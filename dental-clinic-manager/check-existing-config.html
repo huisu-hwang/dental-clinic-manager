@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기존 Supabase 설정 확인</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
+        <h1 class="text-2xl font-bold mb-4">기존 Supabase 설정 확인</h1>
+        <p class="text-gray-600 mb-4">이 페이지는 dcm.html에서 사용하던 Supabase 설정을 확인하는 도구입니다.</p>
+        
+        <div class="space-y-4">
+            <button onclick="checkConfig()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                localStorage에서 설정 확인
+            </button>
+            
+            <div id="result" class="mt-4 p-4 border rounded bg-gray-50"></div>
+        </div>
+    </div>
+
+    <script>
+        function checkConfig() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                const storedConfig = localStorage.getItem('supabaseConfig');
+                
+                if (!storedConfig) {
+                    resultDiv.innerHTML = `
+                        <div class="text-red-600">
+                            <h3 class="font-semibold">설정을 찾을 수 없습니다</h3>
+                            <p>localStorage에 'supabaseConfig' 항목이 없습니다.</p>
+                            <p class="mt-2">dcm.html을 먼저 열어서 Supabase 설정을 완료해주세요.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const config = JSON.parse(storedConfig);
+                
+                if (config.url && config.key) {
+                    resultDiv.innerHTML = `
+                        <div class="text-green-600">
+                            <h3 class="font-semibold">설정을 찾았습니다!</h3>
+                            <div class="mt-2 space-y-2">
+                                <div>
+                                    <strong>Supabase URL:</strong>
+                                    <br>
+                                    <code class="bg-gray-200 px-2 py-1 rounded text-sm">${config.url}</code>
+                                </div>
+                                <div>
+                                    <strong>Supabase Anon Key:</strong>
+                                    <br>
+                                    <code class="bg-gray-200 px-2 py-1 rounded text-sm text-xs break-all">${config.key}</code>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                                <h4 class="font-semibold text-blue-800">Next.js 프로젝트 설정 방법</h4>
+                                <p class="text-blue-700 text-sm mt-1">
+                                    위 값들을 복사해서 <code>.env.local</code> 파일에 붙여넣으세요:
+                                </p>
+                                <pre class="bg-blue-100 p-2 mt-2 rounded text-xs overflow-x-auto">
+NEXT_PUBLIC_SUPABASE_URL=${config.url}
+NEXT_PUBLIC_SUPABASE_ANON_KEY=${config.key}
+                                </pre>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="text-yellow-600">
+                            <h3 class="font-semibold">불완전한 설정</h3>
+                            <p>설정이 있지만 URL 또는 Key가 누락되었습니다.</p>
+                            <pre class="bg-gray-200 p-2 mt-2 rounded text-sm">${JSON.stringify(config, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="text-red-600">
+                        <h3 class="font-semibold">오류 발생</h3>
+                        <p>설정을 읽는 중 오류가 발생했습니다: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

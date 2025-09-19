@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>하얀치과 실시간 업무 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .tab-btn.active { border-color: #3b82f6; color: #3b82f6; font-weight: 700; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .table-container { max-height: 400px; overflow-y: auto; }
+        .table-container::-webkit-scrollbar { width: 8px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .table-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .toast { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); transition: bottom 0.5s, opacity 0.5s; }
+        .toast.show { bottom: 40px; opacity: 1; }
+        .modal-overlay { display: flex; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+        .modal-content { transform: scale(0.95); transition: transform 0.3s; }
+        .modal-overlay.show .modal-content { transform: scale(1); }
+        .prose-custom p { margin-bottom: 1rem; }
+        .prose-custom h4 { font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Supabase Setup Modal -->
+    <div id="setup-modal" class="modal-overlay fixed inset-0 bg-gray-900 bg-opacity-60 justify-center items-center z-50">
+        <div class="modal-content bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">최초 설정</h2>
+            <p class="text-slate-600 mb-6">데이터베이스 연동을 위해 Supabase 프로젝트의 URL과 Anon Key를 입력해주세요.</p>
+            <div class="space-y-4">
+                <div>
+                    <label for="supabase-url" class="block text-sm font-medium text-slate-700">Supabase URL</label>
+                    <input type="text" id="supabase-url" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label for="supabase-key" class="block text-sm font-medium text-slate-700">Supabase Anon Key</label>
+                    <input type="text" id="supabase-key" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                </div>
+            </div>
+            <div class="mt-8 flex justify-end">
+                <button id="save-setup" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">저장하고 시작하기</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="app-container" class="container mx-auto p-4 md:p-8 hidden">
+        <header class="mb-8 flex flex-wrap justify-between items-center gap-4">
+            <div>
+                 <div class="flex items-center space-x-4">
+                    <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    <h1 class="text-3xl font-bold text-slate-900">하얀치과 실시간 업무 대시보드</h1>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                 <div id="db-status" class="flex items-center space-x-2 text-sm">
+                    <div id="db-status-indicator" class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                    <span id="db-status-text" class="text-slate-600">연결 중...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <nav class="flex border-b border-slate-200 mb-6 overflow-x-auto">
+             <button class="tab-btn active py-3 px-6 border-b-2 border-transparent text-slate-600 flex-shrink-0" data-tab="daily-input">일일 보고서 입력</button>
+            <button class="tab-btn py-3 px-6 border-b-2 border-transparent text-slate-600 flex-shrink-0" data-tab="weekly-stats">주간 통계</button>
+            <button class="tab-btn py-3 px-6 border-b-2 border-transparent text-slate-600 flex-shrink-0" data-tab="monthly-stats">월간 통계</button>
+            <button class="tab-btn py-3 px-6 border-b-2 border-transparent text-slate-600 flex-shrink-0" data-tab="annual-stats">연간 통계</button>
+            <button class="tab-btn py-3 px-6 border-b-2 border-transparent text-slate-600 flex-shrink-0" data-tab="logs">상세 기록</button>
+            <button class="tab-btn py-3 px-6 border-b-2 border-transparent text-slate-600 flex-shrink-0" data-tab="settings">설정</button>
+            <button class="tab-btn py-3 px-6 border-b-2 border-transparent text-slate-600 flex-shrink-0" data-tab="guide">사용 안내</button>
+        </nav>
+        
+        <main>
+            <!-- Daily Input -->
+            <section id="daily-input" class="content-section active space-y-8">
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h2 class="text-xl font-bold mb-4 border-b pb-3">[기본 정보]</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="report-date" class="block text-sm font-medium text-slate-700 mb-1">보고 일자</label>
+                            <input type="date" id="report-date" class="w-full p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h2 class="text-xl font-bold mb-4 border-b pb-3">[1] 치과 환자 상담 결과</h2>
+                    <div class="overflow-x-auto">
+                        <table id="consult-table" class="w-full text-sm text-left">
+                            <thead class="bg-slate-100 text-slate-600 uppercase"><tr><th class="p-3">환자명</th><th class="p-3">상담내용</th><th class="p-3">진행여부</th><th class="p-3">보류사유</th><th class="p-3"></th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button id="add-consult-row" class="mt-4 text-blue-600 font-semibold text-sm py-2 px-4 rounded-md hover:bg-e0f2fe flex items-center space-x-2"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg><span>상담 기록 추가</span></button>
+                </div>
+
+                 <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h2 class="text-xl font-bold mb-4 border-b pb-3">[2] 환자 리콜 결과</h2>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label for="recall-count" class="block text-sm font-medium text-slate-700 mb-1">리콜 건수</label><input type="number" id="recall-count" min="0" value="0" class="w-full p-2 border border-slate-300 rounded-md"></div>
+                        <div><label for="recall-booking-count" class="block text-sm font-medium text-slate-700 mb-1">예약 수</label><input type="number" id="recall-booking-count" min="0" value="0" class="w-full p-2 border border-slate-300 rounded-md"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h2 class="text-xl font-bold mb-4 border-b pb-3">[3] 환자 선물 및 리뷰 관리</h2>
+                    <div class="overflow-x-auto">
+                        <table id="gift-table" class="w-full text-sm text-left">
+                            <thead class="bg-slate-100 text-slate-600 uppercase"><tr><th class="p-3">환자명</th><th class="p-3">선물 종류</th><th class="p-3">네이버 리뷰 여부</th><th class="p-3">비고</th><th class="p-3"></th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button id="add-gift-row" class="mt-4 text-blue-600 font-semibold text-sm py-2 px-4 rounded-md hover:bg-e0f2fe flex items-center space-x-2"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg><span>선물/리뷰 기록 추가</span></button>
+                </div>
+                
+                <div class="flex justify-end"><button id="save-report" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">오늘의 보고서 저장하기</button></div>
+            </section>
+            
+            <!-- Other Sections: Stats, Logs, Settings, Guide -->
+            <section id="weekly-stats" class="content-section"><div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200"><div class="flex flex-wrap justify-between items-center mb-4 gap-4"><h2 class="text-xl font-bold">주간 통계</h2><div class="flex items-center gap-4"><button id="generate-weekly-ai-report" class="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm">✨ AI 리포트 분석</button><div><label for="week-selector" class="mr-2">주 선택:</label><input type="week" id="week-selector" class="p-2 border border-slate-300 rounded-md"></div></div></div><div id="weekly-stats-content" class="space-y-6"></div></div></section>
+            <section id="monthly-stats" class="content-section"><div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200"><div class="flex flex-wrap justify-between items-center mb-4 gap-4"><h2 class="text-xl font-bold">월간 통계</h2><div class="flex items-center gap-4"><button id="generate-monthly-ai-report" class="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm">✨ AI 리포트 분석</button><div><label for="month-selector" class="mr-2">월 선택:</label><input type="month" id="month-selector" class="p-2 border border-slate-300 rounded-md"></div></div></div><div id="monthly-stats-content" class="space-y-6"></div></div></section>
+            <section id="annual-stats" class="content-section"><div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200"><div class="flex flex-wrap justify-between items-center mb-4 gap-4"><h2 class="text-xl font-bold">연간 통계</h2><div class="flex items-center gap-4"><button id="generate-annual-ai-report" class="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm">✨ AI 리포트 분석</button><div><label for="year-selector" class="mr-2">연도 선택:</label><select id="year-selector" class="p-2 border border-slate-300 rounded-md"></select></div></div></div><div id="annual-stats-content" class="space-y-6"></div></div></section>
+            
+            <section id="logs" class="content-section space-y-6">
+                 <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">일일 보고 종합 기록</h2></div>
+                    <div class="table-container"><table class="w-full text-sm text-left"><thead class="bg-slate-100 text-slate-600 sticky top-0"><tr><th class="p-3">날짜</th><th class="p-3">네이버 리뷰 수</th><th class="p-3">상담 진행</th><th class="p-3">상담 보류</th><th class="p-3">리콜 수</th><th class="p-3">예약 수</th><th class="p-3">삭제</th></tr></thead><tbody id="daily-logs-tbody"></tbody></table></div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">상담 상세 기록</h2></div>
+                    <div class="table-container"><table class="w-full text-sm text-left"><thead class="bg-slate-100 text-slate-600 sticky top-0"><tr><th class="p-3">날짜</th><th class="p-3">환자명</th><th class="p-3">상담내용</th><th class="p-3">진행여부</th><th class="p-3">보류사유</th></tr></thead><tbody id="consult-logs-tbody"></tbody></table></div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                     <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">선물 증정 및 리뷰 상세 기록</h2></div>
+                    <div class="table-container"><table class="w-full text-sm text-left"><thead class="bg-slate-100 text-slate-600 sticky top-0"><tr><th class="p-3">날짜</th><th class="p-3">환자명</th><th class="p-3">선물 종류</th><th class="p-3">네이버 리뷰 여부</th><th class="p-3">비고</th></tr></thead><tbody id="gift-logs-tbody"></tbody></table></div>
+                </div>
+                 <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                     <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">선물 재고 입출고 기록</h2></div>
+                    <div class="table-container"><table class="w-full text-sm text-left"><thead class="bg-slate-100 text-slate-600 sticky top-0"><tr><th class="p-3">일시</th><th class="p-3">선물명</th><th class="p-3">내용</th><th class="p-3">수량 변경</th><th class="p-3">최종 재고</th></tr></thead><tbody id="inventory-logs-tbody"></tbody></table></div>
+                </div>
+            </section>
+
+            <section id="settings" class="content-section">
+                <div class="bg-white p-8 rounded-lg shadow-sm border border-slate-200 space-y-6">
+                    <h2 class="text-2xl font-bold border-b pb-4">설정</h2>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3">선물 종류 및 재고 관리</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4 p-4 border rounded-md bg-slate-50"><input type="text" id="new-gift-name-input" placeholder="새 선물 이름 (예: 치실)" class="w-full p-2 border border-slate-300 rounded-md"><input type="number" id="new-gift-stock-input" placeholder="초기 재고 수량" class="w-full p-2 border border-slate-300 rounded-md"><button id="add-gift-item-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">신규 추가</button></div>
+                        <div id="gift-inventory-list" class="space-y-2"></div>
+                    </div>
+                    <div class="mt-8 pt-6 border-t">
+                         <h3 class="text-xl font-semibold mb-3">Supabase 설정 변경</h3>
+                         <p class="text-sm text-slate-500 mb-3">Supabase 접속 정보가 변경되었을 경우에만 수정해주세요.</p>
+                         <button id="reset-supabase-config" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md text-sm">접속 정보 재설정</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="guide" class="content-section">
+                 <div class="bg-white p-8 rounded-lg shadow-sm border border-slate-200 space-y-4 prose">
+                    <h2 class="text-2xl font-bold">대시보드 사용 안내</h2>
+                    
+                    <h3 class="font-bold text-lg">1. 최초 설정 (관리자)</h3>
+                    <ul>
+                        <li><strong class="text-red-500">가장 먼저, 채팅창의 안내에 따라 Supabase 데이터베이스 테이블을 생성해야 합니다.</strong> 이 작업은 최초 한 번만 필요합니다.</li>
+                         <li>모든 설정이 완료되면, 대시보드 URL에 처음 접속 시 나타나는 설정 창에 Supabase 프로젝트의 <strong>URL</strong>과 <strong>anon public key</strong>를 입력합니다.</li>
+                    </ul>
+                    <h3 class="font-bold text-lg">2. 데이터 관리</h3>
+                    <ul>
+                        <li>이제 모든 데이터는 클라우드에 실시간으로 저장됩니다. 한 명이 데이터를 입력하면 다른 모든 사람의 화면에도 즉시 반영됩니다.</li>
+                        <li><strong>일일 보고 종합 기록</strong> 테이블 우측의 삭제 버튼을 클릭하여 해당 날짜의 모든 기록(상담, 선물 등)을 한 번에 삭제할 수 있습니다.</li>
+                    </ul>
+                 </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- AI Report Modal -->
+    <div id="ai-report-modal" class="modal-overlay fixed inset-0 bg-gray-500 bg-opacity-75 justify-center items-center z-40"><div class="modal-content bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl"><div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold text-slate-800">✨ AI 업무 분석 리포트</h3><button id="close-modal-btn" class="text-slate-500 hover:text-slate-800 text-2xl font-bold">&times;</button></div><div id="ai-report-content" class="prose-custom max-h-[60vh] overflow-y-auto"></div></div></div>
+
+    <!-- Toast Message -->
+    <div id="toast-message" class="toast p-3 rounded-lg text-white opacity-0 z-50"></div>
+
+    <script type="module">
+        const { createClient } = supabase;
+        let supabaseClient;
+
+        // --- DOM Elements ---
+        const setupModal = document.getElementById('setup-modal');
+        const appContainer = document.getElementById('app-container');
+        const saveSetupBtn = document.getElementById('save-setup');
+        const supabaseUrlInput = document.getElementById('supabase-url');
+        const supabaseKeyInput = document.getElementById('supabase-key');
+        const dbStatusIndicator = document.getElementById('db-status-indicator');
+        const dbStatusText = document.getElementById('db-status-text');
+        const resetConfigBtn = document.getElementById('reset-supabase-config');
+        const toastMessageEl = document.getElementById('toast-message');
+        
+        // --- Other element selectors
+        const tabs = document.querySelectorAll('.tab-btn');
+        const contents = document.querySelectorAll('.content-section');
+        const reportDateEl = document.getElementById('report-date');
+        const saveReportBtn = document.getElementById('save-report');
+        const addConsultRowBtn = document.getElementById('add-consult-row');
+        const consultTableBody = document.querySelector('#consult-table tbody');
+        const addGiftRowBtn = document.getElementById('add-gift-row');
+        const giftTableBody = document.querySelector('#gift-table tbody');
+        const weekSelector = document.getElementById('week-selector');
+        const monthSelector = document.getElementById('month-selector');
+        const yearSelector = document.getElementById('year-selector');
+        const newGiftNameInput = document.getElementById('new-gift-name-input');
+        const newGiftStockInput = document.getElementById('new-gift-stock-input');
+        const addGiftItemBtn = document.getElementById('add-gift-item-btn');
+        const giftInventoryListContainer = document.getElementById('gift-inventory-list');
+        const generateWeeklyAiReportBtn = document.getElementById('generate-weekly-ai-report');
+        const generateMonthlyAiReportBtn = document.getElementById('generate-monthly-ai-report');
+        const generateAnnualAiReportBtn = document.getElementById('generate-annual-ai-report');
+        const aiReportModal = document.getElementById('ai-report-modal');
+        const aiReportContent = document.getElementById('ai-report-content');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        // --- Local State ---
+        let dailyReports = [];
+        let consultLogs = [];
+        let giftLogs = [];
+        let giftInventory = [];
+        let inventoryLogs = [];
+
+        // --- Supabase Setup & Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            let config = null;
+            try {
+                const storedConfig = localStorage.getItem('supabaseConfig');
+                if (storedConfig && storedConfig !== 'undefined' && storedConfig !== 'null') {
+                    config = JSON.parse(storedConfig);
+                }
+            } catch (e) {
+                console.error("저장된 Supabase 설정을 읽어오는 데 실패했습니다. 설정을 초기화합니다.", e);
+                localStorage.removeItem('supabaseConfig');
+            }
+
+            // Always attach event listeners
+            saveSetupBtn.addEventListener('click', handleSaveSetup);
+            resetConfigBtn.addEventListener('click', handleResetConfig);
+
+            if (config && config.url && config.key) {
+                initializeSupabase(config.url, config.key);
+            } else {
+                setupModal.classList.add('show');
+            }
+        });
+        
+        function handleSaveSetup() {
+            const url = supabaseUrlInput.value.trim();
+            const key = supabaseKeyInput.value.trim();
+            if (url && key) {
+                try {
+                    localStorage.setItem('supabaseConfig', JSON.stringify({ url, key }));
+                    showToast('설정이 저장되었습니다. 페이지를 새로고침합니다.', 'bg-green-500');
+                    setTimeout(() => window.location.reload(), 1500);
+                } catch (e) {
+                    console.error("Supabase 설정 저장 실패:", e);
+                    showToast(`설정 저장에 실패했습니다: ${e.message}`, 'bg-red-500');
+                }
+            } else {
+                showToast('URL과 Key를 모두 입력해주세요.', 'bg-red-500');
+            }
+        }
+        
+        function handleResetConfig() {
+            if (confirm('Supabase 접속 정보를 정말로 초기화하시겠습니까? 페이지가 새로고침됩니다.')) {
+                localStorage.removeItem('supabaseConfig');
+                window.location.reload();
+            }
+        }
+
+        async function initializeSupabase(url, key) {
+            supabaseClient = createClient(url, key);
+            console.log('Supabase client initialized.');
+            setupModal.classList.remove('show');
+            appContainer.classList.remove('hidden');
+
+            setDbStatus('connecting', '연결 중...');
+            await fetchAllData();
+            setupRealtimeSubscriptions();
+            initApp();
+        }
+        
+        function setDbStatus(status, text) {
+            const colorMap = { connected: 'bg-green-500', error: 'bg-red-500', connecting: 'bg-yellow-400' };
+            dbStatusIndicator.className = `w-3 h-3 rounded-full ${colorMap[status]}`;
+            dbStatusText.textContent = text;
+        }
+
+        // --- Data Fetching ---
+        async function fetchAllData() {
+            try {
+                const [
+                    { data: dailyData, error: dailyError },
+                    { data: consultData, error: consultError },
+                    { data: giftData, error: giftError },
+                    { data: inventoryData, error: inventoryError },
+                    { data: invLogData, error: invLogError }
+                ] = await Promise.all([
+                    supabaseClient.from('daily_reports').select('*'),
+                    supabaseClient.from('consult_logs').select('*'),
+                    supabaseClient.from('gift_logs').select('*'),
+                    supabaseClient.from('gift_inventory').select('*'),
+                    supabaseClient.from('inventory_logs').select('*')
+                ]);
+
+                if (dailyError) throw dailyError;
+                if (consultError) throw consultError;
+                if (giftError) throw giftError;
+                if (inventoryError) throw inventoryError;
+                if (invLogError) throw invLogError;
+
+                dailyReports = dailyData || [];
+                consultLogs = consultData || [];
+                giftLogs = giftData || [];
+                giftInventory = inventoryData || [];
+                inventoryLogs = invLogData || [];
+                
+                renderAll();
+                setDbStatus('connected', '실시간 연결됨');
+            } catch (error) {
+                console.error("Error fetching initial data:", error);
+                setDbStatus('error', '연결 실패');
+                if (error.message.includes("relation") && error.message.includes("does not exist")) {
+                     showToast(`필수 데이터베이스 테이블이 없습니다. 채팅창의 안내에 따라 테이블을 생성해주세요.`, 'bg-red-500', 15000);
+                } else {
+                    showToast(`데이터 로딩 실패: ${error.message}`, 'bg-red-500');
+                }
+            }
+        }
+
+        // --- Realtime Subscriptions ---
+        function setupRealtimeSubscriptions() {
+            const handleDbChange = (payload) => {
+                console.log(`Realtime change received on ${payload.table}`, payload);
+                fetchAllData(); // Simple refetch on any change
+            };
+
+            const channel = supabaseClient.channel('public-db-changes')
+              .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => handleDbChange(payload))
+              .subscribe((status, err) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('Realtime channel connected.');
+                    setDbStatus('connected', '실시간 연결됨');
+                } else if (status !== 'CLOSED') {
+                    console.log('Realtime connection issue:', status, err);
+                    setDbStatus('error', '연결 오류');
+                }
+              });
+        }
+        
+        // --- App Logic ---
+        function initApp() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            reportDateEl.value = `${yyyy}-${mm}-${dd}`;
+            monthSelector.value = `${yyyy}-${mm}`;
+            weekSelector.value = getCurrentWeekString(today);
+            
+            setupEventListeners();
+            addConsultRow();
+            addGiftRow();
+        }
+
+        function setupEventListeners() {
+            // Detaching and re-attaching to prevent duplicates from multiple init calls
+            addConsultRowBtn.replaceWith(addConsultRowBtn.cloneNode(true));
+            document.getElementById('add-consult-row').addEventListener('click', addConsultRow);
+
+            addGiftRowBtn.replaceWith(addGiftRowBtn.cloneNode(true));
+            document.getElementById('add-gift-row').addEventListener('click', addGiftRow);
+            
+            saveReportBtn.replaceWith(saveReportBtn.cloneNode(true));
+            document.getElementById('save-report').addEventListener('click', saveReport);
+            
+            tabs.forEach(tab => tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            }));
+            
+            weekSelector.addEventListener('change', renderWeeklyStats);
+            monthSelector.addEventListener('change', renderMonthlyStats);
+            yearSelector.addEventListener('change', renderAnnualStats);
+            addGiftItemBtn.addEventListener('click', addGiftItem);
+
+            generateWeeklyAiReportBtn.addEventListener('click', () => generateAiReport('weekly'));
+            generateMonthlyAiReportBtn.addEventListener('click', () => generateAiReport('monthly'));
+            generateAnnualAiReportBtn.addEventListener('click', () => generateAiReport('annual'));
+            closeModalBtn.addEventListener('click', () => aiReportModal.classList.remove('show'));
+            aiReportModal.addEventListener('click', (e) => e.target === aiReportModal && aiReportModal.classList.remove('show'));
+        }
+
+        async function saveReport() {
+            const reportDate = reportDateEl.value;
+            if (!reportDate) {
+                showToast('보고 일자를 선택해주세요.', 'bg-red-500');
+                return;
+            }
+
+            const { data: existing } = await supabaseClient.from('daily_reports').select('id').eq('date', reportDate).single();
+            if (existing) {
+                if (!confirm(`${reportDate}에 이미 저장된 보고서가 있습니다. 모든 관련 데이터를 삭제하고 새로 저장하시겠습니까?`)) return;
+                await deleteReportByDate(reportDate);
+            }
+
+            // --- Batch Inserts ---
+            const newConsults = Array.from(consultTableBody.querySelectorAll('tr')).map(row => {
+                const patientName = row.querySelector('.patient-name').value;
+                if (!patientName) return null;
+                return {
+                    date: reportDate,
+                    patient_name: patientName,
+                    consult_content: row.querySelector('.consult-content').value,
+                    consult_status: row.querySelector('.consult-status').value,
+                    hold_reason: row.querySelector('.hold-reason').value
+                };
+            }).filter(Boolean);
+
+            const newGifts = Array.from(giftTableBody.querySelectorAll('tr')).map(row => {
+                const patientName = row.querySelector('.patient-name').value;
+                if (!patientName) return null;
+                return {
+                    date: reportDate,
+                    patient_name: patientName,
+                    gift_type: row.querySelector('.gift-type').value,
+                    naver_review: row.querySelector('.naver-review').value,
+                    notes: row.querySelector('.gift-notes').value
+                };
+            }).filter(Boolean);
+
+            // --- Daily Report Aggregation ---
+            const newReport = {
+                date: reportDate,
+                recall_count: parseInt(document.getElementById('recall-count').value) || 0,
+                recall_booking_count: parseInt(document.getElementById('recall-booking-count').value) || 0,
+                consult_proceed: newConsults.filter(c => c.consult_status === 'O').length,
+                consult_hold: newConsults.filter(c => c.consult_status === 'X').length,
+                naver_review_count: newGifts.filter(g => g.naver_review === 'O').length,
+            };
+
+            // --- Inventory Updates & Logs ---
+            const inventoryUpdates = [];
+            const newInventoryLogs = [];
+            newGifts.forEach(g => {
+                if (g.gift_type !== '없음') {
+                    const item = giftInventory.find(inv => inv.name === g.gift_type);
+                    if (item && item.stock > 0) {
+                        const newStock = item.stock - 1;
+                        inventoryUpdates.push({ ...item, stock: newStock });
+                        newInventoryLogs.push({
+                            timestamp: new Date().toISOString(), name: item.name, 
+                            reason: `환자 증정: ${g.patient_name}`, change: -1, 
+                            old_stock: item.stock, new_stock: newStock
+                        });
+                    }
+                }
+            });
+
+            try {
+                // Perform all database operations
+                if (newConsults.length > 0) await supabaseClient.from('consult_logs').insert(newConsults);
+                if (newGifts.length > 0) await supabaseClient.from('gift_logs').insert(newGifts);
+                if (newInventoryLogs.length > 0) await supabaseClient.from('inventory_logs').insert(newInventoryLogs);
+                
+                await Promise.all(
+                    inventoryUpdates.map(item => 
+                        supabaseClient.from('gift_inventory').update({ stock: item.stock }).eq('id', item.id)
+                    )
+                );
+
+                await supabaseClient.from('daily_reports').insert([newReport]);
+
+                showToast('보고서가 성공적으로 저장되었습니다.', 'bg-green-500');
+                resetForm();
+            } catch (error) {
+                console.error("Error saving report:", error);
+                showToast(`저장 실패: ${error.message}`, 'bg-red-500');
+            }
+        }
+        
+        async function deleteReportByDate(date) {
+            try {
+                const { data: reportToDelete } = await supabaseClient.from('daily_reports').select('id').eq('date', date).single();
+                if (!reportToDelete) return;
+                
+                await Promise.all([
+                    supabaseClient.from('consult_logs').delete().eq('date', date),
+                    supabaseClient.from('gift_logs').delete().eq('date', date),
+                    supabaseClient.from('daily_reports').delete().eq('id', reportToDelete.id)
+                ]);
+                 showToast(`${date}의 기존 보고서가 삭제되었습니다.`, 'bg-blue-500');
+            } catch (error) {
+                console.error(`Error deleting report for date ${date}:`, error);
+                showToast(`기존 보고서 삭제 실패: ${error.message}`, 'bg-red-500');
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('recall-count').value = 0;
+            document.getElementById('recall-booking-count').value = 0;
+            consultTableBody.innerHTML = '';
+            giftTableBody.innerHTML = '';
+            addConsultRow();
+            addGiftRow();
+        }
+
+        function renderAll() {
+            dailyReports.sort((a, b) => new Date(b.date) - new Date(a.date));
+            consultLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
+            giftLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
+            inventoryLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            populateYearSelector();
+            renderDailyLogs();
+            renderConsultLogs();
+            renderGiftLogs();
+            renderInventoryManagement();
+            renderInventoryLogs();
+            renderWeeklyStats();
+            renderMonthlyStats();
+            renderAnnualStats();
+        }
+
+        function renderDailyLogs() {
+            document.getElementById('daily-logs-tbody').innerHTML = dailyReports.map(r => `
+                <tr class="border-b hover:bg-slate-50">
+                    <td class="p-3">${r.date}</td><td class="p-3">${r.naver_review_count}</td>
+                    <td class="p-3">${r.consult_proceed}</td><td class="p-3">${r.consult_hold}</td>
+                    <td class="p-3">${r.recall_count}</td><td class="p-3">${r.recall_booking_count}</td>
+                    <td class="p-3"><button data-date="${r.date}" class="delete-report-btn text-red-500 hover:text-red-700 text-xs">삭제</button></td>
+                </tr>`).join('');
+            document.querySelectorAll('.delete-report-btn').forEach(btn => btn.addEventListener('click', (e) => {
+                 if(confirm(`${e.target.dataset.date}의 모든 기록을 삭제하시겠습니까? 재고는 복구되지 않습니다.`)) deleteReportByDate(e.target.dataset.date);
+            }));
+        }
+
+        function renderConsultLogs() {
+            document.getElementById('consult-logs-tbody').innerHTML = consultLogs.map(l => `
+                <tr class="border-b hover:bg-slate-50">
+                    <td class="p-3">${l.date}</td><td class="p-3">${l.patient_name}</td>
+                    <td class="p-3">${l.consult_content}</td><td class="p-3">${l.consult_status}</td>
+                    <td class="p-3">${l.hold_reason}</td>
+                </tr>`).join('');
+        }
+
+        function renderGiftLogs() {
+            document.getElementById('gift-logs-tbody').innerHTML = giftLogs.map(l => `
+                 <tr class="border-b hover:bg-slate-50">
+                    <td class="p-3">${l.date}</td><td class="p-3">${l.patient_name}</td>
+                    <td class="p-3">${l.gift_type}</td><td class="p-3">${l.naver_review}</td>
+                    <td class="p-3">${l.notes}</td>
+                </tr>`).join('');
+        }
+
+        function renderInventoryLogs() {
+             document.getElementById('inventory-logs-tbody').innerHTML = inventoryLogs.map(l => `
+                 <tr class="border-b hover:bg-slate-50">
+                    <td class="p-3 text-xs">${new Date(l.timestamp).toLocaleString('ko-KR')}</td>
+                    <td class="p-3">${l.name}</td><td class="p-3">${l.reason}</td>
+                    <td class="p-3 font-mono text-center">${l.change > 0 ? `+${l.change}`: l.change}</td>
+                    <td class="p-3 font-mono text-center">${l.new_stock}</td>
+                </tr>`).join('');
+        }
+
+        const populateYearSelector = () => {
+            const years = [...new Set(dailyReports.map(r => r.date.substring(0, 4)))].sort().reverse();
+            yearSelector.innerHTML = years.map(y => `<option value="${y}">${y}년</option>`).join('');
+            if(years.length === 0){
+                const currentYear = new Date().getFullYear();
+                yearSelector.innerHTML = `<option value="${currentYear}">${currentYear}년</option>`
+            }
+        };
+        const getDatesForPeriod = (periodType, value) => {
+            let startDate, endDate, title;
+            if (periodType === 'weekly' && value) {
+                const [year, week] = value.split('-W');
+                const firstDayOfYear = new Date(year, 0, 1); const days = (week - 1) * 7;
+                startDate = new Date(firstDayOfYear.setDate(firstDayOfYear.getDate() + days - (firstDayOfYear.getDay() + 6) % 7));
+                endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
+                title = `${year}년 ${week}주차`;
+            } else if (periodType === 'monthly' && value) {
+                const [year, month] = value.split('-');
+                startDate = new Date(year, month - 1, 1); endDate = new Date(year, month, 0);
+                title = `${year}년 ${month}월`;
+            } else if (value) {
+                startDate = new Date(value, 0, 1); endDate = new Date(value, 11, 31);
+                title = `${value}년`;
+            } else {
+                return { startDate: new Date(), endDate: new Date(), title: '기간' };
+            }
+            return { startDate, endDate, title };
+        };
+        const getStatsForDateRange = (startDate, endDate) => {
+             const filteredReports = dailyReports.filter(r => { const reportDate = new Date(r.date); return reportDate >= startDate && reportDate <= endDate; });
+             const filteredGifts = giftLogs.filter(g => { const giftDate = new Date(g.date); return giftDate >= startDate && giftDate <= endDate; });
+            const stats = { naver_review_count: 0, consult_proceed: 0, consult_hold: 0, recall_count: 0, recall_booking_count: 0 };
+            filteredReports.forEach(r => { Object.keys(stats).forEach(key => stats[key] += (r[key] || 0)) });
+            const giftCounts = {};
+            filteredGifts.forEach(g => { if(g.gift_type && g.gift_type !== '없음') { giftCounts[g.gift_type] = (giftCounts[g.gift_type] || 0) + 1; } });
+            const totalConsults = stats.consult_proceed + stats.consult_hold;
+            const consultProceedRate = totalConsults > 0 ? ((stats.consult_proceed / totalConsults) * 100).toFixed(1) : 0;
+            const recallSuccessRate = stats.recall_count > 0 ? ((stats.recall_booking_count / stats.recall_count) * 100).toFixed(1) : 0;
+            return { ...stats, totalConsults, consultProceedRate, recallSuccessRate, giftCounts };
+        };
+        const renderWeeklyStats = () => { const periodData = getDatesForPeriod('weekly', weekSelector.value); const stats = getStatsForDateRange(periodData.startDate, periodData.endDate); renderStatsToContainer(document.getElementById('weekly-stats-content'), stats); };
+        const renderMonthlyStats = () => { const periodData = getDatesForPeriod('monthly', monthSelector.value); const stats = getStatsForDateRange(periodData.startDate, periodData.endDate); renderStatsToContainer(document.getElementById('monthly-stats-content'), stats);};
+        const renderAnnualStats = () => { const periodData = getDatesForPeriod('annual', yearSelector.value); const stats = getStatsForDateRange(periodData.startDate, periodData.endDate); renderStatsToContainer(document.getElementById('annual-stats-content'), stats);};
+        const renderStatsToContainer = (container, stats) => {
+            let html = `<div><h3 class="text-lg font-semibold mb-2 text-slate-700">주요 업무 통계</h3><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                ${createStatCard('네이버 리뷰 수', stats.naver_review_count, '건')} ${createStatCard('총 상담', stats.totalConsults, '건')}
+                ${createStatCard('상담 진행률', stats.consultProceedRate, '%')} ${createStatCard('리콜 예약률', stats.recallSuccessRate, '%')}
+            </div></div>`;
+            if (Object.keys(stats.giftCounts).length > 0) {
+                html += `<div><h3 class="text-lg font-semibold mt-6 mb-2 text-slate-700">선물 증정 통계</h3><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">`;
+                for(const gift in stats.giftCounts) { html += createStatCard(gift, stats.giftCounts[gift], '개'); }
+                html += `</div></div>`;
+            } else { html += `<div><h3 class="text-lg font-semibold mt-6 mb-2 text-slate-700">선물 증정 통계</h3><p class="text-slate-500">해당 기간에 선물 증정 기록이 없습니다.</p></div>`; }
+            container.innerHTML = html;
+        };
+        const createStatCard = (title, value, unit) => `<div class="bg-slate-50 p-4 rounded-lg border"><p class="text-sm text-slate-500 font-medium">${title}</p><p class="text-3xl font-bold text-slate-800 mt-1">${value}<span class="text-xl ml-1">${unit}</span></p></div>`;
+        const addConsultRow = () => {
+            const row = document.createElement('tr'); row.className = 'border-b';
+            row.innerHTML = `<td class="p-2"><input type="text" class="w-full p-2 border rounded-md patient-name" placeholder="홍길동"></td><td class="p-2"><input type="text" class="w-full p-2 border rounded-md consult-content" placeholder="상담 내용 요약"></td><td class="p-2"><select class="w-full p-2 border rounded-md consult-status"><option value="O">O</option><option value="X">X</option></select></td><td class="p-2"><input type="text" class="w-full p-2 border rounded-md hold-reason" placeholder="보류 사유 (선택)"></td><td class="p-2 text-center"><button class="remove-row-btn text-red-500 hover:text-red-700 p-1"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg></button></td>`;
+            row.querySelector('.remove-row-btn').addEventListener('click', () => row.remove());
+            consultTableBody.appendChild(row);
+        };
+        const addGiftRow = () => {
+            const row = document.createElement('tr'); row.className = 'border-b';
+            const giftOptions = ['없음', ...giftInventory.map(g => `${g.name} (${g.stock}개 남음)`)].map(name => `<option value="${name.split(' (')[0]}">${name}</option>`).join('');
+            row.innerHTML = `<td class="p-2"><input type="text" class="w-full p-2 border rounded-md patient-name" placeholder="홍길동"></td><td class="p-2"><select class="w-full p-2 border rounded-md gift-type">${giftOptions}</select></td><td class="p-2"><select class="w-full p-2 border rounded-md naver-review"><option value="X">X</option><option value="O">O</option></select></td><td class="p-2"><input type="text" class="w-full p-2 border rounded-md gift-notes" placeholder="비고 (선택)"></td><td class="p-2 text-center"><button class="remove-row-btn text-red-500 hover:text-red-700 p-1"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg></button></td>`;
+            row.querySelector('.remove-row-btn').addEventListener('click', () => row.remove());
+            giftTableBody.appendChild(row);
+        };
+        const getCurrentWeekString = (d) => { const date = new Date(d.getTime()); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7); const week1 = new Date(date.getFullYear(), 0, 4); const weekNumber = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7); return `${date.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`; };
+        let toastTimer; const showToast = (message, bgColor, duration = 3000) => { clearTimeout(toastTimer); toastMessageEl.textContent = message; toastMessageEl.className = `toast ${bgColor} show`; toastTimer = setTimeout(() => toastMessageEl.classList.remove('show'), duration);};
+
+        // --- Settings & Inventory (Supabase version) ---
+        function renderInventoryManagement() {
+            giftInventoryListContainer.innerHTML = giftInventory.map((item, index) => `
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-center bg-slate-100 p-2 rounded-md">
+                    <span class="md:col-span-2 font-semibold">${item.name}</span>
+                    <span class="text-sm">현재 재고: <span class="font-bold text-blue-600">${item.stock}</span> 개</span>
+                    <input type="number" min="0" placeholder="추가 수량" class="w-full p-2 border rounded-md stock-update-input" data-id="${item.id}">
+                    <button class="bg-green-500 text-white p-2 rounded-md hover:bg-green-600 text-sm stock-update-btn" data-id="${item.id}">재고 추가</button>
+                    <button class="bg-red-500 text-white p-2 rounded-md hover:bg-red-600 text-sm delete-gift-item-btn" data-id="${item.id}" data-name="${item.name}">삭제</button>
+                </div>`).join('');
+            document.querySelectorAll('.delete-gift-item-btn').forEach(btn => btn.addEventListener('click', (e) => deleteGiftItem(e.target.dataset.id, e.target.dataset.name)));
+            document.querySelectorAll('.stock-update-btn').forEach(btn => btn.addEventListener('click', (e) => updateStock(e.target.dataset.id)));
+        }
+
+        async function addGiftItem() {
+            const name = newGiftNameInput.value.trim();
+            const stock = parseInt(newGiftStockInput.value) || 0;
+            if (!name) { showToast('선물 이름을 입력해주세요.', 'bg-red-500'); return; }
+            if (giftInventory.find(g => g.name === name)) { showToast('이미 존재하는 선물 종류입니다.', 'bg-yellow-500'); return; }
+            
+            try {
+                const { error: invError } = await supabaseClient.from('gift_inventory').insert([{ name, stock }]);
+                if (invError) throw invError;
+                
+                if (stock > 0) {
+                    const { error: logError } = await supabaseClient.from('inventory_logs').insert([{ timestamp: new Date().toISOString(), name, reason: '신규 등록', change: stock, old_stock: 0, new_stock: stock }]);
+                    if (logError) throw logError;
+                }
+                newGiftNameInput.value = ''; newGiftStockInput.value = '';
+                showToast('새로운 선물이 추가되었습니다.', 'bg-green-500');
+            } catch(error) { showToast(`추가 실패: ${error.message}`, 'bg-red-500'); }
+        }
+
+        async function deleteGiftItem(id, name) {
+            if (confirm(`'${name}' 선물을 삭제하시겠습니까? 관련 재고 기록도 모두 사라집니다.`)) {
+                try {
+                    const { error } = await supabaseClient.from('gift_inventory').delete().eq('id', id);
+                    if (error) throw error;
+                    showToast('선물이 삭제되었습니다.', 'bg-blue-500');
+                } catch(error) { showToast(`삭제 실패: ${error.message}`, 'bg-red-500'); }
+            }
+        }
+
+        async function updateStock(id) {
+            const input = document.querySelector(`.stock-update-input[data-id="${id}"]`);
+            const quantity = parseInt(input.value);
+            if (isNaN(quantity) || quantity <= 0) { showToast('추가할 재고 수량을 정확히 입력해주세요.', 'bg-red-500'); return; }
+            
+            const item = giftInventory.find(g => g.id == id);
+            if (!item) return;
+
+            const oldStock = item.stock;
+            const newStock = oldStock + quantity;
+            try {
+                const { error: invError } = await supabaseClient.from('gift_inventory').update({ stock: newStock }).eq('id', id);
+                if (invError) throw invError;
+
+                const { error: logError } = await supabaseClient.from('inventory_logs').insert([{ timestamp: new Date().toISOString(), name: item.name, reason: '수동 입고', change: quantity, old_stock: oldStock, new_stock: newStock }]);
+                if (logError) throw logError;
+
+                input.value = '';
+                showToast(`${item.name} 재고가 ${quantity}개 추가되었습니다.`, 'bg-green-500');
+            } catch(error) { showToast(`재고 업데이트 실패: ${error.message}`, 'bg-red-500'); }
+        }
+        
+        // --- AI Report ---
+        const generateAiReport = async (periodType) => {
+            let periodData;
+            if (periodType === 'weekly') periodData = getDatesForPeriod(periodType, weekSelector.value);
+            else if (periodType === 'monthly') periodData = getDatesForPeriod(periodType, monthSelector.value);
+            else periodData = getDatesForPeriod(periodType, yearSelector.value);
+
+            const stats = getStatsForDateRange(periodData.startDate, periodData.endDate);
+            const dataIsAvailable = dailyReports.some(r => { const d = new Date(r.date); return d >= periodData.startDate && d <= periodData.endDate; });
+            
+            if (!dataIsAvailable) { showToast(`${periodData.title}의 데이터가 없어 분석할 수 없습니다.`, 'bg-yellow-500'); return; }
+            
+            aiReportContent.innerHTML = `<div class="flex justify-center items-center p-8"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div><p class="ml-4">AI가 리포트를 분석 중입니다...</p></div>`;
+            aiReportModal.classList.add('show');
+            
+            const prompt = `다음은 ${periodData.title} 하얀치과의 업무 데이터입니다: 총 네이버 리뷰 작성 수: ${stats.naver_review_count}건, 총 상담 건수: ${stats.totalConsults}건 (진행: ${stats.consult_proceed}건, 보류: ${stats.consult_hold}건), 상담 진행률: ${stats.consultProceedRate}%, 총 리콜 건수: ${stats.recall_count}건, 리콜 후 예약: ${stats.recall_booking_count}건, 리콜 예약률: ${stats.recallSuccessRate}%, 선물 증정 통계: ${Object.entries(stats.giftCounts).map(([k, v]) => `${k} ${v}개`).join(', ') || '없음'}. 이 데이터를 바탕으로 업무 분석 보고서를 작성해주세요.`;
+            const result = await callGeminiApi(prompt);
+            const formattedResult = result.replace(/\*\*(.*?)\*\*/g, '<h4>$1</h4>').replace(/\*(.*?)\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+            aiReportContent.innerHTML = `<div class="prose-custom">${formattedResult}</div>`;
+        };
+
+        const callGeminiApi = async (prompt) => {
+             const apiKey = "";
+             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+             const systemPrompt = "당신은 데이터 분석 전문가이자 경험 많은 치과 경영 컨설턴트입니다. 제공된 데이터를 바탕으로, 핵심 성과와 개선이 필요한 영역을 식별하여 명확하고 간결한 주간/월간/연간 업무 보고서 분석을 한국어로 작성합니다. 긍정적인 점을 먼저 언급하고, 개선점을 제안하며, 마지막으로 실천 가능한 팁 한 가지를 제시해주세요. 보고서는 마크다운 형식으로 구조화하여 작성해주세요.";
+             const payload = { contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] }, };
+             try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json();
+                return result.candidates?.[0]?.content?.parts?.[0]?.text || "AI 응답을 처리하는 데 실패했습니다.";
+             } catch(error) { console.error("Error calling Gemini API:", error); return "AI 분석 중 오류가 발생했습니다."; }
+        }
+
+    </script>
+</body>
+</html>
+
