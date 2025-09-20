@@ -31,6 +31,11 @@ export const getStatsForDateRange = (
     recall_count: 0,
     recall_booking_count: 0,
     totalConsults: 0,
+    totalGifts: 0,
+    totalRevenue: 0,
+    consultsByManager: {} as Record<string, number>,
+    giftsByManager: {} as Record<string, number>,
+    revenueByManager: {} as Record<string, number>,
     consultProceedRate: 0,
     recallSuccessRate: 0,
     giftCounts: {} as Record<string, number>

@@ -199,7 +199,22 @@ export default function Home() {
                   />
                 </div>
               </div>
-              <StatsContainer stats={loading ? { totalConsults: 0, totalGifts: 0, totalRevenue: 0, consultsByManager: {}, giftsByManager: {}, revenueByManager: {} } : getStats('weekly', weekSelector)} />
+              <StatsContainer stats={loading ? {
+                naver_review_count: 0,
+                consult_proceed: 0,
+                consult_hold: 0,
+                recall_count: 0,
+                recall_booking_count: 0,
+                totalConsults: 0,
+                totalGifts: 0,
+                totalRevenue: 0,
+                consultsByManager: {},
+                giftsByManager: {},
+                revenueByManager: {},
+                consultProceedRate: 0,
+                recallSuccessRate: 0,
+                giftCounts: {}
+              } : getStats('weekly', weekSelector)} />
             </div>
           )}
 
@@ -219,7 +234,22 @@ export default function Home() {
                   />
                 </div>
               </div>
-              <StatsContainer stats={loading ? { totalConsults: 0, totalGifts: 0, totalRevenue: 0, consultsByManager: {}, giftsByManager: {}, revenueByManager: {} } : getStats('monthly', monthSelector)} />
+              <StatsContainer stats={loading ? {
+                naver_review_count: 0,
+                consult_proceed: 0,
+                consult_hold: 0,
+                recall_count: 0,
+                recall_booking_count: 0,
+                totalConsults: 0,
+                totalGifts: 0,
+                totalRevenue: 0,
+                consultsByManager: {},
+                giftsByManager: {},
+                revenueByManager: {},
+                consultProceedRate: 0,
+                recallSuccessRate: 0,
+                giftCounts: {}
+              } : getStats('monthly', monthSelector)} />
             </div>
           )}
 
@@ -242,7 +272,22 @@ export default function Home() {
                   </select>
                 </div>
               </div>
-              <StatsContainer stats={loading ? { totalConsults: 0, totalGifts: 0, totalRevenue: 0, consultsByManager: {}, giftsByManager: {}, revenueByManager: {} } : getStats('annual', yearSelector)} />
+              <StatsContainer stats={loading ? {
+                naver_review_count: 0,
+                consult_proceed: 0,
+                consult_hold: 0,
+                recall_count: 0,
+                recall_booking_count: 0,
+                totalConsults: 0,
+                totalGifts: 0,
+                totalRevenue: 0,
+                consultsByManager: {},
+                giftsByManager: {},
+                revenueByManager: {},
+                consultProceedRate: 0,
+                recallSuccessRate: 0,
+                giftCounts: {}
+              } : getStats('annual', yearSelector)} />
             </div>
           )}
 

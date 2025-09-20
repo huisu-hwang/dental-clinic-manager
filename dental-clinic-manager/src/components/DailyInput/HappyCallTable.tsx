@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Plus, X } from 'lucide-react'
 import type { HappyCallRowData } from '@/types'
 
 interface HappyCallTableProps {
@@ -15,7 +16,6 @@ export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange }:
   }
 
   const removeRow = (index: number) => {
-    if (happyCallRows.length <= 1) return
     const newRows = happyCallRows.filter((_, i) => i !== index)
     onHappyCallRowsChange(newRows)
   }
@@ -30,13 +30,7 @@ export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange }:
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold border-b pb-3">[3] 환자 해피콜 결과</h2>
-        <button
-          onClick={addRow}
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-        >
-          행 추가
-        </button>
+        <h2 className="text-xl font-bold">[4] 환자 해피콜 결과</h2>
       </div>
       
       <div className="overflow-x-auto">
@@ -80,23 +74,26 @@ export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange }:
                   />
                 </td>
                 <td className="p-2 border border-slate-300 text-center">
-                  {happyCallRows.length > 1 && (
-                    <button
-                      onClick={() => removeRow(index)}
-                      className="text-red-500 hover:text-red-700 p-1"
-                      title="행 삭제"
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd"></path>
-                      </svg>
-                    </button>
-                  )}
+                  <button
+                    onClick={() => removeRow(index)}
+                    className="text-red-500 hover:text-red-700 p-1"
+                    title="행 삭제"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <button
+        onClick={addRow}
+        className="mt-4 text-blue-600 font-semibold text-sm py-2 px-4 rounded-md hover:bg-blue-50 flex items-center space-x-2"
+      >
+        <Plus className="w-4 h-4" />
+        <span>해피콜 기록 추가</span>
+      </button>
     </div>
   )
 }

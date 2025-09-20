@@ -76,7 +76,7 @@ export default function LogsSection({
                 <th className="p-3">환자명</th>
                 <th className="p-3">상담내용</th>
                 <th className="p-3">진행여부</th>
-                <th className="p-3">보류사유</th>
+                <th className="p-3">참고사항</th>
               </tr>
             </thead>
             <tbody>
@@ -86,7 +86,7 @@ export default function LogsSection({
                   <td className="p-3">{log.patient_name}</td>
                   <td className="p-3">{log.consult_content}</td>
                   <td className="p-3">{log.consult_status}</td>
-                  <td className="p-3">{log.hold_reason}</td>
+                  <td className="p-3">{log.remarks}</td>
                 </tr>
               ))}
             </tbody>

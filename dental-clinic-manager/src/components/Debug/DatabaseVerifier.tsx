@@ -40,9 +40,9 @@ export default function DatabaseVerifier() {
         url: process.env.NEXT_PUBLIC_SUPABASE_URL,
         tableInfo: result.counts,
         sampleData: {
-          dailyReports: result.sampleData.dailyReports,
-          consultLogs: result.sampleData.consultLogs,
-          giftLogs: result.sampleData.giftLogs,
+          dailyReports: result.sampleData?.dailyReports || [],
+          consultLogs: result.sampleData?.consultLogs || [],
+          giftLogs: result.sampleData?.giftLogs || [],
           giftInventory: []
         },
         total: result.total
@@ -92,7 +92,7 @@ export default function DatabaseVerifier() {
             <h5 className="font-semibold text-yellow-800">해결 방법:</h5>
             <ol className="list-decimal list-inside text-sm text-yellow-700 mt-2 space-y-1">
               <li>브라우저에서 dcm.html 파일을 열어 Supabase 설정이 되어있는지 확인</li>
-              <li>개발자 도구 Console에서 <code className="bg-yellow-200 px-1 rounded">localStorage.getItem('supabaseConfig')</code> 실행</li>
+              <li>개발자 도구 Console에서 <code className="bg-yellow-200 px-1 rounded">localStorage.getItem(&apos;supabaseConfig&apos;)</code> 실행</li>
               <li>또는 check-existing-config.html 파일을 열어서 설정값 확인</li>
               <li>확인된 설정값을 .env.local 파일에 입력</li>
             </ol>

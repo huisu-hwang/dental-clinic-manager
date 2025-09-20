@@ -15,7 +15,7 @@ export interface ConsultLog {
   patient_name: string;
   consult_content: string;
   consult_status: 'O' | 'X';
-  hold_reason: string;
+  remarks: string;
 }
 
 export interface GiftLog {
@@ -58,6 +58,11 @@ export interface Stats {
   recall_count: number;
   recall_booking_count: number;
   totalConsults: number;
+  totalGifts: number;
+  totalRevenue: number;
+  consultsByManager: Record<string, number>;
+  giftsByManager: Record<string, number>;
+  revenueByManager: Record<string, number>;
   consultProceedRate: number;
   recallSuccessRate: number;
   giftCounts: Record<string, number>;
@@ -67,7 +72,7 @@ export interface ConsultRowData {
   patient_name: string;
   consult_content: string;
   consult_status: 'O' | 'X';
-  hold_reason: string;
+  remarks: string;
 }
 
 export interface GiftRowData {
