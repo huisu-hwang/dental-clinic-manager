@@ -149,9 +149,9 @@ export default function Home() {
   console.log('Year options:', yearOptions, 'Selected:', yearSelector)
 
   // Supabase가 설정되지 않은 경우 설정 가이드 표시 (임시 비활성화)
-  // if (error && error.includes('Supabase client not available')) {
-  //   return <SetupGuide />
-  // }
+  if (error && error.includes('Supabase client not available')) {
+    return <SetupGuide />
+  }
 
   if (loading) {
     return (
@@ -199,7 +199,7 @@ export default function Home() {
                   />
                 </div>
               </div>
-              <StatsContainer stats={getStats('weekly', weekSelector)} />
+              <StatsContainer stats={loading ? { totalConsults: 0, totalGifts: 0, totalRevenue: 0, consultsByManager: {}, giftsByManager: {}, revenueByManager: {} } : getStats('weekly', weekSelector)} />
             </div>
           )}
 
@@ -219,7 +219,7 @@ export default function Home() {
                   />
                 </div>
               </div>
-              <StatsContainer stats={getStats('monthly', monthSelector)} />
+              <StatsContainer stats={loading ? { totalConsults: 0, totalGifts: 0, totalRevenue: 0, consultsByManager: {}, giftsByManager: {}, revenueByManager: {} } : getStats('monthly', monthSelector)} />
             </div>
           )}
 
@@ -242,7 +242,7 @@ export default function Home() {
                   </select>
                 </div>
               </div>
-              <StatsContainer stats={getStats('annual', yearSelector)} />
+              <StatsContainer stats={loading ? { totalConsults: 0, totalGifts: 0, totalRevenue: 0, consultsByManager: {}, giftsByManager: {}, revenueByManager: {} } : getStats('annual', yearSelector)} />
             </div>
           )}
 
