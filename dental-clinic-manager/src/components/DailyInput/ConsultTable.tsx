@@ -14,7 +14,7 @@ export default function ConsultTable({ consultRows, onConsultRowsChange }: Consu
       patient_name: '',
       consult_content: '',
       consult_status: 'O',
-      hold_reason: ''
+      remarks: ''
     }
     onConsultRowsChange([...consultRows, newRow])
   }
@@ -40,7 +40,7 @@ export default function ConsultTable({ consultRows, onConsultRowsChange }: Consu
               <th className="p-3">환자명</th>
               <th className="p-3">상담내용</th>
               <th className="p-3">진행여부</th>
-              <th className="p-3">보류사유</th>
+              <th className="p-3">참고사항</th>
               <th className="p-3"></th>
             </tr>
           </thead>
@@ -79,9 +79,9 @@ export default function ConsultTable({ consultRows, onConsultRowsChange }: Consu
                   <input
                     type="text"
                     className="w-full p-2 border rounded-md"
-                    placeholder="보류 사유 (선택)"
-                    value={row.hold_reason}
-                    onChange={(e) => updateRow(index, 'hold_reason', e.target.value)}
+                    placeholder="참고 사항 (선택)"
+                    value={row.remarks}
+                    onChange={(e) => updateRow(index, 'remarks', e.target.value)}
                   />
                 </td>
                 <td className="p-2 text-center">

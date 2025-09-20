@@ -24,7 +24,7 @@ interface DailyInputFormProps {
 export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInputFormProps) {
   const [reportDate, setReportDate] = useState(getTodayString())
   const [consultRows, setConsultRows] = useState<ConsultRowData[]>([
-    { patient_name: '', consult_content: '', consult_status: 'O', hold_reason: '' }
+    { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
   ])
   const [giftRows, setGiftRows] = useState<GiftRowData[]>([
     { patient_name: '', gift_type: '없음', naver_review: 'X', notes: '' }
@@ -62,10 +62,10 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
             patient_name: log.patient_name || '',
             consult_content: log.consult_content || '',
             consult_status: (log.consult_status as 'O' | 'X') || 'O',
-            hold_reason: log.hold_reason || ''
+            remarks: log.remarks || ''
           })))
         } else {
-          setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', hold_reason: '' }])
+          setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
         }
         
         // 선물 로그 데이터 로드 (최소 1개 빈 행 보장)
@@ -108,7 +108,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
 
   // 폼 데이터 리셋
   const resetFormData = () => {
-    setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', hold_reason: '' }])
+    setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
     setGiftRows([{ patient_name: '', gift_type: '없음', naver_review: 'X', notes: '' }])
     setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
     setRecallCount(0)
@@ -207,17 +207,17 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
         </div>
       </div>
 
-      {/* 해피콜 결과 */}
-      <HappyCallTable
-        happyCallRows={happyCallRows}
-        onHappyCallRowsChange={setHappyCallRows}
-      />
-
       {/* 선물/리뷰 관리 */}
       <GiftTable
         giftRows={giftRows}
         onGiftRowsChange={setGiftRows}
         giftInventory={giftInventory}
+      />
+
+      {/* 해피콜 결과 */}
+      <HappyCallTable
+        happyCallRows={happyCallRows}
+        onHappyCallRowsChange={setHappyCallRows}
       />
 
       {/* 기타 특이사항 */}

@@ -1,5 +1,5 @@
 import { getSupabase } from './supabase'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
 
 export const dataService = {
   // 날짜별 보고서 데이터 불러오기
@@ -19,10 +19,10 @@ export const dataService = {
       return {
         success: true,
         data: {
-          dailyReport: dailyReportResult.data,
-          consultLogs: consultLogsResult.data || [],
-          giftLogs: giftLogsResult.data || [],
-          happyCallLogs: happyCallLogsResult.data || [],
+          dailyReport: dailyReportResult.data as DailyReport | null,
+          consultLogs: consultLogsResult.data as ConsultLog[] || [],
+          giftLogs: giftLogsResult.data as GiftLog[] || [],
+          happyCallLogs: happyCallLogsResult.data as HappyCallLog[] || [],
           hasData: !!dailyReportResult.data
         }
       }
@@ -124,7 +124,7 @@ export const dataService = {
           patient_name: row.patient_name,
           consult_content: row.consult_content,
           consult_status: row.consult_status,
-          hold_reason: row.hold_reason
+          remarks: row.remarks
         })) as any)
       }
 

@@ -31,11 +31,11 @@ export const useSupabaseData = () => {
         { data: inventoryData, error: inventoryError },
         { data: invLogData, error: invLogError }
       ] = await Promise.all([
-        supabase.from('daily_reports').select('*'),
-        supabase.from('consult_logs').select('*'),
-        supabase.from('gift_logs').select('*'),
-        supabase.from('gift_inventory').select('*'),
-        supabase.from('inventory_logs').select('*')
+        supabase.from('daily_reports').select<'*', DailyReport>('*'),
+        supabase.from('consult_logs').select<'*', ConsultLog>('*'),
+        supabase.from('gift_logs').select<'*', GiftLog>('*'),
+        supabase.from('gift_inventory').select<'*', GiftInventory>('*'),
+        supabase.from('inventory_logs').select<'*', InventoryLog>('*')
       ])
 
       if (dailyError) throw dailyError
@@ -65,21 +65,23 @@ export const useSupabaseData = () => {
   }
 
   useEffect(() => {
-    fetchAllData()
+    const loadData = async () => {
+      await fetchAllData()
+    }
+    loadData()
 
-    // 실시간 구독 설정
     const supabase = getSupabase()
-    if (supabase) {
-      const channel = supabase
-        .channel('public-db-changes')
-        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-          fetchAllData()
-        })
-        .subscribe()
+    if (!supabase) return
 
-      return () => {
-        supabase.removeChannel(channel)
-      }
+    const channel = supabase
+      .channel('public-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        loadData()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
     }
   }, [])
 
