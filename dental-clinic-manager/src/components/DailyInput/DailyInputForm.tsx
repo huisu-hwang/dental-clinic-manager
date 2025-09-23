@@ -40,11 +40,20 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
 
   // 날짜별 데이터 로드
   const loadDataForDate = async (date: string) => {
-    if (!date) return
-    
+    console.log('[DailyInputForm] loadDataForDate called with:', date)
+    if (!date) {
+      console.log('[DailyInputForm] No date provided, skipping load')
+      return
+    }
+
+    console.log('[DailyInputForm] Setting loading to true')
     setLoading(true)
+    setHasExistingData(false) // 로듩 시작 시 초기화
+
     try {
+      console.log('[DailyInputForm] Calling dataService.getReportByDate...')
       const result = await dataService.getReportByDate(date)
+      console.log('[DailyInputForm] Result received:', result)
       
       if (result.success && result.data.hasData) {
         const { dailyReport, consultLogs, giftLogs, happyCallLogs } = result.data
@@ -62,7 +71,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
             patient_name: log.patient_name || '',
             consult_content: log.consult_content || '',
             consult_status: (log.consult_status as 'O' | 'X') || 'O',
-            remarks: log.remarks || ''
+            remarks: log.remarks || '' // remarks 필드 데이터베이스에서 로드
           })))
         } else {
           setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
@@ -74,7 +83,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
             patient_name: log.patient_name || '',
             gift_type: log.gift_type || '없음',
             naver_review: (log.naver_review as 'O' | 'X') || 'X',
-            notes: log.notes || ''
+            notes: log.notes || '' // notes 필드 데이터베이스에서 로드
           })))
         } else {
           setGiftRows([{ patient_name: '', gift_type: '없음', naver_review: 'X', notes: '' }])
@@ -98,10 +107,12 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
         setHasExistingData(false)
       }
     } catch (error) {
-      console.error('데이터 로드 실패:', error)
+      console.error('[DailyInputForm] 데이터 로드 실패:', error)
       resetFormData()
       setHasExistingData(false)
     } finally {
+      // 로딩 상태를 항상 false로 설정
+      console.log('[DailyInputForm] Setting loading to false')
       setLoading(false)
     }
   }
@@ -124,24 +135,39 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
 
   // 컴포넌트 마운트 시 오늘 날짜 데이터 로드
   useEffect(() => {
-    loadDataForDate(reportDate)
-  }, [])
+    console.log('[DailyInputForm] Component mounted, loading initial data for:', reportDate)
+    const loadInitialData = async () => {
+      await loadDataForDate(reportDate)
+    }
+    loadInitialData()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!reportDate) {
       alert('보고 일자를 선택해주세요.')
       return
     }
 
-    onSaveReport({
-      date: reportDate,
-      consultRows,
-      giftRows,
-      happyCallRows,
-      recallCount,
-      recallBookingCount,
-      specialNotes
-    })
+    setLoading(true)
+    try {
+      await onSaveReport({
+        date: reportDate,
+        consultRows,
+        giftRows,
+        happyCallRows,
+        recallCount,
+        recallBookingCount,
+        specialNotes
+      })
+
+      // 저장 성공 후 기존 데이터가 있다고 표시
+      setHasExistingData(true)
+    } catch (error) {
+      console.error('보고서 저장 중 오류 발생:', error)
+      alert('보고서 저장 중 오류가 발생했습니다. 다시 시도해주세요.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const resetForm = () => {
@@ -244,17 +270,19 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
       {/* 저장 버튼 */}
       <div className="flex justify-end space-x-4">
         <button
+          type="button"
           onClick={resetForm}
           className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
         >
           초기화
         </button>
         <button
+          type="button"
           onClick={handleSave}
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={loading}
         >
-          {loading ? '로딩 중...' : hasExistingData ? '보고서 수정하기' : '보고서 저장하기'}
+          {loading ? '저장 중...' : '저장하기'}
         </button>
       </div>
     </div>

@@ -82,12 +82,22 @@ export default function Home() {
       return
     }
 
+    // 현재 스크롤 위치 저장
+    const scrollPosition = window.scrollY
+
     const result = await dataService.saveReport(data)
     if (result.error) {
       showToast(`저장 실패: ${result.error}`, 'error')
     } else if (result.success) {
       showToast('보고서가 성공적으로 저장되었습니다.', 'success')
-      refetch()
+
+      // refetch 후 스크롤 위치 복원
+      await refetch()
+
+      // 다음 렌더링 사이클에서 스크롤 위치 복원
+      setTimeout(() => {
+        window.scrollTo(0, scrollPosition)
+      }, 0)
     }
   }
 
@@ -130,6 +140,16 @@ export default function Home() {
       showToast(`삭제 실패: ${result.error}`, 'error')
     } else {
       showToast('선물이 삭제되었습니다.', 'success')
+      refetch()
+    }
+  }
+
+  const handleRecalculateStats = async (date: string) => {
+    const result = await dataService.recalculateDailyReportStats(date)
+    if (result.error) {
+      showToast(`재계산 실패: ${result.error}`, 'error')
+    } else {
+      showToast(result.message || '통계가 재계산되었습니다.', 'success')
       refetch()
     }
   }
@@ -299,6 +319,7 @@ export default function Home() {
               giftLogs={giftLogs}
               inventoryLogs={inventoryLogs}
               onDeleteReport={handleDeleteReport}
+              onRecalculateStats={handleRecalculateStats}
             />
           )}
 
