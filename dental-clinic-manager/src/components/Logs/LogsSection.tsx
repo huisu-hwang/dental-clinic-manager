@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog } from '@/types'
 
 interface LogsSectionProps {
@@ -6,15 +9,37 @@ interface LogsSectionProps {
   giftLogs: GiftLog[]
   inventoryLogs: InventoryLog[]
   onDeleteReport: (date: string) => void
+  onRecalculateStats?: (date: string) => void
 }
 
-export default function LogsSection({ 
-  dailyReports, 
-  consultLogs, 
-  giftLogs, 
+export default function LogsSection({
+  dailyReports,
+  consultLogs,
+  giftLogs,
   inventoryLogs,
-  onDeleteReport 
+  onDeleteReport,
+  onRecalculateStats
 }: LogsSectionProps) {
+  const [consultFilter, setConsultFilter] = useState<'all' | 'completed' | 'incomplete'>('all')
+  const [giftSort, setGiftSort] = useState<'default' | 'type' | 'date'>('default')
+
+  const filteredConsultLogs = consultLogs.filter(log => {
+    if (consultFilter === 'all') return true
+    if (consultFilter === 'completed') return log.consult_status === 'O'
+    if (consultFilter === 'incomplete') return log.consult_status === 'X'
+    return true
+  })
+
+  const sortedGiftLogs = [...giftLogs].sort((a, b) => {
+    if (giftSort === 'type') {
+      return a.gift_type.localeCompare(b.gift_type)
+    }
+    if (giftSort === 'date') {
+      return b.date.localeCompare(a.date)
+    }
+    return 0
+  })
+
   return (
     <div className="space-y-6">
       {/* 일일 보고 종합 기록 */}
@@ -32,7 +57,7 @@ export default function LogsSection({
                 <th className="p-3">상담 보류</th>
                 <th className="p-3">리콜 수</th>
                 <th className="p-3">예약 수</th>
-                <th className="p-3">삭제</th>
+                <th className="p-3">사용</th>
               </tr>
             </thead>
             <tbody>
@@ -45,16 +70,28 @@ export default function LogsSection({
                   <td className="p-3">{report.recall_count}</td>
                   <td className="p-3">{report.recall_booking_count}</td>
                   <td className="p-3">
-                    <button
-                      onClick={() => {
-                        if (confirm(`${report.date}의 모든 기록을 삭제하시겠습니까? 재고는 복구되지 않습니다.`)) {
-                          onDeleteReport(report.date)
-                        }
-                      }}
-                      className="text-red-500 hover:text-red-700 text-xs"
-                    >
-                      삭제
-                    </button>
+                    <div className="flex gap-1">
+                      {onRecalculateStats && (
+                        <button
+                          onClick={() => onRecalculateStats(report.date)}
+                          className="text-blue-500 hover:text-blue-700 text-xs px-2 py-1 border border-blue-200 rounded hover:bg-blue-50"
+                          title="상담 통계 재계산"
+                        >
+                          재계산
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (confirm(`${report.date}의 모든 기록을 삭제하시겠습니까? 재고는 복구되지 않습니다.`)) {
+                            onDeleteReport(report.date)
+                          }
+                        }}
+                        className="text-red-500 hover:text-red-700 text-xs px-2 py-1 border border-red-200 rounded hover:bg-red-50"
+                        title="전체 기록 삭제"
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -67,6 +104,38 @@ export default function LogsSection({
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">상담 상세 기록</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setConsultFilter('all')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                consultFilter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              전체 ({consultLogs.length})
+            </button>
+            <button
+              onClick={() => setConsultFilter('completed')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                consultFilter === 'completed'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              진행완료 ({consultLogs.filter(log => log.consult_status === 'O').length})
+            </button>
+            <button
+              onClick={() => setConsultFilter('incomplete')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                consultFilter === 'incomplete'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              진행보류 ({consultLogs.filter(log => log.consult_status === 'X').length})
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
           <table className="w-full text-sm text-left">
@@ -80,12 +149,20 @@ export default function LogsSection({
               </tr>
             </thead>
             <tbody>
-              {consultLogs.map(log => (
+              {filteredConsultLogs.map(log => (
                 <tr key={log.id} className="border-b hover:bg-slate-50">
                   <td className="p-3">{log.date}</td>
                   <td className="p-3">{log.patient_name}</td>
                   <td className="p-3">{log.consult_content}</td>
-                  <td className="p-3">{log.consult_status}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      log.consult_status === 'O'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-orange-100 text-orange-800'
+                    }`}>
+                      {log.consult_status === 'O' ? '진행완료' : '진행보류'}
+                    </span>
+                  </td>
                   <td className="p-3">{log.remarks}</td>
                 </tr>
               ))}
@@ -98,6 +175,38 @@ export default function LogsSection({
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">선물 증정 및 리뷰 상세 기록</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setGiftSort('default')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                giftSort === 'default'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              기본순
+            </button>
+            <button
+              onClick={() => setGiftSort('type')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                giftSort === 'type'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              선물종류순
+            </button>
+            <button
+              onClick={() => setGiftSort('date')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                giftSort === 'date'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              최신순
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
           <table className="w-full text-sm text-left">
@@ -111,7 +220,7 @@ export default function LogsSection({
               </tr>
             </thead>
             <tbody>
-              {giftLogs.map(log => (
+              {sortedGiftLogs.map(log => (
                 <tr key={log.id} className="border-b hover:bg-slate-50">
                   <td className="p-3">{log.date}</td>
                   <td className="p-3">{log.patient_name}</td>
