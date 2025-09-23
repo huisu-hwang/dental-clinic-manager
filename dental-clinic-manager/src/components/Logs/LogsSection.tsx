@@ -215,6 +215,7 @@ export default function LogsSection({
                 <th className="p-3">날짜</th>
                 <th className="p-3">환자명</th>
                 <th className="p-3">선물 종류</th>
+                <th className="p-3">수량</th>
                 <th className="p-3">네이버 리뷰 여부</th>
                 <th className="p-3">비고</th>
               </tr>
@@ -225,6 +226,7 @@ export default function LogsSection({
                   <td className="p-3">{log.date}</td>
                   <td className="p-3">{log.patient_name}</td>
                   <td className="p-3">{log.gift_type}</td>
+                  <td className="p-3 text-center">1개</td>
                   <td className="p-3">{log.naver_review}</td>
                   <td className="p-3">{log.notes}</td>
                 </tr>

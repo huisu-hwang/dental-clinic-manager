@@ -78,6 +78,7 @@ export interface ConsultRowData {
 export interface GiftRowData {
   patient_name: string;
   gift_type: string;
+  quantity: number;
   naver_review: 'O' | 'X';
   notes: string;
 }

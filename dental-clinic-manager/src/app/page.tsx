@@ -154,6 +154,16 @@ export default function Home() {
     }
   }
 
+  const handleRollbackInventoryData = async () => {
+    const result = await dataService.rollbackInventoryData()
+    if (result.error) {
+      showToast(`되돌리기 실패: ${result.error}`, 'error')
+    } else {
+      showToast(result.message || '재고 데이터가 이전 상태로 되돌려졌습니다.', 'success')
+      refetch()
+    }
+  }
+
   // 통계 계산
   const getStats = (periodType: 'weekly' | 'monthly' | 'annual', value: string) => {
     const periodData = getDatesForPeriod(periodType, value)
@@ -330,6 +340,7 @@ export default function Home() {
               onAddGiftItem={handleAddGiftItem}
               onUpdateStock={handleUpdateStock}
               onDeleteGiftItem={handleDeleteGiftItem}
+              onRollbackInventoryData={handleRollbackInventoryData}
             />
           )}
 
