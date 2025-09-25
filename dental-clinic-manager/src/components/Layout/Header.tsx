@@ -1,12 +1,23 @@
 'use client'
 
-import { Shield } from 'lucide-react'
+import { Shield, LogOut, User } from 'lucide-react'
+
+interface User {
+  userId: string
+  clinicName: string
+  clinicOwnerName: string
+  clinicAddress?: string
+  clinicPhone?: string
+  clinicEmail?: string
+}
 
 interface HeaderProps {
   dbStatus: 'connected' | 'connecting' | 'error'
+  user?: User | null
+  onLogout?: () => void
 }
 
-export default function Header({ dbStatus }: HeaderProps) {
+export default function Header({ dbStatus, user, onLogout }: HeaderProps) {
   const getStatusColor = () => {
     switch (dbStatus) {
       case 'connected': return 'bg-green-500'
@@ -30,7 +41,12 @@ export default function Header({ dbStatus }: HeaderProps) {
       <div>
         <div className="flex items-center space-x-4">
           <Shield className="w-10 h-10 text-blue-500" />
-          <h1 className="text-3xl font-bold text-slate-900">하얀치과 실시간 업무 대시보드</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">덴탈매니저</h1>
+            {user && (
+              <p className="text-sm text-slate-600 mt-1">{user.clinicName} - {user.clinicOwnerName}</p>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center space-x-4">
@@ -38,6 +54,22 @@ export default function Header({ dbStatus }: HeaderProps) {
           <div className={`w-3 h-3 rounded-full ${getStatusColor()}`}></div>
           <span className="text-slate-600">{getStatusText()}</span>
         </div>
+        {user && onLogout && (
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 px-3 py-1 bg-slate-100 rounded-lg">
+              <User className="w-4 h-4 text-slate-600" />
+              <span className="text-sm text-slate-700">{user.userId}</span>
+            </div>
+            <button
+              onClick={onLogout}
+              className="flex items-center space-x-1 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+              title="로그아웃"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>로그아웃</span>
+            </button>
+          </div>
+        )}
       </div>
     </header>
   )

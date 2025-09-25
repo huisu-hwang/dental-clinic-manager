@@ -9,8 +9,8 @@ const notoSansKR = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "하얀치과 실시간 업무 대시보드",
-  description: "하얀치과 데스크 업무를 위한 실시간 대시보드",
+  title: "덴탈매니저 - 치과 업무 관리 시스템",
+  description: "치과 데스크 업무를 효율적이고 체계적으로 관리하는 스마트 솔루션",
 };
 
 export default function RootLayout({
