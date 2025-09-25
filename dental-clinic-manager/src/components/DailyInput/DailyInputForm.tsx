@@ -27,7 +27,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
     { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
   ])
   const [giftRows, setGiftRows] = useState<GiftRowData[]>([
-    { patient_name: '', gift_type: '없음', naver_review: 'X', notes: '' }
+    { patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }
   ])
   const [happyCallRows, setHappyCallRows] = useState<HappyCallRowData[]>([
     { patient_name: '', treatment: '', notes: '' }
