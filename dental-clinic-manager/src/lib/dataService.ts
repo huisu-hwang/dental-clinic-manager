@@ -1,5 +1,5 @@
 import { getSupabase } from './supabase'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog } from '@/types'
 
 export const dataService = {
   // 날짜별 보고서 데이터 불러오기
@@ -302,7 +302,7 @@ export const dataService = {
       const { data: giftLogsToDelete } = await supabase
         .from('gift_logs')
         .select('*')
-        .eq('date', date)
+        .eq('date', date) as { data: GiftLog[] | null }
 
       if (giftLogsToDelete && giftLogsToDelete.length > 0) {
         for (const giftLog of giftLogsToDelete) {
@@ -319,10 +319,16 @@ export const dataService = {
               const restoredStock = item.stock + quantity
 
               // 재고 복원
-              await supabase
+              const updateResult = await (supabase as any)
                 .from('gift_inventory')
                 .update({ stock: restoredStock })
                 .eq('id', item.id)
+
+              const updateError = updateResult?.error
+
+              if (updateError) {
+                console.error('[DataService] Failed to restore inventory:', updateError)
+              }
 
               // 재고 복원 로그 추가
               await supabase
@@ -506,17 +512,19 @@ export const dataService = {
       const { data: currentInventory, error: invError } = await supabase
         .from('gift_inventory')
         .select('*')
-        .order('name')
+        .order('name') as { data: GiftInventory[] | null, error: any }
 
       if (invError) throw invError
+      if (!currentInventory) throw new Error('Failed to load inventory')
 
       // 2. 모든 선물 로그 조회
       const { data: allGiftLogs, error: logError } = await supabase
         .from('gift_logs')
         .select('*')
-        .order('date', { ascending: true })
+        .order('date', { ascending: true }) as { data: GiftLog[] | null, error: any }
 
       if (logError) throw logError
+      if (!allGiftLogs) throw new Error('Failed to load gift logs')
 
       // 3. 선물별 총 사용량 계산
       const giftUsage: Record<string, number> = {}
@@ -534,9 +542,10 @@ export const dataService = {
         .from('inventory_logs')
         .select('*')
         .gt('change', 0) // 입고 기록만 (양수)
-        .order('timestamp', { ascending: true })
+        .order('timestamp', { ascending: true }) as { data: InventoryLog[] | null, error: any }
 
       if (logErr) throw logErr
+      if (!inventoryLogs) throw new Error('Failed to load inventory logs')
 
       // 5. 선물별 총 입고량 계산
       const giftRestocked: Record<string, number> = {}
@@ -564,7 +573,7 @@ export const dataService = {
           })
 
           // 재고 수정
-          const { error: updateError } = await supabase
+          const { error: updateError } = await (supabase as any)
             .from('gift_inventory')
             .update({ stock: correctStock })
             .eq('id', item.id)
@@ -611,7 +620,7 @@ export const dataService = {
         .from('inventory_logs')
         .select('*')
         .eq('reason', '재고 데이터 오류 수정')
-        .order('timestamp', { ascending: false })
+        .order('timestamp', { ascending: false }) as { data: InventoryLog[] | null, error: any }
 
       if (logError) throw logError
 
@@ -629,7 +638,7 @@ export const dataService = {
       const rollbacks = []
       for (const log of latestFixLogs) {
         // 이전 재고로 되돌리기
-        const { error: updateError } = await supabase
+        const { error: updateError } = await (supabase as any)
           .from('gift_inventory')
           .update({ stock: log.old_stock })
           .eq('name', log.name)
