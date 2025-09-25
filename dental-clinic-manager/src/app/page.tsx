@@ -34,15 +34,16 @@ export default function Home() {
 
   console.log('Current selectors:', { weekSelector, monthSelector, yearSelector })
 
-  const { 
-    dailyReports, 
-    consultLogs, 
-    giftLogs, 
-    giftInventory, 
-    inventoryLogs, 
-    loading, 
+  const {
+    dailyReports,
+    consultLogs,
+    giftLogs,
+    giftInventory,
+    inventoryLogs,
+    loading,
     error,
-    refetch 
+    refetch,
+    refetchInventory
   } = useSupabaseData()
 
   useEffect(() => {
@@ -129,8 +130,10 @@ export default function Home() {
     if (result.error) {
       showToast(`재고 업데이트 실패: ${result.error}`, 'error')
     } else {
-      showToast(`${item.name} 재고가 ${quantity}개 추가되었습니다.`, 'success')
-      refetch()
+      const action = quantity > 0 ? '추가' : '차감'
+      showToast(`${item.name} 재고가 ${Math.abs(quantity)}개 ${action}되었습니다.`, 'success')
+      // 재고 데이터만 업데이트
+      refetchInventory()
     }
   }
 
@@ -154,15 +157,6 @@ export default function Home() {
     }
   }
 
-  const handleRollbackInventoryData = async () => {
-    const result = await dataService.rollbackInventoryData()
-    if (result.error) {
-      showToast(`되돌리기 실패: ${result.error}`, 'error')
-    } else {
-      showToast(result.message || '재고 데이터가 이전 상태로 되돌려졌습니다.', 'success')
-      refetch()
-    }
-  }
 
   // 통계 계산
   const getStats = (periodType: 'weekly' | 'monthly' | 'annual', value: string) => {
@@ -340,7 +334,6 @@ export default function Home() {
               onAddGiftItem={handleAddGiftItem}
               onUpdateStock={handleUpdateStock}
               onDeleteGiftItem={handleDeleteGiftItem}
-              onRollbackInventoryData={handleRollbackInventoryData}
             />
           )}
 

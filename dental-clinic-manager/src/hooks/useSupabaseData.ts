@@ -13,6 +13,37 @@ export const useSupabaseData = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // 재고 데이터만 업데이트하는 함수
+  const fetchInventoryOnly = async () => {
+    try {
+      const supabase = getSupabase()
+      if (!supabase) {
+        setError('Supabase client not available')
+        return
+      }
+
+      const [
+        { data: inventoryData, error: inventoryError },
+        { data: invLogData, error: invLogError }
+      ] = await Promise.all([
+        supabase.from('gift_inventory').select<'*', GiftInventory>('*'),
+        supabase.from('inventory_logs').select<'*', InventoryLog>('*')
+      ])
+
+      if (inventoryError) throw inventoryError
+      if (invLogError) throw invLogError
+
+      const sortedInventoryData = (inventoryData || []).sort((a, b) => a.name.localeCompare(b.name))
+      const sortedInventoryLogs = (invLogData || []).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+      setGiftInventory(sortedInventoryData)
+      setInventoryLogs(sortedInventoryLogs)
+    } catch (err: unknown) {
+      console.error('Error fetching inventory data:', err)
+      setError(err instanceof Error ? err.message : 'Unknown error occurred')
+    }
+  }
+
   const fetchAllData = async () => {
     try {
       setLoading(true)
@@ -93,6 +124,7 @@ export const useSupabaseData = () => {
     inventoryLogs,
     loading,
     error,
-    refetch: fetchAllData
+    refetch: fetchAllData,
+    refetchInventory: fetchInventoryOnly
   }
 }
