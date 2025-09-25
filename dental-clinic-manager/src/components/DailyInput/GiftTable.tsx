@@ -14,6 +14,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }:
     const newRow: GiftRowData = {
       patient_name: '',
       gift_type: '없음',
+      quantity: 1,
       naver_review: 'X',
       notes: ''
     }
@@ -25,7 +26,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }:
     onGiftRowsChange(newRows)
   }
 
-  const updateRow = (index: number, field: keyof GiftRowData, value: string) => {
+  const updateRow = (index: number, field: keyof GiftRowData, value: string | number) => {
     const newRows = [...giftRows]
     newRows[index] = { ...newRows[index], [field]: value }
     onGiftRowsChange(newRows)
@@ -40,6 +41,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }:
             <tr>
               <th className="p-3">환자명</th>
               <th className="p-3">선물 종류</th>
+              <th className="p-3">수량</th>
               <th className="p-3">네이버 리뷰 여부</th>
               <th className="p-3">비고</th>
               <th className="p-3"></th>
@@ -68,6 +70,17 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }:
                       <option key={item.id} value={item.name}>
                         {item.name} ({item.stock}개 남음)
                       </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="p-2">
+                  <select
+                    className="w-full p-2 border rounded-md"
+                    value={row.quantity}
+                    onChange={(e) => updateRow(index, 'quantity', parseInt(e.target.value))}
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                      <option key={num} value={num}>{num}개</option>
                     ))}
                   </select>
                 </td>

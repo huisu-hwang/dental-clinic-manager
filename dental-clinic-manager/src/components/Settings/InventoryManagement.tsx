@@ -8,13 +8,15 @@ interface InventoryManagementProps {
   onAddGiftItem: (name: string, stock: number) => void
   onUpdateStock: (id: number, quantity: number) => void
   onDeleteGiftItem: (id: number, name: string) => void
+  onRollbackInventoryData?: () => void
 }
 
 export default function InventoryManagement({
   giftInventory,
   onAddGiftItem,
   onUpdateStock,
-  onDeleteGiftItem
+  onDeleteGiftItem,
+  onRollbackInventoryData
 }: InventoryManagementProps) {
   const [newGiftName, setNewGiftName] = useState('')
   const [newGiftStock, setNewGiftStock] = useState(0)
@@ -115,6 +117,33 @@ export default function InventoryManagement({
               </button>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* 재고 관리 도구 */}
+      <div>
+        <h3 className="text-xl font-semibold mb-3">재고 관리 도구</h3>
+
+        {/* 재고 데이터 되돌리기 */}
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <h4 className="text-lg font-semibold text-blue-800 mb-2">↩️ 재고 되돌리기</h4>
+          <p className="text-sm text-blue-700 mb-3">
+            가장 최근에 수행된 재고 수정 작업을 되돌립니다. 수정 전 상태로 재고가 복원됩니다.
+          </p>
+          <button
+            onClick={() => {
+              if (onRollbackInventoryData) {
+                if (confirm('↩️ 재고 데이터를 이전 상태로 되돌리시겠습니까?\n\n이 작업은:\n- 가장 최근 재고 수정을 취소합니다\n- 이전 재고 상태로 복원됩니다\n\n계속하시겠습니까?')) {
+                  onRollbackInventoryData()
+                }
+              } else {
+                alert('재고 되돌리기 기능을 사용할 수 없습니다.')
+              }
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md font-medium shadow-md"
+          >
+            ↩️ 재고 데이터 되돌리기
+          </button>
         </div>
       </div>
     </div>

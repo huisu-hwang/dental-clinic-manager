@@ -82,11 +82,12 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
           setGiftRows(giftLogs.map(log => ({
             patient_name: log.patient_name || '',
             gift_type: log.gift_type || '없음',
+            quantity: 1, // 기존 데이터는 기본값 1로 설정
             naver_review: (log.naver_review as 'O' | 'X') || 'X',
             notes: log.notes || '' // notes 필드 데이터베이스에서 로드
           })))
         } else {
-          setGiftRows([{ patient_name: '', gift_type: '없음', naver_review: 'X', notes: '' }])
+          setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
         }
         
         // 해피콜 로그 데이터 로드 (최소 1개 빈 행 보장)
@@ -120,7 +121,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
   // 폼 데이터 리셋
   const resetFormData = () => {
     setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
-    setGiftRows([{ patient_name: '', gift_type: '없음', naver_review: 'X', notes: '' }])
+    setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
     setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
     setRecallCount(0)
     setRecallBookingCount(0)

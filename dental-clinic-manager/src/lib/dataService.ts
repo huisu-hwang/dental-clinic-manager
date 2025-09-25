@@ -165,19 +165,20 @@ export const dataService = {
           }
 
           const item = items?.[0] as GiftInventory | undefined
-          if (item && item.stock > 0) {
-            const newStock = item.stock - 1
+          const quantity = gift.quantity || 1 // 수량이 없으면 기본값 1
+          if (item && item.stock >= quantity) {
+            const newStock = item.stock - quantity
             inventoryUpdates.push({ id: item.id, stock: newStock })
             inventoryLogs.push({
               timestamp: new Date().toISOString(),
               name: item.name,
-              reason: `환자 증정: ${gift.patient_name}`,
-              change: -1,
+              reason: `환자 증정: ${gift.patient_name} (${quantity}개)`,
+              change: -quantity,
               old_stock: item.stock,
               new_stock: newStock
             })
-          } else if (item && item.stock <= 0) {
-            console.warn(`재고 부족 (${gift.gift_type}): 현재 재고 ${item.stock}개. 재고 차감 없이 기록됩니다.`)
+          } else if (item && item.stock < quantity) {
+            console.warn(`재고 부족 (${gift.gift_type}): 현재 재고 ${item.stock}개, 필요 ${quantity}개. 재고 차감 없이 기록됩니다.`)
           }
         }
       }
@@ -296,6 +297,50 @@ export const dataService = {
       const reportToDelete = reportsToDelete?.[0] as { id: number } | undefined
       if (!reportToDelete) return { success: true }
 
+      // --- 삭제 전 재고 복원 ---
+      // 해당 날짜의 선물 데이터를 먼저 조회하여 재고 복원
+      const { data: giftLogsToDelete } = await supabase
+        .from('gift_logs')
+        .select('*')
+        .eq('date', date)
+
+      if (giftLogsToDelete && giftLogsToDelete.length > 0) {
+        for (const giftLog of giftLogsToDelete) {
+          if (giftLog.gift_type !== '없음') {
+            const { data: items } = await supabase
+              .from('gift_inventory')
+              .select('*')
+              .eq('name', giftLog.gift_type)
+              .limit(1)
+
+            const item = items?.[0] as GiftInventory | undefined
+            if (item) {
+              const quantity = 1 // 기존 데이터는 수량이 1개로 가정
+              const restoredStock = item.stock + quantity
+
+              // 재고 복원
+              await supabase
+                .from('gift_inventory')
+                .update({ stock: restoredStock })
+                .eq('id', item.id)
+
+              // 재고 복원 로그 추가
+              await supabase
+                .from('inventory_logs')
+                .insert([{
+                  timestamp: new Date().toISOString(),
+                  name: item.name,
+                  reason: `데이터 삭제로 인한 재고 복원: ${giftLog.patient_name}`,
+                  change: quantity,
+                  old_stock: item.stock,
+                  new_stock: restoredStock
+                }] as any)
+            }
+          }
+        }
+      }
+
+      // 기존 데이터 삭제
       await Promise.all([
         supabase.from('consult_logs').delete().eq('date', date),
         supabase.from('gift_logs').delete().eq('date', date),
@@ -445,6 +490,181 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting gift item:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 재고 데이터 수정 (잘못된 재고 수치 복구)
+  async fixInventoryData() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      console.log('[FixInventory] 재고 데이터 수정 시작...')
+
+      // 1. 현재 재고 현황 조회
+      const { data: currentInventory, error: invError } = await supabase
+        .from('gift_inventory')
+        .select('*')
+        .order('name')
+
+      if (invError) throw invError
+
+      // 2. 모든 선물 로그 조회
+      const { data: allGiftLogs, error: logError } = await supabase
+        .from('gift_logs')
+        .select('*')
+        .order('date', { ascending: true })
+
+      if (logError) throw logError
+
+      // 3. 선물별 총 사용량 계산
+      const giftUsage: Record<string, number> = {}
+      allGiftLogs.forEach(log => {
+        if (log.gift_type !== '없음') {
+          if (!giftUsage[log.gift_type]) {
+            giftUsage[log.gift_type] = 0
+          }
+          giftUsage[log.gift_type] += 1 // 기존 데이터는 수량이 1개로 가정
+        }
+      })
+
+      // 4. 재고 입고 로그 조회
+      const { data: inventoryLogs, error: logErr } = await supabase
+        .from('inventory_logs')
+        .select('*')
+        .gt('change', 0) // 입고 기록만 (양수)
+        .order('timestamp', { ascending: true })
+
+      if (logErr) throw logErr
+
+      // 5. 선물별 총 입고량 계산
+      const giftRestocked: Record<string, number> = {}
+      inventoryLogs.forEach(log => {
+        if (!giftRestocked[log.name]) {
+          giftRestocked[log.name] = 0
+        }
+        giftRestocked[log.name] += log.change
+      })
+
+      // 6. 올바른 재고 계산 및 수정
+      const corrections = []
+      for (const item of currentInventory) {
+        const totalRestocked = giftRestocked[item.name] || 0
+        const totalUsed = giftUsage[item.name] || 0
+        const correctStock = totalRestocked - totalUsed
+
+        if (item.stock !== correctStock) {
+          corrections.push({
+            id: item.id,
+            name: item.name,
+            currentStock: item.stock,
+            correctStock,
+            difference: correctStock - item.stock
+          })
+
+          // 재고 수정
+          const { error: updateError } = await supabase
+            .from('gift_inventory')
+            .update({ stock: correctStock })
+            .eq('id', item.id)
+
+          if (updateError) throw updateError
+
+          // 수정 로그 추가
+          await supabase
+            .from('inventory_logs')
+            .insert([{
+              timestamp: new Date().toISOString(),
+              name: item.name,
+              reason: '재고 데이터 오류 수정',
+              change: correctStock - item.stock,
+              old_stock: item.stock,
+              new_stock: correctStock
+            }] as any)
+        }
+      }
+
+      console.log('[FixInventory] 수정 완료:', corrections)
+
+      return {
+        success: true,
+        message: `${corrections.length}개 항목의 재고가 수정되었습니다.`,
+        corrections
+      }
+    } catch (error: unknown) {
+      console.error('Error fixing inventory data:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 재고 데이터 되돌리기 (마지막 수정 작업 취소)
+  async rollbackInventoryData() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      console.log('[RollbackInventory] 재고 데이터 되돌리기 시작...')
+
+      // 1. 가장 최근의 "재고 데이터 오류 수정" 로그들을 찾기
+      const { data: fixLogs, error: logError } = await supabase
+        .from('inventory_logs')
+        .select('*')
+        .eq('reason', '재고 데이터 오류 수정')
+        .order('timestamp', { ascending: false })
+
+      if (logError) throw logError
+
+      if (!fixLogs || fixLogs.length === 0) {
+        return { error: '되돌릴 재고 수정 기록이 없습니다.' }
+      }
+
+      // 2. 가장 최근 수정 시간 찾기
+      const latestTimestamp = fixLogs[0].timestamp
+      const latestFixLogs = fixLogs.filter(log => log.timestamp === latestTimestamp)
+
+      console.log(`[RollbackInventory] ${latestFixLogs.length}개의 수정 기록을 되돌립니다.`)
+
+      // 3. 각 항목의 재고를 이전 상태로 되돌리기
+      const rollbacks = []
+      for (const log of latestFixLogs) {
+        // 이전 재고로 되돌리기
+        const { error: updateError } = await supabase
+          .from('gift_inventory')
+          .update({ stock: log.old_stock })
+          .eq('name', log.name)
+
+        if (updateError) throw updateError
+
+        rollbacks.push({
+          name: log.name,
+          currentStock: log.new_stock,
+          rolledBackStock: log.old_stock,
+          difference: log.old_stock - log.new_stock
+        })
+
+        // 되돌리기 로그 추가
+        await supabase
+          .from('inventory_logs')
+          .insert([{
+            timestamp: new Date().toISOString(),
+            name: log.name,
+            reason: '재고 데이터 수정 되돌리기',
+            change: log.old_stock - log.new_stock,
+            old_stock: log.new_stock,
+            new_stock: log.old_stock
+          }] as any)
+      }
+
+      console.log('[RollbackInventory] 되돌리기 완료:', rollbacks)
+
+      return {
+        success: true,
+        message: `${rollbacks.length}개 항목의 재고가 이전 상태로 되돌려졌습니다.`,
+        rollbacks
+      }
+    } catch (error: unknown) {
+      console.error('Error rolling back inventory data:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   }
