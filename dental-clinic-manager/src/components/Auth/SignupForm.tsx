@@ -1,117 +1,198 @@
 'use client'
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import { dataService } from '@/lib/dataService'
+import { getSupabase } from '@/lib/supabase'
 
 interface SignupFormProps {
   onBackToLanding: () => void
   onShowLogin: () => void
-  onSignupSuccess: () => void
+  onSignupSuccess: (clinicInfo: any) => void
+  onSearchClinics?: (query: string) => void
 }
 
-export default function SignupForm({ onBackToLanding, onShowLogin, onSignupSuccess }: SignupFormProps) {
+export default function SignupForm({
+  onBackToLanding,
+  onShowLogin,
+  onSignupSuccess,
+  onSearchClinics,
+}: SignupFormProps) {
   const [formData, setFormData] = useState({
     userId: '',
+    name: '', // 사용자 이름 필드 추가
     password: '',
     confirmPassword: '',
+    role: 'owner', // 직책 기본값을 '대표원장'으로 변경
     clinicOwnerName: '',
     clinicName: '',
     clinicAddress: '',
     clinicPhone: '',
     clinicEmail: ''
-  })
+  });
+  const [publicClinics, setPublicClinics] = useState<any[]>([]);
+  const [selectedClinicId, setSelectedClinicId] = useState('');
+  const [isSearchingClinics, setIsSearchingClinics] = useState(false);
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [success, setSuccess] = useState('');
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 역할이 변경될 때마다 병원 목록을 가져오거나 초기화합니다.
+  useEffect(() => {
+    if (formData.role !== 'owner') {
+      const fetchClinics = async () => {
+        setIsSearchingClinics(true);
+        try {
+          const { data, error } = await dataService.searchPublicClinics();
+          if (error) {
+            setError('공개된 병원 목록을 불러오는 데 실패했습니다.');
+            setPublicClinics([]);
+          } else {
+            setPublicClinics(data || []);
+          }
+        } finally {
+          setIsSearchingClinics(false);
+        }
+      };
+      fetchClinics();
+    } else {
+      setPublicClinics([]);
+      setSelectedClinicId('');
+    }
+  }, [formData.role]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { // HTMLSelectElement 추가
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const validateForm = () => {
-    if (!formData.userId.trim()) {
-      setError('아이디를 입력해주세요.')
-      return false
+    const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    if (!emailRegex.test(formData.userId)) {
+      setError('올바른 이메일 주소(아이디)를 입력해주세요.');
+      return false;
     }
-    if (formData.userId.length < 4) {
-      setError('아이디는 4글자 이상이어야 합니다.')
-      return false
-    }
-    if (!formData.password) {
-      setError('비밀번호를 입력해주세요.')
-      return false
+    if (!formData.name.trim()) {
+      setError('이름을 입력해주세요.');
+      return false;
     }
     if (formData.password.length < 6) {
-      setError('비밀번호는 6글자 이상이어야 합니다.')
-      return false
+      setError('비밀번호는 6글자 이상이어야 합니다.');
+      return false;
     }
     if (formData.password !== formData.confirmPassword) {
-      setError('비밀번호가 일치하지 않습니다.')
-      return false
+      setError('비밀번호가 일치하지 않습니다.');
+      return false;
     }
-    if (!formData.clinicOwnerName.trim()) {
-      setError('원장 이름을 입력해주세요.')
-      return false
+    if (!formData.role) {
+      setError('직책을 선택해주세요.');
+      return false;
     }
-    if (!formData.clinicName.trim()) {
-      setError('치과명을 입력해주세요.')
-      return false
+
+    if (formData.role === 'owner') {
+      if (!formData.clinicOwnerName.trim() || !formData.clinicName.trim() || !formData.clinicAddress.trim() || !formData.clinicPhone.trim() || !formData.clinicEmail.trim()) {
+        setError('대표원장으로 가입 시, 모든 치과 정보를 입력해야 합니다.');
+        return false;
+      }
+      if (!emailRegex.test(formData.clinicEmail)) {
+        setError('치과 정보에 올바른 이메일 주소를 입력해주세요.');
+        return false;
+      }
+    } else {
+      if (!selectedClinicId) {
+        setError('소속될 병원을 선택해주세요.');
+        return false;
+      }
     }
-    if (!formData.clinicAddress.trim()) {
-      setError('치과 주소를 입력해주세요.')
-      return false
-    }
-    if (!formData.clinicPhone.trim()) {
-      setError('치과 전화번호를 입력해주세요.')
-      return false
-    }
-    if (!formData.clinicEmail.trim()) {
-      setError('이메일 주소를 입력해주세요.')
-      return false
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.clinicEmail)) {
-      setError('올바른 이메일 형식을 입력해주세요.')
-      return false
-    }
-    return true
+
+    return true;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
+    e.preventDefault();
+    setError('');
+    setSuccess('');
 
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
-    setLoading(true)
+    setLoading(true);
+
+    const supabase = getSupabase();
+    if (!supabase) {
+      setError('데이터베이스 연결에 실패했습니다.');
+      setLoading(false);
+      return;
+    }
 
     try {
-      // TODO: API 연동으로 실제 회원가입 처리
-      // 현재는 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // 1. 인증 사용자 생성
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.userId,
+        password: formData.password,
+      });
 
-      // 임시로 localStorage에 사용자 정보 저장
-      localStorage.setItem('dental_user', JSON.stringify({
-        userId: formData.userId,
-        clinicName: formData.clinicName,
-        clinicOwnerName: formData.clinicOwnerName
-      }))
+      if (authError) throw new Error(authError.message);
+      if (!authData.user) throw new Error('사용자 정보를 가져오지 못했습니다.');
 
-      setSuccess('회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.')
+      const newUserId = authData.user.id;
+
+      if (formData.role === 'owner') {
+        // 시나리오 A: 대표원장으로 신규 병원 생성
+        const { data: clinicData, error: clinicError } = await (supabase.from('clinics') as any)
+          .insert({
+            name: formData.clinicName,
+            owner_name: formData.clinicOwnerName,
+            address: formData.clinicAddress,
+            phone: formData.clinicPhone,
+            email: formData.clinicEmail,
+          })
+          .select()
+          .single();
+
+        if (clinicError) throw new Error('병원 정보 생성 실패: ' + clinicError.message);
+
+        const { error: userProfileError } = await (supabase.from('users') as any).insert({
+          id: newUserId,
+          clinic_id: clinicData.id,
+          email: formData.userId,
+          name: formData.name,
+          role: 'owner',
+          status: 'active',
+        });
+
+        if (userProfileError) throw new Error('프로필 생성 실패: ' + userProfileError.message);
+
+      } else {
+        // 시나리오 B: 기존 병원에 가입 신청
+        const { error: userProfileError } = await (supabase.from('users') as any).insert({
+          id: newUserId,
+          clinic_id: selectedClinicId,
+          email: formData.userId,
+          name: formData.name,
+          role: formData.role,
+          status: 'pending', // 승인 대기 상태
+        });
+
+        if (userProfileError) throw new Error('가입 신청 실패: ' + userProfileError.message);
+      }
+
+      setSuccess('회원가입 신청이 완료되었습니다. 이메일을 확인하여 인증을 완료해주세요.');
       setTimeout(() => {
-        onSignupSuccess()
-      }, 2000)
+        onSignupSuccess({
+          email: formData.userId,
+          name: formData.name,
+          role: formData.role
+        });
+      }, 4000);
 
-    } catch (error) {
-      setError('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+      setError(errorMessage);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -143,17 +224,18 @@ export default function SignupForm({ onBackToLanding, onShowLogin, onSignupSucce
 
               <div>
                 <label htmlFor="userId" className="block text-sm font-medium text-slate-700 mb-1">
-                  아이디 *
+                  이메일 주소 (아이디) *
                 </label>
                 <input
-                  type="text"
+                  type="email"
                   id="userId"
                   name="userId"
                   value={formData.userId}
                   onChange={handleInputChange}
                   className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="4글자 이상의 아이디"
+                  placeholder="email@example.com"
                   disabled={loading}
+                  autoComplete="off"
                 />
               </div>
 
@@ -170,6 +252,7 @@ export default function SignupForm({ onBackToLanding, onShowLogin, onSignupSucce
                   className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
                   placeholder="6글자 이상"
                   disabled={loading}
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -182,6 +265,23 @@ export default function SignupForm({ onBackToLanding, onShowLogin, onSignupSucce
                     <EyeIcon className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
+              </div>
+
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
+                  이름 *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="홍길동"
+                  required
+                  disabled={loading}
+                />
               </div>
 
               <div className="relative">
@@ -197,6 +297,7 @@ export default function SignupForm({ onBackToLanding, onShowLogin, onSignupSucce
                   className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
                   placeholder="비밀번호를 다시 입력하세요"
                   disabled={loading}
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -210,96 +311,145 @@ export default function SignupForm({ onBackToLanding, onShowLogin, onSignupSucce
                   )}
                 </button>
               </div>
-            </div>
-
-            {/* 치과 정보 */}
-            <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">치과 정보</h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="clinicOwnerName" className="block text-sm font-medium text-slate-700 mb-1">
-                    원장 이름 *
-                  </label>
-                  <input
-                    type="text"
-                    id="clinicOwnerName"
-                    name="clinicOwnerName"
-                    value={formData.clinicOwnerName}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="홍길동"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="clinicName" className="block text-sm font-medium text-slate-700 mb-1">
-                    치과명 *
-                  </label>
-                  <input
-                    type="text"
-                    id="clinicName"
-                    name="clinicName"
-                    value={formData.clinicName}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="○○치과"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
 
               <div>
-                <label htmlFor="clinicAddress" className="block text-sm font-medium text-slate-700 mb-1">
-                  치과 주소 *
+                <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1">
+                  직책 *
                 </label>
-                <input
-                  type="text"
-                  id="clinicAddress"
-                  name="clinicAddress"
-                  value={formData.clinicAddress}
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="서울시 강남구 테헤란로 123 4층"
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white"
                   disabled={loading}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="clinicPhone" className="block text-sm font-medium text-slate-700 mb-1">
-                    치과 전화번호 *
-                  </label>
-                  <input
-                    type="tel"
-                    id="clinicPhone"
-                    name="clinicPhone"
-                    value={formData.clinicPhone}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="02-1234-5678"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="clinicEmail" className="block text-sm font-medium text-slate-700 mb-1">
-                    이메일 주소 *
-                  </label>
-                  <input
-                    type="email"
-                    id="clinicEmail"
-                    name="clinicEmail"
-                    value={formData.clinicEmail}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="clinic@example.com"
-                    disabled={loading}
-                  />
-                </div>
+                >
+                  <option value="owner">대표원장</option>
+                  <option value="vice_director">부원장</option>
+                  <option value="manager">실장</option>
+                  <option value="team_leader">진료팀장</option>
+                  <option value="staff">진료팀원</option>
+                </select>
               </div>
             </div>
+
+            {/* 역할에 따른 분기 UI */}
+            {formData.role === 'owner' ? (
+              // 대표원장 선택 시: 신규 치과 정보 입력
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">치과 정보</h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="clinicOwnerName" className="block text-sm font-medium text-slate-700 mb-1">
+                      원장 이름 *
+                    </label>
+                    <input
+                      type="text"
+                      id="clinicOwnerName"
+                      name="clinicOwnerName"
+                      value={formData.clinicOwnerName}
+                      onChange={handleInputChange}
+                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="홍길동"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="clinicName" className="block text-sm font-medium text-slate-700 mb-1">
+                      치과명 *
+                    </label>
+                    <input
+                      type="text"
+                      id="clinicName"
+                      name="clinicName"
+                      value={formData.clinicName}
+                      onChange={handleInputChange}
+                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="○○치과"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="clinicAddress" className="block text-sm font-medium text-slate-700 mb-1">
+                    치과 주소 *
+                  </label>
+                  <input
+                    type="text"
+                    id="clinicAddress"
+                    name="clinicAddress"
+                    value={formData.clinicAddress}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="서울시 강남구 테헤란로 123 4층"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="clinicPhone" className="block text-sm font-medium text-slate-700 mb-1">
+                      치과 전화번호 *
+                    </label>
+                    <input
+                      type="tel"
+                      id="clinicPhone"
+                      name="clinicPhone"
+                      value={formData.clinicPhone}
+                      onChange={handleInputChange}
+                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="02-1234-5678"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="clinicEmail" className="block text-sm font-medium text-slate-700 mb-1">
+                      이메일 주소 *
+                    </label>
+                    <input
+                      type="email"
+                      id="clinicEmail"
+                      name="clinicEmail"
+                      value={formData.clinicEmail}
+                      onChange={handleInputChange}
+                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="clinic@example.com"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // 그 외 직책 선택 시: 기존 치과 검색
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">소속 병원 선택</h3>
+                <div>
+                  <label htmlFor="clinicId" className="block text-sm font-medium text-slate-700 mb-1">
+                    병원 선택 *
+                  </label>
+                  <select
+                    id="clinicId"
+                    name="clinicId"
+                    value={selectedClinicId}
+                    onChange={(e) => setSelectedClinicId(e.target.value)}
+                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    disabled={loading || isSearchingClinics}
+                    required={formData.role !== 'owner'}
+                  >
+                    <option value="" disabled>{isSearchingClinics ? '병원 목록을 불러오는 중...' : '병원을 선택하세요'}</option>
+                    {publicClinics.map((clinic) => (
+                      <option key={clinic.id} value={clinic.id}>
+                        {clinic.name} ({clinic.address})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">

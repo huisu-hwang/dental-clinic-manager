@@ -7,7 +7,9 @@ import LoginForm from '@/components/Auth/LoginForm'
 import SignupForm from '@/components/Auth/SignupForm'
 import DashboardPage from './dashboard/page'
 
-type AppState = 'landing' | 'login' | 'signup' | 'dashboard'
+import ForgotPasswordForm from '@/components/Auth/ForgotPasswordForm'
+
+type AppState = 'landing' | 'login' | 'signup' | 'forgotPassword' | 'dashboard'
 
 function AppContent() {
   const { isAuthenticated, loading } = useAuth()
@@ -37,7 +39,8 @@ function AppContent() {
         <LoginForm
           onBackToLanding={() => setAppState('landing')}
           onShowSignup={() => setAppState('signup')}
-          onLoginSuccess={() => setAppState('dashboard')}
+          onShowForgotPassword={() => setAppState('forgotPassword')}
+          onLoginSuccess={() => window.location.reload()}
         />
       )
     case 'signup':
@@ -45,7 +48,16 @@ function AppContent() {
         <SignupForm
           onBackToLanding={() => setAppState('landing')}
           onShowLogin={() => setAppState('login')}
-          onSignupSuccess={() => setAppState('login')}
+          onSignupSuccess={() => {
+            // 회원가입 성공 후 로그인 페이지로 이동 또는 자동 로그인
+            setAppState('login')
+          }}
+        />
+      )
+    case 'forgotPassword':
+      return (
+        <ForgotPasswordForm 
+          onBackToLogin={() => setAppState('login')} 
         />
       )
     default:

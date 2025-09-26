@@ -1,17 +1,22 @@
 'use client'
 
 import { useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { getSupabase } from '@/lib/supabase'
+import { dataService } from '@/lib/dataService'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 interface LoginFormProps {
   onBackToLanding: () => void
   onShowSignup: () => void
+  onShowForgotPassword: () => void // 비밀번호 찾기 폼을 보여주는 함수
   onLoginSuccess: () => void
 }
 
-export default function LoginForm({ onBackToLanding, onShowSignup, onLoginSuccess }: LoginFormProps) {
+export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotPassword, onLoginSuccess }: LoginFormProps) {
+  const { login } = useAuth()
   const [formData, setFormData] = useState({
-    userId: '',
+    email: '', // userId를 email로 변경
     password: ''
   })
   const [showPassword, setShowPassword] = useState(false)
@@ -28,49 +33,65 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onLoginSucces
     e.preventDefault()
     setError('')
 
-    if (!formData.userId.trim()) {
-      setError('아이디를 입력해주세요.')
+    if (!formData.email.trim()) { // email로 변경
+      setError('이메일 주소를 입력해주세요.')
       return
     }
 
     if (!formData.password) {
       setError('비밀번호를 입력해주세요.')
-      return
     }
 
     setLoading(true)
 
     try {
-      // TODO: API 연동으로 실제 로그인 처리
-      // 현재는 하얀치과 계정으로만 로그인 가능하도록 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      if (formData.userId === 'whitedc0902' && formData.password === 'gkdisclrhk0902@') {
-        // 성공적인 로그인
-        const userData = {
-          userId: 'whitedc0902',
-          clinicName: '하얀치과',
-          clinicOwnerName: '원장님',
-          clinicAddress: '서울시 송파구 풍납동 152-28 3층',
-          clinicPhone: '02-477-2878',
-          clinicEmail: 'whitedc0902@gmail.com'
-        }
-
-        localStorage.setItem('dental_user', JSON.stringify(userData))
-        localStorage.setItem('dental_auth', 'true')
-
-        if (rememberMe) {
-          localStorage.setItem('dental_remember', 'true')
-        }
-
-        // 페이지 새로고침하여 인증 상태 반영
-        window.location.reload()
-      } else {
-        // 로그인 실패
-        setError('아이디 또는 비밀번호가 올바르지 않습니다.')
+      const supabase = getSupabase()
+      if (!supabase) {
+        setError('데이터베이스 연결에 실패했습니다.')
+        setLoading(false)
+        return
       }
 
-    } catch (error) {
+      // 1. Supabase Auth로 로그인 시도
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: formData.email, // email로 변경
+        password: formData.password,
+      })
+
+      if (authError) {
+        setError('아이디 또는 비밀번호가 올바르지 않습니다.')
+        setLoading(false)
+        return
+      }
+
+      if (!authData.user) {
+        setError('사용자 정보를 가져오지 못했습니다.')
+        setLoading(false)
+        return
+      }
+
+      // 2. 로그인 성공 후, public.profile 테이블에서 전체 프로필 정보 조회
+      const { data: userProfile, error: profileError } = await dataService.getUserProfileById(authData.user.id)
+
+      if (profileError || !userProfile) {
+        setError('로그인에 성공했으나, 프로필 정보를 불러오는 데 실패했습니다.')
+        // 이 경우, 사용자는 인증되었지만 앱 사용에 필요한 정보가 부족하므로 로그아웃 처리
+        await supabase.auth.signOut()
+        setLoading(false)
+        return
+      }
+
+      // 3. AuthContext에 완전한 사용자 정보로 로그인 처리
+      login(formData.email, userProfile) // email로 변경
+
+      if (rememberMe) {
+        // 로그인 상태 유지는 Supabase가 세션 관리를 통해 자동으로 처리합니다.
+        // 별도의 localStorage 작업이 필요 없어졌습니다.
+        console.log('로그인 상태 유지 기능은 Supabase 세션에 의해 관리됩니다.')
+      }
+
+      onLoginSuccess()
+    } catch {
       setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
       setLoading(false)
@@ -103,19 +124,19 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onLoginSucces
         <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="userId" className="block text-sm font-medium text-slate-700 mb-1">
-                아이디
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+                이메일 주소
               </label>
               <input
-                type="text"
-                id="userId"
-                name="userId"
-                value={formData.userId}
+                type="email" 
+                id="email"
+                name="email"
+                value={formData.email}
                 onChange={handleInputChange}
                 className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="아이디를 입력하세요"
+                placeholder="email@example.com"
                 disabled={loading}
-                autoComplete="username"
+                autoComplete="email"
               />
             </div>
 
@@ -160,6 +181,16 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onLoginSucces
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-700">
                   로그인 상태 유지
                 </label>
+              </div>
+
+              <div className="text-sm">
+                <button
+                  type="button"
+                  onClick={onShowForgotPassword}
+                  className="font-medium text-blue-600 hover:text-blue-700"
+                >
+                  비밀번호를 잊으셨나요?
+                </button>
               </div>
             </div>
 

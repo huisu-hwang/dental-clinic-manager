@@ -9,7 +9,22 @@
       "Bash(npm run build:*)",
       "Bash(git commit:*)",
       "Bash(git reset:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run start:*)",
+      "Bash(pkill:*)",
+      "Bash(PORT=3001 npm run start)",
+      "Bash(PORT=3002 npm run start)",
+      "Bash(PORT=3003 npm run start)",
+      "Bash(PORT=3004 npm run start)",
+      "Bash(PORT=3004 npm run dev)",
+      "Bash(PORT=3005 npm run start)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(PORT=3006 npm run start)",
+      "Bash(xargs git add)"
     ],
     "deny": [],
     "ask": []

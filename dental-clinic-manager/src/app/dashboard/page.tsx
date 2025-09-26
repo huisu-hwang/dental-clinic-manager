@@ -9,6 +9,7 @@ import StatsContainer from '@/components/Stats/StatsContainer'
 import LogsSection from '@/components/Logs/LogsSection'
 import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
+import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/UI/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
 import DatabaseVerifier from '@/components/Debug/DatabaseVerifier'
@@ -20,8 +21,9 @@ import { inspectDatabase } from '@/utils/dbInspector'
 import type { ConsultRowData, GiftRowData, HappyCallRowData } from '@/types'
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth()
+  const { user, logout, updateUser } = useAuth()
   const [activeTab, setActiveTab] = useState('daily-input')
+  const [showProfile, setShowProfile] = useState(false)
   const [dbStatus, setDbStatus] = useState<'connected' | 'connecting' | 'error'>('connecting')
   const [toast, setToast] = useState<{
     show: boolean
@@ -197,7 +199,29 @@ export default function DashboardPage() {
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
       <div className="container mx-auto p-4 md:p-8">
-        <Header dbStatus={dbStatus} user={user} onLogout={logout} />
+        <Header
+          dbStatus={dbStatus}
+          user={user}
+          onLogout={logout}
+          onProfileClick={() => setShowProfile(true)}
+        />
+
+        {/* Profile Modal */}
+        {showProfile && user && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <AccountProfile
+                currentUser={user}
+                onClose={() => setShowProfile(false)}
+                onUpdate={(updatedUserData) => {
+                  updateUser(updatedUserData) // AuthContext와 localStorage 업데이트
+                  setShowProfile(false) // 모달 닫기
+                  showToast('프로필이 성공적으로 업데이트되었습니다.', 'success')
+                }}
+              />
+            </div>
+          </div>
+        )}
         <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
         <main>

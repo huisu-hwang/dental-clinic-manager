@@ -2,6 +2,56 @@ import { getSupabase } from './supabase'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog } from '@/types'
 
 export const dataService = {
+  // 공개된 병원 목록 검색
+  async searchPublicClinics() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // 데이터베이스에 미리 정의된 RPC 함수를 호출합니다.
+      const { data, error } = await supabase.rpc('get_public_clinics')
+
+      if (error) {
+        console.error('Error fetching public clinics:', error)
+        throw error
+      }
+
+      return { success: true, data }
+    } catch (error: unknown) {
+      return { error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.' }
+    }
+  },
+
+  // 사용자 ID로 프로필 정보 가져오기 (소속 병원 정보 포함)
+  async getUserProfileById(id: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // users와 clinics의 관계가 정상적이므로, join 쿼리를 사용합니다.
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          clinics (*)
+        `)
+        .eq('id', id)
+        .single()
+
+      if (error) throw error
+
+      // Supabase v2의 join 문법은 'clinics'라는 별도 객체로 결과를 반환합니다.
+      // 이를 user.clinic 형태로 사용하기 쉽게 재구성합니다.
+      const userProfile = data ? { ...(data as any), clinic: (data as any).clinics } : null;
+      if (userProfile) delete (userProfile as any).clinics; // 중복 필드 제거
+
+      return { success: true, data: userProfile }
+    } catch (error: unknown) {
+      console.error('Error fetching user profile by ID:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
   // 날짜별 보고서 데이터 불러오기
   async getReportByDate(date: string) {
     console.log('[DataService] getReportByDate called with date:', date)
@@ -409,6 +459,46 @@ export const dataService = {
     }
   },
 
+  // 재고 업데이트
+  async updateStock(id: number, quantity: number, item: { name: string; stock: number }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const newStock = item.stock + quantity
+      if (newStock < 0) {
+        return { error: '재고가 부족합니다.' }
+      }
+
+      // Update inventory
+      const { error: invError } = await (supabase
+        .from('gift_inventory') as any)
+        .update({ stock: newStock })
+        .eq('id', id)
+
+      if (invError) throw invError
+
+      // Log the change
+      const { error: logError } = await supabase
+        .from('inventory_logs')
+        .insert([{
+          timestamp: new Date().toISOString(),
+          name: item.name,
+          reason: quantity > 0 ? '재고 추가' : '재고 차감',
+          change: quantity,
+          old_stock: item.stock,
+          new_stock: newStock
+        }] as any)
+
+      if (logError) throw logError
+
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating stock:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
   // 선물 아이템 추가
   async addGiftItem(name: string, stock: number) {
     const supabase = getSupabase()
@@ -439,43 +529,6 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error adding gift item:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
-    }
-  },
-
-  // 재고 업데이트
-  async updateStock(id: number, quantity: number, item: GiftInventory) {
-    const supabase = getSupabase()
-    if (!supabase) throw new Error('Supabase client not available')
-
-    try {
-      const oldStock = item.stock
-      const newStock = oldStock + quantity
-
-      const updateQuery = (supabase as any)
-        .from('gift_inventory')
-        .update({ stock: newStock })
-        .eq('id', id)
-      const { error: invError } = await updateQuery
-
-      if (invError) throw invError
-
-      const { error: logError } = await supabase
-        .from('inventory_logs')
-        .insert([{
-          timestamp: new Date().toISOString(),
-          name: item.name,
-          reason: '수동 입고',
-          change: quantity,
-          old_stock: oldStock,
-          new_stock: newStock
-        }] as any)
-
-      if (logError) throw logError
-
-      return { success: true }
-    } catch (error: unknown) {
-      console.error('Error updating stock:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   },
@@ -605,5 +658,30 @@ export const dataService = {
       console.error('Error fixing inventory data:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
-  }
+  },
+
+  // 사용자 프로필 업데이트
+  async updateUserProfile(id: string, updates: { name?: string; phone?: string }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // 사용자 ID (UUID)를 기준으로 직접 업데이트합니다.
+      const { data, error } = await (supabase.from('users') as any)
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id) // email 대신 id를 사용합니다.
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('Error updating user profile:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
 }

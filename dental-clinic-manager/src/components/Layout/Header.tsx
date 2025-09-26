@@ -1,11 +1,18 @@
 'use client'
 
-import { Shield, LogOut, User } from 'lucide-react'
+import { Shield, LogOut, User, Cog } from 'lucide-react'
+import Link from 'next/link'
 
 interface User {
-  userId: string
-  clinicName: string
-  clinicOwnerName: string
+  userId?: string
+  name?: string
+  role?: string
+  clinic?: {
+    name: string
+    ownerName?: string
+  }
+  clinicName?: string
+  clinicOwnerName?: string
   clinicAddress?: string
   clinicPhone?: string
   clinicEmail?: string
@@ -15,9 +22,11 @@ interface HeaderProps {
   dbStatus: 'connected' | 'connecting' | 'error'
   user?: User | null
   onLogout?: () => void
+  showManagementLink?: boolean
+  onProfileClick?: () => void
 }
 
-export default function Header({ dbStatus, user, onLogout }: HeaderProps) {
+export default function Header({ dbStatus, user, onLogout, showManagementLink = true, onProfileClick }: HeaderProps) {
   const getStatusColor = () => {
     switch (dbStatus) {
       case 'connected': return 'bg-green-500'
@@ -44,7 +53,9 @@ export default function Header({ dbStatus, user, onLogout }: HeaderProps) {
           <div>
             <h1 className="text-3xl font-bold text-slate-900">덴탈매니저</h1>
             {user && (
-              <p className="text-sm text-slate-600 mt-1">{user.clinicName} - {user.clinicOwnerName}</p>
+              <p className="text-sm text-slate-600 mt-1">
+                {user.clinic?.name || user.clinicName} - {user.clinic?.ownerName || user.clinicOwnerName}
+              </p>
             )}
           </div>
         </div>
@@ -56,17 +67,35 @@ export default function Header({ dbStatus, user, onLogout }: HeaderProps) {
         </div>
         {user && onLogout && (
           <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-2 px-3 py-1 bg-slate-100 rounded-lg">
-              <User className="w-4 h-4 text-slate-600" />
-              <span className="text-sm text-slate-700">{user.userId}</span>
-            </div>
+            {/* Management Link */}
+            {showManagementLink && ['owner', 'vice_director', 'manager'].includes(user.role || '') && (
+              <Link
+                href="/management"
+                className="flex items-center space-x-1 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-blue-200 transform hover:scale-105"
+                title="병원 관리"
+              >
+                <Cog className="w-4 h-4 transition-transform hover:rotate-12" />
+                <span className="font-medium">관리</span>
+              </Link>
+            )}
+
+            <button
+              onClick={onProfileClick || (() => console.log('Profile click - no handler'))}
+              className="flex items-center space-x-2 px-3 py-1 bg-slate-100 hover:bg-slate-200 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-slate-300 transform hover:scale-105"
+              title="계정 정보 - 클릭하여 프로필 보기"
+              style={{ cursor: 'pointer' }}
+            >
+              <User className="w-4 h-4 text-slate-600 hover:text-slate-800 transition-colors" />
+              <span className="text-sm text-slate-700 hover:text-slate-900 font-medium transition-colors">{user.name || user.userId}</span>
+            </button>
             <button
               onClick={onLogout}
-              className="flex items-center space-x-1 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+              className="flex items-center space-x-1 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-red-200 transform hover:scale-105"
               title="로그아웃"
+              style={{ cursor: 'pointer' }}
             >
-              <LogOut className="w-4 h-4" />
-              <span>로그아웃</span>
+              <LogOut className="w-4 h-4 transition-transform hover:rotate-12" />
+              <span className="font-medium">로그아웃</span>
             </button>
           </div>
         )}
