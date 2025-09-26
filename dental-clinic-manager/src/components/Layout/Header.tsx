@@ -48,17 +48,19 @@ export default function Header({ dbStatus, user, onLogout, showManagementLink = 
   return (
     <header className="mb-8 flex flex-wrap justify-between items-center gap-4">
       <div>
-        <div className="flex items-center space-x-4">
-          <Shield className="w-10 h-10 text-blue-500" />
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">덴탈매니저</h1>
-            {user && (
-              <p className="text-sm text-slate-600 mt-1">
-                {user.clinic?.name || user.clinicName} - {user.clinic?.ownerName || user.clinicOwnerName}
-              </p>
-            )}
+        <Link href="/dashboard" className="group">
+          <div className="flex items-center space-x-4 cursor-pointer transition-transform duration-200 hover:scale-105">
+            <Shield className="w-10 h-10 text-blue-500 group-hover:text-blue-600 transition-colors" />
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">덴탈매니저</h1>
+              {user && (
+                <p className="text-sm text-slate-600 mt-1">
+                  {user.clinic?.name || user.clinicName} - {user.clinic?.ownerName || user.clinicOwnerName}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        </Link>
       </div>
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2 text-sm">
