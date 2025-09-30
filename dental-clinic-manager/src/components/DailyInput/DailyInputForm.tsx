@@ -43,12 +43,19 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
     console.log('[DailyInputForm] loadDataForDate called with:', date)
     if (!date) {
       console.log('[DailyInputForm] No date provided, skipping load')
+      setLoading(false)
       return
     }
 
     console.log('[DailyInputForm] Setting loading to true')
     setLoading(true)
-    setHasExistingData(false) // 로듩 시작 시 초기화
+    setHasExistingData(false) // 로딩 시작 시 초기화
+
+    // 타임아웃 설정 (5초)
+    const timeoutId = setTimeout(() => {
+      console.log('[DailyInputForm] Load timeout - forcing loading to false')
+      setLoading(false)
+    }, 5000)
 
     try {
       console.log('[DailyInputForm] Calling dataService.getReportByDate...')
@@ -112,6 +119,8 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
       resetFormData()
       setHasExistingData(false)
     } finally {
+      // 타임아웃 클리어
+      clearTimeout(timeoutId)
       // 로딩 상태를 항상 false로 설정
       console.log('[DailyInputForm] Setting loading to false')
       setLoading(false)
@@ -130,18 +139,26 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
 
   // 날짜 변경 핸들러
   const handleDateChange = (newDate: string) => {
-    setReportDate(newDate)
-    loadDataForDate(newDate)
+    if (newDate !== reportDate) {
+      setReportDate(newDate)
+      // loadDataForDate는 useEffect에서 처리
+    }
   }
 
-  // 컴포넌트 마운트 시 오늘 날짜 데이터 로드
+  // 컴포넌트 마운트 시 또는 날짜 변경 시 데이터 로드
   useEffect(() => {
-    console.log('[DailyInputForm] Component mounted, loading initial data for:', reportDate)
-    const loadInitialData = async () => {
-      await loadDataForDate(reportDate)
+    console.log('[DailyInputForm] Loading data for date:', reportDate)
+    loadDataForDate(reportDate)
+  }, [reportDate]) // reportDate가 변경될 때마다 실행
+
+  // 컴포넌트가 다시 마운트될 때 강제 리로드
+  useEffect(() => {
+    console.log('[DailyInputForm] Component mounted, forcing data reload')
+    loadDataForDate(reportDate)
+    return () => {
+      console.log('[DailyInputForm] Component unmounting')
     }
-    loadInitialData()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // 컴포넌트 마운트 시 한 번만 실행
 
   const handleSave = async () => {
     if (!reportDate) {

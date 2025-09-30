@@ -1,6 +1,6 @@
 'use client'
 
-import { Shield, LogOut, User, Cog } from 'lucide-react'
+import { Shield, LogOut, User, Cog, Crown } from 'lucide-react'
 import Link from 'next/link'
 
 interface User {
@@ -69,8 +69,20 @@ export default function Header({ dbStatus, user, onLogout, showManagementLink = 
         </div>
         {user && onLogout && (
           <div className="flex items-center space-x-2">
+            {/* Master Admin Link */}
+            {user.role === 'master' && (
+              <Link
+                href="/master"
+                className="flex items-center space-x-1 px-3 py-2 text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-purple-200 transform hover:scale-105"
+                title="마스터 관리"
+              >
+                <Crown className="w-4 h-4 transition-transform hover:rotate-12" />
+                <span className="font-medium">마스터</span>
+              </Link>
+            )}
+
             {/* Management Link */}
-            {showManagementLink && ['owner', 'vice_director', 'manager'].includes(user.role || '') && (
+            {showManagementLink && ['owner', 'vice_director', 'manager', 'master'].includes(user.role || '') && (
               <Link
                 href="/management"
                 className="flex items-center space-x-1 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-blue-200 transform hover:scale-105"

@@ -684,4 +684,255 @@ export const dataService = {
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   },
+
+  // === 마스터 관리자 전용 함수들 ===
+
+  // 현재 사용자 프로필 가져오기
+  async getUserProfile() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching user profile:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 모든 병원 목록 가져오기 (마스터 전용)
+  async getAllClinics() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await supabase
+        .from('clinics')
+        .select(`
+          *,
+          users!users_clinic_id_fkey(count)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching all clinics:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 모든 사용자 목록 가져오기 (마스터 전용)
+  async getAllUsers() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          clinic:clinics(name)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching all users:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 시스템 통계 가져오기 (마스터 전용)
+  async getSystemStatistics() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // 병원 수
+      const { count: clinicsCount } = await supabase
+        .from('clinics')
+        .select('*', { count: 'exact', head: true })
+
+      // 사용자 수
+      const { count: usersCount } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+
+      // 환자 수
+      const { count: patientsCount } = await supabase
+        .from('patients')
+        .select('*', { count: 'exact', head: true })
+
+      // 예약 수
+      const { count: appointmentsCount } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+
+      return {
+        data: {
+          totalClinics: clinicsCount || 0,
+          totalUsers: usersCount || 0,
+          totalPatients: patientsCount || 0,
+          totalAppointments: appointmentsCount || 0
+        }
+      }
+    } catch (error: unknown) {
+      console.error('Error fetching system statistics:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 병원 삭제 (마스터 전용)
+  async deleteClinic(clinicId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // 관련 데이터 먼저 삭제
+      await supabase.from('appointments').delete().eq('clinic_id', clinicId)
+      await supabase.from('inventory').delete().eq('clinic_id', clinicId)
+      await supabase.from('inventory_categories').delete().eq('clinic_id', clinicId)
+      await supabase.from('patients').delete().eq('clinic_id', clinicId)
+      await supabase.from('users').delete().eq('clinic_id', clinicId)
+
+      // 병원 삭제
+      const { error } = await supabase
+        .from('clinics')
+        .delete()
+        .eq('id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting clinic:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 사용자 삭제 (마스터 전용)
+  async deleteUser(userId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting user:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 사용자 권한 업데이트
+  async updateUserPermissions(userId: string, permissions: string[]) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ permissions })
+        .eq('id', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('Error updating user permissions:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 사용자 승인 (직원 관리)
+  async approveUser(userId: string, clinicId: string, permissions?: string[]) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      console.log('Approving user:', { userId, clinicId, permissions })
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Current user not found')
+      }
+
+      const updateData: any = {
+        status: 'active',
+        approved_by: user.id,
+        approved_at: new Date().toISOString()
+      }
+
+      // 권한이 지정된 경우 저장
+      if (permissions && permissions.length > 0) {
+        updateData.permissions = permissions
+      }
+
+      console.log('Update data:', updateData)
+
+      const { data, error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', userId)
+        .eq('clinic_id', clinicId)
+        .select()
+
+      if (error) {
+        console.error('Supabase update error:', error)
+        throw error
+      }
+
+      console.log('Updated user data:', data)
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error approving user - Full error:', error)
+      const errorMessage = error instanceof Error ? error.message : JSON.stringify(error)
+      console.error('Error message:', errorMessage)
+      return { error: errorMessage }
+    }
+  },
+
+  // 사용자 거절 (직원 관리)
+  async rejectUser(userId: string, clinicId: string, reason: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          status: 'rejected',
+          review_note: reason,
+          approved_by: user?.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error rejecting user:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
 }

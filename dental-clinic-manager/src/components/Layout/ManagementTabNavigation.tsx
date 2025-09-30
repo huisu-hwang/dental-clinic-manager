@@ -6,6 +6,8 @@ import {
   ChartBarIcon,
   CogIcon
 } from '@heroicons/react/24/outline'
+import { usePermissions } from '@/hooks/usePermissions'
+import type { Permission } from '@/types/permissions'
 
 interface ManagementTabNavigationProps {
   activeTab: string
@@ -13,41 +15,55 @@ interface ManagementTabNavigationProps {
   userRole: string
 }
 
+interface Tab {
+  id: string
+  label: string
+  icon: any
+  requiredPermissions?: Permission[]
+}
+
 export default function ManagementTabNavigation({
   activeTab,
   onTabChange,
   userRole
 }: ManagementTabNavigationProps) {
-  const tabs = [
+  const { hasPermission } = usePermissions()
+
+  const tabs: Tab[] = [
     {
       id: 'staff',
       label: '직원 관리',
       icon: UsersIcon,
-      allowedRoles: ['owner', 'vice_director']
+      requiredPermissions: ['staff_view', 'staff_manage']
     },
     {
       id: 'clinic',
       label: '병원 설정',
       icon: BuildingOfficeIcon,
-      allowedRoles: ['owner', 'vice_director']
+      requiredPermissions: ['clinic_settings']
     },
     {
       id: 'analytics',
       label: '통계 분석',
       icon: ChartBarIcon,
-      allowedRoles: ['owner', 'vice_director', 'manager']
+      requiredPermissions: ['stats_monthly_view', 'stats_annual_view']
     },
     {
       id: 'system',
       label: '시스템 설정',
       icon: CogIcon,
-      allowedRoles: ['owner']
+      requiredPermissions: ['clinic_settings']  // 대표원장만 가지는 권한
     }
   ]
 
-  const visibleTabs = tabs.filter(tab =>
-    tab.allowedRoles.includes(userRole)
-  )
+  // 권한 체크
+  const visibleTabs = tabs.filter(tab => {
+    if (!tab.requiredPermissions || tab.requiredPermissions.length === 0) {
+      return true
+    }
+    // 하나라도 권한이 있으면 표시
+    return hasPermission(tab.requiredPermissions)
+  })
 
   return (
     <div className="border-b border-slate-200 mb-6">

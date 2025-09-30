@@ -10,23 +10,29 @@ import {
   EnvelopeIcon,
   PhoneIcon,
   ShieldCheckIcon,
-  TrashIcon
+  TrashIcon,
+  CogIcon
 } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
 import { authService } from '@/lib/authService'
+import { dataService } from '@/lib/dataService'
 import type { User } from '@/types/auth'
+import PermissionSelector from './PermissionSelector'
+import type { Permission } from '@/types/permissions'
 
 interface JoinRequest {
   id: string
-  user_email: string
-  user_name: string
-  user_phone: string
-  requested_role: string
-  message: string
+  email: string
+  name: string
+  phone?: string
+  role: string
+  message?: string
   status: 'pending' | 'approved' | 'rejected'
   created_at: string
-  reviewed_at?: string
+  approved_at?: string
+  approved_by?: string
   review_note?: string
+  clinic_id: string
 }
 
 interface StaffManagementProps {
@@ -40,6 +46,9 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showPermissionModal, setShowPermissionModal] = useState(false)
+  const [selectedRequest, setSelectedRequest] = useState<JoinRequest | null>(null)
+  const [editingStaffPermissions, setEditingStaffPermissions] = useState<User | null>(null)
 
   // Invite form state
   const [inviteForm, setInviteForm] = useState({
@@ -63,6 +72,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
         .from('users')
         .select('*')
         .eq('clinic_id', currentUser.clinic_id)
+        .eq('status', 'active') // 승인된 직원만 표시
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -92,46 +102,47 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   const fetchJoinRequests = async () => {
     setLoading(true)
     const supabase = getSupabase()
-    if (!supabase || !currentUser.clinic_id) return
+    if (!supabase || !currentUser.clinic_id) {
+      setLoading(false)
+      return
+    }
 
     try {
+      // 승인 대기 중인 사용자들을 users 테이블에서 직접 조회
       const { data, error } = await supabase
-        .from('clinic_join_requests')
+        .from('users')
         .select('*')
         .eq('clinic_id', currentUser.clinic_id)
+        .eq('status', 'pending')
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Error fetching join requests:', error)
-        setError('가입 요청을 불러오는데 실패했습니다.')
+        console.error('Error fetching pending users:', error.message || error)
+        setJoinRequests([])
       } else {
+        // users 테이블 데이터를 JoinRequest 형식으로 직접 사용
         setJoinRequests(data || [])
       }
     } catch (err) {
-      console.error('Error:', err)
-      setError('가입 요청을 불러오는데 실패했습니다.')
+      console.log('Join requests feature not available')
+      setJoinRequests([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleApproveRequest = async (requestId: string, password: string) => {
-    const supabase = getSupabase()
-    if (!supabase) return
+  const handleApproveRequest = async (requestId: string, permissions?: Permission[]) => {
+    if (!currentUser.clinic_id) return
 
     try {
-      const { data, error } = await (supabase as any)
-        .rpc('approve_join_request', {
-          p_request_id: requestId,
-          p_reviewer_id: currentUser.id,
-          p_password: password,
-          p_review_note: '승인됨'
-        })
+      const result = await dataService.approveUser(requestId, currentUser.clinic_id, permissions)
 
-      if (error || !data.success) {
-        setError(data?.error || '승인 처리 중 오류가 발생했습니다.')
+      if (result.error) {
+        setError(result.error || '승인 처리에 실패했습니다.')
       } else {
         setSuccess('가입 요청이 승인되었습니다.')
+        setShowPermissionModal(false)
+        setSelectedRequest(null)
         fetchJoinRequests()
         fetchStaff()
       }
@@ -142,19 +153,13 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   }
 
   const handleRejectRequest = async (requestId: string, reason: string) => {
-    const supabase = getSupabase()
-    if (!supabase) return
+    if (!currentUser.clinic_id) return
 
     try {
-      const { data, error } = await (supabase as any)
-        .rpc('reject_join_request', {
-          p_request_id: requestId,
-          p_reviewer_id: currentUser.id,
-          p_review_note: reason
-        })
+      const result = await dataService.rejectUser(requestId, currentUser.clinic_id, reason)
 
-      if (error || !data.success) {
-        setError(data?.error || '거부 처리 중 오류가 발생했습니다.')
+      if (result.error) {
+        setError(result.error || '거부 처리에 실패했습니다.')
       } else {
         setSuccess('가입 요청이 거부되었습니다.')
         fetchJoinRequests()
@@ -326,14 +331,23 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                     {getRoleLabel(member.role)}
                   </span>
                   {getStatusBadge(member.status)}
-                  {member.role !== 'owner' && member.status === 'active' && (
-                    <button
-                      onClick={() => handleSuspendUser(member.id)}
-                      className="text-red-600 hover:text-red-800 p-1"
-                      title="사용자 정지"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
+                  {member.role !== 'owner' && member.status === 'active' && currentUser.role === 'owner' && (
+                    <>
+                      <button
+                        onClick={() => setEditingStaffPermissions(member)}
+                        className="text-blue-600 hover:text-blue-800 p-1"
+                        title="권한 수정"
+                      >
+                        <CogIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleSuspendUser(member.id)}
+                        className="text-red-600 hover:text-red-800 p-1"
+                        title="사용자 정지"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -361,9 +375,9 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-semibold text-slate-800">{request.user_name}</h3>
+                      <h3 className="text-lg font-semibold text-slate-800">{request.name}</h3>
                       <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                        {getRoleLabel(request.requested_role)}
+                        {getRoleLabel(request.role)}
                       </span>
                       {request.status === 'pending' ? (
                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
@@ -382,12 +396,12 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                     <div className="space-y-1 text-sm text-slate-600 mb-3">
                       <div className="flex items-center">
                         <EnvelopeIcon className="h-4 w-4 mr-2" />
-                        {request.user_email}
+                        {request.email}
                       </div>
-                      {request.user_phone && (
+                      {request.phone && (
                         <div className="flex items-center">
                           <PhoneIcon className="h-4 w-4 mr-2" />
-                          {request.user_phone}
+                          {request.phone}
                         </div>
                       )}
                       <div className="flex items-center">
@@ -412,10 +426,8 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                     <div className="ml-4 flex space-x-2">
                       <button
                         onClick={() => {
-                          const password = prompt('새 직원의 임시 비밀번호를 입력하세요:')
-                          if (password) {
-                            handleApproveRequest(request.id, password)
-                          }
+                          setSelectedRequest(request)
+                          setShowPermissionModal(true)
                         }}
                         className="flex items-center px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
                       >
@@ -494,6 +506,47 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
             </ul>
           </div>
         </div>
+      )}
+
+      {/* Permission Selection Modal */}
+      {showPermissionModal && selectedRequest && (
+        <PermissionSelector
+          role={selectedRequest.role}
+          onSave={(permissions) => {
+            handleApproveRequest(selectedRequest.id, permissions)
+          }}
+          onCancel={() => {
+            setShowPermissionModal(false)
+            setSelectedRequest(null)
+          }}
+        />
+      )}
+
+      {/* Edit Staff Permissions Modal */}
+      {editingStaffPermissions && (
+        <PermissionSelector
+          role={editingStaffPermissions.role}
+          initialPermissions={editingStaffPermissions.permissions}
+          onSave={async (permissions) => {
+            try {
+              const result = await dataService.updateUserPermissions(
+                editingStaffPermissions.id,
+                permissions
+              )
+
+              if (result.error) {
+                setError(result.error || '권한 수정에 실패했습니다.')
+              } else {
+                setSuccess('권한이 수정되었습니다.')
+                fetchStaff()
+                setEditingStaffPermissions(null)
+              }
+            } catch (err) {
+              setError('권한 수정 중 오류가 발생했습니다.')
+            }
+          }}
+          onCancel={() => setEditingStaffPermissions(null)}
+        />
       )}
     </div>
   )

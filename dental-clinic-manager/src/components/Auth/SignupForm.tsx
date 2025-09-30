@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import { EyeIcon, EyeSlashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { dataService } from '@/lib/dataService'
 import { getSupabase } from '@/lib/supabase'
 
@@ -31,12 +31,16 @@ export default function SignupForm({
   });
   const [publicClinics, setPublicClinics] = useState<any[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState('');
+  const [selectedClinicName, setSelectedClinicName] = useState('');
   const [isSearchingClinics, setIsSearchingClinics] = useState(false);
+  const [clinicSearchQuery, setClinicSearchQuery] = useState('');
+  const [showClinicSearchResults, setShowClinicSearchResults] = useState(false);
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('');
+  const [passwordMatch, setPasswordMatch] = useState({ message: '', color: '' });
 
   // 역할이 변경될 때마다 병원 목록을 가져오거나 초기화합니다.
   useEffect(() => {
@@ -61,6 +65,18 @@ export default function SignupForm({
       setSelectedClinicId('');
     }
   }, [formData.role]);
+
+  useEffect(() => {
+    if (formData.confirmPassword) {
+      if (formData.password === formData.confirmPassword) {
+        setPasswordMatch({ message: '비밀번호가 일치합니다.', color: 'text-green-600' });
+      } else {
+        setPasswordMatch({ message: '비밀번호가 일치하지 않습니다.', color: 'text-red-600' });
+      }
+    } else {
+      setPasswordMatch({ message: '', color: '' });
+    }
+  }, [formData.password, formData.confirmPassword]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { // HTMLSelectElement 추가
     const { name, value } = e.target
@@ -239,6 +255,23 @@ export default function SignupForm({
                 />
               </div>
 
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
+                  이름 *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="홍길동"
+                  required
+                  disabled={loading}
+                />
+              </div>
+
               <div className="relative">
                 <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
                   비밀번호 *
@@ -265,23 +298,6 @@ export default function SignupForm({
                     <EyeIcon className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
-              </div>
-
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
-                  이름 *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="홍길동"
-                  required
-                  disabled={loading}
-                />
               </div>
 
               <div className="relative">
@@ -311,6 +327,11 @@ export default function SignupForm({
                   )}
                 </button>
               </div>
+              {passwordMatch.message && (
+                <p className={`text-sm ${passwordMatch.color}`}>
+                  {passwordMatch.message}
+                </p>
+              )}
 
               <div>
                 <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1">
@@ -428,25 +449,89 @@ export default function SignupForm({
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4">소속 병원 선택</h3>
                 <div>
-                  <label htmlFor="clinicId" className="block text-sm font-medium text-slate-700 mb-1">
-                    병원 선택 *
+                  <label htmlFor="clinicSearch" className="block text-sm font-medium text-slate-700 mb-1">
+                    병원 검색 *
                   </label>
-                  <select
-                    id="clinicId"
-                    name="clinicId"
-                    value={selectedClinicId}
-                    onChange={(e) => setSelectedClinicId(e.target.value)}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white"
-                    disabled={loading || isSearchingClinics}
-                    required={formData.role !== 'owner'}
-                  >
-                    <option value="" disabled>{isSearchingClinics ? '병원 목록을 불러오는 중...' : '병원을 선택하세요'}</option>
-                    {publicClinics.map((clinic) => (
-                      <option key={clinic.id} value={clinic.id}>
-                        {clinic.name} ({clinic.address})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-slate-400 z-10" />
+                    <input
+                      type="text"
+                      id="clinicSearch"
+                      placeholder="병원 이름 또는 주소로 검색..."
+                      value={clinicSearchQuery}
+                      onChange={(e) => {
+                        setClinicSearchQuery(e.target.value)
+                        setShowClinicSearchResults(e.target.value.length > 0)
+                      }}
+                      onFocus={() => setShowClinicSearchResults(clinicSearchQuery.length > 0)}
+                      onBlur={() => setTimeout(() => setShowClinicSearchResults(false), 200)}
+                      className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      disabled={loading || isSearchingClinics}
+                    />
+
+                    {/* 검색 결과 드롭다운 */}
+                    {showClinicSearchResults && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
+                        {isSearchingClinics ? (
+                          <div className="p-4 text-center text-sm text-slate-500">
+                            병원 목록을 불러오는 중...
+                          </div>
+                        ) : (
+                          <>
+                            {publicClinics
+                              .filter(clinic =>
+                                clinic.name.toLowerCase().includes(clinicSearchQuery.toLowerCase()) ||
+                                clinic.address.toLowerCase().includes(clinicSearchQuery.toLowerCase())
+                              )
+                              .slice(0, 5)
+                              .map((clinic) => (
+                                <button
+                                  key={clinic.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedClinicId(clinic.id)
+                                    setSelectedClinicName(`${clinic.name} (${clinic.address})`)
+                                    setClinicSearchQuery(`${clinic.name} - ${clinic.address}`)
+                                    setShowClinicSearchResults(false)
+                                  }}
+                                  className="w-full p-3 hover:bg-blue-50 text-left transition-colors border-b border-slate-100 last:border-b-0"
+                                >
+                                  <div>
+                                    <p className="font-medium text-slate-800">{clinic.name}</p>
+                                    <p className="text-sm text-slate-500 mt-1">{clinic.address}</p>
+                                    {clinic.phone && (
+                                      <p className="text-xs text-slate-400 mt-1">{clinic.phone}</p>
+                                    )}
+                                  </div>
+                                </button>
+                              ))}
+                            {clinicSearchQuery && publicClinics.filter(clinic =>
+                              clinic.name.toLowerCase().includes(clinicSearchQuery.toLowerCase()) ||
+                              clinic.address.toLowerCase().includes(clinicSearchQuery.toLowerCase())
+                            ).length === 0 && (
+                              <div className="p-4 text-center text-sm text-slate-500">
+                                검색 결과가 없습니다
+                              </div>
+                            )}
+                            {!clinicSearchQuery && publicClinics.length === 0 && (
+                              <div className="p-4 text-center text-sm text-slate-500">
+                                등록 가능한 병원이 없습니다
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 선택된 병원 표시 */}
+                  {selectedClinicId && (
+                    <div className="mt-2 p-2 bg-blue-50 rounded-md">
+                      <p className="text-sm text-blue-800">
+                        선택된 병원: <strong>{selectedClinicName}</strong>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

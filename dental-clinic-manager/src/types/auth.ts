@@ -11,6 +11,7 @@ export interface User {
   status: string
   clinic_id?: string
   clinic?: Clinic
+  permissions?: string[]  // 커스텀 권한 배열
   created_at?: string
   updated_at?: string
   last_login_at?: string

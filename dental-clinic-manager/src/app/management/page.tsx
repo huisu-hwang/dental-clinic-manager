@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePermissions } from '@/hooks/usePermissions'
 import Header from '@/components/Layout/Header'
 import ManagementTabNavigation from '@/components/Layout/ManagementTabNavigation'
 import StaffManagement from '@/components/Management/StaffManagement'
@@ -10,7 +12,9 @@ import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/UI/Toast'
 
 export default function ManagementPage() {
+  const router = useRouter()
   const { user, logout, updateUser } = useAuth()
+  const { hasPermission } = usePermissions()
   const [activeTab, setActiveTab] = useState('staff')
   const [showProfile, setShowProfile] = useState(false)
   const [toast, setToast] = useState<{
@@ -23,21 +27,40 @@ export default function ManagementPage() {
     setToast({ show: true, message, type })
   }
 
-  // Redirect if user is not authorized
-  if (!user || !['owner', 'vice_director', 'manager'].includes(user.role)) {
+  // 권한 체크
+  const canAccessStaffManagement = hasPermission(['staff_manage', 'staff_view'])
+  const canAccessClinicSettings = hasPermission('clinic_settings')
+
+  useEffect(() => {
+    // 둘 다 접근 불가능한 경우 대시보드로 리다이렉트
+    if (!canAccessStaffManagement && !canAccessClinicSettings) {
+      router.push('/dashboard')
+      return
+    }
+
+    // 현재 탭에 권한이 없으면 권한이 있는 탭으로 변경
+    if (activeTab === 'staff' && !canAccessStaffManagement && canAccessClinicSettings) {
+      setActiveTab('clinic')
+    } else if (activeTab === 'clinic' && !canAccessClinicSettings && canAccessStaffManagement) {
+      setActiveTab('staff')
+    }
+  }, [canAccessStaffManagement, canAccessClinicSettings, activeTab, router])
+
+  // 권한이 전혀 없는 경우
+  if (!user || (!canAccessStaffManagement && !canAccessClinicSettings)) {
     return (
       <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
         <div className="container mx-auto p-4 md:p-8">
           <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200 text-center">
             <h1 className="text-2xl font-bold text-slate-800 mb-4">접근 권한이 없습니다</h1>
             <p className="text-slate-600 mb-6">
-              이 페이지는 원장, 부원장, 실장만 접근할 수 있습니다.
+              관리 페이지에 접근할 권한이 없습니다.
             </p>
             <button
-              onClick={() => window.history.back()}
+              onClick={() => router.push('/dashboard')}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
             >
-              돌아가기
+              대시보드로 이동
             </button>
           </div>
         </div>

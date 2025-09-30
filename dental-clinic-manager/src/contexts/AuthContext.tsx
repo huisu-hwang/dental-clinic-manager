@@ -50,7 +50,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const result = await dataService.getUserProfileById(session.user.id)
 
               if (result.success && result.data) {
-                console.log('AuthContext: 사용자 프로필 로드 성공')
+                console.log('AuthContext: 사용자 프로필 로드 성공', result.data)
+
+                // 승인 대기 중인 사용자는 pending-approval 페이지로 이동
+                if (result.data.status === 'pending' && window.location.pathname !== '/pending-approval') {
+                  window.location.href = '/pending-approval'
+                  return
+                }
+
+                // 거절된 사용자는 로그아웃
+                if (result.data.status === 'rejected') {
+                  alert('가입 신청이 거절되었습니다. 관리자에게 문의해주세요.')
+                  await supabase.auth.signOut()
+                  return
+                }
+
                 setUser(result.data)
               } else {
                 console.log('AuthContext: 사용자 프로필 로드 실패')

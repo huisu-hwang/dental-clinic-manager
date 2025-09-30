@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePermissions } from '@/hooks/usePermissions'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import DailyInputForm from '@/components/DailyInput/DailyInputForm'
@@ -22,6 +23,7 @@ import type { ConsultRowData, GiftRowData, HappyCallRowData } from '@/types'
 
 export default function DashboardPage() {
   const { user, logout, updateUser } = useAuth()
+  const { hasPermission, canAccessTab } = usePermissions()
   const [activeTab, setActiveTab] = useState('daily-input')
   const [showProfile, setShowProfile] = useState(false)
   const [dbStatus, setDbStatus] = useState<'connected' | 'connecting' | 'error'>('connecting')

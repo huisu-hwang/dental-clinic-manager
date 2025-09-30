@@ -41,6 +41,7 @@ export default function ClinicSelectionForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showSearchResults, setShowSearchResults] = useState(false)
 
   useEffect(() => {
     fetchPublicClinics()
@@ -170,24 +171,71 @@ export default function ClinicSelectionForm({
               </button>
             </div>
 
-            {/* Search Bar */}
+            {/* Enhanced Search Bar with Autocomplete */}
             <div className="bg-white p-4 rounded-lg shadow-md border border-slate-200 mb-6">
               <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-slate-400 z-10" />
                 <input
                   type="text"
                   placeholder="병원 이름 또는 주소로 검색..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setShowSearchResults(e.target.value.length > 0)
+                  }}
+                  onFocus={() => setShowSearchResults(searchQuery.length > 0)}
+                  onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-base"
                 />
+
+                {/* Autocomplete Dropdown */}
+                {showSearchResults && filteredClinics.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
+                    {filteredClinics.slice(0, 5).map((clinic) => (
+                      <button
+                        key={clinic.id}
+                        onClick={() => handleSelectClinic(clinic.id)}
+                        className="w-full p-3 hover:bg-blue-50 text-left transition-colors border-b border-slate-100 last:border-b-0"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-800">{clinic.name}</p>
+                            <p className="text-sm text-slate-500 mt-1">{clinic.address}</p>
+                            {clinic.phone && (
+                              <p className="text-xs text-slate-400 mt-1">{clinic.phone}</p>
+                            )}
+                          </div>
+                          <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {clinic.current_users}/{clinic.max_users}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                    {filteredClinics.length > 5 && (
+                      <div className="p-2 text-center text-sm text-slate-500 bg-slate-50">
+                        {filteredClinics.length - 5}개 더 있습니다
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {showSearchResults && searchQuery && filteredClinics.length === 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg p-4 z-50">
+                    <p className="text-sm text-slate-500 text-center">검색 결과가 없습니다</p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Clinic List */}
             <div className="bg-white rounded-lg shadow-md border border-slate-200">
               <div className="p-4 border-b border-slate-200">
-                <h3 className="text-lg font-semibold text-slate-800">등록 가능한 병원</h3>
+                <h3 className="text-lg font-semibold text-slate-800">
+                  {searchQuery ? `"${searchQuery}" 검색 결과` : '모든 병원'}
+                  <span className="ml-2 text-sm font-normal text-slate-500">
+                    ({filteredClinics.length}개)
+                  </span>
+                </h3>
               </div>
 
               {loading ? (
@@ -203,30 +251,45 @@ export default function ClinicSelectionForm({
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-200">
+                <div className="divide-y divide-slate-200 max-h-96 overflow-y-auto">
                   {filteredClinics.map((clinic) => (
                     <button
                       key={clinic.id}
                       onClick={() => handleSelectClinic(clinic.id)}
-                      className="w-full p-4 hover:bg-slate-50 transition-colors text-left"
+                      className="w-full p-4 hover:bg-slate-50 transition-colors text-left group"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="text-lg font-semibold text-slate-800 mb-1">
+                          <h4 className="text-lg font-semibold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
                             {clinic.name}
                           </h4>
                           {clinic.description && (
                             <p className="text-sm text-slate-600 mb-2">{clinic.description}</p>
                           )}
-                          <p className="text-sm text-slate-500">{clinic.address}</p>
-                          <p className="text-sm text-slate-500">{clinic.phone}</p>
-                          <div className="mt-2">
+                          <div className="space-y-1">
+                            <p className="text-sm text-slate-600">
+                              <span className="inline-block w-12 text-slate-400">주소:</span>
+                              <span className="font-medium">{clinic.address}</span>
+                            </p>
+                            {clinic.phone && (
+                              <p className="text-sm text-slate-600">
+                                <span className="inline-block w-12 text-slate-400">전화:</span>
+                                <span className="font-medium">{clinic.phone}</span>
+                              </p>
+                            )}
+                          </div>
+                          <div className="mt-3 flex items-center gap-2">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                               {clinic.current_users}/{clinic.max_users} 직원
                             </span>
+                            {clinic.current_users >= clinic.max_users && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                정원 마감
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <span className="text-blue-600 ml-4">→</span>
+                        <span className="text-blue-600 ml-4 group-hover:translate-x-1 transition-transform">→</span>
                       </div>
                     </button>
                   ))}
