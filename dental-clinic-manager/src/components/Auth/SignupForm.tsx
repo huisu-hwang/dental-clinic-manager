@@ -142,19 +142,35 @@ export default function SignupForm({
     }
 
     try {
+      console.log('[Signup] Starting signup process...');
+
       // 1. 인증 사용자 생성
+      console.log('[Signup] Creating auth user...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.userId,
         password: formData.password,
+        options: {
+          emailRedirectTo: undefined, // 이메일 확인 링크 비활성화
+        }
       });
 
-      if (authError) throw new Error(authError.message);
-      if (!authData.user) throw new Error('사용자 정보를 가져오지 못했습니다.');
+      console.log('[Signup] Auth response:', { authData, authError });
+
+      if (authError) {
+        console.error('[Signup] Auth error:', authError);
+        throw new Error(authError.message);
+      }
+      if (!authData.user) {
+        console.error('[Signup] No user data returned');
+        throw new Error('사용자 정보를 가져오지 못했습니다.');
+      }
 
       const newUserId = authData.user.id;
+      console.log('[Signup] User created with ID:', newUserId);
 
       if (formData.role === 'owner') {
         // 시나리오 A: 대표원장으로 신규 병원 생성
+        console.log('[Signup] Creating new clinic...');
         const { data: clinicData, error: clinicError } = await (supabase.from('clinics') as any)
           .insert({
             name: formData.clinicName,
@@ -166,8 +182,14 @@ export default function SignupForm({
           .select()
           .single();
 
-        if (clinicError) throw new Error('병원 정보 생성 실패: ' + clinicError.message);
+        console.log('[Signup] Clinic creation result:', { clinicData, clinicError });
 
+        if (clinicError) {
+          console.error('[Signup] Clinic creation error:', clinicError);
+          throw new Error('병원 정보 생성 실패: ' + clinicError.message);
+        }
+
+        console.log('[Signup] Creating user profile...');
         const { error: userProfileError } = await (supabase.from('users') as any).insert({
           id: newUserId,
           clinic_id: clinicData.id,
@@ -177,10 +199,16 @@ export default function SignupForm({
           status: 'active',
         });
 
-        if (userProfileError) throw new Error('프로필 생성 실패: ' + userProfileError.message);
+        console.log('[Signup] User profile creation result:', { userProfileError });
+
+        if (userProfileError) {
+          console.error('[Signup] User profile creation error:', userProfileError);
+          throw new Error('프로필 생성 실패: ' + userProfileError.message);
+        }
 
       } else {
         // 시나리오 B: 기존 병원에 가입 신청
+        console.log('[Signup] Creating user profile for existing clinic...');
         const { error: userProfileError } = await (supabase.from('users') as any).insert({
           id: newUserId,
           clinic_id: selectedClinicId,
@@ -190,9 +218,15 @@ export default function SignupForm({
           status: 'pending', // 승인 대기 상태
         });
 
-        if (userProfileError) throw new Error('가입 신청 실패: ' + userProfileError.message);
+        console.log('[Signup] User profile creation result:', { userProfileError });
+
+        if (userProfileError) {
+          console.error('[Signup] User profile creation error:', userProfileError);
+          throw new Error('가입 신청 실패: ' + userProfileError.message);
+        }
       }
 
+      console.log('[Signup] Signup completed successfully!');
       setSuccess('회원가입 신청이 완료되었습니다. 이메일을 확인하여 인증을 완료해주세요.');
       setTimeout(() => {
         onSignupSuccess({
@@ -203,9 +237,12 @@ export default function SignupForm({
       }, 4000);
 
     } catch (error: unknown) {
+      console.error('[Signup] Signup error:', error);
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+      console.error('[Signup] Error message:', errorMessage);
       setError(errorMessage);
     } finally {
+      console.log('[Signup] Finally block - setting loading to false');
       setLoading(false);
     }
   };
