@@ -86,6 +86,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
           role: u.role,
           clinic_id: u.clinic_id,
           status: u.status,
+          permissions: u.permissions,
           createdAt: new Date(u.created_at),
           updatedAt: new Date(u.updated_at),
           lastLoginAt: u.last_login_at ? new Date(u.last_login_at) : undefined,
