@@ -26,15 +26,40 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
       return
     }
 
-    // Supabase 프로젝트의 이메일 템플릿을 사용하여 비밀번호 재설정 링크를 보냅니다.
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`,
-    })
+    try {
+      // 먼저 해당 이메일이 존재하는지 확인
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('email')
+        .eq('email', email)
+        .single()
 
-    if (resetError) {
-      setError('비밀번호 재설정 이메일 전송에 실패했습니다. 이메일 주소를 확인해주세요.')
-    } else {
-      setMessage('비밀번호 재설정 링크를 이메일로 보냈습니다. 받은 편지함을 확인해주세요.')
+      if (!existingUser) {
+        setError('등록되지 않은 이메일 주소입니다.')
+        setLoading(false)
+        return
+      }
+
+      // Supabase 프로젝트의 이메일 템플릿을 사용하여 비밀번호 재설정 링크를 보냅니다.
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`,
+      })
+
+      if (resetError) {
+        console.error('비밀번호 재설정 오류:', resetError)
+
+        // SMTP 설정이 안 되어 있는 경우
+        if (resetError.message.includes('SMTP') || resetError.message.includes('email')) {
+          setError('이메일 서비스가 설정되지 않았습니다. 관리자에게 문의해주세요.')
+        } else {
+          setError(`이메일 전송에 실패했습니다: ${resetError.message}`)
+        }
+      } else {
+        setMessage('비밀번호 재설정 링크를 이메일로 보냈습니다. 받은 편지함을 확인해주세요.')
+      }
+    } catch (err) {
+      console.error('비밀번호 재설정 처리 중 오류:', err)
+      setError('비밀번호 재설정 요청 처리 중 오류가 발생했습니다.')
     }
 
     setLoading(false)

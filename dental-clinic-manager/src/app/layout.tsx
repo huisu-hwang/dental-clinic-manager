@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
+import PasswordResetHandler from "@/components/PasswordResetHandler";
 import "./globals.css";
 
 const notoSansKR = Noto_Sans_KR({
@@ -25,6 +26,7 @@ export default function RootLayout({
         className={`${notoSansKR.variable} antialiased font-sans`}
       >
         <AuthProvider>
+          <PasswordResetHandler />
           {children}
         </AuthProvider>
       </body>

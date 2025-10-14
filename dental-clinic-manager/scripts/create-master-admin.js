@@ -14,7 +14,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 async function createMasterAdmin() {
   console.log('마스터 관리자 계정 생성 중...\n');
 
-  const masterEmail = 'master@example.com';
+  const masterEmail = 'sani81@gmail.com';
   const masterPassword = 'master123456';
 
   try {
@@ -121,10 +121,11 @@ async function setupMasterData(userId) {
       const { error: updateError } = await supabase
         .from('users')
         .update({
-          email: 'master@example.com',
+          email: 'sani81@gmail.com',
           name: 'Master Administrator',
           role: 'master',  // 마스터 역할 설정
-          clinic_id: clinicId
+          clinic_id: clinicId,
+          status: 'active'
         })
         .eq('id', userId);
 
@@ -139,10 +140,11 @@ async function setupMasterData(userId) {
         .from('users')
         .insert({
           id: userId,
-          email: 'master@example.com',
+          email: 'sani81@gmail.com',
           name: 'Master Administrator',
           role: 'master',  // 마스터 역할 설정
-          clinic_id: clinicId
+          clinic_id: clinicId,
+          status: 'active'
         });
 
       if (insertError) {
@@ -155,7 +157,7 @@ async function setupMasterData(userId) {
     console.log('\n========================================');
     console.log('마스터 관리자 계정 설정 완료!');
     console.log('========================================');
-    console.log('이메일: master@example.com');
+    console.log('이메일: sani81@gmail.com');
     console.log('비밀번호: master123456');
     console.log('역할: Master Administrator');
     console.log('권한: 모든 병원 및 사용자 관리');

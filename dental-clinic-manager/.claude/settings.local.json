@@ -24,7 +24,13 @@
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
       "Bash(PORT=3006 npm run start)",
-      "Bash(xargs git add)"
+      "Bash(xargs git add)",
+      "Bash(claude mcp add context7:*)",
+      "Read(//c/Users/sani8/**)",
+      "WebFetch(domain:localhost)",
+      "Bash(node:*)",
+      "Bash(timeout:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

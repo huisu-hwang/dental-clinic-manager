@@ -16,10 +16,11 @@ export interface AuthContextType {
 // Temporary master admin credentials for testing
 const MASTER_ADMIN = {
   id: 'master-admin-001',
-  email: 'admin@dentalmanager.com',
-  name: 'System Administrator',
-  role: 'master_admin',
-  status: 'active'
+  email: 'sani81@gmail.com',
+  name: 'Master Administrator',
+  role: 'master',
+  status: 'active',
+  userId: 'sani81@gmail.com'
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
     let subscription: any = null
@@ -34,6 +36,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Supabase 세션 확인 및 사용자 정보 로드
     const checkAuth = async () => {
       console.log('AuthContext: checkAuth 시작')
+
+      // 로그아웃 중이면 세션 체크 스킵
+      const loggingOut = localStorage.getItem('dental_logging_out')
+      if (isLoggingOut || loggingOut === 'true') {
+        console.log('AuthContext: 로그아웃 중이므로 세션 체크 스킵')
+        localStorage.removeItem('dental_logging_out')
+        setLoading(false)
+        return
+      }
 
       if (typeof window !== 'undefined') {
         const supabase = getSupabase()
@@ -87,10 +98,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
               console.log('Auth state changed:', event)
 
+              // 로그아웃 중이면 무시
+              const loggingOut = localStorage.getItem('dental_logging_out')
+              if (loggingOut === 'true') {
+                console.log('로그아웃 중이므로 auth state change 무시')
+                return
+              }
+
+              // PASSWORD_RECOVERY 이벤트는 update-password 페이지에서 처리
+              if (event === 'PASSWORD_RECOVERY') {
+                console.log('PASSWORD_RECOVERY 이벤트 감지')
+                // 비밀번호 재설정 모드에서는 사용자 정보를 로드하지 않음
+                // 이벤트를 방해하지 않고 그냥 통과시킴
+                return
+              }
+
               if (event === 'SIGNED_IN' && session?.user) {
-                const result = await dataService.getUserProfileById(session.user.id)
-                if (result.success && result.data) {
-                  setUser(result.data)
+                // 로그아웃 직후의 자동 로그인 방지
+                if (!isLoggingOut) {
+                  const result = await dataService.getUserProfileById(session.user.id)
+                  if (result.success && result.data) {
+                    setUser(result.data)
+                  }
                 }
               } else if (event === 'SIGNED_OUT') {
                 setUser(null)
@@ -133,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (userId: string, clinicInfo: any) => {
     // Check for master admin login
-    if (userId === 'admin@dentalmanager.com') {
+    if (userId === 'sani81@gmail.com') {
       const masterAdmin = { ...MASTER_ADMIN }
       setUser(masterAdmin)
       localStorage.setItem('dental_auth', 'true')
@@ -160,21 +189,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    const supabase = getSupabase()
+    console.log('Logout 시작...')
 
+    // 로그아웃 중 플래그 설정
+    setIsLoggingOut(true)
+
+    // 먼저 로컬 상태를 모두 초기화
+    setUser(null)
+    localStorage.removeItem('dental_auth')
+    localStorage.removeItem('dental_user')
+    localStorage.removeItem('dental_remember')
+
+    // 로그아웃 중임을 localStorage에도 저장
+    localStorage.setItem('dental_logging_out', 'true')
+
+    // Supabase 로그아웃 시도
+    const supabase = getSupabase()
     if (supabase) {
       try {
-        await supabase.auth.signOut()
+        const { error } = await supabase.auth.signOut()
+        if (error) {
+          console.error('Supabase logout error:', error)
+        } else {
+          console.log('Supabase 로그아웃 성공')
+        }
       } catch (error) {
         console.error('Logout error:', error)
       }
     }
 
-    setUser(null)
-    localStorage.removeItem('dental_auth')
-    localStorage.removeItem('dental_user')
-    localStorage.removeItem('dental_remember')
-    window.location.href = '/'
+    // 강제로 홈 페이지로 리디렉션
+    console.log('홈 페이지로 리디렉션...')
+
+    // 약간의 지연 후 리디렉션 (상태 업데이트가 완료되도록)
+    setTimeout(() => {
+      localStorage.removeItem('dental_logging_out')
+      window.location.href = '/'
+    }, 100)
   }
 
   const isAuthenticated = Boolean(user)

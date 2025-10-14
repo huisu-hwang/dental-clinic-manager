@@ -1,6 +1,34 @@
 import { getSupabase } from './supabase'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog } from '@/types'
 
+// 현재 로그인한 사용자의 clinic_id를 가져오는 헬퍼 함수
+async function getCurrentClinicId(): Promise<string | null> {
+  const supabase = getSupabase()
+  if (!supabase) return null
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    // users 테이블에서 clinic_id 조회
+    const { data, error } = await supabase
+      .from('users')
+      .select('clinic_id')
+      .eq('id', user.id)
+      .single()
+
+    if (error || !data) {
+      console.error('Failed to get clinic_id:', error)
+      return null
+    }
+
+    return data.clinic_id
+  } catch (error) {
+    console.error('Error getting clinic_id:', error)
+    return null
+  }
+}
+
 export const dataService = {
   // 공개된 병원 목록 검색
   async searchPublicClinics() {
@@ -36,7 +64,7 @@ export const dataService = {
           clinics (*)
         `)
         .eq('id', id)
-        .single()
+        .maybeSingle()
 
       if (error) throw error
 
@@ -73,7 +101,24 @@ export const dataService = {
     }
 
     try {
-      console.log('[DataService] Starting data fetch...')
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        console.error('[DataService] No clinic_id found for current user')
+        return {
+          success: false,
+          error: 'User clinic information not available',
+          data: {
+            dailyReport: null,
+            consultLogs: [],
+            giftLogs: [],
+            happyCallLogs: [],
+            hasData: false
+          }
+        }
+      }
+
+      console.log('[DataService] Starting data fetch for clinic:', clinicId)
 
       // 각 테이블을 개별적으로 조회하여 에러 격리
       let dailyReportResult, consultLogsResult, giftLogsResult, happyCallLogsResult;
@@ -83,6 +128,7 @@ export const dataService = {
         dailyReportResult = await supabase
           .from('daily_reports')
           .select('*')
+          .eq('clinic_id', clinicId)
           .eq('date', date)
           .maybeSingle();
         console.log('[DataService] daily_reports fetched:', dailyReportResult);
@@ -96,6 +142,7 @@ export const dataService = {
         consultLogsResult = await supabase
           .from('consult_logs')
           .select('*')
+          .eq('clinic_id', clinicId)
           .eq('date', date)
           .order('id');
         console.log('[DataService] consult_logs fetched:', consultLogsResult?.data?.length || 0, 'items');
@@ -109,6 +156,7 @@ export const dataService = {
         giftLogsResult = await supabase
           .from('gift_logs')
           .select('*')
+          .eq('clinic_id', clinicId)
           .eq('date', date)
           .order('id');
         console.log('[DataService] gift_logs fetched:', giftLogsResult?.data?.length || 0, 'items');
@@ -122,6 +170,7 @@ export const dataService = {
         happyCallLogsResult = await supabase
           .from('happy_call_logs')
           .select('*')
+          .eq('clinic_id', clinicId)
           .eq('date', date)
           .order('id');
         console.log('[DataService] happy_call_logs fetched:', happyCallLogsResult?.data?.length || 0, 'items');
@@ -172,12 +221,19 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       const { date, consultRows, giftRows, happyCallRows, recallCount, recallBookingCount, specialNotes } = data
 
       // --- 1. 기존 보고서 확인 및 삭제 ---
       const { data: existingReports, error: checkError } = await supabase
         .from('daily_reports')
         .select('id')
+        .eq('clinic_id', clinicId)
         .eq('date', date)
         .limit(1)
 
@@ -206,6 +262,7 @@ export const dataService = {
           const { data: items, error: inventoryError } = await supabase
             .from('gift_inventory')
             .select('*')
+            .eq('clinic_id', clinicId)
             .eq('name', gift.gift_type)
             .limit(1)
 
@@ -235,6 +292,7 @@ export const dataService = {
 
       // --- 4. 데이터베이스에 모든 정보 저장 (트랜잭션처럼) ---
       const dailyReport = {
+        clinic_id: clinicId,
         date,
         recall_count: recallCount,
         recall_booking_count: recallBookingCount,
@@ -245,8 +303,9 @@ export const dataService = {
       }
 
       if (validConsults.length > 0) {
-        // remarks 컴럼을 항상 포함하도록 수정 (빈 값이어도 null로 저장)
+        // remarks 컬럼을 항상 포함하도록 수정 (빈 값이어도 null로 저장)
         const consultData = validConsults.map(row => ({
+          clinic_id: clinicId,
           date,
           patient_name: row.patient_name,
           consult_content: row.consult_content,
@@ -256,10 +315,11 @@ export const dataService = {
 
         const { error } = await supabase.from('consult_logs').insert(consultData as any)
         if (error) {
-          // remarks 컴럼 없이 재시도
+          // remarks 컬럼 없이 재시도
           if (error.message.includes('remarks')) {
-            console.warn('remarks 컴럼이 없어서 제외하고 저장합니다.')
+            console.warn('remarks 컬럼이 없어서 제외하고 저장합니다.')
             const consultDataWithoutRemarks = validConsults.map(row => ({
+              clinic_id: clinicId,
               date,
               patient_name: row.patient_name,
               consult_content: row.consult_content,
@@ -274,8 +334,9 @@ export const dataService = {
       }
 
       if (validGifts.length > 0) {
-        // notes 컴럼을 항상 포함하도록 수정 (빈 값이어도 null로 저장)
+        // notes 컬럼을 항상 포함하도록 수정 (빈 값이어도 null로 저장)
         const giftData = validGifts.map(row => ({
+          clinic_id: clinicId,
           date,
           patient_name: row.patient_name,
           gift_type: row.gift_type,
@@ -285,10 +346,11 @@ export const dataService = {
 
         const { error } = await supabase.from('gift_logs').insert(giftData as any)
         if (error) {
-          // notes 컴럼 없이 재시도
+          // notes 컬럼 없이 재시도
           if (error.message.includes('notes')) {
-            console.warn('notes 컴럼이 없어서 제외하고 저장합니다.')
+            console.warn('notes 컬럼이 없어서 제외하고 저장합니다.')
             const giftDataWithoutNotes = validGifts.map(row => ({
+              clinic_id: clinicId,
               date,
               patient_name: row.patient_name,
               gift_type: row.gift_type,
@@ -304,6 +366,7 @@ export const dataService = {
 
       if (validHappyCalls.length > 0) {
         const { error } = await supabase.from('happy_call_logs').insert(validHappyCalls.map(row => ({
+          clinic_id: clinicId,
           date,
           patient_name: row.patient_name,
           treatment: row.treatment,
@@ -313,7 +376,11 @@ export const dataService = {
       }
 
       if (inventoryLogs.length > 0) {
-        const { error } = await supabase.from('inventory_logs').insert(inventoryLogs as any)
+        const logsWithClinicId = inventoryLogs.map(log => ({
+          ...log,
+          clinic_id: clinicId
+        }))
+        const { error } = await supabase.from('inventory_logs').insert(logsWithClinicId as any)
         if (error) throw new Error(`재고 로그 저장 실패: ${error.message}`)
       }
 
@@ -338,9 +405,16 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       const { data: reportsToDelete } = await supabase
         .from('daily_reports')
         .select('id')
+        .eq('clinic_id', clinicId)
         .eq('date', date)
         .limit(1)
 
@@ -352,6 +426,7 @@ export const dataService = {
       const { data: giftLogsToDelete } = await supabase
         .from('gift_logs')
         .select('*')
+        .eq('clinic_id', clinicId)
         .eq('date', date) as { data: GiftLog[] | null }
 
       if (giftLogsToDelete && giftLogsToDelete.length > 0) {
@@ -360,6 +435,7 @@ export const dataService = {
             const { data: items } = await supabase
               .from('gift_inventory')
               .select('*')
+              .eq('clinic_id', clinicId)
               .eq('name', giftLog.gift_type)
               .limit(1)
 
@@ -384,6 +460,7 @@ export const dataService = {
               await supabase
                 .from('inventory_logs')
                 .insert([{
+                  clinic_id: clinicId,
                   timestamp: new Date().toISOString(),
                   name: item.name,
                   reason: `데이터 삭제로 인한 재고 복원: ${giftLog.patient_name}`,
@@ -398,10 +475,10 @@ export const dataService = {
 
       // 기존 데이터 삭제
       await Promise.all([
-        supabase.from('consult_logs').delete().eq('date', date),
-        supabase.from('gift_logs').delete().eq('date', date),
-        supabase.from('happy_call_logs').delete().eq('date', date),
-        supabase.from('daily_reports').delete().eq('id', reportToDelete.id)
+        supabase.from('consult_logs').delete().eq('clinic_id', clinicId).eq('date', date),
+        supabase.from('gift_logs').delete().eq('clinic_id', clinicId).eq('date', date),
+        supabase.from('happy_call_logs').delete().eq('clinic_id', clinicId).eq('date', date),
+        supabase.from('daily_reports').delete().eq('clinic_id', clinicId).eq('id', reportToDelete.id)
       ])
 
       return { success: true }
@@ -417,11 +494,17 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       // 해당 날짜의 모든 로그 데이터 조회
       const [consultResult, giftResult, reportResult] = await Promise.all([
-        supabase.from('consult_logs').select('*').eq('date', date),
-        supabase.from('gift_logs').select('*').eq('date', date),
-        supabase.from('daily_reports').select('*').eq('date', date).single()
+        supabase.from('consult_logs').select('*').eq('clinic_id', clinicId).eq('date', date),
+        supabase.from('gift_logs').select('*').eq('clinic_id', clinicId).eq('date', date),
+        supabase.from('daily_reports').select('*').eq('clinic_id', clinicId).eq('date', date).single()
       ])
 
       const consultLogs = (consultResult.data as any[]) || []
@@ -443,6 +526,7 @@ export const dataService = {
       const { error: updateError } = await (supabase as any)
         .from('daily_reports')
         .update(updatedStats)
+        .eq('clinic_id', clinicId)
         .eq('date', date)
 
       if (updateError) {
@@ -465,6 +549,12 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       const newStock = item.stock + quantity
       if (newStock < 0) {
         return { error: '재고가 부족합니다.' }
@@ -474,6 +564,7 @@ export const dataService = {
       const { error: invError } = await (supabase
         .from('gift_inventory') as any)
         .update({ stock: newStock })
+        .eq('clinic_id', clinicId)
         .eq('id', id)
 
       if (invError) throw invError
@@ -482,6 +573,7 @@ export const dataService = {
       const { error: logError } = await supabase
         .from('inventory_logs')
         .insert([{
+          clinic_id: clinicId,
           timestamp: new Date().toISOString(),
           name: item.name,
           reason: quantity > 0 ? '재고 추가' : '재고 차감',
@@ -505,9 +597,15 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       const { error: invError } = await supabase
         .from('gift_inventory')
-        .insert([{ name, stock }] as any)
+        .insert([{ clinic_id: clinicId, name, stock }] as any)
 
       if (invError) throw invError
 
@@ -515,6 +613,7 @@ export const dataService = {
         const { error: logError } = await supabase
           .from('inventory_logs')
           .insert([{
+            clinic_id: clinicId,
             timestamp: new Date().toISOString(),
             name,
             reason: '신규 등록',
@@ -539,9 +638,16 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       const { error } = await supabase
         .from('gift_inventory')
         .delete()
+        .eq('clinic_id', clinicId)
         .eq('id', id)
 
       if (error) throw error
@@ -559,12 +665,19 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       console.log('[FixInventory] 재고 데이터 수정 시작...')
 
       // 1. 현재 재고 현황 조회
       const { data: currentInventory, error: invError } = await supabase
         .from('gift_inventory')
         .select('*')
+        .eq('clinic_id', clinicId)
         .order('name') as { data: GiftInventory[] | null, error: any }
 
       if (invError) throw invError
@@ -574,6 +687,7 @@ export const dataService = {
       const { data: allGiftLogs, error: logError } = await supabase
         .from('gift_logs')
         .select('*')
+        .eq('clinic_id', clinicId)
         .order('date', { ascending: true }) as { data: GiftLog[] | null, error: any }
 
       if (logError) throw logError
@@ -594,6 +708,7 @@ export const dataService = {
       const { data: inventoryLogs, error: logErr } = await supabase
         .from('inventory_logs')
         .select('*')
+        .eq('clinic_id', clinicId)
         .gt('change', 0) // 입고 기록만 (양수)
         .order('timestamp', { ascending: true }) as { data: InventoryLog[] | null, error: any }
 
@@ -629,6 +744,7 @@ export const dataService = {
           const { error: updateError } = await (supabase as any)
             .from('gift_inventory')
             .update({ stock: correctStock })
+            .eq('clinic_id', clinicId)
             .eq('id', item.id)
 
           if (updateError) throw updateError
@@ -637,6 +753,7 @@ export const dataService = {
           await supabase
             .from('inventory_logs')
             .insert([{
+              clinic_id: clinicId,
               timestamp: new Date().toISOString(),
               name: item.name,
               reason: '재고 데이터 오류 수정',
@@ -846,8 +963,7 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
-      const { data, error } = await supabase
-        .from('users')
+      const { data, error } = await (supabase.from('users') as any)
         .update({ permissions })
         .eq('id', userId)
         .select()
@@ -887,8 +1003,7 @@ export const dataService = {
 
       console.log('Update data:', updateData)
 
-      const { data, error } = await supabase
-        .from('users')
+      const { data, error } = await (supabase.from('users') as any)
         .update(updateData)
         .eq('id', userId)
         .eq('clinic_id', clinicId)
@@ -917,13 +1032,12 @@ export const dataService = {
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
-      const { error } = await supabase
-        .from('users')
+      const { error } = await (supabase.from('users') as any)
         .update({
           status: 'rejected',
           review_note: reason,
           approved_by: user?.id,
-          approved_at: new Date().toISOString()
+          approved_at: new Date().toISOString(),
         })
         .eq('id', userId)
         .eq('clinic_id', clinicId)
@@ -932,6 +1046,47 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error rejecting user:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 병원 계정 상태 변경 (마스터 전용)
+  async updateClinicStatus(clinicId: string, status: 'active' | 'suspended') {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { error } = await (supabase.from('clinics') as any)
+        .update({
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating clinic status:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 병원별 사용자 목록 조회 (마스터 전용)
+  async getUsersByClinic(clinicId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching users by clinic:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   },

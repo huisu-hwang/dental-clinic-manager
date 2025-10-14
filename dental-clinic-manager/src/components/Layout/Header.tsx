@@ -27,6 +27,13 @@ interface HeaderProps {
 }
 
 export default function Header({ dbStatus, user, onLogout, showManagementLink = true, onProfileClick }: HeaderProps) {
+  // 디버깅: user 정보 로그
+  console.log('[Header] User info:', {
+    user,
+    role: user?.role,
+    isMaster: user?.role === 'master'
+  })
+
   const getStatusColor = () => {
     switch (dbStatus) {
       case 'connected': return 'bg-green-500'
@@ -103,7 +110,17 @@ export default function Header({ dbStatus, user, onLogout, showManagementLink = 
               <span className="text-sm text-slate-700 hover:text-slate-900 font-medium transition-colors">{user.name || user.userId}</span>
             </button>
             <button
-              onClick={onLogout}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                console.log('로그아웃 버튼 클릭됨')
+                if (onLogout) {
+                  onLogout()
+                } else {
+                  console.error('onLogout 함수가 전달되지 않았습니다.')
+                }
+              }}
               className="flex items-center space-x-1 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-red-200 transform hover:scale-105"
               title="로그아웃"
               style={{ cursor: 'pointer' }}

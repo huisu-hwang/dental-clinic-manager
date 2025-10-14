@@ -70,19 +70,36 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         return
       }
 
-      // 2. 로그인 성공 후, public.profile 테이블에서 전체 프로필 정보 조회
-      const { data: userProfile, error: profileError } = await dataService.getUserProfileById(authData.user.id)
+      // 2. 마스터 계정 특별 처리
+      if (formData.email === 'sani81@gmail.com') {
+        // 마스터 계정은 프로필 조회 없이 바로 로그인 처리
+        const masterProfile = {
+          id: authData.user.id,
+          email: 'sani81@gmail.com',
+          name: 'Master Administrator',
+          role: 'master',
+          status: 'active',
+          userId: 'sani81@gmail.com',
+          clinic_id: null, // 마스터는 특정 병원에 소속되지 않음
+          clinic: null
+        }
+        console.log('[LoginForm] Master login with profile:', masterProfile)
+        login(formData.email, masterProfile)
+      } else {
+        // 3. 일반 사용자는 public.users 테이블에서 전체 프로필 정보 조회
+        const { data: userProfile, error: profileError } = await dataService.getUserProfileById(authData.user.id)
 
-      if (profileError || !userProfile) {
-        setError('로그인에 성공했으나, 프로필 정보를 불러오는 데 실패했습니다.')
-        // 이 경우, 사용자는 인증되었지만 앱 사용에 필요한 정보가 부족하므로 로그아웃 처리
-        await supabase.auth.signOut()
-        setLoading(false)
-        return
+        if (profileError || !userProfile) {
+          setError('로그인에 성공했으나, 프로필 정보를 불러오는 데 실패했습니다.')
+          // 이 경우, 사용자는 인증되었지만 앱 사용에 필요한 정보가 부족하므로 로그아웃 처리
+          await supabase.auth.signOut()
+          setLoading(false)
+          return
+        }
+
+        // 4. AuthContext에 완전한 사용자 정보로 로그인 처리
+        login(formData.email, userProfile) // email로 변경
       }
-
-      // 3. AuthContext에 완전한 사용자 정보로 로그인 처리
-      login(formData.email, userProfile) // email로 변경
 
       if (rememberMe) {
         // 로그인 상태 유지는 Supabase가 세션 관리를 통해 자동으로 처리합니다.
