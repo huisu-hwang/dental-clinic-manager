@@ -58,6 +58,9 @@ CREATE TABLE IF NOT EXISTS public.protocol_versions (
 
 -- 4. protocols 테이블에 current_version_id 외래키 추가
 -- (순환 참조를 피하기 위해 별도로 추가)
+-- 제약 조건이 존재하면 먼저 삭제
+ALTER TABLE public.protocols DROP CONSTRAINT IF EXISTS protocols_current_version_fk;
+
 ALTER TABLE public.protocols
 ADD CONSTRAINT protocols_current_version_fk
 FOREIGN KEY (current_version_id) REFERENCES public.protocol_versions(id) ON DELETE SET NULL;

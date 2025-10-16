@@ -30,7 +30,9 @@
       "WebFetch(domain:localhost)",
       "Bash(node:*)",
       "Bash(timeout:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [],
     "ask": []

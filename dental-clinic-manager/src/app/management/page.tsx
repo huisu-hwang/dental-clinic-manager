@@ -15,9 +15,10 @@ import Toast from '@/components/UI/Toast'
 export default function ManagementPage() {
   const router = useRouter()
   const { user, logout, updateUser, loading: authLoading } = useAuth()
-  const { hasPermission } = usePermissions()
+  const { hasPermission, permissions } = usePermissions()
   const [activeTab, setActiveTab] = useState('staff')
   const [showProfile, setShowProfile] = useState(false)
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -33,14 +34,27 @@ export default function ManagementPage() {
   const canAccessClinicSettings = hasPermission('clinic_settings')
   const canAccessProtocols = hasPermission('protocol_view')
 
+  // 권한 로딩 상태 추적
   useEffect(() => {
-    // 인증 정보 로딩 중에는 아무것도 하지 않음
-    if (authLoading) {
+    if (!authLoading && user && permissions.size > 0) {
+      setPermissionsLoaded(true)
+    }
+  }, [authLoading, user, permissions])
+
+  useEffect(() => {
+    // 인증 정보 로딩 중이거나 권한이 로딩 중이면 아무것도 하지 않음
+    if (authLoading || !permissionsLoaded) {
       return
     }
 
-    // 로딩이 끝났는데 사용자가 없거나, 권한이 전혀 없으면 리디렉션
-    if (!user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols)) {
+    // 사용자가 없으면 리디렉션
+    if (!user) {
+      router.push('/dashboard')
+      return
+    }
+
+    // 권한이 전혀 없으면 리디렉션
+    if (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols) {
       router.push('/dashboard')
       return
     }
@@ -56,46 +70,35 @@ export default function ManagementPage() {
       if (canAccessStaffManagement) setActiveTab('staff')
       else if (canAccessClinicSettings) setActiveTab('clinic')
     }
-  }, [authLoading, user, canAccessStaffManagement, canAccessClinicSettings, canAccessProtocols, activeTab, router])
+  }, [authLoading, permissionsLoaded, user, canAccessStaffManagement, canAccessClinicSettings, canAccessProtocols, activeTab, router])
 
   // 로딩 중이거나 권한이 없는 경우
-  if (authLoading || !user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols)) {
+  if (authLoading || !permissionsLoaded) {
     return (
       <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center">
         <div className="text-center">
-          {authLoading ? (
-            <>
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p>사용자 정보 확인 중...</p>
-            </>
-          ) : (
-            <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200">
-              <h1 className="text-2xl font-bold text-slate-800 mb-4">접근 권한이 없습니다</h1>
-              <p className="text-slate-600 mb-6">
-                관리 페이지에 접근할 권한이 없습니다.
-              </p>
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
-              >
-                대시보드로 이동
-              </button>
-            </div>
-          )}
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>사용자 정보 확인 중...</p>
         </div>
       </div>
     )
   }
 
-  if (!user) {
+  if (!user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols)) {
     return (
-      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
-        <div className="container mx-auto p-4 md:p-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p>로딩 중...</p>
-            </div>
+      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center">
+        <div className="text-center">
+          <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200">
+            <h1 className="text-2xl font-bold text-slate-800 mb-4">접근 권한이 없습니다</h1>
+            <p className="text-slate-600 mb-6">
+              관리 페이지에 접근할 권한이 없습니다.
+            </p>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+            >
+              대시보드로 이동
+            </button>
           </div>
         </div>
       </div>
