@@ -28,6 +28,7 @@ export default function TiptapEditor({
     extensions: [StarterKit],
     content,
     editable,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
     },
