@@ -1266,13 +1266,6 @@ export const dataService = {
         .select(`
           *,
           category:protocol_categories(*),
-          currentVersion:protocol_versions!protocols_current_version_id_fkey(
-            id,
-            version_number,
-            created_at,
-            created_by,
-            created_by_user:users!protocol_versions_created_by_fkey(id, name, email)
-          ),
           created_by_user:users!protocols_created_by_fkey(id, name, email)
         `)
         .eq('clinic_id', targetClinicId)
@@ -1289,10 +1282,36 @@ export const dataService = {
         query = query.or(`title.ilike.%${filters.search}%,tags.cs.{${filters.search}}`)
       }
 
-      const { data, error } = await query.order('updated_at', { ascending: false })
+      const { data: protocols, error } = await query.order('updated_at', { ascending: false })
 
       if (error) throw error
-      return { data }
+
+      // currentVersion 정보를 별도로 조회
+      if (protocols && protocols.length > 0) {
+        const protocolsWithVersions = await Promise.all(
+          protocols.map(async (protocol: any) => {
+            if (protocol.current_version_id) {
+              const { data: version } = await supabase
+                .from('protocol_versions')
+                .select(`
+                  id,
+                  version_number,
+                  created_at,
+                  created_by,
+                  created_by_user:users!protocol_versions_created_by_fkey(id, name, email)
+                `)
+                .eq('id', protocol.current_version_id)
+                .single()
+
+              return { ...protocol, currentVersion: version }
+            }
+            return protocol
+          })
+        )
+        return { data: protocolsWithVersions }
+      }
+
+      return { data: protocols }
     } catch (error: unknown) {
       console.error('Error fetching protocols:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
@@ -1310,21 +1329,11 @@ export const dataService = {
         throw new Error('User clinic information not available')
       }
 
-      const { data, error } = await supabase
+      const { data: protocol, error } = await supabase
         .from('protocols')
         .select(`
           *,
           category:protocol_categories(*),
-          currentVersion:protocol_versions!protocols_current_version_id_fkey(
-            id,
-            version_number,
-            content,
-            change_summary,
-            change_type,
-            created_at,
-            created_by,
-            created_by_user:users!protocol_versions_created_by_fkey(id, name, email)
-          ),
           created_by_user:users!protocols_created_by_fkey(id, name, email)
         `)
         .eq('id', protocolId)
@@ -1333,7 +1342,29 @@ export const dataService = {
         .single()
 
       if (error) throw error
-      return { data }
+
+      // currentVersion 정보를 별도로 조회
+      const typedProtocol = protocol as any
+      if (typedProtocol && typedProtocol.current_version_id) {
+        const { data: version } = await supabase
+          .from('protocol_versions')
+          .select(`
+            id,
+            version_number,
+            content,
+            change_summary,
+            change_type,
+            created_at,
+            created_by,
+            created_by_user:users!protocol_versions_created_by_fkey(id, name, email)
+          `)
+          .eq('id', typedProtocol.current_version_id)
+          .single()
+
+        return { data: { ...typedProtocol, currentVersion: version } }
+      }
+
+      return { data: typedProtocol }
     } catch (error: unknown) {
       console.error('Error fetching protocol by ID:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
