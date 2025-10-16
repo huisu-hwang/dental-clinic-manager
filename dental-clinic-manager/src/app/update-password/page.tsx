@@ -141,7 +141,7 @@ export default function UpdatePasswordPage() {
                 </p>
                 <ul className="text-sm text-yellow-700 mt-2 ml-4 list-disc">
                   <li>받은 편지함에서 비밀번호 재설정 이메일을 확인하세요</li>
-                  <li>이메일에 있는 <strong>"비밀번호 재설정"</strong> 링크를 클릭하세요</li>
+                  <li>이메일에 있는 <strong>&quot;비밀번호 재설정&quot;</strong> 링크를 클릭하세요</li>
                   <li>브라우저 주소창에 직접 입력하면 작동하지 않습니다</li>
                 </ul>
                 <button

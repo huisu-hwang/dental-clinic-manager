@@ -16,7 +16,7 @@ import {
 import { getSupabase } from '@/lib/supabase'
 import { authService } from '@/lib/authService'
 import { dataService } from '@/lib/dataService'
-import type { User } from '@/types/auth'
+import { UserProfile } from '@/contexts/AuthContext'
 import PermissionSelector from './PermissionSelector'
 import type { Permission } from '@/types/permissions'
 
@@ -36,19 +36,19 @@ interface JoinRequest {
 }
 
 interface StaffManagementProps {
-  currentUser: User
+  currentUser: UserProfile
 }
 
 export default function StaffManagement({ currentUser }: StaffManagementProps) {
   const [activeTab, setActiveTab] = useState<'staff' | 'requests' | 'invite'>('staff')
-  const [staff, setStaff] = useState<User[]>([])
+  const [staff, setStaff] = useState<UserProfile[]>([])
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showPermissionModal, setShowPermissionModal] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<JoinRequest | null>(null)
-  const [editingStaffPermissions, setEditingStaffPermissions] = useState<User | null>(null)
+  const [editingStaffPermissions, setEditingStaffPermissions] = useState<UserProfile | null>(null)
 
   // Invite form state
   const [inviteForm, setInviteForm] = useState({
@@ -78,22 +78,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       if (error) {
         console.error('Error fetching staff:', error)
       } else {
-        const formattedStaff: User[] = (data || []).map((u: any) => ({
-          id: u.id,
-          email: u.email,
-          name: u.name,
-          phone: u.phone,
-          role: u.role,
-          clinic_id: u.clinic_id,
-          status: u.status,
-          permissions: u.permissions,
-          createdAt: new Date(u.created_at),
-          updatedAt: new Date(u.updated_at),
-          lastLoginAt: u.last_login_at ? new Date(u.last_login_at) : undefined,
-          approvedBy: u.approved_by,
-          approvedAt: u.approved_at ? new Date(u.approved_at) : undefined
-        }))
-        setStaff(formattedStaff)
+        setStaff(data as UserProfile[] || [])
       }
     } catch (err) {
       console.error('Error:', err)
@@ -308,11 +293,11 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                     <span className="text-blue-600 font-semibold">
-                      {member.name.charAt(0)}
+                      {(member.name || ' ').charAt(0)}
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-800">{member.name}</h3>
+                    <h3 className="text-lg font-semibold text-slate-800">{member.name || '이름 없음'}</h3>
                     <div className="flex items-center space-x-4 text-sm text-slate-600">
                       <span className="flex items-center">
                         <EnvelopeIcon className="h-4 w-4 mr-1" />
@@ -329,9 +314,9 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                 </div>
                 <div className="flex items-center space-x-3">
                   <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                    {getRoleLabel(member.role)}
+                    {getRoleLabel(member.role || '')}
                   </span>
-                  {getStatusBadge(member.status)}
+                  {getStatusBadge(member.status || '')}
                   {member.role !== 'owner' && member.status === 'active' && currentUser.role === 'owner' && (
                     <>
                       <button
@@ -526,7 +511,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       {/* Edit Staff Permissions Modal */}
       {editingStaffPermissions && (
         <PermissionSelector
-          role={editingStaffPermissions.role}
+          role={editingStaffPermissions.role || ''}
           initialPermissions={editingStaffPermissions.permissions}
           onSave={async (permissions) => {
             try {

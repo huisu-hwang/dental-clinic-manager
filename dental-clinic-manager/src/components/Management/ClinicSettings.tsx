@@ -9,10 +9,29 @@ import {
   ShieldCheckIcon
 } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
-import type { User, Clinic } from '@/types/auth'
+import type { UserProfile } from '@/contexts/AuthContext'
+
+// Clinic 타입을 이 파일에 직접 정의
+interface Clinic {
+  id: string;
+  name: string;
+  owner_name: string;
+  address: string;
+  phone: string;
+  email: string;
+  business_number?: string;
+  description?: string;
+  is_public: boolean;
+  allow_join_requests: boolean;
+  max_users: number;
+  subscription_tier: string;
+  subscription_expires_at?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface ClinicSettingsProps {
-  currentUser: User
+  currentUser: UserProfile
 }
 
 export default function ClinicSettings({ currentUser }: ClinicSettingsProps) {

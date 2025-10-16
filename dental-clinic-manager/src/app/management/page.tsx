@@ -8,12 +8,13 @@ import Header from '@/components/Layout/Header'
 import ManagementTabNavigation from '@/components/Layout/ManagementTabNavigation'
 import StaffManagement from '@/components/Management/StaffManagement'
 import ClinicSettings from '@/components/Management/ClinicSettings'
+import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/UI/Toast'
 
 export default function ManagementPage() {
   const router = useRouter()
-  const { user, logout, updateUser } = useAuth()
+  const { user, logout, updateUser, loading: authLoading } = useAuth()
   const { hasPermission } = usePermissions()
   const [activeTab, setActiveTab] = useState('staff')
   const [showProfile, setShowProfile] = useState(false)
@@ -28,41 +29,59 @@ export default function ManagementPage() {
   }
 
   // 권한 체크
-  const canAccessStaffManagement = hasPermission(['staff_manage', 'staff_view'])
+  const canAccessStaffManagement = ['staff_manage', 'staff_view'].some(p => hasPermission(p as any))
   const canAccessClinicSettings = hasPermission('clinic_settings')
+  const canAccessProtocols = hasPermission('protocol_view')
 
   useEffect(() => {
-    // 둘 다 접근 불가능한 경우 대시보드로 리다이렉트
-    if (!canAccessStaffManagement && !canAccessClinicSettings) {
+    // 인증 정보 로딩 중에는 아무것도 하지 않음
+    if (authLoading) {
+      return
+    }
+
+    // 로딩이 끝났는데 사용자가 없거나, 권한이 전혀 없으면 리디렉션
+    if (!user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols)) {
       router.push('/dashboard')
       return
     }
 
     // 현재 탭에 권한이 없으면 권한이 있는 탭으로 변경
-    if (activeTab === 'staff' && !canAccessStaffManagement && canAccessClinicSettings) {
-      setActiveTab('clinic')
-    } else if (activeTab === 'clinic' && !canAccessClinicSettings && canAccessStaffManagement) {
-      setActiveTab('staff')
+    if (activeTab === 'staff' && !canAccessStaffManagement) {
+      if (canAccessClinicSettings) setActiveTab('clinic')
+      else if (canAccessProtocols) setActiveTab('protocols')
+    } else if (activeTab === 'clinic' && !canAccessClinicSettings) {
+      if (canAccessStaffManagement) setActiveTab('staff')
+      else if (canAccessProtocols) setActiveTab('protocols')
+    } else if (activeTab === 'protocols' && !canAccessProtocols) {
+      if (canAccessStaffManagement) setActiveTab('staff')
+      else if (canAccessClinicSettings) setActiveTab('clinic')
     }
-  }, [canAccessStaffManagement, canAccessClinicSettings, activeTab, router])
+  }, [authLoading, user, canAccessStaffManagement, canAccessClinicSettings, canAccessProtocols, activeTab, router])
 
-  // 권한이 전혀 없는 경우
-  if (!user || (!canAccessStaffManagement && !canAccessClinicSettings)) {
+  // 로딩 중이거나 권한이 없는 경우
+  if (authLoading || !user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols)) {
     return (
-      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
-        <div className="container mx-auto p-4 md:p-8">
-          <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200 text-center">
-            <h1 className="text-2xl font-bold text-slate-800 mb-4">접근 권한이 없습니다</h1>
-            <p className="text-slate-600 mb-6">
-              관리 페이지에 접근할 권한이 없습니다.
-            </p>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
-            >
-              대시보드로 이동
-            </button>
-          </div>
+      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center">
+        <div className="text-center">
+          {authLoading ? (
+            <>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p>사용자 정보 확인 중...</p>
+            </>
+          ) : (
+            <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200">
+              <h1 className="text-2xl font-bold text-slate-800 mb-4">접근 권한이 없습니다</h1>
+              <p className="text-slate-600 mb-6">
+                관리 페이지에 접근할 권한이 없습니다.
+              </p>
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+              >
+                대시보드로 이동
+              </button>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -122,7 +141,7 @@ export default function ManagementPage() {
           <ManagementTabNavigation
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            userRole={user.role}
+            userRole={user.role || ''}
           />
 
           {/* Staff Management Tab */}
@@ -133,6 +152,11 @@ export default function ManagementPage() {
           {/* Clinic Settings Tab */}
           {activeTab === 'clinic' && (
             <ClinicSettings currentUser={user} />
+          )}
+
+          {/* Protocols Tab */}
+          {activeTab === 'protocols' && (
+            <ProtocolManagement currentUser={user} />
           )}
 
           {/* Analytics Tab */}

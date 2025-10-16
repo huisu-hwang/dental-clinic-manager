@@ -98,19 +98,9 @@ export default function Header({ dbStatus, user, onLogout, showManagementLink = 
             </button>
             <button
               type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                console.log('로그아웃 버튼 클릭됨')
-                if (onLogout) {
-                  onLogout()
-                } else {
-                  console.error('onLogout 함수가 전달되지 않았습니다.')
-                }
-              }}
+              onClick={onLogout}
               className="flex items-center space-x-1 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-red-200 transform hover:scale-105"
               title="로그아웃"
-              style={{ cursor: 'pointer' }}
             >
               <LogOut className="w-4 h-4 transition-transform hover:rotate-12" />
               <span className="font-medium">로그아웃</span>

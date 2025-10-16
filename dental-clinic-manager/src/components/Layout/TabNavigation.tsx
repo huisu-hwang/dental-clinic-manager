@@ -32,7 +32,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
     if (!tab.requiredPermissions || tab.requiredPermissions.length === 0) {
       return true
     }
-    return hasPermission(tab.requiredPermissions)
+    return tab.requiredPermissions.some(perm => hasPermission(perm))
   })
 
   // 현재 선택된 탭이 권한이 없는 탭이면 첫 번째 탭으로 변경

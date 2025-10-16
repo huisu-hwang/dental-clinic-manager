@@ -92,7 +92,7 @@ export default function MasterAdminPage() {
       setUsers(allUsers)
 
       // 승인 대기 중인 사용자 필터링
-      const pending = allUsers.filter(u => u.status === 'pending')
+      const pending = allUsers.filter((u: any) => u.status === 'pending')
       setPendingUsers(pending)
       console.log('[Master] Pending users:', pending.length)
 

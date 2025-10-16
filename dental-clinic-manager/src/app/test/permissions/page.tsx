@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { DEFAULT_PERMISSIONS, PERMISSION_GROUPS } from '@/types/permissions'
@@ -8,8 +7,7 @@ import type { Permission } from '@/types/permissions'
 
 export default function PermissionsTestPage() {
   const { user } = useAuth()
-  const { permissions, hasPermission, hasAllPermissions, canAccessTab } = usePermissions()
-  const [selectedPermissions, setSelectedPermissions] = useState<Permission[]>([])
+  const { permissions, hasPermission, canAccessTab } = usePermissions()
 
   if (!user) {
     return (
@@ -36,16 +34,6 @@ export default function PermissionsTestPage() {
     return hasPermission(permission)
   }
 
-  const testMultiplePermissions = () => {
-    if (selectedPermissions.length === 0) return null
-    return hasPermission(selectedPermissions)
-  }
-
-  const testAllPermissions = () => {
-    if (selectedPermissions.length === 0) return null
-    return hasAllPermissions(selectedPermissions)
-  }
-
   const allPermissions = Object.values(PERMISSION_GROUPS).flat().map(p => p.key as Permission)
 
   return (
@@ -58,17 +46,17 @@ export default function PermissionsTestPage() {
         <div className="grid grid-cols-2 gap-2">
           <p><strong>이름:</strong> {user.name}</p>
           <p><strong>이메일:</strong> {user.email}</p>
-          <p><strong>역할:</strong> {getRoleLabel(user.role)}</p>
+          <p><strong>역할:</strong> {getRoleLabel(user.role || '')}</p>
           <p><strong>병원 ID:</strong> {user.clinic_id || '없음'}</p>
         </div>
       </div>
 
       {/* 현재 권한 목록 */}
       <div className="bg-green-50 p-4 rounded-lg mb-6">
-        <h2 className="text-xl font-bold mb-2">현재 보유 권한 ({permissions.length}개)</h2>
+        <h2 className="text-xl font-bold mb-2">현재 보유 권한 ({permissions.size}개)</h2>
         <div className="flex flex-wrap gap-2 mt-2">
-          {permissions.length > 0 ? (
-            permissions.map(perm => (
+          {permissions.size > 0 ? (
+            Array.from(permissions).map(perm => (
               <span key={perm} className="px-3 py-1 bg-green-200 text-green-800 rounded-full text-sm">
                 {perm}
               </span>
@@ -83,18 +71,18 @@ export default function PermissionsTestPage() {
       <div className="bg-yellow-50 p-4 rounded-lg mb-6">
         <h2 className="text-xl font-bold mb-2">역할별 기본 권한과 비교</h2>
         <div className="mt-2">
-          <p className="mb-2"><strong>{getRoleLabel(user.role)} 기본 권한:</strong></p>
+          <p className="mb-2"><strong>{getRoleLabel(user.role || '')} 기본 권한:</strong></p>
           <div className="flex flex-wrap gap-2">
-            {DEFAULT_PERMISSIONS[user.role]?.map(perm => (
+            {DEFAULT_PERMISSIONS[user.role || 'staff']?.map(perm => (
               <span
                 key={perm}
                 className={`px-3 py-1 rounded-full text-sm ${
-                  permissions.includes(perm)
+                  permissions.has(perm)
                     ? 'bg-green-200 text-green-800'
                     : 'bg-red-200 text-red-800'
                 }`}
               >
-                {perm} {permissions.includes(perm) ? '✓' : '✗'}
+                {perm} {permissions.has(perm) ? '✓' : '✗'}
               </span>
             )) || <p className="text-gray-500">기본 권한이 정의되지 않았습니다.</p>}
           </div>
@@ -107,7 +95,7 @@ export default function PermissionsTestPage() {
 
         {/* 단일 권한 테스트 */}
         <div className="mb-4">
-          <h3 className="font-bold mb-2">단일 권한 테스트</h3>
+          <h3 className="font-bold mb-2">권한 테스트</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {allPermissions.map(perm => (
               <div key={perm} className="flex items-center space-x-2">
@@ -117,51 +105,6 @@ export default function PermissionsTestPage() {
                 <span className="text-sm">{perm}</span>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* 다중 권한 테스트 */}
-        <div className="mb-4">
-          <h3 className="font-bold mb-2">다중 권한 테스트 (OR 조건)</h3>
-          <div className="mb-2">
-            <p className="text-sm text-gray-600 mb-2">테스트할 권한을 선택하세요:</p>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {allPermissions.map(perm => (
-                <button
-                  key={perm}
-                  onClick={() => {
-                    if (selectedPermissions.includes(perm)) {
-                      setSelectedPermissions(selectedPermissions.filter(p => p !== perm))
-                    } else {
-                      setSelectedPermissions([...selectedPermissions, perm])
-                    }
-                  }}
-                  className={`px-2 py-1 text-xs rounded ${
-                    selectedPermissions.includes(perm)
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  {perm}
-                </button>
-              ))}
-            </div>
-            {selectedPermissions.length > 0 && (
-              <div className="mt-2">
-                <p className="text-sm">
-                  <strong>hasPermission 결과 (OR):</strong>{' '}
-                  <span className={testMultiplePermissions() ? 'text-green-600' : 'text-red-600'}>
-                    {testMultiplePermissions() ? '✓ 권한 있음' : '✗ 권한 없음'}
-                  </span>
-                </p>
-                <p className="text-sm">
-                  <strong>hasAllPermissions 결과 (AND):</strong>{' '}
-                  <span className={testAllPermissions() ? 'text-green-600' : 'text-red-600'}>
-                    {testAllPermissions() ? '✓ 모든 권한 있음' : '✗ 일부 권한 없음'}
-                  </span>
-                </p>
-              </div>
-            )}
           </div>
         </div>
 

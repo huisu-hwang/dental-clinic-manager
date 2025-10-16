@@ -104,16 +104,13 @@ export default function DashboardPage() {
     const result = await dataService.saveReport(data)
     if (result.error) {
       showToast(`저장 실패: ${result.error}`, 'error')
-    } else if (result.success) {
+    } else {
       showToast('보고서가 성공적으로 저장되었습니다.', 'success')
-
-      // refetch 후 스크롤 위치 복원
+      // 데이터가 변경되었으므로 즉시 다시 로드
       await refetch()
 
-      // 다음 렌더링 사이클에서 스크롤 위치 복원
-      setTimeout(() => {
-        window.scrollTo(0, scrollPosition)
-      }, 0)
+      // 스크롤 위치 복원
+      window.scrollTo(0, scrollPosition)
     }
   }
 
@@ -217,7 +214,7 @@ export default function DashboardPage() {
         <Header
           dbStatus={dbStatus}
           user={user}
-          onLogout={logout}
+          onLogout={() => logout()} // 이벤트 객체가 전달되지 않도록 래핑
           onProfileClick={() => setShowProfile(true)}
         />
 

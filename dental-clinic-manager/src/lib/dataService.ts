@@ -1,5 +1,5 @@
 import { getSupabase } from './supabase'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, Protocol, ProtocolCategory, ProtocolVersion, ProtocolFormData } from '@/types'
 
 // 현재 로그인한 사용자의 clinic_id를 가져오는 헬퍼 함수
 async function getCurrentClinicId(): Promise<string | null> {
@@ -22,7 +22,7 @@ async function getCurrentClinicId(): Promise<string | null> {
       return null
     }
 
-    return data.clinic_id
+    return (data as any).clinic_id
   } catch (error) {
     console.error('Error getting clinic_id:', error)
     return null
@@ -1087,6 +1087,482 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching users by clinic:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // ========================================
+  // 프로토콜 관리 함수들
+  // ========================================
+
+  // 프로토콜 카테고리 목록 조회
+  async getProtocolCategories() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_categories')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('display_order')
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching protocol categories:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 카테고리 생성
+  async createProtocolCategory(categoryData: { name: string; description?: string; color?: string; display_order?: number }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await (supabase
+        .from('protocol_categories') as any)
+        .insert([{
+          clinic_id: clinicId,
+          name: categoryData.name,
+          description: categoryData.description || null,
+          color: categoryData.color || '#3B82F6',
+          display_order: categoryData.display_order || 0
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('Error creating protocol category:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 카테고리 수정
+  async updateProtocolCategory(categoryId: string, updates: { name?: string; description?: string; color?: string; display_order?: number }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await (supabase
+        .from('protocol_categories') as any)
+        .update(updates)
+        .eq('id', categoryId)
+        .eq('clinic_id', clinicId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('Error updating protocol category:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 카테고리 삭제
+  async deleteProtocolCategory(categoryId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('protocol_categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting protocol category:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 목록 조회
+  async getProtocols(filters?: { status?: string; category_id?: string; search?: string }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      let query = supabase
+        .from('protocols')
+        .select(`
+          *,
+          category:protocol_categories(*),
+          currentVersion:protocol_versions!protocols_current_version_id_fkey(
+            id,
+            version_number,
+            created_at,
+            created_by,
+            created_by_user:users!protocol_versions_created_by_fkey(id, name, email)
+          ),
+          created_by_user:users!protocols_created_by_fkey(id, name, email)
+        `)
+        .eq('clinic_id', clinicId)
+        .is('deleted_at', null)
+
+      // 필터 적용
+      if (filters?.status) {
+        query = query.eq('status', filters.status)
+      }
+      if (filters?.category_id) {
+        query = query.eq('category_id', filters.category_id)
+      }
+      if (filters?.search) {
+        query = query.or(`title.ilike.%${filters.search}%,tags.cs.{${filters.search}}`)
+      }
+
+      const { data, error } = await query.order('updated_at', { ascending: false })
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching protocols:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 상세 조회 (ID로)
+  async getProtocolById(protocolId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('protocols')
+        .select(`
+          *,
+          category:protocol_categories(*),
+          currentVersion:protocol_versions!protocols_current_version_id_fkey(
+            id,
+            version_number,
+            content,
+            change_summary,
+            change_type,
+            created_at,
+            created_by,
+            created_by_user:users!protocol_versions_created_by_fkey(id, name, email)
+          ),
+          created_by_user:users!protocols_created_by_fkey(id, name, email)
+        `)
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+        .is('deleted_at', null)
+        .single()
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching protocol by ID:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 생성
+  async createProtocol(formData: ProtocolFormData) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // 1. 프로토콜 생성
+      const { data: protocol, error: protocolError } = await (supabase
+        .from('protocols') as any)
+        .insert([{
+          clinic_id: clinicId,
+          title: formData.title,
+          category_id: formData.category_id || null,
+          status: formData.status,
+          tags: formData.tags || [],
+          created_by: user.id
+        }])
+        .select()
+        .single()
+
+      if (protocolError) throw protocolError
+
+      // 2. 첫 번째 버전 생성
+      const { data: version, error: versionError } = await (supabase
+        .from('protocol_versions') as any)
+        .insert([{
+          protocol_id: protocol.id,
+          version_number: '1.0',
+          content: formData.content,
+          change_summary: formData.change_summary || '초기 버전',
+          change_type: 'major',
+          created_by: user.id
+        }])
+        .select()
+        .single()
+
+      if (versionError) throw versionError
+
+      // 3. 프로토콜의 current_version_id 업데이트
+      const { error: updateError } = await (supabase
+        .from('protocols') as any)
+        .update({ current_version_id: version.id })
+        .eq('id', protocol.id)
+
+      if (updateError) throw updateError
+
+      return { success: true, data: { ...protocol, current_version_id: version.id } }
+    } catch (error: unknown) {
+      console.error('Error creating protocol:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 수정 (새 버전 생성)
+  async updateProtocol(protocolId: string, formData: ProtocolFormData) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // 1. 새 버전 번호 계산
+      const { data: versionNumber, error: calcError } = await (supabase as any)
+        .rpc('calculate_next_protocol_version', {
+          p_protocol_id: protocolId,
+          p_change_type: formData.change_type || 'minor'
+        })
+
+      if (calcError) throw calcError
+
+      // 2. 새 버전 생성
+      const { data: version, error: versionError } = await (supabase
+        .from('protocol_versions') as any)
+        .insert([{
+          protocol_id: protocolId,
+          version_number: versionNumber,
+          content: formData.content,
+          change_summary: formData.change_summary || '내용 수정',
+          change_type: formData.change_type || 'minor',
+          created_by: user.id
+        }])
+        .select()
+        .single()
+
+      if (versionError) throw versionError
+
+      // 3. 프로토콜 업데이트
+      const updateData: any = {
+        current_version_id: version.id,
+        updated_at: new Date().toISOString()
+      }
+
+      if (formData.title) updateData.title = formData.title
+      if (formData.category_id !== undefined) updateData.category_id = formData.category_id
+      if (formData.status) updateData.status = formData.status
+      if (formData.tags) updateData.tags = formData.tags
+
+      const { data: protocol, error: updateError } = await (supabase
+        .from('protocols') as any)
+        .update(updateData)
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+        .select()
+        .single()
+
+      if (updateError) throw updateError
+
+      return { success: true, data: protocol }
+    } catch (error: unknown) {
+      console.error('Error updating protocol:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 삭제 (소프트 삭제)
+  async deleteProtocol(protocolId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await (supabase
+        .from('protocols') as any)
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting protocol:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 버전 히스토리 조회
+  async getProtocolVersions(protocolId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      // 프로토콜이 현재 클리닉 소속인지 확인
+      const { data: protocol, error: protocolError } = await supabase
+        .from('protocols')
+        .select('id')
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (protocolError || !protocol) {
+        throw new Error('Protocol not found or access denied')
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_versions')
+        .select(`
+          *,
+          created_by_user:users!protocol_versions_created_by_fkey(id, name, email)
+        `)
+        .eq('protocol_id', protocolId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching protocol versions:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 버전 복원
+  async restoreProtocolVersion(protocolId: string, versionId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // 1. 복원할 버전 조회
+      const { data: oldVersion, error: versionError } = await supabase
+        .from('protocol_versions')
+        .select('*')
+        .eq('id', versionId)
+        .eq('protocol_id', protocolId)
+        .single()
+
+      if (versionError || !oldVersion) throw new Error('Version not found')
+      const typedOldVersion = oldVersion as any
+
+      // 2. 프로토콜이 현재 클리닉 소속인지 확인
+      const { data: protocol, error: protocolError } = await supabase
+        .from('protocols')
+        .select('*')
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (protocolError || !protocol) {
+        throw new Error('Protocol not found or access denied')
+      }
+
+      // 3. 새 버전 번호 계산
+      const { data: versionNumber, error: calcError } = await (supabase as any)
+        .rpc('calculate_next_protocol_version', {
+          p_protocol_id: protocolId,
+          p_change_type: 'minor'
+        })
+
+      if (calcError) throw calcError
+
+      // 4. 복원된 내용으로 새 버전 생성
+      const { data: newVersion, error: createError } = await (supabase
+        .from('protocol_versions') as any)
+        .insert([{
+          protocol_id: protocolId,
+          version_number: versionNumber,
+          content: typedOldVersion.content,
+          change_summary: `버전 ${typedOldVersion.version_number}으로 복원`,
+          change_type: 'minor',
+          created_by: user.id
+        }])
+        .select()
+        .single()
+
+      if (createError) throw createError
+
+      // 5. 프로토콜의 current_version_id 업데이트
+      const { error: updateError } = await (supabase
+        .from('protocols') as any)
+        .update({
+          current_version_id: newVersion.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+
+      if (updateError) throw updateError
+
+      return { success: true, data: newVersion }
+    } catch (error: unknown) {
+      console.error('Error restoring protocol version:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   },

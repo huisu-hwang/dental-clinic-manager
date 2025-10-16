@@ -45,16 +45,16 @@ export default function PendingApprovalPage() {
       }
 
       // 이미 승인된 경우 대시보드로 이동
-      if (userData.status === 'active') {
+      if ((userData as any).status === 'active') {
         router.push('/dashboard')
         return
       }
 
       // 거절된 경우
-      if (userData.status === 'rejected') {
-        setUserInfo({ ...userData, status: 'rejected' })
+      if ((userData as any).status === 'rejected') {
+        setUserInfo({ ...(userData as any), status: 'rejected' })
       } else {
-        setUserInfo(userData)
+        setUserInfo(userData as any)
       }
     } catch (error) {
       console.error('Error checking status:', error)

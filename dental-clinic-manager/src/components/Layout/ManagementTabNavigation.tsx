@@ -4,7 +4,8 @@ import {
   UsersIcon,
   BuildingOfficeIcon,
   ChartBarIcon,
-  CogIcon
+  CogIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 import { usePermissions } from '@/hooks/usePermissions'
 import type { Permission } from '@/types/permissions'
@@ -43,6 +44,12 @@ export default function ManagementTabNavigation({
       requiredPermissions: ['clinic_settings']
     },
     {
+      id: 'protocols',
+      label: '진료 프로토콜',
+      icon: DocumentTextIcon,
+      requiredPermissions: ['protocol_view']
+    },
+    {
       id: 'analytics',
       label: '통계 분석',
       icon: ChartBarIcon,
@@ -62,7 +69,7 @@ export default function ManagementTabNavigation({
       return true
     }
     // 하나라도 권한이 있으면 표시
-    return hasPermission(tab.requiredPermissions)
+    return tab.requiredPermissions.some(perm => hasPermission(perm))
   })
 
   return (

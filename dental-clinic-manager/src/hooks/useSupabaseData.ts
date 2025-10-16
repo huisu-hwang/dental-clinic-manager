@@ -167,7 +167,7 @@ export const useSupabaseData = () => {
       .channel('public-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public' }, () => {
         console.log('[useSupabaseData] Database change detected, reloading data')
-        loadData()
+        fetchAllData()
       })
       .subscribe()
 
@@ -176,7 +176,7 @@ export const useSupabaseData = () => {
         supabase.removeChannel(channel)
       }
     }
-  }, [isInitialized, fetchAllData])
+  }, [isInitialized])
 
   return {
     dailyReports,
