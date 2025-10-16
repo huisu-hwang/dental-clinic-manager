@@ -59,7 +59,8 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
         filters.search = searchTerm
       }
 
-      const result = await dataService.getProtocols(filters)
+      // currentUser.clinic_id를 전달
+      const result = await dataService.getProtocols(currentUser.clinic_id, filters)
       if (result.error) {
         setError(result.error)
       } else {
@@ -74,7 +75,8 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
 
   const fetchCategories = async () => {
     try {
-      const result = await dataService.getProtocolCategories()
+      // currentUser.clinic_id를 전달
+      const result = await dataService.getProtocolCategories(currentUser.clinic_id)
       if (result.error) {
         console.error('Error fetching categories:', result.error)
       } else {

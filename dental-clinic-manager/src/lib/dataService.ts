@@ -3,12 +3,43 @@ import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, Gi
 
 // 현재 로그인한 사용자의 clinic_id를 가져오는 헬퍼 함수
 async function getCurrentClinicId(): Promise<string | null> {
-  const supabase = getSupabase()
-  if (!supabase) return null
-
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
+    // 1. localStorage에서 먼저 확인 (가장 빠른 방법)
+    if (typeof window !== 'undefined') {
+      const cachedUser = localStorage.getItem('currentUser')
+      if (cachedUser) {
+        try {
+          const userData = JSON.parse(cachedUser)
+          if (userData.clinic_id) {
+            console.log('[getCurrentClinicId] Using cached clinic_id:', userData.clinic_id)
+            return userData.clinic_id
+          }
+        } catch (e) {
+          console.warn('[getCurrentClinicId] Failed to parse cached user data:', e)
+        }
+      }
+    }
+
+    // 2. localStorage에 없으면 Supabase에서 조회
+    const supabase = getSupabase()
+    if (!supabase) {
+      console.error('[getCurrentClinicId] Supabase client not available')
+      return null
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError) {
+      console.error('[getCurrentClinicId] Auth error:', authError)
+      return null
+    }
+
+    if (!user) {
+      console.error('[getCurrentClinicId] No authenticated user')
+      return null
+    }
+
+    console.log('[getCurrentClinicId] Querying users table for user:', user.id)
 
     // users 테이블에서 clinic_id 조회
     const { data, error } = await supabase
@@ -17,14 +48,28 @@ async function getCurrentClinicId(): Promise<string | null> {
       .eq('id', user.id)
       .single()
 
-    if (error || !data) {
-      console.error('Failed to get clinic_id:', error)
+    console.log('[getCurrentClinicId] Query result:', { data, error })
+
+    if (error) {
+      console.error('[getCurrentClinicId] Query error:', error)
+      console.error('[getCurrentClinicId] Error code:', error.code)
+      console.error('[getCurrentClinicId] Error message:', error.message)
+      console.error('[getCurrentClinicId] Error details:', error.details)
+      console.error('[getCurrentClinicId] Error hint:', error.hint)
       return null
     }
 
-    return (data as any).clinic_id
+    if (!data) {
+      console.error('[getCurrentClinicId] No data returned for user:', user.id)
+      return null
+    }
+
+    const clinicId = (data as any).clinic_id
+    console.log('[getCurrentClinicId] Retrieved clinic_id:', clinicId)
+
+    return clinicId
   } catch (error) {
-    console.error('Error getting clinic_id:', error)
+    console.error('[getCurrentClinicId] Unexpected error:', error)
     return null
   }
 }
@@ -1096,20 +1141,21 @@ export const dataService = {
   // ========================================
 
   // 프로토콜 카테고리 목록 조회
-  async getProtocolCategories() {
+  async getProtocolCategories(clinicId?: string) {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
-      const clinicId = await getCurrentClinicId()
-      if (!clinicId) {
+      // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
+      const targetClinicId = clinicId || await getCurrentClinicId()
+      if (!targetClinicId) {
         throw new Error('User clinic information not available')
       }
 
       const { data, error } = await supabase
         .from('protocol_categories')
         .select('*')
-        .eq('clinic_id', clinicId)
+        .eq('clinic_id', targetClinicId)
         .order('display_order')
 
       if (error) throw error
@@ -1204,13 +1250,14 @@ export const dataService = {
   },
 
   // 프로토콜 목록 조회
-  async getProtocols(filters?: { status?: string; category_id?: string; search?: string }) {
+  async getProtocols(clinicId?: string, filters?: { status?: string; category_id?: string; search?: string }) {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
-      const clinicId = await getCurrentClinicId()
-      if (!clinicId) {
+      // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
+      const targetClinicId = clinicId || await getCurrentClinicId()
+      if (!targetClinicId) {
         throw new Error('User clinic information not available')
       }
 
@@ -1228,7 +1275,7 @@ export const dataService = {
           ),
           created_by_user:users!protocols_created_by_fkey(id, name, email)
         `)
-        .eq('clinic_id', clinicId)
+        .eq('clinic_id', targetClinicId)
         .is('deleted_at', null)
 
       // 필터 적용
