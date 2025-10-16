@@ -88,3 +88,85 @@ export interface HappyCallRowData {
   treatment: string;
   notes: string;
 }
+
+// ========================================
+// Protocol Management Types
+// ========================================
+
+export interface ProtocolCategory {
+  id: string;
+  clinic_id: string;
+  name: string;
+  description?: string;
+  color: string;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Protocol {
+  id: string;
+  clinic_id: string;
+  title: string;
+  category_id?: string;
+  category?: ProtocolCategory;
+  status: 'draft' | 'active' | 'archived';
+  current_version_id?: string;
+  currentVersion?: ProtocolVersion;
+  tags: string[];
+  created_by: string;
+  created_by_user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+export interface ProtocolVersion {
+  id: string;
+  protocol_id: string;
+  version_number: string;
+  content: string;
+  change_summary?: string;
+  change_type: 'major' | 'minor';
+  created_by: string;
+  created_by_user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  created_at: string;
+}
+
+export interface ProtocolFormData {
+  title: string;
+  category_id?: string;
+  content: string;
+  status: 'draft' | 'active' | 'archived';
+  tags: string[];
+  change_summary?: string;
+  change_type?: 'major' | 'minor';
+}
+
+export interface ProtocolListItem {
+  id: string;
+  title: string;
+  category?: {
+    id: string;
+    name: string;
+    color: string;
+  };
+  status: 'draft' | 'active' | 'archived';
+  currentVersion: {
+    version_number: string;
+    updated_at: string;
+    updated_by: {
+      id: string;
+      name: string;
+    };
+  };
+  tags: string[];
+}

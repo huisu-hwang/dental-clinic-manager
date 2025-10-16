@@ -3,9 +3,21 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import { dataService } from '@/lib/dataService'
+import type { Permission } from '@/types/permissions'
+
+export interface UserProfile {
+  id: string
+  email?: string
+  name?: string
+  role?: string
+  status?: 'pending' | 'active' | 'rejected'
+  permissions?: Permission[]
+  clinic_id?: string
+  [key: string]: any
+}
 
 export interface AuthContextType {
-  user: any
+  user: UserProfile | null
   logout: () => void
   login: (userId: string, clinicInfo: any) => void
   updateUser: (updatedUserData: any) => void
@@ -14,7 +26,7 @@ export interface AuthContextType {
 }
 
 // Temporary master admin credentials for testing
-const MASTER_ADMIN = {
+const MASTER_ADMIN: UserProfile = {
   id: 'master-admin-001',
   email: 'sani81@gmail.com',
   name: 'Master Administrator',
@@ -26,7 +38,7 @@ const MASTER_ADMIN = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 

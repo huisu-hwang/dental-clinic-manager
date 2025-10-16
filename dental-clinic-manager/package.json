@@ -11,7 +11,11 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.57.4",
+    "@tiptap/pm": "^3.7.2",
+    "@tiptap/react": "^3.7.2",
+    "@tiptap/starter-kit": "^3.7.2",
     "@types/uuid": "^10.0.0",
+    "diff": "^8.0.2",
     "dotenv": "^17.2.2",
     "lucide-react": "^0.544.0",
     "next": "15.5.3",

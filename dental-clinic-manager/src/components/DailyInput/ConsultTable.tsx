@@ -6,9 +6,10 @@ import type { ConsultRowData } from '@/types'
 interface ConsultTableProps {
   consultRows: ConsultRowData[]
   onConsultRowsChange: (rows: ConsultRowData[]) => void
+  isReadOnly: boolean
 }
 
-export default function ConsultTable({ consultRows, onConsultRowsChange }: ConsultTableProps) {
+export default function ConsultTable({ consultRows, onConsultRowsChange, isReadOnly }: ConsultTableProps) {
   const addRow = () => {
     const newRow: ConsultRowData = {
       patient_name: '',
@@ -54,6 +55,7 @@ export default function ConsultTable({ consultRows, onConsultRowsChange }: Consu
                     placeholder="홍길동"
                     value={row.patient_name}
                     onChange={(e) => updateRow(index, 'patient_name', e.target.value)}
+                    readOnly={isReadOnly}
                   />
                 </td>
                 <td className="p-2">
@@ -63,6 +65,7 @@ export default function ConsultTable({ consultRows, onConsultRowsChange }: Consu
                     placeholder="상담 내용 요약"
                     value={row.consult_content}
                     onChange={(e) => updateRow(index, 'consult_content', e.target.value)}
+                    readOnly={isReadOnly}
                   />
                 </td>
                 <td className="p-2">
@@ -70,6 +73,7 @@ export default function ConsultTable({ consultRows, onConsultRowsChange }: Consu
                     className="w-full p-2 border rounded-md"
                     value={row.consult_status}
                     onChange={(e) => updateRow(index, 'consult_status', e.target.value as 'O' | 'X')}
+                    disabled={isReadOnly}
                   >
                     <option value="O">O</option>
                     <option value="X">X</option>
@@ -82,12 +86,14 @@ export default function ConsultTable({ consultRows, onConsultRowsChange }: Consu
                     placeholder="참고 사항 (선택)"
                     value={row.remarks}
                     onChange={(e) => updateRow(index, 'remarks', e.target.value)}
+                    readOnly={isReadOnly}
                   />
                 </td>
                 <td className="p-2 text-center">
                   <button
-                    className="text-red-500 hover:text-red-700 p-1"
+                    className="text-red-500 hover:text-red-700 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => removeRow(index)}
+                    disabled={isReadOnly}
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -99,7 +105,8 @@ export default function ConsultTable({ consultRows, onConsultRowsChange }: Consu
       </div>
       <button
         onClick={addRow}
-        className="mt-4 text-blue-600 font-semibold text-sm py-2 px-4 rounded-md hover:bg-blue-50 flex items-center space-x-2"
+        className="mt-4 text-blue-600 font-semibold text-sm py-2 px-4 rounded-md hover:bg-blue-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={isReadOnly}
       >
         <Plus className="w-4 h-4" />
         <span>상담 기록 추가</span>

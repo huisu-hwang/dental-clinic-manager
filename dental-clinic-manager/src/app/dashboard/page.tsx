@@ -24,6 +24,11 @@ import type { ConsultRowData, GiftRowData, HappyCallRowData } from '@/types'
 export default function DashboardPage() {
   const { user, logout, updateUser } = useAuth()
   const { hasPermission, canAccessTab } = usePermissions()
+
+  // 권한 상태 정의
+  const canCreateReport = hasPermission('daily_report_create')
+  const canEditReport = hasPermission('daily_report_edit')
+  const canDeleteReport = hasPermission('daily_report_delete')
   const [activeTab, setActiveTab] = useState('daily-input')
   const [showProfile, setShowProfile] = useState(false)
   const [dbStatus, setDbStatus] = useState<'connected' | 'connecting' | 'error'>('connecting')
@@ -84,6 +89,10 @@ export default function DashboardPage() {
     recallBookingCount: number
     specialNotes: string
   }) => {
+    if (!canCreateReport && !canEditReport) {
+      showToast('보고서를 저장할 권한이 없습니다.', 'error')
+      return
+    }
     if (!data.date) {
       showToast('보고 일자를 선택해주세요.', 'error')
       return
@@ -109,6 +118,10 @@ export default function DashboardPage() {
   }
 
   const handleDeleteReport = async (date: string) => {
+    if (!canDeleteReport) {
+      showToast('보고서를 삭제할 권한이 없습니다.', 'error')
+      return
+    }
     const result = await dataService.deleteReportByDate(date)
     if (result.error) {
       showToast(`삭제 실패: ${result.error}`, 'error')
@@ -232,6 +245,8 @@ export default function DashboardPage() {
             <DailyInputForm
               giftInventory={giftInventory}
               onSaveReport={handleSaveReport}
+              canCreate={canCreateReport}
+              canEdit={canEditReport}
             />
           )}
 
@@ -352,6 +367,7 @@ export default function DashboardPage() {
               inventoryLogs={inventoryLogs}
               onDeleteReport={handleDeleteReport}
               onRecalculateStats={handleRecalculateStats}
+              canDelete={canDeleteReport}
             />
           )}
 

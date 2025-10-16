@@ -19,9 +19,11 @@ interface DailyInputFormProps {
     recallBookingCount: number
     specialNotes: string
   }) => void
+  canCreate: boolean
+  canEdit: boolean
 }
 
-export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInputFormProps) {
+export default function DailyInputForm({ giftInventory, onSaveReport, canCreate, canEdit }: DailyInputFormProps) {
   const [reportDate, setReportDate] = useState(getTodayString())
   const [consultRows, setConsultRows] = useState<ConsultRowData[]>([
     { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
@@ -37,6 +39,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
   const [specialNotes, setSpecialNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
+  const isReadOnly = hasExistingData ? !canEdit : !canCreate
 
   // 날짜별 데이터 로드
   const loadDataForDate = async (date: string) => {
@@ -212,7 +215,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
               className="w-full p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
               value={reportDate}
               onChange={(e) => handleDateChange(e.target.value)}
-              disabled={loading}
+              disabled={loading || !canCreate}
             />
           </div>
         </div>
@@ -222,6 +225,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
       <ConsultTable 
         consultRows={consultRows}
         onConsultRowsChange={setConsultRows}
+        isReadOnly={isReadOnly}
       />
 
       {/* 리콜 결과 */}
@@ -236,6 +240,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
               value={recallCount}
               onChange={(e) => setRecallCount(parseInt(e.target.value) || 0)}
               className="w-full p-2 border border-slate-300 rounded-md"
+              readOnly={isReadOnly}
             />
           </div>
           <div>
@@ -246,6 +251,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
               value={recallBookingCount}
               onChange={(e) => setRecallBookingCount(parseInt(e.target.value) || 0)}
               className="w-full p-2 border border-slate-300 rounded-md"
+              readOnly={isReadOnly}
             />
           </div>
         </div>
@@ -256,12 +262,14 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
         giftRows={giftRows}
         onGiftRowsChange={setGiftRows}
         giftInventory={giftInventory}
+        isReadOnly={isReadOnly}
       />
 
       {/* 해피콜 결과 */}
       <HappyCallTable
         happyCallRows={happyCallRows}
         onHappyCallRowsChange={setHappyCallRows}
+        isReadOnly={isReadOnly}
       />
 
       {/* 기타 특이사항 */}
@@ -278,6 +286,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
             placeholder="오늘 업무 중 특이사항이나 기록할 내용이 있다면 작성해주세요. (선택사항)"
             value={specialNotes}
             onChange={(e) => setSpecialNotes(e.target.value)}
+            readOnly={isReadOnly}
           />
           <p className="mt-1 text-sm text-slate-500">
             예: 장비 점검, 직원 교육, 특별한 환자 케이스, 업무 변경사항 등
@@ -286,23 +295,26 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
       </div>
 
       {/* 저장 버튼 */}
-      <div className="flex justify-end space-x-4">
-        <button
-          type="button"
-          onClick={resetForm}
-          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
-        >
-          초기화
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={loading}
-        >
-          {loading ? '저장 중...' : '저장하기'}
-        </button>
-      </div>
+      {(canCreate || canEdit) && (
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={resetForm}
+            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
+            disabled={isReadOnly}
+          >
+            초기화
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || isReadOnly}
+          >
+            {loading ? '저장 중...' : (hasExistingData ? '수정하기' : '저장하기')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

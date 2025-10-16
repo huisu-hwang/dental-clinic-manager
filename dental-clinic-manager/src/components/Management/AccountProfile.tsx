@@ -12,12 +12,12 @@ import {
   CalendarIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
-import type { User, Clinic } from '@/types/auth'
+import type { UserProfile } from '@/contexts/AuthContext'
 
 interface AccountProfileProps {
-  currentUser: User
+  currentUser: UserProfile
   onClose?: () => void
-  onUpdate?: (updatedUser: User) => void
+  onUpdate?: (updatedUser: UserProfile) => void
 }
 
 export default function AccountProfile({ currentUser, onClose, onUpdate }: AccountProfileProps) {
@@ -93,7 +93,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
       setSuccess('프로필이 성공적으로 업데이트되었습니다.')
 
       if (onUpdate && updatedUser) {
-        onUpdate(updatedUser as User)
+        onUpdate(updatedUser as UserProfile)
       }
 
       setTimeout(() => {

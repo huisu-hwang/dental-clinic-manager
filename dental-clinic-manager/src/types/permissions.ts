@@ -14,6 +14,13 @@ export type Permission =
   | 'staff_manage'           // 직원 관리 (승인/거절/권한 수정)
   | 'clinic_settings'        // 병원 설정 관리
   | 'guide_view'             // 사용 안내 보기
+  | 'protocol_view'          // 진료 프로토콜 조회
+  | 'protocol_create'        // 진료 프로토콜 생성
+  | 'protocol_edit'          // 진료 프로토콜 수정
+  | 'protocol_delete'        // 진료 프로토콜 삭제
+  | 'protocol_version_restore' // 프로토콜 버전 복원
+  | 'protocol_history_view'  // 프로토콜 히스토리 조회
+  | 'protocol_category_manage' // 프로토콜 카테고리 관리
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -22,33 +29,40 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'daily_report_view', 'daily_report_create', 'daily_report_edit', 'daily_report_delete',
     'stats_weekly_view', 'stats_monthly_view', 'stats_annual_view',
     'logs_view', 'inventory_view', 'inventory_manage',
-    'staff_view', 'staff_manage', 'clinic_settings', 'guide_view'
+    'staff_view', 'staff_manage', 'clinic_settings', 'guide_view',
+    'protocol_view', 'protocol_create', 'protocol_edit', 'protocol_delete',
+    'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage'
   ],
   vice_director: [
-    // 부원장은 직원 관리와 병원 설정 제외한 모든 권한
+    // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
     'daily_report_view', 'daily_report_create', 'daily_report_edit', 'daily_report_delete',
     'stats_weekly_view', 'stats_monthly_view', 'stats_annual_view',
     'logs_view', 'inventory_view', 'inventory_manage',
-    'staff_view', 'guide_view'
+    'staff_view', 'guide_view',
+    'protocol_view', 'protocol_create', 'protocol_edit',
+    'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage'
   ],
   manager: [
-    // 실장은 모든 기능 접근 가능 (병원 설정 제외)
+    // 실장은 프로토콜 조회와 히스토리만 가능
     'daily_report_view', 'daily_report_create', 'daily_report_edit', 'daily_report_delete',
     'stats_weekly_view', 'stats_monthly_view', 'stats_annual_view',
     'logs_view', 'inventory_view', 'inventory_manage',
-    'staff_view', 'guide_view'
+    'staff_view', 'guide_view',
+    'protocol_view', 'protocol_history_view'
   ],
   team_leader: [
-    // 팀장은 기본적인 업무와 통계 보기
+    // 팀장은 프로토콜 조회와 히스토리만 가능
     'daily_report_view', 'daily_report_create', 'daily_report_edit',
     'stats_weekly_view', 'stats_monthly_view',
-    'logs_view', 'inventory_view', 'guide_view'
+    'logs_view', 'inventory_view', 'guide_view',
+    'protocol_view', 'protocol_history_view'
   ],
   staff: [
-    // 일반 직원은 기본 업무만
+    // 일반 직원은 프로토콜 조회만 가능
     'daily_report_view', 'daily_report_create',
     'stats_weekly_view',
-    'inventory_view', 'guide_view'
+    'inventory_view', 'guide_view',
+    'protocol_view'
   ]
 }
 
@@ -77,6 +91,15 @@ export const PERMISSION_GROUPS = {
   '병원 설정': [
     { key: 'clinic_settings', label: '병원 정보 관리' }
   ],
+  '진료 프로토콜': [
+    { key: 'protocol_view', label: '프로토콜 조회' },
+    { key: 'protocol_create', label: '프로토콜 생성' },
+    { key: 'protocol_edit', label: '프로토콜 수정' },
+    { key: 'protocol_delete', label: '프로토콜 삭제' },
+    { key: 'protocol_version_restore', label: '버전 복원' },
+    { key: 'protocol_history_view', label: '히스토리 조회' },
+    { key: 'protocol_category_manage', label: '카테고리 관리' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -97,5 +120,12 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'staff_view': '직원 목록을 조회할 수 있습니다.',
   'staff_manage': '직원 가입 승인 및 권한을 관리할 수 있습니다.',
   'clinic_settings': '병원 정보를 수정할 수 있습니다.',
-  'guide_view': '사용 안내를 볼 수 있습니다.'
+  'guide_view': '사용 안내를 볼 수 있습니다.',
+  'protocol_view': '진료 프로토콜을 조회할 수 있습니다.',
+  'protocol_create': '새로운 진료 프로토콜을 생성할 수 있습니다.',
+  'protocol_edit': '기존 진료 프로토콜을 수정할 수 있습니다.',
+  'protocol_delete': '진료 프로토콜을 삭제할 수 있습니다.',
+  'protocol_version_restore': '이전 버전의 프로토콜로 복원할 수 있습니다.',
+  'protocol_history_view': '프로토콜 변경 히스토리를 조회할 수 있습니다.',
+  'protocol_category_manage': '프로토콜 카테고리를 관리할 수 있습니다.'
 }

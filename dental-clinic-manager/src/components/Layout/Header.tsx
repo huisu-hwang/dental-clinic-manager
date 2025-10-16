@@ -3,24 +3,11 @@
 import { Shield, LogOut, User, Cog, Crown } from 'lucide-react'
 import Link from 'next/link'
 
-interface User {
-  userId?: string
-  name?: string
-  role?: string
-  clinic?: {
-    name: string
-    ownerName?: string
-  }
-  clinicName?: string
-  clinicOwnerName?: string
-  clinicAddress?: string
-  clinicPhone?: string
-  clinicEmail?: string
-}
+import type { UserProfile } from '@/contexts/AuthContext'
 
 interface HeaderProps {
   dbStatus: 'connected' | 'connecting' | 'error'
-  user?: User | null
+  user?: UserProfile | null
   onLogout?: () => void
   showManagementLink?: boolean
   onProfileClick?: () => void
@@ -89,7 +76,7 @@ export default function Header({ dbStatus, user, onLogout, showManagementLink = 
             )}
 
             {/* Management Link */}
-            {showManagementLink && ['owner', 'vice_director', 'manager', 'master'].includes(user.role || '') && (
+            {showManagementLink && user.role === 'owner' && (
               <Link
                 href="/management"
                 className="flex items-center space-x-1 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-blue-200 transform hover:scale-105"

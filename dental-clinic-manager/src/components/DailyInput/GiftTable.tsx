@@ -7,9 +7,10 @@ interface GiftTableProps {
   giftRows: GiftRowData[]
   onGiftRowsChange: (rows: GiftRowData[]) => void
   giftInventory: GiftInventory[]
+  isReadOnly: boolean
 }
 
-export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }: GiftTableProps) {
+export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, isReadOnly }: GiftTableProps) {
   // 선택된 선물들의 총 수량 계산
   const getUsedQuantity = (giftName: string) => {
     return giftRows.reduce((total, row) => {
@@ -110,6 +111,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }:
                     placeholder="홍길동"
                     value={row.patient_name}
                     onChange={(e) => updateRow(index, 'patient_name', e.target.value)}
+                    readOnly={isReadOnly}
                   />
                 </td>
                 <td className="p-2">
@@ -118,6 +120,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }:
                       className="w-full p-2 border rounded-md"
                       value={row.gift_type}
                       onChange={(e) => updateRow(index, 'gift_type', e.target.value)}
+                      disabled={isReadOnly}
                     >
                       <option value="없음">없음</option>
                       {giftInventory.map(item => {
@@ -140,7 +143,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }:
                     className="w-full p-2 border rounded-md"
                     value={row.quantity}
                     onChange={(e) => updateRow(index, 'quantity', parseInt(e.target.value))}
-                    disabled={row.gift_type === '없음'}
+                    disabled={row.gift_type === '없음' || isReadOnly}
                   >
                     {(() => {
                       const maxQuantity = row.gift_type === '없음'
@@ -157,6 +160,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }:
                     className="w-full p-2 border rounded-md"
                     value={row.naver_review}
                     onChange={(e) => updateRow(index, 'naver_review', e.target.value as 'O' | 'X')}
+                    disabled={isReadOnly}
                   >
                     <option value="X">X</option>
                     <option value="O">O</option>
@@ -169,12 +173,14 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }:
                     placeholder="비고 (선택)"
                     value={row.notes}
                     onChange={(e) => updateRow(index, 'notes', e.target.value)}
+                    readOnly={isReadOnly}
                   />
                 </td>
                 <td className="p-2 text-center">
                   <button
-                    className="text-red-500 hover:text-red-700 p-1"
+                    className="text-red-500 hover:text-red-700 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => removeRow(index)}
+                    disabled={isReadOnly}
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -186,7 +192,8 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory }:
       </div>
       <button
         onClick={addRow}
-        className="mt-4 text-blue-600 font-semibold text-sm py-2 px-4 rounded-md hover:bg-blue-50 flex items-center space-x-2"
+        className="mt-4 text-blue-600 font-semibold text-sm py-2 px-4 rounded-md hover:bg-blue-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={isReadOnly}
       >
         <Plus className="w-4 h-4" />
         <span>선물/리뷰 기록 추가</span>

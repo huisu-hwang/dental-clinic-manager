@@ -3,53 +3,36 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Permission } from '@/types/permissions'
-import { DEFAULT_PERMISSIONS } from '@/types/permissions'
+import { DEFAULT_PERMISSIONS, PERMISSION_DESCRIPTIONS } from '@/types/permissions'
 
 export function usePermissions() {
   const { user } = useAuth()
-  const [permissions, setPermissions] = useState<Permission[]>([])
+  const [permissions, setPermissions] = useState<Set<Permission>>(new Set())
 
   useEffect(() => {
     if (!user) {
-      setPermissions([])
+      setPermissions(new Set())
       return
     }
 
-    // 사용자의 권한 가져오기
-    // 1. 사용자에게 직접 할당된 권한이 있으면 사용
-    if (user.permissions && Array.isArray(user.permissions)) {
-      setPermissions(user.permissions)
-    }
-    // 2. 없으면 역할 기반 기본 권한 사용
-    else if (user.role) {
-      const rolePermissions = DEFAULT_PERMISSIONS[user.role] || []
-      setPermissions(rolePermissions)
-    }
-    // 3. 대표원장은 항상 모든 권한
+    let userPermissions: Permission[] = []
+
+    // 'owner'는 모든 권한을 가짐
     if (user.role === 'owner') {
-      setPermissions(DEFAULT_PERMISSIONS.owner)
+      userPermissions = Object.keys(PERMISSION_DESCRIPTIONS) as Permission[]
+    } else if (user.permissions && user.permissions.length > 0) {
+      // 사용자에게 직접 할당된 권한이 있으면 사용
+      userPermissions = user.permissions
+    } else {
+      // 없으면 역할 기반 기본 권한 사용
+      userPermissions = DEFAULT_PERMISSIONS[user.role || ''] || []
     }
+
+    setPermissions(new Set(userPermissions))
   }, [user])
 
-  const hasPermission = (permission: Permission | Permission[]): boolean => {
-    if (!user) return false
-
-    // 대표원장은 모든 권한
-    if (user.role === 'owner') return true
-
-    // 배열로 전달된 경우 하나라도 있으면 true
-    if (Array.isArray(permission)) {
-      return permission.some(p => permissions.includes(p))
-    }
-
-    return permissions.includes(permission)
-  }
-
-  const hasAllPermissions = (requiredPermissions: Permission[]): boolean => {
-    if (!user) return false
-    if (user.role === 'owner') return true
-
-    return requiredPermissions.every(p => permissions.includes(p))
+  const hasPermission = (permission: Permission): boolean => {
+    return permissions.has(permission)
   }
 
   const canAccessTab = (tabName: string): boolean => {
@@ -60,19 +43,22 @@ export function usePermissions() {
       'annual-stats': ['stats_annual_view'],
       'logs': ['logs_view'],
       'settings': ['inventory_view', 'inventory_manage'],
-      'guide': ['guide_view']
+      'guide': ['guide_view'],
     }
 
     const required = tabPermissions[tabName]
-    if (!required) return true
+    if (!required || required.length === 0) return true
 
-    return hasPermission(required)
+    // 'owner'는 모든 탭 접근 가능
+    if (user?.role === 'owner') return true
+
+    // 필요한 권한 중 하나라도 있으면 접근 가능
+    return required.some(p => permissions.has(p))
   }
 
   return {
     permissions,
     hasPermission,
-    hasAllPermissions,
-    canAccessTab
+    canAccessTab,
   }
 }
