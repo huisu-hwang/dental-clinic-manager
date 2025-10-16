@@ -126,8 +126,22 @@ export const dataService = {
   },
 
   // 날짜별 보고서 데이터 불러오기
-  async getReportByDate(date: string) {
-    console.log('[DataService] getReportByDate called with date:', date)
+  async getReportByDate(clinicId?: string, date?: string) {
+    // 매개변수 처리: 이전 버전과의 호환성 유지
+    let targetDate: string
+    let targetClinicId: string | null
+
+    if (typeof clinicId === 'string' && !date) {
+      // 이전 방식: getReportByDate(date)
+      targetDate = clinicId
+      targetClinicId = await getCurrentClinicId()
+    } else {
+      // 새 방식: getReportByDate(clinicId, date)
+      targetDate = date || ''
+      targetClinicId = clinicId || null
+    }
+
+    console.log('[DataService] getReportByDate called with date:', targetDate, 'clinicId:', targetClinicId)
 
     const supabase = getSupabase()
     if (!supabase) {
@@ -146,9 +160,12 @@ export const dataService = {
     }
 
     try {
-      // 현재 로그인한 사용자의 clinic_id 가져오기
-      const clinicId = await getCurrentClinicId()
-      if (!clinicId) {
+      // targetClinicId가 없으면 getCurrentClinicId()로 가져오기
+      if (!targetClinicId) {
+        targetClinicId = await getCurrentClinicId()
+      }
+
+      if (!targetClinicId) {
         console.error('[DataService] No clinic_id found for current user')
         return {
           success: false,
@@ -163,7 +180,7 @@ export const dataService = {
         }
       }
 
-      console.log('[DataService] Starting data fetch for clinic:', clinicId)
+      console.log('[DataService] Starting data fetch for clinic:', targetClinicId)
 
       // 각 테이블을 개별적으로 조회하여 에러 격리
       let dailyReportResult, consultLogsResult, giftLogsResult, happyCallLogsResult;
@@ -173,8 +190,8 @@ export const dataService = {
         dailyReportResult = await supabase
           .from('daily_reports')
           .select('*')
-          .eq('clinic_id', clinicId)
-          .eq('date', date)
+          .eq('clinic_id', targetClinicId)
+          .eq('date', targetDate)
           .maybeSingle();
         console.log('[DataService] daily_reports fetched:', dailyReportResult);
       } catch (err) {
@@ -187,8 +204,8 @@ export const dataService = {
         consultLogsResult = await supabase
           .from('consult_logs')
           .select('*')
-          .eq('clinic_id', clinicId)
-          .eq('date', date)
+          .eq('clinic_id', targetClinicId)
+          .eq('date', targetDate)
           .order('id');
         console.log('[DataService] consult_logs fetched:', consultLogsResult?.data?.length || 0, 'items');
       } catch (err) {
@@ -201,8 +218,8 @@ export const dataService = {
         giftLogsResult = await supabase
           .from('gift_logs')
           .select('*')
-          .eq('clinic_id', clinicId)
-          .eq('date', date)
+          .eq('clinic_id', targetClinicId)
+          .eq('date', targetDate)
           .order('id');
         console.log('[DataService] gift_logs fetched:', giftLogsResult?.data?.length || 0, 'items');
       } catch (err) {
@@ -215,8 +232,8 @@ export const dataService = {
         happyCallLogsResult = await supabase
           .from('happy_call_logs')
           .select('*')
-          .eq('clinic_id', clinicId)
-          .eq('date', date)
+          .eq('clinic_id', targetClinicId)
+          .eq('date', targetDate)
           .order('id');
         console.log('[DataService] happy_call_logs fetched:', happyCallLogsResult?.data?.length || 0, 'items');
       } catch (err) {

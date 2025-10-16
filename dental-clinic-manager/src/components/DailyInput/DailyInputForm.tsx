@@ -6,7 +6,7 @@ import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, UserProfile } from '@/types'
 
 interface DailyInputFormProps {
   giftInventory: GiftInventory[]
@@ -21,9 +21,10 @@ interface DailyInputFormProps {
   }) => void
   canCreate: boolean
   canEdit: boolean
+  currentUser?: UserProfile
 }
 
-export default function DailyInputForm({ giftInventory, onSaveReport, canCreate, canEdit }: DailyInputFormProps) {
+export default function DailyInputForm({ giftInventory, onSaveReport, canCreate, canEdit, currentUser }: DailyInputFormProps) {
   const [reportDate, setReportDate] = useState(getTodayString())
   const [consultRows, setConsultRows] = useState<ConsultRowData[]>([
     { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
@@ -62,7 +63,10 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
 
     try {
       console.log('[DailyInputForm] Calling dataService.getReportByDate...')
-      const result = await dataService.getReportByDate(date)
+      // currentUser가 있으면 clinic_id를 전달, 없으면 내부에서 getCurrentClinicId() 호출
+      const result = currentUser?.clinic_id
+        ? await dataService.getReportByDate(currentUser.clinic_id, date)
+        : await dataService.getReportByDate(date)
       console.log('[DailyInputForm] Result received:', result)
       
       if (result.success && result.data.hasData) {
