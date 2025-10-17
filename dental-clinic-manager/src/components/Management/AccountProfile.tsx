@@ -125,9 +125,32 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
     setSaving(true)
 
     try {
-      // For now, just show success message
-      // In production, this would connect to a proper backend
-      setSuccess('비밀번호 변경 기능은 준비 중입니다.')
+      console.log('[PasswordChange] 비밀번호 변경 시작')
+
+      // 1. 현재 비밀번호로 재인증 (보안 확인)
+      const result = await dataService.verifyPassword(
+        currentUser.email,
+        passwordData.currentPassword
+      )
+
+      if (result.error || !result.success) {
+        setError('현재 비밀번호가 올바르지 않습니다.')
+        setSaving(false)
+        return
+      }
+
+      console.log('[PasswordChange] 현재 비밀번호 확인 완료')
+
+      // 2. 새 비밀번호로 업데이트
+      const updateResult = await dataService.updatePassword(passwordData.newPassword)
+
+      if (updateResult.error) {
+        throw new Error(updateResult.error)
+      }
+
+      console.log('[PasswordChange] 비밀번호 변경 성공')
+
+      setSuccess('비밀번호가 성공적으로 변경되었습니다.')
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -139,8 +162,9 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
         setSuccess('')
       }, 3000)
     } catch (err) {
-      console.error('Error:', err)
-      setError('비밀번호 변경 중 오류가 발생했습니다.')
+      console.error('[PasswordChange] 오류:', err)
+      const errorMessage = err instanceof Error ? err.message : '비밀번호 변경 중 오류가 발생했습니다.'
+      setError(errorMessage)
     } finally {
       setSaving(false)
     }

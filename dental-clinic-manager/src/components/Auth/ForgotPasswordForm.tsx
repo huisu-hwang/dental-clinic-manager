@@ -27,6 +27,8 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
     }
 
     try {
+      console.log('[ForgotPassword] 비밀번호 재설정 요청:', email);
+
       // 먼저 해당 이메일이 존재하는지 확인
       const { data: existingUser } = await supabase
         .from('users')
@@ -40,13 +42,16 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
         return
       }
 
-      // Supabase 프로젝트의 이메일 템플릿을 사용하여 비밀번호 재설정 링크를 보냅니다.
+      // 비밀번호 재설정 링크 전송
+      const redirectUrl = `${window.location.origin}/update-password`;
+      console.log('[ForgotPassword] Redirect URL:', redirectUrl);
+
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`,
+        redirectTo: redirectUrl,
       })
 
       if (resetError) {
-        console.error('비밀번호 재설정 오류:', resetError)
+        console.error('[ForgotPassword] 재설정 오류:', resetError)
 
         // SMTP 설정이 안 되어 있는 경우
         if (resetError.message.includes('SMTP') || resetError.message.includes('email')) {
@@ -55,10 +60,11 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
           setError(`이메일 전송에 실패했습니다: ${resetError.message}`)
         }
       } else {
-        setMessage('비밀번호 재설정 링크를 이메일로 보냈습니다. 받은 편지함을 확인해주세요.')
+        console.log('[ForgotPassword] 재설정 이메일 전송 성공');
+        setMessage('비밀번호 재설정 링크를 이메일로 보냈습니다. 받은 편지함을 확인하고 링크를 클릭해주세요. (링크는 24시간 동안 유효합니다)')
       }
     } catch (err) {
-      console.error('비밀번호 재설정 처리 중 오류:', err)
+      console.error('[ForgotPassword] 처리 중 오류:', err)
       setError('비밀번호 재설정 요청 처리 중 오류가 발생했습니다.')
     }
 

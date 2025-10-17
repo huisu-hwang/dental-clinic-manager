@@ -11,72 +11,71 @@ export default function UpdatePasswordPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [isRecoveryMode, setIsRecoveryMode] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase) {
       setError('데이터베이스 연결에 실패했습니다.');
+      setCheckingAuth(false);
       return;
     }
 
-    // 전체 URL 로깅
-    console.log('전체 URL:', window.location.href);
-    console.log('Hash:', window.location.hash);
-    console.log('Search:', window.location.search);
+    console.log('[PasswordReset] 페이지 로드됨');
+    console.log('[PasswordReset] URL:', window.location.href);
+    console.log('[PasswordReset] Hash:', window.location.hash);
 
-    // URL에서 토큰 확인 (다양한 형식 지원)
+    let recoveryDetected = false;
+
+    // 1. URL 해시에서 토큰 확인
     const hash = window.location.hash;
-    const searchParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(hash.substring(1));
-    
-    const hasAccessToken = hashParams.has('access_token') || searchParams.has('access_token');
-    const hasToken = hashParams.has('token') || searchParams.has('token');
-    const isRecoveryType = hash.includes('type=recovery') || searchParams.get('type') === 'recovery';
-    const hasRefreshToken = hashParams.has('refresh_token') || searchParams.has('refresh_token');
-    
-    console.log('URL 파라미터 확인:', { 
-      hasAccessToken, 
-      hasToken,
-      isRecoveryType, 
-      hasRefreshToken,
-      hash, 
-      search: window.location.search 
-    });
+    if (hash) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const type = hashParams.get('type');
 
-    // 토큰이 있으면 복구 모드로 활성화
-    if (hasAccessToken || hasToken || isRecoveryType || hasRefreshToken) {
-      console.log('비밀번호 복구 토큰 감지. 복구 모드를 활성화합니다.');
-      setIsRecoveryMode(true);
+      if (accessToken && type === 'recovery') {
+        console.log('[PasswordReset] Recovery 토큰 감지');
+        recoveryDetected = true;
+        setIsRecoveryMode(true);
+        setCheckingAuth(false);
+      }
     }
 
-    // 초기 세션 확인
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('초기 세션 확인:', { hasSession: !!session, error });
+    // 2. 현재 세션 확인
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        console.log('활성 세션 감지. 복구 모드를 활성화합니다.');
+        console.log('[PasswordReset] 활성 세션 감지');
         setIsRecoveryMode(true);
-      } else if (!hasAccessToken && !hasToken && !isRecoveryType) {
-        // 토큰도 없고 세션도 없으면 에러 표시
-        console.warn('토큰과 세션이 모두 없습니다.');
+      }
+      if (!recoveryDetected) {
+        setCheckingAuth(false);
       }
     });
 
-    // PASSWORD_RECOVERY 이벤트가 발생하면, Supabase가 자동으로 세션을 처리하고
-    // 사용자는 인증된 상태가 됩니다. 이 상태에서 비밀번호를 업데이트할 수 있습니다.
+    // 3. Auth 상태 변경 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth 상태 변경:', { event, hasSession: !!session });
-      if (event === 'PASSWORD_RECOVERY') {
-        console.log('PASSWORD_RECOVERY 이벤트 감지. 복구 모드를 활성화합니다.');
+      console.log('[PasswordReset] Auth 이벤트:', event);
+
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        console.log('[PasswordReset] Recovery 모드 활성화');
         setIsRecoveryMode(true);
-      } else if (event === 'SIGNED_IN' && session) {
-        console.log('SIGNED_IN 이벤트 감지. 복구 모드를 활성화합니다.');
-        setIsRecoveryMode(true);
+        setCheckingAuth(false);
       }
     });
+
+    // 4. 타임아웃: 5초 후에도 토큰이 없으면 체크 종료
+    const timeout = setTimeout(() => {
+      if (!recoveryDetected) {
+        console.log('[PasswordReset] 토큰 감지 타임아웃');
+        setCheckingAuth(false);
+      }
+    }, 5000);
 
     return () => {
       subscription.unsubscribe();
+      clearTimeout(timeout);
     };
   }, [])
 
@@ -130,23 +129,27 @@ export default function UpdatePasswordPage() {
         </div>
 
         <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
-          {!isRecoveryMode && !error ? (
+          {checkingAuth ? (
             <div className="text-center space-y-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
               <p className="text-slate-600">비밀번호 재설정 토큰을 확인하는 중...</p>
-              <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-left">
-                <p className="text-sm text-yellow-800 font-medium mb-2">⚠️ 토큰이 감지되지 않았습니다</p>
-                <p className="text-sm text-yellow-700">
-                  이 페이지는 <strong>비밀번호 재설정 이메일의 링크를 클릭</strong>해야만 접근할 수 있습니다.
+            </div>
+          ) : !isRecoveryMode ? (
+            <div className="text-center space-y-4">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-md text-left">
+                <p className="text-sm text-red-800 font-medium mb-2">❌ 유효한 재설정 토큰이 없습니다</p>
+                <p className="text-sm text-red-700 mb-2">
+                  이 페이지는 <strong>비밀번호 재설정 이메일의 링크를 통해서만</strong> 접근할 수 있습니다.
                 </p>
-                <ul className="text-sm text-yellow-700 mt-2 ml-4 list-disc">
+                <ul className="text-sm text-red-700 mt-2 ml-4 list-disc space-y-1">
                   <li>받은 편지함에서 비밀번호 재설정 이메일을 확인하세요</li>
-                  <li>이메일에 있는 <strong>&quot;비밀번호 재설정&quot;</strong> 링크를 클릭하세요</li>
+                  <li>이메일의 <strong>&quot;비밀번호 재설정&quot;</strong> 버튼을 클릭하세요</li>
                   <li>브라우저 주소창에 직접 입력하면 작동하지 않습니다</li>
+                  <li>링크가 만료되었을 수 있습니다 (24시간 유효)</li>
                 </ul>
                 <button
                   onClick={() => router.push('/')}
-                  className="mt-4 w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-sm"
+                  className="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-sm"
                 >
                   로그인 페이지로 돌아가기
                 </button>

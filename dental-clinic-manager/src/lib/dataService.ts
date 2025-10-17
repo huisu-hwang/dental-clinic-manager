@@ -1661,4 +1661,60 @@ export const dataService = {
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   },
+
+  // ========================================
+  // 비밀번호 관리 함수들
+  // ========================================
+
+  // 비밀번호 확인 (재인증)
+  async verifyPassword(email: string, password: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      console.log('[DataService] Verifying password for:', email)
+
+      // 현재 비밀번호로 로그인 시도 (재인증)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (error) {
+        console.error('[DataService] Password verification failed:', error)
+        return { success: false, error: error.message }
+      }
+
+      console.log('[DataService] Password verified successfully')
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('[DataService] Error verifying password:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 비밀번호 업데이트
+  async updatePassword(newPassword: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      console.log('[DataService] Updating password')
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) {
+        console.error('[DataService] Password update failed:', error)
+        return { error: error.message }
+      }
+
+      console.log('[DataService] Password updated successfully')
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('[DataService] Error updating password:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
 }
