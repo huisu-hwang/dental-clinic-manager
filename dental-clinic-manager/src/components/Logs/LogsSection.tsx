@@ -10,6 +10,7 @@ interface LogsSectionProps {
   inventoryLogs: InventoryLog[]
   onDeleteReport: (date: string) => void
   onRecalculateStats?: (date: string) => void
+  canDelete: boolean
 }
 
 export default function LogsSection({
@@ -18,7 +19,8 @@ export default function LogsSection({
   giftLogs,
   inventoryLogs,
   onDeleteReport,
-  onRecalculateStats
+  onRecalculateStats,
+  canDelete
 }: LogsSectionProps) {
   const [consultFilter, setConsultFilter] = useState<'all' | 'completed' | 'incomplete'>('all')
   const [giftSort, setGiftSort] = useState<'default' | 'type' | 'date'>('default')
@@ -80,17 +82,19 @@ export default function LogsSection({
                           재계산
                         </button>
                       )}
-                      <button
-                        onClick={() => {
-                          if (confirm(`${report.date}의 모든 기록을 삭제하시겠습니까? 재고는 복구되지 않습니다.`)) {
-                            onDeleteReport(report.date)
-                          }
-                        }}
-                        className="text-red-500 hover:text-red-700 text-xs px-2 py-1 border border-red-200 rounded hover:bg-red-50"
-                        title="전체 기록 삭제"
-                      >
-                        삭제
-                      </button>
+                      {canDelete && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`${report.date}의 모든 기록을 삭제하시겠습니까? 재고는 복구되지 않습니다.`)) {
+                              onDeleteReport(report.date)
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 text-xs px-2 py-1 border border-red-200 rounded hover:bg-red-50"
+                          title="전체 기록 삭제"
+                        >
+                          삭제
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

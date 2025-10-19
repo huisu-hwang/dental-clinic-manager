@@ -1,10 +1,147 @@
 import { getSupabase } from './supabase'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, Protocol, ProtocolCategory, ProtocolVersion, ProtocolFormData } from '@/types'
+
+// 현재 로그인한 사용자의 clinic_id를 가져오는 헬퍼 함수
+async function getCurrentClinicId(): Promise<string | null> {
+  try {
+    // 1. localStorage에서 먼저 확인 (가장 빠른 방법)
+    if (typeof window !== 'undefined') {
+      const cachedUser = localStorage.getItem('currentUser')
+      if (cachedUser) {
+        try {
+          const userData = JSON.parse(cachedUser)
+          if (userData.clinic_id) {
+            console.log('[getCurrentClinicId] Using cached clinic_id:', userData.clinic_id)
+            return userData.clinic_id
+          }
+        } catch (e) {
+          console.warn('[getCurrentClinicId] Failed to parse cached user data:', e)
+        }
+      }
+    }
+
+    // 2. localStorage에 없으면 Supabase에서 조회
+    const supabase = getSupabase()
+    if (!supabase) {
+      console.error('[getCurrentClinicId] Supabase client not available')
+      return null
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError) {
+      console.error('[getCurrentClinicId] Auth error:', authError)
+      return null
+    }
+
+    if (!user) {
+      console.error('[getCurrentClinicId] No authenticated user')
+      return null
+    }
+
+    console.log('[getCurrentClinicId] Querying users table for user:', user.id)
+
+    // users 테이블에서 clinic_id 조회
+    const { data, error } = await supabase
+      .from('users')
+      .select('clinic_id')
+      .eq('id', user.id)
+      .single()
+
+    console.log('[getCurrentClinicId] Query result:', { data, error })
+
+    if (error) {
+      console.error('[getCurrentClinicId] Query error:', error)
+      console.error('[getCurrentClinicId] Error code:', error.code)
+      console.error('[getCurrentClinicId] Error message:', error.message)
+      console.error('[getCurrentClinicId] Error details:', error.details)
+      console.error('[getCurrentClinicId] Error hint:', error.hint)
+      return null
+    }
+
+    if (!data) {
+      console.error('[getCurrentClinicId] No data returned for user:', user.id)
+      return null
+    }
+
+    const clinicId = (data as any).clinic_id
+    console.log('[getCurrentClinicId] Retrieved clinic_id:', clinicId)
+
+    return clinicId
+  } catch (error) {
+    console.error('[getCurrentClinicId] Unexpected error:', error)
+    return null
+  }
+}
 
 export const dataService = {
+  // 공개된 병원 목록 검색
+  async searchPublicClinics() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // 데이터베이스에 미리 정의된 RPC 함수를 호출합니다.
+      const { data, error } = await supabase.rpc('get_public_clinics')
+
+      if (error) {
+        console.error('Error fetching public clinics:', error)
+        throw error
+      }
+
+      return { success: true, data }
+    } catch (error: unknown) {
+      return { error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.' }
+    }
+  },
+
+  // 사용자 ID로 프로필 정보 가져오기 (소속 병원 정보 포함)
+  async getUserProfileById(id: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // users와 clinics의 관계가 정상적이므로, join 쿼리를 사용합니다.
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          clinics (*)
+        `)
+        .eq('id', id)
+        .maybeSingle()
+
+      if (error) throw error
+
+      // Supabase v2의 join 문법은 'clinics'라는 별도 객체로 결과를 반환합니다.
+      // 이를 user.clinic 형태로 사용하기 쉽게 재구성합니다.
+      const userProfile = data ? { ...(data as any), clinic: (data as any).clinics } : null;
+      if (userProfile) delete (userProfile as any).clinics; // 중복 필드 제거
+
+      return { success: true, data: userProfile }
+    } catch (error: unknown) {
+      console.error('Error fetching user profile by ID:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
   // 날짜별 보고서 데이터 불러오기
-  async getReportByDate(date: string) {
-    console.log('[DataService] getReportByDate called with date:', date)
+  async getReportByDate(clinicId?: string, date?: string) {
+    // 매개변수 처리: 이전 버전과의 호환성 유지
+    let targetDate: string
+    let targetClinicId: string | null
+
+    if (typeof clinicId === 'string' && !date) {
+      // 이전 방식: getReportByDate(date)
+      targetDate = clinicId
+      targetClinicId = await getCurrentClinicId()
+    } else {
+      // 새 방식: getReportByDate(clinicId, date)
+      targetDate = date || ''
+      targetClinicId = clinicId || null
+    }
+
+    console.log('[DataService] getReportByDate called with date:', targetDate, 'clinicId:', targetClinicId)
 
     const supabase = getSupabase()
     if (!supabase) {
@@ -23,7 +160,27 @@ export const dataService = {
     }
 
     try {
-      console.log('[DataService] Starting data fetch...')
+      // targetClinicId가 없으면 getCurrentClinicId()로 가져오기
+      if (!targetClinicId) {
+        targetClinicId = await getCurrentClinicId()
+      }
+
+      if (!targetClinicId) {
+        console.error('[DataService] No clinic_id found for current user')
+        return {
+          success: false,
+          error: 'User clinic information not available',
+          data: {
+            dailyReport: null,
+            consultLogs: [],
+            giftLogs: [],
+            happyCallLogs: [],
+            hasData: false
+          }
+        }
+      }
+
+      console.log('[DataService] Starting data fetch for clinic:', targetClinicId)
 
       // 각 테이블을 개별적으로 조회하여 에러 격리
       let dailyReportResult, consultLogsResult, giftLogsResult, happyCallLogsResult;
@@ -33,7 +190,8 @@ export const dataService = {
         dailyReportResult = await supabase
           .from('daily_reports')
           .select('*')
-          .eq('date', date)
+          .eq('clinic_id', targetClinicId)
+          .eq('date', targetDate)
           .maybeSingle();
         console.log('[DataService] daily_reports fetched:', dailyReportResult);
       } catch (err) {
@@ -46,7 +204,8 @@ export const dataService = {
         consultLogsResult = await supabase
           .from('consult_logs')
           .select('*')
-          .eq('date', date)
+          .eq('clinic_id', targetClinicId)
+          .eq('date', targetDate)
           .order('id');
         console.log('[DataService] consult_logs fetched:', consultLogsResult?.data?.length || 0, 'items');
       } catch (err) {
@@ -59,7 +218,8 @@ export const dataService = {
         giftLogsResult = await supabase
           .from('gift_logs')
           .select('*')
-          .eq('date', date)
+          .eq('clinic_id', targetClinicId)
+          .eq('date', targetDate)
           .order('id');
         console.log('[DataService] gift_logs fetched:', giftLogsResult?.data?.length || 0, 'items');
       } catch (err) {
@@ -72,7 +232,8 @@ export const dataService = {
         happyCallLogsResult = await supabase
           .from('happy_call_logs')
           .select('*')
-          .eq('date', date)
+          .eq('clinic_id', targetClinicId)
+          .eq('date', targetDate)
           .order('id');
         console.log('[DataService] happy_call_logs fetched:', happyCallLogsResult?.data?.length || 0, 'items');
       } catch (err) {
@@ -122,12 +283,19 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       const { date, consultRows, giftRows, happyCallRows, recallCount, recallBookingCount, specialNotes } = data
 
       // --- 1. 기존 보고서 확인 및 삭제 ---
       const { data: existingReports, error: checkError } = await supabase
         .from('daily_reports')
         .select('id')
+        .eq('clinic_id', clinicId)
         .eq('date', date)
         .limit(1)
 
@@ -156,6 +324,7 @@ export const dataService = {
           const { data: items, error: inventoryError } = await supabase
             .from('gift_inventory')
             .select('*')
+            .eq('clinic_id', clinicId)
             .eq('name', gift.gift_type)
             .limit(1)
 
@@ -185,6 +354,7 @@ export const dataService = {
 
       // --- 4. 데이터베이스에 모든 정보 저장 (트랜잭션처럼) ---
       const dailyReport = {
+        clinic_id: clinicId,
         date,
         recall_count: recallCount,
         recall_booking_count: recallBookingCount,
@@ -195,8 +365,9 @@ export const dataService = {
       }
 
       if (validConsults.length > 0) {
-        // remarks 컴럼을 항상 포함하도록 수정 (빈 값이어도 null로 저장)
+        // remarks 컬럼을 항상 포함하도록 수정 (빈 값이어도 null로 저장)
         const consultData = validConsults.map(row => ({
+          clinic_id: clinicId,
           date,
           patient_name: row.patient_name,
           consult_content: row.consult_content,
@@ -206,10 +377,11 @@ export const dataService = {
 
         const { error } = await supabase.from('consult_logs').insert(consultData as any)
         if (error) {
-          // remarks 컴럼 없이 재시도
+          // remarks 컬럼 없이 재시도
           if (error.message.includes('remarks')) {
-            console.warn('remarks 컴럼이 없어서 제외하고 저장합니다.')
+            console.warn('remarks 컬럼이 없어서 제외하고 저장합니다.')
             const consultDataWithoutRemarks = validConsults.map(row => ({
+              clinic_id: clinicId,
               date,
               patient_name: row.patient_name,
               consult_content: row.consult_content,
@@ -224,8 +396,9 @@ export const dataService = {
       }
 
       if (validGifts.length > 0) {
-        // notes 컴럼을 항상 포함하도록 수정 (빈 값이어도 null로 저장)
+        // notes 컬럼을 항상 포함하도록 수정 (빈 값이어도 null로 저장)
         const giftData = validGifts.map(row => ({
+          clinic_id: clinicId,
           date,
           patient_name: row.patient_name,
           gift_type: row.gift_type,
@@ -235,10 +408,11 @@ export const dataService = {
 
         const { error } = await supabase.from('gift_logs').insert(giftData as any)
         if (error) {
-          // notes 컴럼 없이 재시도
+          // notes 컬럼 없이 재시도
           if (error.message.includes('notes')) {
-            console.warn('notes 컴럼이 없어서 제외하고 저장합니다.')
+            console.warn('notes 컬럼이 없어서 제외하고 저장합니다.')
             const giftDataWithoutNotes = validGifts.map(row => ({
+              clinic_id: clinicId,
               date,
               patient_name: row.patient_name,
               gift_type: row.gift_type,
@@ -254,6 +428,7 @@ export const dataService = {
 
       if (validHappyCalls.length > 0) {
         const { error } = await supabase.from('happy_call_logs').insert(validHappyCalls.map(row => ({
+          clinic_id: clinicId,
           date,
           patient_name: row.patient_name,
           treatment: row.treatment,
@@ -263,7 +438,11 @@ export const dataService = {
       }
 
       if (inventoryLogs.length > 0) {
-        const { error } = await supabase.from('inventory_logs').insert(inventoryLogs as any)
+        const logsWithClinicId = inventoryLogs.map(log => ({
+          ...log,
+          clinic_id: clinicId
+        }))
+        const { error } = await supabase.from('inventory_logs').insert(logsWithClinicId as any)
         if (error) throw new Error(`재고 로그 저장 실패: ${error.message}`)
       }
 
@@ -288,9 +467,16 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       const { data: reportsToDelete } = await supabase
         .from('daily_reports')
         .select('id')
+        .eq('clinic_id', clinicId)
         .eq('date', date)
         .limit(1)
 
@@ -302,6 +488,7 @@ export const dataService = {
       const { data: giftLogsToDelete } = await supabase
         .from('gift_logs')
         .select('*')
+        .eq('clinic_id', clinicId)
         .eq('date', date) as { data: GiftLog[] | null }
 
       if (giftLogsToDelete && giftLogsToDelete.length > 0) {
@@ -310,6 +497,7 @@ export const dataService = {
             const { data: items } = await supabase
               .from('gift_inventory')
               .select('*')
+              .eq('clinic_id', clinicId)
               .eq('name', giftLog.gift_type)
               .limit(1)
 
@@ -334,6 +522,7 @@ export const dataService = {
               await supabase
                 .from('inventory_logs')
                 .insert([{
+                  clinic_id: clinicId,
                   timestamp: new Date().toISOString(),
                   name: item.name,
                   reason: `데이터 삭제로 인한 재고 복원: ${giftLog.patient_name}`,
@@ -348,10 +537,10 @@ export const dataService = {
 
       // 기존 데이터 삭제
       await Promise.all([
-        supabase.from('consult_logs').delete().eq('date', date),
-        supabase.from('gift_logs').delete().eq('date', date),
-        supabase.from('happy_call_logs').delete().eq('date', date),
-        supabase.from('daily_reports').delete().eq('id', reportToDelete.id)
+        supabase.from('consult_logs').delete().eq('clinic_id', clinicId).eq('date', date),
+        supabase.from('gift_logs').delete().eq('clinic_id', clinicId).eq('date', date),
+        supabase.from('happy_call_logs').delete().eq('clinic_id', clinicId).eq('date', date),
+        supabase.from('daily_reports').delete().eq('clinic_id', clinicId).eq('id', reportToDelete.id)
       ])
 
       return { success: true }
@@ -367,11 +556,17 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       // 해당 날짜의 모든 로그 데이터 조회
       const [consultResult, giftResult, reportResult] = await Promise.all([
-        supabase.from('consult_logs').select('*').eq('date', date),
-        supabase.from('gift_logs').select('*').eq('date', date),
-        supabase.from('daily_reports').select('*').eq('date', date).single()
+        supabase.from('consult_logs').select('*').eq('clinic_id', clinicId).eq('date', date),
+        supabase.from('gift_logs').select('*').eq('clinic_id', clinicId).eq('date', date),
+        supabase.from('daily_reports').select('*').eq('clinic_id', clinicId).eq('date', date).single()
       ])
 
       const consultLogs = (consultResult.data as any[]) || []
@@ -393,6 +588,7 @@ export const dataService = {
       const { error: updateError } = await (supabase as any)
         .from('daily_reports')
         .update(updatedStats)
+        .eq('clinic_id', clinicId)
         .eq('date', date)
 
       if (updateError) {
@@ -409,15 +605,69 @@ export const dataService = {
     }
   },
 
+  // 재고 업데이트
+  async updateStock(id: number, quantity: number, item: { name: string; stock: number }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const newStock = item.stock + quantity
+      if (newStock < 0) {
+        return { error: '재고가 부족합니다.' }
+      }
+
+      // Update inventory
+      const { error: invError } = await (supabase
+        .from('gift_inventory') as any)
+        .update({ stock: newStock })
+        .eq('clinic_id', clinicId)
+        .eq('id', id)
+
+      if (invError) throw invError
+
+      // Log the change
+      const { error: logError } = await supabase
+        .from('inventory_logs')
+        .insert([{
+          clinic_id: clinicId,
+          timestamp: new Date().toISOString(),
+          name: item.name,
+          reason: quantity > 0 ? '재고 추가' : '재고 차감',
+          change: quantity,
+          old_stock: item.stock,
+          new_stock: newStock
+        }] as any)
+
+      if (logError) throw logError
+
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating stock:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
   // 선물 아이템 추가
   async addGiftItem(name: string, stock: number) {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       const { error: invError } = await supabase
         .from('gift_inventory')
-        .insert([{ name, stock }] as any)
+        .insert([{ clinic_id: clinicId, name, stock }] as any)
 
       if (invError) throw invError
 
@@ -425,6 +675,7 @@ export const dataService = {
         const { error: logError } = await supabase
           .from('inventory_logs')
           .insert([{
+            clinic_id: clinicId,
             timestamp: new Date().toISOString(),
             name,
             reason: '신규 등록',
@@ -443,52 +694,22 @@ export const dataService = {
     }
   },
 
-  // 재고 업데이트
-  async updateStock(id: number, quantity: number, item: GiftInventory) {
-    const supabase = getSupabase()
-    if (!supabase) throw new Error('Supabase client not available')
-
-    try {
-      const oldStock = item.stock
-      const newStock = oldStock + quantity
-
-      const updateQuery = (supabase as any)
-        .from('gift_inventory')
-        .update({ stock: newStock })
-        .eq('id', id)
-      const { error: invError } = await updateQuery
-
-      if (invError) throw invError
-
-      const { error: logError } = await supabase
-        .from('inventory_logs')
-        .insert([{
-          timestamp: new Date().toISOString(),
-          name: item.name,
-          reason: '수동 입고',
-          change: quantity,
-          old_stock: oldStock,
-          new_stock: newStock
-        }] as any)
-
-      if (logError) throw logError
-
-      return { success: true }
-    } catch (error: unknown) {
-      console.error('Error updating stock:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
-    }
-  },
-
   // 선물 아이템 삭제
   async deleteGiftItem(id: number) {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       const { error } = await supabase
         .from('gift_inventory')
         .delete()
+        .eq('clinic_id', clinicId)
         .eq('id', id)
 
       if (error) throw error
@@ -506,12 +727,19 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       console.log('[FixInventory] 재고 데이터 수정 시작...')
 
       // 1. 현재 재고 현황 조회
       const { data: currentInventory, error: invError } = await supabase
         .from('gift_inventory')
         .select('*')
+        .eq('clinic_id', clinicId)
         .order('name') as { data: GiftInventory[] | null, error: any }
 
       if (invError) throw invError
@@ -521,6 +749,7 @@ export const dataService = {
       const { data: allGiftLogs, error: logError } = await supabase
         .from('gift_logs')
         .select('*')
+        .eq('clinic_id', clinicId)
         .order('date', { ascending: true }) as { data: GiftLog[] | null, error: any }
 
       if (logError) throw logError
@@ -541,6 +770,7 @@ export const dataService = {
       const { data: inventoryLogs, error: logErr } = await supabase
         .from('inventory_logs')
         .select('*')
+        .eq('clinic_id', clinicId)
         .gt('change', 0) // 입고 기록만 (양수)
         .order('timestamp', { ascending: true }) as { data: InventoryLog[] | null, error: any }
 
@@ -576,6 +806,7 @@ export const dataService = {
           const { error: updateError } = await (supabase as any)
             .from('gift_inventory')
             .update({ stock: correctStock })
+            .eq('clinic_id', clinicId)
             .eq('id', item.id)
 
           if (updateError) throw updateError
@@ -584,6 +815,7 @@ export const dataService = {
           await supabase
             .from('inventory_logs')
             .insert([{
+              clinic_id: clinicId,
               timestamp: new Date().toISOString(),
               name: item.name,
               reason: '재고 데이터 오류 수정',
@@ -605,5 +837,884 @@ export const dataService = {
       console.error('Error fixing inventory data:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
-  }
+  },
+
+  // 사용자 프로필 업데이트
+  async updateUserProfile(id: string, updates: { name?: string; phone?: string }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // 사용자 ID (UUID)를 기준으로 직접 업데이트합니다.
+      const { data, error } = await (supabase.from('users') as any)
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id) // email 대신 id를 사용합니다.
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('Error updating user profile:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // === 마스터 관리자 전용 함수들 ===
+
+  // 현재 사용자 프로필 가져오기
+  async getUserProfile() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching user profile:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 모든 병원 목록 가져오기 (마스터 전용)
+  async getAllClinics() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await supabase
+        .from('clinics')
+        .select(`
+          *,
+          users!users_clinic_id_fkey(count)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching all clinics:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 모든 사용자 목록 가져오기 (마스터 전용)
+  async getAllUsers() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          clinic:clinics(name)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching all users:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 시스템 통계 가져오기 (마스터 전용)
+  async getSystemStatistics() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // 병원 수
+      const { count: clinicsCount } = await supabase
+        .from('clinics')
+        .select('*', { count: 'exact', head: true })
+
+      // 사용자 수
+      const { count: usersCount } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+
+      // 환자 수
+      const { count: patientsCount } = await supabase
+        .from('patients')
+        .select('*', { count: 'exact', head: true })
+
+      // 예약 수
+      const { count: appointmentsCount } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+
+      return {
+        data: {
+          totalClinics: clinicsCount || 0,
+          totalUsers: usersCount || 0,
+          totalPatients: patientsCount || 0,
+          totalAppointments: appointmentsCount || 0
+        }
+      }
+    } catch (error: unknown) {
+      console.error('Error fetching system statistics:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 병원 삭제 (마스터 전용)
+  async deleteClinic(clinicId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // 관련 데이터 먼저 삭제
+      await supabase.from('appointments').delete().eq('clinic_id', clinicId)
+      await supabase.from('inventory').delete().eq('clinic_id', clinicId)
+      await supabase.from('inventory_categories').delete().eq('clinic_id', clinicId)
+      await supabase.from('patients').delete().eq('clinic_id', clinicId)
+      await supabase.from('users').delete().eq('clinic_id', clinicId)
+
+      // 병원 삭제
+      const { error } = await supabase
+        .from('clinics')
+        .delete()
+        .eq('id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting clinic:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 사용자 삭제 (마스터 전용)
+  async deleteUser(userId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting user:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 사용자 권한 업데이트
+  async updateUserPermissions(userId: string, permissions: string[]) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await (supabase.from('users') as any)
+        .update({ permissions })
+        .eq('id', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('Error updating user permissions:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 사용자 승인 (직원 관리)
+  async approveUser(userId: string, clinicId: string, permissions?: string[]) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      console.log('Approving user:', { userId, clinicId, permissions })
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Current user not found')
+      }
+
+      const updateData: any = {
+        status: 'active',
+        approved_by: user.id,
+        approved_at: new Date().toISOString()
+      }
+
+      // 권한이 지정된 경우 저장
+      if (permissions && permissions.length > 0) {
+        updateData.permissions = permissions
+      }
+
+      console.log('Update data:', updateData)
+
+      const { data, error } = await (supabase.from('users') as any)
+        .update(updateData)
+        .eq('id', userId)
+        .eq('clinic_id', clinicId)
+        .select()
+
+      if (error) {
+        console.error('Supabase update error:', error)
+        throw error
+      }
+
+      console.log('Updated user data:', data)
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error approving user - Full error:', error)
+      const errorMessage = error instanceof Error ? error.message : JSON.stringify(error)
+      console.error('Error message:', errorMessage)
+      return { error: errorMessage }
+    }
+  },
+
+  // 사용자 거절 (직원 관리)
+  async rejectUser(userId: string, clinicId: string, reason: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+
+      const { error } = await (supabase.from('users') as any)
+        .update({
+          status: 'rejected',
+          review_note: reason,
+          approved_by: user?.id,
+          approved_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error rejecting user:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 병원 계정 상태 변경 (마스터 전용)
+  async updateClinicStatus(clinicId: string, status: 'active' | 'suspended') {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { error } = await (supabase.from('clinics') as any)
+        .update({
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating clinic status:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 병원별 사용자 목록 조회 (마스터 전용)
+  async getUsersByClinic(clinicId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching users by clinic:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // ========================================
+  // 프로토콜 관리 함수들
+  // ========================================
+
+  // 프로토콜 카테고리 목록 조회
+  async getProtocolCategories(clinicId?: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
+      const targetClinicId = clinicId || await getCurrentClinicId()
+      if (!targetClinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_categories')
+        .select('*')
+        .eq('clinic_id', targetClinicId)
+        .order('display_order')
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching protocol categories:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 카테고리 생성
+  async createProtocolCategory(categoryData: { name: string; description?: string; color?: string; display_order?: number }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await (supabase
+        .from('protocol_categories') as any)
+        .insert([{
+          clinic_id: clinicId,
+          name: categoryData.name,
+          description: categoryData.description || null,
+          color: categoryData.color || '#3B82F6',
+          display_order: categoryData.display_order || 0
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('Error creating protocol category:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 카테고리 수정
+  async updateProtocolCategory(categoryId: string, updates: { name?: string; description?: string; color?: string; display_order?: number }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await (supabase
+        .from('protocol_categories') as any)
+        .update(updates)
+        .eq('id', categoryId)
+        .eq('clinic_id', clinicId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('Error updating protocol category:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 카테고리 삭제
+  async deleteProtocolCategory(categoryId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('protocol_categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting protocol category:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 목록 조회
+  async getProtocols(clinicId?: string, filters?: { status?: string; category_id?: string; search?: string }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
+      const targetClinicId = clinicId || await getCurrentClinicId()
+      if (!targetClinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      let query = supabase
+        .from('protocols')
+        .select(`
+          *,
+          category:protocol_categories(*),
+          created_by_user:users!protocols_created_by_fkey(id, name, email)
+        `)
+        .eq('clinic_id', targetClinicId)
+        .is('deleted_at', null)
+
+      // 필터 적용
+      if (filters?.status) {
+        query = query.eq('status', filters.status)
+      }
+      if (filters?.category_id) {
+        query = query.eq('category_id', filters.category_id)
+      }
+      if (filters?.search) {
+        query = query.or(`title.ilike.%${filters.search}%,tags.cs.{${filters.search}}`)
+      }
+
+      const { data: protocols, error } = await query.order('updated_at', { ascending: false })
+
+      if (error) throw error
+
+      // currentVersion 정보를 별도로 조회
+      if (protocols && protocols.length > 0) {
+        const protocolsWithVersions = await Promise.all(
+          protocols.map(async (protocol: any) => {
+            if (protocol.current_version_id) {
+              const { data: version } = await supabase
+                .from('protocol_versions')
+                .select(`
+                  id,
+                  version_number,
+                  created_at,
+                  created_by,
+                  created_by_user:users!protocol_versions_created_by_fkey(id, name, email)
+                `)
+                .eq('id', protocol.current_version_id)
+                .single()
+
+              return { ...protocol, currentVersion: version }
+            }
+            return protocol
+          })
+        )
+        return { data: protocolsWithVersions }
+      }
+
+      return { data: protocols }
+    } catch (error: unknown) {
+      console.error('Error fetching protocols:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 상세 조회 (ID로)
+  async getProtocolById(protocolId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data: protocol, error } = await supabase
+        .from('protocols')
+        .select(`
+          *,
+          category:protocol_categories(*),
+          created_by_user:users!protocols_created_by_fkey(id, name, email)
+        `)
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+        .is('deleted_at', null)
+        .single()
+
+      if (error) throw error
+
+      // currentVersion 정보를 별도로 조회
+      const typedProtocol = protocol as any
+      if (typedProtocol && typedProtocol.current_version_id) {
+        const { data: version } = await supabase
+          .from('protocol_versions')
+          .select(`
+            id,
+            version_number,
+            content,
+            change_summary,
+            change_type,
+            created_at,
+            created_by,
+            created_by_user:users!protocol_versions_created_by_fkey(id, name, email)
+          `)
+          .eq('id', typedProtocol.current_version_id)
+          .single()
+
+        return { data: { ...typedProtocol, currentVersion: version } }
+      }
+
+      return { data: typedProtocol }
+    } catch (error: unknown) {
+      console.error('Error fetching protocol by ID:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 생성
+  async createProtocol(formData: ProtocolFormData) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // 1. 프로토콜 생성
+      const { data: protocol, error: protocolError } = await (supabase
+        .from('protocols') as any)
+        .insert([{
+          clinic_id: clinicId,
+          title: formData.title,
+          category_id: formData.category_id || null,
+          status: formData.status,
+          tags: formData.tags || [],
+          created_by: user.id
+        }])
+        .select()
+        .single()
+
+      if (protocolError) throw protocolError
+
+      // 2. 첫 번째 버전 생성
+      const { data: version, error: versionError } = await (supabase
+        .from('protocol_versions') as any)
+        .insert([{
+          protocol_id: protocol.id,
+          version_number: '1.0',
+          content: formData.content,
+          change_summary: formData.change_summary || '초기 버전',
+          change_type: 'major',
+          created_by: user.id
+        }])
+        .select()
+        .single()
+
+      if (versionError) throw versionError
+
+      // 3. 프로토콜의 current_version_id 업데이트
+      const { error: updateError } = await (supabase
+        .from('protocols') as any)
+        .update({ current_version_id: version.id })
+        .eq('id', protocol.id)
+
+      if (updateError) throw updateError
+
+      return { success: true, data: { ...protocol, current_version_id: version.id } }
+    } catch (error: unknown) {
+      console.error('Error creating protocol:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 수정 (새 버전 생성)
+  async updateProtocol(protocolId: string, formData: ProtocolFormData) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // 1. 새 버전 번호 계산
+      const { data: versionNumber, error: calcError } = await (supabase as any)
+        .rpc('calculate_next_protocol_version', {
+          p_protocol_id: protocolId,
+          p_change_type: formData.change_type || 'minor'
+        })
+
+      if (calcError) throw calcError
+
+      // 2. 새 버전 생성
+      const { data: version, error: versionError } = await (supabase
+        .from('protocol_versions') as any)
+        .insert([{
+          protocol_id: protocolId,
+          version_number: versionNumber,
+          content: formData.content,
+          change_summary: formData.change_summary || '내용 수정',
+          change_type: formData.change_type || 'minor',
+          created_by: user.id
+        }])
+        .select()
+        .single()
+
+      if (versionError) throw versionError
+
+      // 3. 프로토콜 업데이트
+      const updateData: any = {
+        current_version_id: version.id,
+        updated_at: new Date().toISOString()
+      }
+
+      if (formData.title) updateData.title = formData.title
+      if (formData.category_id !== undefined) updateData.category_id = formData.category_id
+      if (formData.status) updateData.status = formData.status
+      if (formData.tags) updateData.tags = formData.tags
+
+      const { data: protocol, error: updateError } = await (supabase
+        .from('protocols') as any)
+        .update(updateData)
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+        .select()
+        .single()
+
+      if (updateError) throw updateError
+
+      return { success: true, data: protocol }
+    } catch (error: unknown) {
+      console.error('Error updating protocol:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 삭제 (소프트 삭제)
+  async deleteProtocol(protocolId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await (supabase
+        .from('protocols') as any)
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting protocol:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 버전 히스토리 조회
+  async getProtocolVersions(protocolId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      // 프로토콜이 현재 클리닉 소속인지 확인
+      const { data: protocol, error: protocolError } = await supabase
+        .from('protocols')
+        .select('id')
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (protocolError || !protocol) {
+        throw new Error('Protocol not found or access denied')
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_versions')
+        .select(`
+          *,
+          created_by_user:users!protocol_versions_created_by_fkey(id, name, email)
+        `)
+        .eq('protocol_id', protocolId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('Error fetching protocol versions:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 프로토콜 버전 복원
+  async restoreProtocolVersion(protocolId: string, versionId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // 1. 복원할 버전 조회
+      const { data: oldVersion, error: versionError } = await supabase
+        .from('protocol_versions')
+        .select('*')
+        .eq('id', versionId)
+        .eq('protocol_id', protocolId)
+        .single()
+
+      if (versionError || !oldVersion) throw new Error('Version not found')
+      const typedOldVersion = oldVersion as any
+
+      // 2. 프로토콜이 현재 클리닉 소속인지 확인
+      const { data: protocol, error: protocolError } = await supabase
+        .from('protocols')
+        .select('*')
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (protocolError || !protocol) {
+        throw new Error('Protocol not found or access denied')
+      }
+
+      // 3. 새 버전 번호 계산
+      const { data: versionNumber, error: calcError } = await (supabase as any)
+        .rpc('calculate_next_protocol_version', {
+          p_protocol_id: protocolId,
+          p_change_type: 'minor'
+        })
+
+      if (calcError) throw calcError
+
+      // 4. 복원된 내용으로 새 버전 생성
+      const { data: newVersion, error: createError } = await (supabase
+        .from('protocol_versions') as any)
+        .insert([{
+          protocol_id: protocolId,
+          version_number: versionNumber,
+          content: typedOldVersion.content,
+          change_summary: `버전 ${typedOldVersion.version_number}으로 복원`,
+          change_type: 'minor',
+          created_by: user.id
+        }])
+        .select()
+        .single()
+
+      if (createError) throw createError
+
+      // 5. 프로토콜의 current_version_id 업데이트
+      const { error: updateError } = await (supabase
+        .from('protocols') as any)
+        .update({
+          current_version_id: newVersion.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+
+      if (updateError) throw updateError
+
+      return { success: true, data: newVersion }
+    } catch (error: unknown) {
+      console.error('Error restoring protocol version:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // ========================================
+  // 비밀번호 관리 함수들
+  // ========================================
+
+  // 비밀번호 확인 (재인증)
+  async verifyPassword(email: string, password: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      console.log('[DataService] Verifying password for:', email)
+
+      // 현재 비밀번호로 로그인 시도 (재인증)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (error) {
+        console.error('[DataService] Password verification failed:', error)
+        return { success: false, error: error.message }
+      }
+
+      console.log('[DataService] Password verified successfully')
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('[DataService] Error verifying password:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 비밀번호 업데이트
+  async updatePassword(newPassword: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      console.log('[DataService] Updating password')
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) {
+        console.error('[DataService] Password update failed:', error)
+        return { error: error.message }
+      }
+
+      console.log('[DataService] Password updated successfully')
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('[DataService] Error updating password:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
 }

@@ -1,0 +1,195 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { usePermissions } from '@/hooks/usePermissions'
+import Header from '@/components/Layout/Header'
+import ManagementTabNavigation from '@/components/Layout/ManagementTabNavigation'
+import StaffManagement from '@/components/Management/StaffManagement'
+import ClinicSettings from '@/components/Management/ClinicSettings'
+import ProtocolManagement from '@/components/Management/ProtocolManagement'
+import AccountProfile from '@/components/Management/AccountProfile'
+import Toast from '@/components/UI/Toast'
+
+export default function ManagementPage() {
+  const router = useRouter()
+  const { user, logout, updateUser, loading: authLoading } = useAuth()
+  const { hasPermission, permissions } = usePermissions()
+  const [activeTab, setActiveTab] = useState('staff')
+  const [showProfile, setShowProfile] = useState(false)
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false)
+  const [toast, setToast] = useState<{
+    show: boolean
+    message: string
+    type: 'success' | 'error' | 'warning' | 'info'
+  }>({ show: false, message: '', type: 'info' })
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setToast({ show: true, message, type })
+  }
+
+  // 권한 체크
+  const canAccessStaffManagement = ['staff_manage', 'staff_view'].some(p => hasPermission(p as any))
+  const canAccessClinicSettings = hasPermission('clinic_settings')
+  const canAccessProtocols = hasPermission('protocol_view')
+
+  // 권한 로딩 상태 추적
+  useEffect(() => {
+    if (!authLoading && user && permissions.size > 0) {
+      setPermissionsLoaded(true)
+    }
+  }, [authLoading, user, permissions])
+
+  useEffect(() => {
+    // 인증 정보 로딩 중이거나 권한이 로딩 중이면 아무것도 하지 않음
+    if (authLoading || !permissionsLoaded) {
+      return
+    }
+
+    // 사용자가 없으면 리디렉션
+    if (!user) {
+      router.push('/dashboard')
+      return
+    }
+
+    // 권한이 전혀 없으면 리디렉션
+    if (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols) {
+      router.push('/dashboard')
+      return
+    }
+
+    // 현재 탭에 권한이 없으면 권한이 있는 탭으로 변경
+    if (activeTab === 'staff' && !canAccessStaffManagement) {
+      if (canAccessClinicSettings) setActiveTab('clinic')
+      else if (canAccessProtocols) setActiveTab('protocols')
+    } else if (activeTab === 'clinic' && !canAccessClinicSettings) {
+      if (canAccessStaffManagement) setActiveTab('staff')
+      else if (canAccessProtocols) setActiveTab('protocols')
+    } else if (activeTab === 'protocols' && !canAccessProtocols) {
+      if (canAccessStaffManagement) setActiveTab('staff')
+      else if (canAccessClinicSettings) setActiveTab('clinic')
+    }
+  }, [authLoading, permissionsLoaded, user, canAccessStaffManagement, canAccessClinicSettings, canAccessProtocols, activeTab, router])
+
+  // 로딩 중이거나 권한이 없는 경우
+  if (authLoading || !permissionsLoaded) {
+    return (
+      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>사용자 정보 확인 중...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols)) {
+    return (
+      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center">
+        <div className="text-center">
+          <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200">
+            <h1 className="text-2xl font-bold text-slate-800 mb-4">접근 권한이 없습니다</h1>
+            <p className="text-slate-600 mb-6">
+              관리 페이지에 접근할 권한이 없습니다.
+            </p>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+            >
+              대시보드로 이동
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
+      <div className="container mx-auto p-4 md:p-8">
+        <Header
+          dbStatus="connected"
+          user={user}
+          onLogout={logout}
+          showManagementLink={false}
+          onProfileClick={() => setShowProfile(true)}
+        />
+
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">병원 관리</h1>
+          <p className="text-slate-600">
+            직원, 설정, 통계를 관리하고 병원 운영을 최적화하세요.
+          </p>
+        </div>
+
+        {/* Profile Modal */}
+        {showProfile && user && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <AccountProfile
+                currentUser={user}
+                onClose={() => setShowProfile(false)}
+                onUpdate={(updatedUserData) => {
+                  updateUser(updatedUserData) // AuthContext와 localStorage 업데이트
+                  setShowProfile(false) // 모달 닫기
+                  showToast('프로필이 성공적으로 업데이트되었습니다.', 'success')
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        <main>
+          <ManagementTabNavigation
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            userRole={user.role || ''}
+          />
+
+          {/* Staff Management Tab */}
+          {activeTab === 'staff' && (
+            <StaffManagement currentUser={user} />
+          )}
+
+          {/* Clinic Settings Tab */}
+          {activeTab === 'clinic' && (
+            <ClinicSettings currentUser={user} />
+          )}
+
+          {/* Protocols Tab */}
+          {activeTab === 'protocols' && (
+            <ProtocolManagement currentUser={user} />
+          )}
+
+          {/* Analytics Tab */}
+          {activeTab === 'analytics' && (
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+              <h2 className="text-xl font-bold text-slate-800 mb-4">통계 분석</h2>
+              <div className="text-center py-12">
+                <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
+              </div>
+            </div>
+          )}
+
+          {/* System Settings Tab */}
+          {activeTab === 'system' && user.role === 'owner' && (
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+              <h2 className="text-xl font-bold text-slate-800 mb-4">시스템 설정</h2>
+              <div className="text-center py-12">
+                <p className="text-slate-600">시스템 설정 기능은 곧 제공될 예정입니다.</p>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        show={toast.show}
+        onClose={() => setToast(prev => ({ ...prev, show: false }))}
+      />
+    </div>
+  )
+}

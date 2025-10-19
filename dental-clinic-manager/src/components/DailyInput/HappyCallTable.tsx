@@ -7,9 +7,10 @@ import type { HappyCallRowData } from '@/types'
 interface HappyCallTableProps {
   happyCallRows: HappyCallRowData[]
   onHappyCallRowsChange: (rows: HappyCallRowData[]) => void
+  isReadOnly: boolean
 }
 
-export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange }: HappyCallTableProps) {
+export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange, isReadOnly }: HappyCallTableProps) {
   const addRow = () => {
     const newRows = [...happyCallRows, { patient_name: '', treatment: '', notes: '' }]
     onHappyCallRowsChange(newRows)
@@ -53,6 +54,7 @@ export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange }:
                     placeholder="홍길동"
                     value={row.patient_name}
                     onChange={(e) => updateRow(index, 'patient_name', e.target.value)}
+                    readOnly={isReadOnly}
                   />
                 </td>
                 <td className="p-2 border border-slate-300">
@@ -62,6 +64,7 @@ export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange }:
                     placeholder="진료 내용"
                     value={row.treatment}
                     onChange={(e) => updateRow(index, 'treatment', e.target.value)}
+                    readOnly={isReadOnly}
                   />
                 </td>
                 <td className="p-2 border border-slate-300">
@@ -71,13 +74,15 @@ export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange }:
                     placeholder="특이사항 (선택)"
                     value={row.notes}
                     onChange={(e) => updateRow(index, 'notes', e.target.value)}
+                    readOnly={isReadOnly}
                   />
                 </td>
                 <td className="p-2 border border-slate-300 text-center">
                   <button
                     onClick={() => removeRow(index)}
-                    className="text-red-500 hover:text-red-700 p-1"
+                    className="text-red-500 hover:text-red-700 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="행 삭제"
+                    disabled={isReadOnly}
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -89,7 +94,8 @@ export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange }:
       </div>
       <button
         onClick={addRow}
-        className="mt-4 text-blue-600 font-semibold text-sm py-2 px-4 rounded-md hover:bg-blue-50 flex items-center space-x-2"
+        className="mt-4 text-blue-600 font-semibold text-sm py-2 px-4 rounded-md hover:bg-blue-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={isReadOnly}
       >
         <Plus className="w-4 h-4" />
         <span>해피콜 기록 추가</span>

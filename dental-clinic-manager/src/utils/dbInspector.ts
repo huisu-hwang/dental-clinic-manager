@@ -28,7 +28,7 @@ export const inspectDatabase = async () => {
         }
 
         // 샘플 데이터 구조 확인
-        const { data: sampleData, error: dataError } = await supabase
+        const { data: sampleData } = await supabase
           .from(tableName)
           .select('*')
           .limit(1)

@@ -6,7 +6,7 @@ import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, UserProfile } from '@/types'
 
 interface DailyInputFormProps {
   giftInventory: GiftInventory[]
@@ -19,9 +19,12 @@ interface DailyInputFormProps {
     recallBookingCount: number
     specialNotes: string
   }) => void
+  canCreate: boolean
+  canEdit: boolean
+  currentUser?: UserProfile
 }
 
-export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInputFormProps) {
+export default function DailyInputForm({ giftInventory, onSaveReport, canCreate, canEdit, currentUser }: DailyInputFormProps) {
   const [reportDate, setReportDate] = useState(getTodayString())
   const [consultRows, setConsultRows] = useState<ConsultRowData[]>([
     { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
@@ -37,22 +40,33 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
   const [specialNotes, setSpecialNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
+  const isReadOnly = hasExistingData ? !canEdit : !canCreate
 
   // 날짜별 데이터 로드
   const loadDataForDate = async (date: string) => {
     console.log('[DailyInputForm] loadDataForDate called with:', date)
     if (!date) {
       console.log('[DailyInputForm] No date provided, skipping load')
+      setLoading(false)
       return
     }
 
     console.log('[DailyInputForm] Setting loading to true')
     setLoading(true)
-    setHasExistingData(false) // 로듩 시작 시 초기화
+    setHasExistingData(false) // 로딩 시작 시 초기화
+
+    // 타임아웃 설정 (5초)
+    const timeoutId = setTimeout(() => {
+      console.log('[DailyInputForm] Load timeout - forcing loading to false')
+      setLoading(false)
+    }, 5000)
 
     try {
       console.log('[DailyInputForm] Calling dataService.getReportByDate...')
-      const result = await dataService.getReportByDate(date)
+      // currentUser가 있으면 clinic_id를 전달, 없으면 내부에서 getCurrentClinicId() 호출
+      const result = currentUser?.clinic_id
+        ? await dataService.getReportByDate(currentUser.clinic_id, date)
+        : await dataService.getReportByDate(date)
       console.log('[DailyInputForm] Result received:', result)
       
       if (result.success && result.data.hasData) {
@@ -112,6 +126,8 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
       resetFormData()
       setHasExistingData(false)
     } finally {
+      // 타임아웃 클리어
+      clearTimeout(timeoutId)
       // 로딩 상태를 항상 false로 설정
       console.log('[DailyInputForm] Setting loading to false')
       setLoading(false)
@@ -130,18 +146,26 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
 
   // 날짜 변경 핸들러
   const handleDateChange = (newDate: string) => {
-    setReportDate(newDate)
-    loadDataForDate(newDate)
+    if (newDate !== reportDate) {
+      setReportDate(newDate)
+      // loadDataForDate는 useEffect에서 처리
+    }
   }
 
-  // 컴포넌트 마운트 시 오늘 날짜 데이터 로드
+  // 컴포넌트 마운트 시 또는 날짜 변경 시 데이터 로드
   useEffect(() => {
-    console.log('[DailyInputForm] Component mounted, loading initial data for:', reportDate)
-    const loadInitialData = async () => {
-      await loadDataForDate(reportDate)
+    console.log('[DailyInputForm] Loading data for date:', reportDate)
+    loadDataForDate(reportDate)
+  }, [reportDate]) // reportDate가 변경될 때마다 실행
+
+  // 컴포넌트가 다시 마운트될 때 강제 리로드
+  useEffect(() => {
+    console.log('[DailyInputForm] Component mounted, forcing data reload')
+    loadDataForDate(reportDate)
+    return () => {
+      console.log('[DailyInputForm] Component unmounting')
     }
-    loadInitialData()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // 컴포넌트 마운트 시 한 번만 실행
 
   const handleSave = async () => {
     if (!reportDate) {
@@ -195,7 +219,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
               className="w-full p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
               value={reportDate}
               onChange={(e) => handleDateChange(e.target.value)}
-              disabled={loading}
+              disabled={loading || !canCreate}
             />
           </div>
         </div>
@@ -205,6 +229,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
       <ConsultTable 
         consultRows={consultRows}
         onConsultRowsChange={setConsultRows}
+        isReadOnly={isReadOnly}
       />
 
       {/* 리콜 결과 */}
@@ -219,6 +244,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
               value={recallCount}
               onChange={(e) => setRecallCount(parseInt(e.target.value) || 0)}
               className="w-full p-2 border border-slate-300 rounded-md"
+              readOnly={isReadOnly}
             />
           </div>
           <div>
@@ -229,6 +255,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
               value={recallBookingCount}
               onChange={(e) => setRecallBookingCount(parseInt(e.target.value) || 0)}
               className="w-full p-2 border border-slate-300 rounded-md"
+              readOnly={isReadOnly}
             />
           </div>
         </div>
@@ -239,12 +266,14 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
         giftRows={giftRows}
         onGiftRowsChange={setGiftRows}
         giftInventory={giftInventory}
+        isReadOnly={isReadOnly}
       />
 
       {/* 해피콜 결과 */}
       <HappyCallTable
         happyCallRows={happyCallRows}
         onHappyCallRowsChange={setHappyCallRows}
+        isReadOnly={isReadOnly}
       />
 
       {/* 기타 특이사항 */}
@@ -261,6 +290,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
             placeholder="오늘 업무 중 특이사항이나 기록할 내용이 있다면 작성해주세요. (선택사항)"
             value={specialNotes}
             onChange={(e) => setSpecialNotes(e.target.value)}
+            readOnly={isReadOnly}
           />
           <p className="mt-1 text-sm text-slate-500">
             예: 장비 점검, 직원 교육, 특별한 환자 케이스, 업무 변경사항 등
@@ -269,23 +299,26 @@ export default function DailyInputForm({ giftInventory, onSaveReport }: DailyInp
       </div>
 
       {/* 저장 버튼 */}
-      <div className="flex justify-end space-x-4">
-        <button
-          type="button"
-          onClick={resetForm}
-          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
-        >
-          초기화
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={loading}
-        >
-          {loading ? '저장 중...' : '저장하기'}
-        </button>
-      </div>
+      {(canCreate || canEdit) && (
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={resetForm}
+            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
+            disabled={isReadOnly}
+          >
+            초기화
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || isReadOnly}
+          >
+            {loading ? '저장 중...' : (hasExistingData ? '수정하기' : '저장하기')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
