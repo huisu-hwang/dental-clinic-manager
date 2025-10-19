@@ -7,6 +7,7 @@ export interface DailyReport {
   consult_hold: number;
   naver_review_count: number;
   special_notes?: string;
+  clinic_id?: string | null;
 }
 
 export interface ConsultLog {
@@ -16,6 +17,7 @@ export interface ConsultLog {
   consult_content: string;
   consult_status: 'O' | 'X';
   remarks: string;
+  clinic_id?: string | null;
 }
 
 export interface GiftLog {
@@ -25,12 +27,14 @@ export interface GiftLog {
   gift_type: string;
   naver_review: 'O' | 'X';
   notes: string;
+  clinic_id?: string | null;
 }
 
 export interface GiftInventory {
   id: number;
   name: string;
   stock: number;
+  clinic_id?: string | null;
 }
 
 export interface InventoryLog {
@@ -41,6 +45,7 @@ export interface InventoryLog {
   change: number;
   old_stock: number;
   new_stock: number;
+  clinic_id?: string | null;
 }
 
 export interface HappyCallLog {
@@ -49,6 +54,7 @@ export interface HappyCallLog {
   patient_name: string;
   treatment: string;
   notes: string;
+  clinic_id?: string | null;
 }
 
 export interface Stats {

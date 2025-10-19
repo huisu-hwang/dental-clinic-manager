@@ -55,7 +55,7 @@ export default function DashboardPage() {
     error,
     refetch,
     refetchInventory
-  } = useSupabaseData()
+  } = useSupabaseData(user?.clinic_id ?? null)
 
   useEffect(() => {
     if (loading) {

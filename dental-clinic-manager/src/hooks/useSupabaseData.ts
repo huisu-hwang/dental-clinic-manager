@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { getSupabase } from '@/lib/supabase'
+import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from '@/lib/clinicScope'
 import type { DailyReport, ConsultLog, GiftLog, GiftInventory, InventoryLog } from '@/types'
 
-export const useSupabaseData = () => {
+export const useSupabaseData = (clinicId?: string | null) => {
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([])
   const [consultLogs, setConsultLogs] = useState<ConsultLog[]>([])
   const [giftLogs, setGiftLogs] = useState<GiftLog[]>([])
@@ -12,11 +13,26 @@ export const useSupabaseData = () => {
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [currentClinicId, setCurrentClinicId] = useState<string | null>(clinicId ?? null)
+
+  useEffect(() => {
+    if (clinicId && clinicId !== currentClinicId) {
+      setCurrentClinicId(clinicId)
+    }
+    if (!clinicId && currentClinicId) {
+      setCurrentClinicId(null)
+    }
+  }, [clinicId, currentClinicId])
 
   // 재고 데이터만 업데이트하는 함수
-  const fetchInventoryOnly = async () => {
+  const fetchInventoryOnly = useCallback(async (clinicIdOverride?: string | null) => {
     try {
+      const targetClinicId = clinicIdOverride ?? currentClinicId
+      if (!targetClinicId) {
+        console.warn('[useSupabaseData] No clinic_id available for inventory fetch')
+        return
+      }
+
       const supabase = getSupabase()
       if (!supabase) {
         setError('Supabase client not available')
@@ -27,28 +43,59 @@ export const useSupabaseData = () => {
         { data: inventoryData, error: inventoryError },
         { data: invLogData, error: invLogError }
       ] = await Promise.all([
-        supabase.from('gift_inventory').select<'*', GiftInventory>('*'),
-        supabase.from('inventory_logs').select<'*', InventoryLog>('*')
+        applyClinicFilter(
+          supabase.from('gift_inventory').select<'*', GiftInventory>('*'),
+          targetClinicId
+        ),
+        applyClinicFilter(
+          supabase.from('inventory_logs').select<'*', InventoryLog>('*'),
+          targetClinicId
+        )
       ])
 
       if (inventoryError) throw inventoryError
       if (invLogError) throw invLogError
 
-      const sortedInventoryData = (inventoryData || []).sort((a, b) => a.name.localeCompare(b.name))
-      const sortedInventoryLogs = (invLogData || []).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      const { normalized: normalizedInventory, missingIds: inventoryIdsToBackfill } = ensureClinicIds(
+        inventoryData as GiftInventory[] | null,
+        targetClinicId
+      )
+      const { normalized: normalizedInventoryLogs, missingIds: inventoryLogIdsToBackfill } = ensureClinicIds(
+        invLogData as InventoryLog[] | null,
+        targetClinicId
+      )
+
+      const sortedInventoryData = normalizedInventory.sort((a, b) => a.name.localeCompare(b.name))
+      const sortedInventoryLogs = normalizedInventoryLogs.sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
 
       setGiftInventory(sortedInventoryData)
       setInventoryLogs(sortedInventoryLogs)
+
+      if (inventoryIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'gift_inventory', targetClinicId, inventoryIdsToBackfill)
+      }
+      if (inventoryLogIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'inventory_logs', targetClinicId, inventoryLogIdsToBackfill)
+      }
     } catch (err: unknown) {
       console.error('Error fetching inventory data:', err)
       setError(err instanceof Error ? err.message : 'Unknown error occurred')
     }
-  }
+  }, [currentClinicId])
 
-  const fetchAllData = useCallback(async () => {
+  const fetchAllData = useCallback(async (clinicIdOverride?: string | null) => {
     try {
       setLoading(true)
       setError(null)
+
+      const targetClinicId = clinicIdOverride ?? currentClinicId
+      if (!targetClinicId) {
+        console.warn('[useSupabaseData] No clinic_id available for data fetch')
+        setLoading(false)
+        return
+      }
 
       const supabase = getSupabase()
       if (!supabase) {
@@ -61,11 +108,26 @@ export const useSupabaseData = () => {
 
       // 각 쿼리를 개별적으로 실행하여 어느 쿼리에서 문제가 발생하는지 파악
       const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
-        supabase.from('daily_reports').select<'*', DailyReport>('*'),
-        supabase.from('consult_logs').select<'*', ConsultLog>('*'),
-        supabase.from('gift_logs').select<'*', GiftLog>('*'),
-        supabase.from('gift_inventory').select<'*', GiftInventory>('*'),
-        supabase.from('inventory_logs').select<'*', InventoryLog>('*')
+        applyClinicFilter(
+          supabase.from('daily_reports').select<'*', DailyReport>('*'),
+          targetClinicId
+        ),
+        applyClinicFilter(
+          supabase.from('consult_logs').select<'*', ConsultLog>('*'),
+          targetClinicId
+        ),
+        applyClinicFilter(
+          supabase.from('gift_logs').select<'*', GiftLog>('*'),
+          targetClinicId
+        ),
+        applyClinicFilter(
+          supabase.from('gift_inventory').select<'*', GiftInventory>('*'),
+          targetClinicId
+        ),
+        applyClinicFilter(
+          supabase.from('inventory_logs').select<'*', InventoryLog>('*'),
+          targetClinicId
+        )
       ])
 
       console.log('[useSupabaseData] 쿼리 결과:', {
@@ -101,17 +163,62 @@ export const useSupabaseData = () => {
       if (invLogError) console.warn('[useSupabaseData] Inventory logs error:', invLogError)
 
       // 기존 dcm.html과 동일한 정렬 방식 적용
-      const sortedDailyReports = (dailyData as DailyReport[] || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      const sortedConsultLogs = (consultData as ConsultLog[] || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      const sortedGiftLogs = (giftData as GiftLog[] || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      const sortedInventoryData = (inventoryData as GiftInventory[] || []).sort((a, b) => a.name.localeCompare(b.name))
-      const sortedInventoryLogs = (invLogData as InventoryLog[] || []).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      const { normalized: normalizedDailyReports, missingIds: dailyIdsToBackfill } = ensureClinicIds(
+        dailyData as DailyReport[] | null,
+        targetClinicId
+      )
+      const { normalized: normalizedConsultLogs, missingIds: consultIdsToBackfill } = ensureClinicIds(
+        consultData as ConsultLog[] | null,
+        targetClinicId
+      )
+      const { normalized: normalizedGiftLogs, missingIds: giftIdsToBackfill } = ensureClinicIds(
+        giftData as GiftLog[] | null,
+        targetClinicId
+      )
+      const { normalized: normalizedInventoryData, missingIds: inventoryIdsToBackfill } = ensureClinicIds(
+        inventoryData as GiftInventory[] | null,
+        targetClinicId
+      )
+      const { normalized: normalizedInventoryLogs, missingIds: inventoryLogIdsToBackfill } = ensureClinicIds(
+        invLogData as InventoryLog[] | null,
+        targetClinicId
+      )
+
+      const sortedDailyReports = normalizedDailyReports.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+      const sortedConsultLogs = normalizedConsultLogs.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+      const sortedGiftLogs = normalizedGiftLogs.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+      const sortedInventoryData = normalizedInventoryData.sort((a, b) => a.name.localeCompare(b.name))
+      const sortedInventoryLogs = normalizedInventoryLogs.sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
 
       setDailyReports(sortedDailyReports)
       setConsultLogs(sortedConsultLogs)
       setGiftLogs(sortedGiftLogs)
       setGiftInventory(sortedInventoryData)
       setInventoryLogs(sortedInventoryLogs)
+
+      if (dailyIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'daily_reports', targetClinicId, dailyIdsToBackfill)
+      }
+      if (consultIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'consult_logs', targetClinicId, consultIdsToBackfill)
+      }
+      if (giftIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'gift_logs', targetClinicId, giftIdsToBackfill)
+      }
+      if (inventoryIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'gift_inventory', targetClinicId, inventoryIdsToBackfill)
+      }
+      if (inventoryLogIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'inventory_logs', targetClinicId, inventoryLogIdsToBackfill)
+      }
 
       // 모든 데이터가 비어있으면 에러 표시
       if (!dailyData && !consultData && !giftData && !inventoryData) {
@@ -133,24 +240,24 @@ export const useSupabaseData = () => {
       console.log('[useSupabaseData] Finally - 로딩 상태를 false로 설정')
       setLoading(false)
     }
-  }, [])
+  }, [currentClinicId])
 
   useEffect(() => {
-    // 이미 초기화되었으면 건너뛰기
-    if (isInitialized) return
-
-    // 클라이언트 사이드에서만 실행
     if (typeof window === 'undefined') {
       console.log('[useSupabaseData] Server-side rendering, skipping data fetch')
       setLoading(false)
       return
     }
 
-    console.log('[useSupabaseData] Client-side, starting data fetch')
-    setIsInitialized(true)
+    if (!currentClinicId) {
+      console.log('[useSupabaseData] No clinic_id yet, waiting for initialization')
+      return
+    }
+
+    console.log('[useSupabaseData] Client-side, starting data fetch for clinic:', currentClinicId)
 
     const loadData = async () => {
-      await fetchAllData()
+      await fetchAllData(currentClinicId)
     }
 
     // 초기 데이터 로드
@@ -164,10 +271,10 @@ export const useSupabaseData = () => {
     }
 
     const channel = supabase
-      .channel('public-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+      .channel(`public-db-changes-${currentClinicId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', filter: `clinic_id=eq.${currentClinicId}` }, () => {
         console.log('[useSupabaseData] Database change detected, reloading data')
-        fetchAllData()
+        fetchAllData(currentClinicId)
       })
       .subscribe()
 
@@ -176,7 +283,7 @@ export const useSupabaseData = () => {
         supabase.removeChannel(channel)
       }
     }
-  }, [isInitialized])
+  }, [currentClinicId, fetchAllData])
 
   return {
     dailyReports,
@@ -186,7 +293,7 @@ export const useSupabaseData = () => {
     inventoryLogs,
     loading,
     error,
-    refetch: fetchAllData,
-    refetchInventory: fetchInventoryOnly
+    refetch: () => fetchAllData(currentClinicId),
+    refetchInventory: () => fetchInventoryOnly(currentClinicId)
   }
 }
