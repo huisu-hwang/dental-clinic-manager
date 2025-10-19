@@ -1,7 +1,6 @@
 export type ClinicScopedRecord = {
   id?: number | string | null
   clinic_id?: string | null
-  [key: string]: unknown
 }
 
 const buildClinicFilter = (clinicId: string) => `clinic_id.eq.${clinicId},clinic_id.is.null`
@@ -41,13 +40,7 @@ export const ensureClinicIds = <T extends ClinicScopedRecord>(
 }
 
 export const backfillClinicIds = async (
-  supabaseClient: {
-    from: (table: string) => {
-      update: (values: Record<string, unknown>) => {
-        in: (column: string, values: Array<number | string>) => Promise<unknown>
-      }
-    }
-  } | null,
+  supabaseClient: any,
   table: string,
   clinicId: string,
   ids: Array<number | string>
