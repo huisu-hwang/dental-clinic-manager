@@ -75,8 +75,19 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
         
         // 기존 데이터로 폼 채우기
         if (dailyReport) {
-          setRecallCount(dailyReport.recall_count || 0)
-          setRecallBookingCount(dailyReport.recall_booking_count || 0)
+          const normalizedRecallCount =
+            typeof dailyReport.recall_count === 'number'
+              ? dailyReport.recall_count
+              : Number(dailyReport.recall_count ?? 0)
+          const normalizedRecallBookingCount =
+            typeof dailyReport.recall_booking_count === 'number'
+              ? dailyReport.recall_booking_count
+              : Number(dailyReport.recall_booking_count ?? 0)
+
+          setRecallCount(Number.isNaN(normalizedRecallCount) ? 0 : normalizedRecallCount)
+          setRecallBookingCount(
+            Number.isNaN(normalizedRecallBookingCount) ? 0 : normalizedRecallBookingCount
+          )
           setSpecialNotes(dailyReport.special_notes || '')
         }
         
