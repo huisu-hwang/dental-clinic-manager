@@ -1,4 +1,5 @@
 import { getSupabase } from './supabase'
+import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, Protocol, ProtocolCategory, ProtocolVersion, ProtocolFormData } from '@/types'
 
 // 현재 로그인한 사용자의 clinic_id를 가져오는 헬퍼 함수
@@ -187,12 +188,13 @@ export const dataService = {
 
       // daily_reports 조회
       try {
-        dailyReportResult = await supabase
-          .from('daily_reports')
-          .select('*')
-          .eq('clinic_id', targetClinicId)
-          .eq('date', targetDate)
-          .maybeSingle();
+        dailyReportResult = await applyClinicFilter(
+          supabase
+            .from('daily_reports')
+            .select('*')
+            .eq('date', targetDate),
+          targetClinicId
+        ).maybeSingle();
         console.log('[DataService] daily_reports fetched:', dailyReportResult);
       } catch (err) {
         console.error('[DataService] Error fetching daily_reports:', err);
@@ -201,12 +203,14 @@ export const dataService = {
 
       // consult_logs 조회
       try {
-        consultLogsResult = await supabase
-          .from('consult_logs')
-          .select('*')
-          .eq('clinic_id', targetClinicId)
-          .eq('date', targetDate)
-          .order('id');
+        consultLogsResult = await applyClinicFilter(
+          supabase
+            .from('consult_logs')
+            .select('*')
+            .eq('date', targetDate)
+            .order('id'),
+          targetClinicId
+        );
         console.log('[DataService] consult_logs fetched:', consultLogsResult?.data?.length || 0, 'items');
       } catch (err) {
         console.error('[DataService] Error fetching consult_logs:', err);
@@ -215,12 +219,14 @@ export const dataService = {
 
       // gift_logs 조회
       try {
-        giftLogsResult = await supabase
-          .from('gift_logs')
-          .select('*')
-          .eq('clinic_id', targetClinicId)
-          .eq('date', targetDate)
-          .order('id');
+        giftLogsResult = await applyClinicFilter(
+          supabase
+            .from('gift_logs')
+            .select('*')
+            .eq('date', targetDate)
+            .order('id'),
+          targetClinicId
+        );
         console.log('[DataService] gift_logs fetched:', giftLogsResult?.data?.length || 0, 'items');
       } catch (err) {
         console.error('[DataService] Error fetching gift_logs:', err);
@@ -229,28 +235,60 @@ export const dataService = {
 
       // happy_call_logs 조회 (테이블이 없을 수 있음)
       try {
-        happyCallLogsResult = await supabase
-          .from('happy_call_logs')
-          .select('*')
-          .eq('clinic_id', targetClinicId)
-          .eq('date', targetDate)
-          .order('id');
+        happyCallLogsResult = await applyClinicFilter(
+          supabase
+            .from('happy_call_logs')
+            .select('*')
+            .eq('date', targetDate)
+            .order('id'),
+          targetClinicId
+        );
         console.log('[DataService] happy_call_logs fetched:', happyCallLogsResult?.data?.length || 0, 'items');
       } catch (err) {
         console.warn('[DataService] Error fetching happy_call_logs (table might not exist):', err);
         happyCallLogsResult = { data: [], error: err };
       }
 
-      const hasData = !!dailyReportResult?.data;
-      console.log('[DataService] Data fetch complete. Has data:', hasData);
+      const { normalized: normalizedDailyReport, missingIds: dailyIdsToBackfill } = ensureClinicIds(
+        dailyReportResult?.data ? [dailyReportResult.data as DailyReport] : [],
+        targetClinicId
+      )
+      const { normalized: normalizedConsultLogs, missingIds: consultIdsToBackfill } = ensureClinicIds(
+        consultLogsResult?.data as ConsultLog[] | null,
+        targetClinicId
+      )
+      const { normalized: normalizedGiftLogs, missingIds: giftIdsToBackfill } = ensureClinicIds(
+        giftLogsResult?.data as GiftLog[] | null,
+        targetClinicId
+      )
+      const { normalized: normalizedHappyCallLogs, missingIds: happyCallIdsToBackfill } = ensureClinicIds(
+        happyCallLogsResult?.data as HappyCallLog[] | null,
+        targetClinicId
+      )
+
+      if (dailyIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'daily_reports', targetClinicId, dailyIdsToBackfill)
+      }
+      if (consultIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'consult_logs', targetClinicId, consultIdsToBackfill)
+      }
+      if (giftIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'gift_logs', targetClinicId, giftIdsToBackfill)
+      }
+      if (happyCallIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'happy_call_logs', targetClinicId, happyCallIdsToBackfill)
+      }
+
+      const hasData = normalizedDailyReport.length > 0
+      console.log('[DataService] Data fetch complete. Has data:', hasData)
 
       return {
         success: true,
         data: {
-          dailyReport: dailyReportResult?.data as DailyReport | null,
-          consultLogs: (consultLogsResult?.data as ConsultLog[]) || [],
-          giftLogs: (giftLogsResult?.data as GiftLog[]) || [],
-          happyCallLogs: (happyCallLogsResult?.data as HappyCallLog[]) || [],
+          dailyReport: normalizedDailyReport[0] ?? null,
+          consultLogs: normalizedConsultLogs,
+          giftLogs: normalizedGiftLogs,
+          happyCallLogs: normalizedHappyCallLogs,
           hasData
         }
       }
@@ -292,12 +330,14 @@ export const dataService = {
       const { date, consultRows, giftRows, happyCallRows, recallCount, recallBookingCount, specialNotes } = data
 
       // --- 1. 기존 보고서 확인 및 삭제 ---
-      const { data: existingReports, error: checkError } = await supabase
-        .from('daily_reports')
-        .select('id')
-        .eq('clinic_id', clinicId)
-        .eq('date', date)
-        .limit(1)
+      const { data: existingReports, error: checkError } = await applyClinicFilter(
+        supabase
+          .from('daily_reports')
+          .select('id')
+          .eq('date', date)
+          .limit(1),
+        clinicId
+      )
 
       if (checkError) {
         throw new Error(`기존 보고서 확인 실패: ${checkError.message}`)
@@ -473,23 +513,27 @@ export const dataService = {
         throw new Error('User clinic information not available')
       }
 
-      const { data: reportsToDelete } = await supabase
-        .from('daily_reports')
-        .select('id')
-        .eq('clinic_id', clinicId)
-        .eq('date', date)
-        .limit(1)
+      const { data: reportsToDelete } = await applyClinicFilter(
+        supabase
+          .from('daily_reports')
+          .select('id')
+          .eq('date', date)
+          .limit(1),
+        clinicId
+      )
 
       const reportToDelete = reportsToDelete?.[0] as { id: number } | undefined
       if (!reportToDelete) return { success: true }
 
       // --- 삭제 전 재고 복원 ---
       // 해당 날짜의 선물 데이터를 먼저 조회하여 재고 복원
-      const { data: giftLogsToDelete } = await supabase
-        .from('gift_logs')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .eq('date', date) as { data: GiftLog[] | null }
+      const { data: giftLogsToDelete } = (await applyClinicFilter(
+        supabase
+          .from('gift_logs')
+          .select('*')
+          .eq('date', date),
+        clinicId
+      )) as { data: GiftLog[] | null }
 
       if (giftLogsToDelete && giftLogsToDelete.length > 0) {
         for (const giftLog of giftLogsToDelete) {
@@ -537,10 +581,19 @@ export const dataService = {
 
       // 기존 데이터 삭제
       await Promise.all([
-        supabase.from('consult_logs').delete().eq('clinic_id', clinicId).eq('date', date),
-        supabase.from('gift_logs').delete().eq('clinic_id', clinicId).eq('date', date),
-        supabase.from('happy_call_logs').delete().eq('clinic_id', clinicId).eq('date', date),
-        supabase.from('daily_reports').delete().eq('clinic_id', clinicId).eq('id', reportToDelete.id)
+        applyClinicFilter(
+          supabase.from('consult_logs').delete().eq('date', date),
+          clinicId
+        ),
+        applyClinicFilter(
+          supabase.from('gift_logs').delete().eq('date', date),
+          clinicId
+        ),
+        applyClinicFilter(
+          supabase.from('happy_call_logs').delete().eq('date', date),
+          clinicId
+        ),
+        supabase.from('daily_reports').delete().eq('id', reportToDelete.id)
       ])
 
       return { success: true }
@@ -564,14 +617,46 @@ export const dataService = {
 
       // 해당 날짜의 모든 로그 데이터 조회
       const [consultResult, giftResult, reportResult] = await Promise.all([
-        supabase.from('consult_logs').select('*').eq('clinic_id', clinicId).eq('date', date),
-        supabase.from('gift_logs').select('*').eq('clinic_id', clinicId).eq('date', date),
-        supabase.from('daily_reports').select('*').eq('clinic_id', clinicId).eq('date', date).single()
+        applyClinicFilter(
+          supabase.from('consult_logs').select('*').eq('date', date),
+          clinicId
+        ),
+        applyClinicFilter(
+          supabase.from('gift_logs').select('*').eq('date', date),
+          clinicId
+        ),
+        applyClinicFilter(
+          supabase.from('daily_reports').select('*').eq('date', date),
+          clinicId
+        ).maybeSingle()
       ])
 
-      const consultLogs = (consultResult.data as any[]) || []
-      const giftLogs = (giftResult.data as any[]) || []
-      const existingReport = reportResult.data
+      const { normalized: normalizedConsultLogs, missingIds: consultIdsToBackfill } = ensureClinicIds(
+        consultResult.data as ConsultLog[] | null,
+        clinicId
+      )
+      const { normalized: normalizedGiftLogs, missingIds: giftIdsToBackfill } = ensureClinicIds(
+        giftResult.data as GiftLog[] | null,
+        clinicId
+      )
+      const { normalized: normalizedReport, missingIds: reportIdsToBackfill } = ensureClinicIds(
+        reportResult.data ? [reportResult.data as DailyReport] : [],
+        clinicId
+      )
+
+      if (consultIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'consult_logs', clinicId, consultIdsToBackfill)
+      }
+      if (giftIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'gift_logs', clinicId, giftIdsToBackfill)
+      }
+      if (reportIdsToBackfill.length) {
+        void backfillClinicIds(supabase, 'daily_reports', clinicId, reportIdsToBackfill)
+      }
+
+      const consultLogs = normalizedConsultLogs
+      const giftLogs = normalizedGiftLogs
+      const existingReport = normalizedReport[0]
 
       if (!existingReport) {
         return { error: '해당 날짜의 보고서가 없습니다.' }
@@ -585,11 +670,13 @@ export const dataService = {
       }
 
       // 일일 보고서 업데이트
-      const { error: updateError } = await (supabase as any)
-        .from('daily_reports')
-        .update(updatedStats)
-        .eq('clinic_id', clinicId)
-        .eq('date', date)
+      const { error: updateError } = await applyClinicFilter(
+        (supabase as any)
+          .from('daily_reports')
+          .update(updatedStats)
+          .eq('date', date),
+        clinicId
+      )
 
       if (updateError) {
         return { error: updateError.message }
