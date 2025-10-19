@@ -6,7 +6,8 @@ import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, UserProfile } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
+import type { UserProfile } from '@/contexts/AuthContext'
 
 interface DailyInputFormProps {
   giftInventory: GiftInventory[]
