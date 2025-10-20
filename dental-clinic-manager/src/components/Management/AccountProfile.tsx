@@ -127,6 +127,12 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
     try {
       console.log('[PasswordChange] 비밀번호 변경 시작')
 
+      if (!currentUser.email) {
+        setError('계정에 등록된 이메일이 없어 비밀번호를 변경할 수 없습니다.')
+        setSaving(false)
+        return
+      }
+
       // 1. 현재 비밀번호로 재인증 (보안 확인)
       const result = await dataService.verifyPassword(
         currentUser.email,

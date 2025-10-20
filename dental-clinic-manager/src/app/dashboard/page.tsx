@@ -56,7 +56,7 @@ export default function DashboardPage() {
     error,
     refetch,
     refetchInventory
-  } = useSupabaseData()
+  } = useSupabaseData(user?.clinic_id ?? null)
 
   useEffect(() => {
     if (loading) {
@@ -245,7 +245,7 @@ export default function DashboardPage() {
               onSaveReport={handleSaveReport}
               canCreate={canCreateReport}
               canEdit={canEditReport}
-              currentUser={user}
+              currentUser={user ?? undefined}
             />
           )}
 

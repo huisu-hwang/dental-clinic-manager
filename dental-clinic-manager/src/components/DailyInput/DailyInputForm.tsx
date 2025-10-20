@@ -6,7 +6,8 @@ import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, UserProfile } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
+import type { UserProfile } from '@/contexts/AuthContext'
 
 interface DailyInputFormProps {
   giftInventory: GiftInventory[]
@@ -74,42 +75,55 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
         
         // 기존 데이터로 폼 채우기
         if (dailyReport) {
-          setRecallCount(dailyReport.recall_count || 0)
-          setRecallBookingCount(dailyReport.recall_booking_count || 0)
-          setSpecialNotes(dailyReport.special_notes || '')
+          const normalizedRecallCount =
+            typeof dailyReport.recall_count === 'number'
+              ? dailyReport.recall_count
+              : Number(dailyReport.recall_count ?? 0)
+          const normalizedRecallBookingCount =
+            typeof dailyReport.recall_booking_count === 'number'
+              ? dailyReport.recall_booking_count
+              : Number(dailyReport.recall_booking_count ?? 0)
+
+          setRecallCount(Number.isNaN(normalizedRecallCount) ? 0 : normalizedRecallCount)
+          setRecallBookingCount(
+            Number.isNaN(normalizedRecallBookingCount) ? 0 : normalizedRecallBookingCount
+          )
+          setSpecialNotes(
+            typeof dailyReport.special_notes === 'string' ? dailyReport.special_notes : ''
+          )
         }
         
         // 상담 로그 데이터 로드 (최소 1개 빈 행 보장)
         if (consultLogs.length > 0) {
           setConsultRows(consultLogs.map(log => ({
-            patient_name: log.patient_name || '',
-            consult_content: log.consult_content || '',
+            patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
+            consult_content: typeof log.consult_content === 'string' ? log.consult_content : '',
             consult_status: (log.consult_status as 'O' | 'X') || 'O',
-            remarks: log.remarks || '' // remarks 필드 데이터베이스에서 로드
+            remarks: typeof log.remarks === 'string' ? log.remarks : '' // remarks 필드 데이터베이스에서 로드
           })))
         } else {
           setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
         }
-        
+
         // 선물 로그 데이터 로드 (최소 1개 빈 행 보장)
         if (giftLogs.length > 0) {
           setGiftRows(giftLogs.map(log => ({
-            patient_name: log.patient_name || '',
-            gift_type: log.gift_type || '없음',
+            patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
+            gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
             quantity: 1, // 기존 데이터는 기본값 1로 설정
             naver_review: (log.naver_review as 'O' | 'X') || 'X',
-            notes: log.notes || '' // notes 필드 데이터베이스에서 로드
+            notes: typeof log.notes === 'string' ? log.notes : '' // notes 필드 데이터베이스에서 로드
           })))
         } else {
           setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
         }
-        
+
         // 해피콜 로그 데이터 로드 (최소 1개 빈 행 보장)
         if (happyCallLogs.length > 0) {
           setHappyCallRows(happyCallLogs.map(log => ({
-            patient_name: log.patient_name || '',
-            treatment: log.treatment || '',
-            notes: log.notes || ''
+            patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
+            treatment: typeof log.treatment === 'string' ? log.treatment : '',
+            notes: typeof log.notes === 'string' ? log.notes : ''
           })))
         } else {
           setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])

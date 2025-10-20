@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
-import { Noto_Sans_KR } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import PasswordResetHandler from "@/components/PasswordResetHandler";
 import "./globals.css";
-
-const notoSansKR = Noto_Sans_KR({
-  variable: "--font-noto-sans-kr",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
 
 export const metadata: Metadata = {
   title: "덴탈매니저 - 치과 업무 관리 시스템",
@@ -22,9 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body
-        className={`${notoSansKR.variable} antialiased font-sans`}
-      >
+      <body className="antialiased font-sans">
         <AuthProvider>
           <PasswordResetHandler />
           {children}
