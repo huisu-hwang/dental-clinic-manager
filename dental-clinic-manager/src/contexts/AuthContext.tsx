@@ -74,17 +74,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             // Supabase 세션 확인 - 타임아웃 추가
             console.log('[AuthContext] Checking Supabase session...')
-            const sessionPromise = supabase.auth.getSession()
-            const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('Session check timeout')), 5000)
-            )
 
-            const { data: { session } } = await Promise.race([
-              sessionPromise,
-              timeoutPromise
-            ]) as any
+            let session = null;
+            try {
+              const sessionPromise = supabase.auth.getSession()
+              const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Session check timeout')), 5000)
+              )
 
-            console.log('[AuthContext] Session check complete:', session ? 'session found' : 'no session')
+              const result = await Promise.race([
+                sessionPromise,
+                timeoutPromise
+              ]) as any
+
+              session = result?.data?.session
+              console.log('[AuthContext] Session check complete:', session ? 'session found' : 'no session')
+            } catch (timeoutError) {
+              console.log('[AuthContext] Session check timed out:', timeoutError)
+              // 타임아웃 시 세션 없음으로 처리
+              session = null
+            }
 
             if (session?.user) {
               console.log('AuthContext: Supabase 세션 발견', session.user.id)
