@@ -44,11 +44,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let subscription: any = null
+    let timeoutId: NodeJS.Timeout | null = null
+
+    // 서버 사이드에서는 즉시 로딩 완료
+    if (typeof window === 'undefined') {
+      console.log('[AuthContext] Server-side rendering detected, skipping auth check')
+      setLoading(false)
+      return
+    }
 
     // Supabase 세션 확인 및 사용자 정보 로드
     const checkAuth = async () => {
       console.log('===== AuthContext: checkAuth 시작 =====')
-      console.log('현재 loading 상태:', loading)
 
       try {
         // 로그아웃 중이면 세션 체크 스킵
@@ -59,115 +66,124 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        if (typeof window !== 'undefined') {
-          const supabase = getSupabase()
+        const supabase = getSupabase()
 
-          if (supabase) {
-            try {
-              // Supabase 세션 확인
-              const { data: { session } } = await supabase.auth.getSession()
+        if (supabase) {
+          // Supabase 세션 확인
+          const { data: { session } } = await supabase.auth.getSession()
 
-              if (session?.user) {
-                console.log('AuthContext: Supabase 세션 발견', session.user.id)
+          if (session?.user) {
+            console.log('AuthContext: Supabase 세션 발견', session.user.id)
 
-                // 사용자 프로필 정보 가져오기
-                const result = await dataService.getUserProfileById(session.user.id)
+            // 사용자 프로필 정보 가져오기
+            const result = await dataService.getUserProfileById(session.user.id)
 
-                if (result.success && result.data) {
-                  console.log('AuthContext: 사용자 프로필 로드 성공', result.data)
+            if (result.success && result.data) {
+              console.log('AuthContext: 사용자 프로필 로드 성공', result.data)
 
-                  // 승인 대기 중인 사용자는 pending-approval 페이지로 이동
-                  if (result.data.status === 'pending' && window.location.pathname !== '/pending-approval') {
-                    window.location.href = '/pending-approval'
-                    return
-                  }
-
-                  // 거절된 사용자는 로그아웃
-                  if (result.data.status === 'rejected') {
-                    alert('가입 신청이 거절되었습니다. 관리자에게 문의해주세요.')
-                    await supabase.auth.signOut()
-                    return
-                  }
-
-                  setUser(result.data)
-                } else {
-                  console.log('AuthContext: 사용자 프로필 로드 실패')
-                  // 프로필이 없으면 로그아웃
-                  await supabase.auth.signOut()
-                }
-              } else {
-                // Supabase 세션이 없으면 localStorage 확인 (기존 방식 호환)
-                const authStatus = localStorage.getItem('dental_auth')
-                const userData = localStorage.getItem('dental_user')
-
-                if (authStatus === 'true' && userData) {
-                  const parsedUser = JSON.parse(userData)
-                  console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
-                  setUser(parsedUser)
-                }
+              // 승인 대기 중인 사용자는 pending-approval 페이지로 이동
+              if (result.data.status === 'pending' && window.location.pathname !== '/pending-approval') {
+                window.location.href = '/pending-approval'
+                return
               }
 
-              // Auth 상태 변경 리스너 설정
-              const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-                console.log('Auth state changed:', event)
+              // 거절된 사용자는 로그아웃
+              if (result.data.status === 'rejected') {
+                alert('가입 신청이 거절되었습니다. 관리자에게 문의해주세요.')
+                await supabase.auth.signOut()
+                return
+              }
 
-                // 로그아웃 중이면 무시
-                const loggingOut = localStorage.getItem('dental_logging_out')
-                if (loggingOut === 'true') {
-                  console.log('로그아웃 중이므로 auth state change 무시')
-                  return
-                }
-
-                // PASSWORD_RECOVERY 이벤트는 update-password 페이지에서 처리
-                if (event === 'PASSWORD_RECOVERY') {
-                  console.log('PASSWORD_RECOVERY 이벤트 감지')
-                  // 비밀번호 재설정 모드에서는 사용자 정보를 로드하지 않음
-                  // 이벤트를 방해하지 않고 그냥 통과시킴
-                  return
-                }
-
-                if (event === 'SIGNED_IN' && session?.user) {
-                  // 로그아웃 직후의 자동 로그인 방지
-                  if (!isLoggingOut) {
-                    const result = await dataService.getUserProfileById(session.user.id)
-                    if (result.success && result.data) {
-                      setUser(result.data)
-                    }
-                  }
-                } else if (event === 'SIGNED_OUT') {
-                  setUser(null)
-                  localStorage.removeItem('dental_auth')
-                  localStorage.removeItem('dental_user')
-                }
-              })
-
-              subscription = authListener.subscription
-            } catch (error) {
-              console.error('Auth check error:', error)
-              localStorage.removeItem('dental_auth')
-              localStorage.removeItem('dental_user')
+              setUser(result.data)
+            } else {
+              console.log('AuthContext: 사용자 프로필 로드 실패')
+              // 프로필이 없으면 로그아웃
+              await supabase.auth.signOut()
             }
           } else {
-            // Supabase 설정이 안 된 경우 localStorage만 확인
+            // Supabase 세션이 없으면 localStorage 확인 (기존 방식 호환)
             const authStatus = localStorage.getItem('dental_auth')
             const userData = localStorage.getItem('dental_user')
 
             if (authStatus === 'true' && userData) {
+              try {
+                const parsedUser = JSON.parse(userData)
+                console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
+                setUser(parsedUser)
+              } catch (e) {
+                console.error('Failed to parse localStorage user data:', e)
+              }
+            }
+          }
+
+          // Auth 상태 변경 리스너 설정
+          const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('Auth state changed:', event)
+
+            // 로그아웃 중이면 무시
+            const loggingOut = localStorage.getItem('dental_logging_out')
+            if (loggingOut === 'true') {
+              console.log('로그아웃 중이므로 auth state change 무시')
+              return
+            }
+
+            // PASSWORD_RECOVERY 이벤트는 update-password 페이지에서 처리
+            if (event === 'PASSWORD_RECOVERY') {
+              console.log('PASSWORD_RECOVERY 이벤트 감지')
+              return
+            }
+
+            if (event === 'SIGNED_IN' && session?.user) {
+              if (!isLoggingOut) {
+                const result = await dataService.getUserProfileById(session.user.id)
+                if (result.success && result.data) {
+                  setUser(result.data)
+                }
+              }
+            } else if (event === 'SIGNED_OUT') {
+              setUser(null)
+              localStorage.removeItem('dental_auth')
+              localStorage.removeItem('dental_user')
+            }
+          })
+
+          subscription = authListener.subscription
+        } else {
+          // Supabase 설정이 안 된 경우 localStorage만 확인
+          console.warn('[AuthContext] Supabase not configured, checking localStorage only')
+          const authStatus = localStorage.getItem('dental_auth')
+          const userData = localStorage.getItem('dental_user')
+
+          if (authStatus === 'true' && userData) {
+            try {
               const parsedUser = JSON.parse(userData)
+              console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
               setUser(parsedUser)
+            } catch (e) {
+              console.error('Failed to parse user data from localStorage:', e)
+              localStorage.removeItem('dental_auth')
+              localStorage.removeItem('dental_user')
             }
           }
         }
       } catch (error) {
         console.error('===== AuthContext: checkAuth 전체 에러 =====', error)
       } finally {
+        // 타임아웃 클리어
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
         // 모든 경우에 대해 로딩 상태를 false로 변경
         console.log('===== AuthContext: 로딩 완료, setLoading(false) =====')
-        console.log('finally 블록 실행 직전 loading 상태:', loading)
         setLoading(false)
-        console.log('===== setLoading(false) 호출 완료 =====')
       }
     }
+
+    // 타임아웃 설정: 10초 후에도 로딩이 끝나지 않으면 강제로 종료
+    timeoutId = setTimeout(() => {
+      console.warn('[AuthContext] Auth check timeout - forcing loading to false')
+      setLoading(false)
+    }, 10000)
 
     checkAuth()
 
@@ -175,6 +191,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       if (subscription) {
         subscription.unsubscribe()
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId)
       }
     }
   }, [])

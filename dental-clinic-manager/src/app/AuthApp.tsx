@@ -1,17 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import LandingPage from '@/components/Landing/LandingPage'
 import LoginForm from '@/components/Auth/LoginForm'
 import SignupForm from '@/components/Auth/SignupForm'
 import DashboardPage from './dashboard/page'
-
 import ForgotPasswordForm from '@/components/Auth/ForgotPasswordForm'
 
 type AppState = 'landing' | 'login' | 'signup' | 'forgotPassword' | 'dashboard'
 
-function AppContent() {
+export default function AuthApp() {
   const { isAuthenticated, loading } = useAuth()
   const [appState, setAppState] = useState<AppState>('landing')
 
@@ -56,8 +55,8 @@ function AppContent() {
       )
     case 'forgotPassword':
       return (
-        <ForgotPasswordForm 
-          onBackToLogin={() => setAppState('login')} 
+        <ForgotPasswordForm
+          onBackToLogin={() => setAppState('login')}
         />
       )
     default:
@@ -68,12 +67,4 @@ function AppContent() {
         />
       )
   }
-}
-
-export default function AuthApp() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  )
 }
