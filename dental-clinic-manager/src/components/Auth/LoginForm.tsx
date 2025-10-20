@@ -87,9 +87,9 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         login(formData.email, masterProfile)
       } else {
         // 3. 일반 사용자는 public.users 테이블에서 전체 프로필 정보 조회
-        const { data: userProfile, error: profileError } = await dataService.getUserProfileById(authData.user.id)
+        const result = await dataService.getUserProfileById(authData.user.id)
 
-        if (profileError || !userProfile) {
+        if (result.error || !result.data) {
           setError('로그인에 성공했으나, 프로필 정보를 불러오는 데 실패했습니다.')
           // 이 경우, 사용자는 인증되었지만 앱 사용에 필요한 정보가 부족하므로 로그아웃 처리
           await supabase.auth.signOut()
@@ -98,7 +98,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         }
 
         // 4. AuthContext에 완전한 사용자 정보로 로그인 처리
-        login(formData.email, userProfile) // email로 변경
+        login(formData.email, result.data) // email로 변경
       }
 
       if (rememberMe) {
