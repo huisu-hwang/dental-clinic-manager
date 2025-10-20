@@ -16,9 +16,7 @@ interface Tab {
 
 const tabs: Tab[] = [
   { id: 'daily-input', label: '일일 보고서 입력', requiredPermissions: ['daily_report_view'] },
-  { id: 'weekly-stats', label: '주간 통계', requiredPermissions: ['stats_weekly_view'] },
-  { id: 'monthly-stats', label: '월간 통계', requiredPermissions: ['stats_monthly_view'] },
-  { id: 'annual-stats', label: '연간 통계', requiredPermissions: ['stats_annual_view'] },
+  { id: 'stats', label: '통계', requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'] },
   { id: 'logs', label: '상세 기록', requiredPermissions: ['logs_view'] },
   { id: 'settings', label: '설정', requiredPermissions: ['inventory_view'] },
   { id: 'guide', label: '사용 안내', requiredPermissions: ['guide_view'] }

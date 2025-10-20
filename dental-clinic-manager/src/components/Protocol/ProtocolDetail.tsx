@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   XMarkIcon,
   PencilIcon,
@@ -41,32 +41,41 @@ export default function ProtocolDetail({
   const canDelete = hasPermission('protocol_delete')
   const canViewHistory = hasPermission('protocol_history_view')
 
-  useEffect(() => {
-    fetchProtocol()
-    if (canViewHistory) {
-      fetchVersions()
+  const fetchProtocol = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const result = await dataService.getProtocolById(protocolId)
+      if (result.error) {
+        setError(result.error)
+        setProtocol(null)
+      } else {
+        setProtocol(result.data || null)
+      }
+    } catch (err) {
+      console.error('프로토콜 조회 오류:', err)
+      setError(err instanceof Error ? err.message : '프로토콜을 불러오는 중 오류가 발생했습니다.')
+      setProtocol(null)
+    } finally {
+      setLoading(false)
     }
   }, [protocolId])
 
-  const fetchProtocol = async () => {
-    setLoading(true)
-    const result = await dataService.getProtocolById(protocolId)
-    if (result.error) {
-      setError(result.error)
-    } else {
-      setProtocol(result.data || null)
-    }
-    setLoading(false)
-  }
-
-  const fetchVersions = async () => {
+  const fetchVersions = useCallback(async () => {
     const result = await dataService.getProtocolVersions(protocolId)
     if (result.error) {
       console.error('Failed to fetch versions:', result.error)
     } else {
       setVersions(result.data || [])
     }
-  }
+  }, [protocolId])
+
+  useEffect(() => {
+    fetchProtocol()
+    if (canViewHistory) {
+      fetchVersions()
+    }
+  }, [protocolId, fetchProtocol, fetchVersions, canViewHistory])
 
   const handleDelete = async () => {
     if (!confirm('이 프로토콜을 삭제하시겠습니까?')) {

@@ -14,6 +14,7 @@ import { dataService } from '@/lib/dataService'
 import { usePermissions } from '@/hooks/usePermissions'
 import ProtocolForm from '../Protocol/ProtocolForm'
 import ProtocolDetail from '../Protocol/ProtocolDetail'
+import ProtocolCategoryManager from '../Protocol/ProtocolCategoryManager'
 import type { UserProfile } from '@/contexts/AuthContext'
 import type { Protocol, ProtocolCategory, ProtocolFormData } from '@/types'
 
@@ -23,6 +24,7 @@ interface ProtocolManagementProps {
 
 export default function ProtocolManagement({ currentUser }: ProtocolManagementProps) {
   const { hasPermission } = usePermissions()
+  const [activeSubTab, setActiveSubTab] = useState<'list' | 'categories'>('list')
   const [protocols, setProtocols] = useState<Protocol[]>([])
   const [categories, setCategories] = useState<ProtocolCategory[]>([])
   const [loading, setLoading] = useState(true)
@@ -97,13 +99,12 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
   const handleCreateProtocol = async (formData: ProtocolFormData) => {
     const result = await dataService.createProtocol(formData)
     if (result.error) {
-      setError(result.error)
-    } else {
-      setSuccess('프로토콜이 생성되었습니다.')
-      setShowCreateForm(false)
-      fetchProtocols()
-      setTimeout(() => setSuccess(''), 3000)
+      throw new Error(result.error)
     }
+    setSuccess('프로토콜이 생성되었습니다.')
+    setShowCreateForm(false)
+    fetchProtocols()
+    setTimeout(() => setSuccess(''), 3000)
   }
 
   const handleUpdateProtocol = async (formData: ProtocolFormData) => {
@@ -111,14 +112,13 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
 
     const result = await dataService.updateProtocol(selectedProtocol.id, formData)
     if (result.error) {
-      setError(result.error)
-    } else {
-      setSuccess('프로토콜이 수정되었습니다.')
-      setShowEditForm(false)
-      setSelectedProtocol(null)
-      fetchProtocols()
-      setTimeout(() => setSuccess(''), 3000)
+      throw new Error(result.error)
     }
+    setSuccess('프로토콜이 수정되었습니다.')
+    setShowEditForm(false)
+    setSelectedProtocol(null)
+    fetchProtocols()
+    setTimeout(() => setSuccess(''), 3000)
   }
 
   const handleDeleteProtocol = (protocolId: string) => {
@@ -167,22 +167,53 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <DocumentTextIcon className="h-6 w-6 text-blue-600 mr-2" />
-          <h2 className="text-xl font-bold text-slate-800">진료 프로토콜</h2>
-        </div>
-        {canEdit && (
+    <div className="space-y-4">
+      {/* Sub-tab Navigation */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <nav className="flex space-x-4">
           <button
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+            onClick={() => setActiveSubTab('list')}
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              activeSubTab === 'list'
+                ? 'bg-blue-600 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
           >
-            <PlusIcon className="h-4 w-4 mr-2" />
-            새 프로토콜 작성
+            <DocumentTextIcon className="h-4 w-4 inline mr-2" />
+            프로토콜 목록
           </button>
-        )}
+          <button
+            onClick={() => setActiveSubTab('categories')}
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              activeSubTab === 'categories'
+                ? 'bg-blue-600 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <FolderIcon className="h-4 w-4 inline mr-2" />
+            카테고리 관리
+          </button>
+        </nav>
       </div>
+
+      {/* Protocol List Tab */}
+      {activeSubTab === 'list' && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <DocumentTextIcon className="h-6 w-6 text-blue-600 mr-2" />
+              <h2 className="text-xl font-bold text-slate-800">진료 프로토콜</h2>
+            </div>
+            {canEdit && (
+              <button
+                onClick={() => setShowCreateForm(true)}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <PlusIcon className="h-4 w-4 mr-2" />
+                새 프로토콜 작성
+              </button>
+            )}
+          </div>
 
       {/* Filters */}
       <div className="mb-6 space-y-4">
@@ -374,6 +405,18 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
           }}
           onEdit={handleEditProtocol}
           onDelete={handleDeleteProtocol}
+        />
+      )}
+        </div>
+      )}
+
+      {/* Category Management Tab */}
+      {activeSubTab === 'categories' && (
+        <ProtocolCategoryManager
+          onCategoryChange={() => {
+            fetchCategories()
+            fetchProtocols()
+          }}
         />
       )}
     </div>

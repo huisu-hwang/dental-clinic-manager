@@ -89,7 +89,9 @@ export default function ProtocolForm({
     try {
       await onSubmit(formData)
     } catch (err) {
-      setError('저장 중 오류가 발생했습니다.')
+      const errorMessage = err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.'
+      setError(errorMessage)
+      console.error('프로토콜 저장 오류:', err)
     } finally {
       setLoading(false)
     }
