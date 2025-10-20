@@ -40,17 +40,24 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
 
     if (!formData.password) {
       setError('비밀번호를 입력해주세요.')
+      return
     }
 
+    console.log('[LoginForm] Starting login process...')
     setLoading(true)
 
     try {
+      console.log('[LoginForm] Getting Supabase client...')
       const supabase = getSupabase()
+
       if (!supabase) {
-        setError('데이터베이스 연결에 실패했습니다.')
+        console.error('[LoginForm] Supabase client is null')
+        setError('데이터베이스 연결에 실패했습니다. 환경 설정을 확인해주세요.')
         setLoading(false)
         return
       }
+
+      console.log('[LoginForm] Supabase client obtained, attempting login...')
 
       // 1. Supabase Auth로 로그인 시도
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -58,7 +65,10 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         password: formData.password,
       })
 
+      console.log('[LoginForm] Auth response:', { authData, authError })
+
       if (authError) {
+        console.error('[LoginForm] Auth error:', authError)
         setError('아이디 또는 비밀번호가 올바르지 않습니다.')
         setLoading(false)
         return
@@ -107,10 +117,11 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         console.log('로그인 상태 유지 기능은 Supabase 세션에 의해 관리됩니다.')
       }
 
+      console.log('[LoginForm] Login successful, calling onLoginSuccess...')
       onLoginSuccess()
-    } catch {
+    } catch (error) {
+      console.error('[LoginForm] Unexpected error during login:', error)
       setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.')
-    } finally {
       setLoading(false)
     }
   }

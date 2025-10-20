@@ -20,20 +20,30 @@ export const getSupabase = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+    // 더 자세한 환경 변수 디버깅
     console.log('[Supabase] Environment check:', {
+      NODE_ENV: process.env.NODE_ENV,
       hasUrl: !!supabaseUrl,
       hasKey: !!supabaseAnonKey,
-      urlPrefix: supabaseUrl?.substring(0, 30)
+      urlValue: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'UNDEFINED',
+      keyValue: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'UNDEFINED',
+      urlLength: supabaseUrl?.length || 0,
+      keyLength: supabaseAnonKey?.length || 0
     })
 
     // 환경 변수 검증
     if (!supabaseUrl || !supabaseAnonKey) {
-      initializationError = 'Supabase 환경 변수가 설정되지 않았습니다. NEXT_PUBLIC_SUPABASE_URL 및 NEXT_PUBLIC_SUPABASE_ANON_KEY를 확인하세요.'
+      initializationError = `Supabase 환경 변수가 설정되지 않았습니다.
+        URL: ${supabaseUrl ? 'SET' : 'NOT SET'}
+        KEY: ${supabaseAnonKey ? 'SET' : 'NOT SET'}
+        Vercel 대시보드에서 환경 변수를 확인하세요.`
       console.error('[Supabase]', initializationError)
 
       // 개발 환경에서만 경고 표시
       if (process.env.NODE_ENV === 'development') {
         console.warn('[Supabase] 환경 변수를 .env.local 파일에 추가하고 서버를 재시작하세요.')
+      } else {
+        console.warn('[Supabase] Production 환경: Vercel 대시보드에서 환경 변수를 설정하고 재배포하세요.')
       }
       return null
     }
