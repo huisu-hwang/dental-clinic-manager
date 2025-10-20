@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const canEditReport = hasPermission('daily_report_edit')
   const canDeleteReport = hasPermission('daily_report_delete')
   const [activeTab, setActiveTab] = useState('daily-input')
+  const [statsSubTab, setStatsSubTab] = useState<'weekly' | 'monthly' | 'annual'>('weekly')
   const [showProfile, setShowProfile] = useState(false)
   const [dbStatus, setDbStatus] = useState<'connected' | 'connecting' | 'error'>('connecting')
   const [toast, setToast] = useState<{
@@ -248,111 +249,152 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* 주간 통계 */}
-          {activeTab === 'weekly-stats' && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-              <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <h2 className="text-xl font-bold">주간 통계</h2>
-                <div>
-                  <label htmlFor="week-selector" className="mr-2">주 선택:</label>
-                  <input
-                    type="week"
-                    id="week-selector"
-                    className="p-2 border border-slate-300 rounded-md"
-                    value={weekSelector}
-                    onChange={(e) => setWeekSelector(e.target.value)}
-                  />
-                </div>
-              </div>
-              <StatsContainer stats={loading ? {
-                naver_review_count: 0,
-                consult_proceed: 0,
-                consult_hold: 0,
-                recall_count: 0,
-                recall_booking_count: 0,
-                totalConsults: 0,
-                totalGifts: 0,
-                totalRevenue: 0,
-                consultsByManager: {},
-                giftsByManager: {},
-                revenueByManager: {},
-                consultProceedRate: 0,
-                recallSuccessRate: 0,
-                giftCounts: {}
-              } : getStats('weekly', weekSelector)} />
-            </div>
-          )}
-
-          {/* 월간 통계 */}
-          {activeTab === 'monthly-stats' && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-              <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <h2 className="text-xl font-bold">월간 통계</h2>
-                <div>
-                  <label htmlFor="month-selector" className="mr-2">월 선택:</label>
-                  <input
-                    type="month"
-                    id="month-selector"
-                    className="p-2 border border-slate-300 rounded-md"
-                    value={monthSelector}
-                    onChange={(e) => setMonthSelector(e.target.value)}
-                  />
-                </div>
-              </div>
-              <StatsContainer stats={loading ? {
-                naver_review_count: 0,
-                consult_proceed: 0,
-                consult_hold: 0,
-                recall_count: 0,
-                recall_booking_count: 0,
-                totalConsults: 0,
-                totalGifts: 0,
-                totalRevenue: 0,
-                consultsByManager: {},
-                giftsByManager: {},
-                revenueByManager: {},
-                consultProceedRate: 0,
-                recallSuccessRate: 0,
-                giftCounts: {}
-              } : getStats('monthly', monthSelector)} />
-            </div>
-          )}
-
-          {/* 연간 통계 */}
-          {activeTab === 'annual-stats' && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-              <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <h2 className="text-xl font-bold">연간 통계</h2>
-                <div>
-                  <label htmlFor="year-selector" className="mr-2">연도 선택:</label>
-                  <select
-                    id="year-selector"
-                    className="p-2 border border-slate-300 rounded-md"
-                    value={yearSelector}
-                    onChange={(e) => setYearSelector(e.target.value)}
+          {/* 통계 */}
+          {activeTab === 'stats' && (
+            <div className="space-y-4">
+              {/* Stats Sub-tab Navigation */}
+              <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                <nav className="flex space-x-4">
+                  <button
+                    onClick={() => setStatsSubTab('weekly')}
+                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                      statsSubTab === 'weekly'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
                   >
-                    {yearOptions.map(year => (
-                      <option key={year} value={year}>{year}년</option>
-                    ))}
-                  </select>
-                </div>
+                    주간 통계
+                  </button>
+                  <button
+                    onClick={() => setStatsSubTab('monthly')}
+                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                      statsSubTab === 'monthly'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    월간 통계
+                  </button>
+                  <button
+                    onClick={() => setStatsSubTab('annual')}
+                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                      statsSubTab === 'annual'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    연간 통계
+                  </button>
+                </nav>
               </div>
-              <StatsContainer stats={loading ? {
-                naver_review_count: 0,
-                consult_proceed: 0,
-                consult_hold: 0,
-                recall_count: 0,
-                recall_booking_count: 0,
-                totalConsults: 0,
-                totalGifts: 0,
-                totalRevenue: 0,
-                consultsByManager: {},
-                giftsByManager: {},
-                revenueByManager: {},
-                consultProceedRate: 0,
-                recallSuccessRate: 0,
-                giftCounts: {}
-              } : getStats('annual', yearSelector)} />
+
+              {/* Stats Content */}
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                {statsSubTab === 'weekly' && (
+                  <>
+                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
+                      <h2 className="text-xl font-bold">주간 통계</h2>
+                      <div>
+                        <label htmlFor="week-selector" className="mr-2">주 선택:</label>
+                        <input
+                          type="week"
+                          id="week-selector"
+                          className="p-2 border border-slate-300 rounded-md"
+                          value={weekSelector}
+                          onChange={(e) => setWeekSelector(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <StatsContainer stats={loading ? {
+                      naver_review_count: 0,
+                      consult_proceed: 0,
+                      consult_hold: 0,
+                      recall_count: 0,
+                      recall_booking_count: 0,
+                      totalConsults: 0,
+                      totalGifts: 0,
+                      totalRevenue: 0,
+                      consultsByManager: {},
+                      giftsByManager: {},
+                      revenueByManager: {},
+                      consultProceedRate: 0,
+                      recallSuccessRate: 0,
+                      giftCounts: {}
+                    } : getStats('weekly', weekSelector)} />
+                  </>
+                )}
+
+                {statsSubTab === 'monthly' && (
+                  <>
+                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
+                      <h2 className="text-xl font-bold">월간 통계</h2>
+                      <div>
+                        <label htmlFor="month-selector" className="mr-2">월 선택:</label>
+                        <input
+                          type="month"
+                          id="month-selector"
+                          className="p-2 border border-slate-300 rounded-md"
+                          value={monthSelector}
+                          onChange={(e) => setMonthSelector(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <StatsContainer stats={loading ? {
+                      naver_review_count: 0,
+                      consult_proceed: 0,
+                      consult_hold: 0,
+                      recall_count: 0,
+                      recall_booking_count: 0,
+                      totalConsults: 0,
+                      totalGifts: 0,
+                      totalRevenue: 0,
+                      consultsByManager: {},
+                      giftsByManager: {},
+                      revenueByManager: {},
+                      consultProceedRate: 0,
+                      recallSuccessRate: 0,
+                      giftCounts: {}
+                    } : getStats('monthly', monthSelector)} />
+                  </>
+                )}
+
+                {statsSubTab === 'annual' && (
+                  <>
+                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
+                      <h2 className="text-xl font-bold">연간 통계</h2>
+                      <div>
+                        <label htmlFor="year-selector" className="mr-2">연도 선택:</label>
+                        <select
+                          id="year-selector"
+                          className="p-2 border border-slate-300 rounded-md"
+                          value={yearSelector}
+                          onChange={(e) => setYearSelector(e.target.value)}
+                        >
+                          {yearOptions.map(year => (
+                            <option key={year} value={year}>{year}년</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <StatsContainer stats={loading ? {
+                      naver_review_count: 0,
+                      consult_proceed: 0,
+                      consult_hold: 0,
+                      recall_count: 0,
+                      recall_booking_count: 0,
+                      totalConsults: 0,
+                      totalGifts: 0,
+                      totalRevenue: 0,
+                      consultsByManager: {},
+                      giftsByManager: {},
+                      revenueByManager: {},
+                      consultProceedRate: 0,
+                      recallSuccessRate: 0,
+                      giftCounts: {}
+                    } : getStats('annual', yearSelector)} />
+                  </>
+                )}
+              </div>
             </div>
           )}
 

@@ -4,6 +4,44 @@ import { useState, useEffect, useCallback } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import type { DailyReport, ConsultLog, GiftLog, GiftInventory, InventoryLog } from '@/types'
 
+// 현재 로그인한 사용자의 clinic_id를 가져오는 헬퍼 함수
+async function getCurrentClinicId(): Promise<string | null> {
+  try {
+    // localStorage에서 먼저 확인
+    if (typeof window !== 'undefined') {
+      const cachedUser = localStorage.getItem('currentUser')
+      if (cachedUser) {
+        try {
+          const userData = JSON.parse(cachedUser)
+          if (userData.clinic_id) {
+            return userData.clinic_id
+          }
+        } catch (e) {
+          console.warn('Failed to parse cached user data:', e)
+        }
+      }
+    }
+
+    // localStorage에 없으면 Supabase에서 조회
+    const supabase = getSupabase()
+    if (!supabase) return null
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const { data } = await supabase
+      .from('users')
+      .select('clinic_id')
+      .eq('id', user.id)
+      .single()
+
+    return data?.clinic_id || null
+  } catch (error) {
+    console.error('Error getting clinic_id:', error)
+    return null
+  }
+}
+
 export const useSupabaseData = () => {
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([])
   const [consultLogs, setConsultLogs] = useState<ConsultLog[]>([])
@@ -23,12 +61,18 @@ export const useSupabaseData = () => {
         return
       }
 
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        console.error('No clinic_id found for current user')
+        return
+      }
+
       const [
         { data: inventoryData, error: inventoryError },
         { data: invLogData, error: invLogError }
       ] = await Promise.all([
-        supabase.from('gift_inventory').select<'*', GiftInventory>('*'),
-        supabase.from('inventory_logs').select<'*', InventoryLog>('*')
+        supabase.from('gift_inventory').select<'*', GiftInventory>('*').eq('clinic_id', clinicId),
+        supabase.from('inventory_logs').select<'*', InventoryLog>('*').eq('clinic_id', clinicId)
       ])
 
       if (inventoryError) throw inventoryError
@@ -57,15 +101,31 @@ export const useSupabaseData = () => {
         return
       }
 
-      console.log('[useSupabaseData] 데이터 가져오기 시작...')
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        console.error('[useSupabaseData] No clinic_id found for current user')
+        setError('사용자 클리닉 정보를 찾을 수 없습니다.')
+        setLoading(false)
+        return
+      }
+
+      console.log('[useSupabaseData] 데이터 가져오기 시작... clinic_id:', clinicId)
+
+      // 타임아웃 설정 (30초)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('데이터 로딩 타임아웃 (30초 초과)')), 30000)
+      })
 
       // 각 쿼리를 개별적으로 실행하여 어느 쿼리에서 문제가 발생하는지 파악
-      const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
-        supabase.from('daily_reports').select<'*', DailyReport>('*'),
-        supabase.from('consult_logs').select<'*', ConsultLog>('*'),
-        supabase.from('gift_logs').select<'*', GiftLog>('*'),
-        supabase.from('gift_inventory').select<'*', GiftInventory>('*'),
-        supabase.from('inventory_logs').select<'*', InventoryLog>('*')
+      const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.race([
+        Promise.allSettled([
+          supabase.from('daily_reports').select<'*', DailyReport>('*').eq('clinic_id', clinicId),
+          supabase.from('consult_logs').select<'*', ConsultLog>('*').eq('clinic_id', clinicId),
+          supabase.from('gift_logs').select<'*', GiftLog>('*').eq('clinic_id', clinicId),
+          supabase.from('gift_inventory').select<'*', GiftInventory>('*').eq('clinic_id', clinicId),
+          supabase.from('inventory_logs').select<'*', InventoryLog>('*').eq('clinic_id', clinicId)
+        ]),
+        timeoutPromise
       ])
 
       console.log('[useSupabaseData] 쿼리 결과:', {
@@ -106,6 +166,21 @@ export const useSupabaseData = () => {
       const sortedGiftLogs = (giftData as GiftLog[] || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       const sortedInventoryData = (inventoryData as GiftInventory[] || []).sort((a, b) => a.name.localeCompare(b.name))
       const sortedInventoryLogs = (invLogData as InventoryLog[] || []).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+      console.log('[useSupabaseData] 조회된 데이터 개수:', {
+        dailyReports: sortedDailyReports.length,
+        consultLogs: sortedConsultLogs.length,
+        giftLogs: sortedGiftLogs.length,
+        inventory: sortedInventoryData.length,
+        inventoryLogs: sortedInventoryLogs.length
+      })
+
+      // 최근 3개 일일 보고서 날짜 출력 (디버깅용)
+      if (sortedDailyReports.length > 0) {
+        console.log('[useSupabaseData] 최근 일일 보고서 날짜:',
+          sortedDailyReports.slice(0, 3).map(r => r.date)
+        )
+      }
 
       setDailyReports(sortedDailyReports)
       setConsultLogs(sortedConsultLogs)
@@ -176,7 +251,7 @@ export const useSupabaseData = () => {
         supabase.removeChannel(channel)
       }
     }
-  }, [isInitialized])
+  }, [isInitialized, fetchAllData])
 
   return {
     dailyReports,
