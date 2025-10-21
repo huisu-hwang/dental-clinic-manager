@@ -11,6 +11,7 @@ import LogsSection from '@/components/Logs/LogsSection'
 import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
 import AccountProfile from '@/components/Management/AccountProfile'
+import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import Toast from '@/components/UI/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
 import DatabaseVerifier from '@/components/Debug/DatabaseVerifier'
@@ -110,8 +111,14 @@ export default function DashboardPage() {
       // 데이터가 변경되었으므로 즉시 다시 로드
       await refetch()
 
-      // 스크롤 위치 복원
-      window.scrollTo(0, scrollPosition)
+      // DOM 업데이트 후 스크롤 위치 복원 (requestAnimationFrame 사용)
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollPosition,
+          left: 0,
+          behavior: 'instant'
+        })
+      })
     }
   }
 
@@ -409,6 +416,11 @@ export default function DashboardPage() {
               onRecalculateStats={handleRecalculateStats}
               canDelete={canDeleteReport}
             />
+          )}
+
+          {/* 진료 프로토콜 */}
+          {activeTab === 'protocols' && (
+            <ProtocolManagement currentUser={user} />
           )}
 
           {/* 설정 */}
