@@ -383,9 +383,10 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
             category_id: selectedProtocol.category_id,
             content: selectedProtocol.currentVersion?.content || '',
             status: selectedProtocol.status,
-            tags: selectedProtocol.tags,
+            tags: selectedProtocol.tags || [],
             change_summary: '',
-            change_type: 'minor'
+            change_type: 'minor',
+            steps: []
           }}
           onSubmit={handleUpdateProtocol}
           onCancel={() => {

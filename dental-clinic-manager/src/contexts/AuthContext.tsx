@@ -87,11 +87,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 timeoutPromise
               ]) as any
 
-              session = result?.data?.session
-              console.log('[AuthContext] Session check complete:', session ? 'session found' : 'no session')
+              // 에러가 있는지 확인
+              if (result?.error) {
+                console.log('[AuthContext] Session error:', result.error.message)
+                // Refresh token 오류 시 로컬 스토리지 클리어
+                if (result.error.message?.includes('Refresh Token')) {
+                  console.log('[AuthContext] Invalid refresh token detected, clearing storage')
+                  localStorage.removeItem('dental_auth')
+                  localStorage.removeItem('dental_user')
+                  // Supabase 로컬 스토리지도 클리어
+                  const keys = Object.keys(localStorage)
+                  keys.forEach(key => {
+                    if (key.startsWith('sb-')) {
+                      localStorage.removeItem(key)
+                    }
+                  })
+                }
+                session = null
+              } else {
+                session = result?.data?.session
+                console.log('[AuthContext] Session check complete:', session ? 'session found' : 'no session')
+              }
             } catch (timeoutError) {
-              console.log('[AuthContext] Session check timed out:', timeoutError)
-              // 타임아웃 시 세션 없음으로 처리
+              console.log('[AuthContext] Session check error:', timeoutError)
+              // 에러 발생 시 세션 없음으로 처리하고 로컬 스토리지 클리어
+              if (timeoutError instanceof Error && timeoutError.message?.includes('Refresh Token')) {
+                console.log('[AuthContext] Invalid refresh token detected, clearing storage')
+                localStorage.removeItem('dental_auth')
+                localStorage.removeItem('dental_user')
+                // Supabase 로컬 스토리지도 클리어
+                const keys = Object.keys(localStorage)
+                keys.forEach(key => {
+                  if (key.startsWith('sb-')) {
+                    localStorage.removeItem(key)
+                  }
+                })
+              }
               session = null
             }
 

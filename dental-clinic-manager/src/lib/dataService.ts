@@ -7,7 +7,8 @@ async function getCurrentClinicId(): Promise<string | null> {
   try {
     // 1. localStorage에서 먼저 확인 (가장 빠른 방법)
     if (typeof window !== 'undefined') {
-      const cachedUser = localStorage.getItem('currentUser')
+      // AuthContext와 동일한 키 사용
+      const cachedUser = localStorage.getItem('dental_user')
       if (cachedUser) {
         try {
           const userData = JSON.parse(cachedUser)
@@ -1807,24 +1808,51 @@ export const dataService = {
 
   // 현재 세션 정보 가져오기
   async getSession() {
-    const supabase = getSupabase()
-    if (!supabase) throw new Error('Supabase client not available')
-
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-      if (authError || !user) {
-        return { data: null, error: authError?.message || 'No authenticated user' }
-      }
-
+      // 먼저 clinic_id 가져오기 (localStorage 또는 Supabase에서)
       const clinicId = await getCurrentClinicId()
 
-      return {
-        data: {
-          user,
-          clinicId
+      // Supabase 세션 확인 시도
+      const supabase = getSupabase()
+      if (supabase) {
+        try {
+          const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+          if (user && !authError) {
+            return {
+              data: {
+                user,
+                clinicId
+              }
+            }
+          }
+        } catch (supabaseError) {
+          console.warn('[DataService] Supabase session check failed, falling back to localStorage')
         }
       }
+
+      // Supabase 세션이 없으면 localStorage에서 사용자 정보 가져오기
+      if (typeof window !== 'undefined') {
+        const authStatus = localStorage.getItem('dental_auth')
+        const userData = localStorage.getItem('dental_user')
+
+        if (authStatus === 'true' && userData) {
+          try {
+            const user = JSON.parse(userData)
+            return {
+              data: {
+                user,
+                clinicId
+              }
+            }
+          } catch (parseError) {
+            console.error('[DataService] Failed to parse localStorage user data')
+          }
+        }
+      }
+
+      // 세션 정보를 찾을 수 없음
+      return { data: null, error: 'No authenticated user' }
     } catch (error: unknown) {
       console.error('[DataService] Error getting session:', error)
       return { data: null, error: error instanceof Error ? error.message : 'Unknown error occurred' }

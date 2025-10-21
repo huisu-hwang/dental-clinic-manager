@@ -104,7 +104,7 @@ CREATE POLICY "Users can view protocol steps from their clinic"
   USING (
     protocol_id IN (
       SELECT id FROM protocols
-      WHERE clinic_id = auth.jwt() ->> 'clinic_id'
+      WHERE clinic_id = (auth.jwt() ->> 'clinic_id')::uuid
     )
   );
 
@@ -114,7 +114,7 @@ CREATE POLICY "Users can manage protocol steps for their clinic"
   USING (
     protocol_id IN (
       SELECT id FROM protocols
-      WHERE clinic_id = auth.jwt() ->> 'clinic_id'
+      WHERE clinic_id = (auth.jwt() ->> 'clinic_id')::uuid
     )
   );
 
@@ -125,7 +125,7 @@ CREATE POLICY "Users can view protocol media from their clinic"
   USING (
     protocol_id IN (
       SELECT id FROM protocols
-      WHERE clinic_id = auth.jwt() ->> 'clinic_id'
+      WHERE clinic_id = (auth.jwt() ->> 'clinic_id')::uuid
     )
   );
 
@@ -135,7 +135,7 @@ CREATE POLICY "Users can manage protocol media for their clinic"
   USING (
     protocol_id IN (
       SELECT id FROM protocols
-      WHERE clinic_id = auth.jwt() ->> 'clinic_id'
+      WHERE clinic_id = (auth.jwt() ->> 'clinic_id')::uuid
     )
   );
 
@@ -143,26 +143,26 @@ CREATE POLICY "Users can manage protocol media for their clinic"
 CREATE POLICY "Users can view tag suggestions from their clinic"
   ON tag_suggestions FOR SELECT
   TO authenticated
-  USING (clinic_id = auth.jwt() ->> 'clinic_id');
+  USING (clinic_id = (auth.jwt() ->> 'clinic_id')::uuid);
 
 CREATE POLICY "Users can manage tag suggestions for their clinic"
   ON tag_suggestions FOR ALL
   TO authenticated
-  USING (clinic_id = auth.jwt() ->> 'clinic_id');
+  USING (clinic_id = (auth.jwt() ->> 'clinic_id')::uuid);
 
 -- Protocol Templates Policies
 CREATE POLICY "Users can view templates from their clinic or public templates"
   ON protocol_templates FOR SELECT
   TO authenticated
   USING (
-    clinic_id = auth.jwt() ->> 'clinic_id' OR
+    clinic_id = (auth.jwt() ->> 'clinic_id')::uuid OR
     is_public = true
   );
 
 CREATE POLICY "Users can manage templates for their clinic"
   ON protocol_templates FOR ALL
   TO authenticated
-  USING (clinic_id = auth.jwt() ->> 'clinic_id');
+  USING (clinic_id = (auth.jwt() ->> 'clinic_id')::uuid);
 
 -- ========================================
 -- 6. Helper Functions

@@ -1,4 +1,4 @@
-import { createClient } from './supabase'
+import { getSupabase } from './supabase'
 
 interface UploadResult {
   url?: string
@@ -11,7 +11,7 @@ export const mediaService = {
    */
   async uploadProtocolImage(file: File): Promise<UploadResult> {
     try {
-      const supabase = createClient()
+      const supabase = getSupabase()
 
       // 파일 검증
       const maxSize = 10 * 1024 * 1024 // 10MB
@@ -64,7 +64,7 @@ export const mediaService = {
    */
   async deleteProtocolMedia(filePath: string): Promise<{ error?: string }> {
     try {
-      const supabase = createClient()
+      const supabase = getSupabase()
 
       // Storage URL에서 파일 경로 추출
       const matches = filePath.match(/protocol-media\/(.+)/)
