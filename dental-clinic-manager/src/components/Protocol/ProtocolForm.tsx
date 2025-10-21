@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline'
-import TiptapEditor from './TiptapEditor'
+import { XMarkIcon } from '@heroicons/react/24/outline'
+import EnhancedTiptapEditor from './EnhancedTiptapEditor'
+import ProtocolStepsEditor from './ProtocolStepsEditor'
+import SmartTagInput from './SmartTagInput'
 import { dataService } from '@/lib/dataService'
-import type { ProtocolCategory, ProtocolFormData } from '@/types'
+import { tagSuggestionService } from '@/lib/tagSuggestionService'
+import type { ProtocolCategory, ProtocolFormData, ProtocolStep } from '@/types'
 
 interface ProtocolFormProps {
   initialData?: ProtocolFormData & { id?: string }
@@ -26,43 +29,34 @@ export default function ProtocolForm({
     status: initialData?.status || 'draft',
     tags: initialData?.tags || [],
     change_summary: initialData?.change_summary || '',
-    change_type: initialData?.change_type || 'minor'
+    change_type: initialData?.change_type || 'minor',
+    steps: initialData?.steps || []
   })
 
   const [categories, setCategories] = useState<ProtocolCategory[]>([])
-  const [tagInput, setTagInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState<'editor' | 'steps'>('editor')
+  const [clinicId, setClinicId] = useState<string>('')
 
   useEffect(() => {
-    fetchCategories()
+    fetchInitialData()
   }, [])
 
-  const fetchCategories = async () => {
+  const fetchInitialData = async () => {
+    // 카테고리 가져오기
     const result = await dataService.getProtocolCategories()
     if (result.error) {
       setError('카테고리를 불러오는데 실패했습니다.')
     } else {
       setCategories(result.data || [])
     }
-  }
 
-  const handleAddTag = () => {
-    const trimmedTag = tagInput.trim()
-    if (trimmedTag && !formData.tags.includes(trimmedTag)) {
-      setFormData({
-        ...formData,
-        tags: [...formData.tags, trimmedTag]
-      })
-      setTagInput('')
+    // 현재 클리닉 ID 가져오기 (세션에서)
+    const { data: session } = await dataService.getSession()
+    if (session?.clinicId) {
+      setClinicId(session.clinicId)
     }
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setFormData({
-      ...formData,
-      tags: formData.tags.filter(tag => tag !== tagToRemove)
-    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,9 +67,26 @@ export default function ProtocolForm({
       return
     }
 
-    if (!formData.content.trim() || formData.content === '<p></p>') {
-      setError('프로토콜 내용을 입력하세요.')
-      return
+    // 에디터 탭이 활성화된 경우 content 검증
+    if (activeTab === 'editor') {
+      if (!formData.content.trim() || formData.content === '<p></p>') {
+        setError('프로토콜 내용을 입력하세요.')
+        return
+      }
+    }
+
+    // 단계별 탭이 활성화된 경우 steps 검증
+    if (activeTab === 'steps') {
+      if (!formData.steps || formData.steps.length === 0) {
+        setError('최소 1개 이상의 단계를 추가하세요.')
+        return
+      }
+
+      const invalidStep = formData.steps.find(step => !step.title.trim() || !step.content.trim())
+      if (invalidStep) {
+        setError('모든 단계에 제목과 내용을 입력하세요.')
+        return
+      }
     }
 
     if (mode === 'edit' && !formData.change_summary?.trim()) {
@@ -87,6 +98,15 @@ export default function ProtocolForm({
     setError('')
 
     try {
+      // 태그 사용 통계 업데이트
+      if (formData.tags.length > 0 && clinicId) {
+        await tagSuggestionService.updateTagStatistics(
+          clinicId,
+          formData.tags,
+          formData.category_id
+        )
+      }
+
       await onSubmit(formData)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.'
@@ -174,60 +194,69 @@ export default function ProtocolForm({
               </div>
             </div>
 
-            {/* Tags */}
+            {/* Content Mode Tabs */}
+            <div className="border-b border-slate-200">
+              <div className="flex space-x-8">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('editor')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'editor'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  통합 에디터
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('steps')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'steps'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  단계별 작성
+                </button>
+              </div>
+            </div>
+
+            {/* Content Editor or Steps Editor */}
+            {activeTab === 'editor' ? (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  프로토콜 내용 *
+                </label>
+                <EnhancedTiptapEditor
+                  content={formData.content}
+                  onChange={(content) => setFormData({ ...formData, content })}
+                  placeholder="프로토콜 내용을 작성하세요..."
+                  editable={true}
+                />
+              </div>
+            ) : (
+              <div>
+                <ProtocolStepsEditor
+                  steps={formData.steps || []}
+                  onChange={(steps) => setFormData({ ...formData, steps })}
+                  disabled={loading}
+                />
+              </div>
+            )}
+
+            {/* Smart Tag Input */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 태그
               </label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleAddTag()
-                    }
-                  }}
-                  className="flex-1 p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="태그 입력 후 엔터"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddTag}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md flex items-center"
-                >
-                  <PlusIcon className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {formData.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="ml-2 hover:text-blue-600"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Content Editor */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                프로토콜 내용 *
-              </label>
-              <TiptapEditor
-                content={formData.content}
-                onChange={(content) => setFormData({ ...formData, content })}
+              <SmartTagInput
+                value={formData.tags}
+                onChange={(tags) => setFormData({ ...formData, tags })}
+                title={formData.title}
+                categoryId={formData.category_id}
+                clinicId={clinicId}
+                disabled={loading}
               />
             </div>
 

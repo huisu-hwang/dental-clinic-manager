@@ -1804,4 +1804,30 @@ export const dataService = {
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   },
+
+  // 현재 세션 정보 가져오기
+  async getSession() {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !user) {
+        return { data: null, error: authError?.message || 'No authenticated user' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+
+      return {
+        data: {
+          user,
+          clinicId
+        }
+      }
+    } catch (error: unknown) {
+      console.error('[DataService] Error getting session:', error)
+      return { data: null, error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
 }
