@@ -100,25 +100,13 @@ export default function DashboardPage() {
       return
     }
 
-    // 현재 스크롤 위치 저장
-    const scrollPosition = window.scrollY
-
     const result = await dataService.saveReport(data)
     if (result.error) {
       showToast(`저장 실패: ${result.error}`, 'error')
     } else {
       showToast('보고서가 성공적으로 저장되었습니다.', 'success')
-      // 데이터가 변경되었으므로 즉시 다시 로드
-      await refetch()
-
-      // DOM 업데이트 후 스크롤 위치 복원 (requestAnimationFrame 사용)
-      requestAnimationFrame(() => {
-        window.scrollTo({
-          top: scrollPosition,
-          left: 0,
-          behavior: 'instant'
-        })
-      })
+      // refetch를 제거하여 불필요한 리렌더링과 스크롤 이동 방지
+      // DailyInputForm이 이미 hasExistingData를 true로 설정하므로 refetch가 불필요함
     }
   }
 

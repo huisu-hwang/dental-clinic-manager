@@ -249,11 +249,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 타임아웃 설정: 10초 후에도 로딩이 끝나지 않으면 강제로 종료
+    // 타임아웃 설정: 5초 후에도 로딩이 끝나지 않으면 강제로 종료
     timeoutId = setTimeout(() => {
       console.warn('[AuthContext] Auth check timeout - forcing loading to false')
       setLoading(false)
-    }, 10000)
+    }, 5000)
 
     checkAuth()
 

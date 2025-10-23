@@ -1,14 +1,18 @@
 'use client'
 
 import { useEditor, EditorContent } from '@tiptap/react'
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Youtube from '@tiptap/extension-youtube'
-import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableCell } from '@tiptap/extension-table-cell'
+import { TableHeader } from '@tiptap/extension-table-header'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
+import { TextAlign } from '@tiptap/extension-text-align'
 import { useDropzone } from 'react-dropzone'
 import { mediaService } from '@/lib/mediaService'
 import {
@@ -49,6 +53,11 @@ export default function EnhancedTiptapEditor({
           levels: [1, 2, 3]
         }
       }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right'],
+        defaultAlignment: 'left'
+      }),
       Image.configure({
         inline: true,
         allowBase64: false,
@@ -67,15 +76,30 @@ export default function EnhancedTiptapEditor({
       Table.configure({
         resizable: true,
         HTMLAttributes: {
-          class: 'protocol-table'
+          class: 'protocol-table border-collapse border border-slate-300'
         }
       }),
-      TableRow,
-      TableHeader,
-      TableCell,
+      TableRow.configure({
+        HTMLAttributes: {
+          class: 'border border-slate-300'
+        }
+      }),
+      TableHeader.configure({
+        HTMLAttributes: {
+          class: 'border border-slate-300 bg-slate-100 p-2 font-bold text-left'
+        }
+      }),
+      TableCell.configure({
+        HTMLAttributes: {
+          class: 'border border-slate-300 p-2'
+        }
+      }),
       TaskList,
       TaskItem.configure({
-        nested: true
+        nested: true,
+        HTMLAttributes: {
+          class: 'flex items-start gap-2'
+        }
       }),
       Placeholder.configure({
         placeholder,
@@ -90,7 +114,7 @@ export default function EnhancedTiptapEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[400px] p-6'
+        class: 'prose prose-sm max-w-none focus:outline-none min-h-[400px] p-6 text-left'
       },
       handleDrop: (view, event, slice, moved) => {
         if (!moved && event.dataTransfer?.files?.length) {
