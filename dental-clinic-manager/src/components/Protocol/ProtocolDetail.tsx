@@ -10,7 +10,7 @@ import {
   FolderIcon,
   ArrowUturnLeftIcon
 } from '@heroicons/react/24/outline'
-import TiptapEditor from './TiptapEditor'
+import EnhancedTiptapEditor from './EnhancedTiptapEditor'
 import ProtocolVersionHistory from './ProtocolVersionHistory'
 import { dataService } from '@/lib/dataService'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -286,7 +286,7 @@ export default function ProtocolDetail({
                   </p>
                 </div>
               )}
-              <TiptapEditor
+              <EnhancedTiptapEditor
                 content={protocol.currentVersion?.content || ''}
                 onChange={() => {}}
                 editable={false}

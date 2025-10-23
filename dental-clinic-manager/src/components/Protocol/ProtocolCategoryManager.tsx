@@ -130,34 +130,6 @@ export default function ProtocolCategoryManager({ onCategoryChange }: ProtocolCa
     }, 3000)
   }
 
-  const createDefaultCategories = async () => {
-    const defaultCategories = [
-      { name: '임플란트', description: '임플란트 시술 관련 프로토콜', color: '#3B82F6', display_order: 1 },
-      { name: '보철', description: '보철 치료 관련 프로토콜', color: '#10B981', display_order: 2 },
-      { name: '치주', description: '치주 치료 관련 프로토콜', color: '#F59E0B', display_order: 3 },
-      { name: '보존', description: '보존 치료 관련 프로토콜', color: '#EF4444', display_order: 4 },
-      { name: '교정', description: '교정 치료 관련 프로토콜', color: '#8B5CF6', display_order: 5 },
-      { name: '구강외과', description: '구강외과 시술 관련 프로토콜', color: '#EC4899', display_order: 6 },
-      { name: '소아치과', description: '소아 치과 관련 프로토콜', color: '#06B6D4', display_order: 7 },
-      { name: '예방', description: '예방 치료 관련 프로토콜', color: '#F97316', display_order: 8 },
-    ]
-
-    setLoading(true)
-    setError('')
-
-    for (const category of defaultCategories) {
-      const result = await dataService.createProtocolCategory(category)
-      if (result.error) {
-        setError(`카테고리 생성 중 오류: ${result.error}`)
-        break
-      }
-    }
-
-    setSuccess('기본 카테고리가 생성되었습니다.')
-    fetchCategories()
-    onCategoryChange?.()
-  }
-
   if (loading && categories.length === 0) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
@@ -176,26 +148,16 @@ export default function ProtocolCategoryManager({ onCategoryChange }: ProtocolCa
           <FolderIcon className="h-6 w-6 text-blue-600 mr-2" />
           <h2 className="text-xl font-bold text-slate-800">프로토콜 카테고리 관리</h2>
         </div>
-        <div className="flex gap-2">
-          {categories.length === 0 && (
-            <button
-              onClick={createDefaultCategories}
-              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
-            >
-              기본 카테고리 생성
-            </button>
-          )}
-          <button
-            onClick={() => {
-              resetForm()
-              setShowForm(true)
-            }}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
-          >
-            <PlusIcon className="h-4 w-4 mr-2" />
-            새 카테고리
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            resetForm()
+            setShowForm(true)
+          }}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+        >
+          <PlusIcon className="h-4 w-4 mr-2" />
+          새 카테고리
+        </button>
       </div>
 
       {error && (
@@ -295,7 +257,7 @@ export default function ProtocolCategoryManager({ onCategoryChange }: ProtocolCa
             <FolderIcon className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-600 mb-4">등록된 카테고리가 없습니다.</p>
             <p className="text-slate-500 text-sm mb-4">
-              기본 카테고리를 생성하거나 직접 추가하세요.
+              기본 카테고리는 자동으로 생성됩니다. 새로고침 후 확인하거나 직접 추가하세요.
             </p>
           </div>
         ) : (

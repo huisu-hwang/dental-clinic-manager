@@ -11,6 +11,7 @@ import LogsSection from '@/components/Logs/LogsSection'
 import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
 import AccountProfile from '@/components/Management/AccountProfile'
+import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import Toast from '@/components/UI/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
 import DatabaseVerifier from '@/components/Debug/DatabaseVerifier'
@@ -99,19 +100,13 @@ export default function DashboardPage() {
       return
     }
 
-    // 현재 스크롤 위치 저장
-    const scrollPosition = window.scrollY
-
     const result = await dataService.saveReport(data)
     if (result.error) {
       showToast(`저장 실패: ${result.error}`, 'error')
     } else {
       showToast('보고서가 성공적으로 저장되었습니다.', 'success')
-      // 데이터가 변경되었으므로 즉시 다시 로드
-      await refetch()
-
-      // 스크롤 위치 복원
-      window.scrollTo(0, scrollPosition)
+      // refetch를 제거하여 불필요한 리렌더링과 스크롤 이동 방지
+      // DailyInputForm이 이미 hasExistingData를 true로 설정하므로 refetch가 불필요함
     }
   }
 
@@ -409,6 +404,11 @@ export default function DashboardPage() {
               onRecalculateStats={handleRecalculateStats}
               canDelete={canDeleteReport}
             />
+          )}
+
+          {/* 진료 프로토콜 */}
+          {activeTab === 'protocols' && (
+            <ProtocolManagement currentUser={user} />
           )}
 
           {/* 설정 */}

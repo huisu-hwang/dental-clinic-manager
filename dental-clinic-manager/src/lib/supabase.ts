@@ -68,9 +68,21 @@ export const getSupabase = () => {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+          storageKey: 'sb-beahjntkmkfhpcbhfnrr-auth-token',
         }
       })
       console.log('[Supabase] Client created successfully')
+
+      // Refresh token 에러 핸들러 설정
+      if (typeof window !== 'undefined') {
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'TOKEN_REFRESHED') {
+            console.log('[Supabase] Token refreshed successfully')
+          }
+        })
+      }
     } catch (error) {
       initializationError = error instanceof Error ? error.message : 'Unknown error'
       console.error('[Supabase] Failed to create client:', error)

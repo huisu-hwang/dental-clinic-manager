@@ -181,7 +181,13 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
     }
   }, []) // 컴포넌트 마운트 시 한 번만 실행
 
-  const handleSave = async () => {
+  const handleSave = async (e?: React.MouseEvent) => {
+    // 이벤트 버블링 방지
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
     if (!reportDate) {
       alert('보고 일자를 선택해주세요.')
       return
@@ -325,7 +331,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
           </button>
           <button
             type="button"
-            onClick={handleSave}
+            onClick={(e) => handleSave(e)}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading || isReadOnly}
           >

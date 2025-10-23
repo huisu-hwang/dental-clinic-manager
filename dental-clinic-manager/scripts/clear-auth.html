@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>인증 정보 초기화</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    button {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 0;
+    }
+    button:hover {
+      background: #dc2626;
+    }
+    .info {
+      background: #f3f4f6;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    .success {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 20px 0;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 인증 정보 초기화</h1>
+
+  <div class="info">
+    <h3>현재 저장된 정보:</h3>
+    <ul id="storage-info"></ul>
+  </div>
+
+  <button onclick="clearAuth()">인증 정보 클리어</button>
+  <button onclick="clearAll()">모든 로컬스토리지 클리어</button>
+
+  <div class="success" id="success-msg"></div>
+
+  <script>
+    // 저장된 정보 표시
+    function displayStorageInfo() {
+      const list = document.getElementById('storage-info');
+      const items = [];
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('dental_') || key.startsWith('sb-')) {
+          items.push(`<li><strong>${key}</strong>: ${localStorage.getItem(key).substring(0, 50)}...</li>`);
+        }
+      }
+
+      if (items.length === 0) {
+        list.innerHTML = '<li>저장된 인증 정보가 없습니다.</li>';
+      } else {
+        list.innerHTML = items.join('');
+      }
+    }
+
+    // 인증 정보만 클리어
+    function clearAuth() {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('dental_') || key.startsWith('sb-')) {
+          keys.push(key);
+        }
+      }
+
+      keys.forEach(key => localStorage.removeItem(key));
+
+      showSuccess(`${keys.length}개의 인증 정보가 삭제되었습니다.`);
+      displayStorageInfo();
+    }
+
+    // 모든 로컬스토리지 클리어
+    function clearAll() {
+      const count = localStorage.length;
+      localStorage.clear();
+      showSuccess(`모든 로컬스토리지(${count}개 항목)가 삭제되었습니다.`);
+      displayStorageInfo();
+    }
+
+    function showSuccess(message) {
+      const successMsg = document.getElementById('success-msg');
+      successMsg.textContent = message;
+      successMsg.style.display = 'block';
+      setTimeout(() => {
+        successMsg.style.display = 'none';
+      }, 3000);
+    }
+
+    // 페이지 로드 시 정보 표시
+    displayStorageInfo();
+  </script>
+</body>
+</html>

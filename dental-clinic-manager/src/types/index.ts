@@ -155,6 +155,36 @@ export interface ProtocolFormData {
   tags: string[];
   change_summary?: string;
   change_type?: 'major' | 'minor';
+  steps?: ProtocolStep[];
+}
+
+export interface ProtocolStep {
+  id?: string;
+  step_order: number;
+  title: string;
+  content: string;
+  reference_materials?: any[];
+  is_optional?: boolean;
+}
+
+export interface ProtocolMedia {
+  id: string;
+  protocol_id: string;
+  step_id?: string;
+  file_type: 'image' | 'video' | 'document' | 'link';
+  file_name: string;
+  file_url: string;
+  file_size?: number;
+  mime_type?: string;
+  uploaded_by?: string;
+  created_at: string;
+}
+
+export interface TagSuggestion {
+  id: string;
+  tag_name: string;
+  usage_count: number;
+  category_id?: string;
 }
 
 export interface ProtocolListItem {
