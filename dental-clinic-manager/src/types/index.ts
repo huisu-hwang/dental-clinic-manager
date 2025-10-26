@@ -145,6 +145,7 @@ export interface ProtocolVersion {
     email: string;
   };
   created_at: string;
+  steps?: ProtocolStep[];
 }
 
 export interface ProtocolFormData {
@@ -163,7 +164,7 @@ export interface ProtocolStep {
   step_order: number;
   title: string;
   content: string;
-  reference_materials?: any[];
+  reference_materials?: string[];
   is_optional?: boolean;
 }
 
