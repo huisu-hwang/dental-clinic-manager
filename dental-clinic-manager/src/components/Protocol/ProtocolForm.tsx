@@ -49,7 +49,7 @@ export default function ProtocolForm({
     if (result.error) {
       setError('카테고리를 불러오는데 실패했습니다.')
     } else {
-      setCategories(result.data || [])
+      setCategories((result.data as ProtocolCategory[] | undefined) ?? [])
     }
 
     // 현재 클리닉 ID 가져오기 (세션에서)

@@ -46,7 +46,7 @@ export default function ProtocolCategoryManager({ onCategoryChange }: ProtocolCa
     if (result.error) {
       setError(result.error)
     } else {
-      setCategories(result.data || [])
+      setCategories((result.data as ProtocolCategory[] | undefined) ?? [])
     }
     setLoading(false)
   }

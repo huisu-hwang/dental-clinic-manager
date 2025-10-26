@@ -66,7 +66,7 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
       if (result.error) {
         setError(result.error)
       } else {
-        setProtocols(result.data || [])
+        setProtocols((result.data as Protocol[] | undefined) ?? [])
       }
     } catch (err) {
       setError('프로토콜을 불러오는 중 오류가 발생했습니다.')
@@ -82,7 +82,7 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
       if (result.error) {
         console.error('Error fetching categories:', result.error)
       } else {
-        setCategories(result.data || [])
+        setCategories((result.data as ProtocolCategory[] | undefined) ?? [])
       }
     } catch (err) {
       console.error('Error fetching categories:', err)

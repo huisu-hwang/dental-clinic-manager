@@ -12,6 +12,9 @@ export const mediaService = {
   async uploadProtocolImage(file: File): Promise<UploadResult> {
     try {
       const supabase = getSupabase()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
 
       // 파일 검증
       const maxSize = 10 * 1024 * 1024 // 10MB
@@ -45,11 +48,20 @@ export const mediaService = {
         return { error: '파일 업로드에 실패했습니다.' }
       }
 
+      if (!data) {
+        return { error: '업로드 결과를 가져오지 못했습니다.' }
+      }
+
       // Public URL 생성
-      const { data: { publicUrl } } = supabase.storage
+      const { data: publicUrlData } = supabase.storage
         .from('protocol-media')
         .getPublicUrl(data.path)
 
+      if (!publicUrlData) {
+        return { error: '파일 URL을 생성하지 못했습니다.' }
+      }
+
+      const publicUrl = publicUrlData.publicUrl
       console.log('[MediaService] Upload success:', publicUrl)
 
       return { url: publicUrl }
@@ -65,6 +77,9 @@ export const mediaService = {
   async deleteProtocolMedia(filePath: string): Promise<{ error?: string }> {
     try {
       const supabase = getSupabase()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
 
       // Storage URL에서 파일 경로 추출
       const matches = filePath.match(/protocol-media\/(.+)/)
