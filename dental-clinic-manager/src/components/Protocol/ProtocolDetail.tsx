@@ -1,17 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import {
-  XMarkIcon,
-  PencilIcon,
-  TrashIcon,
-  ClockIcon,
-  TagIcon,
-  FolderIcon,
-  ArrowUturnLeftIcon
-} from '@heroicons/react/24/outline'
+import { XMarkIcon, PencilIcon, TrashIcon, ClockIcon, TagIcon, FolderIcon } from '@heroicons/react/24/outline'
 import EnhancedTiptapEditor from './EnhancedTiptapEditor'
 import ProtocolVersionHistory from './ProtocolVersionHistory'
+import ProtocolStepViewer from './ProtocolStepViewer'
 import { dataService } from '@/lib/dataService'
 import { usePermissions } from '@/hooks/usePermissions'
 import type { Protocol, ProtocolVersion } from '@/types'
@@ -34,7 +27,6 @@ export default function ProtocolDetail({
   const [versions, setVersions] = useState<ProtocolVersion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [showVersionHistory, setShowVersionHistory] = useState(false)
   const [activeTab, setActiveTab] = useState<'content' | 'history'>('content')
 
   const canEdit = hasPermission('protocol_edit') || hasPermission('protocol_create')
@@ -278,7 +270,7 @@ export default function ProtocolDetail({
         {/* Body */}
         <div className="p-6 max-h-[calc(100vh-300px)] overflow-y-auto">
           {activeTab === 'content' ? (
-            <div>
+            <div className="space-y-6">
               {protocol.currentVersion?.change_summary && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                   <p className="text-sm text-blue-800">
@@ -286,11 +278,25 @@ export default function ProtocolDetail({
                   </p>
                 </div>
               )}
-              <EnhancedTiptapEditor
-                content={protocol.currentVersion?.content || ''}
-                onChange={() => {}}
-                editable={false}
-              />
+              {protocol.currentVersion?.steps && protocol.currentVersion.steps.length > 0 ? (
+                <div className="space-y-4">
+                  <ProtocolStepViewer steps={protocol.currentVersion.steps} />
+                  {protocol.currentVersion.content && (
+                    <details className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+                        통합 본문 보기
+                      </summary>
+                      <div className="prose prose-sm max-w-none pt-3" dangerouslySetInnerHTML={{ __html: protocol.currentVersion.content }} />
+                    </details>
+                  )}
+                </div>
+              ) : (
+                <EnhancedTiptapEditor
+                  content={protocol.currentVersion?.content || ''}
+                  onChange={() => {}}
+                  editable={false}
+                />
+              )}
             </div>
           ) : (
             <ProtocolVersionHistory

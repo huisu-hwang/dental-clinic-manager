@@ -1,19 +1,75 @@
 import { getSupabase } from './supabase'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, Protocol, ProtocolCategory, ProtocolVersion, ProtocolFormData } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
+import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
+
+const CLINIC_CACHE_KEY = 'dental_clinic_id'
+let cachedClinicId: string | null = null
+
+const persistClinicId = (clinicId: string) => {
+  cachedClinicId = clinicId
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(CLINIC_CACHE_KEY, clinicId)
+  }
+}
+
+const getCachedClinicId = (): string | null => {
+  if (cachedClinicId) {
+    return cachedClinicId
+  }
+
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem(CLINIC_CACHE_KEY)
+    if (stored) {
+      cachedClinicId = stored
+      return stored
+    }
+  }
+
+  return null
+}
+
+const saveProtocolSteps = async (
+  supabase: ReturnType<typeof getSupabase>,
+  protocolId: string,
+  versionId: string,
+  steps?: ProtocolStep[]
+) => {
+  if (!supabase || !steps || steps.length === 0) {
+    return
+  }
+
+  const payload = mapStepsForInsert(protocolId, versionId, steps)
+  if (payload.length === 0) {
+    return
+  }
+
+  const { error } = await (supabase
+    .from('protocol_steps') as any)
+    .insert(payload)
+
+  if (error) {
+    throw error
+  }
+}
 
 // 현재 로그인한 사용자의 clinic_id를 가져오는 헬퍼 함수
 async function getCurrentClinicId(): Promise<string | null> {
   try {
-    // 1. localStorage에서 먼저 확인 (가장 빠른 방법)
+    const cached = getCachedClinicId()
+    if (cached) {
+      console.log('[getCurrentClinicId] Using cached clinic_id:', cached)
+      return cached
+    }
+
     if (typeof window !== 'undefined') {
-      // AuthContext와 동일한 키 사용
       const cachedUser = localStorage.getItem('dental_user')
       if (cachedUser) {
         try {
           const userData = JSON.parse(cachedUser)
           if (userData.clinic_id) {
-            console.log('[getCurrentClinicId] Using cached clinic_id:', userData.clinic_id)
+            persistClinicId(userData.clinic_id)
+            console.log('[getCurrentClinicId] Restored clinic_id from cached user:', userData.clinic_id)
             return userData.clinic_id
           }
         } catch (e) {
@@ -22,7 +78,6 @@ async function getCurrentClinicId(): Promise<string | null> {
       }
     }
 
-    // 2. localStorage에 없으면 Supabase에서 조회
     const supabase = getSupabase()
     if (!supabase) {
       console.error('[getCurrentClinicId] Supabase client not available')
@@ -43,7 +98,6 @@ async function getCurrentClinicId(): Promise<string | null> {
 
     console.log('[getCurrentClinicId] Querying users table for user:', user.id)
 
-    // users 테이블에서 clinic_id 조회
     const { data, error } = await supabase
       .from('users')
       .select('clinic_id')
@@ -67,6 +121,9 @@ async function getCurrentClinicId(): Promise<string | null> {
     }
 
     const clinicId = (data as any).clinic_id
+    if (clinicId) {
+      persistClinicId(clinicId)
+    }
     console.log('[getCurrentClinicId] Retrieved clinic_id:', clinicId)
 
     return clinicId
@@ -1550,6 +1607,22 @@ export const dataService = {
           versionCreatedByUser = (versionUserData ?? null) as VersionAuthor
         }
 
+        let steps: ProtocolStep[] = []
+        if (typedProtocol.current_version_id) {
+          const { data: stepsData, error: stepsError } = await supabase
+            .from('protocol_steps')
+            .select('*')
+            .eq('protocol_id', protocolId)
+            .eq('version_id', typedProtocol.current_version_id)
+            .order('step_order', { ascending: true })
+
+          if (stepsError) {
+            console.error('[getProtocolById] Failed to fetch steps:', stepsError)
+          } else {
+            steps = normalizeStepsFromDb(stepsData as any[])
+          }
+        }
+
         console.log('[getProtocolById] Protocol fetched successfully with version')
         return {
           data: {
@@ -1558,6 +1631,7 @@ export const dataService = {
             currentVersion: version
               ? ({
                   ...version,
+                  steps,
                   created_by_user: versionCreatedByUser ?? undefined
                 } as ProtocolVersion & { created_by_user?: VersionAuthor })
               : null
@@ -1631,10 +1705,15 @@ export const dataService = {
 
       // 2. 첫 번째 버전 생성
       console.log('[createProtocol] Step 2: Creating first version...')
+      const versionContent =
+        formData.steps && formData.steps.length > 0
+          ? serializeStepsToHtml(formData.steps)
+          : formData.content
+
       const versionData = {
         protocol_id: protocol.id,
         version_number: '1.0',
-        content: formData.content,
+        content: versionContent,
         change_summary: formData.change_summary || '초기 버전',
         created_by: user.id
       }
@@ -1654,6 +1733,10 @@ export const dataService = {
         throw versionError
       }
       console.log('[createProtocol] Version created successfully:', version.id)
+
+      if (formData.steps && formData.steps.length > 0) {
+        await saveProtocolSteps(supabase, protocol.id, version.id, formData.steps)
+      }
 
       // 3. 프로토콜의 current_version_id 업데이트
       console.log('[createProtocol] Step 3: Updating current_version_id...')
@@ -1703,12 +1786,17 @@ export const dataService = {
       if (calcError) throw calcError
 
       // 2. 새 버전 생성
+      const versionContent =
+        formData.steps && formData.steps.length > 0
+          ? serializeStepsToHtml(formData.steps)
+          : formData.content
+
       const { data: version, error: versionError } = await (supabase
         .from('protocol_versions') as any)
         .insert([{
           protocol_id: protocolId,
           version_number: versionNumber,
-          content: formData.content,
+          content: versionContent,
           change_summary: formData.change_summary || '내용 수정',
           change_type: formData.change_type || 'minor',
           created_by: user.id
@@ -1717,6 +1805,10 @@ export const dataService = {
         .single()
 
       if (versionError) throw versionError
+
+      if (formData.steps && formData.steps.length > 0) {
+        await saveProtocolSteps(supabase, protocolId, version.id, formData.steps)
+      }
 
       // 3. 프로토콜 업데이트
       const updateData: any = {
@@ -1836,6 +1928,20 @@ export const dataService = {
       if (versionError || !oldVersion) throw new Error('Version not found')
       const typedOldVersion = oldVersion as any
 
+      let oldSteps: ProtocolStep[] = []
+      const { data: oldStepsData, error: oldStepsError } = await supabase
+        .from('protocol_steps')
+        .select('*')
+        .eq('protocol_id', protocolId)
+        .eq('version_id', versionId)
+        .order('step_order', { ascending: true })
+
+      if (oldStepsError) {
+        console.error('[restoreProtocolVersion] Failed to fetch steps for restoration:', oldStepsError)
+      } else {
+        oldSteps = normalizeStepsFromDb(oldStepsData as any[])
+      }
+
       // 2. 프로토콜이 현재 클리닉 소속인지 확인
       const { data: protocol, error: protocolError } = await supabase
         .from('protocols')
@@ -1872,6 +1978,10 @@ export const dataService = {
         .single()
 
       if (createError) throw createError
+
+      if (oldSteps.length > 0) {
+        await saveProtocolSteps(supabase, protocolId, newVersion.id, oldSteps)
+      }
 
       // 5. 프로토콜의 current_version_id 업데이트
       const { error: updateError } = await (supabase
@@ -2000,4 +2110,18 @@ export const dataService = {
       return { data: null, error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   },
+
+  clearCachedClinicId() {
+    cachedClinicId = null
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CLINIC_CACHE_KEY)
+    }
+  },
+
+  setCachedClinicId(clinicId: string | null) {
+    if (!clinicId) {
+      return
+    }
+    persistClinicId(clinicId)
+  }
 }

@@ -1,13 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import EnhancedTiptapEditor from './EnhancedTiptapEditor'
 import ProtocolStepsEditor from './ProtocolStepsEditor'
 import SmartTagInput from './SmartTagInput'
+import ProtocolStepViewer from './ProtocolStepViewer'
 import { dataService } from '@/lib/dataService'
 import { tagSuggestionService } from '@/lib/tagSuggestionService'
 import type { ProtocolCategory, ProtocolFormData, ProtocolStep } from '@/types'
+import {
+  buildDefaultStep,
+  hasValidSteps,
+  serializeStepsToHtml
+} from '@/utils/protocolStepUtils'
 
 interface ProtocolFormProps {
   initialData?: ProtocolFormData & { id?: string }
@@ -22,26 +27,74 @@ export default function ProtocolForm({
   onCancel,
   mode
 }: ProtocolFormProps) {
+  const resolvedInitialSteps = useMemo(() => {
+    if (initialData?.steps && initialData.steps.length > 0) {
+      return initialData.steps
+    }
+
+    if (initialData?.content) {
+      return [
+        {
+          id: initialData.id ? `legacy-${initialData.id}` : `legacy-${Date.now()}`,
+          step_order: 0,
+          title: initialData.title || '단계 1',
+          content: initialData.content,
+          reference_materials: initialData.steps?.[0]?.reference_materials ?? [],
+          is_optional: false
+        }
+      ] satisfies ProtocolStep[]
+    }
+
+    return [buildDefaultStep(0)]
+  }, [initialData])
+
   const [formData, setFormData] = useState<ProtocolFormData>({
     title: initialData?.title || '',
     category_id: initialData?.category_id || '',
-    content: initialData?.content || '',
+    content: serializeStepsToHtml(resolvedInitialSteps),
     status: initialData?.status || 'draft',
     tags: initialData?.tags || [],
     change_summary: initialData?.change_summary || '',
     change_type: initialData?.change_type || 'minor',
-    steps: initialData?.steps || []
+    steps: resolvedInitialSteps
   })
 
   const [categories, setCategories] = useState<ProtocolCategory[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [activeTab, setActiveTab] = useState<'editor' | 'steps'>('editor')
   const [clinicId, setClinicId] = useState<string>('')
-
   useEffect(() => {
     fetchInitialData()
   }, [])
+
+  useEffect(() => {
+    if (initialData) {
+      const nextSteps =
+        initialData.steps && initialData.steps.length > 0
+          ? initialData.steps
+          : resolvedInitialSteps
+
+      setFormData({
+        title: initialData.title || '',
+        category_id: initialData.category_id || '',
+        content: serializeStepsToHtml(nextSteps),
+        status: initialData.status || 'draft',
+        tags: initialData.tags || [],
+        change_summary: initialData.change_summary || '',
+        change_type: initialData.change_type || 'minor',
+        steps: nextSteps
+      })
+    }
+  }, [initialData, resolvedInitialSteps])
+
+  const handleStepsChange = (steps: ProtocolStep[]) => {
+    const html = serializeStepsToHtml(steps)
+    setFormData(prev => ({
+      ...prev,
+      steps,
+      content: html
+    }))
+  }
 
   const fetchInitialData = async () => {
     // 카테고리 가져오기
@@ -67,26 +120,9 @@ export default function ProtocolForm({
       return
     }
 
-    // 에디터 탭이 활성화된 경우 content 검증
-    if (activeTab === 'editor') {
-      if (!formData.content.trim() || formData.content === '<p></p>') {
-        setError('프로토콜 내용을 입력하세요.')
-        return
-      }
-    }
-
-    // 단계별 탭이 활성화된 경우 steps 검증
-    if (activeTab === 'steps') {
-      if (!formData.steps || formData.steps.length === 0) {
-        setError('최소 1개 이상의 단계를 추가하세요.')
-        return
-      }
-
-      const invalidStep = formData.steps.find(step => !step.title.trim() || !step.content.trim())
-      if (invalidStep) {
-        setError('모든 단계에 제목과 내용을 입력하세요.')
-        return
-      }
+    if (!hasValidSteps(formData.steps)) {
+      setError('최소 1개 이상의 단계에 제목과 내용을 입력하세요.')
+      return
     }
 
     if (mode === 'edit' && !formData.change_summary?.trim()) {
@@ -107,7 +143,12 @@ export default function ProtocolForm({
         )
       }
 
-      await onSubmit(formData)
+      const stepsHtml = serializeStepsToHtml(formData.steps || [])
+      await onSubmit({
+        ...formData,
+        content: stepsHtml,
+        steps: formData.steps
+      })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.'
       setError(errorMessage)
@@ -194,54 +235,18 @@ export default function ProtocolForm({
               </div>
             </div>
 
-            {/* Content Mode Tabs */}
-            <div className="border-b border-slate-200">
-              <div className="flex space-x-8">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('editor')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'editor'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  통합 에디터
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('steps')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'steps'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  단계별 작성
-                </button>
-              </div>
+            <div>
+              <ProtocolStepsEditor
+                steps={formData.steps || []}
+                onChange={handleStepsChange}
+                disabled={loading}
+              />
             </div>
 
-            {/* Content Editor or Steps Editor */}
-            {activeTab === 'editor' ? (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  프로토콜 내용 *
-                </label>
-                <EnhancedTiptapEditor
-                  content={formData.content}
-                  onChange={(content) => setFormData({ ...formData, content })}
-                  placeholder="프로토콜 내용을 작성하세요..."
-                  editable={true}
-                />
-              </div>
-            ) : (
-              <div>
-                <ProtocolStepsEditor
-                  steps={formData.steps || []}
-                  onChange={(steps) => setFormData({ ...formData, steps })}
-                  disabled={loading}
-                />
+            {formData.steps && formData.steps.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h4 className="mb-3 text-sm font-semibold text-slate-700">미리보기</h4>
+                <ProtocolStepViewer steps={formData.steps} />
               </div>
             )}
 

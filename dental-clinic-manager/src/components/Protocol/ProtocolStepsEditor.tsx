@@ -217,7 +217,8 @@ export default function ProtocolStepsEditor({
       id: `new-${Date.now()}`,
       step_order: localSteps.length,
       title: '',
-      content: '',
+      content: '<p></p>',
+      reference_materials: [],
       is_optional: false
     }
     const updatedSteps = [...localSteps, newStep]
@@ -262,6 +263,8 @@ export default function ProtocolStepsEditor({
       ...stepToDuplicate,
       id: `dup-${Date.now()}`,
       title: `${stepToDuplicate.title} (복사본)`,
+      content: stepToDuplicate.content || '<p></p>',
+      reference_materials: stepToDuplicate.reference_materials ?? [],
       step_order: index + 1
     }
 
