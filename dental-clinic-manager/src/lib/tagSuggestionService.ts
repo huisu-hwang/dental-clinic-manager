@@ -37,6 +37,26 @@ const categoryTags: Record<string, string[]> = {
   '심미치료': ['미백', '라미네이트', '레진', '심미보철']
 }
 
+type CategoryName = keyof typeof categoryTags
+
+const isCategoryName = (value: unknown): value is CategoryName => {
+  if (typeof value !== 'string') {
+    return false
+  }
+  return Object.prototype.hasOwnProperty.call(categoryTags, value)
+}
+
+type TagSuggestionRow = TagSuggestion & {
+  clinic_id: string
+  last_used: string
+}
+
+type TagSuggestionInsert = Omit<TagSuggestionRow, 'id'> & { id?: string }
+
+type TagNameRow = {
+  tag_name: string | null
+}
+
 export const tagSuggestionService = {
   /**
    * 태그 추천 가져오기
@@ -73,10 +93,8 @@ export const tagSuggestionService = {
           .eq('id', categoryId)
           .single()
 
-        // @ts-ignore
-        if (categoryData?.name) {
-          // @ts-ignore
-          suggestions.category = categoryTags[categoryData.name] || []
+        if (isCategoryName(categoryData?.name)) {
+          suggestions.category = categoryTags[categoryData.name]
         }
 
         // 같은 카테고리에서 자주 사용된 태그
@@ -91,8 +109,9 @@ export const tagSuggestionService = {
         if (categoryFrequentTags) {
           suggestions.category = [
             ...suggestions.category,
-            // @ts-ignore
-            ...categoryFrequentTags.map((t: any) => t.tag_name)
+            ...categoryFrequentTags
+              .map(tag => (typeof tag?.tag_name === 'string' ? tag.tag_name : null))
+              .filter((tag): tag is string => tag !== null)
           ].filter((tag, index, self) => self.indexOf(tag) === index) // 중복 제거
         }
       }
@@ -178,16 +197,17 @@ export const tagSuggestionService = {
 
       // 각 태그에 대해 통계 업데이트
       for (const tag of tags) {
-        // @ts-ignore
+        const upsertPayload: TagSuggestionInsert = {
+          clinic_id: clinicId,
+          tag_name: tag,
+          category_id: categoryId,
+          usage_count: 1,
+          last_used: new Date().toISOString(),
+        }
+
         const { error } = await supabase
           .from('tag_suggestions')
-          .upsert({
-            clinic_id: clinicId,
-            tag_name: tag,
-            category_id: categoryId,
-            usage_count: 1,
-            last_used: new Date().toISOString()
-          } as any, {
+          .upsert(upsertPayload, {
             onConflict: 'clinic_id,tag_name',
             ignoreDuplicates: false
           })
@@ -198,7 +218,6 @@ export const tagSuggestionService = {
       }
 
       // 사용 횟수 증가 (upsert가 update인 경우)
-      // @ts-ignore
       await supabase.rpc('increment_tag_usage', {
         p_clinic_id: clinicId,
         p_tags: tags
@@ -231,8 +250,12 @@ export const tagSuggestionService = {
         .order('usage_count', { ascending: false })
         .limit(5)
 
-      // @ts-ignore
-      return data?.map((t: any) => t.tag_name) || []
+      const tagNames =
+        (data as TagNameRow[] | null)?.
+          map(tag => tag.tag_name)
+          .filter((tag): tag is string => typeof tag === 'string') ?? []
+
+      return tagNames
     } catch (error) {
       console.error('[TagSuggestion] Error searching tags:', error)
       return []
