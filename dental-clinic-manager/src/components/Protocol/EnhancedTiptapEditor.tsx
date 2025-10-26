@@ -156,20 +156,21 @@ export default function EnhancedTiptapEditor({
 
     // 실제 업로드
     const result = await mediaService.uploadProtocolImage(file)
+    const uploadedUrl = result.url
 
-    if (result.url) {
+    if (uploadedUrl) {
       // 임시 이미지를 실제 URL로 교체
       const { state } = editor
       const { doc } = state
       doc.descendants((node, pos) => {
         if (node.type.name === 'image' && node.attrs.src === tempUrl) {
-          editor.chain().setNodeSelection(pos).setImage({ src: result.url }).run()
+          editor.chain().setNodeSelection(pos).setImage({ src: uploadedUrl }).run()
         }
       })
 
       // Callback 실행
-      onImageUpload?.(result.url)
-      console.log('[Editor] Image uploaded successfully:', result.url)
+      onImageUpload?.(uploadedUrl)
+      console.log('[Editor] Image uploaded successfully:', uploadedUrl)
     } else {
       // 업로드 실패 시 임시 이미지 제거
       alert(result.error || '이미지 업로드에 실패했습니다.')

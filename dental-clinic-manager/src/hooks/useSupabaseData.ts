@@ -40,11 +40,11 @@ export const useSupabaseData = (clinicId?: string | null) => {
           { data: invLogData, error: invLogError }
         ] = await Promise.all([
           applyClinicFilter(
-            supabase.from('gift_inventory').select<'*', GiftInventory>('*'),
+            supabase.from('gift_inventory').select('*'),
             targetClinicId
           ),
           applyClinicFilter(
-            supabase.from('inventory_logs').select<'*', InventoryLog>('*'),
+            supabase.from('inventory_logs').select('*'),
             targetClinicId
           )
         ])
@@ -107,23 +107,23 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
           applyClinicFilter(
-            supabase.from('daily_reports').select<'*', DailyReport>('*'),
+            supabase.from('daily_reports').select('*'),
             targetClinicId
           ),
           applyClinicFilter(
-            supabase.from('consult_logs').select<'*', ConsultLog>('*'),
+            supabase.from('consult_logs').select('*'),
             targetClinicId
           ),
           applyClinicFilter(
-            supabase.from('gift_logs').select<'*', GiftLog>('*'),
+            supabase.from('gift_logs').select('*'),
             targetClinicId
           ),
           applyClinicFilter(
-            supabase.from('gift_inventory').select<'*', GiftInventory>('*'),
+            supabase.from('gift_inventory').select('*'),
             targetClinicId
           ),
           applyClinicFilter(
-            supabase.from('inventory_logs').select<'*', InventoryLog>('*'),
+            supabase.from('inventory_logs').select('*'),
             targetClinicId
           )
         ])

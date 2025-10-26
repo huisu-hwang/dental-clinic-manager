@@ -1,5 +1,5 @@
 import { getSupabase } from './supabase'
-import type { TagSuggestion } from '@/types'
+import type { ProtocolCategory, TagSuggestion } from '@/types'
 
 /**
  * 의료 용어 사전 (키워드 추출용)
@@ -73,10 +73,10 @@ export const tagSuggestionService = {
           .eq('id', categoryId)
           .single()
 
-        // @ts-ignore
-        if (categoryData?.name) {
-          // @ts-ignore
-          suggestions.category = categoryTags[categoryData.name] || []
+        const categoryRecord = (categoryData ?? null) as Pick<ProtocolCategory, 'name'> | null
+
+        if (categoryRecord?.name) {
+          suggestions.category = categoryTags[categoryRecord.name] || []
         }
 
         // 같은 카테고리에서 자주 사용된 태그
@@ -89,10 +89,10 @@ export const tagSuggestionService = {
           .limit(5)
 
         if (categoryFrequentTags) {
+          const frequentByCategory = categoryFrequentTags as TagSuggestion[]
           suggestions.category = [
             ...suggestions.category,
-            // @ts-ignore
-            ...categoryFrequentTags.map((t: any) => t.tag_name)
+            ...frequentByCategory.map(t => t.tag_name)
           ].filter((tag, index, self) => self.indexOf(tag) === index) // 중복 제거
         }
       }
@@ -106,7 +106,7 @@ export const tagSuggestionService = {
         .limit(10)
 
       if (frequentTags) {
-        suggestions.frequent = frequentTags
+        suggestions.frequent = frequentTags as TagSuggestion[]
       }
 
       console.log('[TagSuggestion] Generated suggestions:', suggestions)
@@ -178,7 +178,6 @@ export const tagSuggestionService = {
 
       // 각 태그에 대해 통계 업데이트
       for (const tag of tags) {
-        // @ts-ignore
         const { error } = await supabase
           .from('tag_suggestions')
           .upsert({
@@ -198,7 +197,6 @@ export const tagSuggestionService = {
       }
 
       // 사용 횟수 증가 (upsert가 update인 경우)
-      // @ts-ignore
       await supabase.rpc('increment_tag_usage', {
         p_clinic_id: clinicId,
         p_tags: tags
@@ -231,7 +229,6 @@ export const tagSuggestionService = {
         .order('usage_count', { ascending: false })
         .limit(5)
 
-      // @ts-ignore
       return data?.map((t: any) => t.tag_name) || []
     } catch (error) {
       console.error('[TagSuggestion] Error searching tags:', error)

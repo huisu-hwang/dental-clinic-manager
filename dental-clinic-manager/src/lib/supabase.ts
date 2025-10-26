@@ -1,6 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type AuthChangeEvent, type Session, type SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/supabase'
 
-let supabase: ReturnType<typeof createClient> | null = null
+let supabase: SupabaseClient<Database> | null = null
 let initializationError: string | null = null
 
 export const getSupabase = () => {
@@ -64,7 +65,7 @@ export const getSupabase = () => {
 
     try {
       console.log('[Supabase] Creating client...')
-      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
@@ -77,7 +78,7 @@ export const getSupabase = () => {
 
       // Refresh token 에러 핸들러 설정
       if (typeof window !== 'undefined') {
-        supabase.auth.onAuthStateChange((event, session) => {
+        supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
           if (event === 'TOKEN_REFRESHED') {
             console.log('[Supabase] Token refreshed successfully')
           }

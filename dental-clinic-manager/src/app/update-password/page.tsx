@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import type { Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 
@@ -44,7 +45,7 @@ export default function UpdatePasswordPage() {
     }
 
     // 2. 현재 세션 확인
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session) {
         console.log('[PasswordReset] 활성 세션 감지');
         setIsRecoveryMode(true);
@@ -55,7 +56,7 @@ export default function UpdatePasswordPage() {
     });
 
     // 3. Auth 상태 변경 감지
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       console.log('[PasswordReset] Auth 이벤트:', event);
 
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {

@@ -357,8 +357,15 @@ export const dataService = {
       const validHappyCalls = happyCallRows.filter(row => row.patient_name.trim())
 
       // --- 3. 재고 업데이트 준비 ---
-      const inventoryUpdates = []
-      const inventoryLogs = []
+      const inventoryUpdates: Array<{ id: number; stock: number }> = []
+      const inventoryLogs: Array<{
+        timestamp: string
+        name: string
+        reason: string
+        change: number
+        old_stock: number
+        new_stock: number
+      }> = []
 
       for (const gift of validGifts) {
         if (gift.gift_type !== '없음') {
@@ -1439,11 +1446,13 @@ export const dataService = {
 
             // currentVersion 정보 조회
             if (protocol.current_version_id) {
-              const { data: version } = await supabase
+              const versionResponse = await (supabase
                 .from('protocol_versions')
                 .select('id, version_number, created_at, created_by')
                 .eq('id', protocol.current_version_id)
-                .single()
+                .single() as unknown as { data: { id: string; version_number: number; created_at: string; created_by: string | null } | null; error: unknown })
+
+              const version = versionResponse.data
 
               // 버전 작성자 정보 조회
               let versionCreatedByUser = null
@@ -1521,21 +1530,24 @@ export const dataService = {
 
       // currentVersion 정보를 별도로 조회
       if (typedProtocol && typedProtocol.current_version_id) {
-        const { data: version } = await supabase
+        const { data: versionData } = await supabase
           .from('protocol_versions')
           .select('id, version_number, content, change_summary, change_type, created_at, created_by')
           .eq('id', typedProtocol.current_version_id)
           .single()
 
         // 버전 작성자 정보 조회
-        let versionCreatedByUser = null
+        type VersionAuthor = { id: string; name: string | null; email: string | null } | null
+
+        let versionCreatedByUser: VersionAuthor = null
+        const version = (versionData ?? null) as (ProtocolVersion & { created_by?: string | null }) | null
         if (version?.created_by) {
           const { data: versionUserData } = await supabase
             .from('users')
             .select('id, name, email')
             .eq('id', version.created_by)
             .single()
-          versionCreatedByUser = versionUserData
+          versionCreatedByUser = (versionUserData ?? null) as VersionAuthor
         }
 
         console.log('[getProtocolById] Protocol fetched successfully with version')
@@ -1543,7 +1555,12 @@ export const dataService = {
           data: {
             ...typedProtocol,
             created_by_user: createdByUser,
-            currentVersion: version ? { ...version, created_by_user: versionCreatedByUser } : null
+            currentVersion: version
+              ? ({
+                  ...version,
+                  created_by_user: versionCreatedByUser ?? undefined
+                } as ProtocolVersion & { created_by_user?: VersionAuthor })
+              : null
           }
         }
       }

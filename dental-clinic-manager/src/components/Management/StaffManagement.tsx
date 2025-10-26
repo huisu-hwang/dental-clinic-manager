@@ -78,7 +78,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       if (error) {
         console.error('Error fetching staff:', error)
       } else {
-        setStaff(data as UserProfile[] || [])
+        setStaff((data as UserProfile[] | null) ?? [])
       }
     } catch (err) {
       console.error('Error:', err)
@@ -107,7 +107,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
         setJoinRequests([])
       } else {
         // users 테이블 데이터를 JoinRequest 형식으로 직접 사용
-        setJoinRequests(data || [])
+        setJoinRequests((data as JoinRequest[] | null) ?? [])
       }
     } catch (err) {
       console.log('Join requests feature not available')

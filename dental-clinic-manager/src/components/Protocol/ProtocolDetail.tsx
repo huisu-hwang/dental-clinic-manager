@@ -50,7 +50,7 @@ export default function ProtocolDetail({
         setError(result.error)
         setProtocol(null)
       } else {
-        setProtocol(result.data || null)
+        setProtocol((result.data as Protocol | null) ?? null)
       }
     } catch (err) {
       console.error('프로토콜 조회 오류:', err)
@@ -66,7 +66,7 @@ export default function ProtocolDetail({
     if (result.error) {
       console.error('Failed to fetch versions:', result.error)
     } else {
-      setVersions(result.data || [])
+      setVersions((result.data as ProtocolVersion[] | undefined) ?? [])
     }
   }, [protocolId])
 

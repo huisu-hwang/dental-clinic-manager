@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { getSupabase } from '@/lib/supabase'
 import { dataService } from '@/lib/dataService'
 import type { Permission } from '@/types/permissions'
@@ -75,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Supabase 세션 확인 - 타임아웃 추가
             console.log('[AuthContext] Checking Supabase session...')
 
-            let session = null;
+            let session: Session | null = null;
             try {
               const sessionPromise = supabase.auth.getSession()
               const timeoutPromise = new Promise((_, reject) =>
@@ -171,7 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             // Auth 상태 변경 리스너 설정
-            const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            const { data: authListener } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
               console.log('Auth state changed:', event)
 
               // 로그아웃 중이면 무시

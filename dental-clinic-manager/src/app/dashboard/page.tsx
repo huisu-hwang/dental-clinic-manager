@@ -408,7 +408,13 @@ export default function DashboardPage() {
 
           {/* 진료 프로토콜 */}
           {activeTab === 'protocols' && (
-            <ProtocolManagement currentUser={user} />
+            user ? (
+              <ProtocolManagement currentUser={user} />
+            ) : (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.
+              </div>
+            )
           )}
 
           {/* 설정 */}
