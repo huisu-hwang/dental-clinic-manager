@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
@@ -43,8 +43,18 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
   const [hasExistingData, setHasExistingData] = useState(false)
   const isReadOnly = hasExistingData ? !canEdit : !canCreate
 
+  // 폼 데이터 리셋
+  const resetFormData = useCallback(() => {
+    setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
+    setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
+    setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
+    setRecallCount(0)
+    setRecallBookingCount(0)
+    setSpecialNotes('')
+  }, [])
+
   // 날짜별 데이터 로드
-  const loadDataForDate = async (date: string) => {
+  const loadDataForDate = useCallback(async (date: string) => {
     console.log('[DailyInputForm] loadDataForDate called with:', date)
     if (!date) {
       console.log('[DailyInputForm] No date provided, skipping load')
@@ -146,17 +156,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
       console.log('[DailyInputForm] Setting loading to false')
       setLoading(false)
     }
-  }
-
-  // 폼 데이터 리셋
-  const resetFormData = () => {
-    setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
-    setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
-    setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
-    setRecallCount(0)
-    setRecallBookingCount(0)
-    setSpecialNotes('')
-  }
+  }, [currentUser?.clinic_id, resetFormData])
 
   // 날짜 변경 핸들러
   const handleDateChange = (newDate: string) => {
@@ -170,16 +170,16 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
   useEffect(() => {
     console.log('[DailyInputForm] Loading data for date:', reportDate)
     loadDataForDate(reportDate)
-  }, [reportDate]) // reportDate가 변경될 때마다 실행
+  }, [reportDate, loadDataForDate]) // reportDate가 변경될 때마다 실행
 
-  // 컴포넌트가 다시 마운트될 때 강제 리로드
   useEffect(() => {
-    console.log('[DailyInputForm] Component mounted, forcing data reload')
-    loadDataForDate(reportDate)
-    return () => {
-      console.log('[DailyInputForm] Component unmounting')
+    if (!currentUser?.clinic_id) {
+      return
     }
-  }, []) // 컴포넌트 마운트 시 한 번만 실행
+
+    console.log('[DailyInputForm] Detected clinic change, reloading data for', reportDate)
+    loadDataForDate(reportDate)
+  }, [currentUser?.clinic_id, loadDataForDate, reportDate])
 
   const handleSave = async (e?: React.MouseEvent) => {
     // 이벤트 버블링 방지

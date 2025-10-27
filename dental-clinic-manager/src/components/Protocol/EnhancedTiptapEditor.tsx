@@ -1,7 +1,7 @@
 'use client'
 
 import { useEditor, EditorContent } from '@tiptap/react'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Youtube from '@tiptap/extension-youtube'
@@ -13,6 +13,9 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
 import { TextAlign } from '@tiptap/extension-text-align'
+import ListItem from '@tiptap/extension-list-item'
+import BulletList from '@tiptap/extension-bullet-list'
+import OrderedList from '@tiptap/extension-ordered-list'
 import { useDropzone } from 'react-dropzone'
 import { mediaService } from '@/lib/mediaService'
 import {
@@ -25,7 +28,6 @@ import {
   VideoCameraIcon,
   TableCellsIcon,
   ExclamationTriangleIcon,
-  LinkIcon,
   ArrowUturnLeftIcon,
   ArrowUturnRightIcon
 } from '@heroicons/react/24/outline'
@@ -51,6 +53,26 @@ export default function EnhancedTiptapEditor({
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3]
+        },
+        bulletList: false,
+        orderedList: false,
+        listItem: false
+      }),
+      ListItem.configure({
+        HTMLAttributes: {
+          class: 'protocol-list-item'
+        }
+      }),
+      BulletList.configure({
+        keepMarks: true,
+        HTMLAttributes: {
+          class: 'protocol-bullet-list list-disc pl-6'
+        }
+      }),
+      OrderedList.configure({
+        keepMarks: true,
+        HTMLAttributes: {
+          class: 'protocol-ordered-list list-decimal pl-6'
         }
       }),
       TextAlign.configure({
@@ -116,7 +138,7 @@ export default function EnhancedTiptapEditor({
       attributes: {
         class: 'prose prose-sm max-w-none focus:outline-none min-h-[400px] p-6 text-left'
       },
-      handleDrop: (view, event, slice, moved) => {
+      handleDrop: (view, event, _slice, moved) => {
         if (!moved && event.dataTransfer?.files?.length) {
           const file = event.dataTransfer.files[0]
           if (file.type.startsWith('image/')) {
@@ -126,7 +148,7 @@ export default function EnhancedTiptapEditor({
         }
         return false
       },
-      handlePaste: (view, event, slice) => {
+      handlePaste: (view, event, _slice) => {
         const items = event.clipboardData?.items
         if (items) {
           for (const item of items) {
@@ -143,6 +165,12 @@ export default function EnhancedTiptapEditor({
       }
     }
   })
+
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content, { emitUpdate: false })
+    }
+  }, [content, editor])
 
   // 이미지 업로드 핸들러
   const handleImageUpload = useCallback(async (file: File) => {
