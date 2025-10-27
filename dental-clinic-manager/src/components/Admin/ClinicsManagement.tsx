@@ -222,7 +222,7 @@ export default function ClinicsManagement() {
           enterprise: 500000
         }
 
-        monthlyRevenue = clinicsForRevenue.reduce((total, clinic: any) => {
+        monthlyRevenue = clinicsForRevenue.reduce((total: number, clinic: any) => {
           const tier = clinic.subscription_tier || 'basic'
           return total + (tierPrices[tier as keyof typeof tierPrices] || 0)
         }, 0)

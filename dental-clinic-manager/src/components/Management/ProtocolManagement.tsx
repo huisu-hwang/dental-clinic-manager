@@ -39,6 +39,7 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
   const [showEditForm, setShowEditForm] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null)
+  const [editingProtocol, setEditingProtocol] = useState<Protocol | null>(null)
 
   const canEdit = hasPermission('protocol_create') || hasPermission('protocol_edit')
 
@@ -66,7 +67,7 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
       if (result.error) {
         setError(result.error)
       } else {
-        setProtocols(result.data || [])
+        setProtocols((result.data as Protocol[] | undefined) ?? [])
       }
     } catch (err) {
       setError('프로토콜을 불러오는 중 오류가 발생했습니다.')
@@ -82,7 +83,7 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
       if (result.error) {
         console.error('Error fetching categories:', result.error)
       } else {
-        setCategories(result.data || [])
+        setCategories((result.data as ProtocolCategory[] | undefined) ?? [])
       }
     } catch (err) {
       console.error('Error fetching categories:', err)
@@ -108,15 +109,16 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
   }
 
   const handleUpdateProtocol = async (formData: ProtocolFormData) => {
-    if (!selectedProtocol) return
+    if (!editingProtocol) return
 
-    const result = await dataService.updateProtocol(selectedProtocol.id, formData)
+    const result = await dataService.updateProtocol(editingProtocol.id, formData)
     if (result.error) {
       throw new Error(result.error)
     }
     setSuccess('프로토콜이 수정되었습니다.')
     setShowEditForm(false)
     setSelectedProtocol(null)
+    setEditingProtocol(null)
     fetchProtocols()
     setTimeout(() => setSuccess(''), 3000)
   }
@@ -124,6 +126,7 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
   const handleDeleteProtocol = (protocolId: string) => {
     setShowDetail(false)
     setSelectedProtocol(null)
+    setEditingProtocol(null)
     setSuccess('프로토콜이 삭제되었습니다.')
     fetchProtocols()
     setTimeout(() => setSuccess(''), 3000)
@@ -134,10 +137,32 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
     setShowDetail(true)
   }
 
-  const handleEditProtocol = (protocol: Protocol) => {
-    setSelectedProtocol(protocol)
+  const handleEditProtocol = async (protocol: Protocol) => {
     setShowDetail(false)
-    setShowEditForm(true)
+
+    if (protocol.currentVersion?.steps && protocol.currentVersion.steps.length > 0) {
+      setEditingProtocol(protocol)
+      setShowEditForm(true)
+      return
+    }
+
+    setError('')
+    try {
+      const result = await dataService.getProtocolById(protocol.id)
+      if (result.error) {
+        setError(result.error)
+        setEditingProtocol(null)
+        setShowEditForm(false)
+      } else {
+        setEditingProtocol((result.data as Protocol | null) ?? null)
+        setShowEditForm(true)
+      }
+    } catch (err) {
+      console.error('Failed to load protocol for editing:', err)
+      setError(err instanceof Error ? err.message : '프로토콜 정보를 불러오지 못했습니다.')
+      setEditingProtocol(null)
+      setShowEditForm(false)
+    }
   }
 
   const getStatusLabel = (status: string) => {
@@ -374,24 +399,25 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
       )}
 
       {/* Edit Protocol Modal */}
-      {showEditForm && selectedProtocol && (
+      {showEditForm && editingProtocol && (
         <ProtocolForm
           mode="edit"
           initialData={{
-            id: selectedProtocol.id,
-            title: selectedProtocol.title,
-            category_id: selectedProtocol.category_id,
-            content: selectedProtocol.currentVersion?.content || '',
-            status: selectedProtocol.status,
-            tags: selectedProtocol.tags || [],
+            id: editingProtocol.id,
+            title: editingProtocol.title,
+            category_id: editingProtocol.category_id,
+            content: editingProtocol.currentVersion?.content || '',
+            status: editingProtocol.status,
+            tags: editingProtocol.tags || [],
             change_summary: '',
             change_type: 'minor',
-            steps: []
+            steps: editingProtocol.currentVersion?.steps || []
           }}
           onSubmit={handleUpdateProtocol}
           onCancel={() => {
             setShowEditForm(false)
             setSelectedProtocol(null)
+            setEditingProtocol(null)
           }}
         />
       )}

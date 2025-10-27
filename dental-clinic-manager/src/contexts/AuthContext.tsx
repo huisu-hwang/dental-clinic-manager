@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { getSupabase } from '@/lib/supabase'
 import { dataService } from '@/lib/dataService'
 import type { Permission } from '@/types/permissions'
@@ -75,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Supabase 세션 확인 - 타임아웃 추가
             console.log('[AuthContext] Checking Supabase session...')
 
-            let session = null;
+            let session: Session | null = null;
             try {
               const sessionPromise = supabase.auth.getSession()
               const timeoutPromise = new Promise((_, reject) =>
@@ -149,6 +150,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
 
                 setUser(result.data)
+                if (result.data.clinic_id) {
+                  dataService.setCachedClinicId(result.data.clinic_id)
+                }
               } else {
                 console.log('AuthContext: 사용자 프로필 로드 실패')
                 // 프로필이 없으면 로그아웃
@@ -171,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             // Auth 상태 변경 리스너 설정
-            const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            const { data: authListener } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
               console.log('Auth state changed:', event)
 
               // 로그아웃 중이면 무시
@@ -192,12 +196,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   const result = await dataService.getUserProfileById(session.user.id)
                   if (result.success && result.data) {
                     setUser(result.data)
+                    if (result.data.clinic_id) {
+                      dataService.setCachedClinicId(result.data.clinic_id)
+                    }
                   }
                 }
               } else if (event === 'SIGNED_OUT') {
                 setUser(null)
                 localStorage.removeItem('dental_auth')
                 localStorage.removeItem('dental_user')
+                dataService.clearCachedClinicId()
               }
             })
 
@@ -275,6 +283,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(masterAdmin)
       localStorage.setItem('dental_auth', 'true')
       localStorage.setItem('dental_user', JSON.stringify(masterAdmin))
+      dataService.clearCachedClinicId()
       return
     }
 
@@ -289,11 +298,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData)
     localStorage.setItem('dental_auth', 'true')
     localStorage.setItem('dental_user', JSON.stringify(userData))
+    if (userData.clinic_id) {
+      dataService.setCachedClinicId(userData.clinic_id)
+    }
   }
 
   const updateUser = (updatedUserData: any) => {
     setUser(updatedUserData)
     localStorage.setItem('dental_user', JSON.stringify(updatedUserData))
+    if (updatedUserData?.clinic_id) {
+      dataService.setCachedClinicId(updatedUserData.clinic_id)
+    }
   }
 
   const logout = async () => {
@@ -307,6 +322,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('dental_auth')
     localStorage.removeItem('dental_user')
     localStorage.removeItem('dental_remember')
+    dataService.clearCachedClinicId()
 
     // 로그아웃 중임을 localStorage에도 저장
     localStorage.setItem('dental_logging_out', 'true')
