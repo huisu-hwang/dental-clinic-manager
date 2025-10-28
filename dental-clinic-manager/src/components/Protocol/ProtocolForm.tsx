@@ -27,13 +27,6 @@ export default function ProtocolForm({
   onCancel,
   mode
 }: ProtocolFormProps) {
-  const isMountedRef = useRef(true)
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
-
   const resolvedInitialSteps = useMemo(() => {
     if (initialData?.steps && initialData.steps.length > 0) {
       return initialData.steps
@@ -109,40 +102,29 @@ export default function ProtocolForm({
       const { data: session } = await dataService.getSession()
 
       if (!session?.clinicId) {
-        if (isMountedRef.current) {
-          setError('사용자 정보를 불러올 수 없습니다. 다시 로그인해주세요.')
-        }
+        setError('사용자 정보를 불러올 수 없습니다. 다시 로그인해주세요.')
         return
       }
 
-      if (isMountedRef.current) {
-        setClinicId(session.clinicId)
-      }
+      setClinicId(session.clinicId)
 
       // 클리닉 ID로 카테고리 가져오기
       const result = await dataService.getProtocolCategories(session.clinicId)
 
       if (result.error) {
-        if (isMountedRef.current) {
-          setError(`카테고리를 불러오는데 실패했습니다: ${result.error}`)
-        }
+        setError(`카테고리를 불러오는데 실패했습니다: ${result.error}`)
       } else {
         const categoryList = (result.data as ProtocolCategory[] | undefined) ?? []
+        setCategories(categoryList)
 
-        if (isMountedRef.current) {
-          setCategories(categoryList)
-
-          // 카테고리가 없으면 안내 메시지
-          if (categoryList.length === 0) {
-            setError('프로토콜 카테고리가 없습니다. 관리자에게 문의하세요.')
-          }
+        // 카테고리가 없으면 안내 메시지
+        if (categoryList.length === 0) {
+          setError('프로토콜 카테고리가 없습니다. 관리자에게 문의하세요.')
         }
       }
     } catch (error) {
       console.error('[ProtocolForm] Error fetching initial data:', error)
-      if (isMountedRef.current) {
-        setError('데이터를 불러오는 중 오류가 발생했습니다.')
-      }
+      setError('데이터를 불러오는 중 오류가 발생했습니다.')
     }
   }
 
@@ -187,14 +169,10 @@ export default function ProtocolForm({
       shouldClose = mode === 'create'
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.'
-      if (isMountedRef.current) {
-        setError(errorMessage)
-      }
+      setError(errorMessage)
       console.error('프로토콜 저장 오류:', err)
     } finally {
-      if (isMountedRef.current) {
-        setLoading(false)
-      }
+      setLoading(false)
       if (shouldClose) {
         onCancel()
       }
