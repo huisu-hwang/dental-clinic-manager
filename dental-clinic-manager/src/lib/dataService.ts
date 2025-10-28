@@ -1805,6 +1805,7 @@ export const dataService = {
         .from('protocols') as any)
         .update({ current_version_id: version.id })
         .eq('id', protocol.id)
+        .eq('clinic_id', clinicId)
 
       if (updateError) {
         console.error('[createProtocol] Update error:', updateError)
