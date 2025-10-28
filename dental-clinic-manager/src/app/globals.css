@@ -171,3 +171,49 @@ body {
   margin-bottom: 0.5rem !important;
   color: #475569 !important;
 }
+
+/* Nested List Styles for Editor and View Mode */
+.ProseMirror ul,
+.ProseMirror ol,
+.prose ul,
+.prose ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror ul ul,
+.ProseMirror ol ul,
+.prose ul ul,
+.prose ol ul {
+  list-style-type: circle;
+  padding-left: 2rem;
+}
+
+.ProseMirror ul ul ul,
+.ProseMirror ol ul ul,
+.prose ul ul ul,
+.prose ol ul ul {
+  list-style-type: square;
+  padding-left: 2rem;
+}
+
+.ProseMirror ol ol,
+.ProseMirror ul ol,
+.prose ol ol,
+.prose ul ol {
+  list-style-type: lower-alpha;
+  padding-left: 2rem;
+}
+
+.ProseMirror ol ol ol,
+.ProseMirror ul ol ol,
+.prose ol ol ol,
+.prose ul ol ol {
+  list-style-type: lower-roman;
+  padding-left: 2rem;
+}
+
+.ProseMirror li,
+.prose li {
+  margin: 0.25rem 0;
+}
