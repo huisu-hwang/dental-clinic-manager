@@ -72,6 +72,8 @@ export const getSupabase = () => {
           detectSessionInUrl: true,
           storage: typeof window !== 'undefined' ? window.localStorage : undefined,
           storageKey: 'sb-beahjntkmkfhpcbhfnrr-auth-token',
+          // Set session timeout to 4 hours (14400 seconds)
+          flowType: 'pkce',
         }
       })
       console.log('[Supabase] Client created successfully')
