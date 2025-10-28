@@ -181,6 +181,13 @@ body {
   margin: 0.5rem 0;
 }
 
+/* Bullet List Level 1: Filled circle (●) */
+.ProseMirror ul,
+.prose ul {
+  list-style-type: disc;
+}
+
+/* Bullet List Level 2: Empty circle (○) */
 .ProseMirror ul ul,
 .ProseMirror ol ul,
 .prose ul ul,
@@ -189,6 +196,7 @@ body {
   padding-left: 2rem;
 }
 
+/* Bullet List Level 3: Square (■) */
 .ProseMirror ul ul ul,
 .ProseMirror ol ul ul,
 .prose ul ul ul,
@@ -197,20 +205,64 @@ body {
   padding-left: 2rem;
 }
 
+/* Ordered List Level 1: 1. 2. 3. */
+.ProseMirror ol,
+.prose ol {
+  list-style-type: decimal;
+}
+
+/* Ordered List Level 2: 1) 2) 3) */
 .ProseMirror ol ol,
 .ProseMirror ul ol,
 .prose ol ol,
 .prose ul ol {
-  list-style-type: lower-alpha;
+  list-style-type: none;
+  counter-reset: level2;
   padding-left: 2rem;
 }
 
+.ProseMirror ol ol > li,
+.ProseMirror ul ol > li,
+.prose ol ol > li,
+.prose ul ol > li {
+  counter-increment: level2;
+  position: relative;
+}
+
+.ProseMirror ol ol > li::before,
+.ProseMirror ul ol > li::before,
+.prose ol ol > li::before,
+.prose ul ol > li::before {
+  content: counter(level2) ") ";
+  position: absolute;
+  left: -1.5rem;
+}
+
+/* Ordered List Level 3: (1) (2) (3) */
 .ProseMirror ol ol ol,
 .ProseMirror ul ol ol,
 .prose ol ol ol,
 .prose ul ol ol {
-  list-style-type: lower-roman;
+  list-style-type: none;
+  counter-reset: level3;
   padding-left: 2rem;
+}
+
+.ProseMirror ol ol ol > li,
+.ProseMirror ul ol ol > li,
+.prose ol ol ol > li,
+.prose ul ol ol > li {
+  counter-increment: level3;
+  position: relative;
+}
+
+.ProseMirror ol ol ol > li::before,
+.ProseMirror ul ol ol > li::before,
+.prose ol ol ol > li::before,
+.prose ul ol ol > li::before {
+  content: "(" counter(level3) ") ";
+  position: absolute;
+  left: -2rem;
 }
 
 .ProseMirror li,
