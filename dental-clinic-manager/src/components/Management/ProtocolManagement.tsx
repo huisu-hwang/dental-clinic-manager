@@ -8,7 +8,10 @@ import {
   MagnifyingGlassIcon,
   ClockIcon,
   TagIcon,
-  FolderIcon
+  FolderIcon,
+  EyeIcon,
+  PencilIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline'
 import { dataService } from '@/lib/dataService'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -130,6 +133,29 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
     setSuccess('프로토콜이 삭제되었습니다.')
     fetchProtocols()
     setTimeout(() => setSuccess(''), 3000)
+  }
+
+  const handleDeleteProtocolDirect = async (protocol: Protocol, e: React.MouseEvent) => {
+    e.stopPropagation() // 카드 클릭 이벤트 전파 방지
+
+    if (!window.confirm(`"${protocol.title}" 프로토콜을 삭제하시겠습니까?`)) {
+      return
+    }
+
+    try {
+      const result = await dataService.deleteProtocol(protocol.id)
+      if (result.error) {
+        setError(result.error)
+        setTimeout(() => setError(''), 3000)
+      } else {
+        setSuccess('프로토콜이 삭제되었습니다.')
+        fetchProtocols()
+        setTimeout(() => setSuccess(''), 3000)
+      }
+    } catch (err) {
+      setError('프로토콜 삭제 중 오류가 발생했습니다.')
+      setTimeout(() => setError(''), 3000)
+    }
   }
 
   const handleViewProtocol = (protocol: Protocol) => {
@@ -331,11 +357,14 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
           {protocols.map((protocol) => (
             <div
               key={protocol.id}
-              onClick={() => handleViewProtocol(protocol)}
-              className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
+              className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
+              <div className="flex items-start justify-between gap-4">
+                {/* 왼쪽: 프로토콜 정보 (클릭 가능) */}
+                <div
+                  className="flex-1 cursor-pointer"
+                  onClick={() => handleViewProtocol(protocol)}
+                >
                   <div className="flex items-center space-x-3 mb-2">
                     <h3 className="text-lg font-semibold text-slate-800 hover:text-blue-600">
                       {protocol.title}
@@ -381,6 +410,41 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
                         </span>
                       ))}
                     </div>
+                  )}
+                </div>
+
+                {/* 오른쪽: 액션 버튼들 */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleViewProtocol(protocol)
+                    }}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                    title="보기"
+                  >
+                    <EyeIcon className="h-5 w-5" />
+                  </button>
+                  {canEdit && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditProtocol(protocol)
+                        }}
+                        className="p-2 text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+                        title="수정"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteProtocolDirect(protocol, e)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        title="삭제"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

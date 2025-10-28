@@ -72,15 +72,24 @@ export const getSupabase = () => {
           detectSessionInUrl: true,
           storage: typeof window !== 'undefined' ? window.localStorage : undefined,
           storageKey: 'sb-beahjntkmkfhpcbhfnrr-auth-token',
+          // Set session timeout to 4 hours (14400 seconds)
+          flowType: 'pkce',
         }
       })
       console.log('[Supabase] Client created successfully')
 
-      // Refresh token 에러 핸들러 설정
+      // Auth state change 에러 핸들러 설정
       if (typeof window !== 'undefined') {
         supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+          console.log('[Supabase] Auth state change:', event)
+
           if (event === 'TOKEN_REFRESHED') {
             console.log('[Supabase] Token refreshed successfully')
+          } else if (event === 'SIGNED_OUT') {
+            console.log('[Supabase] User signed out')
+            // 로컬 스토리지 정리
+            localStorage.removeItem('dental_auth')
+            localStorage.removeItem('dental_user')
           }
         })
       }

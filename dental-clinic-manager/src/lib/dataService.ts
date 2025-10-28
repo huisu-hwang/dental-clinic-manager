@@ -53,6 +53,44 @@ const saveProtocolSteps = async (
   }
 }
 
+// 세션 만료 확인 및 처리 함수
+async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Promise<boolean> {
+  if (!supabase) return false
+
+  try {
+    // 세션 갱신 시도
+    console.log('[handleSessionError] Attempting to refresh session...')
+    const { data, error } = await supabase.auth.refreshSession()
+
+    if (error) {
+      console.error('[handleSessionError] Session refresh failed:', error)
+      // 세션 갱신 실패 - 로그아웃 처리
+      console.log('[handleSessionError] Clearing session and redirecting to login')
+      localStorage.removeItem('dental_auth')
+      localStorage.removeItem('dental_user')
+      const keys = Object.keys(localStorage)
+      keys.forEach(key => {
+        if (key.startsWith('sb-')) {
+          localStorage.removeItem(key)
+        }
+      })
+
+      // 사용자에게 알림 후 로그인 페이지로 이동
+      if (typeof window !== 'undefined') {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+        window.location.href = '/'
+      }
+      return false
+    }
+
+    console.log('[handleSessionError] Session refreshed successfully')
+    return true
+  } catch (error) {
+    console.error('[handleSessionError] Unexpected error:', error)
+    return false
+  }
+}
+
 // 현재 로그인한 사용자의 clinic_id를 가져오는 헬퍼 함수
 async function getCurrentClinicId(): Promise<string | null> {
   try {
@@ -88,6 +126,15 @@ async function getCurrentClinicId(): Promise<string | null> {
 
     if (authError) {
       console.error('[getCurrentClinicId] Auth error:', authError)
+      // 세션 만료 에러인 경우 갱신 시도
+      if (authError.message?.includes('session') || authError.message?.includes('token') || authError.message?.includes('JWT')) {
+        console.log('[getCurrentClinicId] Session error detected, attempting to refresh...')
+        const refreshed = await handleSessionError(supabase)
+        if (refreshed) {
+          // 세션이 갱신되었으면 다시 시도
+          return getCurrentClinicId()
+        }
+      }
       return null
     }
 
@@ -112,6 +159,16 @@ async function getCurrentClinicId(): Promise<string | null> {
       console.error('[getCurrentClinicId] Error message:', error.message)
       console.error('[getCurrentClinicId] Error details:', error.details)
       console.error('[getCurrentClinicId] Error hint:', error.hint)
+
+      // 인증 관련 에러인 경우 세션 갱신 시도
+      if (error.code === 'PGRST301' || error.message?.includes('JWT') || error.message?.includes('session')) {
+        console.log('[getCurrentClinicId] Auth error detected in query, attempting to refresh...')
+        const refreshed = await handleSessionError(supabase)
+        if (refreshed) {
+          // 세션이 갱신되었으면 다시 시도
+          return getCurrentClinicId()
+        }
+      }
       return null
     }
 
@@ -337,7 +394,11 @@ export const dataService = {
         void backfillClinicIds(supabase, 'happy_call_logs', targetClinicId, happyCallIdsToBackfill)
       }
 
-      const hasData = normalizedDailyReport.length > 0
+      const hasData =
+        normalizedDailyReport.length > 0 ||
+        normalizedConsultLogs.length > 0 ||
+        normalizedGiftLogs.length > 0 ||
+        normalizedHappyCallLogs.length > 0
       console.log('[DataService] Data fetch complete. Has data:', hasData)
 
       return {
@@ -1744,6 +1805,7 @@ export const dataService = {
         .from('protocols') as any)
         .update({ current_version_id: version.id })
         .eq('id', protocol.id)
+        .eq('clinic_id', clinicId)
 
       if (updateError) {
         console.error('[createProtocol] Update error:', updateError)

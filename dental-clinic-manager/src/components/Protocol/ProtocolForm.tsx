@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import ProtocolStepsEditor from './ProtocolStepsEditor'
 import SmartTagInput from './SmartTagInput'
@@ -97,18 +97,34 @@ export default function ProtocolForm({
   }
 
   const fetchInitialData = async () => {
-    // 카테고리 가져오기
-    const result = await dataService.getProtocolCategories()
-    if (result.error) {
-      setError('카테고리를 불러오는데 실패했습니다.')
-    } else {
-      setCategories((result.data as ProtocolCategory[] | undefined) ?? [])
-    }
+    try {
+      // 먼저 세션에서 클리닉 ID 가져오기
+      const { data: session } = await dataService.getSession()
 
-    // 현재 클리닉 ID 가져오기 (세션에서)
-    const { data: session } = await dataService.getSession()
-    if (session?.clinicId) {
+      if (!session?.clinicId) {
+        setError('사용자 정보를 불러올 수 없습니다. 다시 로그인해주세요.')
+        return
+      }
+
       setClinicId(session.clinicId)
+
+      // 클리닉 ID로 카테고리 가져오기
+      const result = await dataService.getProtocolCategories(session.clinicId)
+
+      if (result.error) {
+        setError(`카테고리를 불러오는데 실패했습니다: ${result.error}`)
+      } else {
+        const categoryList = (result.data as ProtocolCategory[] | undefined) ?? []
+        setCategories(categoryList)
+
+        // 카테고리가 없으면 안내 메시지
+        if (categoryList.length === 0) {
+          setError('프로토콜 카테고리가 없습니다. 관리자에게 문의하세요.')
+        }
+      }
+    } catch (error) {
+      console.error('[ProtocolForm] Error fetching initial data:', error)
+      setError('데이터를 불러오는 중 오류가 발생했습니다.')
     }
   }
 
@@ -132,6 +148,7 @@ export default function ProtocolForm({
 
     setLoading(true)
     setError('')
+    let shouldClose = false
 
     try {
       // 태그 사용 통계 업데이트
@@ -149,12 +166,16 @@ export default function ProtocolForm({
         content: stepsHtml,
         steps: formData.steps
       })
+      shouldClose = mode === 'create'
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.'
       setError(errorMessage)
       console.error('프로토콜 저장 오류:', err)
     } finally {
       setLoading(false)
+      if (shouldClose) {
+        onCancel()
+      }
     }
   }
 

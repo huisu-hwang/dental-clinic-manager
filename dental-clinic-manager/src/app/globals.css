@@ -115,3 +115,157 @@ body {
   background-color: rgba(59, 130, 246, 0.1);
   border: 2px dashed #3b82f6;
 }
+
+/* Protocol Editor Headings */
+.protocol-editor-content h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 2.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: #1e293b;
+}
+
+.protocol-editor-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 2rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: #334155;
+}
+
+.protocol-editor-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.75rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #475569;
+}
+
+/* Protocol View Mode Headings (prose class) */
+.prose h1 {
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  line-height: 2.5rem !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 1rem !important;
+  color: #1e293b !important;
+}
+
+.prose h2 {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  line-height: 2rem !important;
+  margin-top: 1.25rem !important;
+  margin-bottom: 0.75rem !important;
+  color: #334155 !important;
+}
+
+.prose h3 {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  line-height: 1.75rem !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+  color: #475569 !important;
+}
+
+/* Nested List Styles for Editor and View Mode */
+.ProseMirror ul,
+.ProseMirror ol,
+.prose ul,
+.prose ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+/* Bullet List Level 1: Filled circle (●) */
+.ProseMirror ul,
+.prose ul {
+  list-style-type: disc;
+}
+
+/* Bullet List Level 2: Empty circle (○) */
+.ProseMirror ul ul,
+.ProseMirror ol ul,
+.prose ul ul,
+.prose ol ul {
+  list-style-type: circle;
+  padding-left: 2rem;
+}
+
+/* Bullet List Level 3: Square (■) */
+.ProseMirror ul ul ul,
+.ProseMirror ol ul ul,
+.prose ul ul ul,
+.prose ol ul ul {
+  list-style-type: square;
+  padding-left: 2rem;
+}
+
+/* Ordered List Level 1: 1. 2. 3. */
+.ProseMirror ol,
+.prose ol {
+  list-style-type: decimal;
+}
+
+/* Ordered List Level 2: 1) 2) 3) */
+.ProseMirror ol ol,
+.ProseMirror ul ol,
+.prose ol ol,
+.prose ul ol {
+  list-style-type: none;
+  counter-reset: level2;
+  padding-left: 2rem;
+}
+
+.ProseMirror ol ol > li,
+.ProseMirror ul ol > li,
+.prose ol ol > li,
+.prose ul ol > li {
+  counter-increment: level2;
+  position: relative;
+}
+
+.ProseMirror ol ol > li::before,
+.ProseMirror ul ol > li::before,
+.prose ol ol > li::before,
+.prose ul ol > li::before {
+  content: counter(level2) ") ";
+  position: absolute;
+  left: -1.5rem;
+}
+
+/* Ordered List Level 3: (1) (2) (3) */
+.ProseMirror ol ol ol,
+.ProseMirror ul ol ol,
+.prose ol ol ol,
+.prose ul ol ol {
+  list-style-type: none;
+  counter-reset: level3;
+  padding-left: 2rem;
+}
+
+.ProseMirror ol ol ol > li,
+.ProseMirror ul ol ol > li,
+.prose ol ol ol > li,
+.prose ul ol ol > li {
+  counter-increment: level3;
+  position: relative;
+}
+
+.ProseMirror ol ol ol > li::before,
+.ProseMirror ul ol ol > li::before,
+.prose ol ol ol > li::before,
+.prose ul ol ol > li::before {
+  content: "(" counter(level3) ") ";
+  position: absolute;
+  left: -2rem;
+}
+
+.ProseMirror li,
+.prose li {
+  margin: 0.25rem 0;
+}

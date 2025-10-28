@@ -5,6 +5,7 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { getSupabase } from '@/lib/supabase'
 import { dataService } from '@/lib/dataService'
 import type { Permission } from '@/types/permissions'
+import { useActivityTracker } from '@/hooks/useActivityTracker'
 
 export interface UserProfile {
   id: string
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [showInactivityModal, setShowInactivityModal] = useState(false)
 
   useEffect(() => {
     let subscription: any = null
@@ -206,6 +208,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 localStorage.removeItem('dental_auth')
                 localStorage.removeItem('dental_user')
                 dataService.clearCachedClinicId()
+              } else if (event === 'TOKEN_REFRESHED') {
+                console.log('[AuthContext] Token refreshed successfully')
+              } else if (event === 'USER_UPDATED') {
+                console.log('[AuthContext] User updated')
               }
             })
 
@@ -311,8 +317,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const logout = async () => {
+  const logout = async (showInactivityMessage = false) => {
     console.log('Logout 시작...')
+
+    // Show inactivity modal if requested
+    if (showInactivityMessage) {
+      setShowInactivityModal(true)
+      // Wait for user to see the message
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
 
     // 로그아웃 중 플래그 설정
     setIsLoggingOut(true)
@@ -348,9 +361,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 약간의 지연 후 리디렉션 (상태 업데이트가 완료되도록)
     setTimeout(() => {
       localStorage.removeItem('dental_logging_out')
+      setShowInactivityModal(false)
       window.location.href = '/'
-    }, 100)
+    }, showInactivityMessage ? 2000 : 100)
   }
+
+  // Auto logout after 4 hours of inactivity
+  const handleInactivity = () => {
+    console.log('[AuthContext] User inactive for 4 hours, logging out...')
+    logout(true)
+  }
+
+  // Track user activity (only when user is logged in)
+  useActivityTracker({
+    onInactive: handleInactivity,
+    inactivityTimeout: 4 * 60 * 60 * 1000, // 4 hours in milliseconds
+    enabled: !!user && !loading && !isLoggingOut
+  })
 
   const isAuthenticated = Boolean(user)
 
@@ -376,6 +403,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading
     }}>
       {children}
+
+      {/* Inactivity Modal */}
+      {showInactivityModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="mb-4">
+                <svg
+                  className="mx-auto h-12 w-12 text-amber-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">
+                자동 로그아웃
+              </h3>
+              <p className="text-slate-600 mb-6">
+                4시간 동안 아무런 동작이 없어서<br />
+                자동으로 로그아웃 되었습니다.
+              </p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+              <p className="text-sm text-slate-500 mt-4">
+                로그인 페이지로 이동 중...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </AuthContext.Provider>
   )
 }
