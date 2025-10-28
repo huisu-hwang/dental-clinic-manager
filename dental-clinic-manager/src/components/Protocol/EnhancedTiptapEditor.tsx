@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import { useCallback, useEffect } from 'react'
 import StarterKit from '@tiptap/starter-kit'
+import Heading from '@tiptap/extension-heading'
 import Image from '@tiptap/extension-image'
 import Youtube from '@tiptap/extension-youtube'
 import { Table } from '@tiptap/extension-table'
@@ -51,12 +52,16 @@ export default function EnhancedTiptapEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3]
-        },
+        heading: false, // Disable default heading
         bulletList: false,
         orderedList: false,
         listItem: false
+      }),
+      Heading.configure({
+        levels: [1, 2, 3],
+        HTMLAttributes: {
+          class: 'protocol-heading'
+        }
       }),
       ListItem.configure({
         HTMLAttributes: {
@@ -136,7 +141,7 @@ export default function EnhancedTiptapEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[400px] p-6 text-left'
+        class: 'prose prose-sm max-w-none focus:outline-none min-h-[400px] p-6 text-left protocol-editor-content'
       },
       handleDrop: (view, event, _slice, moved) => {
         if (!moved && event.dataTransfer?.files?.length) {
