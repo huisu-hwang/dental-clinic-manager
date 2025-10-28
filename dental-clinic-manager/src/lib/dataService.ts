@@ -394,7 +394,11 @@ export const dataService = {
         void backfillClinicIds(supabase, 'happy_call_logs', targetClinicId, happyCallIdsToBackfill)
       }
 
-      const hasData = normalizedDailyReport.length > 0
+      const hasData =
+        normalizedDailyReport.length > 0 ||
+        normalizedConsultLogs.length > 0 ||
+        normalizedGiftLogs.length > 0 ||
+        normalizedHappyCallLogs.length > 0
       console.log('[DataService] Data fetch complete. Has data:', hasData)
 
       return {

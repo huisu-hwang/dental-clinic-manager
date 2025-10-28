@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import ProtocolStepsEditor from './ProtocolStepsEditor'
 import SmartTagInput from './SmartTagInput'
@@ -27,6 +27,13 @@ export default function ProtocolForm({
   onCancel,
   mode
 }: ProtocolFormProps) {
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
   const resolvedInitialSteps = useMemo(() => {
     if (initialData?.steps && initialData.steps.length > 0) {
       return initialData.steps
@@ -100,14 +107,18 @@ export default function ProtocolForm({
     // 카테고리 가져오기
     const result = await dataService.getProtocolCategories()
     if (result.error) {
-      setError('카테고리를 불러오는데 실패했습니다.')
+      if (isMountedRef.current) {
+        setError('카테고리를 불러오는데 실패했습니다.')
+      }
     } else {
-      setCategories((result.data as ProtocolCategory[] | undefined) ?? [])
+      if (isMountedRef.current) {
+        setCategories((result.data as ProtocolCategory[] | undefined) ?? [])
+      }
     }
 
     // 현재 클리닉 ID 가져오기 (세션에서)
     const { data: session } = await dataService.getSession()
-    if (session?.clinicId) {
+    if (session?.clinicId && isMountedRef.current) {
       setClinicId(session.clinicId)
     }
   }
@@ -132,6 +143,7 @@ export default function ProtocolForm({
 
     setLoading(true)
     setError('')
+    let shouldClose = false
 
     try {
       // 태그 사용 통계 업데이트
@@ -149,15 +161,20 @@ export default function ProtocolForm({
         content: stepsHtml,
         steps: formData.steps
       })
-
-      // 저장 성공 후 폼 닫기
-      onCancel()
+      shouldClose = mode === 'create'
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.'
-      setError(errorMessage)
+      if (isMountedRef.current) {
+        setError(errorMessage)
+      }
       console.error('프로토콜 저장 오류:', err)
     } finally {
-      setLoading(false)
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+      if (shouldClose) {
+        onCancel()
+      }
     }
   }
 
