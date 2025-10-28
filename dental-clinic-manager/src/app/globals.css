@@ -143,3 +143,31 @@ body {
   margin-bottom: 0.5rem;
   color: #475569;
 }
+
+/* Protocol View Mode Headings (prose class) */
+.prose h1 {
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  line-height: 2.5rem !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 1rem !important;
+  color: #1e293b !important;
+}
+
+.prose h2 {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  line-height: 2rem !important;
+  margin-top: 1.25rem !important;
+  margin-bottom: 0.75rem !important;
+  color: #334155 !important;
+}
+
+.prose h3 {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  line-height: 1.75rem !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+  color: #475569 !important;
+}

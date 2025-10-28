@@ -1,7 +1,7 @@
 'use client'
 
 import { useEditor, EditorContent } from '@tiptap/react'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import StarterKit from '@tiptap/starter-kit'
 import Heading from '@tiptap/extension-heading'
 import Image from '@tiptap/extension-image'
@@ -14,6 +14,8 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
 import { TextAlign } from '@tiptap/extension-text-align'
+import { TextStyle } from '@tiptap/extension-text-style'
+import { Color } from '@tiptap/extension-color'
 import ListItem from '@tiptap/extension-list-item'
 import BulletList from '@tiptap/extension-bullet-list'
 import OrderedList from '@tiptap/extension-ordered-list'
@@ -48,6 +50,9 @@ export default function EnhancedTiptapEditor({
   editable = true,
   onImageUpload
 }: EnhancedTiptapEditorProps) {
+  // 색상 팔레트 표시 상태
+  const [showColorPicker, setShowColorPicker] = useState(false)
+
   // Tiptap Editor 설정
   const editor = useEditor({
     extensions: [
@@ -63,6 +68,8 @@ export default function EnhancedTiptapEditor({
           class: 'protocol-heading'
         }
       }),
+      TextStyle,
+      Color,
       ListItem.configure({
         HTMLAttributes: {
           class: 'protocol-list-item'
@@ -164,6 +171,34 @@ export default function EnhancedTiptapEditor({
                 return true
               }
             }
+          }
+        }
+        return false
+      },
+      handleKeyDown: (view, event) => {
+        // Tab 키 처리 (리스트 들여쓰기)
+        if (event.key === 'Tab' && editor) {
+          event.preventDefault()
+
+          const { state } = editor
+          const { selection } = state
+          const { $from } = selection
+
+          // 리스트 아이템 안에 있는지 확인
+          const inList = $from.node(-2)?.type.name === 'bulletList' ||
+                         $from.node(-2)?.type.name === 'orderedList' ||
+                         $from.node(-1)?.type.name === 'bulletList' ||
+                         $from.node(-1)?.type.name === 'orderedList'
+
+          if (inList) {
+            if (event.shiftKey) {
+              // Shift+Tab: 내어쓰기 (lift)
+              editor.chain().focus().liftListItem('listItem').run()
+            } else {
+              // Tab: 들여쓰기 (sink)
+              editor.chain().focus().sinkListItem('listItem').run()
+            }
+            return true
           }
         }
         return false
@@ -310,6 +345,59 @@ export default function EnhancedTiptapEditor({
           >
             <CodeBracketIcon className="h-4 w-4" />
           </button>
+        </div>
+
+        <div className="w-px h-8 bg-slate-300" />
+
+        {/* 텍스트 색상 */}
+        <div className="relative flex gap-1">
+          <button
+            type="button"
+            onClick={() => setShowColorPicker(!showColorPicker)}
+            className="p-2 rounded hover:bg-slate-200 transition-colors relative"
+            title="글자 색"
+          >
+            <span className="text-sm font-bold">A</span>
+            <span
+              className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 rounded"
+              style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000000' }}
+            />
+          </button>
+
+          {showColorPicker && (
+            <div className="absolute top-12 left-0 bg-white border border-slate-300 rounded-lg shadow-lg p-3 z-20">
+              <div className="grid grid-cols-6 gap-2 mb-2">
+                {[
+                  '#000000', '#434343', '#666666', '#999999', '#B7B7B7', '#CCCCCC',
+                  '#D33115', '#E27300', '#FFC107', '#16A765', '#2196F3', '#9C27B0',
+                  '#EA1E63', '#FF5722', '#FDD835', '#7CB342', '#00ACC1', '#5E35B1',
+                  '#F06292', '#FF8A65', '#FFF176', '#AED581', '#4DD0E1', '#9575CD'
+                ].map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => {
+                      editor.chain().focus().setColor(color).run()
+                      setShowColorPicker(false)
+                    }}
+                    className="w-6 h-6 rounded border border-slate-300 hover:scale-110 transition-transform"
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  editor.chain().focus().unsetColor().run()
+                  setShowColorPicker(false)
+                }}
+                className="w-full px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded transition-colors"
+              >
+                기본 색상으로 재설정
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="w-px h-8 bg-slate-300" />
