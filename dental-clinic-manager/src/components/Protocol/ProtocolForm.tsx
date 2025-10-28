@@ -149,6 +149,9 @@ export default function ProtocolForm({
         content: stepsHtml,
         steps: formData.steps
       })
+
+      // 저장 성공 후 폼 닫기
+      onCancel()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.'
       setError(errorMessage)

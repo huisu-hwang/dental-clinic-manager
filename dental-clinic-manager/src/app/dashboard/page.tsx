@@ -100,13 +100,28 @@ export default function DashboardPage() {
       return
     }
 
-    const result = await dataService.saveReport(data)
-    if (result.error) {
-      showToast(`저장 실패: ${result.error}`, 'error')
-    } else {
-      showToast('보고서가 성공적으로 저장되었습니다.', 'success')
-      // refetch를 제거하여 불필요한 리렌더링과 스크롤 이동 방지
-      // DailyInputForm이 이미 hasExistingData를 true로 설정하므로 refetch가 불필요함
+    try {
+      // 타임아웃 설정 (30초)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('저장 요청 시간이 초과되었습니다. 네트워크 연결을 확인하거나 다시 로그인해주세요.')), 30000)
+      )
+
+      const result = await Promise.race([
+        dataService.saveReport(data),
+        timeoutPromise
+      ]) as any
+
+      if (result.error) {
+        showToast(`저장 실패: ${result.error}`, 'error')
+      } else {
+        showToast('보고서가 성공적으로 저장되었습니다.', 'success')
+        // refetch를 제거하여 불필요한 리렌더링과 스크롤 이동 방지
+        // DailyInputForm이 이미 hasExistingData를 true로 설정하므로 refetch가 불필요함
+      }
+    } catch (error) {
+      console.error('Save report error:', error)
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      showToast(`저장 실패: ${errorMessage}`, 'error')
     }
   }
 

@@ -206,6 +206,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 localStorage.removeItem('dental_auth')
                 localStorage.removeItem('dental_user')
                 dataService.clearCachedClinicId()
+              } else if (event === 'TOKEN_REFRESHED') {
+                console.log('[AuthContext] Token refreshed successfully')
+              } else if (event === 'USER_UPDATED') {
+                console.log('[AuthContext] User updated')
               }
             })
 

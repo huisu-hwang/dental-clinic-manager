@@ -315,7 +315,14 @@ export default function EnhancedTiptapEditor({
             <button
               key={level}
               type="button"
-              onClick={() => editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 }).run()}
+              onClick={() => {
+                // 현재 활성 상태인 헤딩 레벨이면 일반 텍스트로 전환, 아니면 해당 헤딩 레벨로 설정
+                if (editor.isActive('heading', { level })) {
+                  editor.chain().focus().setParagraph().run()
+                } else {
+                  editor.chain().focus().setHeading({ level: level as 1 | 2 | 3 }).run()
+                }
+              }}
               className={`px-3 py-2 rounded hover:bg-slate-200 text-sm font-semibold transition-colors ${
                 editor.isActive('heading', { level }) ? 'bg-slate-300' : ''
               }`}
