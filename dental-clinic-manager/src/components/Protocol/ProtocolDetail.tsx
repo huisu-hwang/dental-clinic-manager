@@ -67,7 +67,8 @@ export default function ProtocolDetail({
     if (canViewHistory) {
       fetchVersions()
     }
-  }, [protocolId, fetchProtocol, fetchVersions, canViewHistory])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [protocolId, canViewHistory])
 
   const handleDelete = async () => {
     if (!confirm('이 프로토콜을 삭제하시겠습니까?')) {
