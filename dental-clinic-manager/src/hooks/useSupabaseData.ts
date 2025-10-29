@@ -250,11 +250,8 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
     console.log('[useSupabaseData] Client-side, starting data fetch for clinic:', activeClinicId)
 
-    const loadData = async () => {
-      await fetchAllData(activeClinicId)
-    }
-
-    loadData()
+    // Call fetchAllData directly without creating a wrapper function
+    fetchAllData(activeClinicId)
 
     const supabase = getSupabase()
     if (!supabase) {
@@ -273,7 +270,8 @@ export const useSupabaseData = (clinicId?: string | null) => {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [activeClinicId, fetchAllData])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeClinicId])
 
   return {
     dailyReports,
