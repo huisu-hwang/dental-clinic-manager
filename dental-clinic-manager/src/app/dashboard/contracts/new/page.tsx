@@ -73,12 +73,13 @@ export default function NewContractPage() {
         .from('users')
         .select('id, name, email, phone, address, resident_registration_number, role, status')
         .eq('clinic_id', user.clinic_id)
-        .eq('status', 'approved')
+        .neq('id', user.id) // Exclude current user (owner/manager creating the contract)
         .order('name')
 
       if (error) {
         console.error('Failed to load employees:', error)
       } else {
+        console.log('Loaded employees:', data?.length || 0, 'employees found')
         setEmployees(data as User[])
       }
     } catch (err) {
