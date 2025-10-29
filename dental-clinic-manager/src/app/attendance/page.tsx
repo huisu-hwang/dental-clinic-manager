@@ -3,18 +3,26 @@
 import { useState } from 'react'
 import CheckInOut from '@/components/Attendance/CheckInOut'
 import AttendanceHistory from '@/components/Attendance/AttendanceHistory'
+import AttendanceStats from '@/components/Attendance/AttendanceStats'
+import ScheduleManagement from '@/components/Attendance/ScheduleManagement'
+import TeamStatus from '@/components/Attendance/TeamStatus'
 import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
 
+type TabType = 'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'
+
 export default function AttendancePage() {
   const { user } = useAuth()
   const { hasPermission } = usePermissions()
-  const [activeTab, setActiveTab] = useState<'checkin' | 'history' | 'qr'>('checkin')
+  const [activeTab, setActiveTab] = useState<TabType>('checkin')
 
   // 권한 체크
   const canCheckIn = hasPermission('attendance_check_in')
   const canViewHistory = hasPermission('attendance_view_own')
+  const canViewStats = hasPermission('attendance_stats_view')
+  const canManageSchedule = hasPermission('schedule_manage')
+  const canViewTeam = hasPermission('attendance_view_all')
   const canManageQR = hasPermission('qr_code_manage')
 
   if (!user) {
@@ -33,11 +41,11 @@ export default function AttendancePage() {
       {/* 탭 네비게이션 */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8" aria-label="Tabs">
+          <nav className="flex space-x-8 overflow-x-auto" aria-label="Tabs">
             {canCheckIn && (
               <button
                 onClick={() => setActiveTab('checkin')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'checkin'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -53,7 +61,7 @@ export default function AttendancePage() {
             {canViewHistory && (
               <button
                 onClick={() => setActiveTab('history')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'history'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -66,10 +74,58 @@ export default function AttendancePage() {
               </button>
             )}
 
+            {canViewStats && (
+              <button
+                onClick={() => setActiveTab('stats')}
+                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                  activeTab === 'stats'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                근태 통계
+              </button>
+            )}
+
+            {canManageSchedule && (
+              <button
+                onClick={() => setActiveTab('schedule')}
+                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                  activeTab === 'schedule'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                스케줄 관리
+              </button>
+            )}
+
+            {canViewTeam && (
+              <button
+                onClick={() => setActiveTab('team')}
+                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                  activeTab === 'team'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                팀 출근 현황
+              </button>
+            )}
+
             {canManageQR && (
               <button
                 onClick={() => setActiveTab('qr')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'qr'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -89,6 +145,9 @@ export default function AttendancePage() {
       <div className="py-6">
         {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
         {activeTab === 'history' && canViewHistory && <AttendanceHistory />}
+        {activeTab === 'stats' && canViewStats && <AttendanceStats />}
+        {activeTab === 'schedule' && canManageSchedule && <ScheduleManagement />}
+        {activeTab === 'team' && canViewTeam && <TeamStatus />}
         {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
       </div>
     </div>
