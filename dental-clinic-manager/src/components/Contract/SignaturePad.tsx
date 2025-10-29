@@ -67,18 +67,22 @@ export default function SignaturePad({
 
     const rect = canvas.getBoundingClientRect()
 
+    // Calculate scale between canvas internal size and display size
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+
     if ('touches' in e) {
       // Touch event
       const touch = e.touches[0]
       return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY
       }
     } else {
       // Mouse event
       return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
       }
     }
   }
@@ -170,7 +174,7 @@ export default function SignaturePad({
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
           className={`cursor-crosshair ${disabled ? 'opacity-50' : ''}`}
-          style={{ display: 'block', touchAction: 'none' }}
+          style={{ display: 'block', touchAction: 'none', width: `${width}px`, height: `${height}px` }}
         />
       </div>
 
