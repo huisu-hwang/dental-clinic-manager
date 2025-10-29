@@ -243,113 +243,203 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
 
         {/* Contract Content */}
         <div className="space-y-6 text-sm leading-relaxed">
-          {/* Parties */}
+          {/* Introduction */}
+          <section className="text-center pb-4 border-b">
+            <p className="mb-4">
+              &ldquo;{data.clinic_name || '하얀치과'}&rdquo; (이하 &ldquo;갑&rdquo;이라 한다)와 &ldquo;{data.employee_name}&rdquo; (이하 &ldquo;을&rdquo;이라 한다)은 고용 및 근로계약을 체결함에 있어 다음과 같이 서로 합의하고 상호신의의 원칙하에 성실히 이행, 준수할 것을 약속하고 각각 서명 날인한다.
+            </p>
+          </section>
+
+          {/* Article 1 - 계약당사자 */}
           <section className="border-b pb-4">
-            <h2 className="text-lg font-bold mb-3">제1조 (당사자)</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <h2 className="text-lg font-bold mb-3">제1조 (계약당사자)</h2>
+            <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded">
               <div>
-                <p className="font-semibold">사용자 (이하 &ldquo;갑&rdquo;)</p>
-                <p>병원명: {data.clinic_name}</p>
-                <p>원장: {data.employer_name}</p>
-                <p>주소: {data.clinic_address}</p>
+                <p className="font-semibold mb-2">갑 (사용자)</p>
+                <p className="text-xs">사업체명: {data.clinic_name || '하얀치과'}</p>
+                <p className="text-xs">대표자: {data.employer_name}</p>
+                <p className="text-xs">소재지: {data.clinic_address}</p>
               </div>
               <div>
-                <p className="font-semibold">근로자 (이하 &ldquo;을&rdquo;)</p>
-                <p>성명: {data.employee_name}</p>
-                <p>주민등록번호: {displayResidentNumber}</p>
-                <p>주소: {data.employee_address}</p>
-                <p>전화: {data.employee_phone}</p>
+                <p className="font-semibold mb-2">을 (근로자)</p>
+                <p className="text-xs">성명: {data.employee_name}</p>
+                <p className="text-xs">주민번호: {displayResidentNumber}</p>
+                <p className="text-xs">주소: {data.employee_address}</p>
+                <p className="text-xs">전화: {data.employee_phone}</p>
               </div>
             </div>
           </section>
 
-          {/* Employment Period */}
+          {/* Article 2 - 계약기간 */}
           <section className="border-b pb-4">
-            <h2 className="text-lg font-bold mb-3">제2조 (근로기간)</h2>
-            <p>
-              근로 계약 기간은 <strong>{formatDate(data.employment_period_start)}</strong>부터{' '}
-              {data.is_permanent ? (
-                <strong>무기한</strong>
-              ) : (
-                <>
-                  <strong>{data.employment_period_end && formatDate(data.employment_period_end)}</strong>까지
-                </>
-              )}
-              로 한다.
-            </p>
-          </section>
-
-          {/* Work Location */}
-          <section className="border-b pb-4">
-            <h2 className="text-lg font-bold mb-3">제3조 (근무장소)</h2>
-            <p>근무지는 {data.clinic_address}로 한다.</p>
-          </section>
-
-          {/* Work Hours */}
-          <section className="border-b pb-4">
-            <h2 className="text-lg font-bold mb-3">제4조 (근로시간)</h2>
-            <p>
-              1일 근로시간은 <strong>{data.work_start_time || '09:00'}</strong>부터{' '}
-              <strong>{data.work_end_time || '18:00'}</strong>까지로 하며, 1주 근무일수는{' '}
-              <strong>{data.work_days_per_week || 5}일</strong>로 한다.
-            </p>
-            <p className="mt-2">
-              연차 휴가는 연간 <strong>{data.annual_leave_days}일</strong>로 한다.
-            </p>
-          </section>
-
-          {/* Salary */}
-          <section className="border-b pb-4">
-            <h2 className="text-lg font-bold mb-3">제5조 (임금)</h2>
+            <h2 className="text-lg font-bold mb-3">제2조 (계약기간)</h2>
             <div className="space-y-2">
-              <p>
-                기본급: <strong>{formatSalary(data.salary_base)}</strong> (월)
-              </p>
-              {data.allowance_meal && (
-                <p>
-                  식대: <strong>{formatSalary(data.allowance_meal)}</strong>
-                </p>
-              )}
-              {data.allowance_transport && (
-                <p>
-                  교통비: <strong>{formatSalary(data.allowance_transport)}</strong>
-                </p>
-              )}
-              {data.allowance_other && (
-                <p>
-                  기타 수당: <strong>{formatSalary(data.allowance_other)}</strong>
-                </p>
-              )}
-              <p>
-                임금 지급일: 매월 <strong>{data.salary_payment_day}일</strong>
-              </p>
+              <p>1. 계약기간: {formatDate(data.employment_period_start)}부터 {data.is_permanent ? '무기한' : data.employment_period_end && formatDate(data.employment_period_end)}</p>
+              <p>2. 계약기간은 제1항에 명시된 날로부터 효력을 발휘한다.</p>
+              <p>3. 수습기간은 입사 후 3개월 이내로 하며, 수습기간 중에는 정식사원 급여의 80% 이상 지급 가능하다. 단 최저임금은 지급하여야 한다. 수습기간 중에는 상호 각자의 의사에 의하여 근로관계를 해고예고절차나 해고절차 등 없이 바로 종료할 수 있으며, 상대방은 이에 대하여 이의를 제기하지 아니한다.</p>
             </div>
           </section>
 
-          {/* Social Insurance */}
+          {/* Article 3 - 근로조건 */}
           <section className="border-b pb-4">
-            <h2 className="text-lg font-bold mb-3">제6조 (사회보험)</h2>
-            <p>갑은 을에 대하여 다음 각호의 사회보험에 가입한다:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              {data.social_insurance && <li>국민연금</li>}
-              {data.health_insurance && <li>건강보험</li>}
-              {data.employment_insurance && <li>고용보험</li>}
-              {data.pension_insurance && <li>산재보험</li>}
-            </ul>
+            <h2 className="text-lg font-bold mb-3">제3조 (근로조건)</h2>
+            <div className="space-y-2">
+              <p>1. 근로시간: {data.work_start_time || '10:00'}부터 {data.work_end_time || '19:00'}까지</p>
+              <p className="ml-4 text-xs text-gray-600">* 담당직무: 진료</p>
+              <p>2. 휴게시간: 점심시간 포함 (1일 평균 1시간)</p>
+              <p>3. 주휴일: 주 1회</p>
+              <p>4. 근로시간은 휴게시간을 제하고 1일 8시간, 주 {data.work_days_per_week || 5}일 근무를 원칙으로 한다.</p>
+            </div>
           </section>
 
-          {/* Special Terms */}
-          {data.special_terms && (
-            <section className="border-b pb-4">
-              <h2 className="text-lg font-bold mb-3">제7조 (특약사항)</h2>
-              <p className="whitespace-pre-wrap">{data.special_terms}</p>
-            </section>
-          )}
-
-          {/* General Provisions */}
+          {/* Article 4 - 계약기간 월급여액 */}
           <section className="border-b pb-4">
-            <h2 className="text-lg font-bold mb-3">제8조 (기타)</h2>
-            <p>이 계약서에 명시되지 않은 사항은 근로기준법 및 관계 법령에 따른다.</p>
+            <h2 className="text-lg font-bold mb-3">제4조 (계약기간 월급여액) (세후)</h2>
+            <p className="font-bold">월급여액: {formatSalary(data.salary_base)}</p>
+          </section>
+
+          {/* Article 5 - 월지급액의 구성 및 지급 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제5조 (월지급액의 구성 및 지급)</h2>
+            <div className="space-y-2">
+              <div className="grid grid-cols-4 gap-2 p-2 bg-gray-100 rounded text-xs text-center font-semibold">
+                <div>기본급</div>
+                <div>주휴수당</div>
+                <div>연장근로수당</div>
+                <div>월 총급여액</div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 p-2 text-xs text-center">
+                <div>{formatSalary(data.salary_base)}</div>
+                <div>포함</div>
+                <div>별도</div>
+                <div className="font-bold">{formatSalary(data.salary_base)}</div>
+              </div>
+              <p>1. 월급여는 위와 같이 기본급, 주휴수당, 기본연장근로수당으로 구성되며 매월 급여지급일에 지급한다.</p>
+              <p>2. 위 연장근로수당은 월 기본으로 근무하는 연장근로시의 1.5배 가산하여 지급한 것이다. (야간근무시간에는 야간할증시간: 22시~오전6시 0.5배 가산하여 근무시간을 계산한다.)</p>
+              <p>3. 기존 근무자는 위 급여체계개정에 동의한 것으로 본다.</p>
+            </div>
+          </section>
+
+          {/* Article 6 - 지급방법 및 시기 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제6조 (지급방법 및 시기)</h2>
+            <p>임금지급은 매월 {data.salary_payment_day || '25'}일에 지급한다. 다만, 그 지급일이 휴일이나 토요일인 때에는 그 전일에 지급한다.</p>
+          </section>
+
+          {/* Article 7 - 퇴직금 및 중간정산 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제7조 (퇴직금 및 중간정산)</h2>
+            <div className="space-y-2">
+              <p>1. 퇴직금은 1년 이상 계속 근무한 자에 대하여 지급한다. 퇴직금은 상기 월급여액에 포함되어 있지 아니하며 별도로 지급한다.</p>
+              <p>2. 1년 이상 재직 중인 근로자의 신청이 있더라도 기왕에 근로한 기간의 퇴직금을 중간정산할 수 없다. (다만 법이 정하는 사유가 있으면 법이 정한 요건에 따라 예외적으로 중간정산 가능하다.)</p>
+              <p>3. 법이 정한 절차에 따라 퇴직연금제도로 전환도 가능하다. (DB형, DC형 기타)</p>
+              <p>4. &ldquo;을&rdquo;은 퇴직하고자 하는 경우 한 달 이전에 퇴직사실을 &ldquo;갑&rdquo;에 통보하여야 한다. 그러하지 아니하면 갑은 을의 무단결근한 날로부터 30일이 지난 날까지 무단결근한 것으로 하여 퇴사처리할 수 있다.</p>
+              <p>5. 퇴사 시 &ldquo;을&rdquo;은 &ldquo;갑&rdquo;으로부터 지급받은 유니폼 등 업무에 소요되었던 일체의 작업용 물건을 반환한다.</p>
+            </div>
+          </section>
+
+          {/* Article 8 - 유급휴일 및 임금차감 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제8조 (유급휴일 및 임금차감)</h2>
+            <div className="space-y-2">
+              <p>1. 회사는 다음 각 호의 유급휴일을 준다.</p>
+              <p className="ml-4">1. 근로자의 날(5월 1일), 2. 주휴일</p>
+              <p>2. 휴일근로가산수당 50%가 지급되는 휴일은 1항의 휴일로 한다.</p>
+              <p>3. 주휴일과 상기휴일이 중복될 경우에는 그 휴일의 사용으로 주휴일과 상기휴일 모두를 사용한 것으로 본다.</p>
+              <p>4. &ldquo;갑&rdquo;이 경영상 필요한 경우 &ldquo;을&rdquo;과 협의 하에 휴일/휴가일을 변경할 수 있다. 결근 1일에 대해서는 통상임금으로 공제하고, 주휴 및 지각, 조퇴의 경우 통상시급으로 차감한다.</p>
+            </div>
+          </section>
+
+          {/* Article 9 - 경조사휴가, 병가휴가 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제9조 (경조사휴가, 병가휴가)</h2>
+            <div className="space-y-2">
+              <p>1. 회사는 다음 각 호의 어느 하나에 해당하는 범위에서 사원의 신청에 따라 유급의 경조사휴가를 부여한다 (휴가 중의 휴일, 휴무일 포함하여 아래의 기간 계산).</p>
+              <p className="ml-4">1. 본인의 결혼: 5일</p>
+              <p className="ml-4">2. 본인·배우자의 부모 또는 배우자의 사망: 5일</p>
+              <p className="ml-4">3. 본인·배우자의 조부모 또는 외조부모의 사망: 3일</p>
+              <p className="ml-4">4. 자녀 또는 그 자녀의 배우자의 사망: 3일</p>
+              <p>2. 병가는 무노동 무임금 원칙의 적용을 받는다.</p>
+            </div>
+          </section>
+
+          {/* Article 10 - 연차유급휴가 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제10조 (연차유급휴가)</h2>
+            <div className="space-y-2">
+              <p>1. 회사는 1년간 8할 이상 출근한 근로자에 대하여는 {data.annual_leave_days || 15}일의 유급휴가를 주어야 한다.</p>
+              <p>2. 회사는 계속근로연수가 1년 미만인 근로자에 대하여는 1월간 개근시 1일의 유급휴가를 주어야 한다.</p>
+              <p>3. 회사는 근로자의 최초 1년간의 근로에 대하여 유급휴가를 주는 경우에는 제2항의 규정에 의한 휴가를 포함하여 15일로 하고, 근로자가 제2항의 규정에 의한 휴가를 이미 사용한 경우에는 그 사용한 휴가일수를 15일에서 공제한다.</p>
+              <p>4. 제1항에 대하여 회사와 근로자와의 서면합의에 의하여 휴가를 대체할 수 있다.</p>
+            </div>
+          </section>
+
+          {/* Article 11 - 연차유급휴가대체 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제11조 (연차유급휴가대체)</h2>
+            <p>회사와 사원은 주중에 놓인 법정공휴일 및 여름하계 휴무를 하게 될 때 연차휴가로 사용하는 것에 서로 합의한다.</p>
+          </section>
+
+          {/* Article 12 - 기밀유지 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제12조 (기밀유지)</h2>
+            <p>을은 급여 및 회사의 규정에 대하여 비밀을 유지할 의무를 지며, 을의 급여를 타인에게 누설하거나 타인의 급여를 알려고 하여서는 안 되며, 위반 시 불이익을 감수해야 한다.</p>
+          </section>
+
+          {/* Article 13 - 계약위반에 대한 책임 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제13조 (계약위반에 대한 책임)</h2>
+            <p>계약기간 중 &ldquo;을&rdquo;의 계약위반 및 복무규정위반으로 &ldquo;갑&rdquo;의 업무에 지장이나 손해를 초래하였을 경우 &ldquo;을&rdquo;은 그에 상당한 손해배상책임을 진다.</p>
+          </section>
+
+          {/* Article 14 - 업무상 징계사유 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제14조 (업무상 징계사유)</h2>
+            <p className="mb-2">갑은 다음 각 호의 경우에 을을 징계할 수 있다.</p>
+            <div className="ml-4 space-y-1 text-xs">
+              <p>1. 업무를 태만히 하거나 업무수행능력이 부족한 때</p>
+              <p>2. 규정 또는 정당한 업무명령을 위반한 때</p>
+              <p>3. 정당한 이유 없이 무단결근, 무단지각한 때</p>
+              <p>4. 장비파손, 장비분실로 회사에 손실을 끼쳤을 때</p>
+              <p>5. 도박, 음주, 폭행, 파괴, 풍기문란 등으로 직장규율을 위반하였을 때</p>
+              <p>6. 취업 장소 및 취업직종에 대하여 불복할 경우</p>
+              <p>7. 급여명세서 및 회사의 제반규정을 누설한 경우</p>
+              <p>8. 고의 또는 과실로 업무상 회사에 손실을 끼쳤을 때</p>
+              <p>9. 업무상 태만에 의하여 재해 기타 사고를 발생케 하였을 때</p>
+              <p>10. 회사의 정당한 지휘명령이나 직무명령·출장명령을 위반하였을 때</p>
+              <p>11. 장(근무지)를 무단으로 이탈하였을 때</p>
+              <p>12. 무상 부정, 배임, 횡령 등의 범죄행위를 하였을 때</p>
+              <p>13. 기타 사회 통념상 징계함이 타당하거나 근로관계를 지속할 수 없는 경우</p>
+            </div>
+          </section>
+
+          {/* Article 15 - 근로계약 관련 적용준칙 */}
+          <section className="border-b pb-4">
+            <h2 className="text-lg font-bold mb-3">제15조 (근로계약 관련 적용준칙)</h2>
+            <p>본 계약서에 없는 사항은 당사 취업규칙, 노동관계법령 및 근로기준법에 따르기로 한다.</p>
+          </section>
+
+          {/* Additional Agreements */}
+          <section className="mt-8 pt-6 border-t-2 border-gray-300">
+            <h2 className="text-xl font-bold text-center mb-6">연차 휴가 대체 합의서</h2>
+            <div className="space-y-3 text-sm">
+              <p>1. 근로기준법에 근거하여 법정 연차 휴가를 법정공휴일과 여름철에 휴무하는 것으로 연차휴가와 대체하는 것에 대하여 자유로운 의사로 합의하고, 이 합의서를 작성하여 그 말미에 근로자와 사용자가 함께 서명한다.</p>
+              <p>2. 상기 휴무가 법정연차휴가일수에 미치지 아니하는 경우 추가로 연차휴가를 부여한다.</p>
+            </div>
+          </section>
+
+          <section className="mt-8 pt-6 border-t-2 border-gray-300">
+            <h2 className="text-xl font-bold text-center mb-6">연장·야간·휴일근로 동의서</h2>
+            <div className="text-sm text-center space-y-3">
+              <p>본인은 {data.clinic_name || '하얀치과'}에 채용되어 업무를 수행함에 있어 근로기준법 규정에 의한 연장근로 / 야간근로 / 휴일근로에 동의합니다.</p>
+            </div>
+          </section>
+
+          <section className="mt-8 pt-6 border-t-2 border-gray-300">
+            <h2 className="text-xl font-bold text-center mb-6">비밀 유지 각서</h2>
+            <div className="text-sm text-center space-y-3">
+              <p>본인은 {data.clinic_name || '하얀치과'}에서 보고 들은 모든 것에 대하여 병원 직원 이외의 타인에게 함부로 발설하지 않고 비밀로 유지할 것을 약속하며, 이를 지키지 아니할 경우에는 그로 인해 병원이 입게 되는 손실에 대하여 공동 책임을 질 것을 서약함.</p>
+            </div>
           </section>
         </div>
 
