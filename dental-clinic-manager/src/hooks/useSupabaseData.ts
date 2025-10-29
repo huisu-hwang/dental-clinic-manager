@@ -244,6 +244,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
     if (!activeClinicId) {
       console.log('[useSupabaseData] Waiting for clinic_id before loading data')
+      setLoading(false)
       return
     }
 
