@@ -101,16 +101,35 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 -- Ensure proper RLS policies exist for SELECT operations
 -- (UPDATE is now handled via the function)
 DROP POLICY IF EXISTS "Users can view colleagues in same clinic" ON users;
+DROP POLICY IF EXISTS "Users can view profiles" ON users;
 
-CREATE POLICY "Users can view colleagues in same clinic" ON users
+-- Create SELECT policy that avoids circular reference
+CREATE POLICY "Users can view profiles" ON users
   FOR SELECT USING (
-    -- Allow if user is in the same clinic OR is master_admin
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
-    ) OR
-    auth.uid() IN (
-      SELECT id FROM users WHERE role = 'master_admin'
-    ) OR
+    -- CRITICAL: Allow users to view their own profile (required for login)
+    id = auth.uid()
+    OR
+    -- Allow users to view colleagues in the same clinic
+    (
+      auth.uid() IS NOT NULL
+      AND clinic_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = auth.uid()
+        AND u.clinic_id = users.clinic_id
+      )
+    )
+    OR
+    -- Allow master admins to view all users
+    (
+      auth.uid() IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = auth.uid()
+        AND u.role = 'master_admin'
+      )
+    )
+    OR
     -- For legacy users without auth session, allow read
     auth.uid() IS NULL
   );

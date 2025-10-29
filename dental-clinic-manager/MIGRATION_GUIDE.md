@@ -96,17 +96,61 @@ supabase db push
 - 에러 메시지를 더 구체적으로 표시하도록 개선
 - 상세한 로깅 추가
 
-### 4. 테스트 방법
+### 4. 추가 마이그레이션 (필수!)
 
-마이그레이션 적용 후:
+로그인 후 "프로필 정보를 불러오는 데 실패했습니다" 오류가 발생하는 경우:
 
-1. 애플리케이션에 로그인
-2. 계정 정보 페이지로 이동
-3. 이름 또는 전화번호 변경
-4. "프로필 저장" 버튼 클릭
-5. "프로필이 성공적으로 업데이트되었습니다" 메시지 확인
+**원인**: SELECT RLS 정책의 순환 참조 문제
 
-### 5. 문제 해결
+**해결**: `20250129_fix_select_policy_circular_reference.sql` 실행
+
+```sql
+-- 아래 SQL을 Supabase SQL Editor에서 실행하세요
+DROP POLICY IF EXISTS "Users can view colleagues in same clinic" ON users;
+
+CREATE POLICY "Users can view profiles" ON users
+  FOR SELECT USING (
+    id = auth.uid()
+    OR
+    (
+      auth.uid() IS NOT NULL
+      AND clinic_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = auth.uid()
+        AND u.clinic_id = users.clinic_id
+      )
+    )
+    OR
+    (
+      auth.uid() IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = auth.uid()
+        AND u.role = 'master_admin'
+      )
+    )
+    OR
+    auth.uid() IS NULL
+  );
+```
+
+### 5. 테스트 방법
+
+모든 마이그레이션 적용 후:
+
+1. **로그인 테스트**
+   - 로그아웃 후 다시 로그인
+   - 정상적으로 로그인되는지 확인
+   - "프로필 정보를 불러오는 데 실패" 오류가 없는지 확인
+
+2. **프로필 업데이트 테스트**
+   - 계정 정보 페이지로 이동
+   - 이름 또는 전화번호 변경
+   - "프로필 저장" 버튼 클릭
+   - "프로필이 성공적으로 업데이트되었습니다" 메시지 확인
+
+### 6. 문제 해결
 
 만약 여전히 오류가 발생한다면:
 
