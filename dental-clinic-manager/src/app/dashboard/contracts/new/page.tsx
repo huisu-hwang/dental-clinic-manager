@@ -76,15 +76,16 @@ export default function NewContractPage() {
   }
 
   // Load employees
+  // Note: Permission check is already done at page level, so we only check for clinic_id here
   useEffect(() => {
     console.log('[Contract New] useEffect triggered')
-    console.log('[Contract New] Has permission:', hasPermission('contract_create'))
     console.log('[Contract New] User clinic_id:', user?.clinic_id)
 
-    if (hasPermission('contract_create') && user?.clinic_id) {
+    if (user?.clinic_id) {
+      console.log('[Contract New] Loading employees for clinic:', user.clinic_id)
       loadEmployees()
     } else {
-      console.log('[Contract New] Skipping employee load - missing permission or clinic_id')
+      console.log('[Contract New] Skipping employee load - no clinic_id')
       setLoading(false)
     }
   }, [user?.clinic_id])
