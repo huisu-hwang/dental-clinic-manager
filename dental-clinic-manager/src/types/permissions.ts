@@ -21,6 +21,11 @@ export type Permission =
   | 'protocol_version_restore' // 프로토콜 버전 복원
   | 'protocol_history_view'  // 프로토콜 히스토리 조회
   | 'protocol_category_manage' // 프로토콜 카테고리 관리
+  | 'contract_view'          // 근로계약서 조회
+  | 'contract_create'        // 근로계약서 작성
+  | 'contract_sign'          // 근로계약서 서명
+  | 'contract_cancel'        // 근로계약서 취소
+  | 'contract_template_manage' // 계약서 템플릿 관리
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -31,7 +36,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'logs_view', 'inventory_view', 'inventory_manage',
     'staff_view', 'staff_manage', 'clinic_settings', 'guide_view',
     'protocol_view', 'protocol_create', 'protocol_edit', 'protocol_delete',
-    'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage'
+    'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage',
+    'contract_view', 'contract_create', 'contract_sign', 'contract_cancel', 'contract_template_manage'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -40,29 +46,33 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'logs_view', 'inventory_view', 'inventory_manage',
     'staff_view', 'guide_view',
     'protocol_view', 'protocol_create', 'protocol_edit',
-    'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage'
+    'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage',
+    'contract_view', 'contract_sign'
   ],
   manager: [
-    // 실장은 프로토콜 조회와 히스토리만 가능
+    // 실장은 프로토콜 조회와 히스토리만 가능, 계약서 작성 및 서명 가능
     'daily_report_view', 'daily_report_create', 'daily_report_edit', 'daily_report_delete',
     'stats_weekly_view', 'stats_monthly_view', 'stats_annual_view',
     'logs_view', 'inventory_view', 'inventory_manage',
     'staff_view', 'guide_view',
-    'protocol_view', 'protocol_history_view'
+    'protocol_view', 'protocol_history_view',
+    'contract_view', 'contract_create', 'contract_sign'
   ],
   team_leader: [
-    // 팀장은 프로토콜 조회와 히스토리만 가능
+    // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
     'daily_report_view', 'daily_report_create', 'daily_report_edit',
     'stats_weekly_view', 'stats_monthly_view',
     'logs_view', 'inventory_view', 'guide_view',
-    'protocol_view', 'protocol_history_view'
+    'protocol_view', 'protocol_history_view',
+    'contract_view', 'contract_sign'
   ],
   staff: [
-    // 일반 직원은 프로토콜 조회만 가능
+    // 일반 직원은 프로토콜 조회만 가능, 자신의 계약서 조회 및 서명만 가능
     'daily_report_view', 'daily_report_create',
     'stats_weekly_view',
     'inventory_view', 'guide_view',
-    'protocol_view'
+    'protocol_view',
+    'contract_view', 'contract_sign'
   ]
 }
 
@@ -100,6 +110,13 @@ export const PERMISSION_GROUPS = {
     { key: 'protocol_history_view', label: '히스토리 조회' },
     { key: 'protocol_category_manage', label: '카테고리 관리' }
   ],
+  '근로계약서': [
+    { key: 'contract_view', label: '계약서 조회' },
+    { key: 'contract_create', label: '계약서 작성' },
+    { key: 'contract_sign', label: '계약서 서명' },
+    { key: 'contract_cancel', label: '계약서 취소' },
+    { key: 'contract_template_manage', label: '템플릿 관리' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -127,5 +144,10 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'protocol_delete': '진료 프로토콜을 삭제할 수 있습니다.',
   'protocol_version_restore': '이전 버전의 프로토콜로 복원할 수 있습니다.',
   'protocol_history_view': '프로토콜 변경 히스토리를 조회할 수 있습니다.',
-  'protocol_category_manage': '프로토콜 카테고리를 관리할 수 있습니다.'
+  'protocol_category_manage': '프로토콜 카테고리를 관리할 수 있습니다.',
+  'contract_view': '근로계약서를 조회할 수 있습니다.',
+  'contract_create': '새로운 근로계약서를 작성할 수 있습니다.',
+  'contract_sign': '근로계약서에 서명할 수 있습니다.',
+  'contract_cancel': '근로계약서를 취소할 수 있습니다.',
+  'contract_template_manage': '계약서 템플릿을 관리할 수 있습니다.'
 }
