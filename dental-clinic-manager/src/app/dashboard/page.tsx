@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import Header from '@/components/Layout/Header'
@@ -23,6 +24,7 @@ import { inspectDatabase } from '@/utils/dbInspector'
 import type { ConsultRowData, GiftRowData, HappyCallRowData } from '@/types'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const { user, logout, updateUser } = useAuth()
   const { hasPermission, canAccessTab } = usePermissions()
 
@@ -77,6 +79,13 @@ export default function DashboardPage() {
       }
     }
   }, [loading, error])
+
+  // Redirect to contracts page when contracts tab is selected
+  useEffect(() => {
+    if (activeTab === 'contracts') {
+      router.push('/dashboard/contracts')
+    }
+  }, [activeTab, router])
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ show: true, message, type })
