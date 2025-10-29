@@ -7,6 +7,8 @@ export interface User {
   name: string
   email: string
   phone?: string
+  address?: string  // 근로계약서 작성용
+  resident_registration_number?: string  // 근로계약서 작성용 (주민등록번호)
   role: string
   status: string
   clinic_id?: string

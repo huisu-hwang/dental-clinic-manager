@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { MagnifyingGlassIcon, BuildingOfficeIcon, PlusCircleIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, BuildingOfficeIcon, PlusCircleIcon, LockClosedIcon, HomeIcon, IdentificationIcon } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
+import { formatResidentNumber, validateResidentNumberWithMessage } from '@/utils/residentNumberUtils'
+import { encryptResidentNumber } from '@/utils/encryptionUtils'
 
 interface ClinicSelectionFormProps {
   onBack: () => void
@@ -34,6 +36,8 @@ export default function ClinicSelectionForm({
     name: '',
     email: '',
     phone: '',
+    address: '',
+    resident_registration_number: '',
     role: 'staff' as 'vice_director' | 'manager' | 'team_leader' | 'staff',
     message: ''
   })
@@ -90,6 +94,30 @@ export default function ClinicSelectionForm({
 
     setError('')
     setSuccess('')
+
+    // Validate required fields
+    if (!joinRequestData.name || !joinRequestData.email || !joinRequestData.phone) {
+      setError('이름, 이메일, 전화번호는 필수 입력입니다.')
+      return
+    }
+
+    if (!joinRequestData.address) {
+      setError('주소는 필수 입력입니다.')
+      return
+    }
+
+    if (!joinRequestData.resident_registration_number) {
+      setError('주민등록번호는 필수 입력입니다.')
+      return
+    }
+
+    // Validate resident registration number
+    const validation = validateResidentNumberWithMessage(joinRequestData.resident_registration_number)
+    if (!validation.isValid) {
+      setError(validation.error || '주민등록번호 형식이 올바르지 않습니다.')
+      return
+    }
+
     setSubmitting(true)
 
     const supabase = getSupabase()
@@ -100,12 +128,23 @@ export default function ClinicSelectionForm({
     }
 
     try {
+      // Encrypt resident registration number before sending
+      const encryptedResidentNumber = await encryptResidentNumber(joinRequestData.resident_registration_number)
+
+      if (!encryptedResidentNumber) {
+        setError('주민등록번호 암호화 중 오류가 발생했습니다.')
+        setSubmitting(false)
+        return
+      }
+
       const { data, error } = await (supabase as any)
         .rpc('request_to_join_clinic', {
           p_clinic_id: selectedClinicId,
           p_email: joinRequestData.email,
           p_name: joinRequestData.name,
           p_phone: joinRequestData.phone,
+          p_address: joinRequestData.address,
+          p_resident_registration_number: encryptedResidentNumber,
           p_requested_role: joinRequestData.role,
           p_message: joinRequestData.message || null
         })
@@ -341,7 +380,7 @@ export default function ClinicSelectionForm({
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  전화번호
+                  전화번호 *
                 </label>
                 <input
                   type="tel"
@@ -349,8 +388,70 @@ export default function ClinicSelectionForm({
                   onChange={(e) => setJoinRequestData({ ...joinRequestData, phone: e.target.value })}
                   className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   placeholder="010-1234-5678"
+                  required
                   disabled={submitting}
                 />
+              </div>
+
+              {/* Personal Information Section */}
+              <div className="pt-4 border-t border-slate-200">
+                <div className="flex items-start mb-3">
+                  <LockClosedIcon className="h-5 w-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-800 mb-1">
+                      개인정보 (근로계약서용)
+                    </h4>
+                    <p className="text-xs text-slate-600">
+                      주민등록번호는 AES-256 암호화되어 안전하게 저장됩니다.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      주소 *
+                    </label>
+                    <div className="relative">
+                      <HomeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={joinRequestData.address}
+                        onChange={(e) => setJoinRequestData({ ...joinRequestData, address: e.target.value })}
+                        className="w-full pl-10 pr-3 py-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="서울시 강남구 테헤란로 123"
+                        required
+                        disabled={submitting}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      주민등록번호 *
+                    </label>
+                    <div className="relative">
+                      <IdentificationIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={joinRequestData.resident_registration_number}
+                        onChange={(e) => {
+                          const formatted = formatResidentNumber(e.target.value)
+                          setJoinRequestData({ ...joinRequestData, resident_registration_number: formatted })
+                        }}
+                        className="w-full pl-10 pr-3 py-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono"
+                        placeholder="000000-0000000"
+                        maxLength={14}
+                        required
+                        disabled={submitting}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 flex items-center">
+                      <LockClosedIcon className="h-3 w-3 text-green-600 mr-1" />
+                      근로계약서 작성에 사용되며, 암호화되어 저장됩니다.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div>

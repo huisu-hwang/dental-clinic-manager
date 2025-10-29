@@ -6,14 +6,14 @@ import Link from 'next/link'
 import type { UserProfile } from '@/contexts/AuthContext'
 
 interface HeaderProps {
-  dbStatus: 'connected' | 'connecting' | 'error'
+  dbStatus?: 'connected' | 'connecting' | 'error'
   user?: UserProfile | null
   onLogout?: () => void
   showManagementLink?: boolean
   onProfileClick?: () => void
 }
 
-export default function Header({ dbStatus, user, onLogout, showManagementLink = true, onProfileClick }: HeaderProps) {
+export default function Header({ dbStatus = 'connected', user, onLogout, showManagementLink = true, onProfileClick }: HeaderProps) {
   // 디버깅: user 정보 로그
   console.log('[Header] User info:', {
     user,

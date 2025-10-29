@@ -105,7 +105,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_balance_view_own', 'leave_balance_view_all'
   ],
   team_leader: [
-    // 팀장은 프로토콜 조회와 히스토리만 가능
+    // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
     'daily_report_view', 'daily_report_create', 'daily_report_edit',
     'stats_weekly_view', 'stats_monthly_view',
     'logs_view', 'inventory_view', 'guide_view',
