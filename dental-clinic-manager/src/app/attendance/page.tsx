@@ -1,19 +1,22 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import CheckInOut from '@/components/Attendance/CheckInOut'
 import AttendanceHistory from '@/components/Attendance/AttendanceHistory'
 import AttendanceStats from '@/components/Attendance/AttendanceStats'
 import ScheduleManagement from '@/components/Attendance/ScheduleManagement'
 import TeamStatus from '@/components/Attendance/TeamStatus'
 import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
+import Header from '@/components/Layout/Header'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 
 type TabType = 'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'
 
 export default function AttendancePage() {
-  const { user } = useAuth()
+  const router = useRouter()
+  const { user, logout } = useAuth()
   const { hasPermission } = usePermissions()
   const [activeTab, setActiveTab] = useState<TabType>('checkin')
 
@@ -37,11 +40,26 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 탭 네비게이션 */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8 overflow-x-auto" aria-label="Tabs">
+    <div className="min-h-screen bg-slate-50">
+      <div className="container mx-auto p-4 md:p-8">
+        {/* Header */}
+        <Header
+          dbStatus="connected"
+          user={user}
+          onLogout={() => logout()}
+          showManagementLink={false}
+        />
+
+        {/* 페이지 제목 */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">출근 관리</h1>
+          <p className="mt-1 text-sm text-slate-600">출퇴근 기록과 근태를 관리합니다.</p>
+        </div>
+
+        {/* 탭 네비게이션 */}
+        <div className="bg-white border-b border-gray-200 rounded-t-lg">
+          <div className="px-4 sm:px-6 lg:px-8">
+            <nav className="flex space-x-8 overflow-x-auto" aria-label="Tabs">
             {canCheckIn && (
               <button
                 onClick={() => setActiveTab('checkin')}
@@ -138,17 +156,20 @@ export default function AttendancePage() {
               </button>
             )}
           </nav>
+          </div>
         </div>
-      </div>
 
-      {/* 탭 콘텐츠 */}
-      <div className="py-6">
-        {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
-        {activeTab === 'history' && canViewHistory && <AttendanceHistory />}
-        {activeTab === 'stats' && canViewStats && <AttendanceStats />}
-        {activeTab === 'schedule' && canManageSchedule && <ScheduleManagement />}
-        {activeTab === 'team' && canViewTeam && <TeamStatus />}
-        {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
+        {/* 탭 콘텐츠 */}
+        <div className="bg-white rounded-b-lg shadow-sm">
+          <div className="p-6">
+            {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
+            {activeTab === 'history' && canViewHistory && <AttendanceHistory />}
+            {activeTab === 'stats' && canViewStats && <AttendanceStats />}
+            {activeTab === 'schedule' && canManageSchedule && <ScheduleManagement />}
+            {activeTab === 'team' && canViewTeam && <TeamStatus />}
+            {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
+          </div>
+        </div>
       </div>
     </div>
   )
