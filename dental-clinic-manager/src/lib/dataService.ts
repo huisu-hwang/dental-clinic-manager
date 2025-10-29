@@ -1055,24 +1055,70 @@ export const dataService = {
   // 사용자 프로필 업데이트
   async updateUserProfile(id: string, updates: { name?: string; phone?: string }) {
     const supabase = getSupabase()
-    if (!supabase) throw new Error('Supabase client not available')
+    if (!supabase) {
+      console.error('[updateUserProfile] Supabase client not available')
+      return { error: 'Supabase client not available' }
+    }
 
     try {
+      console.log('[updateUserProfile] Updating user profile for ID:', id)
+      console.log('[updateUserProfile] Updates:', updates)
+
+      // 먼저 현재 인증된 사용자 확인
+      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser()
+
+      if (authError) {
+        console.error('[updateUserProfile] Auth error:', authError)
+        return { error: `인증 오류: ${authError.message}` }
+      }
+
+      if (!currentUser) {
+        console.error('[updateUserProfile] No authenticated user')
+        return { error: '로그인된 사용자가 없습니다.' }
+      }
+
+      console.log('[updateUserProfile] Current authenticated user:', currentUser.id)
+
+      // 본인의 프로필만 수정할 수 있도록 확인
+      if (currentUser.id !== id) {
+        console.error('[updateUserProfile] User ID mismatch:', { currentUserId: currentUser.id, targetUserId: id })
+        return { error: '본인의 프로필만 수정할 수 있습니다.' }
+      }
+
       // 사용자 ID (UUID)를 기준으로 직접 업데이트합니다.
       const { data, error } = await (supabase.from('users') as any)
         .update({
           ...updates,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', id) // email 대신 id를 사용합니다.
+        .eq('id', id)
         .select()
-        .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('[updateUserProfile] Supabase update error:', error)
+        console.error('[updateUserProfile] Error code:', error.code)
+        console.error('[updateUserProfile] Error message:', error.message)
+        console.error('[updateUserProfile] Error details:', error.details)
+        console.error('[updateUserProfile] Error hint:', error.hint)
+        return { error: `업데이트 실패: ${error.message || error.details || error.hint || 'Unknown error'}` }
+      }
 
-      return { success: true, data }
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        console.error('[updateUserProfile] No data returned after update')
+        return { error: '업데이트 결과를 받지 못했습니다. RLS 정책을 확인해주세요.' }
+      }
+
+      const updatedUser = Array.isArray(data) ? data[0] : data
+      console.log('[updateUserProfile] Profile updated successfully:', updatedUser)
+
+      return { success: true, data: updatedUser }
     } catch (error: unknown) {
-      console.error('Error updating user profile:', error)
+      console.error('[updateUserProfile] Unexpected error:', error)
+
+      if (error && typeof error === 'object') {
+        console.error('[updateUserProfile] Error object:', JSON.stringify(error, null, 2))
+      }
+
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   },

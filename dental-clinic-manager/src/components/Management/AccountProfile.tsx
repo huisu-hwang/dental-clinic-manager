@@ -78,17 +78,31 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
     setSaving(true)
 
     try {
+      console.log('[AccountProfile] Submitting profile update for user:', currentUser.id)
+      console.log('[AccountProfile] Form data:', { name: formData.name, phone: formData.phone })
+
       const result = await dataService.updateUserProfile(currentUser.id, {
         name: formData.name,
         phone: formData.phone,
       })
 
+      console.log('[AccountProfile] Update result:', result)
+
       if (result.error) {
-        throw new Error(result.error)
+        console.error('[AccountProfile] Update failed with error:', result.error)
+        setError(result.error)
+        return
       }
 
       const updatedUser = result.data
 
+      if (!updatedUser) {
+        console.error('[AccountProfile] No updated user data returned')
+        setError('업데이트된 사용자 정보를 받지 못했습니다.')
+        return
+      }
+
+      console.log('[AccountProfile] Profile updated successfully:', updatedUser)
       setUser(updatedUser)
       setSuccess('프로필이 성공적으로 업데이트되었습니다.')
 
@@ -100,8 +114,9 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
         setSuccess('')
       }, 3000)
     } catch (err) {
-      console.error('Error:', err)
-      setError('프로필 업데이트 중 오류가 발생했습니다.')
+      console.error('[AccountProfile] Unexpected error:', err)
+      const errorMessage = err instanceof Error ? err.message : '프로필 업데이트 중 오류가 발생했습니다.'
+      setError(errorMessage)
     } finally {
       setSaving(false)
     }
