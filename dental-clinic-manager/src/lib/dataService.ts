@@ -1053,7 +1053,7 @@ export const dataService = {
   },
 
   // 사용자 프로필 업데이트 (Secure Database Function 사용)
-  async updateUserProfile(id: string, updates: { name?: string; phone?: string }) {
+  async updateUserProfile(id: string, updates: { name?: string; phone?: string; address?: string; ssn?: string }) {
     const supabase = getSupabase()
     if (!supabase) {
       console.error('[updateUserProfile] Supabase client not available')
@@ -1082,7 +1082,9 @@ export const dataService = {
       const { data, error } = await supabase.rpc('update_own_profile', {
         p_user_id: id,
         p_name: updates.name || null,
-        p_phone: updates.phone || null
+        p_phone: updates.phone || null,
+        p_address: updates.address || null,
+        p_ssn: updates.ssn || null
       })
 
       if (error) {

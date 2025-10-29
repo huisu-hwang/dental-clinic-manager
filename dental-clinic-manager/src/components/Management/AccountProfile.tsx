@@ -31,7 +31,9 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
   const [formData, setFormData] = useState({
     name: currentUser?.name || '',
     email: currentUser?.email || '',
-    phone: currentUser?.phone || ''
+    phone: currentUser?.phone || '',
+    address: (currentUser as any)?.address || '',
+    ssn: (currentUser as any)?.ssn || ''
   })
 
   const [passwordData, setPasswordData] = useState({
@@ -45,7 +47,9 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
       setFormData({
         name: currentUser?.name || '',
         email: currentUser?.email || '',
-        phone: currentUser?.phone || ''
+        phone: currentUser?.phone || '',
+        address: (currentUser as any)?.address || '',
+        ssn: (currentUser as any)?.ssn || ''
       })
     }
   }, [currentUser])
@@ -84,6 +88,8 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
       const result = await dataService.updateUserProfile(currentUser.id, {
         name: formData.name,
         phone: formData.phone,
+        address: formData.address,
+        ssn: formData.ssn,
       })
 
       console.log('[AccountProfile] Update result:', result)
@@ -313,6 +319,46 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                     disabled={saving}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  주소 (선택사항)
+                </label>
+                <div className="relative">
+                  <BuildingOfficeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="주소를 입력하세요"
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  주민등록번호 (선택사항)
+                </label>
+                <div className="relative">
+                  <ShieldCheckIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <input
+                    type="text"
+                    name="ssn"
+                    value={formData.ssn}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="123456-1234567"
+                    maxLength={14}
+                    disabled={saving}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  주민등록번호는 안전하게 암호화되어 저장됩니다
+                </p>
               </div>
 
               <div className="flex justify-between">
