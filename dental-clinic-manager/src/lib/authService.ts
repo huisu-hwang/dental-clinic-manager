@@ -20,7 +20,24 @@ export const authService = {
     }
 
     try {
-      // Get user by email
+      console.log('[AuthService] Login attempt for:', email)
+
+      // First, try to sign in with Supabase Auth to create a session
+      // This is crucial for RLS policies to work with auth.uid()
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (authError) {
+        console.log('[AuthService] Supabase Auth login failed:', authError.message)
+        // If Supabase Auth fails, this user might not have an auth account
+        // Fall back to custom authentication for legacy users
+      } else if (authData.user) {
+        console.log('[AuthService] Supabase Auth login successful, user ID:', authData.user.id)
+      }
+
+      // Get user by email from users table
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select(`
@@ -31,11 +48,13 @@ export const authService = {
         .single()
 
       if (userError || !userData) {
+        console.error('[AuthService] User not found in users table:', userError)
         return { success: false, error: 'Invalid email or password' }
       }
 
       // Check password (simplified for development - use bcrypt in production)
       if ((userData as any).password_hash !== password) {
+        console.log('[AuthService] Password mismatch')
         return { success: false, error: 'Invalid email or password' }
       }
 
@@ -54,7 +73,7 @@ export const authService = {
         .eq('role', (userData as any).role)
 
       if (permError) {
-        console.error('Error fetching permissions:', permError)
+        console.error('[AuthService] Error fetching permissions:', permError)
       }
 
       // Update last login
@@ -62,6 +81,8 @@ export const authService = {
         .from('users')
         .update({ last_login_at: new Date().toISOString() })
         .eq('id', (userData as any).id)
+
+      console.log('[AuthService] Login successful for user:', (userData as any).id)
 
       // Create session token (in production, use JWT)
       const token = btoa(JSON.stringify({
@@ -103,7 +124,7 @@ export const authService = {
       }
 
     } catch (error) {
-      console.error('Login error:', error)
+      console.error('[AuthService] Login error:', error)
       return { success: false, error: 'An error occurred during login' }
     }
   },
