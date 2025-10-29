@@ -7,7 +7,7 @@ import AttendanceStats from '@/components/Attendance/AttendanceStats'
 import ScheduleManagement from '@/components/Attendance/ScheduleManagement'
 import TeamStatus from '@/components/Attendance/TeamStatus'
 import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 
 type TabType = 'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'

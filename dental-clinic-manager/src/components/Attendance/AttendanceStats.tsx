@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { attendanceService } from '@/lib/attendanceService'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/contexts/AuthContext'
 import type { AttendanceStatistics } from '@/types/attendance'
 
 export default function AttendanceStats() {
@@ -310,7 +310,7 @@ export default function AttendanceStats() {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
         <h3 className="font-semibold mb-2">💡 통계 안내</h3>
         <ul className="space-y-1">
-          <li>• 통계는 매월 자동으로 계산되며, '통계 새로고침' 버튼으로 수동 업데이트할 수 있습니다.</li>
+          <li>• 통계는 매월 자동으로 계산되며, &apos;통계 새로고침&apos; 버튼으로 수동 업데이트할 수 있습니다.</li>
           <li>• 출근율 = (출근 일수 / 총 근무 예정일) × 100</li>
           <li>• 지각, 조퇴, 초과근무는 설정된 근무 스케줄 기준으로 계산됩니다.</li>
         </ul>

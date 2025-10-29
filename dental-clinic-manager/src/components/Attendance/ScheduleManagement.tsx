@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { scheduleService } from '@/lib/scheduleService'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/contexts/AuthContext'
 import type { WorkSchedule, WeeklySchedule } from '@/types/attendance'
 import { DAY_OF_WEEK_NAMES } from '@/types/attendance'
 

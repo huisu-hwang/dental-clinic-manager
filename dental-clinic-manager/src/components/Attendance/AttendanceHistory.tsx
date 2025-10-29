@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { attendanceService } from '@/lib/attendanceService'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/contexts/AuthContext'
 import type { AttendanceRecord, AttendanceStatus } from '@/types/attendance'
 import { ATTENDANCE_STATUS_NAMES, ATTENDANCE_STATUS_COLORS } from '@/types/attendance'
 
@@ -47,7 +47,7 @@ export default function AttendanceHistory() {
     }
   }
 
-  const formatTime = (dateString: string | undefined) => {
+  const formatTime = (dateString: string | null | undefined) => {
     if (!dateString) return '-'
     const date = new Date(dateString)
     return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
@@ -58,7 +58,7 @@ export default function AttendanceHistory() {
     return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
   }
 
-  const formatMinutes = (minutes: number | undefined) => {
+  const formatMinutes = (minutes: number | null | undefined) => {
     if (!minutes) return '-'
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60

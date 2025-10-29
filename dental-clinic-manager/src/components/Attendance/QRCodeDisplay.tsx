@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { attendanceService } from '@/lib/attendanceService'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/contexts/AuthContext'
 import type { AttendanceQRCode } from '@/types/attendance'
 
 export default function QRCodeDisplay() {

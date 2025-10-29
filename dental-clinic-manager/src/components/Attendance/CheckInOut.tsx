@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { attendanceService } from '@/lib/attendanceService'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/contexts/AuthContext'
 import type { AttendanceRecord } from '@/types/attendance'
 import { ATTENDANCE_STATUS_NAMES, ATTENDANCE_STATUS_COLORS } from '@/types/attendance'
 
@@ -135,7 +135,7 @@ export default function CheckInOut() {
     }
   }
 
-  const formatTime = (dateString: string | undefined) => {
+  const formatTime = (dateString: string | null | undefined) => {
     if (!dateString) return '-'
     const date = new Date(dateString)
     return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
@@ -154,8 +154,8 @@ export default function CheckInOut() {
     return `${hours}시간 ${mins}분`
   }
 
-  const isCheckedIn = todayRecord?.check_in_time && !todayRecord?.check_out_time
-  const isCheckedOut = todayRecord?.check_out_time
+  const isCheckedIn = !!todayRecord?.check_in_time && !todayRecord?.check_out_time
+  const isCheckedOut = !!todayRecord?.check_out_time
   const workingMinutes = calculateWorkingMinutes()
 
   return (
