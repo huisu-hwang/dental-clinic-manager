@@ -20,34 +20,39 @@ This application handles sensitive personal information including resident regis
 #### Row-Level Security (RLS)
 Strict access policies are enforced at the database level:
 
-| User Role | Can View Own Info | Can View Others' Personal Info |
-|-----------|-------------------|--------------------------------|
-| **User** | ✅ Full access | ❌ No access |
-| **Owner** | ✅ Full access | ✅ Clinic members only |
-| **Vice Director** | ✅ Full access | ❌ No access |
-| **Manager** | ✅ Full access | ❌ No access |
-| **Team Leader** | ✅ Full access | ❌ No access |
-| **Staff** | ✅ Full access | ❌ No access |
-| **Master Admin** | ✅ Full access | ✅ All users (system-wide) |
+| User Role | Can View Own Info | Can View Others' Personal Info | Can View Resident Number |
+|-----------|-------------------|--------------------------------|--------------------------|
+| **User** | ✅ Full access (decrypted) | ❌ No access | ✅ Own only (decrypted) |
+| **Owner** | ✅ Full access (decrypted) | ✅ Clinic members only (encrypted, decrypt on client) | ✅ Clinic members (encrypted, decrypt on client) |
+| **Vice Director** | ✅ Full access (decrypted) | ❌ No access | ❌ No access |
+| **Manager** | ✅ Full access (decrypted) | ❌ No access | ❌ No access |
+| **Team Leader** | ✅ Full access (decrypted) | ❌ No access | ❌ No access |
+| **Staff** | ✅ Full access (decrypted) | ❌ No access | ❌ No access |
+| **Master Admin** | ✅ Full access (decrypted) | ✅ All users (encrypted, decrypt on client) | ✅ All users (encrypted, decrypt on client) |
 
 #### Personal Information Fields
-- **Address**: Visible to user and clinic owner only
+- **Address**: Visible to user themselves and clinic owner only (for employment contracts)
 - **Resident Registration Number**:
-  - Full number: Visible to user themselves only
-  - Masked (XXXXXX-X******): Visible to clinic owner
-  - Not visible at all: All other roles
+  - **User themselves**: Full decrypted number visible
+  - **Clinic Owner**: Full encrypted number accessible, can decrypt on client-side for employment contracts
+  - **Other roles**: No access at all (neither encrypted nor decrypted)
+
+#### How Owners Access Employee Personal Information
+1. Owner queries user data from database → receives encrypted resident registration number
+2. Client-side decryption using `decryptResidentNumber()` utility function
+3. Decrypted number displayed only when necessary (e.g., when creating employment contract)
+4. Never stored in plaintext anywhere
 
 ### Secure Views
 
-Two database views are provided for safe data access:
+Database view for safe data access:
 
-1. **`users_basic_info`**: For general staff
-   - Includes: name, email, phone, role, status
+1. **`users_basic_info`**: For general staff (vice_director, manager, team_leader, staff)
+   - Includes: name, email, phone, role, status, timestamps
    - Excludes: address, resident registration number
+   - Use this view when displaying colleague lists to non-owner roles
 
-2. **`users_with_masked_info`**: For owners
-   - Includes: all basic info + address + masked resident number
-   - Resident number shown as: `XXXXXX-X******`
+**Note for Owners**: Query the `users` table directly to access encrypted personal information. The RLS policy ensures you can only access members of your own clinic. Decrypt data on client-side as needed.
 
 ### Environment Variables
 

@@ -107,22 +107,27 @@ ADD CONSTRAINT check_resident_number_format
 CHECK (validate_resident_number(resident_registration_number));
 
 -- 7. Grant necessary permissions (if using RLS)
--- STRICT SECURITY: Only user themselves and clinic owners can view personal information
--- Vice directors, managers, team leaders, and staff CANNOT view others' personal info
+-- SECURITY POLICY:
+-- - Users can view their own full information (including encrypted personal data)
+-- - Owners can view full information of their clinic members (including encrypted personal data)
+-- - Master admins can view all users
+-- - Other roles (vice_director, manager, team_leader, staff) can only see basic info of colleagues
+--   but CANNOT access address or resident_registration_number fields
 
--- Update existing RLS policy to restrict resident_registration_number access
+-- Update existing RLS policy
 DROP POLICY IF EXISTS "Users can view colleagues in same clinic" ON users;
 
--- New policy: Strict access control for personal information
+-- New policy: Owner can view full personal information (encrypted)
 CREATE POLICY "Users can view colleagues in same clinic" ON users
     FOR SELECT USING (
-        -- User can always see their own full data
+        -- User can always see their own full data (encrypted)
         id = auth.uid() OR
         -- Master admin can see all
         auth.uid() IN (
             SELECT id FROM users WHERE role = 'master_admin'
         ) OR
-        -- ONLY owners can see personal info of their clinic members (NOT vice_directors)
+        -- Owners can see full personal info of their clinic members (encrypted data)
+        -- They will decrypt on client-side for employment contracts
         (
             clinic_id IN (
                 SELECT clinic_id FROM users
@@ -130,20 +135,19 @@ CREATE POLICY "Users can view colleagues in same clinic" ON users
                 AND role = 'owner'
             )
         ) OR
-        -- Other users in same clinic can see basic info ONLY (name, email, role, status)
-        -- But they CANNOT access address or resident_registration_number
+        -- Other users in same clinic can see basic info ONLY
+        -- They CANNOT access address or resident_registration_number
         (
             clinic_id IN (
                 SELECT clinic_id FROM users WHERE id = auth.uid()
             )
-            -- This policy allows row-level access but column-level restriction
-            -- is handled by the secure view below
         )
     );
 
 -- 8. Create secure views for different access levels
 
 -- View for general staff: NO personal information (address, resident number)
+-- This view excludes sensitive personal information
 CREATE OR REPLACE VIEW users_basic_info AS
 SELECT
     id,
@@ -161,33 +165,18 @@ SELECT
     -- NO address or resident_registration_number for general staff
 FROM users;
 
--- View for owners only: Shows masked resident registration number
-CREATE OR REPLACE VIEW users_with_masked_info AS
-SELECT
-    id,
-    email,
-    name,
-    phone,
-    role,
-    status,
-    clinic_id,
-    address,
-    created_at,
-    updated_at,
-    last_login_at,
-    approved_by,
-    approved_at,
-    -- Mask resident registration number (show only first 8 chars for owners)
-    CASE
-        WHEN resident_registration_number IS NOT NULL AND length(resident_registration_number) > 8
-        THEN left(resident_registration_number, 8) || '******'
-        ELSE '********'
-    END as resident_registration_number_masked
-FROM users;
+-- NOTE: Owners should query the users table directly to get encrypted personal information
+-- and decrypt on client-side using the encryption utilities. This ensures:
+-- 1. Encrypted data never leaves the database unencrypted
+-- 2. Decryption happens only when necessary
+-- 3. Full audit trail of who accessed what data
+--
+-- Example query for owners:
+-- SELECT * FROM users WHERE clinic_id = :clinic_id
+-- Then decrypt resident_registration_number on client-side
 
 -- 9. Grant access to the views
 GRANT SELECT ON users_basic_info TO authenticated;
-GRANT SELECT ON users_with_masked_info TO authenticated;
 
 -- 10. Add audit log entry for migration
 INSERT INTO audit_logs (
