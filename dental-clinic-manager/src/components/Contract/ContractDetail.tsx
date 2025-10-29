@@ -10,12 +10,12 @@ import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
 import SignaturePad from './SignaturePad'
 import type { EmploymentContract, ContractSigningData, SignerType } from '@/types/contract'
-import type { User } from '@/types/auth'
+import type { UserProfile } from '@/contexts/AuthContext'
 import { formatResidentNumber, maskResidentNumber } from '@/utils/residentNumberUtils'
 
 interface ContractDetailProps {
   contractId: string
-  currentUser: User
+  currentUser: UserProfile
 }
 
 export default function ContractDetail({ contractId, currentUser }: ContractDetailProps) {
@@ -248,13 +248,13 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
             <h2 className="text-lg font-bold mb-3">제1조 (당사자)</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="font-semibold">사용자 (이하 "갑")</p>
+                <p className="font-semibold">사용자 (이하 &ldquo;갑&rdquo;)</p>
                 <p>병원명: {data.clinic_name}</p>
                 <p>원장: {data.employer_name}</p>
                 <p>주소: {data.clinic_address}</p>
               </div>
               <div>
-                <p className="font-semibold">근로자 (이하 "을")</p>
+                <p className="font-semibold">근로자 (이하 &ldquo;을&rdquo;)</p>
                 <p>성명: {data.employee_name}</p>
                 <p>주민등록번호: {displayResidentNumber}</p>
                 <p>주소: {data.employee_address}</p>

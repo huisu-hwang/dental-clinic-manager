@@ -1053,7 +1053,7 @@ export const dataService = {
   },
 
   // 사용자 프로필 업데이트
-  async updateUserProfile(id: string, updates: { name?: string; phone?: string }) {
+  async updateUserProfile(id: string, updates: { name?: string; phone?: string; address?: string; resident_registration_number?: string }) {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase client not available')
 

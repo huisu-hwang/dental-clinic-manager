@@ -10,10 +10,11 @@ import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
 import type { ContractFormData, ContractData } from '@/types/contract'
 import type { User } from '@/types/auth'
+import type { UserProfile } from '@/contexts/AuthContext'
 import { formatResidentNumber } from '@/utils/residentNumberUtils'
 
 interface ContractFormProps {
-  currentUser: User
+  currentUser: UserProfile
   employees: User[]
   onSuccess?: (contractId: string) => void
   onCancel?: () => void
@@ -91,12 +92,12 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
 
       const response = await contractService.createContract(contractFormData, currentUser.id)
 
-      if (response.success && response.data) {
+      if (response.success && response.contract) {
         alert('근로계약서가 성공적으로 생성되었습니다.')
         if (onSuccess) {
-          onSuccess(response.data.id)
+          onSuccess(response.contract.id)
         } else {
-          router.push(`/dashboard/contracts/${response.data.id}`)
+          router.push(`/dashboard/contracts/${response.contract.id}`)
         }
       } else {
         alert(`오류: ${response.error}`)

@@ -8,11 +8,11 @@
 import { useState, useEffect } from 'react'
 import { contractService } from '@/lib/contractService'
 import type { ContractTemplate } from '@/types/contract'
-import type { User } from '@/types/auth'
+import type { UserProfile } from '@/contexts/AuthContext'
 import { DEFAULT_HAYAN_TEMPLATE } from '@/types/contract'
 
 interface TemplateManagementProps {
-  currentUser: User
+  currentUser: UserProfile
   clinicId: string
 }
 

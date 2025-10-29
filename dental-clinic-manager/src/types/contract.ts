@@ -233,7 +233,7 @@ export interface ContractChangeHistory {
 // =====================================================================
 
 export interface ContractFormData {
-  template_id: string
+  template_id?: string
   employee_user_id: string
   contract_data: Partial<ContractData>
 }
@@ -415,3 +415,9 @@ export const DEFAULT_SIGNATURE_AREAS: SignatureArea[] = [
     label: '근로자 서명'
   }
 ]
+
+// Default Hayan Dental Template Structure
+export const DEFAULT_HAYAN_TEMPLATE = {
+  fields: DEFAULT_CONTRACT_FIELDS,
+  signature_areas: DEFAULT_SIGNATURE_AREAS
+}

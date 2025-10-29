@@ -174,11 +174,11 @@ export function secureErase(data: string): void {
   // In JavaScript, we can't truly erase memory, but we can try to overwrite
   // The garbage collector will eventually clean it up
   try {
-    // @ts-ignore - Overwrite the string content (may not work in all JS engines)
+    // Note: Overwriting string content may not work in all JS engines
     for (let i = 0; i < data.length; i++) {
       data = data.substring(0, i) + '\0' + data.substring(i + 1)
     }
-  } catch (e) {
+  } catch (_e) {
     // Silent fail - best effort only
   }
 }

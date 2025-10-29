@@ -77,7 +77,7 @@ class ContractService {
       }
 
       // Prepare contract data with auto-filled employee info
-      const contractData: ContractData = {
+      const contractData = {
         // Auto-filled employee info
         employee_name: employee.name,
         employee_address: employee.address || '',
@@ -103,7 +103,7 @@ class ContractService {
         non_compete_agreement: data.contract_data.non_compete_agreement ?? false,
         contract_date: new Date().toISOString().split('T')[0],
         contract_location: clinic.address
-      }
+      } as ContractData
 
       // Calculate total salary
       const salaryBase = contractData.salary_base || 0
@@ -168,7 +168,7 @@ class ContractService {
         return { data: null, error: error.message }
       }
 
-      return { data: data as EmploymentContract, error: null }
+      return { data: data as unknown as EmploymentContract, error: null }
     } catch (error) {
       return {
         data: null,
@@ -238,7 +238,7 @@ class ContractService {
 
       return {
         success: true,
-        contracts: data as EmploymentContract[],
+        contracts: data as unknown as EmploymentContract[],
         total: count || 0
       }
     } catch (error) {
@@ -274,7 +274,7 @@ class ContractService {
 
       return {
         success: true,
-        contracts: data as EmploymentContract[],
+        contracts: data as unknown as EmploymentContract[],
         total: count || 0
       }
     } catch (error) {
@@ -425,7 +425,7 @@ class ContractService {
       }
 
       // Check if already signed
-      const existingSignature = (contract.signatures as ContractSignature[])?.find(
+      const existingSignature = (contract.signatures as unknown as ContractSignature[])?.find(
         (s: ContractSignature) => s.signer_type === data.signer_type
       )
 
@@ -463,7 +463,7 @@ class ContractService {
       }
 
       // Update contract status based on signatures
-      const allSignatures = [...(contract.signatures as ContractSignature[] || []), signature as ContractSignature]
+      const allSignatures = [...(contract.signatures as unknown as ContractSignature[] || []), signature as unknown as ContractSignature]
       const hasEmployerSignature = allSignatures.some((s: ContractSignature) => s.signer_type === 'employer')
       const hasEmployeeSignature = allSignatures.some((s: ContractSignature) => s.signer_type === 'employee')
 
@@ -484,7 +484,7 @@ class ContractService {
 
       return {
         success: true,
-        signature: signature as ContractSignature,
+        signature: signature as unknown as ContractSignature,
         contract_status: newStatus
       }
     } catch (error) {

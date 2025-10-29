@@ -9,10 +9,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
 import type { EmploymentContract, ContractStatus, ContractListFilters } from '@/types/contract'
-import type { User } from '@/types/auth'
+import type { UserProfile } from '@/contexts/AuthContext'
 
 interface ContractListProps {
-  currentUser: User
+  currentUser: UserProfile
   clinicId: string
 }
 
@@ -39,7 +39,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<ContractListFilters>({
     status: undefined,
-    employee_id: undefined,
+    employee_user_id: undefined,
     search: undefined
   })
 
@@ -58,7 +58,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       if (response.error) {
         setError(response.error)
       } else {
-        setContracts(response.data)
+        setContracts(response.contracts || [])
       }
     } catch (err) {
       console.error('Failed to load contracts:', err)

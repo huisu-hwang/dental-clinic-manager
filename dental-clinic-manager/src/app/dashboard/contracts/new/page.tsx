@@ -20,6 +20,13 @@ export default function NewContractPage() {
   const [employees, setEmployees] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Load employees
+  useEffect(() => {
+    if (hasPermission('contract_create') && user?.clinic_id) {
+      loadEmployees()
+    }
+  }, [user?.clinic_id, hasPermission])
+
   // Check permission
   if (!hasPermission('contract_create')) {
     return (
@@ -40,11 +47,6 @@ export default function NewContractPage() {
       </div>
     )
   }
-
-  // Load employees
-  useEffect(() => {
-    loadEmployees()
-  }, [user?.clinic_id])
 
   const loadEmployees = async () => {
     if (!user?.clinic_id) return
