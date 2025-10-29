@@ -38,6 +38,7 @@ export const authService = {
       }
 
       // Get user by email from users table
+      // Use maybeSingle() to avoid throwing errors and get better error handling
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select(`
@@ -45,10 +46,16 @@ export const authService = {
           clinic:clinics(*)
         `)
         .eq('email', email)
-        .single()
+        .maybeSingle()
 
-      if (userError || !userData) {
-        console.error('[AuthService] User not found in users table:', userError)
+      if (userError) {
+        console.error('[AuthService] Error querying users table:', userError)
+        console.error('[AuthService] Error details:', JSON.stringify(userError, null, 2))
+        return { success: false, error: 'Database error: ' + userError.message }
+      }
+
+      if (!userData) {
+        console.error('[AuthService] User not found in users table for email:', email)
         return { success: false, error: 'Invalid email or password' }
       }
 

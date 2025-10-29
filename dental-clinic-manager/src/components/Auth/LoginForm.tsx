@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getSupabase } from '@/lib/supabase'
-import { dataService } from '@/lib/dataService'
+import { authService } from '@/lib/authService'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 interface LoginFormProps {
@@ -47,77 +46,29 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
     setLoading(true)
 
     try {
-      console.log('[LoginForm] Getting Supabase client...')
-      const supabase = getSupabase()
+      // authService의 하이브리드 로그인 사용 (Supabase Auth + 커스텀 인증)
+      console.log('[LoginForm] Calling authService.login...')
+      const result = await authService.login(formData.email, formData.password)
 
-      if (!supabase) {
-        console.error('[LoginForm] Supabase client is null')
-        setError('데이터베이스 연결에 실패했습니다. 환경 설정을 확인해주세요.')
+      console.log('[LoginForm] authService.login result:', result)
+
+      if (!result.success || !result.user) {
+        console.error('[LoginForm] Login failed:', result.error)
+        setError(result.error || '아이디 또는 비밀번호가 올바르지 않습니다.')
         setLoading(false)
         return
       }
 
-      console.log('[LoginForm] Supabase client obtained, attempting login...')
-
-      // 1. Supabase Auth로 로그인 시도
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: formData.email, // email로 변경
-        password: formData.password,
-      })
-
-      console.log('[LoginForm] Auth response:', { authData, authError })
-
-      if (authError) {
-        console.error('[LoginForm] Auth error:', authError)
-        setError('아이디 또는 비밀번호가 올바르지 않습니다.')
-        setLoading(false)
-        return
-      }
-
-      if (!authData.user) {
-        setError('사용자 정보를 가져오지 못했습니다.')
-        setLoading(false)
-        return
-      }
-
-      // 2. 마스터 계정 특별 처리
-      if (formData.email === 'sani81@gmail.com') {
-        // 마스터 계정은 프로필 조회 없이 바로 로그인 처리
-        const masterProfile = {
-          id: authData.user.id,
-          email: 'sani81@gmail.com',
-          name: 'Master Administrator',
-          role: 'master',
-          status: 'active',
-          userId: 'sani81@gmail.com',
-          clinic_id: null, // 마스터는 특정 병원에 소속되지 않음
-          clinic: null
-        }
-        console.log('[LoginForm] Master login with profile:', masterProfile)
-        login(formData.email, masterProfile)
-      } else {
-        // 3. 일반 사용자는 public.users 테이블에서 전체 프로필 정보 조회
-        const result = await dataService.getUserProfileById(authData.user.id)
-
-        if (result.error || !result.data) {
-          setError('로그인에 성공했으나, 프로필 정보를 불러오는 데 실패했습니다.')
-          // 이 경우, 사용자는 인증되었지만 앱 사용에 필요한 정보가 부족하므로 로그아웃 처리
-          await supabase.auth.signOut()
-          setLoading(false)
-          return
-        }
-
-        // 4. AuthContext에 완전한 사용자 정보로 로그인 처리
-        login(formData.email, result.data) // email로 변경
-      }
+      // AuthContext에 사용자 정보로 로그인 처리
+      console.log('[LoginForm] Login successful, user:', result.user)
+      login(formData.email, result.user)
 
       if (rememberMe) {
         // 로그인 상태 유지는 Supabase가 세션 관리를 통해 자동으로 처리합니다.
-        // 별도의 localStorage 작업이 필요 없어졌습니다.
-        console.log('로그인 상태 유지 기능은 Supabase 세션에 의해 관리됩니다.')
+        console.log('[LoginForm] Remember me enabled - Supabase session will persist')
       }
 
-      console.log('[LoginForm] Login successful, calling onLoginSuccess...')
+      console.log('[LoginForm] Calling onLoginSuccess...')
       onLoginSuccess()
     } catch (error) {
       console.error('[LoginForm] Unexpected error during login:', error)
