@@ -14,11 +14,22 @@ Supabase의 `users` 테이블에 대한 Row Level Security (RLS) 정책이 `auth
 
 ### 1. 마이그레이션 파일 적용
 
-다음 마이그레이션 파일을 Supabase에 적용해야 합니다:
-- **권장**: `supabase/migrations/20250129_disable_users_rls_temporarily.sql` (RLS 비활성화)
-- 또는: `supabase/migrations/20250129_fix_users_rls_update_policy.sql` (RLS 정책 수정)
+세 가지 방법이 있으며, **방법 A가 가장 안전하고 권장됩니다**:
 
-**중요**: 두 개의 마이그레이션 중 하나만 선택하여 실행하세요. 권장 방법은 RLS를 비활성화하는 것입니다.
+- **✅ 방법 A (최고 권장)**: `20250129_secure_profile_update_function.sql`
+  - Database Function을 사용한 보안 업데이트
+  - RLS 유지 + 함수 내부 권한 체크
+  - 클라이언트 우회 불가능
+  - **가장 안전한 방법**
+
+- **⚠️ 방법 B (임시 해결책)**: `20250129_disable_users_rls_temporarily.sql`
+  - RLS 비활성화
+  - 빠른 적용 가능
+  - **보안 위험 있음** (SECURITY_ANALYSIS.md 참조)
+
+- **🔶 방법 C (하이브리드)**: `20250129_fix_users_rls_update_policy.sql`
+  - RLS 정책 수정
+  - Supabase Auth 세션 필요
 
 #### Supabase CLI를 사용하는 경우:
 
@@ -33,23 +44,41 @@ supabase db push
 2. 프로젝트 선택
 3. 좌측 메뉴에서 "SQL Editor" 선택
 4. "New query" 클릭
-5. **권장**: `supabase/migrations/20250129_disable_users_rls_temporarily.sql` 파일의 내용을 복사하여 붙여넣기
+5. **최고 권장**: `supabase/migrations/20250129_secure_profile_update_function.sql` 파일의 내용을 복사하여 붙여넣기
 6. "Run" 버튼 클릭
-7. "Success" 메시지 확인
+7. "Success. No rows returned" 메시지 확인
 
 ### 2. 마이그레이션 내용
 
-#### 방법 A: RLS 비활성화 (권장)
-`20250129_disable_users_rls_temporarily.sql`를 실행하면:
-- users 테이블의 RLS를 비활성화합니다
-- 애플리케이션 레벨에서 이미 보안 체크를 하고 있으므로 안전합니다
-- 코드에서 사용자 본인 확인 로직이 구현되어 있습니다 (dataService.updateUserProfile)
+#### ✅ 방법 A: Database Function (최고 권장)
+`20250129_secure_profile_update_function.sql`를 실행하면:
+- `update_own_profile()` 함수 생성 (SECURITY DEFINER)
+- RLS를 유지하면서도 안전한 업데이트 가능
+- 함수 내부에서 권한 체크 (데이터베이스 레벨)
+- 클라이언트에서 우회 불가능
+- 감사 로그 자동 기록
 
-#### 방법 B: RLS 정책 수정
+**보안 구조:**
+```
+클라이언트 → supabase.rpc('update_own_profile') → Database Function
+                                                    ↓
+                                             권한 체크 (DB)
+                                                    ↓
+                                             UPDATE users
+```
+
+#### ⚠️ 방법 B: RLS 비활성화 (보안 위험)
+`20250129_disable_users_rls_temporarily.sql`를 실행하면:
+- users 테이블의 RLS를 완전히 비활성화
+- 애플리케이션 레벨 보안에만 의존
+- **보안 위험 상세 내역은 SECURITY_ANALYSIS.md 참조**
+- 프로덕션 환경에서는 권장하지 않음
+
+#### 🔶 방법 C: RLS 정책 수정 (하이브리드)
 `20250129_fix_users_rls_update_policy.sql`를 실행하면:
-- 인증된 모든 사용자가 users 테이블을 업데이트할 수 있도록 허용
-- 애플리케이션 레벨에서 본인 확인 로직으로 보안 유지
-- Supabase Auth 세션이 있는 사용자만 작동
+- 인증된 사용자의 UPDATE 허용
+- Supabase Auth 세션이 있어야 작동
+- 기존 사용자는 여전히 문제 발생 가능
 
 ### 3. 변경된 코드
 

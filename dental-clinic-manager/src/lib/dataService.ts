@@ -1052,7 +1052,7 @@ export const dataService = {
     }
   },
 
-  // 사용자 프로필 업데이트
+  // 사용자 프로필 업데이트 (Secure Database Function 사용)
   async updateUserProfile(id: string, updates: { name?: string; phone?: string }) {
     const supabase = getSupabase()
     if (!supabase) {
@@ -1064,52 +1064,53 @@ export const dataService = {
       console.log('[updateUserProfile] Updating user profile for ID:', id)
       console.log('[updateUserProfile] Updates:', updates)
 
-      // 먼저 현재 인증된 사용자 확인
+      // 먼저 현재 인증된 사용자 확인 (선택적 체크)
       const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser()
 
       if (authError) {
-        console.error('[updateUserProfile] Auth error:', authError)
-        return { error: `인증 오류: ${authError.message}` }
+        console.warn('[updateUserProfile] Auth check failed (may be legacy user):', authError.message)
       }
 
-      if (!currentUser) {
-        console.error('[updateUserProfile] No authenticated user')
-        return { error: '로그인된 사용자가 없습니다.' }
-      }
-
-      console.log('[updateUserProfile] Current authenticated user:', currentUser.id)
-
-      // 본인의 프로필만 수정할 수 있도록 확인
-      if (currentUser.id !== id) {
+      // 애플리케이션 레벨 보안: 본인의 프로필만 수정할 수 있도록 확인
+      if (currentUser && currentUser.id !== id) {
         console.error('[updateUserProfile] User ID mismatch:', { currentUserId: currentUser.id, targetUserId: id })
         return { error: '본인의 프로필만 수정할 수 있습니다.' }
       }
 
-      // 사용자 ID (UUID)를 기준으로 직접 업데이트합니다.
-      const { data, error } = await (supabase.from('users') as any)
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select()
+      // 안전한 Database Function 호출
+      // SECURITY DEFINER로 RLS를 우회하지만, 함수 내부에서 권한 체크
+      const { data, error } = await supabase.rpc('update_own_profile', {
+        p_user_id: id,
+        p_name: updates.name || null,
+        p_phone: updates.phone || null
+      })
 
       if (error) {
-        console.error('[updateUserProfile] Supabase update error:', error)
+        console.error('[updateUserProfile] Database function error:', error)
         console.error('[updateUserProfile] Error code:', error.code)
         console.error('[updateUserProfile] Error message:', error.message)
         console.error('[updateUserProfile] Error details:', error.details)
         console.error('[updateUserProfile] Error hint:', error.hint)
-        return { error: `업데이트 실패: ${error.message || error.details || error.hint || 'Unknown error'}` }
+
+        // 사용자 친화적인 에러 메시지
+        if (error.message?.includes('Unauthorized')) {
+          return { error: '권한이 없습니다. 본인의 프로필만 수정할 수 있습니다.' }
+        } else if (error.message?.includes('not found')) {
+          return { error: '사용자를 찾을 수 없습니다.' }
+        } else if (error.message?.includes('inactive')) {
+          return { error: '비활성화된 계정입니다.' }
+        }
+
+        return { error: `업데이트 실패: ${error.message || 'Unknown error'}` }
       }
 
       if (!data || (Array.isArray(data) && data.length === 0)) {
-        console.error('[updateUserProfile] No data returned after update')
-        return { error: '업데이트 결과를 받지 못했습니다. RLS 정책을 확인해주세요.' }
+        console.error('[updateUserProfile] No data returned from function')
+        return { error: '업데이트 결과를 받지 못했습니다.' }
       }
 
       const updatedUser = Array.isArray(data) ? data[0] : data
-      console.log('[updateUserProfile] Profile updated successfully:', updatedUser)
+      console.log('[updateUserProfile] Profile updated successfully via secure function')
 
       return { success: true, data: updatedUser }
     } catch (error: unknown) {
