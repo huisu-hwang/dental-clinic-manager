@@ -27,12 +27,67 @@ export default function NewContractPage() {
     else router.push('/dashboard')
   }
 
+  const loadEmployees = async () => {
+    console.log('[Contract New] Starting to load employees...')
+    console.log('[Contract New] User clinic_id:', user?.clinic_id)
+    console.log('[Contract New] User id:', user?.id)
+
+    if (!user?.clinic_id) {
+      console.warn('[Contract New] No clinic_id available')
+      setLoading(false)
+      return
+    }
+
+    try {
+      const supabase = getSupabase()
+      if (!supabase) {
+        console.error('[Contract New] Supabase client not available')
+        setLoading(false)
+        return
+      }
+
+      console.log('[Contract New] Executing query for clinic_id:', user.clinic_id)
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, phone, address, resident_registration_number, role, status')
+        .eq('clinic_id', user.clinic_id)
+        .neq('id', user.id)
+        .order('name')
+
+      console.log('[Contract New] Query completed')
+      console.log('[Contract New] Error:', error)
+      console.log('[Contract New] Data:', data)
+      console.log('[Contract New] Employee count:', data?.length || 0)
+
+      if (error) {
+        console.error('[Contract New] Failed to load employees:', error)
+        alert(`직원 목록을 불러오는데 실패했습니다: ${error.message}`)
+      } else {
+        console.log('[Contract New] Successfully loaded employees:', data)
+        setEmployees(data as User[])
+      }
+    } catch (err) {
+      console.error('[Contract New] Exception while loading employees:', err)
+      alert(`직원 목록 로딩 중 오류 발생: ${err instanceof Error ? err.message : '알 수 없는 오류'}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Load employees
   useEffect(() => {
+    console.log('[Contract New] useEffect triggered')
+    console.log('[Contract New] Has permission:', hasPermission('contract_create'))
+    console.log('[Contract New] User clinic_id:', user?.clinic_id)
+
     if (hasPermission('contract_create') && user?.clinic_id) {
       loadEmployees()
+    } else {
+      console.log('[Contract New] Skipping employee load - missing permission or clinic_id')
+      setLoading(false)
     }
-  }, [user?.clinic_id, hasPermission])
+  }, [user?.clinic_id])
 
   // Check permission
   if (!hasPermission('contract_create')) {
@@ -56,37 +111,6 @@ export default function NewContractPage() {
         </div>
       </div>
     )
-  }
-
-  const loadEmployees = async () => {
-    if (!user?.clinic_id) return
-
-    try {
-      const supabase = getSupabase()
-      if (!supabase) {
-        console.error('Supabase client not available')
-        setLoading(false)
-        return
-      }
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, email, phone, address, resident_registration_number, role, status')
-        .eq('clinic_id', user.clinic_id)
-        .neq('id', user.id) // Exclude current user (owner/manager creating the contract)
-        .order('name')
-
-      if (error) {
-        console.error('Failed to load employees:', error)
-      } else {
-        console.log('Loaded employees:', data?.length || 0, 'employees found')
-        setEmployees(data as User[])
-      }
-    } catch (err) {
-      console.error('Failed to load employees:', err)
-    } finally {
-      setLoading(false)
-    }
   }
 
   const handleSuccess = (contractId: string) => {

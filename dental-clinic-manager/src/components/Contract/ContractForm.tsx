@@ -36,6 +36,13 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
     is_permanent: true
   })
 
+  // Debug logging for employees prop
+  useEffect(() => {
+    console.log('[ContractForm] Received employees prop:', employees)
+    console.log('[ContractForm] Employee count:', employees?.length || 0)
+    console.log('[ContractForm] Current user:', currentUser)
+  }, [employees, currentUser])
+
   // Auto-fill when employee is selected
   useEffect(() => {
     if (selectedEmployee) {
