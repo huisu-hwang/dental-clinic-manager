@@ -76,7 +76,11 @@ const [formData, setFormData] = useState<ClinicFormData>({
   const fetchClinicInfo = async () => {
     setLoading(true)
     const supabase = getSupabase()
-    if (!supabase || !currentUser.clinic_id) return
+    if (!supabase || !currentUser.clinic_id) {
+      setLoading(false)
+      setError('병원 정보를 불러올 수 없습니다.')
+      return
+    }
 
     try {
       const { data, error } = await supabase
