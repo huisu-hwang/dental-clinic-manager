@@ -39,7 +39,12 @@ export default function AuthApp() {
           onBackToLanding={() => setAppState('landing')}
           onShowSignup={() => setAppState('signup')}
           onShowForgotPassword={() => setAppState('forgotPassword')}
-          onLoginSuccess={() => window.location.reload()}
+          onLoginSuccess={() => {
+            // 상태 업데이트 완료를 위한 약간의 지연 후 reload
+            setTimeout(() => {
+              window.location.reload()
+            }, 150)
+          }}
         />
       )
     case 'signup':
