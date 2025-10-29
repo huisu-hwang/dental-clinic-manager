@@ -25,21 +25,29 @@ export default function SignaturePad({
   disabled = false
 }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [isEmpty, setIsEmpty] = useState(true)
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null)
 
-  // Initialize canvas
+  // Initialize canvas with proper sizing
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    const container = containerRef.current
+    if (!canvas || !container) return
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Set canvas size
-    canvas.width = width
-    canvas.height = height
+    // Get actual container size
+    const rect = container.getBoundingClientRect()
+    const actualWidth = rect.width
+    const actualHeight = Math.min(height, actualWidth * (height / width)) // Maintain aspect ratio
+
+    // Set canvas internal resolution to match display size exactly
+    // This ensures 1:1 pixel mapping and prevents scaling issues
+    canvas.width = actualWidth
+    canvas.height = actualHeight
 
     // Configure drawing context
     ctx.strokeStyle = '#000000'
@@ -53,7 +61,7 @@ export default function SignaturePad({
     if (defaultSignature) {
       const img = new Image()
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, width, height)
+        ctx.drawImage(img, 0, 0, actualWidth, actualHeight)
         setIsEmpty(false)
       }
       img.src = defaultSignature
@@ -67,22 +75,19 @@ export default function SignaturePad({
 
     const rect = canvas.getBoundingClientRect()
 
-    // Calculate scale between canvas internal size and display size
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-
+    // Since canvas internal resolution matches display size (1:1), no scaling needed
     if ('touches' in e) {
       // Touch event
       const touch = e.touches[0]
       return {
-        x: (touch.clientX - rect.left) * scaleX,
-        y: (touch.clientY - rect.top) * scaleY
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top
       }
     } else {
       // Mouse event
       return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
       }
     }
   }
@@ -163,7 +168,11 @@ export default function SignaturePad({
       </div>
 
       {/* Signature Canvas */}
-      <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-white mb-4">
+      <div
+        ref={containerRef}
+        className="border-2 border-gray-300 rounded-lg overflow-hidden bg-white mb-4"
+        style={{ maxWidth: `${width}px`, aspectRatio: `${width}/${height}` }}
+      >
         <canvas
           ref={canvasRef}
           onMouseDown={startDrawing}
@@ -174,7 +183,7 @@ export default function SignaturePad({
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
           className={`cursor-crosshair ${disabled ? 'opacity-50' : ''}`}
-          style={{ display: 'block', touchAction: 'none', width: `${width}px`, height: `${height}px` }}
+          style={{ display: 'block', touchAction: 'none', width: '100%', height: '100%' }}
         />
       </div>
 
