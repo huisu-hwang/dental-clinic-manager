@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
               const sessionPromise = supabase.auth.getSession()
               const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Session check timeout')), 5000)
+                setTimeout(() => reject(new Error('Session check timeout')), 10000)
               )
 
               const result = await Promise.race([
@@ -263,11 +263,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 타임아웃 설정: 5초 후에도 로딩이 끝나지 않으면 강제로 종료
+    // 타임아웃 설정: 15초 후에도 로딩이 끝나지 않으면 강제로 종료
     timeoutId = setTimeout(() => {
       console.warn('[AuthContext] Auth check timeout - forcing loading to false')
       setLoading(false)
-    }, 5000)
+    }, 15000)
 
     checkAuth()
 
