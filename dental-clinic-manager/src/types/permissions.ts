@@ -53,10 +53,6 @@ export type Permission =
   | 'leave_balance_manage'   // 연차 잔여 수동 조정 (관리자)
   | 'leave_workflow_manage'  // 승인 프로세스 관리 (관리자)
   | 'leave_type_manage'      // 연차 종류 관리 (관리자)
-  // 근로계약서 관리 권한
-  | 'contract_view'          // 근로계약서 조회
-  | 'contract_create'        // 근로계약서 생성
-  | 'contract_template_manage' // 계약서 템플릿 관리
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -79,9 +75,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_approve_step1', 'leave_approve_step2', 'leave_approve_final',
     'leave_policy_view', 'leave_policy_manage',
     'leave_balance_view_own', 'leave_balance_view_all', 'leave_balance_manage',
-    'leave_workflow_manage', 'leave_type_manage',
-    // 근로계약서 관리 (모든 권한)
-    'contract_view', 'contract_create', 'contract_template_manage'
+    'leave_workflow_manage', 'leave_type_manage'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -101,9 +95,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_request_create', 'leave_request_view_own', 'leave_request_view_all', 'leave_request_cancel',
     'leave_approve_step1', 'leave_approve_step2',
     'leave_policy_view',
-    'leave_balance_view_own', 'leave_balance_view_all',
-    // 근로계약서 관리 (조회 및 생성)
-    'contract_view', 'contract_create', 'contract_template_manage'
+    'leave_balance_view_own', 'leave_balance_view_all'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
@@ -122,9 +114,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_request_create', 'leave_request_view_own', 'leave_request_view_all', 'leave_request_cancel',
     'leave_approve_step1',
     'leave_policy_view',
-    'leave_balance_view_own', 'leave_balance_view_all',
-    // 근로계약서 관리 (조회만)
-    'contract_view'
+    'leave_balance_view_own', 'leave_balance_view_all'
   ],
   team_leader: [
     // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
@@ -141,9 +131,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 연차 관리 (신청 및 조회)
     'leave_request_create', 'leave_request_view_own', 'leave_request_view_all', 'leave_request_cancel',
     'leave_policy_view',
-    'leave_balance_view_own', 'leave_balance_view_all',
-    // 근로계약서 관리 (본인 조회만)
-    'contract_view'
+    'leave_balance_view_own', 'leave_balance_view_all'
   ],
   staff: [
     // 일반 직원은 프로토콜 조회, 본인 출퇴근, 본인 연차만 가능
@@ -160,9 +148,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 연차 관리 (본인만)
     'leave_request_create', 'leave_request_view_own', 'leave_request_cancel',
     'leave_policy_view',
-    'leave_balance_view_own',
-    // 근로계약서 관리 (본인 조회만)
-    'contract_view'
+    'leave_balance_view_own'
   ]
 }
 
@@ -235,11 +221,6 @@ export const PERMISSION_GROUPS = {
     { key: 'leave_workflow_manage', label: '승인 프로세스 관리' },
     { key: 'leave_type_manage', label: '연차 종류 관리' }
   ],
-  '근로계약서': [
-    { key: 'contract_view', label: '계약서 조회' },
-    { key: 'contract_create', label: '계약서 생성' },
-    { key: 'contract_template_manage', label: '템플릿 관리' }
-  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -299,9 +280,5 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'leave_balance_view_all': '전체 직원의 연차 잔여 현황을 조회할 수 있습니다.',
   'leave_balance_manage': '직원의 연차 잔여를 수동으로 조정할 수 있습니다.',
   'leave_workflow_manage': '연차 승인 프로세스를 설정하고 관리할 수 있습니다.',
-  'leave_type_manage': '연차 종류를 추가하고 관리할 수 있습니다.',
-  // 근로계약서 권한 설명
-  'contract_view': '근로계약서를 조회할 수 있습니다.',
-  'contract_create': '새로운 근로계약서를 작성할 수 있습니다.',
-  'contract_template_manage': '근로계약서 템플릿을 생성하고 관리할 수 있습니다.'
+  'leave_type_manage': '연차 종류를 추가하고 관리할 수 있습니다.'
 }
