@@ -86,12 +86,19 @@ export default function QRCodeDisplay() {
     setMessage(null)
 
     try {
-      const result = await attendanceService.generateDailyQRCode({
+      // 타임아웃 설정 (10초)
+      const qrCodePromise = attendanceService.generateDailyQRCode({
         clinic_id: user.clinic_id,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         radius_meters: parseInt(radiusMeters, 10),
       })
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('QR code generation timeout')), 10000)
+      )
+
+      const result = await Promise.race([qrCodePromise, timeoutPromise]) as any
 
       if (result.success && result.qrCode) {
         setQrCode(result.qrCode)
@@ -100,7 +107,11 @@ export default function QRCodeDisplay() {
         setMessage({ type: 'error', text: result.error || 'QR 코드 생성 실패' })
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'QR 코드 생성 중 오류가 발생했습니다.' })
+      if (error.message === 'QR code generation timeout') {
+        setMessage({ type: 'error', text: 'QR 코드 생성 시간이 초과되었습니다. 네트워크 연결을 확인하거나 다시 시도해주세요.' })
+      } else {
+        setMessage({ type: 'error', text: error.message || 'QR 코드 생성 중 오류가 발생했습니다.' })
+      }
     } finally {
       setLoading(false)
     }
