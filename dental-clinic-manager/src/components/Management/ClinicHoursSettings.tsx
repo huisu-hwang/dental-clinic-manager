@@ -36,14 +36,28 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
 
   const loadData = async () => {
     setLoading(true)
+    console.log('[ClinicHoursSettings] Loading data for clinic:', clinicId)
+
     try {
       const [hoursResult, holidaysResult] = await Promise.all([
         clinicHoursService.getClinicHours(clinicId),
         clinicHoursService.getClinicHolidays(clinicId),
       ])
 
+      console.log('[ClinicHoursSettings] Hours result:', hoursResult)
+      console.log('[ClinicHoursSettings] Holidays result:', holidaysResult)
+
+      // 테이블이 없는 경우 체크
       if (hoursResult.error) {
-        console.error('Error loading clinic hours:', hoursResult.error)
+        const errorMessage = hoursResult.error.message || hoursResult.error.toString()
+        console.error('[ClinicHoursSettings] Error loading clinic hours:', errorMessage)
+
+        if (errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
+          showMessage('error', '⚠️ 데이터베이스 테이블이 생성되지 않았습니다. Supabase Dashboard에서 Migration SQL을 실행해주세요.')
+          setHoursData(DEFAULT_CLINIC_HOURS) // 기본값으로 UI는 표시
+          setLoading(false)
+          return
+        }
       } else if (hoursResult.data && hoursResult.data.length > 0) {
         // 데이터베이스에서 불러온 데이터를 UI용 형태로 변환
         const formattedData: ClinicHoursInput[] = hoursResult.data.map((hours: ClinicHours) => ({
@@ -55,20 +69,39 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
           break_end: hours.break_end || '',
         }))
         setHoursData(formattedData)
+        console.log('[ClinicHoursSettings] Loaded hours data:', formattedData)
       } else {
-        // 데이터가 없으면 기본값으로 생성
-        await clinicHoursService.createDefaultHours(clinicId)
+        // 데이터가 없으면 기본값으로 생성 시도
+        console.log('[ClinicHoursSettings] No hours data, creating defaults')
+        const createResult = await clinicHoursService.createDefaultHours(clinicId)
+        if (createResult.error) {
+          console.error('[ClinicHoursSettings] Error creating default hours:', createResult.error)
+        }
         setHoursData(DEFAULT_CLINIC_HOURS)
       }
 
       if (holidaysResult.error) {
-        console.error('Error loading holidays:', holidaysResult.error)
+        const errorMessage = holidaysResult.error.message || holidaysResult.error.toString()
+        console.error('[ClinicHoursSettings] Error loading holidays:', errorMessage)
+
+        if (!errorMessage.includes('relation') && !errorMessage.includes('does not exist')) {
+          // 테이블은 있는데 다른 에러인 경우에만 메시지 표시
+          showMessage('error', `휴진일 로드 실패: ${errorMessage}`)
+        }
       } else if (holidaysResult.data) {
         setHolidays(holidaysResult.data)
+        console.log('[ClinicHoursSettings] Loaded holidays:', holidaysResult.data)
       }
-    } catch (error) {
-      console.error('Error loading data:', error)
-      showMessage('error', '데이터를 불러오는데 실패했습니다.')
+    } catch (error: any) {
+      console.error('[ClinicHoursSettings] Exception loading data:', error)
+      const errorMessage = error.message || error.toString()
+
+      if (errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
+        showMessage('error', '⚠️ 데이터베이스 테이블이 없습니다. Migration을 먼저 실행해주세요.')
+      } else {
+        showMessage('error', `데이터 로드 실패: ${errorMessage}`)
+      }
+      setHoursData(DEFAULT_CLINIC_HOURS)
     } finally {
       setLoading(false)
     }
@@ -112,17 +145,42 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
     }
 
     setSaving(true)
+    console.log('[ClinicHoursSettings] Saving hours for clinic:', clinicId)
+    console.log('[ClinicHoursSettings] Hours data:', hoursData)
+
     try {
       const result = await clinicHoursService.updateClinicHours(clinicId, hoursData)
+      console.log('[ClinicHoursSettings] Save result:', result)
+
       if (result.error) {
-        throw result.error
+        console.error('[ClinicHoursSettings] Error from service:', result.error)
+
+        // 테이블이 없는 경우
+        if (result.error.message?.includes('relation') || result.error.message?.includes('does not exist')) {
+          showMessage('error', '데이터베이스 테이블이 생성되지 않았습니다. Migration을 먼저 실행해주세요. (Supabase Dashboard > SQL Editor)')
+        } else {
+          showMessage('error', `저장 실패: ${result.error.message || '알 수 없는 오류'}`)
+        }
+        return
       }
+
       showMessage('success', '진료시간이 저장되었습니다.')
-    } catch (error) {
-      console.error('Error saving hours:', error)
-      showMessage('error', '저장에 실패했습니다.')
+      console.log('[ClinicHoursSettings] Successfully saved hours')
+    } catch (error: any) {
+      console.error('[ClinicHoursSettings] Exception while saving hours:', error)
+
+      const errorMessage = error.message || error.toString()
+
+      if (errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
+        showMessage('error', '⚠️ 데이터베이스 테이블이 없습니다. Supabase Dashboard에서 Migration을 실행해주세요.')
+      } else if (errorMessage.includes('permission') || errorMessage.includes('RLS')) {
+        showMessage('error', '권한이 없습니다. 관리자에게 문의해주세요.')
+      } else {
+        showMessage('error', `저장 실패: ${errorMessage}`)
+      }
     } finally {
       setSaving(false)
+      console.log('[ClinicHoursSettings] Save operation completed')
     }
   }
 

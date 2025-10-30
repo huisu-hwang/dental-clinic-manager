@@ -3,6 +3,12 @@ import { useState, useEffect } from 'react'
 import { EyeIcon, EyeSlashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { dataService } from '@/lib/dataService'
 import { getSupabase } from '@/lib/supabase'
+import { encryptResidentNumber } from '@/utils/encryptionUtils'
+import {
+  validateResidentNumberWithMessage,
+  autoFormatResidentNumber,
+  sanitizeResidentNumberInput
+} from '@/utils/residentNumberUtils'
 
 interface SignupFormProps {
   onBackToLanding: () => void
@@ -23,6 +29,9 @@ export default function SignupForm({
     password: '',
     confirmPassword: '',
     role: 'owner', // 직책 기본값을 '대표원장'으로 변경
+    phone: '', // 개인 전화번호
+    address: '', // 주소
+    residentNumber: '', // 주민등록번호
     clinicOwnerName: '',
     clinicName: '',
     clinicAddress: '',
@@ -85,6 +94,8 @@ export default function SignupForm({
 
   const validateForm = () => {
     const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    const phoneRegex = /^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/;
+
     if (!emailRegex.test(formData.userId)) {
       setError('올바른 이메일 주소(아이디)를 입력해주세요.');
       return false;
@@ -103,6 +114,27 @@ export default function SignupForm({
     }
     if (!formData.role) {
       setError('직책을 선택해주세요.');
+      return false;
+    }
+
+    // 개인정보 필수 입력 검증
+    if (!formData.phone.trim()) {
+      setError('전화번호를 입력해주세요.');
+      return false;
+    }
+    if (!phoneRegex.test(formData.phone.replace(/-/g, ''))) {
+      setError('올바른 전화번호 형식을 입력해주세요. (예: 010-1234-5678)');
+      return false;
+    }
+    if (!formData.address.trim()) {
+      setError('주소를 입력해주세요.');
+      return false;
+    }
+
+    // 주민등록번호 검증
+    const residentValidation = validateResidentNumberWithMessage(formData.residentNumber);
+    if (!residentValidation.isValid) {
+      setError(residentValidation.error || '주민등록번호가 유효하지 않습니다.');
       return false;
     }
 
@@ -143,6 +175,13 @@ export default function SignupForm({
 
     try {
       console.log('[Signup] Starting signup process...');
+
+      // 0. 주민등록번호 암호화
+      console.log('[Signup] Encrypting resident registration number...');
+      const encryptedResidentNumber = await encryptResidentNumber(formData.residentNumber);
+      if (!encryptedResidentNumber) {
+        throw new Error('주민등록번호 암호화에 실패했습니다.');
+      }
 
       // 1. 인증 사용자 생성
       console.log('[Signup] Creating auth user...');
@@ -195,6 +234,9 @@ export default function SignupForm({
           clinic_id: clinicData.id,
           email: formData.userId,
           name: formData.name,
+          phone: formData.phone,
+          address: formData.address,
+          resident_registration_number: encryptedResidentNumber,
           role: 'owner',
           status: 'active',
         });
@@ -214,6 +256,9 @@ export default function SignupForm({
           clinic_id: selectedClinicId,
           email: formData.userId,
           name: formData.name,
+          phone: formData.phone,
+          address: formData.address,
+          resident_registration_number: encryptedResidentNumber,
           role: formData.role,
           status: 'pending', // 승인 대기 상태
         });
@@ -307,6 +352,64 @@ export default function SignupForm({
                   required
                   disabled={loading}
                 />
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">
+                  전화번호 *
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="010-1234-5678"
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="address" className="block text-sm font-medium text-slate-700 mb-1">
+                  주소 *
+                </label>
+                <input
+                  type="text"
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="서울시 강남구 테헤란로 123"
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="residentNumber" className="block text-sm font-medium text-slate-700 mb-1">
+                  주민등록번호 * <span className="text-xs text-slate-500">(암호화되어 저장됩니다)</span>
+                </label>
+                <input
+                  type="text"
+                  id="residentNumber"
+                  name="residentNumber"
+                  value={formData.residentNumber}
+                  onChange={(e) => {
+                    const formatted = autoFormatResidentNumber(e.target.value);
+                    setFormData(prev => ({ ...prev, residentNumber: formatted.value }));
+                  }}
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="123456-7890123"
+                  maxLength={14}
+                  required
+                  disabled={loading}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  ※ 근로계약서 작성 시 필요합니다. 암호화되어 안전하게 보관됩니다.
+                </p>
               </div>
 
               <div className="relative">
