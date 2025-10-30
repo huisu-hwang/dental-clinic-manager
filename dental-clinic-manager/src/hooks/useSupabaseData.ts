@@ -105,10 +105,15 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         console.log('[useSupabaseData] 데이터 가져오기 시작...', targetClinicId)
 
-        // 타임아웃 설정 (10초)
+        // 타임아웃 설정 (30초로 증가)
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Data fetch timeout')), 10000)
+          setTimeout(() => {
+            console.error('[useSupabaseData] 데이터 로딩 타임아웃 (30초 초과)')
+            reject(new Error('Data fetch timeout'))
+          }, 30000)
         )
+
+        const startTime = Date.now()
 
         const dataPromise = Promise.allSettled([
           applyClinicFilter(
@@ -138,6 +143,9 @@ export const useSupabaseData = (clinicId?: string | null) => {
           timeoutPromise
         ]) as any
 
+        const elapsedTime = Date.now() - startTime
+        console.log(`[useSupabaseData] 데이터 로딩 완료 (${elapsedTime}ms)`)
+
         console.log('[useSupabaseData] 쿼리 결과:', {
           daily: dailyResult.status,
           consult: consultResult.status,
@@ -145,6 +153,23 @@ export const useSupabaseData = (clinicId?: string | null) => {
           inventory: inventoryResult.status,
           invLog: invLogResult.status
         })
+
+        // 실패한 쿼리 로깅
+        if (dailyResult.status === 'rejected') {
+          console.error('[useSupabaseData] Daily reports 쿼리 실패:', dailyResult.reason)
+        }
+        if (consultResult.status === 'rejected') {
+          console.error('[useSupabaseData] Consult logs 쿼리 실패:', consultResult.reason)
+        }
+        if (giftResult.status === 'rejected') {
+          console.error('[useSupabaseData] Gift logs 쿼리 실패:', giftResult.reason)
+        }
+        if (inventoryResult.status === 'rejected') {
+          console.error('[useSupabaseData] Inventory 쿼리 실패:', inventoryResult.reason)
+        }
+        if (invLogResult.status === 'rejected') {
+          console.error('[useSupabaseData] Inventory logs 쿼리 실패:', invLogResult.reason)
+        }
 
         const results = [
           dailyResult.status === 'fulfilled' ? dailyResult.value : { data: [], error: 'Failed to fetch daily reports' },
@@ -232,10 +257,20 @@ export const useSupabaseData = (clinicId?: string | null) => {
         console.log('[useSupabaseData] 데이터 로딩 완료')
       } catch (err: unknown) {
         console.error('[useSupabaseData] Error fetching data:', err)
-        const errorMessage = err instanceof Error && err.message === 'Data fetch timeout'
-          ? '데이터 로딩 시간이 초과되었습니다. 네트워크 연결을 확인하거나 페이지를 새로고침해주세요.'
-          : err instanceof Error ? err.message : 'Unknown error occurred'
+
+        let errorMessage = 'Unknown error occurred'
+
+        if (err instanceof Error) {
+          if (err.message === 'Data fetch timeout') {
+            errorMessage = '데이터 로딩 시간이 초과되었습니다 (30초). 네트워크 연결이 느리거나 데이터가 많을 수 있습니다. 페이지를 새로고침하거나 잠시 후 다시 시도해주세요.'
+            console.error('[useSupabaseData] 타임아웃 발생 - 가능한 원인: 1) 느린 네트워크 2) 대량의 데이터 3) 데이터베이스 연결 문제')
+          } else {
+            errorMessage = err.message
+          }
+        }
+
         setError(errorMessage)
+
         // 타임아웃이나 에러 발생 시에도 빈 배열로 초기화하여 UI가 표시되도록 함
         setDailyReports([])
         setConsultLogs([])
