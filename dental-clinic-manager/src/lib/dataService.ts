@@ -1238,16 +1238,32 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      console.log('[updateUserPermissions] Updating permissions for user:', userId)
+
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      console.log('[updateUserPermissions] Using clinic_id:', clinicId, 'permissions:', permissions)
+
       const { data, error } = await (supabase.from('users') as any)
         .update({ permissions })
         .eq('id', userId)
+        .eq('clinic_id', clinicId)  // 같은 클리닉의 사용자만 수정 가능
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('[updateUserPermissions] Error:', error)
+        throw error
+      }
+
+      console.log('[updateUserPermissions] Successfully updated permissions')
       return { success: true, data }
     } catch (error: unknown) {
-      console.error('Error updating user permissions:', error)
+      console.error('[updateUserPermissions] Error updating user permissions:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   },
