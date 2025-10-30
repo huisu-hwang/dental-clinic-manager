@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
 import type { AttendanceQRCode } from '@/types/attendance'
+import QRCode from 'qrcode'
 
 export default function QRCodeDisplay() {
   const { user } = useAuth()
@@ -14,6 +15,7 @@ export default function QRCodeDisplay() {
   const [longitude, setLongitude] = useState('')
   const [radiusMeters, setRadiusMeters] = useState('100')
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // 현재 위치 가져오기
   useEffect(() => {
@@ -51,6 +53,29 @@ export default function QRCodeDisplay() {
     return () => clearInterval(checkMidnight)
   }, [autoRefresh])
 
+  // QR 코드를 canvas에 그리기
+  useEffect(() => {
+    if (qrCode?.qr_code && canvasRef.current) {
+      QRCode.toCanvas(
+        canvasRef.current,
+        qrCode.qr_code,
+        {
+          width: 256,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        },
+        (error) => {
+          if (error) {
+            console.error('[QRCodeDisplay] QR code generation error:', error)
+          }
+        }
+      )
+    }
+  }, [qrCode])
+
   const loadQRCode = async () => {
     if (!user?.clinic_id) return
 
@@ -86,12 +111,19 @@ export default function QRCodeDisplay() {
     setMessage(null)
 
     try {
-      const result = await attendanceService.generateDailyQRCode({
+      // 타임아웃 설정 (10초)
+      const qrCodePromise = attendanceService.generateDailyQRCode({
         clinic_id: user.clinic_id,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         radius_meters: parseInt(radiusMeters, 10),
       })
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('QR code generation timeout')), 10000)
+      )
+
+      const result = await Promise.race([qrCodePromise, timeoutPromise]) as any
 
       if (result.success && result.qrCode) {
         setQrCode(result.qrCode)
@@ -100,7 +132,11 @@ export default function QRCodeDisplay() {
         setMessage({ type: 'error', text: result.error || 'QR 코드 생성 실패' })
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'QR 코드 생성 중 오류가 발생했습니다.' })
+      if (error.message === 'QR code generation timeout') {
+        setMessage({ type: 'error', text: 'QR 코드 생성 시간이 초과되었습니다. 네트워크 연결을 확인하거나 다시 시도해주세요.' })
+      } else {
+        setMessage({ type: 'error', text: error.message || 'QR 코드 생성 중 오류가 발생했습니다.' })
+      }
     } finally {
       setLoading(false)
     }
@@ -152,15 +188,11 @@ export default function QRCodeDisplay() {
           {/* QR 코드 표시 영역 */}
           <div className="text-center space-y-4">
             <div className="inline-block p-8 bg-white border-4 border-gray-200 rounded-lg">
-              {/* QR 코드는 실제 구현 시 qrcode.react 라이브러리 사용 */}
-              <div className="w-64 h-64 bg-gray-100 flex items-center justify-center text-center">
-                <div>
-                  <div className="text-sm text-gray-500 mb-2">QR Code</div>
-                  <div className="text-xs text-gray-400 break-all px-4">
-                    {qrCode.qr_code}
-                  </div>
-                </div>
-              </div>
+              <canvas
+                ref={canvasRef}
+                className="mx-auto"
+                style={{ imageRendering: 'pixelated' }}
+              />
             </div>
 
             <div className="text-lg font-semibold text-gray-900 print:text-2xl">

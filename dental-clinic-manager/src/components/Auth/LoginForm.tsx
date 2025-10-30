@@ -57,16 +57,27 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         return
       }
 
+      // 0. 로그인 전에 기존 세션을 완전히 클리어 (타임아웃 5초)
+      console.log('[LoginForm] Clearing any existing session...')
+      try {
+        const signOutPromise = supabase.auth.signOut()
+        const signOutTimeout = new Promise((resolve) => setTimeout(resolve, 5000))
+        await Promise.race([signOutPromise, signOutTimeout])
+        console.log('[LoginForm] Previous session cleared')
+      } catch (err) {
+        console.warn('[LoginForm] Error clearing previous session:', err)
+      }
+
       console.log('[LoginForm] Supabase client obtained, attempting login...')
 
-      // 1. Supabase Auth로 로그인 시도 (타임아웃 설정: 10초)
+      // 1. Supabase Auth로 로그인 시도 (타임아웃 설정: 20초로 증가)
       const loginPromise = supabase.auth.signInWithPassword({
         email: formData.email, // email로 변경
         password: formData.password,
       })
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Login timeout')), 10000)
+        setTimeout(() => reject(new Error('Login timeout')), 20000)
       )
 
       const { data: authData, error: authError } = await Promise.race([

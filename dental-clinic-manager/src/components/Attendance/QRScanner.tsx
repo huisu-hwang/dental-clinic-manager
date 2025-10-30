@@ -61,6 +61,9 @@ export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps
   }
 
   useEffect(() => {
+    // 컴포넌트 마운트 시 자동으로 스캐너 시작
+    startScanner()
+
     return () => {
       // 컴포넌트 언마운트 시 스캐너 정리
       if (scannerRef.current) {
@@ -71,41 +74,29 @@ export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps
 
   return (
     <div className="space-y-4">
-      {!isScanning ? (
-        <button
-          onClick={startScanner}
-          className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span>QR 코드 스캔</span>
-        </button>
-      ) : (
-        <button
-          onClick={stopScanner}
-          className="w-full py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors"
-        >
-          스캔 중지
-        </button>
-      )}
-
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
           {error}
+          <button
+            onClick={startScanner}
+            className="ml-2 underline hover:no-underline"
+          >
+            다시 시도
+          </button>
         </div>
       )}
 
-      {/* QR 스캐너 영역 */}
+      {/* QR 스캐너 영역 - 항상 표시 */}
       <div
         id={scannerIdRef.current}
-        className={`${isScanning ? 'block' : 'hidden'} rounded-lg overflow-hidden border-2 border-blue-500`}
+        className="rounded-lg overflow-hidden border-4 border-blue-500 bg-gray-900"
+        style={{ minHeight: '300px' }}
       />
 
-      {isScanning && (
-        <div className="text-sm text-gray-600 text-center">
-          QR 코드를 카메라에 비춰주세요
+      {!error && (
+        <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
+          <div className="animate-pulse w-2 h-2 bg-blue-500 rounded-full"></div>
+          <span>스캔 중...</span>
         </div>
       )}
     </div>
