@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import Header from '@/components/Layout/Header'
+import TabNavigation from '@/components/Layout/TabNavigation'
 import ManagementTabNavigation from '@/components/Layout/ManagementTabNavigation'
 import StaffManagement from '@/components/Management/StaffManagement'
 import ClinicSettings from '@/components/Management/ClinicSettings'
@@ -26,6 +27,19 @@ export default function ManagementPage() {
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ show: true, message, type })
+  }
+
+  // 메인 탭 네비게이션 핸들러
+  const handleMainTabChange = (tab: string) => {
+    if (tab === 'settings') return // Already on settings/management page
+    if (tab === 'daily-input') router.push('/dashboard')
+    else if (tab === 'attendance') router.push('/attendance')
+    else if (tab === 'contracts') router.push('/dashboard/contracts')
+    else if (tab === 'stats') router.push('/dashboard') // TODO: stats page
+    else if (tab === 'logs') router.push('/dashboard') // TODO: logs page
+    else if (tab === 'protocols') router.push('/dashboard') // TODO: protocols page
+    else if (tab === 'guide') router.push('/dashboard') // TODO: guide page
+    else router.push('/dashboard')
   }
 
   // 권한 체크
@@ -108,6 +122,9 @@ export default function ManagementPage() {
           showManagementLink={false}
           onProfileClick={() => setShowProfile(true)}
         />
+
+        {/* Main Tab Navigation */}
+        <TabNavigation activeTab="settings" onTabChange={handleMainTabChange} />
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-800 mb-2">병원 관리</h1>

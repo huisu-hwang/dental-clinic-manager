@@ -70,14 +70,19 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
 
       console.log('[LoginForm] Supabase client obtained, attempting login...')
 
-      // 1. Supabase Auth로 로그인 시도 (타임아웃 설정: 20초로 증가)
+      // 1. Supabase Auth로 로그인 시도 (타임아웃 설정: 60초로 증가)
+      const loginStartTime = Date.now()
       const loginPromise = supabase.auth.signInWithPassword({
         email: formData.email, // email로 변경
         password: formData.password,
       })
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Login timeout')), 20000)
+        setTimeout(() => {
+          const elapsed = Date.now() - loginStartTime
+          console.error(`[LoginForm] Login timeout after ${elapsed}ms`)
+          reject(new Error('Login timeout'))
+        }, 60000)
       )
 
       const { data: authData, error: authError } = await Promise.race([
@@ -85,7 +90,8 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         timeoutPromise
       ]) as any
 
-      console.log('[LoginForm] Auth response:', { authData, authError })
+      const loginElapsed = Date.now() - loginStartTime
+      console.log(`[LoginForm] Auth response received in ${loginElapsed}ms:`, { authData, authError })
 
       if (authError) {
         console.error('[LoginForm] Auth error:', authError)
@@ -117,9 +123,14 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         login(formData.email, masterProfile)
       } else {
         // 3. 일반 사용자는 public.users 테이블에서 전체 프로필 정보 조회
+        console.log('[LoginForm] Fetching user profile for ID:', authData.user.id)
+        const profileStartTime = Date.now()
         const result = await dataService.getUserProfileById(authData.user.id)
+        const profileElapsed = Date.now() - profileStartTime
+        console.log(`[LoginForm] Profile fetched in ${profileElapsed}ms:`, result.data)
 
         if (result.error || !result.data) {
+          console.error('[LoginForm] Profile fetch failed:', result.error)
           setError('로그인에 성공했으나, 프로필 정보를 불러오는 데 실패했습니다.')
           // 이 경우, 사용자는 인증되었지만 앱 사용에 필요한 정보가 부족하므로 로그아웃 처리
           await supabase.auth.signOut()
@@ -128,6 +139,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         }
 
         // 4. AuthContext에 완전한 사용자 정보로 로그인 처리
+        console.log('[LoginForm] Logging in with profile:', result.data)
         login(formData.email, result.data) // email로 변경
       }
 
@@ -144,7 +156,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
     } catch (error) {
       console.error('[LoginForm] Unexpected error during login:', error)
       if (error instanceof Error && error.message === 'Login timeout') {
-        setError('로그인 시간이 초과되었습니다. 네트워크 연결을 확인하거나 다시 시도해주세요.')
+        setError('로그인 시간이 초과되었습니다 (60초). 네트워크 연결이 느리거나 Supabase 서버에 문제가 있을 수 있습니다. 네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.')
       } else {
         setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.')
       }
