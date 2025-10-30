@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { scheduleService } from '@/lib/scheduleService'
+import { clinicHoursService } from '@/lib/clinicHoursService'
 import { useAuth } from '@/contexts/AuthContext'
 import type { WorkSchedule, WeeklySchedule } from '@/types/attendance'
 import { DAY_OF_WEEK_NAMES } from '@/types/attendance'
+import type { ClinicHours } from '@/types/clinic'
 
 interface User {
   id: string
@@ -160,6 +162,56 @@ export default function ScheduleManagement() {
     setBulkWorkDays(newDays)
   }
 
+  // 병원 진료시간 불러오기
+  const loadClinicHours = async () => {
+    if (!user?.clinic_id) {
+      setMessage({ type: 'error', text: '병원 정보를 찾을 수 없습니다.' })
+      return
+    }
+
+    setLoading(true)
+    setMessage(null)
+
+    try {
+      const result = await clinicHoursService.getClinicHours(user.clinic_id)
+
+      if (result.error || !result.data || result.data.length === 0) {
+        setMessage({
+          type: 'error',
+          text: '병원 진료시간이 설정되지 않았습니다. 병원 설정에서 진료시간을 먼저 설정해주세요.',
+        })
+        return
+      }
+
+      const hours = result.data as ClinicHours[]
+
+      // 평일 중 첫 번째 영업일의 시간을 가져옴
+      const firstWorkDay = hours.find((h) => h.is_open && h.day_of_week >= 1 && h.day_of_week <= 5)
+
+      if (firstWorkDay && firstWorkDay.open_time && firstWorkDay.close_time) {
+        setBulkStartTime(firstWorkDay.open_time.substring(0, 5))
+        setBulkEndTime(firstWorkDay.close_time.substring(0, 5))
+      }
+
+      // 영업하는 요일만 선택
+      const workDays = hours.filter((h) => h.is_open).map((h) => h.day_of_week)
+      setBulkWorkDays(workDays.sort())
+
+      setMessage({
+        type: 'success',
+        text: '병원 진료시간을 불러왔습니다. 필요시 수정 후 저장하세요.',
+      })
+    } catch (error) {
+      console.error('[ScheduleManagement] Error loading clinic hours:', error)
+      setMessage({
+        type: 'error',
+        text: '병원 진료시간을 불러오는데 실패했습니다.',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* 헤더 */}
@@ -215,7 +267,16 @@ export default function ScheduleManagement() {
       {/* 일괄 설정 모드 */}
       {bulkMode ? (
         <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-xl font-semibold">주간 스케줄 일괄 설정</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">주간 스케줄 일괄 설정</h2>
+            <button
+              onClick={loadClinicHours}
+              disabled={loading}
+              className="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              병원 진료시간 가져오기
+            </button>
+          </div>
 
           {/* 시간 설정 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

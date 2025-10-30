@@ -207,3 +207,9 @@ export interface ProtocolListItem {
   };
   tags: string[];
 }
+
+// ========================================
+// Clinic Hours Types
+// ========================================
+
+export * from './clinic'
