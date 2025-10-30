@@ -330,11 +330,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 로그아웃 중 플래그 설정
     setIsLoggingOut(true)
 
-    // Supabase 로그아웃 시도 (먼저 실행)
+    // Supabase 로그아웃 시도 (먼저 실행, 타임아웃 5초)
     const supabase = getSupabase()
     if (supabase) {
       try {
-        const { error } = await supabase.auth.signOut()
+        const signOutPromise = supabase.auth.signOut()
+        const timeoutPromise = new Promise<{ error: any }>((resolve) =>
+          setTimeout(() => resolve({ error: new Error('Logout timeout') }), 5000)
+        )
+
+        const { error } = await Promise.race([signOutPromise, timeoutPromise])
         if (error) {
           console.error('Supabase logout error:', error)
         } else {
