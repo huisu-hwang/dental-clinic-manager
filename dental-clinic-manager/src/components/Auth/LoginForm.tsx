@@ -59,11 +59,20 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
 
       console.log('[LoginForm] Supabase client obtained, attempting login...')
 
-      // 1. Supabase Auth로 로그인 시도
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      // 1. Supabase Auth로 로그인 시도 (타임아웃 설정: 10초)
+      const loginPromise = supabase.auth.signInWithPassword({
         email: formData.email, // email로 변경
         password: formData.password,
       })
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Login timeout')), 10000)
+      )
+
+      const { data: authData, error: authError } = await Promise.race([
+        loginPromise,
+        timeoutPromise
+      ]) as any
 
       console.log('[LoginForm] Auth response:', { authData, authError })
 
@@ -123,7 +132,11 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
       onLoginSuccess()
     } catch (error) {
       console.error('[LoginForm] Unexpected error during login:', error)
-      setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.')
+      if (error instanceof Error && error.message === 'Login timeout') {
+        setError('로그인 시간이 초과되었습니다. 네트워크 연결을 확인하거나 다시 시도해주세요.')
+      } else {
+        setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.')
+      }
       setLoading(false)
     }
   }
