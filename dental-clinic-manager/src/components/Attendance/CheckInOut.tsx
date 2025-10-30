@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
+import QRScanner from './QRScanner'
 import type { AttendanceRecord } from '@/types/attendance'
 import { ATTENDANCE_STATUS_NAMES, ATTENDANCE_STATUS_COLORS } from '@/types/attendance'
 
@@ -15,6 +16,7 @@ export default function CheckInOut() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null)
   const [locationError, setLocationError] = useState<string | null>(null)
+  const [showScanner, setShowScanner] = useState(false)
 
   // 실시간 시계
   useEffect(() => {
@@ -279,23 +281,62 @@ export default function CheckInOut() {
       <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
         <h2 className="text-xl font-semibold mb-4">출퇴근 체크</h2>
 
-        {/* QR 코드 입력 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            QR 코드
-          </label>
-          <input
-            type="text"
-            value={qrCode}
-            onChange={(e) => setQrCode(e.target.value)}
-            placeholder="QR 코드를 입력하거나 스캔하세요"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={loading}
-          />
-          <p className="mt-2 text-sm text-gray-500">
-            병원에 비치된 QR 코드를 스캔해주세요.
-          </p>
+        {/* 입력 방법 선택 탭 */}
+        <div className="flex border-b border-gray-200 mb-4">
+          <button
+            onClick={() => setShowScanner(false)}
+            className={`px-4 py-2 font-medium text-sm transition-colors ${
+              !showScanner
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            수동 입력
+          </button>
+          <button
+            onClick={() => setShowScanner(true)}
+            className={`px-4 py-2 font-medium text-sm transition-colors ${
+              showScanner
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            카메라 스캔
+          </button>
         </div>
+
+        {/* QR 코드 입력 */}
+        {!showScanner ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              QR 코드
+            </label>
+            <input
+              type="text"
+              value={qrCode}
+              onChange={(e) => setQrCode(e.target.value)}
+              placeholder="QR 코드를 입력하세요"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={loading}
+            />
+            <p className="mt-2 text-sm text-gray-500">
+              QR 코드 하단의 번호를 직접 입력하세요.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <QRScanner
+              onScanSuccess={(code) => {
+                setQrCode(code)
+                setShowScanner(false)
+                setMessage({ type: 'success', text: 'QR 코드가 스캔되었습니다!' })
+              }}
+              onScanError={(error) => {
+                setMessage({ type: 'error', text: error })
+              }}
+            />
+          </div>
+        )}
 
         {/* 메시지 표시 */}
         {message && (

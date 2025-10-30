@@ -21,6 +21,12 @@ export type Permission =
   | 'protocol_version_restore' // 프로토콜 버전 복원
   | 'protocol_history_view'  // 프로토콜 히스토리 조회
   | 'protocol_category_manage' // 프로토콜 카테고리 관리
+  // 근로계약서 관리 권한
+  | 'contract_view'          // 계약서 조회
+  | 'contract_create'        // 계약서 생성
+  | 'contract_edit'          // 계약서 수정
+  | 'contract_delete'        // 계약서 삭제
+  | 'contract_template_manage' // 계약서 템플릿 관리
   // 출퇴근 관리 권한
   | 'attendance_check_in'    // 본인 출퇴근 체크
   | 'attendance_view_own'    // 본인 근태 기록 조회
@@ -62,6 +68,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'staff_view', 'staff_manage', 'clinic_settings', 'guide_view',
     'protocol_view', 'protocol_create', 'protocol_edit', 'protocol_delete',
     'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage',
+    // 근로계약서 관리 (모든 권한)
+    'contract_view', 'contract_create', 'contract_edit', 'contract_delete', 'contract_template_manage',
     // 출퇴근 관리 (모든 권한)
     'attendance_check_in', 'attendance_view_own', 'attendance_view_all', 'attendance_manage',
     'attendance_stats_view', 'schedule_view_own', 'schedule_view_all', 'schedule_manage',
@@ -83,6 +91,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'staff_view', 'guide_view',
     'protocol_view', 'protocol_create', 'protocol_edit',
     'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage',
+    // 근로계약서 관리 (삭제 제외)
+    'contract_view', 'contract_create', 'contract_edit', 'contract_template_manage',
     // 출퇴근 관리 (관리 권한 일부)
     'attendance_check_in', 'attendance_view_own', 'attendance_view_all',
     'attendance_stats_view', 'schedule_view_own', 'schedule_view_all', 'schedule_manage',
@@ -102,6 +112,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'logs_view', 'inventory_view', 'inventory_manage',
     'staff_view', 'guide_view',
     'protocol_view', 'protocol_history_view',
+    // 근로계약서 관리 (조회만)
+    'contract_view',
     // 출퇴근 관리 (조회 및 본인 체크)
     'attendance_check_in', 'attendance_view_own', 'attendance_view_all',
     'attendance_stats_view', 'schedule_view_own', 'schedule_view_all',
@@ -120,6 +132,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'stats_weekly_view', 'stats_monthly_view',
     'logs_view', 'inventory_view', 'guide_view',
     'protocol_view', 'protocol_history_view',
+    // 근로계약서 관리 (본인 것만 조회)
+    'contract_view',
     // 출퇴근 관리 (본인 및 팀 조회)
     'attendance_check_in', 'attendance_view_own', 'attendance_view_all',
     'attendance_stats_view', 'schedule_view_own', 'schedule_view_all',
@@ -137,6 +151,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'stats_weekly_view',
     'inventory_view', 'guide_view',
     'protocol_view',
+    // 근로계약서 관리 (본인 것만)
+    'contract_view',
     // 출퇴근 관리 (본인만)
     'attendance_check_in', 'attendance_view_own',
     'schedule_view_own',
@@ -183,6 +199,13 @@ export const PERMISSION_GROUPS = {
     { key: 'protocol_version_restore', label: '버전 복원' },
     { key: 'protocol_history_view', label: '히스토리 조회' },
     { key: 'protocol_category_manage', label: '카테고리 관리' }
+  ],
+  '근로계약서': [
+    { key: 'contract_view', label: '계약서 조회' },
+    { key: 'contract_create', label: '계약서 생성' },
+    { key: 'contract_edit', label: '계약서 수정' },
+    { key: 'contract_delete', label: '계약서 삭제' },
+    { key: 'contract_template_manage', label: '템플릿 관리' }
   ],
   '출퇴근 관리': [
     { key: 'attendance_check_in', label: '출퇴근 체크' },
@@ -245,6 +268,12 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'protocol_version_restore': '이전 버전의 프로토콜로 복원할 수 있습니다.',
   'protocol_history_view': '프로토콜 변경 히스토리를 조회할 수 있습니다.',
   'protocol_category_manage': '프로토콜 카테고리를 관리할 수 있습니다.',
+  // 근로계약서 관리 권한 설명
+  'contract_view': '근로계약서를 조회할 수 있습니다.',
+  'contract_create': '새로운 근로계약서를 생성할 수 있습니다.',
+  'contract_edit': '근로계약서를 수정할 수 있습니다.',
+  'contract_delete': '근로계약서를 삭제할 수 있습니다.',
+  'contract_template_manage': '계약서 템플릿을 관리할 수 있습니다.',
   // 출퇴근 관리 권한 설명
   'attendance_check_in': 'QR 코드를 스캔하여 출퇴근 체크를 할 수 있습니다.',
   'attendance_view_own': '본인의 출퇴근 기록을 조회할 수 있습니다.',
