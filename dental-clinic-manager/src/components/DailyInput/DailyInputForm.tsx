@@ -168,9 +168,14 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
 
   // 컴포넌트 마운트 시 또는 날짜 변경 시 데이터 로드
   useEffect(() => {
+    if (!currentUser?.clinic_id) {
+      console.log('[DailyInputForm] No user/clinic_id, skipping data load')
+      setLoading(false)
+      return
+    }
     console.log('[DailyInputForm] Loading data for date:', reportDate)
     loadDataForDate(reportDate)
-  }, [reportDate, loadDataForDate]) // reportDate가 변경될 때마다 실행
+  }, [reportDate, loadDataForDate, currentUser?.clinic_id]) // reportDate가 변경될 때마다 실행
 
   useEffect(() => {
     if (!currentUser?.clinic_id) {
