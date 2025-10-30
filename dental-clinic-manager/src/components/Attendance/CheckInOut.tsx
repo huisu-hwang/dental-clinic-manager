@@ -17,6 +17,7 @@ export default function CheckInOut() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null)
   const [locationError, setLocationError] = useState<string | null>(null)
   const [showScanner, setShowScanner] = useState(false)
+  const [scannerMode, setScannerMode] = useState<'check-in' | 'check-out' | null>(null)
 
   // 실시간 시계
   useEffect(() => {
@@ -69,8 +70,10 @@ export default function CheckInOut() {
     }
   }
 
-  const handleCheckIn = async () => {
-    if (!user?.id || !qrCode.trim()) {
+  const handleCheckIn = async (code?: string) => {
+    const qrCodeToUse = code || qrCode.trim()
+
+    if (!user?.id || !qrCodeToUse) {
       setMessage({ type: 'error', text: 'QR 코드를 입력해주세요.' })
       return
     }
@@ -82,7 +85,7 @@ export default function CheckInOut() {
       const today = new Date().toISOString().split('T')[0]
       const result = await attendanceService.checkIn({
         user_id: user.id,
-        qr_code: qrCode.trim(),
+        qr_code: qrCodeToUse,
         work_date: today,
         latitude: location?.latitude,
         longitude: location?.longitude,
@@ -103,8 +106,10 @@ export default function CheckInOut() {
     }
   }
 
-  const handleCheckOut = async () => {
-    if (!user?.id || !qrCode.trim()) {
+  const handleCheckOut = async (code?: string) => {
+    const qrCodeToUse = code || qrCode.trim()
+
+    if (!user?.id || !qrCodeToUse) {
       setMessage({ type: 'error', text: 'QR 코드를 입력해주세요.' })
       return
     }
@@ -116,7 +121,7 @@ export default function CheckInOut() {
       const today = new Date().toISOString().split('T')[0]
       const result = await attendanceService.checkOut({
         user_id: user.id,
-        qr_code: qrCode.trim(),
+        qr_code: qrCodeToUse,
         work_date: today,
         latitude: location?.latitude,
         longitude: location?.longitude,
@@ -135,6 +140,28 @@ export default function CheckInOut() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleQRScanSuccess = async (code: string) => {
+    console.log('[CheckInOut] QR Code scanned:', code)
+    setScannerMode(null) // 모달 닫기
+
+    // 스캔된 QR 코드로 자동으로 출근/퇴근 처리
+    if (scannerMode === 'check-in') {
+      await handleCheckIn(code)
+    } else if (scannerMode === 'check-out') {
+      await handleCheckOut(code)
+    }
+  }
+
+  const openScannerForCheckIn = () => {
+    if (isCheckedIn || isCheckedOut) return
+    setScannerMode('check-in')
+  }
+
+  const openScannerForCheckOut = () => {
+    if (!isCheckedIn || isCheckedOut) return
+    setScannerMode('check-out')
   }
 
   const formatTime = (dateString: string | null | undefined) => {
@@ -281,63 +308,6 @@ export default function CheckInOut() {
       <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
         <h2 className="text-xl font-semibold mb-4">출퇴근 체크</h2>
 
-        {/* 입력 방법 선택 탭 */}
-        <div className="flex border-b border-gray-200 mb-4">
-          <button
-            onClick={() => setShowScanner(false)}
-            className={`px-4 py-2 font-medium text-sm transition-colors ${
-              !showScanner
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            수동 입력
-          </button>
-          <button
-            onClick={() => setShowScanner(true)}
-            className={`px-4 py-2 font-medium text-sm transition-colors ${
-              showScanner
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            카메라 스캔
-          </button>
-        </div>
-
-        {/* QR 코드 입력 */}
-        {!showScanner ? (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              QR 코드
-            </label>
-            <input
-              type="text"
-              value={qrCode}
-              onChange={(e) => setQrCode(e.target.value)}
-              placeholder="QR 코드를 입력하세요"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={loading}
-            />
-            <p className="mt-2 text-sm text-gray-500">
-              QR 코드 하단의 번호를 직접 입력하세요.
-            </p>
-          </div>
-        ) : (
-          <div>
-            <QRScanner
-              onScanSuccess={(code) => {
-                setQrCode(code)
-                setShowScanner(false)
-                setMessage({ type: 'success', text: 'QR 코드가 스캔되었습니다!' })
-              }}
-              onScanError={(error) => {
-                setMessage({ type: 'error', text: error })
-              }}
-            />
-          </div>
-        )}
-
         {/* 메시지 표시 */}
         {message && (
           <div
@@ -351,40 +321,83 @@ export default function CheckInOut() {
           </div>
         )}
 
-        {/* 출퇴근 버튼 */}
-        <div className="flex gap-4">
+        {/* QR 스캔 버튼 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <button
-            onClick={handleCheckIn}
+            onClick={openScannerForCheckIn}
             disabled={loading || isCheckedIn || isCheckedOut}
-            className={`flex-1 py-4 rounded-lg font-semibold text-white transition-colors ${
+            className={`py-6 rounded-lg font-semibold text-white transition-colors flex flex-col items-center justify-center space-y-2 ${
               loading || isCheckedIn || isCheckedOut
                 ? 'bg-gray-300 cursor-not-allowed'
                 : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'
             }`}
           >
-            {loading ? '처리 중...' : '출근하기'}
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-lg">QR 스캔 출근</span>
           </button>
 
           <button
-            onClick={handleCheckOut}
+            onClick={openScannerForCheckOut}
             disabled={loading || !isCheckedIn || isCheckedOut}
-            className={`flex-1 py-4 rounded-lg font-semibold text-white transition-colors ${
+            className={`py-6 rounded-lg font-semibold text-white transition-colors flex flex-col items-center justify-center space-y-2 ${
               loading || !isCheckedIn || isCheckedOut
                 ? 'bg-gray-300 cursor-not-allowed'
                 : 'bg-green-500 hover:bg-green-600 active:bg-green-700'
             }`}
           >
-            {loading ? '처리 중...' : '퇴근하기'}
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-lg">QR 스캔 퇴근</span>
           </button>
         </div>
 
         {/* 안내 메시지 */}
-        <div className="text-sm text-gray-600 space-y-1">
+        <div className="text-sm text-gray-600 space-y-1 mt-6">
+          <p>• 출근/퇴근 버튼을 클릭하면 QR 코드 스캐너가 실행됩니다.</p>
+          <p>• QR 코드를 카메라에 비추면 자동으로 출퇴근 처리됩니다.</p>
           <p>• 출근 시간은 근무 스케줄에 따라 자동으로 지각 여부가 판단됩니다.</p>
           <p>• 퇴근 시간은 초과근무 또는 조퇴 여부가 자동으로 계산됩니다.</p>
           <p>• 위치 정보는 출퇴근 인증에 사용되며 저장되지 않습니다.</p>
         </div>
       </div>
+
+      {/* QR 스캐너 모달 */}
+      {scannerMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">
+                {scannerMode === 'check-in' ? '출근 QR 스캔' : '퇴근 QR 스캔'}
+              </h3>
+              <button
+                onClick={() => setScannerMode(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <QRScanner
+              onScanSuccess={handleQRScanSuccess}
+              onScanError={(error) => {
+                setMessage({ type: 'error', text: error })
+                setScannerMode(null)
+              }}
+            />
+
+            <div className="mt-4 text-center text-sm text-gray-600">
+              QR 코드를 카메라에 비춰주세요
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
