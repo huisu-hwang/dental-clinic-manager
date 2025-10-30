@@ -42,11 +42,11 @@ export const useSupabaseData = (clinicId?: string | null) => {
           applyClinicFilter(
             supabase.from('gift_inventory').select('*'),
             targetClinicId
-          ),
+          ).then(result => result),
           applyClinicFilter(
             supabase.from('inventory_logs').select('*'),
             targetClinicId
-          )
+          ).then(result => result)
         ])
 
         if (inventoryError) throw inventoryError
@@ -119,23 +119,38 @@ export const useSupabaseData = (clinicId?: string | null) => {
           applyClinicFilter(
             supabase.from('daily_reports').select('*'),
             targetClinicId
-          ),
+          ).then(result => {
+            console.log('[useSupabaseData] daily_reports query completed')
+            return result
+          }),
           applyClinicFilter(
             supabase.from('consult_logs').select('*'),
             targetClinicId
-          ),
+          ).then(result => {
+            console.log('[useSupabaseData] consult_logs query completed')
+            return result
+          }),
           applyClinicFilter(
             supabase.from('gift_logs').select('*'),
             targetClinicId
-          ),
+          ).then(result => {
+            console.log('[useSupabaseData] gift_logs query completed')
+            return result
+          }),
           applyClinicFilter(
             supabase.from('gift_inventory').select('*'),
             targetClinicId
-          ),
+          ).then(result => {
+            console.log('[useSupabaseData] gift_inventory query completed')
+            return result
+          }),
           applyClinicFilter(
             supabase.from('inventory_logs').select('*'),
             targetClinicId
-          )
+          ).then(result => {
+            console.log('[useSupabaseData] inventory_logs query completed')
+            return result
+          })
         ])
 
         const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.race([
