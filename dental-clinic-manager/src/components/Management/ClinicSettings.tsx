@@ -6,10 +6,12 @@ import {
   GlobeAltIcon,
   UserGroupIcon,
   CreditCardIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
 import type { UserProfile } from '@/contexts/AuthContext'
+import ClinicHoursSettings from './ClinicHoursSettings'
 
 // Clinic 타입을 이 파일에 직접 정의
 interface Clinic {
@@ -35,6 +37,7 @@ interface ClinicSettingsProps {
 }
 
 export default function ClinicSettings({ currentUser }: ClinicSettingsProps) {
+  const [activeTab, setActiveTab] = useState<'info' | 'hours'>('info')
   const [clinic, setClinic] = useState<Clinic | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -194,11 +197,39 @@ const [formData, setFormData] = useState<ClinicFormData>({
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-      <div className="flex items-center mb-6">
-        <BuildingOfficeIcon className="h-6 w-6 text-blue-600 mr-2" />
-        <h2 className="text-xl font-bold text-slate-800">병원 설정</h2>
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+      {/* 탭 네비게이션 */}
+      <div className="border-b border-slate-200">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('info')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
+              activeTab === 'info'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <BuildingOfficeIcon className="h-5 w-5" />
+            병원 정보
+          </button>
+          <button
+            onClick={() => setActiveTab('hours')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
+              activeTab === 'hours'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <ClockIcon className="h-5 w-5" />
+            진료시간
+          </button>
+        </div>
       </div>
+
+      {/* 탭 컨텐츠 */}
+      <div className="p-6">{activeTab === 'info' ? (
+        <>
+          {/* 기존 병원 정보 폼 */}
 
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
@@ -470,6 +501,16 @@ const [formData, setFormData] = useState<ClinicFormData>({
           </div>
         </div>
       )}
+        </>
+      ) : (
+        <>
+          {/* 진료시간 설정 탭 */}
+          {currentUser.clinic_id && (
+            <ClinicHoursSettings clinicId={currentUser.clinic_id} />
+          )}
+        </>
+      )}
+      </div>
     </div>
   )
 }
