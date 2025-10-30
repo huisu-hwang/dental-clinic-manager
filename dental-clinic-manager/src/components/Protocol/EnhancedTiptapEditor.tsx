@@ -365,14 +365,16 @@ export default function EnhancedTiptapEditor({
           </button>
 
           {showColorPicker && (
-            <div className="absolute top-12 left-0 bg-white border border-slate-300 rounded-lg shadow-lg p-3 z-20">
-              <div className="grid grid-cols-6 gap-2 mb-2">
+            <div className="absolute top-12 left-0 bg-white border border-slate-300 rounded-lg shadow-lg p-3 z-20 min-w-[200px]">
+              <div className="text-xs text-slate-600 mb-2 font-medium">기본 색상</div>
+              <div className="flex gap-2 mb-3">
                 {[
-                  '#000000', '#434343', '#666666', '#999999', '#B7B7B7', '#CCCCCC',
-                  '#D33115', '#E27300', '#FFC107', '#16A765', '#2196F3', '#9C27B0',
-                  '#EA1E63', '#FF5722', '#FDD835', '#7CB342', '#00ACC1', '#5E35B1',
-                  '#F06292', '#FF8A65', '#FFF176', '#AED581', '#4DD0E1', '#9575CD'
-                ].map((color) => (
+                  { color: '#000000', name: '검정' },
+                  { color: '#FFFF00', name: '노랑' },
+                  { color: '#FF0000', name: '빨강' },
+                  { color: '#0000FF', name: '파랑' },
+                  { color: '#00FF00', name: '초록' }
+                ].map(({ color, name }) => (
                   <button
                     key={color}
                     type="button"
@@ -380,19 +382,34 @@ export default function EnhancedTiptapEditor({
                       editor.chain().focus().setColor(color).run()
                       setShowColorPicker(false)
                     }}
-                    className="w-6 h-6 rounded border border-slate-300 hover:scale-110 transition-transform"
+                    className="w-8 h-8 rounded border-2 border-slate-300 hover:scale-110 hover:border-slate-500 transition-all"
                     style={{ backgroundColor: color }}
-                    title={color}
+                    title={name}
                   />
                 ))}
               </div>
+
+              <div className="border-t border-slate-200 pt-3 mt-3">
+                <label className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors">
+                  <input
+                    type="color"
+                    onChange={(e) => {
+                      editor.chain().focus().setColor(e.target.value).run()
+                      setShowColorPicker(false)
+                    }}
+                    className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
+                  />
+                  <span className="text-sm text-slate-700">사용자 정의 색상</span>
+                </label>
+              </div>
+
               <button
                 type="button"
                 onClick={() => {
                   editor.chain().focus().unsetColor().run()
                   setShowColorPicker(false)
                 }}
-                className="w-full px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded transition-colors"
+                className="w-full mt-3 px-2 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded transition-colors"
               >
                 기본 색상으로 재설정
               </button>

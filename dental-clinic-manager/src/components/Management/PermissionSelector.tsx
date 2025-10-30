@@ -20,6 +20,8 @@ export default function PermissionSelector({
 }: PermissionSelectorProps) {
   const [selectedPermissions, setSelectedPermissions] = useState<Set<Permission>>(new Set())
   const [useDefaultPermissions, setUseDefaultPermissions] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (initialPermissions) {
@@ -63,12 +65,21 @@ export default function PermissionSelector({
     setUseDefaultPermissions(true)
   }
 
-  const handleSave = () => {
-    if (useDefaultPermissions) {
-      // 기본 권한 사용 시 빈 배열 전달 (서버에서 역할 기반으로 처리)
-      onSave([])
-    } else {
-      onSave(Array.from(selectedPermissions))
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+      setError('')
+
+      if (useDefaultPermissions) {
+        // 기본 권한 사용 시 빈 배열 전달 (서버에서 역할 기반으로 처리)
+        await onSave([])
+      } else {
+        await onSave(Array.from(selectedPermissions))
+      }
+    } catch (err) {
+      console.error('권한 저장 중 오류:', err)
+      setError(err instanceof Error ? err.message : '권한 저장 중 오류가 발생했습니다.')
+      setSaving(false)
     }
   }
 
@@ -104,6 +115,13 @@ export default function PermissionSelector({
         </div>
 
         <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 200px)' }}>
+          {/* 에러 메시지 */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+
           {/* 기본 권한 사용 옵션 */}
           <div className="mb-6 p-4 bg-blue-50 rounded-lg">
             <label className="flex items-center">
@@ -197,16 +215,27 @@ export default function PermissionSelector({
             <div className="flex space-x-3">
               <button
                 onClick={onCancel}
-                className="px-4 py-2 text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+                disabled={saving}
+                className="px-4 py-2 text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 취소
               </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <CheckIcon className="h-4 w-4 mr-2" />
-                권한 저장
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    저장 중...
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon className="h-4 w-4 mr-2" />
+                    권한 저장
+                  </>
+                )}
               </button>
             </div>
           </div>

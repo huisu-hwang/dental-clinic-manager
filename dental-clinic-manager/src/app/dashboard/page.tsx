@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import Header from '@/components/Layout/Header'
@@ -23,6 +24,7 @@ import { inspectDatabase } from '@/utils/dbInspector'
 import type { ConsultRowData, GiftRowData, HappyCallRowData } from '@/types'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const { user, logout, updateUser } = useAuth()
   const { hasPermission, canAccessTab } = usePermissions()
 
@@ -77,6 +79,13 @@ export default function DashboardPage() {
       }
     }
   }, [loading, error])
+
+  // Redirect to contracts page when contracts tab is selected
+  useEffect(() => {
+    if (activeTab === 'contracts') {
+      router.push('/dashboard/contracts')
+    }
+  }, [activeTab, router])
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ show: true, message, type })
@@ -257,6 +266,34 @@ export default function DashboardPage() {
               canEdit={canEditReport}
               currentUser={user ?? undefined}
             />
+          )}
+
+          {/* 출근 관리 */}
+          {activeTab === 'attendance' && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
+              <div className="text-center space-y-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full">
+                  <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 mb-2">출근 관리</h2>
+                  <p className="text-slate-600 mb-6">
+                    출퇴근 기록, 근무 스케줄, 근태 통계를 관리할 수 있습니다.
+                  </p>
+                </div>
+                <Link
+                  href="/attendance"
+                  className="inline-flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>출근 관리 바로가기</span>
+                </Link>
+              </div>
+            </div>
           )}
 
           {/* 통계 */}

@@ -10,9 +10,20 @@ import {
   BuildingOfficeIcon,
   ShieldCheckIcon,
   CalendarIcon,
-  XMarkIcon
+  XMarkIcon,
+  HomeIcon,
+  IdentificationIcon,
+  ExclamationTriangleIcon,
+  LockClosedIcon
 } from '@heroicons/react/24/outline'
 import type { UserProfile } from '@/contexts/AuthContext'
+import {
+  formatResidentNumber,
+  validateResidentNumberWithMessage,
+  maskResidentNumber,
+  checkPersonalInfoCompletion
+} from '@/utils/residentNumberUtils'
+import { encryptResidentNumber, decryptResidentNumber } from '@/utils/encryptionUtils'
 
 interface AccountProfileProps {
   currentUser: UserProfile
@@ -31,8 +42,14 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
   const [formData, setFormData] = useState({
     name: currentUser?.name || '',
     email: currentUser?.email || '',
-    phone: currentUser?.phone || ''
+    phone: currentUser?.phone || '',
+    address: currentUser?.address || '',
+    resident_registration_number: currentUser?.resident_registration_number || ''
   })
+
+  const [decryptedResidentNumber, setDecryptedResidentNumber] = useState('')
+  const [showResidentNumber, setShowResidentNumber] = useState(false)
+  const [loadingDecryption, setLoadingDecryption] = useState(false)
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -45,10 +62,35 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
       setFormData({
         name: currentUser?.name || '',
         email: currentUser?.email || '',
-        phone: currentUser?.phone || ''
+        phone: currentUser?.phone || '',
+        address: currentUser?.address || '',
+        resident_registration_number: currentUser?.resident_registration_number || ''
       })
+
+      // Try to decrypt resident number if it exists
+      if (currentUser?.resident_registration_number) {
+        loadDecryptedResidentNumber(currentUser.resident_registration_number)
+      }
     }
   }, [currentUser])
+
+  const loadDecryptedResidentNumber = async (encrypted: string) => {
+    if (!encrypted) return
+
+    try {
+      setLoadingDecryption(true)
+      const decrypted = await decryptResidentNumber(encrypted)
+      if (decrypted) {
+        setDecryptedResidentNumber(decrypted)
+      }
+    } catch (error) {
+      console.error('Failed to decrypt resident number:', error)
+      // Assume it's not encrypted if decryption fails
+      setDecryptedResidentNumber(encrypted)
+    } finally {
+      setLoadingDecryption(false)
+    }
+  }
 
   // 타입 안전성을 위한 처리
   if (!currentUser) {
@@ -63,6 +105,22 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
     }))
   }
 
+  const handleResidentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatResidentNumber(e.target.value)
+    setFormData(prev => ({
+      ...prev,
+      resident_registration_number: formatted
+    }))
+  }
+
+  // Check if personal info is missing
+  const personalInfoStatus = checkPersonalInfoCompletion({
+    name: formData.name,
+    phone: formData.phone,
+    address: formData.address,
+    resident_registration_number: formData.resident_registration_number
+  })
+
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setPasswordData(prev => ({
@@ -75,12 +133,41 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
     e.preventDefault()
     setError('')
     setSuccess('')
+
+    // Validate resident registration number if provided
+    if (formData.resident_registration_number) {
+      const validation = validateResidentNumberWithMessage(formData.resident_registration_number)
+      if (!validation.isValid) {
+        setError(validation.error || '주민등록번호 형식이 올바르지 않습니다.')
+        return
+      }
+    }
+
     setSaving(true)
 
     try {
+      // Encrypt resident registration number before saving
+      let encryptedResidentNumber = formData.resident_registration_number
+
+      if (formData.resident_registration_number && formData.resident_registration_number.trim() !== '') {
+        try {
+          const encrypted = await encryptResidentNumber(formData.resident_registration_number)
+          if (encrypted) {
+            encryptedResidentNumber = encrypted
+          }
+        } catch (encryptError) {
+          console.error('Encryption failed:', encryptError)
+          setError('주민등록번호 암호화 중 오류가 발생했습니다.')
+          setSaving(false)
+          return
+        }
+      }
+
       const result = await dataService.updateUserProfile(currentUser.id, {
         name: formData.name,
         phone: formData.phone,
+        address: formData.address,
+        resident_registration_number: encryptedResidentNumber
       })
 
       if (result.error) {
@@ -94,6 +181,11 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
 
       if (onUpdate && updatedUser) {
         onUpdate(updatedUser as UserProfile)
+      }
+
+      // Update decrypted resident number
+      if (formData.resident_registration_number) {
+        setDecryptedResidentNumber(formData.resident_registration_number)
       }
 
       setTimeout(() => {
@@ -285,6 +377,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   전화번호
+                  {!formData.phone && <span className="text-red-500 ml-1">*</span>}
                 </label>
                 <div className="relative">
                   <PhoneIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -297,6 +390,103 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                     placeholder="010-1234-5678"
                     disabled={saving}
                   />
+                </div>
+                {!formData.phone && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    근로계약서 작성을 위해 필수 입력입니다.
+                  </p>
+                )}
+              </div>
+
+              {/* Personal Information Section */}
+              <div className="pt-4 border-t border-slate-200">
+                <div className="flex items-start mb-4">
+                  <LockClosedIcon className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-base font-semibold text-slate-800 mb-1">
+                      개인정보 (근로계약서용)
+                    </h3>
+                    <p className="text-xs text-slate-600">
+                      주민등록번호는 AES-256 암호화되어 안전하게 저장됩니다.
+                      본인과 원장님만 조회할 수 있습니다.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Show warning if personal info is incomplete */}
+                {!personalInfoStatus.isComplete && (
+                  <div className="mb-4 bg-amber-50 border-l-4 border-amber-400 p-3">
+                    <div className="flex">
+                      <ExclamationTriangleIcon className="h-5 w-5 text-amber-400 flex-shrink-0" />
+                      <div className="ml-3">
+                        <p className="text-sm text-amber-700">
+                          <span className="font-medium">근로계약서 작성을 위해</span> 다음 정보를 입력해주세요:
+                          <span className="ml-1 font-semibold">
+                            {personalInfoStatus.missingFieldLabels.join(', ')}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {/* Address */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      주소
+                      {!formData.address && <span className="text-red-500 ml-1">*</span>}
+                    </label>
+                    <div className="relative">
+                      <HomeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="서울시 강남구 테헤란로 123"
+                        disabled={saving}
+                      />
+                    </div>
+                    {!formData.address && (
+                      <p className="mt-1 text-xs text-amber-600">
+                        근로계약서에 표시되는 주소입니다.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Resident Registration Number */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      주민등록번호
+                      {!formData.resident_registration_number && <span className="text-red-500 ml-1">*</span>}
+                    </label>
+                    <div className="relative">
+                      <IdentificationIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <input
+                        type="text"
+                        name="resident_registration_number"
+                        value={formData.resident_registration_number}
+                        onChange={handleResidentNumberChange}
+                        className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono"
+                        placeholder="000000-0000000"
+                        maxLength={14}
+                        disabled={saving}
+                      />
+                    </div>
+                    <div className="mt-1 flex items-start space-x-1">
+                      <LockClosedIcon className="h-3 w-3 text-green-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-slate-500">
+                        AES-256 암호화되어 저장됩니다. 본인과 원장만 조회 가능합니다.
+                      </p>
+                    </div>
+                    {!formData.resident_registration_number && (
+                      <p className="mt-1 text-xs text-amber-600">
+                        근로계약서 작성을 위해 필수 입력입니다.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 

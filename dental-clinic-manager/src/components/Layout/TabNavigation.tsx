@@ -16,9 +16,11 @@ interface Tab {
 
 const tabs: Tab[] = [
   { id: 'daily-input', label: '일일 보고서 입력', requiredPermissions: ['daily_report_view'] },
+  { id: 'attendance', label: '출근 관리', requiredPermissions: ['attendance_check_in', 'attendance_view_own'] },
   { id: 'stats', label: '통계', requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'] },
   { id: 'logs', label: '상세 기록', requiredPermissions: ['logs_view'] },
   { id: 'protocols', label: '진료 프로토콜', requiredPermissions: ['protocol_view'] },
+  { id: 'contracts', label: '근로계약서', requiredPermissions: ['contract_view'] },
   { id: 'settings', label: '설정', requiredPermissions: ['inventory_view'] },
   { id: 'guide', label: '사용 안내', requiredPermissions: ['guide_view'] }
 ]
