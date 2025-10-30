@@ -9,6 +9,7 @@ import ScheduleManagement from '@/components/Attendance/ScheduleManagement'
 import TeamStatus from '@/components/Attendance/TeamStatus'
 import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
 import Header from '@/components/Layout/Header'
+import TabNavigation from '@/components/Layout/TabNavigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 
@@ -19,6 +20,19 @@ export default function AttendancePage() {
   const { user, logout } = useAuth()
   const { hasPermission } = usePermissions()
   const [activeTab, setActiveTab] = useState<TabType>('checkin')
+
+  // 메인 탭 네비게이션 핸들러
+  const handleMainTabChange = (tab: string) => {
+    if (tab === 'attendance') return // Already on attendance page
+    if (tab === 'daily-input') router.push('/dashboard')
+    else if (tab === 'contracts') router.push('/dashboard/contracts')
+    else if (tab === 'stats') router.push('/dashboard') // TODO: stats page
+    else if (tab === 'logs') router.push('/dashboard') // TODO: logs page
+    else if (tab === 'protocols') router.push('/dashboard') // TODO: protocols page
+    else if (tab === 'settings') router.push('/dashboard') // TODO: settings page
+    else if (tab === 'guide') router.push('/dashboard') // TODO: guide page
+    else router.push('/dashboard')
+  }
 
   // 권한 체크
   const canCheckIn = hasPermission('attendance_check_in')
@@ -49,6 +63,9 @@ export default function AttendancePage() {
           onLogout={() => logout()}
           showManagementLink={false}
         />
+
+        {/* Main Tab Navigation */}
+        <TabNavigation activeTab="attendance" onTabChange={handleMainTabChange} />
 
         {/* 페이지 제목 */}
         <div className="mb-6">
