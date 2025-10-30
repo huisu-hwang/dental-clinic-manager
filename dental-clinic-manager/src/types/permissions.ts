@@ -21,6 +21,12 @@ export type Permission =
   | 'protocol_version_restore' // 프로토콜 버전 복원
   | 'protocol_history_view'  // 프로토콜 히스토리 조회
   | 'protocol_category_manage' // 프로토콜 카테고리 관리
+  // 근로계약서 관리 권한
+  | 'contract_view'          // 계약서 조회
+  | 'contract_create'        // 계약서 생성
+  | 'contract_edit'          // 계약서 수정
+  | 'contract_delete'        // 계약서 삭제
+  | 'contract_template_manage' // 계약서 템플릿 관리
   // 출퇴근 관리 권한
   | 'attendance_check_in'    // 본인 출퇴근 체크
   | 'attendance_view_own'    // 본인 근태 기록 조회
@@ -47,10 +53,6 @@ export type Permission =
   | 'leave_balance_manage'   // 연차 잔여 수동 조정 (관리자)
   | 'leave_workflow_manage'  // 승인 프로세스 관리 (관리자)
   | 'leave_type_manage'      // 연차 종류 관리 (관리자)
-  // 근로계약서 관리 권한
-  | 'contract_view'          // 근로계약서 조회
-  | 'contract_create'        // 근로계약서 생성
-  | 'contract_template_manage' // 계약서 템플릿 관리
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -62,6 +64,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'staff_view', 'staff_manage', 'clinic_settings', 'guide_view',
     'protocol_view', 'protocol_create', 'protocol_edit', 'protocol_delete',
     'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage',
+    // 근로계약서 관리 (모든 권한)
+    'contract_view', 'contract_create', 'contract_edit', 'contract_delete', 'contract_template_manage',
     // 출퇴근 관리 (모든 권한)
     'attendance_check_in', 'attendance_view_own', 'attendance_view_all', 'attendance_manage',
     'attendance_stats_view', 'schedule_view_own', 'schedule_view_all', 'schedule_manage',
@@ -71,9 +75,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_approve_step1', 'leave_approve_step2', 'leave_approve_final',
     'leave_policy_view', 'leave_policy_manage',
     'leave_balance_view_own', 'leave_balance_view_all', 'leave_balance_manage',
-    'leave_workflow_manage', 'leave_type_manage',
-    // 근로계약서 관리 (모든 권한)
-    'contract_view', 'contract_create', 'contract_template_manage'
+    'leave_workflow_manage', 'leave_type_manage'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -83,6 +85,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'staff_view', 'guide_view',
     'protocol_view', 'protocol_create', 'protocol_edit',
     'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage',
+    // 근로계약서 관리 (삭제 제외)
+    'contract_view', 'contract_create', 'contract_edit', 'contract_template_manage',
     // 출퇴근 관리 (관리 권한 일부)
     'attendance_check_in', 'attendance_view_own', 'attendance_view_all',
     'attendance_stats_view', 'schedule_view_own', 'schedule_view_all', 'schedule_manage',
@@ -91,9 +95,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_request_create', 'leave_request_view_own', 'leave_request_view_all', 'leave_request_cancel',
     'leave_approve_step1', 'leave_approve_step2',
     'leave_policy_view',
-    'leave_balance_view_own', 'leave_balance_view_all',
-    // 근로계약서 관리 (조회 및 생성)
-    'contract_view', 'contract_create', 'contract_template_manage'
+    'leave_balance_view_own', 'leave_balance_view_all'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
@@ -102,6 +104,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'logs_view', 'inventory_view', 'inventory_manage',
     'staff_view', 'guide_view',
     'protocol_view', 'protocol_history_view',
+    // 근로계약서 관리 (조회만)
+    'contract_view',
     // 출퇴근 관리 (조회 및 본인 체크)
     'attendance_check_in', 'attendance_view_own', 'attendance_view_all',
     'attendance_stats_view', 'schedule_view_own', 'schedule_view_all',
@@ -110,9 +114,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_request_create', 'leave_request_view_own', 'leave_request_view_all', 'leave_request_cancel',
     'leave_approve_step1',
     'leave_policy_view',
-    'leave_balance_view_own', 'leave_balance_view_all',
-    // 근로계약서 관리 (조회만)
-    'contract_view'
+    'leave_balance_view_own', 'leave_balance_view_all'
   ],
   team_leader: [
     // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
@@ -120,6 +122,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'stats_weekly_view', 'stats_monthly_view',
     'logs_view', 'inventory_view', 'guide_view',
     'protocol_view', 'protocol_history_view',
+    // 근로계약서 관리 (본인 것만 조회)
+    'contract_view',
     // 출퇴근 관리 (본인 및 팀 조회)
     'attendance_check_in', 'attendance_view_own', 'attendance_view_all',
     'attendance_stats_view', 'schedule_view_own', 'schedule_view_all',
@@ -127,9 +131,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 연차 관리 (신청 및 조회)
     'leave_request_create', 'leave_request_view_own', 'leave_request_view_all', 'leave_request_cancel',
     'leave_policy_view',
-    'leave_balance_view_own', 'leave_balance_view_all',
-    // 근로계약서 관리 (본인 조회만)
-    'contract_view'
+    'leave_balance_view_own', 'leave_balance_view_all'
   ],
   staff: [
     // 일반 직원은 프로토콜 조회, 본인 출퇴근, 본인 연차만 가능
@@ -137,6 +139,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'stats_weekly_view',
     'inventory_view', 'guide_view',
     'protocol_view',
+    // 근로계약서 관리 (본인 것만)
+    'contract_view',
     // 출퇴근 관리 (본인만)
     'attendance_check_in', 'attendance_view_own',
     'schedule_view_own',
@@ -144,9 +148,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 연차 관리 (본인만)
     'leave_request_create', 'leave_request_view_own', 'leave_request_cancel',
     'leave_policy_view',
-    'leave_balance_view_own',
-    // 근로계약서 관리 (본인 조회만)
-    'contract_view'
+    'leave_balance_view_own'
   ]
 }
 
@@ -184,6 +186,13 @@ export const PERMISSION_GROUPS = {
     { key: 'protocol_history_view', label: '히스토리 조회' },
     { key: 'protocol_category_manage', label: '카테고리 관리' }
   ],
+  '근로계약서': [
+    { key: 'contract_view', label: '계약서 조회' },
+    { key: 'contract_create', label: '계약서 생성' },
+    { key: 'contract_edit', label: '계약서 수정' },
+    { key: 'contract_delete', label: '계약서 삭제' },
+    { key: 'contract_template_manage', label: '템플릿 관리' }
+  ],
   '출퇴근 관리': [
     { key: 'attendance_check_in', label: '출퇴근 체크' },
     { key: 'attendance_view_own', label: '본인 근태 조회' },
@@ -211,11 +220,6 @@ export const PERMISSION_GROUPS = {
     { key: 'leave_balance_manage', label: '연차 잔여 관리' },
     { key: 'leave_workflow_manage', label: '승인 프로세스 관리' },
     { key: 'leave_type_manage', label: '연차 종류 관리' }
-  ],
-  '근로계약서': [
-    { key: 'contract_view', label: '계약서 조회' },
-    { key: 'contract_create', label: '계약서 생성' },
-    { key: 'contract_template_manage', label: '템플릿 관리' }
   ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
@@ -245,6 +249,12 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'protocol_version_restore': '이전 버전의 프로토콜로 복원할 수 있습니다.',
   'protocol_history_view': '프로토콜 변경 히스토리를 조회할 수 있습니다.',
   'protocol_category_manage': '프로토콜 카테고리를 관리할 수 있습니다.',
+  // 근로계약서 관리 권한 설명
+  'contract_view': '근로계약서를 조회할 수 있습니다.',
+  'contract_create': '새로운 근로계약서를 생성할 수 있습니다.',
+  'contract_edit': '근로계약서를 수정할 수 있습니다.',
+  'contract_delete': '근로계약서를 삭제할 수 있습니다.',
+  'contract_template_manage': '계약서 템플릿을 관리할 수 있습니다.',
   // 출퇴근 관리 권한 설명
   'attendance_check_in': 'QR 코드를 스캔하여 출퇴근 체크를 할 수 있습니다.',
   'attendance_view_own': '본인의 출퇴근 기록을 조회할 수 있습니다.',
@@ -270,9 +280,5 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'leave_balance_view_all': '전체 직원의 연차 잔여 현황을 조회할 수 있습니다.',
   'leave_balance_manage': '직원의 연차 잔여를 수동으로 조정할 수 있습니다.',
   'leave_workflow_manage': '연차 승인 프로세스를 설정하고 관리할 수 있습니다.',
-  'leave_type_manage': '연차 종류를 추가하고 관리할 수 있습니다.',
-  // 근로계약서 권한 설명
-  'contract_view': '근로계약서를 조회할 수 있습니다.',
-  'contract_create': '새로운 근로계약서를 작성할 수 있습니다.',
-  'contract_template_manage': '근로계약서 템플릿을 생성하고 관리할 수 있습니다.'
+  'leave_type_manage': '연차 종류를 추가하고 관리할 수 있습니다.'
 }
