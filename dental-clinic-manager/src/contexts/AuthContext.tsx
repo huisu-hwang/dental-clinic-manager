@@ -330,17 +330,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 로그아웃 중 플래그 설정
     setIsLoggingOut(true)
 
-    // 먼저 로컬 상태를 모두 초기화
-    setUser(null)
-    localStorage.removeItem('dental_auth')
-    localStorage.removeItem('dental_user')
-    localStorage.removeItem('dental_remember')
-    dataService.clearCachedClinicId()
-
-    // 로그아웃 중임을 localStorage에도 저장
-    localStorage.setItem('dental_logging_out', 'true')
-
-    // Supabase 로그아웃 시도
+    // Supabase 로그아웃 시도 (먼저 실행)
     const supabase = getSupabase()
     if (supabase) {
       try {
@@ -354,6 +344,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Logout error:', error)
       }
     }
+
+    // 로컬 상태를 모두 초기화
+    setUser(null)
+    localStorage.removeItem('dental_auth')
+    localStorage.removeItem('dental_user')
+    localStorage.removeItem('dental_remember')
+    dataService.clearCachedClinicId()
+
+    // Supabase 로컬 스토리지 완전 정리 (CRITICAL FIX)
+    console.log('[Logout] Clearing all Supabase localStorage keys...')
+    const keys = Object.keys(localStorage)
+    keys.forEach(key => {
+      if (key.startsWith('sb-')) {
+        console.log(`[Logout] Removing: ${key}`)
+        localStorage.removeItem(key)
+      }
+    })
+
+    // 로그아웃 중임을 localStorage에도 저장
+    localStorage.setItem('dental_logging_out', 'true')
 
     // 강제로 홈 페이지로 리디렉션
     console.log('홈 페이지로 리디렉션...')
