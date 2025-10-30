@@ -105,7 +105,12 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         console.log('[useSupabaseData] 데이터 가져오기 시작...', targetClinicId)
 
-        const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
+        // 타임아웃 설정 (10초)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Data fetch timeout')), 10000)
+        )
+
+        const dataPromise = Promise.allSettled([
           applyClinicFilter(
             supabase.from('daily_reports').select('*'),
             targetClinicId
@@ -127,6 +132,11 @@ export const useSupabaseData = (clinicId?: string | null) => {
             targetClinicId
           )
         ])
+
+        const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.race([
+          dataPromise,
+          timeoutPromise
+        ]) as any
 
         console.log('[useSupabaseData] 쿼리 결과:', {
           daily: dailyResult.status,
@@ -222,7 +232,11 @@ export const useSupabaseData = (clinicId?: string | null) => {
         console.log('[useSupabaseData] 데이터 로딩 완료')
       } catch (err: unknown) {
         console.error('[useSupabaseData] Error fetching data:', err)
-        setError(err instanceof Error ? err.message : 'Unknown error occurred')
+        const errorMessage = err instanceof Error && err.message === 'Data fetch timeout'
+          ? '데이터 로딩 시간이 초과되었습니다. 네트워크 연결을 확인하거나 페이지를 새로고침해주세요.'
+          : err instanceof Error ? err.message : 'Unknown error occurred'
+        setError(errorMessage)
+        // 타임아웃이나 에러 발생 시에도 빈 배열로 초기화하여 UI가 표시되도록 함
         setDailyReports([])
         setConsultLogs([])
         setGiftLogs([])
