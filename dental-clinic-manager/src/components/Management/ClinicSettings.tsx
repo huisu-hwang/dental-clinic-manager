@@ -3,13 +3,22 @@
 import { useState, useEffect } from 'react'
 import {
   BuildingOfficeIcon,
-  GlobeAltIcon,
+  ClockIcon,
   UserGroupIcon,
   CreditCardIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
 import type { UserProfile } from '@/contexts/AuthContext'
+import type { OperatingHours, DayKey } from '@/types/clinic'
+import {
+  createDefaultOperatingHours,
+  dayOrder,
+  mergeOperatingHours,
+  prepareOperatingHoursForSave,
+  summarizeOperatingHours,
+  hasConfiguredOperatingHours
+} from '@/lib/operatingHours'
 
 // Clinic 타입을 이 파일에 직접 정의
 interface Clinic {
@@ -28,6 +37,7 @@ interface Clinic {
   subscription_expires_at?: string;
   created_at: string;
   updated_at: string;
+  operating_hours?: OperatingHours | null;
 }
 
 interface ClinicSettingsProps {
@@ -42,19 +52,20 @@ export default function ClinicSettings({ currentUser }: ClinicSettingsProps) {
   const [success, setSuccess] = useState('')
 
   interface ClinicFormData {
-  name: string;
-  ownerName: string;
-  address: string;
-  phone: string;
-  email: string;
-  businessNumber: string;
-  description: string;
-  isPublic: boolean;
-  allowJoinRequests: boolean;
-  maxUsers: number;
-}
+    name: string
+    ownerName: string
+    address: string
+    phone: string
+    email: string
+    businessNumber: string
+    description: string
+    isPublic: boolean
+    allowJoinRequests: boolean
+    maxUsers: number
+    operatingHours: OperatingHours
+  }
 
-const [formData, setFormData] = useState<ClinicFormData>({
+  const [formData, setFormData] = useState<ClinicFormData>({
     name: '',
     ownerName: '',
     address: '',
@@ -64,7 +75,8 @@ const [formData, setFormData] = useState<ClinicFormData>({
     description: '',
     isPublic: false,
     allowJoinRequests: true,
-    maxUsers: 5
+    maxUsers: 5,
+    operatingHours: createDefaultOperatingHours()
   })
 
   useEffect(() => {
@@ -89,7 +101,11 @@ const [formData, setFormData] = useState<ClinicFormData>({
         console.error('Error fetching clinic:', error)
         setError('병원 정보를 불러오는데 실패했습니다.')
       } else if (data) {
-        const clinicData: Clinic = data as any;
+        const clinicHours = mergeOperatingHours((data as any).operating_hours)
+        const clinicData: Clinic = {
+          ...(data as any),
+          operating_hours: clinicHours
+        }
 
         setClinic(clinicData)
         setFormData({
@@ -102,7 +118,8 @@ const [formData, setFormData] = useState<ClinicFormData>({
           description: (data as any).description || '',
           isPublic: (data as any).is_public || false,
           allowJoinRequests: (data as any).allow_join_requests !== false,
-          maxUsers: (data as any).max_users || 5
+          maxUsers: (data as any).max_users || 5,
+          operatingHours: clinicHours
         })
       }
     } catch (err) {
@@ -121,6 +138,102 @@ const [formData, setFormData] = useState<ClinicFormData>({
     }))
   }
 
+  const handleWorkingHoursToggle = (day: DayKey, enabled: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      operatingHours: {
+        ...prev.operatingHours,
+        [day]: {
+          ...prev.operatingHours[day],
+          enabled,
+          startTime: enabled ? prev.operatingHours[day].startTime : null,
+          endTime: enabled ? prev.operatingHours[day].endTime : null,
+          breakStart: enabled ? prev.operatingHours[day].breakStart : null,
+          breakEnd: enabled ? prev.operatingHours[day].breakEnd : null,
+          note: enabled
+            ? prev.operatingHours[day].note === '휴무'
+              ? null
+              : prev.operatingHours[day].note
+            : '휴무'
+        }
+      }
+    }))
+  }
+
+  type WorkingHourField = 'startTime' | 'endTime' | 'breakStart' | 'breakEnd' | 'note'
+
+  const handleWorkingHourChange = (day: DayKey, field: WorkingHourField, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      operatingHours: {
+        ...prev.operatingHours,
+        [day]: {
+          ...prev.operatingHours[day],
+          [field]: field === 'note'
+            ? value.trim().length > 0
+              ? value
+              : null
+            : value ? value : null
+        }
+      }
+    }))
+  }
+
+  const toMinutes = (time: string | null): number | null => {
+    if (!time) return null
+    const [hours, minutes] = time.split(':').map(Number)
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null
+    return hours * 60 + minutes
+  }
+
+  const validateOperatingHours = () => {
+    for (const { key, label } of dayOrder) {
+      const entry = formData.operatingHours[key]
+
+      if (!entry.enabled) {
+        continue
+      }
+
+      if (!entry.startTime || !entry.endTime) {
+        setError(`${label}의 진료 시작/종료 시간을 모두 입력해주세요.`)
+        return false
+      }
+
+      const start = toMinutes(entry.startTime)
+      const end = toMinutes(entry.endTime)
+
+      if (start === null || end === null || start >= end) {
+        setError(`${label}의 종료 시간은 시작 시간 이후여야 합니다.`)
+        return false
+      }
+
+      const hasBreakStart = !!entry.breakStart
+      const hasBreakEnd = !!entry.breakEnd
+
+      if (hasBreakStart !== hasBreakEnd) {
+        setError(`${label}의 점심시간 시작과 종료를 모두 입력해주세요.`)
+        return false
+      }
+
+      if (entry.breakStart && entry.breakEnd) {
+        const breakStart = toMinutes(entry.breakStart)
+        const breakEnd = toMinutes(entry.breakEnd)
+
+        if (breakStart === null || breakEnd === null || breakStart >= breakEnd) {
+          setError(`${label}의 점심시간 종료는 시작 이후여야 합니다.`)
+          return false
+        }
+
+        if (breakStart <= start || breakEnd >= end) {
+          setError(`${label}의 점심시간은 진료 시간 범위 내에 있어야 합니다.`)
+          return false
+        }
+      }
+    }
+
+    return true
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!currentUser.clinic_id) return
@@ -128,6 +241,13 @@ const [formData, setFormData] = useState<ClinicFormData>({
     setError('')
     setSuccess('')
     setSaving(true)
+
+    if (!validateOperatingHours()) {
+      setSaving(false)
+      return
+    }
+
+    const operatingHoursForSave = prepareOperatingHoursForSave(formData.operatingHours)
 
     const supabase = getSupabase()
     if (!supabase) {
@@ -150,6 +270,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
           is_public: formData.isPublic,
           allow_join_requests: formData.allowJoinRequests,
           max_users: formData.maxUsers,
+          operating_hours: operatingHoursForSave,
           updated_at: new Date().toISOString()
         })
         .eq('id', currentUser.clinic_id)
@@ -188,6 +309,9 @@ const [formData, setFormData] = useState<ClinicFormData>({
       </div>
     )
   }
+
+  const workingHourSummaries = summarizeOperatingHours(formData.operatingHours)
+  const hasWorkingHoursConfigured = hasConfiguredOperatingHours(formData.operatingHours)
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
@@ -324,6 +448,101 @@ const [formData, setFormData] = useState<ClinicFormData>({
                 </div>
               </div>
 
+              {/* Operating Hours */}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">진료 시간</h3>
+                <p className="text-sm text-slate-500 mb-4">
+                  병원의 진료 시간을 요일별로 입력하면 근로계약서와 안내 문서에 자동으로 반영됩니다.
+                </p>
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium text-slate-600">요일</th>
+                        <th className="px-4 py-2 text-left font-medium text-slate-600">운영</th>
+                        <th className="px-4 py-2 text-left font-medium text-slate-600">시작 시간</th>
+                        <th className="px-4 py-2 text-left font-medium text-slate-600">종료 시간</th>
+                        <th className="px-4 py-2 text-left font-medium text-slate-600">점심시간</th>
+                        <th className="px-4 py-2 text-left font-medium text-slate-600">비고</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {dayOrder.map(({ key, label }) => {
+                        const dayHours = formData.operatingHours[key]
+
+                        return (
+                          <tr key={key} className="bg-white">
+                            <td className="px-4 py-3 font-medium text-slate-700">{label}</td>
+                            <td className="px-4 py-3">
+                              <label className="inline-flex items-center space-x-2 text-sm text-slate-600">
+                                <input
+                                  type="checkbox"
+                                  checked={dayHours.enabled}
+                                  onChange={(e) => handleWorkingHoursToggle(key, e.target.checked)}
+                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+                                  disabled={saving}
+                                />
+                                <span>{dayHours.enabled ? '운영' : '휴무'}</span>
+                              </label>
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="time"
+                                value={dayHours.startTime ?? ''}
+                                onChange={(e) => handleWorkingHourChange(key, 'startTime', e.target.value)}
+                                className="w-full md:w-32 p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100"
+                                disabled={!dayHours.enabled || saving}
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="time"
+                                value={dayHours.endTime ?? ''}
+                                onChange={(e) => handleWorkingHourChange(key, 'endTime', e.target.value)}
+                                className="w-full md:w-32 p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100"
+                                disabled={!dayHours.enabled || saving}
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="time"
+                                  value={dayHours.breakStart ?? ''}
+                                  onChange={(e) => handleWorkingHourChange(key, 'breakStart', e.target.value)}
+                                  className="w-full md:w-28 p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100"
+                                  disabled={!dayHours.enabled || saving}
+                                />
+                                <span className="text-slate-400">~</span>
+                                <input
+                                  type="time"
+                                  value={dayHours.breakEnd ?? ''}
+                                  onChange={(e) => handleWorkingHourChange(key, 'breakEnd', e.target.value)}
+                                  className="w-full md:w-28 p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100"
+                                  disabled={!dayHours.enabled || saving}
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="text"
+                                value={dayHours.note ?? ''}
+                                onChange={(e) => handleWorkingHourChange(key, 'note', e.target.value)}
+                                className="w-full p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100"
+                                placeholder={dayHours.enabled ? '예: 야간진료' : '휴무'}
+                                disabled={saving}
+                              />
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  • 휴무일은 체크를 해제하고, 점심시간이 여러 구간일 경우 비고란에 기재해주세요.
+                </p>
+              </div>
+
               {/* Visibility Settings */}
               <div>
                 <h3 className="text-lg font-semibold text-slate-800 mb-4">공개 설정</h3>
@@ -429,32 +648,51 @@ const [formData, setFormData] = useState<ClinicFormData>({
               </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="bg-slate-50 p-4 rounded-lg">
-              <div className="flex items-center mb-3">
-                <UserGroupIcon className="h-5 w-5 text-slate-600 mr-2" />
-                <h4 className="font-semibold text-slate-800">현황</h4>
+          {/* Quick Stats */}
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <div className="flex items-center mb-3">
+              <UserGroupIcon className="h-5 w-5 text-slate-600 mr-2" />
+              <h4 className="font-semibold text-slate-800">현황</h4>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-600">등록일:</span>
+                <span className="font-medium">
+                  {new Date(clinic.created_at).toLocaleDateString('ko-KR')}
+                </span>
               </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">등록일:</span>
-                  <span className="font-medium">
-                    {new Date(clinic.created_at).toLocaleDateString('ko-KR')}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">최종 수정:</span>
-                  <span className="font-medium">
-                    {new Date(clinic.updated_at).toLocaleDateString('ko-KR')}
-                  </span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">최종 수정:</span>
+                <span className="font-medium">
+                  {new Date(clinic.updated_at).toLocaleDateString('ko-KR')}
+                </span>
               </div>
             </div>
+          </div>
 
-            {/* Security Notice */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="flex items-center mb-3">
-                <ShieldCheckIcon className="h-5 w-5 text-blue-600 mr-2" />
+          {/* Operating Hours Summary */}
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <div className="flex items-center mb-3">
+              <ClockIcon className="h-5 w-5 text-slate-600 mr-2" />
+              <h4 className="font-semibold text-slate-800">진료 시간 요약</h4>
+            </div>
+            {hasWorkingHoursConfigured ? (
+              <ul className="space-y-1 text-xs text-slate-600">
+                {workingHourSummaries.map((line, index) => (
+                  <li key={`${index}-${line}`}>{line}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-slate-500">
+                진료 시간을 설정하면 근로계약서에 자동 반영됩니다.
+              </p>
+            )}
+          </div>
+
+          {/* Security Notice */}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="flex items-center mb-3">
+              <ShieldCheckIcon className="h-5 w-5 text-blue-600 mr-2" />
                 <h4 className="font-semibold text-blue-800">보안 안내</h4>
               </div>
               <ul className="space-y-1 text-xs text-blue-700">

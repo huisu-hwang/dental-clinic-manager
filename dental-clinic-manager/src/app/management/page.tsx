@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -9,6 +9,7 @@ import ManagementTabNavigation from '@/components/Layout/ManagementTabNavigation
 import StaffManagement from '@/components/Management/StaffManagement'
 import ClinicSettings from '@/components/Management/ClinicSettings'
 import AccountProfile from '@/components/Management/AccountProfile'
+import EmploymentContract from '@/components/Management/EmploymentContract'
 import Toast from '@/components/UI/Toast'
 
 export default function ManagementPage() {
@@ -31,6 +32,23 @@ export default function ManagementPage() {
   // 권한 체크
   const canAccessStaffManagement = ['staff_manage', 'staff_view'].some(p => hasPermission(p as any))
   const canAccessClinicSettings = hasPermission('clinic_settings')
+  const canAccessAnalytics = ['stats_monthly_view', 'stats_annual_view'].some(p => hasPermission(p as any))
+
+  const tabAccess = useMemo(
+    () => ({
+      staff: canAccessStaffManagement,
+      clinic: canAccessClinicSettings,
+      contracts: canAccessClinicSettings,
+      analytics: canAccessAnalytics,
+      system: canAccessClinicSettings
+    }),
+    [canAccessStaffManagement, canAccessClinicSettings, canAccessAnalytics]
+  )
+
+  const accessibleTabs = useMemo(
+    () => Object.entries(tabAccess).filter(([, allowed]) => allowed).map(([tab]) => tab),
+    [tabAccess]
+  )
 
   // 권한 로딩 상태 추적
   useEffect(() => {
@@ -52,18 +70,27 @@ export default function ManagementPage() {
     }
 
     // 권한이 전혀 없으면 리디렉션
-    if (!canAccessStaffManagement && !canAccessClinicSettings) {
+    if (accessibleTabs.length === 0) {
       router.push('/dashboard')
       return
     }
 
     // 현재 탭에 권한이 없으면 권한이 있는 탭으로 변경
-    if (activeTab === 'staff' && !canAccessStaffManagement) {
-      if (canAccessClinicSettings) setActiveTab('clinic')
-    } else if (activeTab === 'clinic' && !canAccessClinicSettings) {
-      if (canAccessStaffManagement) setActiveTab('staff')
+    if (!tabAccess[activeTab as keyof typeof tabAccess]) {
+      const fallback = accessibleTabs[0]
+      if (fallback) {
+        setActiveTab(fallback)
+      }
     }
-  }, [authLoading, permissionsLoaded, user, canAccessStaffManagement, canAccessClinicSettings, activeTab, router])
+  }, [
+    authLoading,
+    permissionsLoaded,
+    user,
+    tabAccess,
+    accessibleTabs,
+    activeTab,
+    router
+  ])
 
   // 로딩 중이거나 권한이 없는 경우
   if (authLoading || !permissionsLoaded) {
@@ -77,7 +104,7 @@ export default function ManagementPage() {
     )
   }
 
-  if (!user || (!canAccessStaffManagement && !canAccessClinicSettings)) {
+  if (!user || accessibleTabs.length === 0) {
     return (
       <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center">
         <div className="text-center">
@@ -148,6 +175,11 @@ export default function ManagementPage() {
           {/* Clinic Settings Tab */}
           {activeTab === 'clinic' && (
             <ClinicSettings currentUser={user} />
+          )}
+
+          {/* Employment Contracts Tab */}
+          {activeTab === 'contracts' && (
+            <EmploymentContract currentUser={user} />
           )}
 
           {/* Analytics Tab */}
