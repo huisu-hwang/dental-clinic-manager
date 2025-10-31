@@ -8,6 +8,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
+import { workScheduleService } from '@/lib/workScheduleService'
+import { convertWorkScheduleToContractData } from '@/utils/workScheduleUtils'
 import type { ContractFormData, ContractData } from '@/types/contract'
 import type { User } from '@/types/auth'
 import type { UserProfile } from '@/contexts/AuthContext'
@@ -45,15 +47,49 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
 
   // Auto-fill when employee is selected
   useEffect(() => {
-    if (selectedEmployee) {
-      setFormData(prev => ({
-        ...prev,
-        employee_name: selectedEmployee.name,
-        employee_address: selectedEmployee.address || '',
-        employee_phone: selectedEmployee.phone || '',
-        employee_resident_number: selectedEmployee.resident_registration_number || ''
-      }))
+    const loadEmployeeData = async () => {
+      if (selectedEmployee) {
+        console.log('[ContractForm] Employee selected, loading data:', selectedEmployee.id)
+
+        // 1. 기본 직원 정보 자동 입력
+        setFormData(prev => ({
+          ...prev,
+          employee_name: selectedEmployee.name,
+          employee_address: selectedEmployee.address || '',
+          employee_phone: selectedEmployee.phone || '',
+          employee_resident_number: selectedEmployee.resident_registration_number || ''
+        }))
+
+        // 2. 직원의 근무 스케줄 조회
+        try {
+          const workScheduleResult = await workScheduleService.getUserWorkSchedule(selectedEmployee.id)
+
+          if (workScheduleResult.data) {
+            console.log('[ContractForm] Work schedule loaded:', workScheduleResult.data)
+
+            // 3. 근무 스케줄을 근로계약서 형식으로 변환
+            const contractWorkData = convertWorkScheduleToContractData(workScheduleResult.data)
+
+            console.log('[ContractForm] Auto-filling work hours from schedule:', contractWorkData)
+
+            // 4. 근로시간 필드에 자동 입력
+            setFormData(prev => ({
+              ...prev,
+              work_start_time: contractWorkData.work_start_time,
+              work_end_time: contractWorkData.work_end_time,
+              work_days_per_week: contractWorkData.work_days_per_week,
+              work_hours_detail: contractWorkData.work_hours_detail
+            }))
+          } else {
+            console.warn('[ContractForm] No work schedule found for employee:', workScheduleResult.error)
+          }
+        } catch (error) {
+          console.error('[ContractForm] Error loading work schedule:', error)
+        }
+      }
     }
+
+    loadEmployeeData()
   }, [selectedEmployee])
 
   const handleEmployeeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -312,6 +348,14 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         {/* Work Hours */}
         <div className="border border-gray-200 p-4 rounded-lg">
           <h3 className="text-lg font-semibold mb-3">근로 시간</h3>
+          {selectedEmployee && formData.work_start_time && formData.work_days_per_week && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800">
+                ✅ <span className="font-semibold">{selectedEmployee.name}</span>님의 개인 근무 스케줄이 자동으로 입력되었습니다.
+                (주 {formData.work_days_per_week}일 근무)
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">근무 시작 시간</label>
