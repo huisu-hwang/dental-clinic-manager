@@ -8,6 +8,8 @@ import type {
   WorkSchedule,
   DaySchedule,
   DayName,
+} from '@/types/workSchedule'
+import {
   DAY_OF_WEEK_TO_NAME,
   DEFAULT_WORK_SCHEDULE,
 } from '@/types/workSchedule'
