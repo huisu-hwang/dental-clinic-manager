@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { getSupabase } from '@/lib/supabase'
 import { dataService } from '@/lib/dataService'
+import { clearAllSessions, getRememberMe } from '@/lib/customStorageAdapter'
 import type { Permission } from '@/types/permissions'
 import { useActivityTracker } from '@/hooks/useActivityTracker'
 
@@ -283,12 +284,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = (userId: string, clinicInfo: any) => {
+    // rememberMe 플래그에 따라 storage 선택
+    const rememberMe = getRememberMe()
+    const storage = rememberMe ? window.localStorage : window.sessionStorage
+    console.log(`[AuthContext] Login using ${rememberMe ? 'localStorage' : 'sessionStorage'} (rememberMe: ${rememberMe})`)
+
     // Check for master admin login
     if (userId === 'sani81@gmail.com') {
       const masterAdmin = { ...MASTER_ADMIN }
       setUser(masterAdmin)
-      localStorage.setItem('dental_auth', 'true')
-      localStorage.setItem('dental_user', JSON.stringify(masterAdmin))
+      storage.setItem('dental_auth', 'true')
+      storage.setItem('dental_user', JSON.stringify(masterAdmin))
       dataService.clearCachedClinicId()
       return
     }
@@ -302,16 +308,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
     setUser(userData)
-    localStorage.setItem('dental_auth', 'true')
-    localStorage.setItem('dental_user', JSON.stringify(userData))
+    storage.setItem('dental_auth', 'true')
+    storage.setItem('dental_user', JSON.stringify(userData))
     if (userData.clinic_id) {
       dataService.setCachedClinicId(userData.clinic_id)
     }
   }
 
   const updateUser = (updatedUserData: any) => {
+    // rememberMe 플래그에 따라 storage 선택
+    const rememberMe = getRememberMe()
+    const storage = rememberMe ? window.localStorage : window.sessionStorage
+
     setUser(updatedUserData)
-    localStorage.setItem('dental_user', JSON.stringify(updatedUserData))
+    storage.setItem('dental_user', JSON.stringify(updatedUserData))
     if (updatedUserData?.clinic_id) {
       dataService.setCachedClinicId(updatedUserData.clinic_id)
     }
@@ -352,20 +362,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // 로컬 상태를 모두 초기화
     setUser(null)
-    localStorage.removeItem('dental_auth')
-    localStorage.removeItem('dental_user')
-    localStorage.removeItem('dental_remember')
     dataService.clearCachedClinicId()
 
-    // Supabase 로컬 스토리지 완전 정리 (CRITICAL FIX)
-    console.log('[Logout] Clearing all Supabase localStorage keys...')
-    const keys = Object.keys(localStorage)
-    keys.forEach(key => {
-      if (key.startsWith('sb-')) {
-        console.log(`[Logout] Removing: ${key}`)
-        localStorage.removeItem(key)
-      }
-    })
+    // 모든 세션 데이터 완전 정리 (localStorage, sessionStorage 모두)
+    console.log('[Logout] Clearing all session data...')
+    clearAllSessions()
 
     // 로그아웃 중임을 localStorage에도 저장
     localStorage.setItem('dental_logging_out', 'true')

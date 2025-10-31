@@ -9,7 +9,10 @@ let cachedClinicId: string | null = null
 const persistClinicId = (clinicId: string) => {
   cachedClinicId = clinicId
   if (typeof window !== 'undefined') {
-    localStorage.setItem(CLINIC_CACHE_KEY, clinicId)
+    // rememberMe 플래그에 따라 storage 선택
+    const rememberMe = localStorage.getItem('dental_remember_me') === 'true'
+    const storage = rememberMe ? window.localStorage : window.sessionStorage
+    storage.setItem(CLINIC_CACHE_KEY, clinicId)
   }
 }
 
@@ -19,10 +22,17 @@ const getCachedClinicId = (): string | null => {
   }
 
   if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem(CLINIC_CACHE_KEY)
-    if (stored) {
-      cachedClinicId = stored
-      return stored
+    // sessionStorage를 우선 체크하고, 없으면 localStorage도 체크
+    const storedInSession = sessionStorage.getItem(CLINIC_CACHE_KEY)
+    if (storedInSession) {
+      cachedClinicId = storedInSession
+      return storedInSession
+    }
+
+    const storedInLocal = localStorage.getItem(CLINIC_CACHE_KEY)
+    if (storedInLocal) {
+      cachedClinicId = storedInLocal
+      return storedInLocal
     }
   }
 

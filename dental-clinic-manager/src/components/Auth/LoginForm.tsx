@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getSupabase } from '@/lib/supabase'
+import { getSupabase, reinitializeSupabase } from '@/lib/supabase'
 import { dataService } from '@/lib/dataService'
+import { setRememberMe } from '@/lib/customStorageAdapter'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 interface LoginFormProps {
@@ -47,8 +48,13 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
     setLoading(true)
 
     try {
-      console.log('[LoginForm] Getting Supabase client...')
-      const supabase = getSupabase()
+      // 0. 로그인 상태 유지 옵션 먼저 설정
+      console.log('[LoginForm] Setting remember me option:', rememberMe)
+      setRememberMe(rememberMe)
+
+      // 1. Supabase 클라이언트 재초기화 (새로운 storage adapter 적용)
+      console.log('[LoginForm] Reinitializing Supabase client with new storage settings...')
+      const supabase = reinitializeSupabase()
 
       if (!supabase) {
         console.error('[LoginForm] Supabase client is null')
@@ -57,7 +63,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         return
       }
 
-      // 0. 로그인 전에 기존 세션을 완전히 클리어 (타임아웃 5초)
+      // 1. 로그인 전에 기존 세션을 완전히 클리어 (타임아웃 5초)
       console.log('[LoginForm] Clearing any existing session...')
       try {
         const signOutPromise = supabase.auth.signOut()
@@ -143,13 +149,9 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         login(formData.email, result.data) // email로 변경
       }
 
-      if (rememberMe) {
-        // 로그인 상태 유지는 Supabase가 세션 관리를 통해 자동으로 처리합니다.
-        // 별도의 localStorage 작업이 필요 없어졌습니다.
-        console.log('로그인 상태 유지 기능은 Supabase 세션에 의해 관리됩니다.')
-      }
-
-      console.log('[LoginForm] Login successful, calling onLoginSuccess...')
+      console.log('[LoginForm] Login successful, remember me:', rememberMe)
+      console.log('[LoginForm] Session storage type:', rememberMe ? 'localStorage (persistent)' : 'sessionStorage (temporary)')
+      console.log('[LoginForm] Calling onLoginSuccess...')
       // localStorage 저장이 완료될 때까지 약간 대기
       await new Promise(resolve => setTimeout(resolve, 100))
       onLoginSuccess()

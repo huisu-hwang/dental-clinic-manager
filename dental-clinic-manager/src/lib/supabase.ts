@@ -1,8 +1,21 @@
 import { createClient, type AuthChangeEvent, type Session, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
+import { CustomStorageAdapter } from './customStorageAdapter'
 
 let supabase: SupabaseClient<Database> | null = null
 let initializationError: string | null = null
+let customStorage: CustomStorageAdapter | null = null
+
+/**
+ * Supabase 클라이언트를 재초기화합니다 (로그인 상태 유지 옵션 변경 시 사용)
+ */
+export const reinitializeSupabase = () => {
+  console.log('[Supabase] Reinitializing client...')
+  supabase = null
+  customStorage = null
+  initializationError = null
+  return getSupabase()
+}
 
 export const getSupabase = () => {
   if (typeof window === 'undefined') {
@@ -65,18 +78,25 @@ export const getSupabase = () => {
 
     try {
       console.log('[Supabase] Creating client...')
+
+      // 커스텀 스토리지 어댑터 초기화
+      if (!customStorage) {
+        customStorage = new CustomStorageAdapter()
+        console.log('[Supabase] Custom storage adapter initialized')
+      }
+
       supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+          storage: customStorage as any,
           storageKey: 'sb-beahjntkmkfhpcbhfnrr-auth-token',
           // Set session timeout to 4 hours (14400 seconds)
           flowType: 'pkce',
         }
       })
-      console.log('[Supabase] Client created successfully')
+      console.log('[Supabase] Client created successfully with custom storage')
 
       // Auth state change 에러 핸들러 설정
       if (typeof window !== 'undefined') {
