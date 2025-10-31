@@ -313,6 +313,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
     }
 
     console.log('[useSupabaseData] Client-side, starting data fetch for clinic:', activeClinicId)
+    setLoading(true) // clinic_id 변경 시 로딩 상태를 true로 설정
 
     // Call fetchAllData directly without creating a wrapper function
     fetchAllData(activeClinicId)

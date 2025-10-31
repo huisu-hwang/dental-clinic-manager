@@ -47,8 +47,27 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
   const canEdit = hasPermission('protocol_create') || hasPermission('protocol_edit')
 
   useEffect(() => {
-    fetchProtocols()
-    fetchCategories()
+    let isMounted = true
+
+    const fetchInitialData = async () => {
+      if (!isMounted) return
+
+      try {
+        await Promise.all([
+          fetchProtocols(),
+          fetchCategories()
+        ])
+      } catch (err) {
+        console.error('[ProtocolManagement] Failed to fetch initial data:', err)
+      }
+    }
+
+    fetchInitialData()
+
+    return () => {
+      isMounted = false
+      console.log('[ProtocolManagement] Cleanup: component unmounted')
+    }
   }, [])
 
   const fetchProtocols = async () => {
@@ -65,14 +84,18 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
         filters.search = searchTerm
       }
 
+      console.log('[ProtocolManagement] Fetching protocols with filters:', filters)
       // currentUser.clinic_id를 전달
       const result = await dataService.getProtocols(currentUser.clinic_id, filters)
       if (result.error) {
+        console.error('[ProtocolManagement] Error:', result.error)
         setError(result.error)
       } else {
         setProtocols((result.data as Protocol[] | undefined) ?? [])
+        console.log('[ProtocolManagement] Protocols loaded:', (result.data as Protocol[] | undefined)?.length || 0)
       }
     } catch (err) {
+      console.error('[ProtocolManagement] Exception:', err)
       setError('프로토콜을 불러오는 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
@@ -81,23 +104,34 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
 
   const fetchCategories = async () => {
     try {
+      console.log('[ProtocolManagement] Fetching categories...')
       // currentUser.clinic_id를 전달
       const result = await dataService.getProtocolCategories(currentUser.clinic_id)
       if (result.error) {
-        console.error('Error fetching categories:', result.error)
+        console.error('[ProtocolManagement] Error fetching categories:', result.error)
       } else {
         setCategories((result.data as ProtocolCategory[] | undefined) ?? [])
+        console.log('[ProtocolManagement] Categories loaded:', (result.data as ProtocolCategory[] | undefined)?.length || 0)
       }
     } catch (err) {
-      console.error('Error fetching categories:', err)
+      console.error('[ProtocolManagement] Exception fetching categories:', err)
     }
   }
 
   useEffect(() => {
+    let isMounted = true
+
     const debounceTimer = setTimeout(() => {
-      fetchProtocols()
+      if (isMounted) {
+        console.log('[ProtocolManagement] Debounced fetch triggered')
+        fetchProtocols()
+      }
     }, 300)
-    return () => clearTimeout(debounceTimer)
+
+    return () => {
+      isMounted = false
+      clearTimeout(debounceTimer)
+    }
   }, [searchTerm, selectedStatus, selectedCategory])
 
   const handleCreateProtocol = async (formData: ProtocolFormData) => {

@@ -401,6 +401,10 @@ const handleSubmit = async () => {
 - [ ] 모든 테스트 통과 확인
 - [ ] 코드 리뷰 (self-review)
 - [ ] 문서화 (README, 주석)
+- [ ] **Git Commit & Push (필수)**
+  - 작업 완료 시 자동으로 커밋 및 푸시
+  - 커밋 메시지에 변경 사항 명확히 기술
+  - Co-Authored-By: Claude 포함
 - [ ] 사용자에게 테스트 방법 안내
 
 ---
@@ -464,6 +468,93 @@ node scripts/integration-test.js
 node scripts/check-database.js
 ```
 
+### 4. Git 워크플로우 (필수)
+
+**중요: 모든 작업 완료 시 반드시 Git에 커밋하고 푸시합니다.**
+
+#### 자동 커밋 & 푸시 프로세스
+
+```bash
+# 1. 변경사항 확인
+git status
+git diff --stat
+
+# 2. 변경된 파일 staging
+git add [파일들...]
+
+# 3. 의미있는 커밋 메시지 작성
+git commit -m "$(cat <<'EOF'
+[type]: [간단한 제목]
+
+[상세 설명]
+- 변경사항 1
+- 변경사항 2
+- 변경사항 3
+
+[보안/성능/테스트 관련 내용]
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+
+# 4. GitHub에 자동 푸시
+git push origin [브랜치명]
+```
+
+#### 커밋 메시지 컨벤션
+
+**타입 (Type):**
+- `feat`: 새로운 기능 추가
+- `fix`: 버그 수정
+- `refactor`: 코드 리팩토링 (기능 변경 없음)
+- `test`: 테스트 추가/수정
+- `docs`: 문서 수정
+- `chore`: 빌드, 설정 파일 수정
+- `perf`: 성능 개선
+- `security`: 보안 강화
+
+**예시:**
+```
+fix: rememberMe 옵션에 따라 sessionStorage/localStorage 동적 선택
+
+- customStorageAdapter: rememberMe 플래그에 따라 storage 동적 선택
+- AuthContext: login/updateUser 함수에서 storage 동적 선택
+- dataService: persistClinicId/getCachedClinicId storage 동적 선택
+
+보안 개선:
+- rememberMe=false 시 모든 세션 데이터가 sessionStorage에 저장
+- 브라우저 닫으면 세션 자동 삭제 (공용 PC 보안 향상)
+
+테스트:
+- 로그인 시스템 전체 테스트 시나리오 작성
+- rememberMe=false 검증 완료
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+#### Git 자동화 규칙
+
+1. **작업 완료 즉시 커밋**
+   - Todo 항목이 모두 completed 상태가 되면 즉시 커밋
+   - 테스트 통과 확인 후 커밋
+
+2. **커밋 단위**
+   - 하나의 논리적 기능 단위로 커밋
+   - 여러 기능을 구현했다면 기능별로 분리 커밋
+
+3. **푸시 타이밍**
+   - 커밋 후 즉시 푸시 (백업 목적)
+   - 사용자에게 명시적으로 요청받지 않아도 자동 수행
+
+4. **커밋 메시지 품질**
+   - 제목: 50자 이내 (한글 25자 이내)
+   - 본문: 상세한 변경 내용
+   - 보안/성능/테스트 내용 별도 섹션으로 작성
+
 ---
 
 ## 예상 질문 (FAQ)
@@ -508,6 +599,21 @@ A: `totalThoughts`를 동적으로 조정하세요. 처음 예상보다 복잡�
 - ✅ 문서화 자동화
 
 **모든 기능 구현은 이 문서를 기준으로 진행합니다.**
+
+---
+
+## 변경 이력
+
+### 2025-10-31
+- Git 워크플로우 자동화 규칙 추가
+- 작업 완료 시 자동 커밋 & 푸시 의무화
+- 커밋 메시지 컨벤션 정의
+- Co-Authored-By: Claude 포함 규칙
+
+### 2025-10-31 (초기 작성)
+- Sequential Thinking 방법론 정의
+- TDD 프로세스 정의
+- TodoWrite 활용 가이드
 
 ---
 

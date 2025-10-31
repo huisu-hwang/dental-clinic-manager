@@ -17,7 +17,6 @@ import type {
   AttendanceRecordsResponse,
   AttendanceStatistics,
   TeamAttendanceStatus,
-  LocationData,
   AttendanceEditRequest,
 } from '@/types/attendance'
 
@@ -212,6 +211,7 @@ export async function validateQRCode(
 
 /**
  * 사용자의 근무 스케줄 조회
+ * users.work_schedule JSONB에서 조회
  */
 async function getUserScheduleForDate(
   userId: string,
@@ -223,22 +223,44 @@ async function getUserScheduleForDate(
   try {
     const dayOfWeek = new Date(date).getDay()
 
+    // 요일 숫자를 요일명으로 매핑
+    const dayMap: Record<number, string> = {
+      0: 'sunday',
+      1: 'monday',
+      2: 'tuesday',
+      3: 'wednesday',
+      4: 'thursday',
+      5: 'friday',
+      6: 'saturday',
+    }
+    const dayName = dayMap[dayOfWeek]
+
+    // users.work_schedule에서 조회
     const { data, error } = await supabase
-      .from('work_schedules')
-      .select('start_time, end_time, is_work_day')
-      .eq('user_id', userId)
-      .eq('day_of_week', dayOfWeek)
-      .lte('effective_from', date)
-      .or(`effective_until.is.null,effective_until.gte.${date}`)
+      .from('users')
+      .select('work_schedule')
+      .eq('id', userId)
       .single()
 
-    if (error || !data || !data.is_work_day) {
+    if (error || !data || !data.work_schedule) {
+      console.warn(`[getUserScheduleForDate] No work_schedule for user ${userId}`)
       return null
     }
 
+    const daySchedule = data.work_schedule[dayName]
+
+    if (!daySchedule || !daySchedule.isWorking) {
+      // 휴무일
+      return null
+    }
+
+    // HH:MM 형식을 HH:MM:SS로 변환
+    const start_time = daySchedule.start ? `${daySchedule.start}:00` : undefined
+    const end_time = daySchedule.end ? `${daySchedule.end}:00` : undefined
+
     return {
-      start_time: data.start_time,
-      end_time: data.end_time,
+      start_time,
+      end_time,
     }
   } catch (error) {
     console.error('[getUserScheduleForDate] Error:', error)

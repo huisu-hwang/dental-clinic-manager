@@ -2,6 +2,15 @@
 // 근무 스케줄 관리 서비스
 // Work Schedule Management Service
 // ============================================
+//
+// ⚠️ DEPRECATED
+// 이 서비스는 더 이상 사용되지 않습니다.
+// users.work_schedule (JSONB)를 사용하는 workScheduleService를 사용하세요.
+//
+// 이유: work_schedules 테이블 대신 users.work_schedule JSONB로 통합
+// 대체: @/lib/workScheduleService
+// 삭제 예정일: 2025-12-31
+// ============================================
 
 import { getSupabase } from './supabase'
 import type {
