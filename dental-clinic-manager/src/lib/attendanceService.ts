@@ -17,7 +17,6 @@ import type {
   AttendanceRecordsResponse,
   AttendanceStatistics,
   TeamAttendanceStatus,
-  LocationData,
   AttendanceEditRequest,
 } from '@/types/attendance'
 
