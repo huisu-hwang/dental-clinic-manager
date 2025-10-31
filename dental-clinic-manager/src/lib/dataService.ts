@@ -242,21 +242,27 @@ export const dataService = {
       console.log('[DataService] Starting data fetch for clinic:', targetClinicId)
 
       // 각 테이블을 개별적으로 조회하여 에러 격리
-      let dailyReportResult, consultLogsResult, giftLogsResult, happyCallLogsResult;
+      let dailyReportResult,
+        consultLogsResult,
+        giftLogsResult,
+        happyCallLogsResult;
 
       // daily_reports 조회
       try {
-        dailyReportResult = await applyClinicFilter(
+        const dailyQuery = applyClinicFilter(
           supabase
             .from('daily_reports')
             .select('*')
-            .eq('date', targetDate),
+            .eq('date', targetDate)
+            .order('id', { ascending: false }),
           targetClinicId
-        ).maybeSingle();
-        console.log('[DataService] daily_reports fetched:', dailyReportResult);
+        ).limit(1);
+        const { data, error } = await dailyQuery;
+        dailyReportResult = { data: data ?? [], error };
+        console.log('[DataService] daily_reports fetched:', data?.length || 0, 'items');
       } catch (err) {
         console.error('[DataService] Error fetching daily_reports:', err);
-        dailyReportResult = { data: null, error: err };
+        dailyReportResult = { data: [], error: err };
       }
 
       // consult_logs 조회
@@ -308,7 +314,7 @@ export const dataService = {
       }
 
       const { normalized: normalizedDailyReport, missingIds: dailyIdsToBackfill } = ensureClinicIds(
-        dailyReportResult?.data ? [dailyReportResult.data as DailyReport] : [],
+        (dailyReportResult?.data as DailyReport[] | null) ?? [],
         targetClinicId
       )
       const { normalized: normalizedConsultLogs, missingIds: consultIdsToBackfill } = ensureClinicIds(
@@ -323,6 +329,10 @@ export const dataService = {
         happyCallLogsResult?.data as HappyCallLog[] | null,
         targetClinicId
       )
+
+      if (dailyReportResult?.error) {
+        console.warn('[DataService] daily_reports error:', dailyReportResult.error)
+      }
 
       if (dailyIdsToBackfill.length) {
         void backfillClinicIds(supabase, 'daily_reports', targetClinicId, dailyIdsToBackfill)
@@ -681,6 +691,15 @@ export const dataService = {
       }
 
       // 해당 날짜의 모든 로그 데이터 조회
+      const reportQuery = applyClinicFilter(
+        supabase
+          .from('daily_reports')
+          .select('*')
+          .eq('date', date)
+          .order('id', { ascending: false }),
+        clinicId
+      ).limit(1)
+
       const [consultResult, giftResult, reportResult] = await Promise.all([
         applyClinicFilter(
           supabase.from('consult_logs').select('*').eq('date', date),
@@ -690,10 +709,7 @@ export const dataService = {
           supabase.from('gift_logs').select('*').eq('date', date),
           clinicId
         ),
-        applyClinicFilter(
-          supabase.from('daily_reports').select('*').eq('date', date),
-          clinicId
-        ).maybeSingle()
+        reportQuery
       ])
 
       const { normalized: normalizedConsultLogs, missingIds: consultIdsToBackfill } = ensureClinicIds(
@@ -704,8 +720,12 @@ export const dataService = {
         giftResult.data as GiftLog[] | null,
         clinicId
       )
+      if (reportResult.error) {
+        console.warn('[DataService] daily_reports error during recalculation:', reportResult.error)
+      }
+
       const { normalized: normalizedReport, missingIds: reportIdsToBackfill } = ensureClinicIds(
-        reportResult.data ? [reportResult.data as DailyReport] : [],
+        (reportResult.data as DailyReport[] | null) ?? [],
         clinicId
       )
 
