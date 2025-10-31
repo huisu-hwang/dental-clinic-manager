@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
-import type { AttendanceQRCode } from '@/types/attendance'
+import type { AttendanceQRCode, QRCodeGenerateInput } from '@/types/attendance'
 import QRCode from 'qrcode'
 
 export default function QRCodeDisplay() {
@@ -102,22 +102,25 @@ export default function QRCodeDisplay() {
       return
     }
 
-    if (!latitude || !longitude) {
-      setMessage({ type: 'error', text: '위치 정보를 입력해주세요.' })
-      return
-    }
-
     setLoading(true)
     setMessage(null)
 
     try {
-      // 타임아웃 설정 (10초)
-      const qrCodePromise = attendanceService.generateDailyQRCode({
+      const hasLocation = latitude.trim() !== '' && longitude.trim() !== ''
+      const parsedRadius = parseInt(radiusMeters, 10)
+
+      const request: QRCodeGenerateInput = {
         clinic_id: user.clinic_id,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-        radius_meters: parseInt(radiusMeters, 10),
-      })
+        radius_meters: Number.isFinite(parsedRadius) ? parsedRadius : undefined,
+      }
+
+      if (hasLocation) {
+        request.latitude = parseFloat(latitude)
+        request.longitude = parseFloat(longitude)
+      }
+
+      // 타임아웃 설정 (10초)
+      const qrCodePromise = attendanceService.generateDailyQRCode(request)
 
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('QR code generation timeout')), 10000)
@@ -127,7 +130,10 @@ export default function QRCodeDisplay() {
 
       if (result.success && result.qrCode) {
         setQrCode(result.qrCode)
-        setMessage({ type: 'success', text: 'QR 코드가 생성되었습니다!' })
+        const successMessage = hasLocation
+          ? 'QR 코드가 생성되었습니다!'
+          : 'QR 코드가 생성되었습니다. 위치 검증을 사용하려면 위도와 경도를 입력해주세요.'
+        setMessage({ type: 'success', text: successMessage })
       } else {
         setMessage({ type: 'error', text: result.error || 'QR 코드 생성 실패' })
       }
@@ -280,6 +286,10 @@ export default function QRCodeDisplay() {
             </div>
           </div>
 
+          <p className="text-xs text-gray-500">
+            ※ 위도와 경도는 선택 사항입니다. 입력하지 않으면 위치 검증 없이 QR 코드가 생성됩니다.
+          </p>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               인증 반경 (미터)
@@ -311,7 +321,7 @@ export default function QRCodeDisplay() {
 
           <button
             onClick={generateNewQRCode}
-            disabled={loading || !latitude || !longitude}
+            disabled={loading}
             className="w-full py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'QR 코드 생성 중...' : qrCode ? '새 QR 코드 재생성' : 'QR 코드 생성'}

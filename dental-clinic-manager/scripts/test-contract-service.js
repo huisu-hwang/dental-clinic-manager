@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Test script for contract service (structure validation)
- * Run: node test-contract-service.js
+ * Run: node scripts/test-contract-service.js
  */
 
 const fs = require('fs');
