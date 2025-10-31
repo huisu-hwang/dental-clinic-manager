@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { scheduleService } from '@/lib/scheduleService'
+import { workScheduleService } from '@/lib/workScheduleService'
 import { clinicHoursService } from '@/lib/clinicHoursService'
 import { useAuth } from '@/contexts/AuthContext'
-import type { WorkSchedule, WeeklySchedule } from '@/types/attendance'
-import { DAY_OF_WEEK_NAMES } from '@/types/attendance'
+import type { WorkSchedule, DaySchedule, DayName } from '@/types/workSchedule'
+import { DAY_NAMES_KO } from '@/types/workSchedule'
 import type { ClinicHours } from '@/types/clinic'
+import { convertClinicHoursToWorkSchedule } from '@/utils/workScheduleUtils'
 
 interface User {
   id: string
@@ -18,7 +19,7 @@ export default function ScheduleManagement() {
   const { user } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [selectedUser, setSelectedUser] = useState<string>('')
-  const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule | null>(null)
+  const [workSchedule, setWorkSchedule] = useState<WorkSchedule | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -26,7 +27,11 @@ export default function ScheduleManagement() {
   const [bulkMode, setBulkMode] = useState(false)
   const [bulkStartTime, setBulkStartTime] = useState('09:00')
   const [bulkEndTime, setBulkEndTime] = useState('18:00')
-  const [bulkWorkDays, setBulkWorkDays] = useState<number[]>([1, 2, 3, 4, 5]) // 월~금
+  const [bulkBreakStart, setBulkBreakStart] = useState('12:00')
+  const [bulkBreakEnd, setBulkBreakEnd] = useState('13:00')
+  const [bulkWorkDays, setBulkWorkDays] = useState<DayName[]>(['monday', 'tuesday', 'wednesday', 'thursday', 'friday'])
+
+  const dayOrder: DayName[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
   useEffect(() => {
     if (user?.clinic_id) {
@@ -44,7 +49,6 @@ export default function ScheduleManagement() {
     if (!user?.clinic_id) return
 
     try {
-      // Supabase에서 직원 목록 조회
       const { getSupabase } = await import('@/lib/supabase')
       const supabase = getSupabase()
       if (!supabase) return
@@ -72,11 +76,11 @@ export default function ScheduleManagement() {
 
     setLoading(true)
     try {
-      const result = await scheduleService.getWeeklySchedule(selectedUser)
-      if (result.success && result.schedule) {
-        setWeeklySchedule(result.schedule)
+      const result = await workScheduleService.getUserWorkSchedule(selectedUser)
+      if (result.data) {
+        setWorkSchedule(result.data)
       } else {
-        setWeeklySchedule({ user_id: selectedUser, schedules: [] })
+        setWorkSchedule(null)
       }
     } catch (error) {
       console.error('[ScheduleManagement] Error loading schedule:', error)
@@ -86,60 +90,70 @@ export default function ScheduleManagement() {
   }
 
   const handleBulkScheduleCreate = async () => {
-    if (!selectedUser || !user?.clinic_id) return
-
-    setLoading(true)
-    setMessage(null)
-
-    try {
-      const effectiveFrom = new Date().toISOString().split('T')[0]
-      const result = await scheduleService.createWeeklyScheduleBulk(
-        selectedUser,
-        user.clinic_id,
-        bulkStartTime + ':00',
-        bulkEndTime + ':00',
-        bulkWorkDays,
-        effectiveFrom
-      )
-
-      if (result.success) {
-        setMessage({ type: 'success', text: '주간 스케줄이 생성되었습니다!' })
-        await loadUserSchedule()
-        setBulkMode(false)
-      } else {
-        setMessage({ type: 'error', text: result.error || '스케줄 생성 실패' })
-      }
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || '스케줄 생성 중 오류가 발생했습니다.' })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleUpdateDaySchedule = async (
-    dayOfWeek: number,
-    startTime: string,
-    endTime: string,
-    isWorkDay: boolean
-  ) => {
     if (!selectedUser) return
 
     setLoading(true)
     setMessage(null)
 
     try {
-      const effectiveFrom = new Date().toISOString().split('T')[0]
-      const result = await scheduleService.updateDaySchedule(
-        selectedUser,
-        dayOfWeek,
-        startTime + ':00',
-        endTime + ':00',
-        isWorkDay,
-        effectiveFrom
-      )
+      // WorkSchedule 객체 생성
+      const newSchedule: WorkSchedule = {} as WorkSchedule
+
+      dayOrder.forEach(day => {
+        if (bulkWorkDays.includes(day)) {
+          newSchedule[day] = {
+            start: bulkStartTime,
+            end: bulkEndTime,
+            breakStart: bulkBreakStart,
+            breakEnd: bulkBreakEnd,
+            isWorking: true,
+          }
+        } else {
+          newSchedule[day] = {
+            start: null,
+            end: null,
+            breakStart: null,
+            breakEnd: null,
+            isWorking: false,
+          }
+        }
+      })
+
+      const result = await workScheduleService.updateUserWorkSchedule(selectedUser, newSchedule)
 
       if (result.success) {
-        setMessage({ type: 'success', text: `${DAY_OF_WEEK_NAMES[dayOfWeek]} 스케줄이 업데이트되었습니다!` })
+        setMessage({ type: 'success', text: '주간 스케줄이 저장되었습니다!' })
+        await loadUserSchedule()
+        setBulkMode(false)
+      } else {
+        setMessage({ type: 'error', text: result.error || '스케줄 저장 실패' })
+      }
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || '스케줄 저장 중 오류가 발생했습니다.' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUpdateDaySchedule = async (
+    dayName: DayName,
+    daySchedule: DaySchedule
+  ) => {
+    if (!selectedUser || !workSchedule) return
+
+    setLoading(true)
+    setMessage(null)
+
+    try {
+      const updatedSchedule = {
+        ...workSchedule,
+        [dayName]: daySchedule,
+      }
+
+      const result = await workScheduleService.updateUserWorkSchedule(selectedUser, updatedSchedule)
+
+      if (result.success) {
+        setMessage({ type: 'success', text: `${DAY_NAMES_KO[dayName]} 스케줄이 업데이트되었습니다!` })
         await loadUserSchedule()
       } else {
         setMessage({ type: 'error', text: result.error || '스케줄 업데이트 실패' })
@@ -151,14 +165,10 @@ export default function ScheduleManagement() {
     }
   }
 
-  const getScheduleForDay = (dayOfWeek: number): WorkSchedule | undefined => {
-    return weeklySchedule?.schedules.find((s) => s.day_of_week === dayOfWeek)
-  }
-
-  const toggleWorkDay = (dayOfWeek: number) => {
-    const newDays = bulkWorkDays.includes(dayOfWeek)
-      ? bulkWorkDays.filter((d) => d !== dayOfWeek)
-      : [...bulkWorkDays, dayOfWeek].sort()
+  const toggleWorkDay = (dayName: DayName) => {
+    const newDays = bulkWorkDays.includes(dayName)
+      ? bulkWorkDays.filter((d) => d !== dayName)
+      : [...bulkWorkDays, dayName]
     setBulkWorkDays(newDays)
   }
 
@@ -185,17 +195,27 @@ export default function ScheduleManagement() {
 
       const hours = result.data as ClinicHours[]
 
-      // 평일 중 첫 번째 영업일의 시간을 가져옴
-      const firstWorkDay = hours.find((h) => h.is_open && h.day_of_week >= 1 && h.day_of_week <= 5)
+      // clinic_hours를 WorkSchedule로 변환
+      const convertedSchedule = convertClinicHoursToWorkSchedule(hours)
 
-      if (firstWorkDay && firstWorkDay.open_time && firstWorkDay.close_time) {
-        setBulkStartTime(firstWorkDay.open_time.substring(0, 5))
-        setBulkEndTime(firstWorkDay.close_time.substring(0, 5))
+      // 일괄 설정 필드에 반영
+      const firstWorkDay = Object.entries(convertedSchedule).find(
+        ([_, schedule]) => schedule.isWorking
+      )
+
+      if (firstWorkDay) {
+        const [_, schedule] = firstWorkDay
+        setBulkStartTime(schedule.start || '09:00')
+        setBulkEndTime(schedule.end || '18:00')
+        setBulkBreakStart(schedule.breakStart || '12:00')
+        setBulkBreakEnd(schedule.breakEnd || '13:00')
       }
 
       // 영업하는 요일만 선택
-      const workDays = hours.filter((h) => h.is_open).map((h) => h.day_of_week)
-      setBulkWorkDays(workDays.sort())
+      const workDayNames = Object.entries(convertedSchedule)
+        .filter(([_, schedule]) => schedule.isWorking)
+        .map(([dayName]) => dayName as DayName)
+      setBulkWorkDays(workDayNames)
 
       setMessage({
         type: 'success',
@@ -298,13 +318,31 @@ export default function ScheduleManagement() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">점심 시작</label>
+              <input
+                type="time"
+                value={bulkBreakStart}
+                onChange={(e) => setBulkBreakStart(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">점심 종료</label>
+              <input
+                type="time"
+                value={bulkBreakEnd}
+                onChange={(e) => setBulkBreakEnd(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
           </div>
 
           {/* 근무 요일 선택 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">근무 요일</label>
             <div className="grid grid-cols-7 gap-2">
-              {[0, 1, 2, 3, 4, 5, 6].map((day) => (
+              {dayOrder.map((day) => (
                 <button
                   key={day}
                   onClick={() => toggleWorkDay(day)}
@@ -314,7 +352,7 @@ export default function ScheduleManagement() {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {DAY_OF_WEEK_NAMES[day].substring(0, 1)}
+                  {DAY_NAMES_KO[day].substring(0, 1)}
                 </button>
               ))}
             </div>
@@ -325,10 +363,11 @@ export default function ScheduleManagement() {
             <h3 className="font-medium text-gray-900 mb-2">설정 미리보기</h3>
             <div className="text-sm text-gray-600 space-y-1">
               <p>• 근무 시간: {bulkStartTime} ~ {bulkEndTime}</p>
+              <p>• 점심 시간: {bulkBreakStart} ~ {bulkBreakEnd}</p>
               <p>
                 • 근무 요일:{' '}
                 {bulkWorkDays.length > 0
-                  ? bulkWorkDays.map((d) => DAY_OF_WEEK_NAMES[d]).join(', ')
+                  ? bulkWorkDays.map((d) => DAY_NAMES_KO[d]).join(', ')
                   : '없음'}
               </p>
             </div>
@@ -362,6 +401,9 @@ export default function ScheduleManagement() {
                     퇴근 시간
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    점심시간
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     액션
                   </th>
                 </tr>
@@ -369,7 +411,7 @@ export default function ScheduleManagement() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                       <div className="flex justify-center items-center space-x-2">
                         <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                         <span>로딩 중...</span>
@@ -377,12 +419,12 @@ export default function ScheduleManagement() {
                     </td>
                   </tr>
                 ) : (
-                  [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
-                    const schedule = getScheduleForDay(dayOfWeek)
+                  dayOrder.map((dayName) => {
+                    const schedule = workSchedule?.[dayName]
                     return (
                       <DayScheduleRow
-                        key={dayOfWeek}
-                        dayOfWeek={dayOfWeek}
+                        key={dayName}
+                        dayName={dayName}
                         schedule={schedule}
                         onUpdate={handleUpdateDaySchedule}
                       />
@@ -401,7 +443,8 @@ export default function ScheduleManagement() {
         <ul className="space-y-1">
           <li>• 일괄 설정: 모든 요일에 동일한 시간을 한 번에 적용합니다.</li>
           <li>• 개별 설정: 각 요일별로 다른 시간을 설정할 수 있습니다.</li>
-          <li>• 스케줄 변경은 즉시 적용되며, 출퇴근 시 지각/조퇴 계산에 사용됩니다.</li>
+          <li>• 스케줄은 출퇴근 기록 및 근로계약서 작성 시 자동으로 사용됩니다.</li>
+          <li>• "병원 진료시간 가져오기"를 클릭하면 병원 진료시간을 기본값으로 불러옵니다.</li>
         </ul>
       </div>
     </div>
@@ -410,57 +453,63 @@ export default function ScheduleManagement() {
 
 // 요일별 스케줄 행 컴포넌트
 function DayScheduleRow({
-  dayOfWeek,
+  dayName,
   schedule,
   onUpdate,
 }: {
-  dayOfWeek: number
-  schedule?: WorkSchedule
-  onUpdate: (dayOfWeek: number, startTime: string, endTime: string, isWorkDay: boolean) => void
+  dayName: DayName
+  schedule?: DaySchedule
+  onUpdate: (dayName: DayName, schedule: DaySchedule) => void
 }) {
   const [isEditing, setIsEditing] = useState(false)
-  const [isWorkDay, setIsWorkDay] = useState(schedule?.is_work_day ?? true)
-  const [startTime, setStartTime] = useState(
-    schedule?.start_time ? schedule.start_time.substring(0, 5) : '09:00'
-  )
-  const [endTime, setEndTime] = useState(
-    schedule?.end_time ? schedule.end_time.substring(0, 5) : '18:00'
-  )
+  const [isWorking, setIsWorking] = useState(schedule?.isWorking ?? true)
+  const [startTime, setStartTime] = useState(schedule?.start || '09:00')
+  const [endTime, setEndTime] = useState(schedule?.end || '18:00')
+  const [breakStart, setBreakStart] = useState(schedule?.breakStart || '12:00')
+  const [breakEnd, setBreakEnd] = useState(schedule?.breakEnd || '13:00')
 
   const handleSave = () => {
-    onUpdate(dayOfWeek, startTime, endTime, isWorkDay)
+    onUpdate(dayName, {
+      start: isWorking ? startTime : null,
+      end: isWorking ? endTime : null,
+      breakStart: isWorking ? breakStart : null,
+      breakEnd: isWorking ? breakEnd : null,
+      isWorking,
+    })
     setIsEditing(false)
   }
 
   const handleCancel = () => {
-    setIsWorkDay(schedule?.is_work_day ?? true)
-    setStartTime(schedule?.start_time ? schedule.start_time.substring(0, 5) : '09:00')
-    setEndTime(schedule?.end_time ? schedule.end_time.substring(0, 5) : '18:00')
+    setIsWorking(schedule?.isWorking ?? true)
+    setStartTime(schedule?.start || '09:00')
+    setEndTime(schedule?.end || '18:00')
+    setBreakStart(schedule?.breakStart || '12:00')
+    setBreakEnd(schedule?.breakEnd || '13:00')
     setIsEditing(false)
   }
 
   return (
     <tr className={isEditing ? 'bg-blue-50' : ''}>
       <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-        {DAY_OF_WEEK_NAMES[dayOfWeek]}
+        {DAY_NAMES_KO[dayName]}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         {isEditing ? (
           <input
             type="checkbox"
-            checked={isWorkDay}
-            onChange={(e) => setIsWorkDay(e.target.checked)}
+            checked={isWorking}
+            onChange={(e) => setIsWorking(e.target.checked)}
             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
         ) : (
           <span
             className={`px-2 py-1 text-xs font-semibold rounded-full ${
-              schedule?.is_work_day
+              schedule?.isWorking
                 ? 'bg-green-100 text-green-800'
                 : 'bg-gray-100 text-gray-800'
             }`}
           >
-            {schedule?.is_work_day ? '근무' : '휴무'}
+            {schedule?.isWorking ? '근무' : '휴무'}
           </span>
         )}
       </td>
@@ -470,14 +519,12 @@ function DayScheduleRow({
             type="time"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            disabled={!isWorkDay}
+            disabled={!isWorking}
             className="px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
           />
         ) : (
           <span className="text-gray-900">
-            {schedule?.is_work_day && schedule?.start_time
-              ? schedule.start_time.substring(0, 5)
-              : '-'}
+            {schedule?.isWorking && schedule?.start ? schedule.start : '-'}
           </span>
         )}
       </td>
@@ -487,12 +534,39 @@ function DayScheduleRow({
             type="time"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            disabled={!isWorkDay}
+            disabled={!isWorking}
             className="px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
           />
         ) : (
           <span className="text-gray-900">
-            {schedule?.is_work_day && schedule?.end_time ? schedule.end_time.substring(0, 5) : '-'}
+            {schedule?.isWorking && schedule?.end ? schedule.end : '-'}
+          </span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        {isEditing ? (
+          <div className="flex gap-1">
+            <input
+              type="time"
+              value={breakStart}
+              onChange={(e) => setBreakStart(e.target.value)}
+              disabled={!isWorking}
+              className="px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 w-24"
+            />
+            <span className="text-gray-500">~</span>
+            <input
+              type="time"
+              value={breakEnd}
+              onChange={(e) => setBreakEnd(e.target.value)}
+              disabled={!isWorking}
+              className="px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 w-24"
+            />
+          </div>
+        ) : (
+          <span className="text-gray-900">
+            {schedule?.isWorking && schedule?.breakStart && schedule?.breakEnd
+              ? `${schedule.breakStart} ~ ${schedule.breakEnd}`
+              : '-'}
           </span>
         )}
       </td>
