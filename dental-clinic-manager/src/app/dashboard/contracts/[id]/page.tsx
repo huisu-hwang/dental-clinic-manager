@@ -18,6 +18,41 @@ export default function ContractDetailPage() {
   const router = useRouter()
   const contractId = params.id as string
 
+  // Redirect if "new" is accessed via dynamic route
+  if (contractId === 'new') {
+    router.replace('/dashboard/contracts/new')
+    return null
+  }
+
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (contractId && !uuidRegex.test(contractId)) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <div className="container mx-auto p-4 md:p-8">
+          <Header user={user} onLogout={logout} />
+          <TabNavigation activeTab="contracts" onTabChange={(tab) => {
+            if (tab === 'contracts') router.push('/dashboard/contracts')
+            else if (tab === 'daily-input') router.push('/dashboard')
+            else router.push('/dashboard')
+          }} />
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+              <h2 className="text-xl font-bold text-red-800 mb-2">유효하지 않은 계약서 ID</h2>
+              <p className="text-red-600 mb-4">올바른 계약서 ID가 아닙니다.</p>
+              <button
+                onClick={() => router.push('/dashboard/contracts')}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                목록으로 돌아가기
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const handleTabChange = (tab: string) => {
     if (tab === 'contracts') router.push('/dashboard/contracts')
     else if (tab === 'daily-input') router.push('/dashboard')

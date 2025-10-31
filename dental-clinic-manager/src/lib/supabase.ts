@@ -92,6 +92,28 @@ export const getSupabase = () => {
             localStorage.removeItem('dental_user')
           }
         })
+
+        // 초기 세션 확인 및 오래된 토큰 정리
+        supabase.auth.getSession().then(({ data, error }) => {
+          if (error) {
+            console.error('[Supabase] Session check error on init:', error.message)
+            // Refresh token 에러 시 로컬 스토리지 클리어
+            if (error.message?.includes('Refresh Token') || error.message?.includes('Invalid')) {
+              console.log('[Supabase] Clearing invalid session data')
+              localStorage.removeItem('dental_auth')
+              localStorage.removeItem('dental_user')
+              // Supabase 로컬 스토리지도 클리어
+              const keys = Object.keys(localStorage)
+              keys.forEach(key => {
+                if (key.startsWith('sb-')) {
+                  localStorage.removeItem(key)
+                }
+              })
+            }
+          }
+        }).catch(err => {
+          console.error('[Supabase] Failed to check initial session:', err)
+        })
       }
     } catch (error) {
       initializationError = error instanceof Error ? error.message : 'Unknown error'

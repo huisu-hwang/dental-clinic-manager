@@ -93,6 +93,17 @@ export interface ContractData {
   workdays: string[] // ['월', '화', '수', '목', '금']
   holidays: string[]
 
+  // Weekly work hours (요일별 근로시간)
+  weekly_work_hours?: {
+    [key: number]: {
+      is_open: boolean
+      open_time: string | null
+      close_time: string | null
+      break_start: string | null
+      break_end: string | null
+    }
+  }
+
   // Salary information
   salary_base: number
   salary_bonus?: number

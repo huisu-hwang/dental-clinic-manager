@@ -284,7 +284,37 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           <section className="border-b pb-4">
             <h2 className="text-lg font-bold mb-3">제3조 (근로조건)</h2>
             <div className="space-y-2">
-              <p>1. 근로시간: {data.work_start_time || '10:00'}부터 {data.work_end_time || '19:00'}까지</p>
+              <p className="font-semibold">1. 요일별 근로시간</p>
+              {data.weekly_work_hours ? (
+                <div className="ml-4 space-y-1">
+                  {[1, 2, 3, 4, 5, 6, 0].map((dayOfWeek) => {
+                    const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일']
+                    const hours = data.weekly_work_hours?.[dayOfWeek]
+
+                    if (!hours) return null
+
+                    return (
+                      <div key={dayOfWeek} className="text-sm">
+                        <span className="inline-block w-16 font-medium">{dayNames[dayOfWeek]}:</span>
+                        {hours.is_open ? (
+                          <span>
+                            {hours.open_time} ~ {hours.close_time}
+                            {hours.break_start && hours.break_end && (
+                              <span className="text-gray-600 ml-2">
+                                (휴게: {hours.break_start} ~ {hours.break_end})
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">휴무</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="ml-4">근로시간: {data.work_start_time || '10:00'}부터 {data.work_end_time || '19:00'}까지</p>
+              )}
               <p className="ml-4 text-xs text-gray-600">* 담당직무: 진료</p>
               <p>2. 휴게시간: 점심시간 포함 (1일 평균 1시간)</p>
               <p>3. 주휴일: 주 1회</p>

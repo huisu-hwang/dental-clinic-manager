@@ -45,8 +45,49 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
   // Load contracts
   useEffect(() => {
+    const abortController = new AbortController()
+    let isMounted = true
+
+    const loadContracts = async () => {
+      if (!isMounted) return
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        console.log('[ContractList] Loading contracts...')
+        const response = await contractService.getContracts(clinicId, filters)
+
+        if (!isMounted) {
+          console.log('[ContractList] Component unmounted, ignoring response')
+          return
+        }
+
+        if (response.error) {
+          setError(response.error)
+        } else {
+          setContracts(response.contracts || [])
+        }
+      } catch (err) {
+        if (!isMounted) return
+
+        console.error('[ContractList] Failed to load contracts:', err)
+        setError('근로계약서 목록을 불러오는 중 오류가 발생했습니다.')
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
     loadContracts()
-  }, [clinicId, filters])
+
+    return () => {
+      isMounted = false
+      abortController.abort()
+      console.log('[ContractList] Cleanup: aborted pending requests')
+    }
+  }, [clinicId, filters.status, filters.employee_user_id, filters.search])
 
   const loadContracts = async () => {
     setLoading(true)
@@ -61,7 +102,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
         setContracts(response.contracts || [])
       }
     } catch (err) {
-      console.error('Failed to load contracts:', err)
+      console.error('[ContractList] Failed to load contracts:', err)
       setError('근로계약서 목록을 불러오는 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)

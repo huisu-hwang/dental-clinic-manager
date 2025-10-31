@@ -4,6 +4,7 @@
  */
 
 import { getSupabase } from './supabase'
+import { clinicHoursService } from './clinicHoursService'
 import type {
   EmploymentContract,
   ContractTemplate,
@@ -76,6 +77,28 @@ class ContractService {
         }
       }
 
+      // Get clinic hours for weekly work schedule
+      const { data: clinicHoursData } = await clinicHoursService.getClinicHours(employee.clinic_id)
+      const weeklyWorkHours: Record<number, {
+        is_open: boolean
+        open_time: string | null
+        close_time: string | null
+        break_start: string | null
+        break_end: string | null
+      }> = {}
+
+      if (clinicHoursData) {
+        clinicHoursData.forEach(hours => {
+          weeklyWorkHours[hours.day_of_week] = {
+            is_open: hours.is_open,
+            open_time: hours.open_time,
+            close_time: hours.close_time,
+            break_start: hours.break_start,
+            break_end: hours.break_end
+          }
+        })
+      }
+
       // Prepare contract data with auto-filled employee info
       const contractData = {
         // Auto-filled employee info
@@ -91,6 +114,9 @@ class ContractService {
 
         // Contract data from form
         ...data.contract_data,
+
+        // Weekly work hours from clinic settings
+        weekly_work_hours: weeklyWorkHours,
 
         // Default values
         is_permanent: !data.contract_data.employment_period_end,
