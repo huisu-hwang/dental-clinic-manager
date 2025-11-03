@@ -4,7 +4,8 @@ import {
   UsersIcon,
   BuildingOfficeIcon,
   ChartBarIcon,
-  CogIcon
+  CogIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 import { usePermissions } from '@/hooks/usePermissions'
 import type { Permission } from '@/types/permissions'
@@ -41,6 +42,12 @@ export default function ManagementTabNavigation({
       label: '병원 설정',
       icon: BuildingOfficeIcon,
       requiredPermissions: ['clinic_settings']
+    },
+    {
+      id: 'protocols',
+      label: '프로토콜 관리',
+      icon: DocumentTextIcon,
+      requiredPermissions: ['protocol_view', 'protocol_create', 'protocol_edit']
     },
     {
       id: 'analytics',

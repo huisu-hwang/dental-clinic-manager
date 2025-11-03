@@ -163,6 +163,7 @@ export default function ProtocolForm({
       const stepsHtml = serializeStepsToHtml(formData.steps || [])
       await onSubmit({
         ...formData,
+        clinic_id: clinicId,
         content: stepsHtml,
         steps: formData.steps
       })

@@ -1751,7 +1751,7 @@ export const dataService = {
 
     try {
       console.log('[createProtocol] Getting clinic ID...')
-      const clinicId = await getCurrentClinicId()
+      const clinicId = formData.clinic_id || await getCurrentClinicId()
       if (!clinicId) {
         console.error('[createProtocol] No clinic ID')
         throw new Error('User clinic information not available')

@@ -9,6 +9,7 @@ import TabNavigation from '@/components/Layout/TabNavigation'
 import ManagementTabNavigation from '@/components/Layout/ManagementTabNavigation'
 import StaffManagement from '@/components/Management/StaffManagement'
 import ClinicSettings from '@/components/Management/ClinicSettings'
+import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/UI/Toast'
 
@@ -45,6 +46,7 @@ export default function ManagementPage() {
   // 권한 체크
   const canAccessStaffManagement = ['staff_manage', 'staff_view'].some(p => hasPermission(p as any))
   const canAccessClinicSettings = hasPermission('clinic_settings')
+  const canAccessProtocols = ['protocol_view', 'protocol_create', 'protocol_edit'].some(p => hasPermission(p as any))
 
   // 권한 로딩 상태 추적
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function ManagementPage() {
     }
 
     // 권한이 전혀 없으면 리디렉션
-    if (!canAccessStaffManagement && !canAccessClinicSettings) {
+    if (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols) {
       router.push('/dashboard')
       return
     }
@@ -74,10 +76,15 @@ export default function ManagementPage() {
     // 현재 탭에 권한이 없으면 권한이 있는 탭으로 변경
     if (activeTab === 'staff' && !canAccessStaffManagement) {
       if (canAccessClinicSettings) setActiveTab('clinic')
+      else if (canAccessProtocols) setActiveTab('protocols')
     } else if (activeTab === 'clinic' && !canAccessClinicSettings) {
       if (canAccessStaffManagement) setActiveTab('staff')
+      else if (canAccessProtocols) setActiveTab('protocols')
+    } else if (activeTab === 'protocols' && !canAccessProtocols) {
+      if (canAccessStaffManagement) setActiveTab('staff')
+      else if (canAccessClinicSettings) setActiveTab('clinic')
     }
-  }, [authLoading, permissionsLoaded, user, canAccessStaffManagement, canAccessClinicSettings, activeTab, router])
+  }, [authLoading, permissionsLoaded, user, canAccessStaffManagement, canAccessClinicSettings, canAccessProtocols, activeTab, router])
 
   // 로딩 중이거나 권한이 없는 경우
   if (authLoading || !permissionsLoaded) {
@@ -91,7 +98,7 @@ export default function ManagementPage() {
     )
   }
 
-  if (!user || (!canAccessStaffManagement && !canAccessClinicSettings)) {
+  if (!user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols)) {
     return (
       <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center">
         <div className="text-center">
@@ -165,6 +172,11 @@ export default function ManagementPage() {
           {/* Clinic Settings Tab */}
           {activeTab === 'clinic' && (
             <ClinicSettings currentUser={user} />
+          )}
+
+          {/* Protocol Management Tab */}
+          {activeTab === 'protocols' && (
+            <ProtocolManagement currentUser={user} />
           )}
 
           {/* Analytics Tab */}

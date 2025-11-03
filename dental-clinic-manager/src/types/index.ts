@@ -151,6 +151,7 @@ export interface ProtocolVersion {
 export interface ProtocolFormData {
   title: string;
   category_id?: string;
+  clinic_id?: string;
   content: string;
   status: 'draft' | 'active' | 'archived';
   tags: string[];
