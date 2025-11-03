@@ -105,61 +105,80 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         console.log('[useSupabaseData] 데이터 가져오기 시작...', targetClinicId)
 
-        // 타임아웃 설정 (30초로 증가)
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => {
-            console.error('[useSupabaseData] 데이터 로딩 타임아웃 (30초 초과)')
-            reject(new Error('Data fetch timeout'))
-          }, 30000)
-        )
-
         const startTime = Date.now()
 
-        const dataPromise = Promise.allSettled([
-          applyClinicFilter(
-            supabase.from('daily_reports').select('*'),
-            targetClinicId
-          ).then(result => {
-            console.log('[useSupabaseData] daily_reports query completed')
-            return result
-          }),
-          applyClinicFilter(
-            supabase.from('consult_logs').select('*'),
-            targetClinicId
-          ).then(result => {
-            console.log('[useSupabaseData] consult_logs query completed')
-            return result
-          }),
-          applyClinicFilter(
-            supabase.from('gift_logs').select('*'),
-            targetClinicId
-          ).then(result => {
-            console.log('[useSupabaseData] gift_logs query completed')
-            return result
-          }),
-          applyClinicFilter(
-            supabase.from('gift_inventory').select('*'),
-            targetClinicId
-          ).then(result => {
-            console.log('[useSupabaseData] gift_inventory query completed')
-            return result
-          }),
-          applyClinicFilter(
-            supabase.from('inventory_logs').select('*'),
-            targetClinicId
-          ).then(result => {
-            console.log('[useSupabaseData] inventory_logs query completed')
-            return result
+        // 개별 쿼리 타임아웃 헬퍼 함수 (10초)
+        const withTimeout = <T,>(promise: Promise<T>, ms: number, queryName: string): Promise<T> => {
+          const queryStartTime = Date.now()
+          let timeoutId: NodeJS.Timeout | null = null
+
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(() => {
+              console.error(`[useSupabaseData] ${queryName} 타임아웃 (${ms}ms 초과)`)
+              reject(new Error(`${queryName} timeout after ${ms}ms`))
+            }, ms)
           })
+
+          return Promise.race([
+            promise.then(result => {
+              const queryElapsedTime = Date.now() - queryStartTime
+              console.log(`[useSupabaseData] ${queryName} 완료 (${queryElapsedTime}ms)`)
+              if (timeoutId) clearTimeout(timeoutId)
+              return result
+            }).catch(err => {
+              if (timeoutId) clearTimeout(timeoutId)
+              throw err
+            }),
+            timeoutPromise
+          ])
+        }
+
+        // 각 쿼리를 개별 타임아웃으로 감싸기 (10초)
+        const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
+          withTimeout(
+            applyClinicFilter(
+              supabase.from('daily_reports').select('*'),
+              targetClinicId
+            ),
+            10000,
+            'daily_reports'
+          ),
+          withTimeout(
+            applyClinicFilter(
+              supabase.from('consult_logs').select('*'),
+              targetClinicId
+            ),
+            10000,
+            'consult_logs'
+          ),
+          withTimeout(
+            applyClinicFilter(
+              supabase.from('gift_logs').select('*'),
+              targetClinicId
+            ),
+            10000,
+            'gift_logs'
+          ),
+          withTimeout(
+            applyClinicFilter(
+              supabase.from('gift_inventory').select('*'),
+              targetClinicId
+            ),
+            10000,
+            'gift_inventory'
+          ),
+          withTimeout(
+            applyClinicFilter(
+              supabase.from('inventory_logs').select('*'),
+              targetClinicId
+            ),
+            10000,
+            'inventory_logs'
+          )
         ])
 
-        const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.race([
-          dataPromise,
-          timeoutPromise
-        ]) as any
-
         const elapsedTime = Date.now() - startTime
-        console.log(`[useSupabaseData] 데이터 로딩 완료 (${elapsedTime}ms)`)
+        console.log(`[useSupabaseData] 전체 데이터 로딩 완료 (${elapsedTime}ms)`)
 
         console.log('[useSupabaseData] 쿼리 결과:', {
           daily: dailyResult.status,
@@ -169,21 +188,51 @@ export const useSupabaseData = (clinicId?: string | null) => {
           invLog: invLogResult.status
         })
 
-        // 실패한 쿼리 로깅
+        // 실패한 쿼리 로깅 및 추적
+        const failedQueries: string[] = []
+        const timeoutQueries: string[] = []
+
         if (dailyResult.status === 'rejected') {
           console.error('[useSupabaseData] Daily reports 쿼리 실패:', dailyResult.reason)
+          failedQueries.push('Daily reports')
+          if (dailyResult.reason instanceof Error && dailyResult.reason.message.includes('timeout')) {
+            timeoutQueries.push('Daily reports')
+          }
         }
         if (consultResult.status === 'rejected') {
           console.error('[useSupabaseData] Consult logs 쿼리 실패:', consultResult.reason)
+          failedQueries.push('Consult logs')
+          if (consultResult.reason instanceof Error && consultResult.reason.message.includes('timeout')) {
+            timeoutQueries.push('Consult logs')
+          }
         }
         if (giftResult.status === 'rejected') {
           console.error('[useSupabaseData] Gift logs 쿼리 실패:', giftResult.reason)
+          failedQueries.push('Gift logs')
+          if (giftResult.reason instanceof Error && giftResult.reason.message.includes('timeout')) {
+            timeoutQueries.push('Gift logs')
+          }
         }
         if (inventoryResult.status === 'rejected') {
           console.error('[useSupabaseData] Inventory 쿼리 실패:', inventoryResult.reason)
+          failedQueries.push('Inventory')
+          if (inventoryResult.reason instanceof Error && inventoryResult.reason.message.includes('timeout')) {
+            timeoutQueries.push('Inventory')
+          }
         }
         if (invLogResult.status === 'rejected') {
           console.error('[useSupabaseData] Inventory logs 쿼리 실패:', invLogResult.reason)
+          failedQueries.push('Inventory logs')
+          if (invLogResult.reason instanceof Error && invLogResult.reason.message.includes('timeout')) {
+            timeoutQueries.push('Inventory logs')
+          }
+        }
+
+        // 타임아웃 경고 메시지
+        if (timeoutQueries.length > 0) {
+          const warningMessage = `일부 데이터 로딩이 지연되었습니다 (${timeoutQueries.join(', ')}). 다른 데이터는 정상적으로 표시됩니다.`
+          console.warn('[useSupabaseData]', warningMessage)
+          setError(warningMessage)
         }
 
         const results = [
@@ -276,12 +325,11 @@ export const useSupabaseData = (clinicId?: string | null) => {
         let errorMessage = 'Unknown error occurred'
 
         if (err instanceof Error) {
-          if (err.message === 'Data fetch timeout') {
-            errorMessage = '데이터 로딩 시간이 초과되었습니다 (30초). 네트워크 연결이 느리거나 데이터가 많을 수 있습니다. 페이지를 새로고침하거나 잠시 후 다시 시도해주세요.'
-            console.error('[useSupabaseData] 타임아웃 발생 - 가능한 원인: 1) 느린 네트워크 2) 대량의 데이터 3) 데이터베이스 연결 문제')
-          } else {
-            errorMessage = err.message
-          }
+          errorMessage = err.message
+          console.error('[useSupabaseData] 에러 발생:', {
+            message: err.message,
+            stack: err.stack
+          })
         }
 
         setError(errorMessage)
