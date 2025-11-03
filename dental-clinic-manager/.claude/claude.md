@@ -447,10 +447,12 @@ const handleSubmit = async () => {
 - [ ] 모든 테스트 통과 확인
 - [ ] 코드 리뷰 (self-review)
 - [ ] 문서화 (README, 주석)
-- [ ] **Git Commit & Push (필수)**
-  - 작업 완료 시 자동으로 커밋 및 푸시
+- [ ] **🚨 Git Commit & Push (필수 - 예외 없음)**
+  - **모든 작업 완료 시 반드시 GitHub에 푸시**
+  - 사용자가 요청하지 않아도 자동으로 수행
   - 커밋 메시지에 변경 사항 명확히 기술
   - Co-Authored-By: Claude 포함
+  - 푸시 실패 시 즉시 사용자에게 알림
 - [ ] 사용자에게 테스트 방법 안내
 
 ---
@@ -474,6 +476,12 @@ const handleSubmit = async () => {
 4. **문서화 생략**
    - 미래의 나(또는 다른 개발자)가 고생함
    - 구현과 동시에 문서 작성
+
+5. **🚨 GitHub 푸시 생략 (절대 금지)**
+   - "나중에 푸시하지" ❌
+   - 작업 완료 즉시 푸시 ✅
+   - 사용자가 요청하지 않아도 자동으로 수행
+   - 백업 및 협업을 위한 필수 작업
 
 ---
 
@@ -601,6 +609,109 @@ Co-Authored-By: Claude <noreply@anthropic.com>
    - 본문: 상세한 변경 내용
    - 보안/성능/테스트 내용 별도 섹션으로 작성
 
+### 5. MCP (Model Context Protocol) 적극 활용
+
+**필요한 경우 MCP 도구를 적극적으로 활용합니다.**
+
+#### 활용 가능한 MCP 도구
+
+1. **mcp__context7** - 라이브러리 문서 조회
+   ```javascript
+   // 라이브러리 ID 검색
+   mcp__context7__resolve-library-id({ libraryName: "react" })
+
+   // 문서 가져오기
+   mcp__context7__get-library-docs({
+     context7CompatibleLibraryID: "/vercel/next.js",
+     topic: "routing"
+   })
+   ```
+
+2. **mcp__chrome-devtools** - 브라우저 자동화 및 디버깅
+   ```javascript
+   // 페이지 탐색
+   mcp__chrome-devtools__navigate_page({ url: "http://localhost:3000" })
+
+   // 스냅샷 찍기
+   mcp__chrome-devtools__take_snapshot()
+
+   // 콘솔 메시지 확인
+   mcp__chrome-devtools__list_console_messages()
+   ```
+
+3. **mcp__gdrive** - Google Drive 파일 접근
+   ```javascript
+   // 파일 검색
+   mcp__gdrive__gdrive_search({ query: "프로토콜" })
+
+   // 파일 읽기
+   mcp__gdrive__gdrive_read_file({ fileId: "..." })
+   ```
+
+4. **mcp__playwright** - 웹 테스팅 자동화
+   ```javascript
+   // 브라우저 제어
+   mcp__playwright__browser_navigate({ url: "..." })
+
+   // 스냅샷 및 스크린샷
+   mcp__playwright__browser_snapshot()
+   ```
+
+5. **mcp__sequential-thinking** - 복잡한 문제 분석
+   ```javascript
+   mcp__sequential-thinking__sequentialthinking({
+     thought: "현재 사고 단계",
+     thoughtNumber: 1,
+     totalThoughts: 10,
+     nextThoughtNeeded: true
+   })
+   ```
+
+#### MCP 활용 시나리오
+
+**언제 사용하는가?**
+
+1. **최신 라이브러리 문서 필요 시** → context7 사용
+   - Next.js, React, Supabase 등의 최신 API 확인
+   - 예: "Next.js 15의 새로운 라우팅 방식은?"
+
+2. **브라우저 테스트 필요 시** → chrome-devtools 또는 playwright 사용
+   - UI 버그 재현 및 디버깅
+   - 프로덕션 환경 문제 조사
+   - 예: "프로토콜 저장 시 콘솔 에러 확인"
+
+3. **복잡한 문제 분석 시** → sequential-thinking 사용
+   - 다단계 사고 프로세스 필요 시
+   - 예: "무한 로딩 문제 원인 분석"
+
+4. **외부 파일 접근 시** → gdrive 사용
+   - 공유된 문서나 데이터 확인
+   - 예: "요구사항 문서 확인"
+
+#### MCP 활용 원칙
+
+✅ **적극 활용해야 할 때:**
+- 문제 해결에 도움이 될 것 같은 외부 도구가 있을 때
+- 수동으로 하면 시간이 오래 걸리는 작업
+- 브라우저 디버깅이 필요할 때
+- 최신 라이브러리 문서 확인이 필요할 때
+
+❌ **불필요한 경우:**
+- 간단한 파일 읽기/쓰기 (Read, Write 도구 사용)
+- 코드 내 간단한 검색 (Grep 사용)
+- 기본 bash 명령 (Bash 도구 사용)
+
+**예시:**
+```
+사용자: "프로토콜 저장 시 무한 로딩 문제가 발생해"
+
+1. Sequential Thinking으로 원인 분석
+2. Chrome DevTools로 브라우저 콘솔 확인
+3. 코드 수정
+4. 다시 Chrome DevTools로 테스트
+5. 문제 해결 확인
+```
+
 ---
 
 ## 예상 질문 (FAQ)
@@ -650,6 +761,16 @@ A: `totalThoughts`를 동적으로 조정하세요. 처음 예상보다 복잡�
 
 ## 변경 이력
 
+### 2025-11-03
+- 🛡️ **기존 기능 보호 원칙 추가 (최우선 원칙)**
+  - 최소 침습 원칙, 영향 범위 분석, 하위 호환성 유지
+- 🚨 **GitHub 푸시 필수화 강조**
+  - 체크리스트에 "예외 없음" 명시
+  - 금지 사항에 "푸시 생략 절대 금지" 추가
+- 🔧 **MCP (Model Context Protocol) 적극 활용 가이드 추가**
+  - context7, chrome-devtools, gdrive, playwright 등
+  - 활용 시나리오 및 원칙 정의
+
 ### 2025-10-31
 - Git 워크플로우 자동화 규칙 추가
 - 작업 완료 시 자동 커밋 & 푸시 의무화
@@ -663,4 +784,4 @@ A: `totalThoughts`를 동적으로 조정하세요. 처음 예상보다 복잡�
 
 ---
 
-마지막 업데이트: 2025-10-31
+마지막 업데이트: 2025-11-03
