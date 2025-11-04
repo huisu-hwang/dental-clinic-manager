@@ -4,6 +4,7 @@
  */
 
 import { getSupabase } from './supabase'
+import type { Session } from '@supabase/supabase-js'
 import { clinicHoursService } from './clinicHoursService'
 import type {
   EmploymentContract,
@@ -27,6 +28,26 @@ class ContractService {
 
   constructor() {
     this.supabase = getSupabase()
+  }
+
+  /**
+   * Check current Supabase session
+   */
+  private async checkSession(): Promise<{ session: Session | null; error: string | null }> {
+    if (!this.supabase) {
+      return { session: null, error: 'Database connection failed' }
+    }
+    const { data, error } = await this.supabase.auth.getSession()
+
+    if (error) {
+      return { session: null, error: 'Failed to get session.' }
+    }
+
+    if (!data.session) {
+      return { session: null, error: '인증 세션이 만료되었습니다. 다시 로그인해주세요.' }
+    }
+
+    return { session: data.session, error: null }
   }
 
   // =====================================================================
@@ -210,6 +231,10 @@ class ContractService {
     clinicId: string,
     filters?: ContractListFilters
   ): Promise<GetContractsResponse> {
+    const sessionCheck = await this.checkSession()
+    if (sessionCheck.error) {
+      return { success: false, error: sessionCheck.error }
+    }
     if (!this.supabase) {
       return { success: false, error: 'Database connection failed' }
     }

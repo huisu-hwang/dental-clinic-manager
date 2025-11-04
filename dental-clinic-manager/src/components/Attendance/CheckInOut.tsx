@@ -39,26 +39,17 @@ export default function CheckInOut() {
           setLocationError(null)
         },
         (error: GeolocationPositionError) => {
-          // 에러 상세 로깅
-          console.error('[CheckInOut] Location error:', error.message,
-            `(code: ${error.code}, type: ${
-              error.code === 1 ? 'PERMISSION_DENIED' :
-              error.code === 2 ? 'POSITION_UNAVAILABLE' :
-              error.code === 3 ? 'TIMEOUT' : 'UNKNOWN'
-            })`
-          )
-
-          // 에러 코드별 메시지
-          let errorMessage = '위치 정보를 가져올 수 없습니다.'
-          if (error.code === 1) {
-            errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.'
-          } else if (error.code === 2) {
-            errorMessage = '위치 정보를 사용할 수 없습니다. 네트워크 연결을 확인해주세요.'
-          } else if (error.code === 3) {
-            errorMessage = '위치 정보 요청 시간이 초과되었습니다. 다시 시도해주세요.'
+          let errorMessage = '위치 정보를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.'
+          if (error.code === 1) { // PERMISSION_DENIED
+            errorMessage = '위치 정보 권한이 필요합니다. 브라우저 설정에서 위치 권한을 허용해주세요.'
+          } else if (error.code === 2) { // POSITION_UNAVAILABLE
+            errorMessage = '현재 위치를 확인할 수 없습니다. 네트워크나 GPS 상태를 확인해주세요.'
+          } else if (error.code === 3) { // TIMEOUT
+            errorMessage = '위치 정보를 가져오는 데 시간이 초과되었습니다. 다시 시도해주세요.'
           }
-
-          setLocationError(errorMessage)
+          
+          setMessage({ type: 'error', text: errorMessage });
+          setLocationError(errorMessage) // 기존 locationError 상태도 유지
         },
         {
           timeout: 10000, // 10초 타임아웃

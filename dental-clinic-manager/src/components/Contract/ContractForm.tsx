@@ -14,6 +14,7 @@ import type { ContractFormData, ContractData } from '@/types/contract'
 import type { User } from '@/types/auth'
 import type { UserProfile } from '@/contexts/AuthContext'
 import { formatResidentNumber } from '@/utils/residentNumberUtils'
+import { decryptResidentNumber } from '@/utils/encryptionUtils'
 
 interface ContractFormProps {
   currentUser: UserProfile
@@ -51,13 +52,23 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       if (selectedEmployee) {
         console.log('[ContractForm] Employee selected, loading data:', selectedEmployee.id)
 
-        // 1. 기본 직원 정보 자동 입력
+        // 1. 주민번호 복호화
+        console.log('[ContractForm] Decrypting resident number...')
+        const decryptedResidentNumber = selectedEmployee.resident_registration_number
+          ? await decryptResidentNumber(selectedEmployee.resident_registration_number)
+          : ''
+
+        if (!decryptedResidentNumber && selectedEmployee.resident_registration_number) {
+          console.warn('[ContractForm] Failed to decrypt resident number')
+        }
+
+        // 2. 기본 직원 정보 자동 입력
         setFormData(prev => ({
           ...prev,
           employee_name: selectedEmployee.name,
           employee_address: selectedEmployee.address || '',
           employee_phone: selectedEmployee.phone || '',
-          employee_resident_number: selectedEmployee.resident_registration_number || ''
+          employee_resident_number: decryptedResidentNumber || ''
         }))
 
         // 2. 직원의 근무 스케줄 조회
