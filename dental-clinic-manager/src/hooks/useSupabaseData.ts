@@ -107,7 +107,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         const startTime = Date.now()
 
-        // 개별 쿼리 타임아웃 헬퍼 함수 (10초)
+        // 개별 쿼리 타임아웃 헬퍼 함수 (30초)
         const withTimeout = <T,>(promise: Promise<T>, ms: number, queryName: string): Promise<T> => {
           const queryStartTime = Date.now()
           let timeoutId: NodeJS.Timeout | null = null
@@ -133,14 +133,14 @@ export const useSupabaseData = (clinicId?: string | null) => {
           ])
         }
 
-        // 각 쿼리를 개별 타임아웃으로 감싸기 (10초)
+        // 각 쿼리를 개별 타임아웃으로 감싸기 (30초 - idle 연결 재생성 시간 고려)
         const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
           withTimeout(
             applyClinicFilter(
               supabase.from('daily_reports').select('*'),
               targetClinicId
             ).then(result => result),
-            10000,
+            30000,
             'daily_reports'
           ),
           withTimeout(
@@ -148,7 +148,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('consult_logs').select('*'),
               targetClinicId
             ).then(result => result),
-            10000,
+            30000,
             'consult_logs'
           ),
           withTimeout(
@@ -156,7 +156,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('gift_logs').select('*'),
               targetClinicId
             ).then(result => result),
-            10000,
+            30000,
             'gift_logs'
           ),
           withTimeout(
@@ -164,7 +164,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('gift_inventory').select('*'),
               targetClinicId
             ).then(result => result),
-            10000,
+            30000,
             'gift_inventory'
           ),
           withTimeout(
@@ -172,7 +172,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('inventory_logs').select('*'),
               targetClinicId
             ).then(result => result),
-            10000,
+            30000,
             'inventory_logs'
           )
         ])
