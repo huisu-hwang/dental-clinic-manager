@@ -117,8 +117,14 @@ export async function decryptData(encryptedData: string): Promise<string> {
   try {
     const key = await getEncryptionKey()
 
-    // Decode from base64
-    const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0))
+    // Decode from base64 with additional error handling
+    let combined: Uint8Array
+    try {
+      combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0))
+    } catch (atobError) {
+      console.error('atob() failed - invalid base64 string:', atobError)
+      throw new Error('Invalid base64 encoding - possible plaintext data')
+    }
 
     // Extract IV and encrypted data
     const iv = combined.slice(0, IV_LENGTH)
