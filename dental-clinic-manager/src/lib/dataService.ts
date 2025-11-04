@@ -5,6 +5,7 @@ import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@
 
 const CLINIC_CACHE_KEY = 'dental_clinic_id'
 let cachedClinicId: string | null = null
+// Force recompile
 
 const persistClinicId = (clinicId: string) => {
   cachedClinicId = clinicId
@@ -436,7 +437,6 @@ export const dataService = {
       }
     }
   },
-  // 보고서 저장
   async saveReport(data: {
     date: string
     consultRows: ConsultRowData[]
@@ -449,22 +449,30 @@ export const dataService = {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase client not available')
 
+    const {
+      date,
+      consultRows,
+      giftRows,
+      happyCallRows,
+      recallCount,
+      recallBookingCount,
+      specialNotes
+    } = data
+
     try {
-      // 현재 로그인한 사용자의 clinic_id 가져오기
       const clinicId = await getCurrentClinicId()
       if (!clinicId) {
         throw new Error('User clinic information not available')
       }
 
-      const { date, consultRows, giftRows, happyCallRows, recallCount, recallBookingCount, specialNotes } = data
+      // --- 1. 데이터 유효성 검사 ---
+      const validConsults = consultRows.filter(row => row.patient_name.trim() !== '' || row.consult_content.trim() !== '')
+      const validGifts = giftRows.filter(row => row.patient_name.trim() !== '')
+      const validHappyCalls = happyCallRows.filter(row => row.patient_name.trim() !== '')
 
-      // --- 1. 기존 보고서 확인 및 삭제 ---
+      // --- 2. 기존 보고서 확인 ---
       const { data: existingReports, error: checkError } = await applyClinicFilter(
-        supabase
-          .from('daily_reports')
-          .select('id')
-          .eq('date', date)
-          .limit(1),
+        supabase.from('daily_reports').select('id').eq('date', date),
         clinicId
       )
 
@@ -472,63 +480,20 @@ export const dataService = {
         throw new Error(`기존 보고서 확인 실패: ${checkError.message}`)
       }
 
+      // --- 3. 기존 데이터 삭제 (존재하는 경우) ---
       if (existingReports && existingReports.length > 0) {
-        const deleteResult = await this.deleteReportByDate(date)
-        if (deleteResult.error) {
-          throw new Error(`기존 데이터 삭제 실패: ${deleteResult.error}`)
+        console.log(`[DataService] Deleting existing data for date: ${date}`)
+        for (const report of existingReports) {
+          await Promise.all([
+            applyClinicFilter(supabase.from('consult_logs').delete().eq('date', date), clinicId),
+            applyClinicFilter(supabase.from('gift_logs').delete().eq('date', date), clinicId),
+            applyClinicFilter(supabase.from('happy_call_logs').delete().eq('date', date), clinicId),
+            supabase.from('daily_reports').delete().eq('id', report.id)
+          ])
         }
       }
 
-      // --- 2. 유효 데이터 필터링 ---
-      const validConsults = consultRows.filter(row => row.patient_name.trim())
-      const validGifts = giftRows.filter(row => row.patient_name.trim())
-      const validHappyCalls = happyCallRows.filter(row => row.patient_name.trim())
-
-      // --- 3. 재고 업데이트 준비 ---
-      const inventoryUpdates: Array<{ id: number; stock: number }> = []
-      const inventoryLogs: Array<{
-        timestamp: string
-        name: string
-        reason: string
-        change: number
-        old_stock: number
-        new_stock: number
-      }> = []
-
-      for (const gift of validGifts) {
-        if (gift.gift_type !== '없음') {
-          const { data: items, error: inventoryError } = await supabase
-            .from('gift_inventory')
-            .select('*')
-            .eq('clinic_id', clinicId)
-            .eq('name', gift.gift_type)
-            .limit(1)
-
-          if (inventoryError) {
-            console.warn(`재고 조회 실패 (${gift.gift_type}):`, inventoryError.message)
-            continue // 해당 선물은 건너뛰고 계속 진행
-          }
-
-          const item = items?.[0] as GiftInventory | undefined
-          const quantity = gift.quantity || 1 // 수량이 없으면 기본값 1
-          if (item && item.stock >= quantity) {
-            const newStock = item.stock - quantity
-            inventoryUpdates.push({ id: item.id, stock: newStock })
-            inventoryLogs.push({
-              timestamp: new Date().toISOString(),
-              name: item.name,
-              reason: `환자 증정: ${gift.patient_name} (${quantity}개)`,
-              change: -quantity,
-              old_stock: item.stock,
-              new_stock: newStock
-            })
-          } else if (item && item.stock < quantity) {
-            console.warn(`재고 부족 (${gift.gift_type}): 현재 재고 ${item.stock}개, 필요 ${quantity}개. 재고 차감 없이 기록됩니다.`)
-          }
-        }
-      }
-
-      // --- 4. 데이터베이스에 모든 정보 저장 (트랜잭션처럼) ---
+      // --- 4. 신규 데이터 생성 ---
       const dailyReport = {
         clinic_id: clinicId,
         date,
@@ -540,95 +505,46 @@ export const dataService = {
         special_notes: specialNotes.trim() || null,
       }
 
+      const { error: dailyReportError } = await supabase.from('daily_reports').insert([dailyReport] as any)
+      if (dailyReportError) throw new Error(`일일 보고서 저장 실패: ${dailyReportError.message}`)
+
       if (validConsults.length > 0) {
-        // remarks 컬럼을 항상 포함하도록 수정 (빈 값이어도 null로 저장)
         const consultData = validConsults.map(row => ({
           clinic_id: clinicId,
           date,
           patient_name: row.patient_name,
           consult_content: row.consult_content,
           consult_status: row.consult_status,
-          remarks: row.remarks ?? '' // undefined/null이면 빈 문자열로 저장
+          remarks: row.remarks ?? ''
         }))
-
         const { error } = await supabase.from('consult_logs').insert(consultData as any)
-        if (error) {
-          // remarks 컬럼 없이 재시도
-          if (error.message.includes('remarks')) {
-            console.warn('remarks 컬럼이 없어서 제외하고 저장합니다.')
-            const consultDataWithoutRemarks = validConsults.map(row => ({
-              clinic_id: clinicId,
-              date,
-              patient_name: row.patient_name,
-              consult_content: row.consult_content,
-              consult_status: row.consult_status
-            }))
-            const { error: retryError } = await supabase.from('consult_logs').insert(consultDataWithoutRemarks as any)
-            if (retryError) throw new Error(`상담 기록 저장 실패: ${retryError.message}`)
-          } else {
-            throw new Error(`상담 기록 저장 실패: ${error.message}`)
-          }
-        }
+        if (error) throw new Error(`상담 기록 저장 실패: ${error.message}`)
       }
 
       if (validGifts.length > 0) {
-        // notes 컬럼을 항상 포함하도록 수정 (빈 값이어도 null로 저장)
         const giftData = validGifts.map(row => ({
           clinic_id: clinicId,
           date,
           patient_name: row.patient_name,
           gift_type: row.gift_type,
           naver_review: row.naver_review,
-          notes: row.notes ?? '' // undefined/null이면 빈 문자열로 저장
+          notes: row.notes ?? ''
         }))
-
         const { error } = await supabase.from('gift_logs').insert(giftData as any)
-        if (error) {
-          // notes 컬럼 없이 재시도
-          if (error.message.includes('notes')) {
-            console.warn('notes 컬럼이 없어서 제외하고 저장합니다.')
-            const giftDataWithoutNotes = validGifts.map(row => ({
-              clinic_id: clinicId,
-              date,
-              patient_name: row.patient_name,
-              gift_type: row.gift_type,
-              naver_review: row.naver_review
-            }))
-            const { error: retryError } = await supabase.from('gift_logs').insert(giftDataWithoutNotes as any)
-            if (retryError) throw new Error(`선물 기록 저장 실패: ${retryError.message}`)
-          } else {
-            throw new Error(`선물 기록 저장 실패: ${error.message}`)
-          }
-        }
+        if (error) throw new Error(`선물 기록 저장 실패: ${error.message}`)
       }
 
       if (validHappyCalls.length > 0) {
-        const { error } = await supabase.from('happy_call_logs').insert(validHappyCalls.map(row => ({
+        const happyCallData = validHappyCalls.map(row => ({
           clinic_id: clinicId,
           date,
           patient_name: row.patient_name,
           treatment: row.treatment,
           notes: row.notes
-        })) as any)
+        }))
+        const { error } = await supabase.from('happy_call_logs').insert(happyCallData as any)
         if (error) throw new Error(`해피콜 기록 저장 실패: ${error.message}`)
       }
-
-      if (inventoryLogs.length > 0) {
-        const logsWithClinicId = inventoryLogs.map(log => ({
-          ...log,
-          clinic_id: clinicId
-        }))
-        const { error } = await supabase.from('inventory_logs').insert(logsWithClinicId as any)
-        if (error) throw new Error(`재고 로그 저장 실패: ${error.message}`)
-      }
-
-      for (const update of inventoryUpdates) {
-        const { error } = await (supabase.from('gift_inventory') as any).update({ stock: update.stock }).eq('id', update.id)
-        if (error) throw new Error(`재고 업데이트 실패: ${error.message}`)
-      }
-
-      const { error } = await supabase.from('daily_reports').insert([dailyReport] as any)
-      if (error) throw new Error(`일일 보고서 저장 실패: ${error.message}`)
 
       return { success: true }
     } catch (error: unknown) {

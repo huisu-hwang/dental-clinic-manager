@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
 import { workScheduleService } from '@/lib/workScheduleService'
-import { convertWorkScheduleToContractData } from '@/utils/workScheduleUtils'
+import { convertWorkScheduleToContractData, formatDaySchedule } from '@/utils/workScheduleUtils'
 import type { ContractFormData, ContractData } from '@/types/contract'
 import type { User } from '@/types/auth'
 import type { UserProfile } from '@/contexts/AuthContext'
@@ -345,62 +345,61 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
           </div>
         </div>
 
-        {/* Work Hours */}
+        {/* Work Schedule */}
         <div className="border border-gray-200 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold mb-3">근로 시간</h3>
-          {selectedEmployee && formData.work_start_time && formData.work_days_per_week && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">
-                ✅ <span className="font-semibold">{selectedEmployee.name}</span>님의 개인 근무 스케줄이 자동으로 입력되었습니다.
-                (주 {formData.work_days_per_week}일 근무)
+          <h3 className="text-lg font-semibold mb-3">근무 스케줄</h3>
+          {selectedEmployee && formData.work_hours_detail ? (
+            <>
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">
+                  ✅ <span className="font-semibold">{selectedEmployee.name}</span>님의 개인 근무 스케줄이 자동으로 반영되었습니다.
+                  (주 {formData.work_days_per_week || 0}일 근무)
+                </p>
+              </div>
+
+              {/* 요일별 스케줄 표시 */}
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  { key: 'monday', label: '월요일' },
+                  { key: 'tuesday', label: '화요일' },
+                  { key: 'wednesday', label: '수요일' },
+                  { key: 'thursday', label: '목요일' },
+                  { key: 'friday', label: '금요일' },
+                  { key: 'saturday', label: '토요일' },
+                  { key: 'sunday', label: '일요일' },
+                ].map(({ key, label }) => {
+                  const daySchedule = formData.work_hours_detail?.[key as keyof typeof formData.work_hours_detail]
+                  return (
+                    <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-md border border-gray-200">
+                      <span className="font-medium text-gray-700 w-20">{label}</span>
+                      <span className="text-gray-900 flex-1 text-right">
+                        {daySchedule ? formatDaySchedule(daySchedule) : '미설정'}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* 연차 휴가일수 */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">연차 휴가일수</label>
+                <input
+                  type="number"
+                  name="annual_leave_days"
+                  value={formData.annual_leave_days || 15}
+                  onChange={handleInputChange}
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">
+                직원을 선택하면 근무 스케줄이 자동으로 표시됩니다.
               </p>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">근무 시작 시간</label>
-              <input
-                type="time"
-                name="work_start_time"
-                value={formData.work_start_time || '09:00'}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">근무 종료 시간</label>
-              <input
-                type="time"
-                name="work_end_time"
-                value={formData.work_end_time || '18:00'}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">주당 근무일</label>
-              <input
-                type="number"
-                name="work_days_per_week"
-                value={formData.work_days_per_week || 5}
-                onChange={handleInputChange}
-                min="1"
-                max="7"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">연차 휴가일수</label>
-              <input
-                type="number"
-                name="annual_leave_days"
-                value={formData.annual_leave_days || 15}
-                onChange={handleInputChange}
-                min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
         </div>
 
         {/* Social Insurance */}
