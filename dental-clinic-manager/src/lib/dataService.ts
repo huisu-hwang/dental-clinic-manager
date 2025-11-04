@@ -112,7 +112,8 @@ async function getCurrentClinicId(): Promise<string | null> {
     }
 
     if (typeof window !== 'undefined') {
-      const cachedUser = localStorage.getItem('dental_user')
+      // sessionStorage를 우선 체크, 없으면 localStorage 체크 (rememberMe 옵션 대응)
+      const cachedUser = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
       if (cachedUser) {
         try {
           const userData = JSON.parse(cachedUser)
