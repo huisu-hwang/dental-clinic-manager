@@ -40,13 +40,13 @@ export default function CheckInOut() {
         },
         (error: GeolocationPositionError) => {
           // 에러 상세 로깅
-          console.error('[CheckInOut] Location error:', {
-            code: error.code,
-            message: error.message,
-            PERMISSION_DENIED: error.code === 1,
-            POSITION_UNAVAILABLE: error.code === 2,
-            TIMEOUT: error.code === 3,
-          })
+          console.error('[CheckInOut] Location error:', error.message,
+            `(code: ${error.code}, type: ${
+              error.code === 1 ? 'PERMISSION_DENIED' :
+              error.code === 2 ? 'POSITION_UNAVAILABLE' :
+              error.code === 3 ? 'TIMEOUT' : 'UNKNOWN'
+            })`
+          )
 
           // 에러 코드별 메시지
           let errorMessage = '위치 정보를 가져올 수 없습니다.'
