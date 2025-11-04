@@ -126,7 +126,6 @@ export default function ManagementPage() {
           dbStatus="connected"
           user={user}
           onLogout={logout}
-          showManagementLink={false}
           onProfileClick={() => setShowProfile(true)}
         />
 

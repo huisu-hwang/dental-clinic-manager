@@ -237,7 +237,6 @@ export default function MasterAdminPage() {
           dbStatus="connected"
           user={user}
           onLogout={logout}
-          showManagementLink={false}
         />
       </div>
 

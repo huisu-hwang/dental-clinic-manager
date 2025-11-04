@@ -61,7 +61,6 @@ export default function AttendancePage() {
           dbStatus="connected"
           user={user}
           onLogout={() => logout()}
-          showManagementLink={false}
         />
 
         {/* Main Tab Navigation */}

@@ -2,6 +2,52 @@
 
 ## 핵심 원칙
 
+### 🛡️ 기존 기능 보호 원칙 (최우선)
+
+**새로운 기능 구현이나 오류 수정 시 반드시 준수:**
+
+1. **최소 침습 원칙 (Minimal Invasive Changes)**
+   - 정상 작동하는 기존 기능에 영향을 주지 않도록 최소한으로 변경
+   - 꼭 필요한 경우가 아니면 기존 코드 수정 금지
+   - 새로운 기능은 기존 코드와 독립적으로 구현
+
+2. **영향 범위 분석 필수**
+   - 코드 수정 전 반드시 영향받는 기능 파악
+   - Sequential Thinking에서 기존 기능 영향도 분석 포함
+   - 의존성이 있는 모든 컴포넌트/함수 확인
+
+3. **사이드 이펙트 최소화**
+   - 전역 상태 변경 최소화
+   - 공유 유틸리티 함수 수정 시 주의
+   - 타입 변경 시 모든 사용처 확인
+
+4. **하위 호환성 유지 (Backward Compatibility)**
+   - 기존 API 인터페이스 변경 금지 (부득이한 경우 선택적 필드로 추가)
+   - 데이터베이스 스키마 변경 시 마이그레이션 스크립트 필수
+   - 기존 데이터 구조와 호환되도록 설계
+
+5. **검증 필수**
+   - 수정 후 기존 기능 동작 테스트
+   - 회귀 테스트 (Regression Test) 수행
+   - 관련 기능 모두 수동 테스트
+
+**예시:**
+```
+❌ 나쁜 예:
+- 공통 함수 getCurrentClinicId()의 동작 방식 변경
+- 모든 컴포넌트가 사용하는 타입 인터페이스 필드 제거
+- 기존 API 파라미터 순서 변경
+
+✅ 좋은 예:
+- 새로운 선택적 필드 추가 (clinic_id?: string)
+- 기존 함수는 유지하고 새로운 함수 추가
+- 파라미터 우선순위로 하위 호환성 유지 (formData.clinic_id || await getCurrentClinicId())
+```
+
+---
+
+### 📋 개발 순서
+
 모든 기능 구현은 다음 순서를 **반드시** 따릅니다:
 
 1. **Sequential Thinking (ultrathink)** - 문제 분석 및 설계
@@ -401,10 +447,12 @@ const handleSubmit = async () => {
 - [ ] 모든 테스트 통과 확인
 - [ ] 코드 리뷰 (self-review)
 - [ ] 문서화 (README, 주석)
-- [ ] **Git Commit & Push (필수)**
-  - 작업 완료 시 자동으로 커밋 및 푸시
+- [ ] **🚨 Git Commit & Push (필수 - 예외 없음)**
+  - **모든 작업 완료 시 반드시 GitHub에 푸시**
+  - 사용자가 요청하지 않아도 자동으로 수행
   - 커밋 메시지에 변경 사항 명확히 기술
   - Co-Authored-By: Claude 포함
+  - 푸시 실패 시 즉시 사용자에게 알림
 - [ ] 사용자에게 테스트 방법 안내
 
 ---
@@ -428,6 +476,12 @@ const handleSubmit = async () => {
 4. **문서화 생략**
    - 미래의 나(또는 다른 개발자)가 고생함
    - 구현과 동시에 문서 작성
+
+5. **🚨 GitHub 푸시 생략 (절대 금지)**
+   - "나중에 푸시하지" ❌
+   - 작업 완료 즉시 푸시 ✅
+   - 사용자가 요청하지 않아도 자동으로 수행
+   - 백업 및 협업을 위한 필수 작업
 
 ---
 
@@ -555,6 +609,109 @@ Co-Authored-By: Claude <noreply@anthropic.com>
    - 본문: 상세한 변경 내용
    - 보안/성능/테스트 내용 별도 섹션으로 작성
 
+### 5. MCP (Model Context Protocol) 적극 활용
+
+**필요한 경우 MCP 도구를 적극적으로 활용합니다.**
+
+#### 활용 가능한 MCP 도구
+
+1. **mcp__context7** - 라이브러리 문서 조회
+   ```javascript
+   // 라이브러리 ID 검색
+   mcp__context7__resolve-library-id({ libraryName: "react" })
+
+   // 문서 가져오기
+   mcp__context7__get-library-docs({
+     context7CompatibleLibraryID: "/vercel/next.js",
+     topic: "routing"
+   })
+   ```
+
+2. **mcp__chrome-devtools** - 브라우저 자동화 및 디버깅
+   ```javascript
+   // 페이지 탐색
+   mcp__chrome-devtools__navigate_page({ url: "http://localhost:3000" })
+
+   // 스냅샷 찍기
+   mcp__chrome-devtools__take_snapshot()
+
+   // 콘솔 메시지 확인
+   mcp__chrome-devtools__list_console_messages()
+   ```
+
+3. **mcp__gdrive** - Google Drive 파일 접근
+   ```javascript
+   // 파일 검색
+   mcp__gdrive__gdrive_search({ query: "프로토콜" })
+
+   // 파일 읽기
+   mcp__gdrive__gdrive_read_file({ fileId: "..." })
+   ```
+
+4. **mcp__playwright** - 웹 테스팅 자동화
+   ```javascript
+   // 브라우저 제어
+   mcp__playwright__browser_navigate({ url: "..." })
+
+   // 스냅샷 및 스크린샷
+   mcp__playwright__browser_snapshot()
+   ```
+
+5. **mcp__sequential-thinking** - 복잡한 문제 분석
+   ```javascript
+   mcp__sequential-thinking__sequentialthinking({
+     thought: "현재 사고 단계",
+     thoughtNumber: 1,
+     totalThoughts: 10,
+     nextThoughtNeeded: true
+   })
+   ```
+
+#### MCP 활용 시나리오
+
+**언제 사용하는가?**
+
+1. **최신 라이브러리 문서 필요 시** → context7 사용
+   - Next.js, React, Supabase 등의 최신 API 확인
+   - 예: "Next.js 15의 새로운 라우팅 방식은?"
+
+2. **브라우저 테스트 필요 시** → chrome-devtools 또는 playwright 사용
+   - UI 버그 재현 및 디버깅
+   - 프로덕션 환경 문제 조사
+   - 예: "프로토콜 저장 시 콘솔 에러 확인"
+
+3. **복잡한 문제 분석 시** → sequential-thinking 사용
+   - 다단계 사고 프로세스 필요 시
+   - 예: "무한 로딩 문제 원인 분석"
+
+4. **외부 파일 접근 시** → gdrive 사용
+   - 공유된 문서나 데이터 확인
+   - 예: "요구사항 문서 확인"
+
+#### MCP 활용 원칙
+
+✅ **적극 활용해야 할 때:**
+- 문제 해결에 도움이 될 것 같은 외부 도구가 있을 때
+- 수동으로 하면 시간이 오래 걸리는 작업
+- 브라우저 디버깅이 필요할 때
+- 최신 라이브러리 문서 확인이 필요할 때
+
+❌ **불필요한 경우:**
+- 간단한 파일 읽기/쓰기 (Read, Write 도구 사용)
+- 코드 내 간단한 검색 (Grep 사용)
+- 기본 bash 명령 (Bash 도구 사용)
+
+**예시:**
+```
+사용자: "프로토콜 저장 시 무한 로딩 문제가 발생해"
+
+1. Sequential Thinking으로 원인 분석
+2. Chrome DevTools로 브라우저 콘솔 확인
+3. 코드 수정
+4. 다시 Chrome DevTools로 테스트
+5. 문제 해결 확인
+```
+
 ---
 
 ## 예상 질문 (FAQ)
@@ -589,6 +746,109 @@ A: `totalThoughts`를 동적으로 조정하세요. 처음 예상보다 복잡�
 
 ---
 
+## UI 컴포넌트 라이브러리 (shadcn/ui)
+
+### 📦 shadcn/ui 사용 원칙
+
+**새로운 기능 개발 또는 기존 UI 개선 시 shadcn/ui를 적극 활용합니다.**
+
+#### 핵심 원칙
+
+1. **점진적 적용 (Gradual Migration)**
+   - 한 번에 하나씩 컴포넌트 적용
+   - 전체 리팩토링 X, 필요한 부분만 개선
+   - 기존 스타일링과 공존 가능
+
+2. **우선 적용 대상**
+   - 새로 만드는 기능의 UI
+   - 버그 수정이나 개선이 필요한 기존 UI
+   - 사용자 경험 개선이 필요한 컴포넌트
+
+3. **기존 코드 보호**
+   - 기존에 잘 작동하는 UI는 억지로 변경하지 않음
+   - shadcn/ui 적용 시에도 기능은 동일하게 유지
+   - 시각적 개선만 점진적으로 진행
+
+#### shadcn/ui 설치 및 사용
+
+```bash
+# 컴포넌트 설치 (필요한 것만)
+npx shadcn-ui@latest add button
+npx shadcn-ui@latest add input
+npx shadcn-ui@latest add card
+npx shadcn-ui@latest add dialog
+npx shadcn-ui@latest add select
+npx shadcn-ui@latest add table
+# ... 등등
+```
+
+#### 사용 예시
+
+**Before (기존 코드):**
+```tsx
+<button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+  저장하기
+</button>
+```
+
+**After (shadcn/ui 적용):**
+```tsx
+import { Button } from "@/components/ui/button"
+
+<Button variant="default" size="default">
+  저장하기
+</Button>
+```
+
+#### 적용 체크리스트
+
+- [ ] 새 기능 UI 개발 시 shadcn/ui 컴포넌트 우선 고려
+- [ ] 필요한 컴포넌트만 설치 (불필요한 전체 설치 X)
+- [ ] 기존 기능의 동작은 변경하지 않고 UI만 개선
+- [ ] Tailwind CSS와 함께 사용하여 일관성 유지
+- [ ] 접근성(a11y) 자동 적용 확인
+
+#### 주요 컴포넌트
+
+| 컴포넌트 | 용도 | 우선순위 |
+|---------|------|---------|
+| Button | 모든 버튼 | 높음 |
+| Input | 텍스트 입력 | 높음 |
+| Select | 드롭다운 | 높음 |
+| Dialog | 모달 창 | 높음 |
+| Table | 데이터 테이블 | 중간 |
+| Card | 카드 레이아웃 | 중간 |
+| Form | 폼 관리 | 중간 |
+| Toast | 알림 메시지 | 낮음 |
+
+#### 적용 전략
+
+1. **Phase 1: 새 기능부터**
+   - 앞으로 개발하는 모든 새 기능에 shadcn/ui 사용
+   - 예: 새로운 관리 페이지, 새로운 폼 등
+
+2. **Phase 2: 문제 있는 기존 UI**
+   - 버그 수정 시 해당 컴포넌트를 shadcn/ui로 교체
+   - 사용자 불만이 있는 UI 개선
+
+3. **Phase 3: 점진적 개선**
+   - 시간이 날 때마다 하나씩 교체
+   - 우선순위: Button > Input > Select > Dialog
+
+#### 금지 사항
+
+❌ **절대 하지 말 것:**
+- 한 번에 전체 UI 리팩토링 (기존 기능 위험)
+- 잘 작동하는 UI를 억지로 변경
+- shadcn/ui를 위한 불필요한 코드 변경
+
+✅ **권장 사항:**
+- 새 기능 개발 시 자연스럽게 적용
+- 버그 수정 시 해당 컴포넌트만 개선
+- 한 번에 하나씩 점진적으로 마이그레이션
+
+---
+
 ## 마무리
 
 이 방법론을 따르면:
@@ -597,12 +857,30 @@ A: `totalThoughts`를 동적으로 조정하세요. 처음 예상보다 복잡�
 - ✅ 유지보수 용이
 - ✅ 협업 효율 증가
 - ✅ 문서화 자동화
+- ✅ UI 일관성 및 접근성 향상
 
 **모든 기능 구현은 이 문서를 기준으로 진행합니다.**
 
 ---
 
 ## 변경 이력
+
+### 2025-11-04
+- 🎨 **shadcn/ui 사용 가이드 추가**
+  - 점진적 적용 원칙 정의
+  - 한 번에 하나씩 컴포넌트 교체
+  - 새 기능 개발 시 우선 적용
+  - 기존 코드 보호하면서 UI 개선
+
+### 2025-11-03
+- 🛡️ **기존 기능 보호 원칙 추가 (최우선 원칙)**
+  - 최소 침습 원칙, 영향 범위 분석, 하위 호환성 유지
+- 🚨 **GitHub 푸시 필수화 강조**
+  - 체크리스트에 "예외 없음" 명시
+  - 금지 사항에 "푸시 생략 절대 금지" 추가
+- 🔧 **MCP (Model Context Protocol) 적극 활용 가이드 추가**
+  - context7, chrome-devtools, gdrive, playwright 등
+  - 활용 시나리오 및 원칙 정의
 
 ### 2025-10-31
 - Git 워크플로우 자동화 규칙 추가
@@ -617,4 +895,4 @@ A: `totalThoughts`를 동적으로 조정하세요. 처음 예상보다 복잡�
 
 ---
 
-마지막 업데이트: 2025-10-31
+마지막 업데이트: 2025-11-04

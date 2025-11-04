@@ -108,11 +108,23 @@ export async function decryptData(encryptedData: string): Promise<string> {
     throw new Error('Cannot decrypt empty data')
   }
 
+  // Base64 유효성 검사 (평문 데이터 감지)
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
+  if (!base64Regex.test(encryptedData)) {
+    throw new Error('Invalid base64 string - possible plaintext data')
+  }
+
   try {
     const key = await getEncryptionKey()
 
-    // Decode from base64
-    const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0))
+    // Decode from base64 with additional error handling
+    let combined: Uint8Array
+    try {
+      combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0))
+    } catch (atobError) {
+      console.error('atob() failed - invalid base64 string:', atobError)
+      throw new Error('Invalid base64 encoding - possible plaintext data')
+    }
 
     // Extract IV and encrypted data
     const iv = combined.slice(0, IV_LENGTH)
@@ -218,8 +230,10 @@ export async function decryptResidentNumber(encryptedData: string): Promise<stri
   try {
     return await decryptData(encryptedData)
   } catch (error) {
-    console.error('Failed to decrypt resident number:', error)
-    return null
+    console.warn('Failed to decrypt resident number, assuming plaintext:', error)
+    // 복호화 실패 시 평문으로 간주하고 원본 반환
+    // 이렇게 하면 평문과 암호화된 값 모두 처리 가능
+    return encryptedData
   }
 }
 

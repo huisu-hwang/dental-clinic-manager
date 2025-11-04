@@ -12,6 +12,7 @@ import SignaturePad from './SignaturePad'
 import type { EmploymentContract, ContractSigningData, SignerType } from '@/types/contract'
 import type { UserProfile } from '@/contexts/AuthContext'
 import { formatResidentNumber, maskResidentNumber } from '@/utils/residentNumberUtils'
+import { decryptResidentNumber } from '@/utils/encryptionUtils'
 
 interface ContractDetailProps {
   contractId: string
@@ -29,6 +30,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
     hasEmployerSignature: false,
     hasEmployeeSignature: false
   })
+  const [decryptedResidentNumber, setDecryptedResidentNumber] = useState<string>('')
 
   // Load contract
   useEffect(() => {
@@ -46,6 +48,18 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
         setError(response.error)
       } else if (response.data) {
         setContract(response.data)
+
+        // 주민번호 복호화
+        if (response.data.contract_data.employee_resident_number) {
+          console.log('[ContractDetail] Decrypting resident number...')
+          const decrypted = await decryptResidentNumber(response.data.contract_data.employee_resident_number)
+          setDecryptedResidentNumber(decrypted || '')
+
+          if (!decrypted) {
+            console.warn('[ContractDetail] Failed to decrypt resident number')
+          }
+        }
+
         loadSignatureStatus()
       }
     } catch (err) {
@@ -172,6 +186,48 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
 
   // Determine if user can view full resident number (owner only)
   const canViewFullResidentNumber = currentUser.role === 'owner' || currentUser.id === contract.employee_user_id
+
+  // Calculate weekly work hours
+  const calculateWorkHours = () => {
+    if (!data.weekly_work_hours) {
+      return {
+        totalHours: 40,
+        workDays: data.work_days_per_week || 5,
+        avgHoursPerDay: 8
+      }
+    }
+
+    let totalMinutes = 0
+    let workDays = 0
+
+    Object.values(data.weekly_work_hours).forEach(day => {
+      if (day.is_open && day.open_time && day.close_time) {
+        workDays++
+        const start = new Date(`1970-01-01T${day.open_time}Z`)
+        const end = new Date(`1970-01-01T${day.close_time}Z`)
+        let diff = end.getTime() - start.getTime()
+
+        if (day.break_start && day.break_end) {
+          const breakStart = new Date(`1970-01-01T${day.break_start}Z`)
+          const breakEnd = new Date(`1970-01-01T${day.break_end}Z`)
+          diff -= (breakEnd.getTime() - breakStart.getTime())
+        }
+
+        totalMinutes += diff / (1000 * 60)
+      }
+    })
+
+    const totalHours = totalMinutes / 60
+    const avgHoursPerDay = workDays > 0 ? totalHours / workDays : 0
+
+    return {
+      totalHours: Math.round(totalHours * 10) / 10,
+      workDays,
+      avgHoursPerDay: Math.round(avgHoursPerDay * 10) / 10
+    }
+  }
+
+  const workHoursInfo = calculateWorkHours()
   const displayResidentNumber = canViewFullResidentNumber
     ? formatResidentNumber(data.employee_resident_number)
     : maskResidentNumber(data.employee_resident_number)
@@ -318,7 +374,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
               <p className="ml-4 text-xs text-gray-600">* 담당직무: 진료</p>
               <p>2. 휴게시간: 점심시간 포함 (1일 평균 1시간)</p>
               <p>3. 주휴일: 주 1회</p>
-              <p>4. 근로시간은 휴게시간을 제하고 1일 8시간, 주 {data.work_days_per_week || 5}일 근무를 원칙으로 한다.</p>
+              <p>4. 근로시간은 휴게시간을 제하고 1일 평균 {workHoursInfo.avgHoursPerDay}시간, 주 {workHoursInfo.workDays}일(총 {workHoursInfo.totalHours}시간) 근무를 원칙으로 한다.</p>
             </div>
           </section>
 

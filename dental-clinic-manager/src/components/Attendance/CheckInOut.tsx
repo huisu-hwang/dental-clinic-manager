@@ -38,9 +38,23 @@ export default function CheckInOut() {
           })
           setLocationError(null)
         },
-        (error) => {
-          console.error('[CheckInOut] Location error:', error)
-          setLocationError('위치 정보를 가져올 수 없습니다. 위치 권한을 허용해주세요.')
+        (error: GeolocationPositionError) => {
+          let errorMessage = '위치 정보를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.'
+          if (error.code === 1) { // PERMISSION_DENIED
+            errorMessage = '위치 정보 권한이 필요합니다. 브라우저 설정에서 위치 권한을 허용해주세요.'
+          } else if (error.code === 2) { // POSITION_UNAVAILABLE
+            errorMessage = '현재 위치를 확인할 수 없습니다. 네트워크나 GPS 상태를 확인해주세요.'
+          } else if (error.code === 3) { // TIMEOUT
+            errorMessage = '위치 정보를 가져오는 데 시간이 초과되었습니다. 다시 시도해주세요.'
+          }
+          
+          setMessage({ type: 'error', text: errorMessage });
+          setLocationError(errorMessage) // 기존 locationError 상태도 유지
+        },
+        {
+          timeout: 10000, // 10초 타임아웃
+          enableHighAccuracy: false, // 빠른 응답 우선
+          maximumAge: 60000, // 1분간 캐시 사용
         }
       )
     } else {

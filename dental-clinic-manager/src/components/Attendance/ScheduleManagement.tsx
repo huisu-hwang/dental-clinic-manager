@@ -245,17 +245,23 @@ export default function ScheduleManagement() {
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">직원 선택</label>
-            <select
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.role})
-                </option>
-              ))}
-            </select>
+            {users.length === 0 ? (
+              <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                직원 목록을 불러오는 중... (또는 등록된 직원이 없습니다)
+              </div>
+            ) : (
+              <select
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.role})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="pt-7">
             <button
@@ -462,11 +468,22 @@ function DayScheduleRow({
   onUpdate: (dayName: DayName, schedule: DaySchedule) => void
 }) {
   const [isEditing, setIsEditing] = useState(false)
-  const [isWorking, setIsWorking] = useState(schedule?.isWorking ?? true)
+  const [isWorking, setIsWorking] = useState(schedule?.isWorking ?? false)
   const [startTime, setStartTime] = useState(schedule?.start || '09:00')
   const [endTime, setEndTime] = useState(schedule?.end || '18:00')
   const [breakStart, setBreakStart] = useState(schedule?.breakStart || '12:00')
   const [breakEnd, setBreakEnd] = useState(schedule?.breakEnd || '13:00')
+
+  // schedule prop이 변경되면 state 업데이트 (편집 중이 아닐 때만)
+  useEffect(() => {
+    if (schedule && !isEditing) {
+      setIsWorking(schedule.isWorking ?? false)
+      setStartTime(schedule.start || '09:00')
+      setEndTime(schedule.end || '18:00')
+      setBreakStart(schedule.breakStart || '12:00')
+      setBreakEnd(schedule.breakEnd || '13:00')
+    }
+  }, [schedule, isEditing])
 
   const handleSave = () => {
     onUpdate(dayName, {
@@ -480,7 +497,7 @@ function DayScheduleRow({
   }
 
   const handleCancel = () => {
-    setIsWorking(schedule?.isWorking ?? true)
+    setIsWorking(schedule?.isWorking ?? false)
     setStartTime(schedule?.start || '09:00')
     setEndTime(schedule?.end || '18:00')
     setBreakStart(schedule?.breakStart || '12:00')

@@ -50,7 +50,7 @@ export default function NewContractPage() {
 
       const { data, error } = await supabase
         .from('users')
-        .select('id, name, email, phone, role, status')
+        .select('id, name, email, phone, role, status, address, resident_registration_number')
         .eq('clinic_id', user.clinic_id)
         .neq('id', user.id)
         .order('name')

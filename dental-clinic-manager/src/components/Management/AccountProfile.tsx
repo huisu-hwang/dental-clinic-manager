@@ -111,6 +111,8 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
       ...prev,
       resident_registration_number: formatted
     }))
+    // Also update the decrypted state so they stay in sync
+    setDecryptedResidentNumber(formatted)
   }
 
   // Check if personal info is missing
@@ -467,12 +469,12 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                       <input
                         type="text"
                         name="resident_registration_number"
-                        value={formData.resident_registration_number}
+                        value={loadingDecryption ? '복호화 중...' : (decryptedResidentNumber || formData.resident_registration_number)}
                         onChange={handleResidentNumberChange}
                         className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono"
                         placeholder="000000-0000000"
                         maxLength={14}
-                        disabled={saving}
+                        disabled={saving || loadingDecryption}
                       />
                     </div>
                     <div className="mt-1 flex items-start space-x-1">
