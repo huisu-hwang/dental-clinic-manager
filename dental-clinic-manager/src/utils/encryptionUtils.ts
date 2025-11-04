@@ -108,6 +108,12 @@ export async function decryptData(encryptedData: string): Promise<string> {
     throw new Error('Cannot decrypt empty data')
   }
 
+  // Base64 유효성 검사 (평문 데이터 감지)
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
+  if (!base64Regex.test(encryptedData)) {
+    throw new Error('Invalid base64 string - possible plaintext data')
+  }
+
   try {
     const key = await getEncryptionKey()
 
