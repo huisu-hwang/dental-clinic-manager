@@ -22,6 +22,7 @@ import { dataService } from '@/lib/dataService'
 import { UserProfile } from '@/contexts/AuthContext'
 import PermissionSelector from './PermissionSelector'
 import type { Permission } from '@/types/permissions'
+import { decryptResidentNumber } from '@/utils/encryptionUtils'
 
 interface JoinRequest {
   id: string
@@ -59,6 +60,9 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
     address: '',
     resident_registration_number: ''
   })
+
+  // 복호화된 주민번호 저장 (userId -> 복호화된 주민번호)
+  const [decryptedResidentNumbers, setDecryptedResidentNumbers] = useState<Record<string, string>>({})
 
   // Invite form state
   const [inviteForm, setInviteForm] = useState({
@@ -98,7 +102,24 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       if (error) {
         console.error('Error fetching staff:', error)
       } else {
-        setStaff((data as UserProfile[] | null) ?? [])
+        const staffData = (data as UserProfile[] | null) ?? []
+        setStaff(staffData)
+
+        // 주민번호 복호화
+        const decrypted: Record<string, string> = {}
+        for (const member of staffData) {
+          if (member.resident_registration_number) {
+            try {
+              const decryptedValue = await decryptResidentNumber(member.resident_registration_number)
+              if (decryptedValue) {
+                decrypted[member.id] = decryptedValue
+              }
+            } catch (err) {
+              console.error(`Failed to decrypt resident number for user ${member.id}:`, err)
+            }
+          }
+        }
+        setDecryptedResidentNumbers(decrypted)
       }
     } catch (err) {
       console.error('Error:', err)
@@ -379,10 +400,10 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                           {member.address}
                         </div>
                       )}
-                      {currentUser.role === 'owner' && member.resident_registration_number && (
+                      {currentUser.role === 'owner' && decryptedResidentNumbers[member.id] && (
                         <div className="flex items-center">
                           <IdentificationIcon className="h-4 w-4 mr-1" />
-                          {maskResidentNumber(member.resident_registration_number)}
+                          {maskResidentNumber(decryptedResidentNumbers[member.id])}
                         </div>
                       )}
                     </div>
@@ -398,16 +419,14 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                       <button
                         onClick={() => {
                           setEditingStaffInfo(member)
-                          // 주민번호가 13자리 숫자가 아니면 빈 문자열로 (암호화된 값 제외)
-                          const rrn = member.resident_registration_number || ''
-                          const cleanedRrn = rrn.replace(/-/g, '')
-                          const isValidFormat = cleanedRrn.length === 13 && /^\d{13}$/.test(cleanedRrn)
+                          // 복호화된 주민번호 사용
+                          const decryptedRrn = decryptedResidentNumbers[member.id] || ''
 
                           setEditForm({
                             name: member.name || '',
                             phone: member.phone || '',
                             address: member.address || '',
-                            resident_registration_number: isValidFormat ? rrn : ''
+                            resident_registration_number: decryptedRrn
                           })
                         }}
                         className="text-blue-600 hover:text-blue-800 p-1"
