@@ -218,8 +218,10 @@ export async function decryptResidentNumber(encryptedData: string): Promise<stri
   try {
     return await decryptData(encryptedData)
   } catch (error) {
-    console.error('Failed to decrypt resident number:', error)
-    return null
+    console.warn('Failed to decrypt resident number, assuming plaintext:', error)
+    // 복호화 실패 시 평문으로 간주하고 원본 반환
+    // 이렇게 하면 평문과 암호화된 값 모두 처리 가능
+    return encryptedData
   }
 }
 
