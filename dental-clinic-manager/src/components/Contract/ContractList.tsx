@@ -64,6 +64,23 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
         }
 
         if (response.error) {
+          // Session expired - redirect to login
+          if (response.error === 'SESSION_EXPIRED' ||
+              response.error.includes('인증 세션이 만료')) {
+            console.error('[ContractList] Session expired, redirecting to login...')
+            alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+
+            // Clear all session data
+            localStorage.removeItem('dental_auth')
+            localStorage.removeItem('dental_user')
+            sessionStorage.removeItem('dental_auth')
+            sessionStorage.removeItem('dental_user')
+
+            // Redirect to home
+            window.location.href = '/'
+            return
+          }
+
           setError(response.error)
         } else {
           setContracts(response.contracts || [])
@@ -97,6 +114,23 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       const response = await contractService.getContracts(clinicId, filters)
 
       if (response.error) {
+        // Session expired - redirect to login
+        if (response.error === 'SESSION_EXPIRED' ||
+            response.error.includes('인증 세션이 만료')) {
+          console.error('[ContractList] Session expired, redirecting to login...')
+          alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+
+          // Clear all session data
+          localStorage.removeItem('dental_auth')
+          localStorage.removeItem('dental_user')
+          sessionStorage.removeItem('dental_auth')
+          sessionStorage.removeItem('dental_user')
+
+          // Redirect to home
+          window.location.href = '/'
+          return
+        }
+
         setError(response.error)
       } else {
         setContracts(response.contracts || [])

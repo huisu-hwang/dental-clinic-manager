@@ -31,22 +31,53 @@ class ContractService {
   }
 
   /**
-   * Check current Supabase session
+   * Check current Supabase session with auto-refresh
    */
   private async checkSession(): Promise<{ session: Session | null; error: string | null }> {
     if (!this.supabase) {
       return { session: null, error: 'Database connection failed' }
     }
+
+    console.log('[contractService] Checking session...')
     const { data, error } = await this.supabase.auth.getSession()
 
+    // Case 1: Session check error (possibly invalid token)
     if (error) {
-      return { session: null, error: 'Failed to get session.' }
+      console.error('[contractService] Session check error:', error.message)
+
+      // If it's a refresh token error, try to refresh the session
+      if (error.message?.includes('Refresh Token') || error.message?.includes('Invalid')) {
+        console.log('[contractService] Attempting to refresh session...')
+        const { data: refreshData, error: refreshError } = await this.supabase.auth.refreshSession()
+
+        if (refreshError || !refreshData.session) {
+          console.error('[contractService] Session refresh failed:', refreshError?.message)
+          return { session: null, error: 'SESSION_EXPIRED' }
+        }
+
+        console.log('[contractService] Session refreshed successfully')
+        return { session: refreshData.session, error: null }
+      }
+
+      return { session: null, error: 'SESSION_ERROR' }
     }
 
+    // Case 2: No session found, try to refresh
     if (!data.session) {
-      return { session: null, error: '인증 세션이 만료되었습니다. 다시 로그인해주세요.' }
+      console.log('[contractService] No session found, attempting to refresh...')
+      const { data: refreshData, error: refreshError } = await this.supabase.auth.refreshSession()
+
+      if (refreshError || !refreshData.session) {
+        console.error('[contractService] Session refresh failed:', refreshError?.message)
+        return { session: null, error: 'SESSION_EXPIRED' }
+      }
+
+      console.log('[contractService] Session refreshed successfully')
+      return { session: refreshData.session, error: null }
     }
 
+    // Case 3: Valid session found
+    console.log('[contractService] Valid session found')
     return { session: data.session, error: null }
   }
 
