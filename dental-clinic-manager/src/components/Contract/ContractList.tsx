@@ -59,6 +59,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
       try {
         console.log('[ContractList] Loading contracts...')
+        console.log('[ContractList] Current user role:', currentUser?.role)
         const response = await contractService.getContracts(clinicId, filters)
 
         if (!isMounted) {
@@ -86,7 +87,20 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
           setError(response.error)
         } else {
-          setContracts(response.contracts || [])
+          const contracts = response.contracts || []
+          setContracts(contracts)
+
+          // Log contract statuses
+          console.log('[ContractList] Loaded contracts:', contracts.length)
+          const cancelledContracts = contracts.filter(c => c.status === 'cancelled')
+          console.log('[ContractList] Cancelled contracts:', cancelledContracts.length)
+          if (cancelledContracts.length > 0) {
+            console.log('[ContractList] Sample cancelled contract:', {
+              id: cancelledContracts[0].id,
+              employee: cancelledContracts[0].contract_data.employee_name,
+              status: cancelledContracts[0].status
+            })
+          }
         }
       } catch (err) {
         if (!isMounted) return
@@ -399,7 +413,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
                       >
                         보기
                       </button>
-                      {contract.status === 'cancelled' && (currentUser.role === 'owner' || currentUser.role === 'manager') && (
+                      {contract.status === 'cancelled' && (currentUser?.role === 'owner' || currentUser?.role === 'manager') && (
                         <>
                           <span className="text-gray-300">|</span>
                           <button
