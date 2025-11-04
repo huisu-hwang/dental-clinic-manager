@@ -474,16 +474,16 @@ function DayScheduleRow({
   const [breakStart, setBreakStart] = useState(schedule?.breakStart || '12:00')
   const [breakEnd, setBreakEnd] = useState(schedule?.breakEnd || '13:00')
 
-  // schedule prop이 변경되면 state 업데이트
+  // schedule prop이 변경되면 state 업데이트 (편집 중이 아닐 때만)
   useEffect(() => {
-    if (schedule) {
+    if (schedule && !isEditing) {
       setIsWorking(schedule.isWorking ?? false)
       setStartTime(schedule.start || '09:00')
       setEndTime(schedule.end || '18:00')
       setBreakStart(schedule.breakStart || '12:00')
       setBreakEnd(schedule.breakEnd || '13:00')
     }
-  }, [schedule])
+  }, [schedule, isEditing])
 
   const handleSave = () => {
     onUpdate(dayName, {
