@@ -136,42 +136,42 @@ export const useSupabaseData = (clinicId?: string | null) => {
         // 각 쿼리를 개별 타임아웃으로 감싸기 (30초 - idle 연결 재생성 시간 고려)
         const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
           withTimeout(
-            applyClinicFilter(
+            Promise.resolve(applyClinicFilter(
               supabase.from('daily_reports').select('*'),
               targetClinicId
-            ).then(result => result),
+            ).then(result => result)),
             30000,
             'daily_reports'
           ),
           withTimeout(
-            applyClinicFilter(
+            Promise.resolve(applyClinicFilter(
               supabase.from('consult_logs').select('*'),
               targetClinicId
-            ).then(result => result),
+            ).then(result => result)),
             30000,
             'consult_logs'
           ),
           withTimeout(
-            applyClinicFilter(
+            Promise.resolve(applyClinicFilter(
               supabase.from('gift_logs').select('*'),
               targetClinicId
-            ).then(result => result),
+            ).then(result => result)),
             30000,
             'gift_logs'
           ),
           withTimeout(
-            applyClinicFilter(
+            Promise.resolve(applyClinicFilter(
               supabase.from('gift_inventory').select('*'),
               targetClinicId
-            ).then(result => result),
+            ).then(result => result)),
             30000,
             'gift_inventory'
           ),
           withTimeout(
-            applyClinicFilter(
+            Promise.resolve(applyClinicFilter(
               supabase.from('inventory_logs').select('*'),
               targetClinicId
-            ).then(result => result),
+            ).then(result => result)),
             30000,
             'inventory_logs'
           )
