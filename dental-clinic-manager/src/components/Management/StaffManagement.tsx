@@ -11,7 +11,10 @@ import {
   PhoneIcon,
   ShieldCheckIcon,
   TrashIcon,
-  CogIcon
+  CogIcon,
+  MapPinIcon,
+  IdentificationIcon,
+  PencilIcon
 } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
 import { authService } from '@/lib/authService'
@@ -49,12 +52,29 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   const [showPermissionModal, setShowPermissionModal] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<JoinRequest | null>(null)
   const [editingStaffPermissions, setEditingStaffPermissions] = useState<UserProfile | null>(null)
+  const [editingStaffInfo, setEditingStaffInfo] = useState<UserProfile | null>(null)
+  const [editForm, setEditForm] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    resident_registration_number: ''
+  })
 
   // Invite form state
   const [inviteForm, setInviteForm] = useState({
     email: '',
     role: 'staff' as 'vice_director' | 'manager' | 'team_leader' | 'staff'
   })
+
+  // 주민번호 마스킹 함수
+  const maskResidentNumber = (rrn: string) => {
+    if (!rrn) return ''
+    const cleaned = rrn.replace(/-/g, '')
+    if (cleaned.length === 13) {
+      return cleaned.substring(0, 6) + '-' + cleaned.substring(6, 7) + '******'
+    }
+    return rrn.substring(0, 8) + '******'
+  }
 
   useEffect(() => {
     if (currentUser.clinic_id) {
@@ -203,6 +223,50 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
     }
   }
 
+  const handleUpdateStaffInfo = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingStaffInfo) return
+
+    setError('')
+    setSuccess('')
+
+    // 유효성 검증
+    if (!editForm.name.trim()) {
+      setError('이름을 입력해주세요.')
+      return
+    }
+
+    // 주민번호 검증 (값이 있을 때만)
+    if (editForm.resident_registration_number && editForm.resident_registration_number.trim()) {
+      const cleaned = editForm.resident_registration_number.replace(/-/g, '')
+      if (cleaned.length !== 13 || !/^\d{13}$/.test(cleaned)) {
+        setError('주민등록번호는 13자리 숫자여야 합니다.')
+        return
+      }
+    }
+
+    try {
+      const result = await dataService.updateStaffInfo(editingStaffInfo.id, {
+        name: editForm.name,
+        phone: editForm.phone || '',
+        address: editForm.address || '',
+        resident_registration_number: editForm.resident_registration_number || ''
+      })
+
+      if (result.error) {
+        setError(result.error || '직원 정보 수정에 실패했습니다.')
+      } else {
+        setSuccess('직원 정보가 수정되었습니다.')
+        setEditingStaffInfo(null)
+        setEditForm({ name: '', phone: '', address: '', resident_registration_number: '' })
+        fetchStaff()
+      }
+    } catch (err) {
+      console.error('Error updating staff info:', err)
+      setError('직원 정보 수정 중 오류가 발생했습니다.')
+    }
+  }
+
   const getRoleLabel = (role: string) => {
     const roleLabels: Record<string, string> = {
       owner: '원장',
@@ -298,16 +362,28 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-slate-800">{member.name || '이름 없음'}</h3>
-                    <div className="flex items-center space-x-4 text-sm text-slate-600">
-                      <span className="flex items-center">
+                    <div className="space-y-1 text-sm text-slate-600">
+                      <div className="flex items-center">
                         <EnvelopeIcon className="h-4 w-4 mr-1" />
                         {member.email}
-                      </span>
+                      </div>
                       {member.phone && (
-                        <span className="flex items-center">
+                        <div className="flex items-center">
                           <PhoneIcon className="h-4 w-4 mr-1" />
                           {member.phone}
-                        </span>
+                        </div>
+                      )}
+                      {currentUser.role === 'owner' && member.address && (
+                        <div className="flex items-center">
+                          <MapPinIcon className="h-4 w-4 mr-1" />
+                          {member.address}
+                        </div>
+                      )}
+                      {currentUser.role === 'owner' && member.resident_registration_number && (
+                        <div className="flex items-center">
+                          <IdentificationIcon className="h-4 w-4 mr-1" />
+                          {maskResidentNumber(member.resident_registration_number)}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -319,6 +395,26 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                   {getStatusBadge(member.status || '')}
                   {member.role !== 'owner' && member.status === 'active' && currentUser.role === 'owner' && (
                     <>
+                      <button
+                        onClick={() => {
+                          setEditingStaffInfo(member)
+                          // 주민번호가 13자리 숫자가 아니면 빈 문자열로 (암호화된 값 제외)
+                          const rrn = member.resident_registration_number || ''
+                          const cleanedRrn = rrn.replace(/-/g, '')
+                          const isValidFormat = cleanedRrn.length === 13 && /^\d{13}$/.test(cleanedRrn)
+
+                          setEditForm({
+                            name: member.name || '',
+                            phone: member.phone || '',
+                            address: member.address || '',
+                            resident_registration_number: isValidFormat ? rrn : ''
+                          })
+                        }}
+                        className="text-blue-600 hover:text-blue-800 p-1"
+                        title="정보 수정"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => setEditingStaffPermissions(member)}
                         className="text-blue-600 hover:text-blue-800 p-1"
@@ -533,6 +629,92 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
           }}
           onCancel={() => setEditingStaffPermissions(null)}
         />
+      )}
+
+      {/* Edit Staff Info Modal */}
+      {editingStaffInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-slate-800 mb-4">직원 정보 수정</h3>
+            <form onSubmit={handleUpdateStaffInfo} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  이름 *
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="홍길동"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  전화번호
+                </label>
+                <input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="010-1234-5678"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  주소
+                </label>
+                <input
+                  type="text"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="서울시 강남구..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  주민등록번호
+                </label>
+                <input
+                  type="text"
+                  value={editForm.resident_registration_number}
+                  onChange={(e) => setEditForm({ ...editForm, resident_registration_number: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="900101-1234567"
+                  maxLength={14}
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  13자리 숫자로 입력 (하이픈 포함 가능)
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingStaffInfo(null)
+                    setEditForm({ name: '', phone: '', address: '', resident_registration_number: '' })
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                >
+                  저장
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )

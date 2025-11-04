@@ -1194,6 +1194,45 @@ export const dataService = {
     }
   },
 
+  // 직원 정보 업데이트 (주소, 주민번호 등)
+  async updateStaffInfo(userId: string, updates: { name?: string; phone?: string; address?: string; resident_registration_number?: string }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      console.log('[updateStaffInfo] Updating staff info for user:', userId)
+
+      // 현재 로그인한 사용자의 clinic_id 가져오기
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      console.log('[updateStaffInfo] Using clinic_id:', clinicId, 'updates:', updates)
+
+      const { data, error } = await (supabase.from('users') as any)
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .eq('clinic_id', clinicId)  // 같은 클리닉의 사용자만 수정 가능
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[updateStaffInfo] Error:', error)
+        throw error
+      }
+
+      console.log('[updateStaffInfo] Successfully updated staff info')
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('[updateStaffInfo] Error updating staff info:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
   // 사용자 승인 (직원 관리)
   async approveUser(userId: string, clinicId: string, permissions?: string[]) {
     const supabase = getSupabase()
