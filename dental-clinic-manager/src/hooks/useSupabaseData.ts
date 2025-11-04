@@ -35,6 +35,18 @@ export const useSupabaseData = (clinicId?: string | null) => {
           return
         }
 
+        // Check session before fetching data
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError || !sessionData.session) {
+          console.warn('[useSupabaseData] Session expired or not available, attempting refresh...')
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+          if (refreshError || !refreshData.session) {
+            setError('인증이 만료되었습니다. 다시 로그인해주세요.')
+            setLoading(false)
+            return
+          }
+        }
+
         const [
           { data: inventoryData, error: inventoryError },
           { data: invLogData, error: invLogError }
@@ -101,6 +113,18 @@ export const useSupabaseData = (clinicId?: string | null) => {
           setError('Supabase client not available')
           setLoading(false)
           return
+        }
+
+        // Check session before fetching data
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError || !sessionData.session) {
+          console.warn('[useSupabaseData] Session expired or not available, attempting refresh...')
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+          if (refreshError || !refreshData.session) {
+            setError('인증이 만료되었습니다. 다시 로그인해주세요.')
+            setLoading(false)
+            return
+          }
         }
 
         console.log('[useSupabaseData] 데이터 가져오기 시작...', targetClinicId)
