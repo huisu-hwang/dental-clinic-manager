@@ -22,7 +22,7 @@ import { dataService } from '@/lib/dataService'
 import { UserProfile } from '@/contexts/AuthContext'
 import PermissionSelector from './PermissionSelector'
 import type { Permission } from '@/types/permissions'
-import { decryptResidentNumber } from '@/utils/encryptionUtils'
+import { decryptResidentNumber, encryptResidentNumber } from '@/utils/encryptionUtils'
 
 interface JoinRequest {
   id: string
@@ -267,11 +267,22 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
     }
 
     try {
+      // 주민번호 암호화
+      let encryptedResidentNumber = ''
+      if (editForm.resident_registration_number && editForm.resident_registration_number.trim()) {
+        const encrypted = await encryptResidentNumber(editForm.resident_registration_number)
+        if (!encrypted) {
+          setError('주민등록번호 암호화에 실패했습니다.')
+          return
+        }
+        encryptedResidentNumber = encrypted
+      }
+
       const result = await dataService.updateStaffInfo(editingStaffInfo.id, {
         name: editForm.name,
         phone: editForm.phone || '',
         address: editForm.address || '',
-        resident_registration_number: editForm.resident_registration_number || ''
+        resident_registration_number: encryptedResidentNumber
       })
 
       if (result.error) {
