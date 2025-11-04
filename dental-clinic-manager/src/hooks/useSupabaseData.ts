@@ -136,52 +136,42 @@ export const useSupabaseData = (clinicId?: string | null) => {
         // 각 쿼리를 개별 타임아웃으로 감싸기 (10초)
         const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
           withTimeout(
-            Promise.resolve(
-              applyClinicFilter(
-                supabase.from('daily_reports').select('*'),
-                targetClinicId
-              )
-            ),
+            applyClinicFilter(
+              supabase.from('daily_reports').select('*'),
+              targetClinicId
+            ).then(result => result),
             10000,
             'daily_reports'
           ),
           withTimeout(
-            Promise.resolve(
-              applyClinicFilter(
-                supabase.from('consult_logs').select('*'),
-                targetClinicId
-              )
-            ),
+            applyClinicFilter(
+              supabase.from('consult_logs').select('*'),
+              targetClinicId
+            ).then(result => result),
             10000,
             'consult_logs'
           ),
           withTimeout(
-            Promise.resolve(
-              applyClinicFilter(
-                supabase.from('gift_logs').select('*'),
-                targetClinicId
-              )
-            ),
+            applyClinicFilter(
+              supabase.from('gift_logs').select('*'),
+              targetClinicId
+            ).then(result => result),
             10000,
             'gift_logs'
           ),
           withTimeout(
-            Promise.resolve(
-              applyClinicFilter(
-                supabase.from('gift_inventory').select('*'),
-                targetClinicId
-              )
-            ),
+            applyClinicFilter(
+              supabase.from('gift_inventory').select('*'),
+              targetClinicId
+            ).then(result => result),
             10000,
             'gift_inventory'
           ),
           withTimeout(
-            Promise.resolve(
-              applyClinicFilter(
-                supabase.from('inventory_logs').select('*'),
-                targetClinicId
-              )
-            ),
+            applyClinicFilter(
+              supabase.from('inventory_logs').select('*'),
+              targetClinicId
+            ).then(result => result),
             10000,
             'inventory_logs'
           )
