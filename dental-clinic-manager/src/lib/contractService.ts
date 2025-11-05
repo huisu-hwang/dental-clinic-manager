@@ -6,6 +6,7 @@
 import { getSupabase } from './supabase'
 import type { Session } from '@supabase/supabase-js'
 import { clinicHoursService } from './clinicHoursService'
+import { refreshSessionWithTimeout } from './sessionUtils'
 import type {
   EmploymentContract,
   ContractTemplate,
@@ -48,15 +49,15 @@ class ContractService {
       // If it's a refresh token error, try to refresh the session
       if (error.message?.includes('Refresh Token') || error.message?.includes('Invalid')) {
         console.log('[contractService] Attempting to refresh session...')
-        const { data: refreshData, error: refreshError } = await this.supabase.auth.refreshSession()
+        const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(this.supabase)
 
-        if (refreshError || !refreshData.session) {
-          console.error('[contractService] Session refresh failed:', refreshError?.message)
+        if (refreshError || !refreshedSession) {
+          console.error('[contractService] Session refresh failed:', refreshError)
           return { session: null, error: 'SESSION_EXPIRED' }
         }
 
         console.log('[contractService] Session refreshed successfully')
-        return { session: refreshData.session, error: null }
+        return { session: refreshedSession, error: null }
       }
 
       return { session: null, error: 'SESSION_ERROR' }
@@ -65,15 +66,15 @@ class ContractService {
     // Case 2: No session found, try to refresh
     if (!data.session) {
       console.log('[contractService] No session found, attempting to refresh...')
-      const { data: refreshData, error: refreshError } = await this.supabase.auth.refreshSession()
+      const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(this.supabase)
 
-      if (refreshError || !refreshData.session) {
-        console.error('[contractService] Session refresh failed:', refreshError?.message)
+      if (refreshError || !refreshedSession) {
+        console.error('[contractService] Session refresh failed:', refreshError)
         return { session: null, error: 'SESSION_EXPIRED' }
       }
 
       console.log('[contractService] Session refreshed successfully')
-      return { session: refreshData.session, error: null }
+      return { session: refreshedSession, error: null }
     }
 
     // Case 3: Valid session found

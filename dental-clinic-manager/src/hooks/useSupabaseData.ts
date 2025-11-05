@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from '@/lib/clinicScope'
+import { refreshSessionWithTimeout, handleSessionExpired } from '@/lib/sessionUtils'
 import type { DailyReport, ConsultLog, GiftLog, GiftInventory, InventoryLog } from '@/types'
 
 export const useSupabaseData = (clinicId?: string | null) => {
@@ -39,10 +40,10 @@ export const useSupabaseData = (clinicId?: string | null) => {
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
         if (sessionError || !sessionData.session) {
           console.warn('[useSupabaseData] Session expired or not available, attempting refresh...')
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-          if (refreshError || !refreshData.session) {
-            setError('인증이 만료되었습니다. 다시 로그인해주세요.')
-            setLoading(false)
+          const { session, error: refreshError } = await refreshSessionWithTimeout(supabase)
+          if (refreshError || !session) {
+            console.error('[useSupabaseData] Session refresh failed, redirecting to login...')
+            handleSessionExpired('session_refresh_failed')
             return
           }
         }
@@ -119,10 +120,10 @@ export const useSupabaseData = (clinicId?: string | null) => {
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
         if (sessionError || !sessionData.session) {
           console.warn('[useSupabaseData] Session expired or not available, attempting refresh...')
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-          if (refreshError || !refreshData.session) {
-            setError('인증이 만료되었습니다. 다시 로그인해주세요.')
-            setLoading(false)
+          const { session, error: refreshError } = await refreshSessionWithTimeout(supabase)
+          if (refreshError || !session) {
+            console.error('[useSupabaseData] Session refresh failed, redirecting to login...')
+            handleSessionExpired('session_refresh_failed')
             return
           }
         }
