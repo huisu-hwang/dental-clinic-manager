@@ -219,7 +219,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       } else {
         alert('계약서가 삭제되었습니다.')
         // Refresh the list
-        loadContracts()
+        await loadContracts()
       }
     } catch (err) {
       console.error('[ContractList] Delete error:', err)
