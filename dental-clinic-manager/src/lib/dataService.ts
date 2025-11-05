@@ -1,5 +1,6 @@
 import { getSupabase } from './supabase'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
+import { refreshSessionWithTimeout, handleSessionExpired } from './sessionUtils'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
@@ -69,28 +70,20 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
   if (!supabase) return false
 
   try {
-    // 세션 갱신 시도
-    console.log('[handleSessionError] Attempting to refresh session...')
-    const { data, error } = await supabase.auth.refreshSession()
+    console.log('[handleSessionError] Attempting to refresh session with timeout...')
+    const { session, error } = await refreshSessionWithTimeout(supabase, 8000)
 
-    if (error) {
+    if (error || !session) {
       console.error('[handleSessionError] Session refresh failed:', error)
-      // 세션 갱신 실패 - 로그아웃 처리
-      console.log('[handleSessionError] Clearing session and redirecting to login')
-      localStorage.removeItem('dental_auth')
-      localStorage.removeItem('dental_user')
-      const keys = Object.keys(localStorage)
-      keys.forEach(key => {
-        if (key.startsWith('sb-')) {
-          localStorage.removeItem(key)
-        }
-      })
 
-      // 사용자에게 알림 후 로그인 페이지로 이동
       if (typeof window !== 'undefined') {
-        alert('세션이 만료되었습니다. 다시 로그인해주세요.')
-        window.location.href = '/'
+        const message = error === 'SESSION_REFRESH_TIMEOUT'
+          ? '세션 갱신이 지연되었습니다. 다시 로그인해주세요.'
+          : '세션이 만료되었습니다. 다시 로그인해주세요.'
+        alert(message)
       }
+
+      handleSessionExpired(error === 'SESSION_REFRESH_TIMEOUT' ? 'session_timeout' : 'session_expired')
       return false
     }
 
@@ -98,6 +91,12 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
     return true
   } catch (error) {
     console.error('[handleSessionError] Unexpected error:', error)
+
+    if (typeof window !== 'undefined') {
+      alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+    }
+
+    handleSessionExpired('session_error')
     return false
   }
 }
