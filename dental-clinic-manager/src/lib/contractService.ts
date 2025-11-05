@@ -24,6 +24,27 @@ import type {
 import type { User } from '@/types/auth'
 import { encryptResidentNumber, decryptResidentNumber } from '@/utils/encryptionUtils'
 
+const SESSION_OPERATION_TIMEOUT = 7000
+
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`[contractService] ${operation} timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
+  })
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise])
+    return result as T
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+  }
+}
+
 class ContractService {
   private supabase: ReturnType<typeof getSupabase>
 
@@ -35,25 +56,57 @@ class ContractService {
    * Check current Supabase session with auto-refresh
    */
   private async checkSession(): Promise<{ session: Session | null; error: string | null }> {
+    const latestClient = getSupabase()
+    if (latestClient) {
+      this.supabase = latestClient
+    }
+
     if (!this.supabase) {
       return { session: null, error: 'Database connection failed' }
     }
 
     console.log('[contractService] Checking session...')
-    const { data, error } = await this.supabase.auth.getSession()
 
-    // Case 1: Session check error (possibly invalid token)
+    let sessionResult
+    try {
+      sessionResult = await withTimeout(
+        this.supabase.auth.getSession(),
+        SESSION_OPERATION_TIMEOUT,
+        'auth.getSession'
+      )
+    } catch (error) {
+      console.error('[contractService] Session check failed:', error)
+      const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(
+        this.supabase,
+        SESSION_OPERATION_TIMEOUT
+      )
+
+      if (refreshError || !refreshedSession) {
+        const mappedError = refreshError === 'SESSION_REFRESH_TIMEOUT' ? 'SESSION_EXPIRED' : refreshError
+        console.error('[contractService] Session refresh failed after timeout:', mappedError)
+        return { session: null, error: mappedError || 'SESSION_EXPIRED' }
+      }
+
+      console.log('[contractService] Session refreshed successfully after timeout')
+      return { session: refreshedSession, error: null }
+    }
+
+    const { data, error } = sessionResult
+
     if (error) {
       console.error('[contractService] Session check error:', error.message)
 
-      // If it's a refresh token error, try to refresh the session
       if (error.message?.includes('Refresh Token') || error.message?.includes('Invalid')) {
         console.log('[contractService] Attempting to refresh session...')
-        const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(this.supabase)
+        const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(
+          this.supabase,
+          SESSION_OPERATION_TIMEOUT
+        )
 
         if (refreshError || !refreshedSession) {
-          console.error('[contractService] Session refresh failed:', refreshError)
-          return { session: null, error: 'SESSION_EXPIRED' }
+          const mappedError = refreshError === 'SESSION_REFRESH_TIMEOUT' ? 'SESSION_EXPIRED' : refreshError
+          console.error('[contractService] Session refresh failed:', mappedError)
+          return { session: null, error: mappedError || 'SESSION_EXPIRED' }
         }
 
         console.log('[contractService] Session refreshed successfully')
@@ -63,21 +116,23 @@ class ContractService {
       return { session: null, error: 'SESSION_ERROR' }
     }
 
-    // Case 2: No session found, try to refresh
     if (!data.session) {
       console.log('[contractService] No session found, attempting to refresh...')
-      const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(this.supabase)
+      const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(
+        this.supabase,
+        SESSION_OPERATION_TIMEOUT
+      )
 
       if (refreshError || !refreshedSession) {
-        console.error('[contractService] Session refresh failed:', refreshError)
-        return { session: null, error: 'SESSION_EXPIRED' }
+        const mappedError = refreshError === 'SESSION_REFRESH_TIMEOUT' ? 'SESSION_EXPIRED' : refreshError
+        console.error('[contractService] Session refresh failed:', mappedError)
+        return { session: null, error: mappedError || 'SESSION_EXPIRED' }
       }
 
       console.log('[contractService] Session refreshed successfully')
       return { session: refreshedSession, error: null }
     }
 
-    // Case 3: Valid session found
     console.log('[contractService] Valid session found')
     return { session: data.session, error: null }
   }

@@ -1,11 +1,49 @@
 import { getSupabase } from './supabase'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
+import { handleSessionExpired } from './sessionUtils'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
 const CLINIC_CACHE_KEY = 'dental_clinic_id'
 let cachedClinicId: string | null = null
 // Force recompile
+
+const SESSION_OPERATION_TIMEOUT = 7000
+
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`[dataService] ${operation} timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
+  })
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise])
+    return result as T
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+  }
+}
+
+const clearStoredSession = () => {
+  if (typeof window === 'undefined') return
+
+  const storages = [window.localStorage, window.sessionStorage]
+  storages.forEach(storage => {
+    const keys: string[] = []
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i)
+      if (key && (key.startsWith('sb-') || key.startsWith('supabase-') || key === 'dental_auth' || key === 'dental_user' || key === CLINIC_CACHE_KEY)) {
+        keys.push(key)
+      }
+    }
+    keys.forEach(key => storage.removeItem(key))
+  })
+}
 
 const persistClinicId = (clinicId: string) => {
   cachedClinicId = clinicId
@@ -71,26 +109,19 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
   try {
     // 세션 갱신 시도
     console.log('[handleSessionError] Attempting to refresh session...')
-    const { data, error } = await supabase.auth.refreshSession()
+    const { data, error } = await withTimeout(
+      supabase.auth.refreshSession(),
+      SESSION_OPERATION_TIMEOUT,
+      'auth.refreshSession'
+    )
 
-    if (error) {
+    if (error || !data?.session) {
       console.error('[handleSessionError] Session refresh failed:', error)
-      // 세션 갱신 실패 - 로그아웃 처리
-      console.log('[handleSessionError] Clearing session and redirecting to login')
-      localStorage.removeItem('dental_auth')
-      localStorage.removeItem('dental_user')
-      const keys = Object.keys(localStorage)
-      keys.forEach(key => {
-        if (key.startsWith('sb-')) {
-          localStorage.removeItem(key)
-        }
-      })
-
-      // 사용자에게 알림 후 로그인 페이지로 이동
+      clearStoredSession()
       if (typeof window !== 'undefined') {
         alert('세션이 만료되었습니다. 다시 로그인해주세요.')
-        window.location.href = '/'
       }
+      handleSessionExpired('session_expired')
       return false
     }
 
@@ -98,7 +129,34 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
     return true
   } catch (error) {
     console.error('[handleSessionError] Unexpected error:', error)
+    clearStoredSession()
+    handleSessionExpired('session_expired')
     return false
+  }
+}
+
+const ensureActiveSession = async (supabase: ReturnType<typeof getSupabase>): Promise<boolean> => {
+  if (!supabase) {
+    return false
+  }
+
+  try {
+    const { data, error } = await withTimeout(
+      supabase.auth.getSession(),
+      SESSION_OPERATION_TIMEOUT,
+      'auth.getSession'
+    )
+
+    if (error || !data?.session) {
+      const refreshed = await handleSessionError(supabase)
+      return refreshed
+    }
+
+    return true
+  } catch (error) {
+    console.error('[dataService] Session check failed:', error)
+    const refreshed = await handleSessionError(supabase)
+    return refreshed
   }
 }
 
@@ -134,7 +192,11 @@ async function getCurrentClinicId(): Promise<string | null> {
       return null
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await withTimeout(
+      supabase.auth.getUser(),
+      SESSION_OPERATION_TIMEOUT,
+      'auth.getUser'
+    )
 
     if (authError) {
       console.error('[getCurrentClinicId] Auth error:', authError)
@@ -157,11 +219,15 @@ async function getCurrentClinicId(): Promise<string | null> {
 
     console.log('[getCurrentClinicId] Querying users table for user:', user.id)
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('clinic_id')
-      .eq('id', user.id)
-      .single()
+    const { data, error } = await withTimeout(
+      supabase
+        .from('users')
+        .select('clinic_id')
+        .eq('id', user.id)
+        .single(),
+      SESSION_OPERATION_TIMEOUT,
+      'users.select'
+    )
 
     console.log('[getCurrentClinicId] Query result:', { data, error })
 
@@ -1361,17 +1427,26 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      const sessionValid = await ensureActiveSession(supabase)
+      if (!sessionValid) {
+        return { error: 'SESSION_EXPIRED' }
+      }
+
       // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
       const targetClinicId = clinicId || await getCurrentClinicId()
       if (!targetClinicId) {
         throw new Error('User clinic information not available')
       }
 
-      const { data, error } = await supabase
-        .from('protocol_categories')
-        .select('*')
-        .eq('clinic_id', targetClinicId)
-        .order('display_order')
+      const { data, error } = await withTimeout(
+        supabase
+          .from('protocol_categories')
+          .select('*')
+          .eq('clinic_id', targetClinicId)
+          .order('display_order'),
+        SESSION_OPERATION_TIMEOUT,
+        'protocol_categories.select'
+      )
 
       if (error) throw error
       return { data }
@@ -1493,6 +1568,11 @@ export const dataService = {
     try {
       console.log('[getProtocols] Starting fetch with clinicId:', clinicId, 'filters:', filters)
 
+      const sessionValid = await ensureActiveSession(supabase)
+      if (!sessionValid) {
+        return { error: 'SESSION_EXPIRED' }
+      }
+
       // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
       const targetClinicId = clinicId || await getCurrentClinicId()
       if (!targetClinicId) {
@@ -1526,7 +1606,11 @@ export const dataService = {
       }
 
       console.log('[getProtocols] Executing query...')
-      const { data: protocols, error } = await query.order('updated_at', { ascending: false })
+      const { data: protocols, error } = await withTimeout(
+        query.order('updated_at', { ascending: false }),
+        SESSION_OPERATION_TIMEOUT,
+        'protocols.select'
+      )
 
       if (error) {
         console.error('[getProtocols] Query error:', error)
