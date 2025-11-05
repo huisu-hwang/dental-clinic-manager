@@ -65,11 +65,46 @@ export function setRememberMe(remember: boolean): void {
   if (typeof window === 'undefined') return
 
   if (remember) {
+    // sessionStorage → localStorage 마이그레이션
+    migrateStorage(window.sessionStorage, window.localStorage)
     localStorage.setItem(REMEMBER_ME_KEY, 'true')
-    console.log('[CustomStorage] Remember me enabled - using localStorage')
+    console.log('[CustomStorage] Remember me enabled - migrated to localStorage')
   } else {
+    // localStorage → sessionStorage 마이그레이션
+    migrateStorage(window.localStorage, window.sessionStorage)
     localStorage.removeItem(REMEMBER_ME_KEY)
-    console.log('[CustomStorage] Remember me disabled - using sessionStorage')
+    console.log('[CustomStorage] Remember me disabled - migrated to sessionStorage')
+  }
+}
+
+/**
+ * Storage 간 데이터 마이그레이션
+ */
+function migrateStorage(from: Storage, to: Storage): void {
+  try {
+    // Supabase 세션 데이터와 앱 데이터만 이동
+    const keysToMigrate: string[] = []
+
+    // Storage 객체의 모든 키 수집
+    for (let i = 0; i < from.length; i++) {
+      const key = from.key(i)
+      if (key && (key.startsWith('sb-') || key === 'dental_auth' || key === 'dental_user' || key === 'dental_clinic_id')) {
+        keysToMigrate.push(key)
+      }
+    }
+
+    // 수집한 키들의 데이터 이동
+    keysToMigrate.forEach(key => {
+      const value = from.getItem(key)
+      if (value) {
+        to.setItem(key, value)
+        from.removeItem(key)
+      }
+    })
+
+    console.log(`[CustomStorage] Migrated ${keysToMigrate.length} session data items between storages`)
+  } catch (error) {
+    console.error('[CustomStorage] Migration error:', error)
   }
 }
 
@@ -91,11 +126,19 @@ export function clearAllSessions(): void {
   const storages = [window.localStorage, window.sessionStorage]
 
   storages.forEach(storage => {
-    const keys = Object.keys(storage)
-    keys.forEach(key => {
-      if (key.startsWith('sb-') || key === 'dental_auth' || key === 'dental_user') {
-        storage.removeItem(key)
+    const keysToRemove: string[] = []
+
+    // Storage 객체의 모든 키 수집
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i)
+      if (key && (key.startsWith('sb-') || key === 'dental_auth' || key === 'dental_user')) {
+        keysToRemove.push(key)
       }
+    }
+
+    // 수집한 키들 삭제
+    keysToRemove.forEach(key => {
+      storage.removeItem(key)
     })
   })
 
