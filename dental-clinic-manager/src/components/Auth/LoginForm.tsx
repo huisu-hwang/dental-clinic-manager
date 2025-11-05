@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getSupabase, reinitializeSupabase } from '@/lib/supabase'
 import { dataService } from '@/lib/dataService'
-import { setRememberMe } from '@/lib/customStorageAdapter'
+import { setRememberMe as setRememberMePreference } from '@/lib/customStorageAdapter'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 interface LoginFormProps {
@@ -23,7 +23,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [rememberMe, setRememberMe] = useState(false)
+  const [rememberMe, setRememberMeState] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -50,7 +50,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
     try {
       // 0. 로그인 상태 유지 옵션 먼저 설정
       console.log('[LoginForm] Setting remember me option:', rememberMe)
-      setRememberMe(rememberMe)
+      setRememberMePreference(rememberMe)
 
       // 1. Supabase 클라이언트 재초기화 (새로운 storage adapter 적용)
       console.log('[LoginForm] Reinitializing Supabase client with new storage settings...')
@@ -243,7 +243,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                   name="remember-me"
                   type="checkbox"
                   checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+                  onChange={(e) => setRememberMeState(e.target.checked)}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-700">

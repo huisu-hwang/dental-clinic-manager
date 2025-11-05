@@ -38,6 +38,45 @@ const MASTER_ADMIN: UserProfile = {
   userId: 'sani81@gmail.com'
 }
 
+interface PersistedAuthData {
+  authStatus: string | null
+  userData: string | null
+  source: 'session' | 'local' | null
+}
+
+const getPersistedAuthData = (): PersistedAuthData => {
+  if (typeof window === 'undefined') {
+    return { authStatus: null, userData: null, source: null }
+  }
+
+  const storageCandidates: Array<{ label: 'session' | 'local'; getStorage: () => Storage }> = [
+    {
+      label: 'session',
+      getStorage: () => window.sessionStorage
+    },
+    {
+      label: 'local',
+      getStorage: () => window.localStorage
+    }
+  ]
+
+  for (const candidate of storageCandidates) {
+    try {
+      const storage = candidate.getStorage()
+      const authStatus = storage.getItem('dental_auth')
+      const userData = storage.getItem('dental_user')
+
+      if (authStatus === 'true' && userData) {
+        return { authStatus, userData, source: candidate.label }
+      }
+    } catch (error) {
+      console.warn(`[AuthContext] Failed to access ${candidate.label}Storage:`, error)
+    }
+  }
+
+  return { authStatus: null, userData: null, source: null }
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -163,13 +202,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             } else {
               // Supabase 세션이 없으면 localStorage 확인 (기존 방식 호환)
-              const authStatus = localStorage.getItem('dental_auth')
-              const userData = localStorage.getItem('dental_user')
+              const { authStatus, userData, source } = getPersistedAuthData()
 
               if (authStatus === 'true' && userData) {
                 try {
                   const parsedUser = JSON.parse(userData)
-                  console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
+                  console.log(`AuthContext: ${source}Storage에서 사용자 정보 복원`, parsedUser)
                   setUser(parsedUser)
                 } catch (e) {
                   console.error('Failed to parse localStorage user data:', e)
@@ -220,13 +258,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch (sessionError) {
             console.error('[AuthContext] Session check error:', sessionError)
             // 세션 확인 실패 시 localStorage 확인
-            const authStatus = localStorage.getItem('dental_auth')
-            const userData = localStorage.getItem('dental_user')
+            const { authStatus, userData, source } = getPersistedAuthData()
 
             if (authStatus === 'true' && userData) {
               try {
                 const parsedUser = JSON.parse(userData)
-                console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
+                console.log(`AuthContext: ${source}Storage에서 사용자 정보 복원`, parsedUser)
                 setUser(parsedUser)
               } catch (e) {
                 console.error('Failed to parse localStorage user data:', e)
@@ -236,13 +273,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           // Supabase 설정이 안 된 경우 localStorage만 확인
           console.warn('[AuthContext] Supabase not configured, checking localStorage only')
-          const authStatus = localStorage.getItem('dental_auth')
-          const userData = localStorage.getItem('dental_user')
+          const { authStatus, userData, source } = getPersistedAuthData()
 
           if (authStatus === 'true' && userData) {
             try {
               const parsedUser = JSON.parse(userData)
-              console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
+              console.log(`AuthContext: ${source}Storage에서 사용자 정보 복원`, parsedUser)
               setUser(parsedUser)
             } catch (e) {
               console.error('Failed to parse user data from localStorage:', e)
