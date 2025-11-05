@@ -8,6 +8,7 @@ import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import ManagementTabNavigation from '@/components/Layout/ManagementTabNavigation'
 import StaffManagement from '@/components/Management/StaffManagement'
+import BranchManagement from '@/components/Management/BranchManagement'
 import ClinicSettings from '@/components/Management/ClinicSettings'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import AccountProfile from '@/components/Management/AccountProfile'
@@ -166,6 +167,11 @@ export default function ManagementPage() {
           {/* Staff Management Tab */}
           {activeTab === 'staff' && (
             <StaffManagement currentUser={user} />
+          )}
+
+          {/* Branch Management Tab */}
+          {activeTab === 'branches' && (
+            <BranchManagement currentUser={user} />
           )}
 
           {/* Clinic Settings Tab */}

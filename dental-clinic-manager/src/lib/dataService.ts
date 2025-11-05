@@ -226,7 +226,10 @@ export const dataService = {
   // 사용자 ID로 프로필 정보 가져오기 (소속 병원 정보 포함)
   async getUserProfileById(id: string) {
     const supabase = getSupabase()
-    if (!supabase) throw new Error('Supabase client not available')
+    if (!supabase) {
+      console.warn('[dataService] Supabase client not available in getUserProfileById (likely server-side).')
+      return { error: 'Supabase client not available' }
+    }
 
     try {
       // users와 clinics의 관계가 정상적이므로, join 쿼리를 사용합니다.
@@ -2207,5 +2210,206 @@ export const dataService = {
       return
     }
     persistClinicId(clinicId)
+  },
+
+  // ========================================
+  // 지점 관리 함수들
+  // Branch Management Functions
+  // ========================================
+
+  // 지점 목록 조회
+  async getBranches(filter?: { is_active?: boolean }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      let query = supabase
+        .from('clinic_branches')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: true })
+        .order('branch_name', { ascending: true })
+
+      // 활성/비활성 필터 적용
+      if (filter?.is_active !== undefined) {
+        query = query.eq('is_active', filter.is_active)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      return { data, total_count: data?.length || 0 }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching branches:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 단일 지점 조회
+  async getBranchById(branchId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('clinic_branches')
+        .select('*')
+        .eq('id', branchId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 지점 생성
+  async createBranch(branchData: {
+    branch_name: string
+    branch_code?: string
+    address?: string
+    latitude?: number
+    longitude?: number
+    attendance_radius_meters?: number
+    phone?: string
+    is_active?: boolean
+    display_order?: number
+  }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      const { data, error } = await supabase
+        .from('clinic_branches')
+        .insert([{
+          ...branchData,
+          clinic_id: clinicId,
+          created_by: user.id
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      console.log('[DataService] Branch created successfully:', data.id)
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('[DataService] Error creating branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 지점 수정
+  async updateBranch(branchId: string, updates: {
+    branch_name?: string
+    branch_code?: string
+    address?: string
+    latitude?: number
+    longitude?: number
+    attendance_radius_meters?: number
+    phone?: string
+    is_active?: boolean
+    display_order?: number
+  }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('clinic_branches')
+        .update(updates)
+        .eq('id', branchId)
+        .eq('clinic_id', clinicId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      console.log('[DataService] Branch updated successfully:', branchId)
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('[DataService] Error updating branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 지점 삭제 (soft delete - is_active를 false로 설정)
+  async deleteBranch(branchId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('clinic_branches')
+        .update({ is_active: false })
+        .eq('id', branchId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      console.log('[DataService] Branch deactivated successfully:', branchId)
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('[DataService] Error deleting branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 지점 완전 삭제 (hard delete - owner만 사용)
+  async hardDeleteBranch(branchId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('clinic_branches')
+        .delete()
+        .eq('id', branchId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      console.log('[DataService] Branch permanently deleted:', branchId)
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('[DataService] Error hard deleting branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
   }
 }
