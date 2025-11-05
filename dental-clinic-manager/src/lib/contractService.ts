@@ -6,6 +6,7 @@
 import { getSupabase } from './supabase'
 import type { Session } from '@supabase/supabase-js'
 import { clinicHoursService } from './clinicHoursService'
+import { refreshSessionWithTimeout } from './sessionUtils'
 import type {
   EmploymentContract,
   ContractTemplate,
@@ -48,15 +49,15 @@ class ContractService {
       // If it's a refresh token error, try to refresh the session
       if (error.message?.includes('Refresh Token') || error.message?.includes('Invalid')) {
         console.log('[contractService] Attempting to refresh session...')
-        const { data: refreshData, error: refreshError } = await this.supabase.auth.refreshSession()
+        const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(this.supabase)
 
-        if (refreshError || !refreshData.session) {
-          console.error('[contractService] Session refresh failed:', refreshError?.message)
+        if (refreshError || !refreshedSession) {
+          console.error('[contractService] Session refresh failed:', refreshError)
           return { session: null, error: 'SESSION_EXPIRED' }
         }
 
         console.log('[contractService] Session refreshed successfully')
-        return { session: refreshData.session, error: null }
+        return { session: refreshedSession, error: null }
       }
 
       return { session: null, error: 'SESSION_ERROR' }
@@ -65,15 +66,15 @@ class ContractService {
     // Case 2: No session found, try to refresh
     if (!data.session) {
       console.log('[contractService] No session found, attempting to refresh...')
-      const { data: refreshData, error: refreshError } = await this.supabase.auth.refreshSession()
+      const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(this.supabase)
 
-      if (refreshError || !refreshData.session) {
-        console.error('[contractService] Session refresh failed:', refreshError?.message)
+      if (refreshError || !refreshedSession) {
+        console.error('[contractService] Session refresh failed:', refreshError)
         return { session: null, error: 'SESSION_EXPIRED' }
       }
 
       console.log('[contractService] Session refreshed successfully')
-      return { session: refreshData.session, error: null }
+      return { session: refreshedSession, error: null }
     }
 
     // Case 3: Valid session found
@@ -837,74 +838,29 @@ class ContractService {
   /**
    * Delete a cancelled contract (permanent delete)
    * Only contracts with status 'cancelled' can be deleted
+   * Uses API route to bypass RLS with service role key
    */
   async deleteContract(contractId: string, currentUserId: string): Promise<{ success: boolean; error: string | null }> {
-    // Check session first
-    const sessionCheck = await this.checkSession()
-    if (sessionCheck.error) {
-      return { success: false, error: sessionCheck.error }
-    }
-
-    if (!this.supabase) {
-      return { success: false, error: 'Database connection failed' }
-    }
-
     try {
-      console.log('[contractService] Deleting contract:', contractId)
+      console.log('[contractService] Deleting contract via API:', contractId)
 
-      // 1. First, verify the contract exists and is cancelled
-      const { data: contract, error: fetchError } = await this.supabase
-        .from('employment_contracts')
-        .select('id, status, clinic_id')
-        .eq('id', contractId)
-        .single()
+      // Call API route with service role key (server-side)
+      const response = await fetch(`/api/contracts/${contractId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ currentUserId })
+      })
 
-      if (fetchError) {
-        console.error('[contractService] Failed to fetch contract:', fetchError.message)
-        return { success: false, error: '계약서를 찾을 수 없습니다.' }
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        console.error('[contractService] API delete failed:', result.error)
+        return { success: false, error: result.error || 'Failed to delete contract' }
       }
 
-      if (!contract) {
-        return { success: false, error: '계약서를 찾을 수 없습니다.' }
-      }
-
-      // 2. Check if contract is cancelled
-      if (contract.status !== 'cancelled') {
-        return { success: false, error: '취소된 계약서만 삭제할 수 있습니다.' }
-      }
-
-      // 3. Verify user has permission (owner or manager of the clinic)
-      const { data: userProfile, error: userError } = await this.supabase
-        .from('users')
-        .select('role, clinic_id')
-        .eq('id', currentUserId)
-        .single()
-
-      if (userError || !userProfile) {
-        return { success: false, error: '사용자 정보를 확인할 수 없습니다.' }
-      }
-
-      // Check if user is owner/manager of the same clinic
-      if (userProfile.clinic_id !== contract.clinic_id) {
-        return { success: false, error: '권한이 없습니다.' }
-      }
-
-      if (userProfile.role !== 'owner' && userProfile.role !== 'manager') {
-        return { success: false, error: '계약서 삭제 권한이 없습니다. (원장 또는 관리자만 가능)' }
-      }
-
-      // 4. Delete the contract (permanent delete)
-      const { error: deleteError } = await this.supabase
-        .from('employment_contracts')
-        .delete()
-        .eq('id', contractId)
-
-      if (deleteError) {
-        console.error('[contractService] Failed to delete contract:', deleteError.message)
-        return { success: false, error: '계약서 삭제에 실패했습니다.' }
-      }
-
-      console.log('[contractService] Contract deleted successfully:', contractId)
+      console.log('[contractService] Contract deleted successfully via API:', contractId)
       return { success: true, error: null }
     } catch (error) {
       console.error('[contractService] Delete contract error:', error)

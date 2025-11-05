@@ -148,12 +148,41 @@ export default function QRCodeDisplay() {
     }
   }
 
-  const copyToClipboard = () => {
-    if (qrCode?.qr_code) {
-      navigator.clipboard.writeText(qrCode.qr_code)
+  const copyToClipboard = async () => {
+    if (!qrCode?.qr_code) return
+
+    try {
+      // 최신 Clipboard API 시도
+      await navigator.clipboard.writeText(qrCode.qr_code)
       setMessage({ type: 'success', text: 'QR 코드가 클립보드에 복사되었습니다!' })
-      setTimeout(() => setMessage(null), 3000)
+    } catch (err) {
+      console.warn('Clipboard API failed, falling back to execCommand:', err)
+
+      // 폴백: document.execCommand 사용
+      const textArea = document.createElement('textarea')
+      textArea.value = qrCode.qr_code
+      textArea.style.position = 'fixed' // 화면에 보이지 않게 처리
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+
+      try {
+        const successful = document.execCommand('copy')
+        if (successful) {
+          setMessage({ type: 'success', text: 'QR 코드가 클립보드에 복사되었습니다!' })
+        } else {
+          setMessage({ type: 'error', text: '클립보드 복사에 실패했습니다.' })
+        }
+      } catch (execErr) {
+        console.error('Fallback execCommand failed:', execErr)
+        setMessage({ type: 'error', text: '클립보드 복사에 실패했습니다.' })
+      }
+
+      document.body.removeChild(textArea)
     }
+
+    setTimeout(() => setMessage(null), 3000)
   }
 
   const printQRCode = () => {

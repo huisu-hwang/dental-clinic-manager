@@ -3,6 +3,7 @@
 import {
   UsersIcon,
   BuildingOfficeIcon,
+  BuildingStorefrontIcon,
   ChartBarIcon,
   CogIcon,
   DocumentTextIcon
@@ -36,6 +37,12 @@ export default function ManagementTabNavigation({
       label: '직원 관리',
       icon: UsersIcon,
       requiredPermissions: ['staff_view', 'staff_manage']
+    },
+    {
+      id: 'branches',
+      label: '지점 관리',
+      icon: BuildingStorefrontIcon,
+      requiredPermissions: ['clinic_settings']  // owner와 manager만
     },
     {
       id: 'clinic',

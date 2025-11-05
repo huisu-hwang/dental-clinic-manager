@@ -14,7 +14,7 @@ import {
 import ClinicsManagement from '@/components/Admin/ClinicsManagement'
 import SystemMonitoring from '@/components/Admin/SystemMonitoring'
 import AccountProfile from '@/components/Management/AccountProfile'
-import Toast from '@/components/UI/Toast'
+import Toast from '@/components/ui/Toast'
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth()

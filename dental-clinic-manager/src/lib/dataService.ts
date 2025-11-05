@@ -1,6 +1,7 @@
 import { getSupabase } from './supabase'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
+import type { ClinicBranch } from '@/types/branch'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
 const CLINIC_CACHE_KEY = 'dental_clinic_id'
@@ -69,27 +70,21 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
   if (!supabase) return false
 
   try {
-    // 세션 갱신 시도
-    console.log('[handleSessionError] Attempting to refresh session...')
-    const { data, error } = await supabase.auth.refreshSession()
+    // 세션 갱신 시도 (타임아웃 포함)
+    console.log('[handleSessionError] Attempting to refresh session with timeout...')
 
-    if (error) {
+    // refreshSessionWithTimeout() 동적 import
+    const { refreshSessionWithTimeout, handleSessionExpired } = await import('./sessionUtils')
+
+    const { session, error } = await refreshSessionWithTimeout(supabase, 5000)
+
+    if (error || !session) {
       console.error('[handleSessionError] Session refresh failed:', error)
-      // 세션 갱신 실패 - 로그아웃 처리
-      console.log('[handleSessionError] Clearing session and redirecting to login')
-      localStorage.removeItem('dental_auth')
-      localStorage.removeItem('dental_user')
-      const keys = Object.keys(localStorage)
-      keys.forEach(key => {
-        if (key.startsWith('sb-')) {
-          localStorage.removeItem(key)
-        }
-      })
 
-      // 사용자에게 알림 후 로그인 페이지로 이동
+      // 세션 갱신 실패 - 로그아웃 처리
       if (typeof window !== 'undefined') {
-        alert('세션이 만료되었습니다. 다시 로그인해주세요.')
-        window.location.href = '/'
+        console.log('[handleSessionError] Session expired, redirecting to login')
+        handleSessionExpired('session_refresh_failed')
       }
       return false
     }
@@ -98,6 +93,12 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
     return true
   } catch (error) {
     console.error('[handleSessionError] Unexpected error:', error)
+
+    // 예상치 못한 에러 발생 시에도 로그아웃 처리
+    if (typeof window !== 'undefined') {
+      const { handleSessionExpired } = await import('./sessionUtils')
+      handleSessionExpired('session_error')
+    }
     return false
   }
 }
@@ -134,34 +135,120 @@ async function getCurrentClinicId(): Promise<string | null> {
       return null
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // getUser() 호출에 타임아웃 추가 (5초)
+    console.log('[getCurrentClinicId] Fetching user with timeout...')
+    const getUserPromise = supabase.auth.getUser()
+    const timeoutPromise = new Promise<{ data: { user: null }, error: any }>((_, reject) =>
+      setTimeout(() => reject(new Error('User fetch timeout after 5 seconds')), 5000)
+    )
 
-    if (authError) {
+    let getUserResult
+    try {
+      getUserResult = await Promise.race([getUserPromise, timeoutPromise])
+    } catch (timeoutError) {
+      console.error('[getCurrentClinicId] getUser() timeout:', timeoutError)
+      // 타임아웃 발생 시 세션 갱신 시도
+      console.log('[getCurrentClinicId] Timeout detected, attempting to refresh session...')
+      const refreshed = await handleSessionError(supabase)
+      if (refreshed) {
+        // 세션이 갱신되었으면 다시 시도 (단, 재귀는 1회만)
+        console.log('[getCurrentClinicId] Session refreshed, retrying once...')
+        try {
+          getUserResult = await Promise.race([
+            supabase.auth.getUser(),
+            new Promise<{ data: { user: null }, error: any }>((_, reject) =>
+              setTimeout(() => reject(new Error('User fetch timeout (retry)')), 5000)
+            )
+          ])
+        } catch (retryError) {
+          console.error('[getCurrentClinicId] Retry also timed out:', retryError)
+          return null
+        }
+      } else {
+        return null
+      }
+    }
+
+    let { data: userData, error: authError } = getUserResult
+    let user = userData?.user
+
+    if (authError || !user) {
       console.error('[getCurrentClinicId] Auth error:', authError)
-      // 세션 만료 에러인 경우 갱신 시도
-      if (authError.message?.includes('session') || authError.message?.includes('token') || authError.message?.includes('JWT')) {
+      // 세션 만료 에러인 경우 갱신 시도 (1회만)
+      if (authError?.message?.includes('session') || authError?.message?.includes('token') || authError?.message?.includes('JWT')) {
         console.log('[getCurrentClinicId] Session error detected, attempting to refresh...')
         const refreshed = await handleSessionError(supabase)
         if (refreshed) {
-          // 세션이 갱신되었으면 다시 시도
-          return getCurrentClinicId()
+          // 세션이 갱신되었으면 다시 getUser() 시도 (재귀 아님)
+          console.log('[getCurrentClinicId] Session refreshed, retrying getUser() once...')
+          try {
+            const retryResult = await Promise.race([
+              supabase.auth.getUser(),
+              new Promise<{ data: { user: null }, error: any }>((_, reject) =>
+                setTimeout(() => reject(new Error('User fetch timeout (auth error retry)')), 5000)
+              )
+            ])
+            userData = retryResult.data
+            authError = retryResult.error as any
+            user = userData?.user
+          } catch (retryError) {
+            console.error('[getCurrentClinicId] Auth error retry failed:', retryError)
+            return null
+          }
+        } else {
+          return null
         }
+      } else {
+        return null
       }
-      return null
     }
 
+    // 최종 체크
     if (!user) {
-      console.error('[getCurrentClinicId] No authenticated user')
+      console.error('[getCurrentClinicId] No authenticated user after all checks')
       return null
     }
 
     console.log('[getCurrentClinicId] Querying users table for user:', user.id)
 
-    const { data, error } = await supabase
+    // users 테이블 조회에 타임아웃 추가 (5초)
+    const queryPromise = supabase
       .from('users')
       .select('clinic_id')
       .eq('id', user.id)
       .single()
+
+    const queryTimeoutPromise = new Promise<{ data: null, error: any }>((_, reject) =>
+      setTimeout(() => reject(new Error('Database query timeout after 5 seconds')), 5000)
+    )
+
+    let queryResult
+    try {
+      queryResult = await Promise.race([queryPromise, queryTimeoutPromise])
+    } catch (timeoutError) {
+      console.error('[getCurrentClinicId] Database query timeout:', timeoutError)
+      // 타임아웃 발생 시 세션 문제일 수 있으므로 갱신 시도
+      console.log('[getCurrentClinicId] Query timeout, attempting to refresh session...')
+      const refreshed = await handleSessionError(supabase)
+      if (refreshed) {
+        console.log('[getCurrentClinicId] Session refreshed, retrying query once...')
+        try {
+          queryResult = await Promise.race([
+            supabase.from('users').select('clinic_id').eq('id', user.id).single(),
+            new Promise<{ data: null, error: any }>((_, reject) =>
+              setTimeout(() => reject(new Error('Database query timeout (retry)')), 5000)
+            )
+          ])
+        } catch (retryError) {
+          console.error('[getCurrentClinicId] Query retry also timed out:', retryError)
+          return null
+        }
+      } else {
+        return null
+      }
+    }
+
+    const { data, error } = queryResult
 
     console.log('[getCurrentClinicId] Query result:', { data, error })
 
@@ -172,24 +259,52 @@ async function getCurrentClinicId(): Promise<string | null> {
       console.error('[getCurrentClinicId] Error details:', error.details)
       console.error('[getCurrentClinicId] Error hint:', error.hint)
 
-      // 인증 관련 에러인 경우 세션 갱신 시도
+      // 인증 관련 에러인 경우 세션 갱신 시도 (1회만)
       if (error.code === 'PGRST301' || error.message?.includes('JWT') || error.message?.includes('session')) {
         console.log('[getCurrentClinicId] Auth error detected in query, attempting to refresh...')
         const refreshed = await handleSessionError(supabase)
         if (refreshed) {
-          // 세션이 갱신되었으면 다시 시도
-          return getCurrentClinicId()
+          // 세션이 갱신되었으면 다시 쿼리 시도 (재귀 아님)
+          console.log('[getCurrentClinicId] Session refreshed, retrying query once...')
+          try {
+            const retryResult = await Promise.race([
+              supabase.from('users').select('clinic_id').eq('id', user.id).single(),
+              new Promise<{ data: null, error: any }>((_, reject) =>
+                setTimeout(() => reject(new Error('Database query timeout (auth error retry)')), 5000)
+              )
+            ])
+            queryResult = retryResult
+          } catch (retryError) {
+            console.error('[getCurrentClinicId] Query retry after auth error failed:', retryError)
+            return null
+          }
+        } else {
+          return null
         }
+      } else {
+        return null
       }
+    }
+
+    // 재시도 후 다시 체크
+    if (!queryResult || queryResult.error) {
+      console.error('[getCurrentClinicId] Still have query error after retry')
       return null
     }
 
-    if (!data) {
+    const { data: finalData, error: finalError } = queryResult
+
+    if (finalError) {
+      console.error('[getCurrentClinicId] Final query check failed:', finalError)
+      return null
+    }
+
+    if (!finalData) {
       console.error('[getCurrentClinicId] No data returned for user:', user.id)
       return null
     }
 
-    const clinicId = (data as any).clinic_id
+    const clinicId = (finalData as any).clinic_id
     if (clinicId) {
       persistClinicId(clinicId)
     }
@@ -226,7 +341,10 @@ export const dataService = {
   // 사용자 ID로 프로필 정보 가져오기 (소속 병원 정보 포함)
   async getUserProfileById(id: string) {
     const supabase = getSupabase()
-    if (!supabase) throw new Error('Supabase client not available')
+    if (!supabase) {
+      console.warn('[dataService] Supabase client not available in getUserProfileById (likely server-side).')
+      return { error: 'Supabase client not available' }
+    }
 
     try {
       // users와 clinics의 관계가 정상적이므로, join 쿼리를 사용합니다.
@@ -1361,7 +1479,8 @@ export const dataService = {
       // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
       const targetClinicId = clinicId || await getCurrentClinicId()
       if (!targetClinicId) {
-        throw new Error('User clinic information not available')
+        console.error('[getProtocolCategories] No clinic ID available - session may have expired')
+        throw new Error('인증 세션이 만료되었거나 사용자 정보를 가져올 수 없습니다. 페이지를 새로고침하거나 다시 로그인해주세요.')
       }
 
       const { data, error } = await supabase
@@ -1493,8 +1612,9 @@ export const dataService = {
       // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
       const targetClinicId = clinicId || await getCurrentClinicId()
       if (!targetClinicId) {
-        console.error('[getProtocols] No clinic ID available')
-        throw new Error('User clinic information not available')
+        console.error('[getProtocols] No clinic ID available - session may have expired')
+        // 세션 만료 가능성이 높으므로 명확한 에러 메시지 반환
+        throw new Error('인증 세션이 만료되었거나 사용자 정보를 가져올 수 없습니다. 페이지를 새로고침하거나 다시 로그인해주세요.')
       }
 
       console.log('[getProtocols] Using clinic ID:', targetClinicId)
@@ -1529,56 +1649,7 @@ export const dataService = {
 
       console.log('[getProtocols] Query successful, protocols count:', protocols?.length || 0)
 
-      // currentVersion 정보와 사용자 정보를 별도로 조회
-      if (protocols && protocols.length > 0) {
-        const protocolsWithVersions = await Promise.all(
-          protocols.map(async (protocol: any) => {
-            // 작성자 정보 조회
-            let createdByUser = null
-            if (protocol.created_by) {
-              const { data: userData } = await supabase
-                .from('users')
-                .select('id, name, email')
-                .eq('id', protocol.created_by)
-                .single()
-              createdByUser = userData
-            }
-
-            // currentVersion 정보 조회
-            if (protocol.current_version_id) {
-              const versionResponse = await (supabase
-                .from('protocol_versions')
-                .select('id, version_number, created_at, created_by')
-                .eq('id', protocol.current_version_id)
-                .single() as unknown as { data: { id: string; version_number: number; created_at: string; created_by: string | null } | null; error: unknown })
-
-              const version = versionResponse.data
-
-              // 버전 작성자 정보 조회
-              let versionCreatedByUser = null
-              if (version?.created_by) {
-                const { data: versionUserData } = await supabase
-                  .from('users')
-                  .select('id, name, email')
-                  .eq('id', version.created_by)
-                  .single()
-                versionCreatedByUser = versionUserData
-              }
-
-              return {
-                ...protocol,
-                created_by_user: createdByUser,
-                currentVersion: version ? { ...version, created_by_user: versionCreatedByUser } : null
-              }
-            }
-            return { ...protocol, created_by_user: createdByUser }
-          })
-        )
-        console.log('[getProtocols] Enriched protocols with versions and users')
-        return { data: protocolsWithVersions }
-      }
-
-      console.log('[getProtocols] No protocols found or protocols is empty')
+      console.log('[getProtocols] Query successful, returning data.')
       return { data: protocols || [] }
     } catch (error: unknown) {
       console.error('[getProtocols] Error fetching protocols:', error)
@@ -2207,5 +2278,206 @@ export const dataService = {
       return
     }
     persistClinicId(clinicId)
+  },
+
+  // ========================================
+  // 지점 관리 함수들
+  // Branch Management Functions
+  // ========================================
+
+  // 지점 목록 조회
+  async getBranches(filter?: { is_active?: boolean }): Promise<{ data?: ClinicBranch[], total_count?: number, error?: string }> {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      let query = supabase
+        .from('clinic_branches')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: true })
+        .order('branch_name', { ascending: true })
+
+      // 활성/비활성 필터 적용
+      if (filter?.is_active !== undefined) {
+        query = query.eq('is_active', filter.is_active)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      return { data: data as ClinicBranch[], total_count: data?.length || 0 }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching branches:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 단일 지점 조회
+  async getBranchById(branchId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('clinic_branches')
+        .select('*')
+        .eq('id', branchId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (error) throw error
+      return { data }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 지점 생성
+  async createBranch(branchData: {
+    branch_name: string
+    branch_code?: string
+    address?: string
+    latitude?: number
+    longitude?: number
+    attendance_radius_meters?: number
+    phone?: string
+    is_active?: boolean
+    display_order?: number
+  }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      const { data, error } = await supabase
+        .from('clinic_branches')
+        .insert([{
+          ...branchData,
+          clinic_id: clinicId,
+          created_by: user.id
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      console.log('[DataService] Branch created successfully:', data.id)
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('[DataService] Error creating branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 지점 수정
+  async updateBranch(branchId: string, updates: {
+    branch_name?: string
+    branch_code?: string
+    address?: string
+    latitude?: number
+    longitude?: number
+    attendance_radius_meters?: number
+    phone?: string
+    is_active?: boolean
+    display_order?: number
+  }) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('clinic_branches')
+        .update(updates)
+        .eq('id', branchId)
+        .eq('clinic_id', clinicId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      console.log('[DataService] Branch updated successfully:', branchId)
+      return { success: true, data }
+    } catch (error: unknown) {
+      console.error('[DataService] Error updating branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 지점 삭제 (soft delete - is_active를 false로 설정)
+  async deleteBranch(branchId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('clinic_branches')
+        .update({ is_active: false })
+        .eq('id', branchId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      console.log('[DataService] Branch deactivated successfully:', branchId)
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('[DataService] Error deleting branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 지점 완전 삭제 (hard delete - owner만 사용)
+  async hardDeleteBranch(branchId: string) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('clinic_branches')
+        .delete()
+        .eq('id', branchId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      console.log('[DataService] Branch permanently deleted:', branchId)
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('[DataService] Error hard deleting branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
   }
 }

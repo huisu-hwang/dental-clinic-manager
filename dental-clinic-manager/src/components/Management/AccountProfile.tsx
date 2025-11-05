@@ -138,7 +138,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
 
     // Validate resident registration number if provided
     if (formData.resident_registration_number) {
-      const validation = validateResidentNumberWithMessage(formData.resident_registration_number)
+      const validation = validateResidentNumberWithMessage(decryptedResidentNumber)
       if (!validation.isValid) {
         setError(validation.error || '주민등록번호 형식이 올바르지 않습니다.')
         return
@@ -149,13 +149,16 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
 
     try {
       // Encrypt resident registration number before saving
-      let encryptedResidentNumber = formData.resident_registration_number
+      let encryptedResidentNumber = decryptedResidentNumber
 
-      if (formData.resident_registration_number && formData.resident_registration_number.trim() !== '') {
+      if (decryptedResidentNumber && decryptedResidentNumber.trim() !== '') {
         try {
-          const encrypted = await encryptResidentNumber(formData.resident_registration_number)
+          const encrypted = await encryptResidentNumber(decryptedResidentNumber)
           if (encrypted) {
             encryptedResidentNumber = encrypted
+          } else {
+            // 암호화 실패 시 원본 저장 (안전장치)
+            encryptedResidentNumber = decryptedResidentNumber
           }
         } catch (encryptError) {
           console.error('Encryption failed:', encryptError)
@@ -163,6 +166,8 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
           setSaving(false)
           return
         }
+      } else {
+        encryptedResidentNumber = '' // Clear the number if input is empty
       }
 
       const result = await dataService.updateUserProfile(currentUser.id, {
