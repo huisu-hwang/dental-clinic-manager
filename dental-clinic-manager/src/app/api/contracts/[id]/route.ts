@@ -11,11 +11,29 @@ const getServiceRoleClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Missing Supabase environment variables')
+  if (!supabaseUrl) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable')
   }
 
-  return createClient(supabaseUrl, supabaseServiceKey, {
+  // Try to use service role key first
+  if (supabaseServiceKey) {
+    console.log('[API] Using service role client')
+    return createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  }
+
+  // Fallback to anon key if service role key is not available
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseAnonKey) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
+  }
+
+  console.warn('[API] Service role key not found, using anon key (RLS will apply)')
+  return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
@@ -25,7 +43,7 @@ const getServiceRoleClient = () => {
 
 /**
  * DELETE /api/contracts/[id]
- * Deletes a cancelled contract (bypasses RLS with service role)
+ * Deletes a cancelled contract (bypasses RLS with service role if available)
  */
 export async function DELETE(
   request: NextRequest,
@@ -33,16 +51,13 @@ export async function DELETE(
 ) {
   try {
     const { id: contractId } = await context.params
-
-    // Get user ID from Authorization header or body
-    const authHeader = request.headers.get('authorization')
     const body = await request.json().catch(() => ({}))
-    const currentUserId = body.currentUserId || authHeader?.split('Bearer ')[1]
+    const currentUserId = body.currentUserId
 
     if (!currentUserId) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: 'User ID is required' },
+        { status: 400 }
       )
     }
 
