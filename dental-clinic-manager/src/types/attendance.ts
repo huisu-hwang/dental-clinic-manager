@@ -91,6 +91,7 @@ export interface QRCodeValidationResult {
   is_valid: boolean;
   error_message?: string;
   clinic_id?: string;
+  branch_id?: string;
   distance_meters?: number;
 }
 
@@ -252,6 +253,7 @@ export interface AttendanceStatisticsSummary {
  */
 export interface AttendanceFilter {
   clinic_id: string;
+  branch_id?: string; // 특정 지점 (없으면 전체)
   user_id?: string; // 특정 사용자 (없으면 전체)
   start_date: string; // YYYY-MM-DD
   end_date: string; // YYYY-MM-DD

@@ -33,19 +33,27 @@ export async function generateDailyQRCode(
   }
 
   try {
-    const { clinic_id, latitude, longitude, radius_meters = 100 } = input
+    const { clinic_id, branch_id, latitude, longitude, radius_meters = 100 } = input
 
     // 오늘 날짜
     const today = new Date().toISOString().split('T')[0]
 
     // 이미 오늘 생성된 QR 코드가 있는지 확인
-    const { data: existingQR, error: checkError } = await supabase
+    let existingQRQuery = supabase
       .from('attendance_qr_codes')
       .select('*')
       .eq('clinic_id', clinic_id)
       .eq('valid_date', today)
       .eq('is_active', true)
-      .single()
+
+    // branch_id 조건 추가 (하위 호환성 유지)
+    if (branch_id) {
+      existingQRQuery = existingQRQuery.eq('branch_id', branch_id)
+    } else {
+      existingQRQuery = existingQRQuery.is('branch_id', null)
+    }
+
+    const { data: existingQR, error: checkError } = await existingQRQuery.single()
 
     if (existingQR) {
       // 이미 존재하면 반환
@@ -60,6 +68,7 @@ export async function generateDailyQRCode(
       .from('attendance_qr_codes')
       .insert({
         clinic_id,
+        branch_id, // 지점 ID 포함
         qr_code: qrCodeValue,
         valid_date: today,
         latitude,
@@ -86,7 +95,8 @@ export async function generateDailyQRCode(
  * QR 코드 조회 함수
  */
 export async function getQRCodeForToday(
-  clinicId: string
+  clinicId: string,
+  branchId?: string
 ): Promise<{ success: boolean; qrCode?: AttendanceQRCode; error?: string }> {
   const supabase = getSupabase()
   if (!supabase) {
@@ -96,13 +106,21 @@ export async function getQRCodeForToday(
   try {
     const today = new Date().toISOString().split('T')[0]
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('attendance_qr_codes')
       .select('*')
       .eq('clinic_id', clinicId)
       .eq('valid_date', today)
       .eq('is_active', true)
-      .single()
+
+    // branch_id 조건 추가 (하위 호환성 유지)
+    if (branchId) {
+      query = query.eq('branch_id', branchId)
+    } else {
+      query = query.is('branch_id', null)
+    }
+
+    const { data, error } = await query.single()
 
     if (error || !data) {
       return { success: false, error: 'QR code not found for today' }
@@ -194,6 +212,7 @@ export async function validateQRCode(
       return {
         is_valid: true,
         clinic_id: qrCode.clinic_id,
+        branch_id: qrCode.branch_id || undefined,
         distance_meters: Math.round(distance),
       }
     }
@@ -202,6 +221,7 @@ export async function validateQRCode(
     return {
       is_valid: true,
       clinic_id: qrCode.clinic_id,
+      branch_id: qrCode.branch_id || undefined,
     }
   } catch (error: any) {
     console.error('[validateQRCode] Error:', error)
@@ -329,6 +349,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
           check_in_device_info: device_info,
           scheduled_start: schedule?.start_time,
           scheduled_end: schedule?.end_time,
+          branch_id: validation.branch_id, // 지점 ID 저장
         })
         .eq('id', existingRecord.id)
         .select()
@@ -351,6 +372,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
         .insert({
           user_id,
           clinic_id: validation.clinic_id,
+          branch_id: validation.branch_id, // 지점 ID 저장
           work_date,
           check_in_time: checkInTime,
           check_in_latitude: latitude,
@@ -482,7 +504,7 @@ export async function getAttendanceRecords(
   }
 
   try {
-    const { clinic_id, user_id, start_date, end_date, status } = filter
+    const { clinic_id, branch_id, user_id, start_date, end_date, status } = filter
 
     let query = supabase
       .from('attendance_records')
@@ -491,6 +513,10 @@ export async function getAttendanceRecords(
       .gte('work_date', start_date)
       .lte('work_date', end_date)
       .order('work_date', { ascending: false })
+
+    if (branch_id) {
+      query = query.eq('branch_id', branch_id)
+    }
 
     if (user_id) {
       query = query.eq('user_id', user_id)
@@ -631,7 +657,8 @@ export async function updateMonthlyStatistics(
  */
 export async function getTeamAttendanceStatus(
   clinicId: string,
-  date: string
+  date: string,
+  branchId?: string
 ): Promise<{ success: boolean; status?: TeamAttendanceStatus; error?: string }> {
   const supabase = getSupabase()
   if (!supabase) {
@@ -639,23 +666,35 @@ export async function getTeamAttendanceStatus(
   }
 
   try {
-    // 클리닉의 모든 직원 조회
-    const { data: users, error: usersError } = await supabase
+    // 클리닉의 모든 직원 조회 (지점별 필터링)
+    let usersQuery = supabase
       .from('users')
       .select('id, name, role')
       .eq('clinic_id', clinicId)
       .eq('status', 'active')
 
+    if (branchId) {
+      usersQuery = usersQuery.eq('primary_branch_id', branchId)
+    }
+
+    const { data: users, error: usersError } = await usersQuery
+
     if (usersError) {
       return { success: false, error: usersError.message }
     }
 
-    // 해당 날짜의 출퇴근 기록 조회
-    const { data: records, error: recordsError } = await supabase
+    // 해당 날짜의 출퇴근 기록 조회 (지점별 필터링)
+    let recordsQuery = supabase
       .from('attendance_records')
       .select('*')
       .eq('clinic_id', clinicId)
       .eq('work_date', date)
+
+    if (branchId) {
+      recordsQuery = recordsQuery.eq('branch_id', branchId)
+    }
+
+    const { data: records, error: recordsError } = await recordsQuery
 
     if (recordsError) {
       return { success: false, error: recordsError.message }
