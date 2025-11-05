@@ -62,6 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('===== AuthContext: checkAuth 시작 =====')
 
       try {
+        // 서버 사이드 렌더링 중에는 실행하지 않음
+        if (typeof window === 'undefined') {
+          console.log('[AuthContext] Skipping auth check on server-side.')
+          return
+        }
+
         // 로그아웃 중이면 세션 체크 스킵
         const loggingOut = localStorage.getItem('dental_logging_out')
         if (isLoggingOut || loggingOut === 'true') {

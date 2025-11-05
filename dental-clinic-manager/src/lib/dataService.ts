@@ -1506,9 +1506,12 @@ export const dataService = {
         .from('protocols')
         .select(`
           *,
-          category:protocol_categories(*)
+          category:protocol_categories(*),
+          created_by_user:users!protocols_created_by_fkey(id, name, email),
+          currentVersion:protocol_versions!inner(id, version_number, created_at, created_by_user:users!protocol_versions_created_by_fkey(id, name, email))
         `)
         .eq('clinic_id', targetClinicId)
+        .eq('currentVersion.id', supabase.raw('protocols.current_version_id'))
         .is('deleted_at', null)
 
       // 필터 적용
@@ -1532,56 +1535,7 @@ export const dataService = {
 
       console.log('[getProtocols] Query successful, protocols count:', protocols?.length || 0)
 
-      // currentVersion 정보와 사용자 정보를 별도로 조회
-      if (protocols && protocols.length > 0) {
-        const protocolsWithVersions = await Promise.all(
-          protocols.map(async (protocol: any) => {
-            // 작성자 정보 조회
-            let createdByUser = null
-            if (protocol.created_by) {
-              const { data: userData } = await supabase
-                .from('users')
-                .select('id, name, email')
-                .eq('id', protocol.created_by)
-                .single()
-              createdByUser = userData
-            }
-
-            // currentVersion 정보 조회
-            if (protocol.current_version_id) {
-              const versionResponse = await (supabase
-                .from('protocol_versions')
-                .select('id, version_number, created_at, created_by')
-                .eq('id', protocol.current_version_id)
-                .single() as unknown as { data: { id: string; version_number: number; created_at: string; created_by: string | null } | null; error: unknown })
-
-              const version = versionResponse.data
-
-              // 버전 작성자 정보 조회
-              let versionCreatedByUser = null
-              if (version?.created_by) {
-                const { data: versionUserData } = await supabase
-                  .from('users')
-                  .select('id, name, email')
-                  .eq('id', version.created_by)
-                  .single()
-                versionCreatedByUser = versionUserData
-              }
-
-              return {
-                ...protocol,
-                created_by_user: createdByUser,
-                currentVersion: version ? { ...version, created_by_user: versionCreatedByUser } : null
-              }
-            }
-            return { ...protocol, created_by_user: createdByUser }
-          })
-        )
-        console.log('[getProtocols] Enriched protocols with versions and users')
-        return { data: protocolsWithVersions }
-      }
-
-      console.log('[getProtocols] No protocols found or protocols is empty')
+      console.log('[getProtocols] Query successful, returning data.')
       return { data: protocols || [] }
     } catch (error: unknown) {
       console.error('[getProtocols] Error fetching protocols:', error)
