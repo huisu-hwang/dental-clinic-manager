@@ -1,4 +1,4 @@
-import StatCard from '@/components/UI/StatCard'
+import StatCard from '@/components/ui/StatCard'
 import type { Stats } from '@/types'
 
 interface StatsContainerProps {

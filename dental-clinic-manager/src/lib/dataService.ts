@@ -1,6 +1,7 @@
 import { getSupabase } from './supabase'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
+import type { ClinicBranch } from '@/types/branch'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
 const CLINIC_CACHE_KEY = 'dental_clinic_id'
@@ -1506,12 +1507,9 @@ export const dataService = {
         .from('protocols')
         .select(`
           *,
-          category:protocol_categories(*),
-          created_by_user:users!protocols_created_by_fkey(id, name, email),
-          currentVersion:protocol_versions!inner(id, version_number, created_at, created_by_user:users!protocol_versions_created_by_fkey(id, name, email))
+          category:protocol_categories(*)
         `)
         .eq('clinic_id', targetClinicId)
-        .eq('currentVersion.id', supabase.raw('protocols.current_version_id'))
         .is('deleted_at', null)
 
       // 필터 적용
@@ -2172,7 +2170,7 @@ export const dataService = {
   // ========================================
 
   // 지점 목록 조회
-  async getBranches(filter?: { is_active?: boolean }) {
+  async getBranches(filter?: { is_active?: boolean }): Promise<{ data?: ClinicBranch[], total_count?: number, error?: string }> {
     const supabase = getSupabase()
     if (!supabase) throw new Error('Supabase client not available')
 
@@ -2197,7 +2195,7 @@ export const dataService = {
       const { data, error } = await query
 
       if (error) throw error
-      return { data, total_count: data?.length || 0 }
+      return { data: data as ClinicBranch[], total_count: data?.length || 0 }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching branches:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }

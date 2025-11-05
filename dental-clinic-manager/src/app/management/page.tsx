@@ -12,7 +12,7 @@ import BranchManagement from '@/components/Management/BranchManagement'
 import ClinicSettings from '@/components/Management/ClinicSettings'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import AccountProfile from '@/components/Management/AccountProfile'
-import Toast from '@/components/UI/Toast'
+import Toast from '@/components/ui/Toast'
 
 export default function ManagementPage() {
   const router = useRouter()

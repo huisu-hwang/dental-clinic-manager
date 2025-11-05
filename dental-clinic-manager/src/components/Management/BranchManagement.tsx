@@ -30,7 +30,7 @@ import { BuildingStorefrontIcon, PencilIcon, TrashIcon, PlusIcon } from '@heroic
 interface BranchManagementProps {
   currentUser: {
     id: string
-    role: string
+    role?: string
   }
 }
 
@@ -56,8 +56,9 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   // 권한 체크
-  const canManage = currentUser.role === 'owner' || currentUser.role === 'manager'
-  const canDelete = currentUser.role === 'owner'
+  const userRole = currentUser.role || ''
+  const canManage = userRole === 'owner' || userRole === 'manager'
+  const canDelete = userRole === 'owner'
 
   // 지점 목록 로드
   const loadBranches = async () => {
