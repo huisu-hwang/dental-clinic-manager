@@ -227,13 +227,20 @@ export async function encryptResidentNumber(residentNumber: string): Promise<str
 export async function decryptResidentNumber(encryptedData: string): Promise<string | null> {
   if (!encryptedData) return null
 
+  // 평문 주민번호 패턴 체크 (XXXXXX-XXXXXXX 또는 XXXXXXXXXXXXX)
+  const plaintextPattern = /^(\d{6}-\d{7}|\d{13})$/
+  if (plaintextPattern.test(encryptedData)) {
+    console.log('[Decryption] Plaintext resident number detected, returning as-is')
+    return encryptedData
+  }
+
+  // 암호화된 데이터 복호화 시도
   try {
     return await decryptData(encryptedData)
   } catch (error) {
-    console.warn('Failed to decrypt resident number, assuming plaintext:', error)
-    // 복호화 실패 시 평문으로 간주하고 원본 반환
-    // 이렇게 하면 평문과 암호화된 값 모두 처리 가능
-    return encryptedData
+    console.warn('Failed to decrypt resident number:', error)
+    // 복호화 실패 시 null 반환 (잘못된 데이터)
+    return null
   }
 }
 
