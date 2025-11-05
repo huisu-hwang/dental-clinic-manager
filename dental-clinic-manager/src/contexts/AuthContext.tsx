@@ -211,17 +211,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 dataService.clearCachedClinicId()
               } else if (event === 'TOKEN_REFRESHED') {
                 console.log('[AuthContext] Token refreshed successfully')
-                // 갱신된 세션으로 사용자 정보 다시 로드
-                if (session?.user && !isLoggingOut) {
-                  const result = await dataService.getUserProfileById(session.user.id)
-                  if (result.success && result.data) {
-                    setUser(result.data)
-                    if (result.data.clinic_id) {
-                      dataService.setCachedClinicId(result.data.clinic_id)
-                    }
-                    console.log('[AuthContext] User profile refreshed after token renewal')
-                  }
-                }
               } else if (event === 'USER_UPDATED') {
                 console.log('[AuthContext] User updated')
               }

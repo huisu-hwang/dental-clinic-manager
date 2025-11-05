@@ -36,17 +36,6 @@ export const useSupabaseData = (clinicId?: string | null) => {
           return
         }
 
-        // Check session before fetching data
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-        if (sessionError || !sessionData.session) {
-          console.warn('[useSupabaseData] Session expired or not available, attempting refresh...')
-          const { session, error: refreshError } = await refreshSessionWithTimeout(supabase)
-          if (refreshError || !session) {
-            console.error('[useSupabaseData] Session refresh failed, redirecting to login...')
-            handleSessionExpired('session_refresh_failed')
-            return
-          }
-        }
 
         const [
           { data: inventoryData, error: inventoryError },
@@ -116,16 +105,23 @@ export const useSupabaseData = (clinicId?: string | null) => {
           return
         }
 
-        // Check session before fetching data
+        // 세션 검증 및 갱신
+        console.log('[useSupabaseData] 세션 확인 중...')
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
         if (sessionError || !sessionData.session) {
-          console.warn('[useSupabaseData] Session expired or not available, attempting refresh...')
-          const { session, error: refreshError } = await refreshSessionWithTimeout(supabase)
-          if (refreshError || !session) {
-            console.error('[useSupabaseData] Session refresh failed, redirecting to login...')
-            handleSessionExpired('session_refresh_failed')
+          console.warn('[useSupabaseData] 세션이 유효하지 않음, 갱신 시도...')
+          const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(supabase, 5000)
+
+          if (refreshError || !refreshedSession) {
+            console.error('[useSupabaseData] 세션 갱신 실패:', refreshError)
+            handleSessionExpired('session_expired')
+            setLoading(false)
             return
           }
+          console.log('[useSupabaseData] 세션 갱신 성공')
+        } else {
+          console.log('[useSupabaseData] 유효한 세션 확인됨')
         }
 
         console.log('[useSupabaseData] 데이터 가져오기 시작...', targetClinicId)
@@ -165,7 +161,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('daily_reports').select('*'),
               targetClinicId
             ).then(result => result)),
-            30000,
+            60000,
             'daily_reports'
           ),
           withTimeout(
@@ -173,7 +169,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('consult_logs').select('*'),
               targetClinicId
             ).then(result => result)),
-            30000,
+            60000,
             'consult_logs'
           ),
           withTimeout(
@@ -181,7 +177,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('gift_logs').select('*'),
               targetClinicId
             ).then(result => result)),
-            30000,
+            60000,
             'gift_logs'
           ),
           withTimeout(
@@ -189,7 +185,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('gift_inventory').select('*'),
               targetClinicId
             ).then(result => result)),
-            30000,
+            60000,
             'gift_inventory'
           ),
           withTimeout(
@@ -197,7 +193,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('inventory_logs').select('*'),
               targetClinicId
             ).then(result => result)),
-            30000,
+            60000,
             'inventory_logs'
           )
         ])
@@ -255,9 +251,17 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         // 타임아웃 경고 메시지
         if (timeoutQueries.length > 0) {
-          const warningMessage = `일부 데이터 로딩이 지연되었습니다 (${timeoutQueries.join(', ')}). 다른 데이터는 정상적으로 표시됩니다.`
-          console.warn('[useSupabaseData]', warningMessage)
-          setError(warningMessage)
+          const errorMessage = `데이터 로딩 중 시간이 초과되었습니다. 네트워크 연결 상태가 좋지 않거나, 장시간 활동이 없었을 경우 발생할 수 있습니다. 페이지를 새로고침해주세요. (${timeoutQueries.join(', ')})`
+          console.error('[useSupabaseData] Query timeout error:', errorMessage)
+          setError(errorMessage)
+          // 타임아웃 발생 시에도 로딩 상태를 확실히 종료
+          setDailyReports([])
+          setConsultLogs([])
+          setGiftLogs([])
+          setGiftInventory([])
+          setInventoryLogs([])
+          setLoading(false)
+          return // 추가 데이터 처리 중단
         }
 
         const results = [
