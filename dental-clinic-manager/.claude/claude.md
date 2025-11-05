@@ -80,9 +80,106 @@ Claude:
 모든 기능 구현은 다음 순서를 **반드시** 따릅니다:
 
 1. **/compact 실행** - 세션 초기화 및 컨텍스트 정리 (새 작업 시작 시)
-2. **Sequential Thinking (ultrathink)** - 문제 분석 및 설계
-3. **계획 수립 (Planning)** - 구현 단계 정의
-4. **TDD (Test-Driven Development)** - 테스트 주도 개발
+2. **🤖 Subagent 자동 선택** - 작업 유형에 맞는 전문 subagent 활용
+3. **Sequential Thinking (ultrathink)** - 문제 분석 및 설계
+4. **계획 수립 (Planning)** - 구현 단계 정의
+5. **TDD (Test-Driven Development)** - 테스트 주도 개발
+
+---
+
+### 🤖 Subagent 자동 활용 원칙
+
+**작업 시작 시 항상 적절한 subagent를 자동으로 선택하여 사용합니다.**
+
+#### 작업 유형별 Subagent 매칭
+
+| 작업 유형 | Subagent | 사용 시점 |
+|----------|----------|-----------|
+| **버그 수정** | `/bug-fix` | 버그 발생, 오류 재현, 긴급 핫픽스 |
+| **새 기능 개발** | `/feature-dev` | 신규 기능 추가, 기존 기능 확장 |
+| **DB 스키마 변경** | `/db-schema` | 테이블 추가/수정, RLS 정책, 인덱스 |
+| **보안 이슈** | `/security-check` | 민감정보 처리, 취약점 검사 |
+| **UI 개선** | `/ui-enhance` | shadcn/ui 적용, 반응형 디자인 |
+| **배포 문제** | `/deploy-fix` | 빌드 실패, 환경변수, Vercel 문제 |
+| **데이터 마이그레이션** | `/data-migration` | 스키마 변경 시 데이터 이전, 암호화 |
+| **성능 최적화** | `/performance` | 로딩 속도, 쿼리 최적화, 번들 크기 |
+| **API 개발** | `/api-design` | 새 엔드포인트, API 구조 설계 |
+| **코드 리뷰** | `/code-review` | PR 리뷰, 리팩토링, 품질 검토 |
+| **테스트 작성** | `/test-automation` | 단위/통합/E2E 테스트 |
+| **문서 작성** | `/documentation` | API 문서, README, 가이드 |
+
+#### Subagent 활용 예시
+
+**예시 1: 버그 수정 작업**
+```
+사용자: "로그인 후 2-3분 지나면 프로토콜 탭이 무한 로딩돼요"
+
+Claude:
+1. /compact (컨텍스트 정리)
+2. /bug-fix (버그 수정 모드 자동 활성화)
+3. Sequential Thinking (문제 분석)
+4. Chrome DevTools로 재현
+5. 원인 특정 및 수정
+6. 테스트 및 검증
+7. Git commit & push
+```
+
+**예시 2: 새 기능 개발**
+```
+사용자: "직원 평가 기능을 추가해줘"
+
+Claude:
+1. /compact
+2. /feature-dev (기능 개발 모드 자동 활성화)
+3. Sequential Thinking (요구사항 분석)
+4. /db-schema (DB 스키마 설계가 필요한 경우)
+5. 계획 수립 (TodoWrite)
+6. TDD로 구현
+7. Git commit & push
+```
+
+**예시 3: UI 개선 + 성능 최적화**
+```
+사용자: "계약서 목록을 shadcn/ui로 바꾸고 성능도 개선해줘"
+
+Claude:
+1. /compact
+2. /ui-enhance (UI 개선 모드)
+3. shadcn/ui Table 적용
+4. /performance (성능 최적화 모드)
+5. 번들 크기 최적화
+6. 테스트
+7. Git commit & push
+```
+
+**예시 4: 복합 작업 (DB + 보안 + 마이그레이션)**
+```
+사용자: "주민번호를 암호화해서 저장해야 해요"
+
+Claude:
+1. /compact
+2. /security-check (보안 검사)
+3. /db-schema (스키마 변경)
+4. /data-migration (기존 데이터 마이그레이션)
+5. 암호화 구현
+6. 마이그레이션 스크립트 작성
+7. 테스트 및 검증
+8. Git commit & push
+```
+
+#### 자동 선택 규칙
+
+1. **단일 작업**: 해당하는 subagent 1개 사용
+2. **복합 작업**: 필요한 subagent를 순차적으로 사용
+3. **명시적 요청**: 사용자가 특정 subagent를 요청하면 그것을 우선 사용
+4. **기본값**: 작업 유형이 불명확한 경우 `/feature-dev` 사용
+
+#### 주의사항
+
+- ✅ **모든 작업은 적절한 subagent를 통해 수행**
+- ✅ **Subagent 사용 내역을 사용자에게 명시적으로 안내**
+- ✅ **여러 subagent가 필요한 경우 순서대로 사용**
+- ❌ **Subagent 없이 직접 작업하지 않음** (간단한 질문 제외)
 
 ---
 
