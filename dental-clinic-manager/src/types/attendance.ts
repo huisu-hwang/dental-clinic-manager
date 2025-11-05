@@ -51,10 +51,11 @@ export interface WeeklySchedule {
 export interface AttendanceQRCode {
   id: string;
   clinic_id: string;
+  branch_id?: string | null; // 지점 ID (선택)
   qr_code: string; // QR 코드 값 (UUID)
   valid_date: string; // YYYY-MM-DD 형식
-  latitude?: number | null; // 병원 위도
-  longitude?: number | null; // 병원 경도
+  latitude?: number | null; // 병원/지점 위도
+  longitude?: number | null; // 병원/지점 경도
   radius_meters: number; // 인증 허용 반경 (미터)
   is_active: boolean;
   created_at: string;
@@ -66,6 +67,7 @@ export interface AttendanceQRCode {
  */
 export interface QRCodeGenerateInput {
   clinic_id: string;
+  branch_id?: string;       // 지점 ID (선택)
   latitude?: number;
   longitude?: number;
   radius_meters?: number;
@@ -100,6 +102,7 @@ export interface AttendanceRecord {
   id: string;
   user_id: string;
   clinic_id: string;
+  branch_id?: string | null; // 지점 ID (선택)
   work_date: string; // YYYY-MM-DD 형식
 
   // 출근 정보
