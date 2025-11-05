@@ -66,19 +66,35 @@ export async function DELETE(
     const supabase = getServiceRoleClient()
 
     // 1. Verify the contract exists and is cancelled
+    console.log('[API] Fetching contract with ID:', contractId)
     const { data: contract, error: fetchError } = await supabase
       .from('employment_contracts')
       .select('id, status, clinic_id')
       .eq('id', contractId)
       .single()
 
-    if (fetchError || !contract) {
-      console.error('[API] Failed to fetch contract:', fetchError?.message)
+    if (fetchError) {
+      console.error('[API] Database error when fetching contract:', {
+        message: fetchError.message,
+        details: fetchError.details,
+        hint: fetchError.hint,
+        code: fetchError.code
+      })
+      return NextResponse.json(
+        { success: false, error: `계약서 조회 실패: ${fetchError.message}` },
+        { status: 500 }
+      )
+    }
+
+    if (!contract) {
+      console.error('[API] Contract not found:', contractId)
       return NextResponse.json(
         { success: false, error: '계약서를 찾을 수 없습니다.' },
         { status: 404 }
       )
     }
+
+    console.log('[API] Contract found:', { id: contract.id, status: contract.status, clinic_id: contract.clinic_id })
 
     // 2. Check if contract is cancelled
     if (contract.status !== 'cancelled') {
@@ -119,15 +135,21 @@ export async function DELETE(
     }
 
     // 4. Delete the contract (permanent delete with service role - bypasses RLS)
+    console.log('[API] Attempting to delete contract:', contractId)
     const { error: deleteError } = await supabase
       .from('employment_contracts')
       .delete()
       .eq('id', contractId)
 
     if (deleteError) {
-      console.error('[API] Failed to delete contract:', deleteError.message)
+      console.error('[API] Database error when deleting contract:', {
+        message: deleteError.message,
+        details: deleteError.details,
+        hint: deleteError.hint,
+        code: deleteError.code
+      })
       return NextResponse.json(
-        { success: false, error: '계약서 삭제에 실패했습니다.' },
+        { success: false, error: `계약서 삭제 실패: ${deleteError.message}` },
         { status: 500 }
       )
     }
