@@ -70,27 +70,21 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
   if (!supabase) return false
 
   try {
-    // 세션 갱신 시도
-    console.log('[handleSessionError] Attempting to refresh session...')
-    const { data, error } = await supabase.auth.refreshSession()
+    // 세션 갱신 시도 (타임아웃 포함)
+    console.log('[handleSessionError] Attempting to refresh session with timeout...')
 
-    if (error) {
+    // refreshSessionWithTimeout() 동적 import
+    const { refreshSessionWithTimeout, handleSessionExpired } = await import('./sessionUtils')
+
+    const { session, error } = await refreshSessionWithTimeout(supabase, 5000)
+
+    if (error || !session) {
       console.error('[handleSessionError] Session refresh failed:', error)
-      // 세션 갱신 실패 - 로그아웃 처리
-      console.log('[handleSessionError] Clearing session and redirecting to login')
-      localStorage.removeItem('dental_auth')
-      localStorage.removeItem('dental_user')
-      const keys = Object.keys(localStorage)
-      keys.forEach(key => {
-        if (key.startsWith('sb-')) {
-          localStorage.removeItem(key)
-        }
-      })
 
-      // 사용자에게 알림 후 로그인 페이지로 이동
+      // 세션 갱신 실패 - 로그아웃 처리
       if (typeof window !== 'undefined') {
-        alert('세션이 만료되었습니다. 다시 로그인해주세요.')
-        window.location.href = '/'
+        console.log('[handleSessionError] Session expired, redirecting to login')
+        handleSessionExpired('session_refresh_failed')
       }
       return false
     }
@@ -99,6 +93,12 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
     return true
   } catch (error) {
     console.error('[handleSessionError] Unexpected error:', error)
+
+    // 예상치 못한 에러 발생 시에도 로그아웃 처리
+    if (typeof window !== 'undefined') {
+      const { handleSessionExpired } = await import('./sessionUtils')
+      handleSessionExpired('session_error')
+    }
     return false
   }
 }
@@ -169,24 +169,43 @@ async function getCurrentClinicId(): Promise<string | null> {
       }
     }
 
-    const { data: { user }, error: authError } = getUserResult
+    let { data: userData, error: authError } = getUserResult
+    let user = userData?.user
 
-    if (authError) {
+    if (authError || !user) {
       console.error('[getCurrentClinicId] Auth error:', authError)
-      // 세션 만료 에러인 경우 갱신 시도
-      if (authError.message?.includes('session') || authError.message?.includes('token') || authError.message?.includes('JWT')) {
+      // 세션 만료 에러인 경우 갱신 시도 (1회만)
+      if (authError?.message?.includes('session') || authError?.message?.includes('token') || authError?.message?.includes('JWT')) {
         console.log('[getCurrentClinicId] Session error detected, attempting to refresh...')
         const refreshed = await handleSessionError(supabase)
         if (refreshed) {
-          // 세션이 갱신되었으면 다시 시도
-          return getCurrentClinicId()
+          // 세션이 갱신되었으면 다시 getUser() 시도 (재귀 아님)
+          console.log('[getCurrentClinicId] Session refreshed, retrying getUser() once...')
+          try {
+            const retryResult = await Promise.race([
+              supabase.auth.getUser(),
+              new Promise<{ data: { user: null }, error: any }>((_, reject) =>
+                setTimeout(() => reject(new Error('User fetch timeout (auth error retry)')), 5000)
+              )
+            ])
+            userData = retryResult.data
+            authError = retryResult.error as any
+            user = userData?.user
+          } catch (retryError) {
+            console.error('[getCurrentClinicId] Auth error retry failed:', retryError)
+            return null
+          }
+        } else {
+          return null
         }
+      } else {
+        return null
       }
-      return null
     }
 
+    // 최종 체크
     if (!user) {
-      console.error('[getCurrentClinicId] No authenticated user')
+      console.error('[getCurrentClinicId] No authenticated user after all checks')
       return null
     }
 
@@ -240,24 +259,52 @@ async function getCurrentClinicId(): Promise<string | null> {
       console.error('[getCurrentClinicId] Error details:', error.details)
       console.error('[getCurrentClinicId] Error hint:', error.hint)
 
-      // 인증 관련 에러인 경우 세션 갱신 시도
+      // 인증 관련 에러인 경우 세션 갱신 시도 (1회만)
       if (error.code === 'PGRST301' || error.message?.includes('JWT') || error.message?.includes('session')) {
         console.log('[getCurrentClinicId] Auth error detected in query, attempting to refresh...')
         const refreshed = await handleSessionError(supabase)
         if (refreshed) {
-          // 세션이 갱신되었으면 다시 시도
-          return getCurrentClinicId()
+          // 세션이 갱신되었으면 다시 쿼리 시도 (재귀 아님)
+          console.log('[getCurrentClinicId] Session refreshed, retrying query once...')
+          try {
+            const retryResult = await Promise.race([
+              supabase.from('users').select('clinic_id').eq('id', user.id).single(),
+              new Promise<{ data: null, error: any }>((_, reject) =>
+                setTimeout(() => reject(new Error('Database query timeout (auth error retry)')), 5000)
+              )
+            ])
+            queryResult = retryResult
+          } catch (retryError) {
+            console.error('[getCurrentClinicId] Query retry after auth error failed:', retryError)
+            return null
+          }
+        } else {
+          return null
         }
+      } else {
+        return null
       }
+    }
+
+    // 재시도 후 다시 체크
+    if (!queryResult || queryResult.error) {
+      console.error('[getCurrentClinicId] Still have query error after retry')
       return null
     }
 
-    if (!data) {
+    const { data: finalData, error: finalError } = queryResult
+
+    if (finalError) {
+      console.error('[getCurrentClinicId] Final query check failed:', finalError)
+      return null
+    }
+
+    if (!finalData) {
       console.error('[getCurrentClinicId] No data returned for user:', user.id)
       return null
     }
 
-    const clinicId = (data as any).clinic_id
+    const clinicId = (finalData as any).clinic_id
     if (clinicId) {
       persistClinicId(clinicId)
     }
