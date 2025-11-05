@@ -2102,7 +2102,7 @@ export const dataService = {
     }
   },
 
-  // 현재 세션 정보 가져오기
+  // 현재 세션 정보 가져오기 (with auto-refresh)
   async getSession() {
     try {
       // 먼저 clinic_id 가져오기 (localStorage 또는 Supabase에서)
@@ -2112,14 +2112,54 @@ export const dataService = {
       const supabase = getSupabase()
       if (supabase) {
         try {
-          const { data: { user }, error: authError } = await supabase.auth.getUser()
+          console.log('[DataService] Checking session...')
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
 
-          if (user && !authError) {
-            return {
-              data: {
-                user,
-                clinicId
+          // Case 1: Session error - try to refresh
+          if (sessionError) {
+            console.error('[DataService] Session check error:', sessionError.message)
+
+            if (sessionError.message?.includes('Refresh Token') || sessionError.message?.includes('Invalid')) {
+              console.log('[DataService] Attempting to refresh session...')
+              const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+
+              if (refreshError || !refreshData.session) {
+                console.error('[DataService] Session refresh failed:', refreshError?.message)
+                return { data: null, error: 'SESSION_EXPIRED' }
               }
+
+              console.log('[DataService] Session refreshed successfully')
+              // Get user with refreshed session
+              const { data: { user }, error: userError } = await supabase.auth.getUser()
+              if (user && !userError) {
+                return { data: { user, clinicId } }
+              }
+            }
+          }
+
+          // Case 2: No session - try to refresh
+          if (!sessionData.session) {
+            console.log('[DataService] No session found, attempting to refresh...')
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+
+            if (refreshError || !refreshData.session) {
+              console.error('[DataService] Session refresh failed:', refreshError?.message)
+              // Fall through to localStorage check
+            } else {
+              console.log('[DataService] Session refreshed successfully')
+              const { data: { user }, error: userError } = await supabase.auth.getUser()
+              if (user && !userError) {
+                return { data: { user, clinicId } }
+              }
+            }
+          }
+
+          // Case 3: Valid session - get user
+          if (sessionData.session) {
+            const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+            if (user && !authError) {
+              return { data: { user, clinicId } }
             }
           }
         } catch (supabaseError) {

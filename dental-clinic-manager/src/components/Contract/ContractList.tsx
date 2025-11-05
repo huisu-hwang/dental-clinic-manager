@@ -42,6 +42,9 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
     employee_user_id: undefined,
     search: undefined
   })
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [contractToDelete, setContractToDelete] = useState<EmploymentContract | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   // Load contracts
   useEffect(() => {
@@ -56,6 +59,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
       try {
         console.log('[ContractList] Loading contracts...')
+        console.log('[ContractList] Current user role:', currentUser?.role)
         const response = await contractService.getContracts(clinicId, filters)
 
         if (!isMounted) {
@@ -64,9 +68,39 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
         }
 
         if (response.error) {
+          // Session expired - redirect to login
+          if (response.error === 'SESSION_EXPIRED' ||
+              response.error.includes('인증 세션이 만료')) {
+            console.error('[ContractList] Session expired, redirecting to login...')
+            alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+
+            // Clear all session data
+            localStorage.removeItem('dental_auth')
+            localStorage.removeItem('dental_user')
+            sessionStorage.removeItem('dental_auth')
+            sessionStorage.removeItem('dental_user')
+
+            // Redirect to home
+            window.location.href = '/'
+            return
+          }
+
           setError(response.error)
         } else {
-          setContracts(response.contracts || [])
+          const contracts = response.contracts || []
+          setContracts(contracts)
+
+          // Log contract statuses
+          console.log('[ContractList] Loaded contracts:', contracts.length)
+          const cancelledContracts = contracts.filter(c => c.status === 'cancelled')
+          console.log('[ContractList] Cancelled contracts:', cancelledContracts.length)
+          if (cancelledContracts.length > 0) {
+            console.log('[ContractList] Sample cancelled contract:', {
+              id: cancelledContracts[0].id,
+              employee: cancelledContracts[0].contract_data.employee_name,
+              status: cancelledContracts[0].status
+            })
+          }
         }
       } catch (err) {
         if (!isMounted) return
@@ -97,6 +131,23 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       const response = await contractService.getContracts(clinicId, filters)
 
       if (response.error) {
+        // Session expired - redirect to login
+        if (response.error === 'SESSION_EXPIRED' ||
+            response.error.includes('인증 세션이 만료')) {
+          console.error('[ContractList] Session expired, redirecting to login...')
+          alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+
+          // Clear all session data
+          localStorage.removeItem('dental_auth')
+          localStorage.removeItem('dental_user')
+          sessionStorage.removeItem('dental_auth')
+          sessionStorage.removeItem('dental_user')
+
+          // Redirect to home
+          window.location.href = '/'
+          return
+        }
+
         setError(response.error)
       } else {
         setContracts(response.contracts || [])
@@ -146,6 +197,43 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
   const handleCreateNew = () => {
     router.push('/dashboard/contracts/new')
+  }
+
+  const handleDeleteClick = (contract: EmploymentContract, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setContractToDelete(contract)
+    setDeleteModalOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!contractToDelete) return
+
+    setDeleting(true)
+
+    try {
+      console.log('[ContractList] Deleting contract:', contractToDelete.id)
+      const response = await contractService.deleteContract(contractToDelete.id, currentUser.id)
+
+      if (response.error) {
+        alert(`삭제 실패: ${response.error}`)
+      } else {
+        alert('계약서가 삭제되었습니다.')
+        // Refresh the list
+        loadContracts()
+      }
+    } catch (err) {
+      console.error('[ContractList] Delete error:', err)
+      alert('계약서 삭제 중 오류가 발생했습니다.')
+    } finally {
+      setDeleting(false)
+      setDeleteModalOpen(false)
+      setContractToDelete(null)
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteModalOpen(false)
+    setContractToDelete(null)
   }
 
   if (loading) {
@@ -315,15 +403,28 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
                     {formatDate(contract.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={e => {
-                        e.stopPropagation()
-                        handleContractClick(contract.id)
-                      }}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      보기
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          handleContractClick(contract.id)
+                        }}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        보기
+                      </button>
+                      {contract.status === 'cancelled' && (currentUser?.role === 'owner' || currentUser?.role === 'manager') && (
+                        <>
+                          <span className="text-gray-300">|</span>
+                          <button
+                            onClick={e => handleDeleteClick(contract, e)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            삭제
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -347,6 +448,60 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
           </div>
         ))}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && contractToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">계약서 삭제 확인</h3>
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">
+                취소된 계약서를 영구적으로 삭제하시겠습니까?
+                <br />
+                <span className="text-red-600 font-semibold">삭제된 데이터는 복구할 수 없습니다.</span>
+              </p>
+              <div className="bg-gray-50 p-4 rounded border border-gray-200">
+                <p className="text-sm text-gray-600 mb-1">
+                  <span className="font-semibold">직원명:</span> {contractToDelete.contract_data.employee_name}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="font-semibold">계약 기간:</span>{' '}
+                  {formatDate(contractToDelete.contract_data.employment_period_start)}
+                  {contractToDelete.contract_data.employment_period_end && (
+                    <> ~ {formatDate(contractToDelete.contract_data.employment_period_end)}</>
+                  )}
+                  {contractToDelete.contract_data.is_permanent && (
+                    <span className="ml-2 text-blue-600">(무기한)</span>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleCancelDelete}
+                disabled={deleting}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    삭제 중...
+                  </>
+                ) : (
+                  '삭제'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
