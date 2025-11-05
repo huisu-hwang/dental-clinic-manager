@@ -5,9 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import dotenv from 'dotenv'
-
-dotenv.config({ path: '.env.local' })
 
 // Create Supabase client with service role key (server-side only)
 const getServiceRoleClient = () => {
