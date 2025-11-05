@@ -1,9 +1,11 @@
 import { getSupabase } from './supabase'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
+import { withTimeout } from './sessionUtils'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
 const CLINIC_CACHE_KEY = 'dental_clinic_id'
+const SESSION_TIMEOUT_MS = 7000
 let cachedClinicId: string | null = null
 // Force recompile
 
@@ -102,6 +104,33 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
   }
 }
 
+async function ensureActiveSession(supabase: ReturnType<typeof getSupabase>): Promise<boolean> {
+  if (!supabase) return false
+
+  try {
+    const { data, error } = await withTimeout(
+      supabase.auth.getSession(),
+      SESSION_TIMEOUT_MS,
+      'supabase.auth.getSession()'
+    )
+
+    if (error) {
+      console.warn('[ensureActiveSession] Session check error detected:', error.message ?? error)
+      return handleSessionError(supabase)
+    }
+
+    if (!data?.session) {
+      console.warn('[ensureActiveSession] No active session found, attempting refresh...')
+      return handleSessionError(supabase)
+    }
+
+    return true
+  } catch (error) {
+    console.error('[ensureActiveSession] Session check failed:', error)
+    return handleSessionError(supabase)
+  }
+}
+
 // 현재 로그인한 사용자의 clinic_id를 가져오는 헬퍼 함수
 async function getCurrentClinicId(): Promise<string | null> {
   try {
@@ -134,7 +163,29 @@ async function getCurrentClinicId(): Promise<string | null> {
       return null
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const sessionActive = await ensureActiveSession(supabase)
+    if (!sessionActive) {
+      console.error('[getCurrentClinicId] Unable to ensure active session')
+      return null
+    }
+
+    let userResult
+    try {
+      userResult = await withTimeout(
+        supabase.auth.getUser(),
+        SESSION_TIMEOUT_MS,
+        'supabase.auth.getUser()'
+      )
+    } catch (error) {
+      console.error('[getCurrentClinicId] Failed to retrieve user within timeout:', error)
+      const refreshed = await handleSessionError(supabase)
+      if (refreshed) {
+        return getCurrentClinicId()
+      }
+      return null
+    }
+
+    const { data: { user }, error: authError } = userResult
 
     if (authError) {
       console.error('[getCurrentClinicId] Auth error:', authError)
@@ -157,11 +208,27 @@ async function getCurrentClinicId(): Promise<string | null> {
 
     console.log('[getCurrentClinicId] Querying users table for user:', user.id)
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('clinic_id')
-      .eq('id', user.id)
-      .single()
+    let clinicResult
+    try {
+      clinicResult = await withTimeout(
+        supabase
+          .from('users')
+          .select('clinic_id')
+          .eq('id', user.id)
+          .single(),
+        SESSION_TIMEOUT_MS,
+        'users.clinic_id query'
+      )
+    } catch (error) {
+      console.error('[getCurrentClinicId] Failed to load clinic information within timeout:', error)
+      const refreshed = await handleSessionError(supabase)
+      if (refreshed) {
+        return getCurrentClinicId()
+      }
+      return null
+    }
+
+    const { data, error } = clinicResult
 
     console.log('[getCurrentClinicId] Query result:', { data, error })
 
@@ -1361,17 +1428,26 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      const sessionActive = await ensureActiveSession(supabase)
+      if (!sessionActive) {
+        return { error: '세션이 만료되었습니다. 다시 로그인해주세요.' }
+      }
+
       // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
       const targetClinicId = clinicId || await getCurrentClinicId()
       if (!targetClinicId) {
         throw new Error('User clinic information not available')
       }
 
-      const { data, error } = await supabase
-        .from('protocol_categories')
-        .select('*')
-        .eq('clinic_id', targetClinicId)
-        .order('display_order')
+      const { data, error } = await withTimeout(
+        supabase
+          .from('protocol_categories')
+          .select('*')
+          .eq('clinic_id', targetClinicId)
+          .order('display_order'),
+        SESSION_TIMEOUT_MS,
+        'protocol_categories query'
+      )
 
       if (error) throw error
       return { data }
@@ -1491,6 +1567,11 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      const sessionActive = await ensureActiveSession(supabase)
+      if (!sessionActive) {
+        return { error: '세션이 만료되었습니다. 다시 로그인해주세요.' }
+      }
+
       console.log('[getProtocols] Starting fetch with clinicId:', clinicId, 'filters:', filters)
 
       // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
@@ -1526,7 +1607,11 @@ export const dataService = {
       }
 
       console.log('[getProtocols] Executing query...')
-      const { data: protocols, error } = await query.order('updated_at', { ascending: false })
+      const { data: protocols, error } = await withTimeout(
+        query.order('updated_at', { ascending: false }),
+        SESSION_TIMEOUT_MS,
+        'protocols query'
+      )
 
       if (error) {
         console.error('[getProtocols] Query error:', error)

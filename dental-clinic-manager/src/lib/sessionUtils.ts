@@ -68,6 +68,32 @@ export async function refreshSessionWithTimeout(
 }
 
 /**
+ * Utility helper to add a timeout to a promise.
+ * Rejects with a descriptive error when the timeout is reached.
+ */
+export async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`[Timeout] ${label} exceeded ${timeoutMs}ms`))
+    }, timeoutMs)
+  })
+
+  try {
+    return await Promise.race([promise, timeoutPromise])
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+  }
+}
+
+/**
  * Clear all session data from storage
  */
 export function clearSessionData(): void {
