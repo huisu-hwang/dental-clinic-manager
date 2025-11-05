@@ -6,7 +6,7 @@
 import { getSupabase } from './supabase'
 import type { Session } from '@supabase/supabase-js'
 import { clinicHoursService } from './clinicHoursService'
-import { refreshSessionWithTimeout } from './sessionUtils'
+import { refreshSessionWithTimeout, withTimeout } from './sessionUtils'
 import type {
   EmploymentContract,
   ContractTemplate,
@@ -40,7 +40,27 @@ class ContractService {
     }
 
     console.log('[contractService] Checking session...')
-    const { data, error } = await this.supabase.auth.getSession()
+    let sessionResult
+    try {
+      sessionResult = await withTimeout(
+        this.supabase.auth.getSession(),
+        7000,
+        'contractService.getSession'
+      )
+    } catch (error) {
+      console.error('[contractService] Session check timed out or failed:', error)
+      const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(this.supabase, 7000)
+
+      if (refreshError || !refreshedSession) {
+        console.error('[contractService] Session refresh after timeout failed:', refreshError)
+        return { session: null, error: refreshError || 'SESSION_EXPIRED' }
+      }
+
+      console.log('[contractService] Session refreshed successfully after timeout')
+      return { session: refreshedSession, error: null }
+    }
+
+    const { data, error } = sessionResult
 
     // Case 1: Session check error (possibly invalid token)
     if (error) {
