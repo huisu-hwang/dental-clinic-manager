@@ -89,6 +89,22 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
       const result = await dataService.getProtocols(currentUser.clinic_id, filters)
       if (result.error) {
         console.error('[ProtocolManagement] Error:', result.error)
+
+        // 세션 만료 에러 감지
+        if (result.error.includes('인증 세션이 만료') || result.error.includes('SESSION_EXPIRED')) {
+          alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+
+          // 세션 데이터 정리
+          localStorage.removeItem('dental_auth')
+          localStorage.removeItem('dental_user')
+          sessionStorage.removeItem('dental_auth')
+          sessionStorage.removeItem('dental_user')
+
+          // 홈으로 리다이렉트
+          window.location.href = '/'
+          return
+        }
+
         setError(result.error)
       } else {
         setProtocols((result.data as Protocol[] | undefined) ?? [])
@@ -96,7 +112,24 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
       }
     } catch (err) {
       console.error('[ProtocolManagement] Exception:', err)
-      setError('프로토콜을 불러오는 중 오류가 발생했습니다.')
+      const errorMessage = err instanceof Error ? err.message : '프로토콜을 불러오는 중 오류가 발생했습니다.'
+
+      // 세션 만료 에러 감지
+      if (errorMessage.includes('인증 세션이 만료')) {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+
+        // 세션 데이터 정리
+        localStorage.removeItem('dental_auth')
+        localStorage.removeItem('dental_user')
+        sessionStorage.removeItem('dental_auth')
+        sessionStorage.removeItem('dental_user')
+
+        // 홈으로 리다이렉트
+        window.location.href = '/'
+        return
+      }
+
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }

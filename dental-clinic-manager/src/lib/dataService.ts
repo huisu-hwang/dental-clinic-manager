@@ -135,7 +135,41 @@ async function getCurrentClinicId(): Promise<string | null> {
       return null
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // getUser() 호출에 타임아웃 추가 (5초)
+    console.log('[getCurrentClinicId] Fetching user with timeout...')
+    const getUserPromise = supabase.auth.getUser()
+    const timeoutPromise = new Promise<{ data: { user: null }, error: any }>((_, reject) =>
+      setTimeout(() => reject(new Error('User fetch timeout after 5 seconds')), 5000)
+    )
+
+    let getUserResult
+    try {
+      getUserResult = await Promise.race([getUserPromise, timeoutPromise])
+    } catch (timeoutError) {
+      console.error('[getCurrentClinicId] getUser() timeout:', timeoutError)
+      // 타임아웃 발생 시 세션 갱신 시도
+      console.log('[getCurrentClinicId] Timeout detected, attempting to refresh session...')
+      const refreshed = await handleSessionError(supabase)
+      if (refreshed) {
+        // 세션이 갱신되었으면 다시 시도 (단, 재귀는 1회만)
+        console.log('[getCurrentClinicId] Session refreshed, retrying once...')
+        try {
+          getUserResult = await Promise.race([
+            supabase.auth.getUser(),
+            new Promise<{ data: { user: null }, error: any }>((_, reject) =>
+              setTimeout(() => reject(new Error('User fetch timeout (retry)')), 5000)
+            )
+          ])
+        } catch (retryError) {
+          console.error('[getCurrentClinicId] Retry also timed out:', retryError)
+          return null
+        }
+      } else {
+        return null
+      }
+    }
+
+    const { data: { user }, error: authError } = getUserResult
 
     if (authError) {
       console.error('[getCurrentClinicId] Auth error:', authError)
@@ -158,11 +192,44 @@ async function getCurrentClinicId(): Promise<string | null> {
 
     console.log('[getCurrentClinicId] Querying users table for user:', user.id)
 
-    const { data, error } = await supabase
+    // users 테이블 조회에 타임아웃 추가 (5초)
+    const queryPromise = supabase
       .from('users')
       .select('clinic_id')
       .eq('id', user.id)
       .single()
+
+    const queryTimeoutPromise = new Promise<{ data: null, error: any }>((_, reject) =>
+      setTimeout(() => reject(new Error('Database query timeout after 5 seconds')), 5000)
+    )
+
+    let queryResult
+    try {
+      queryResult = await Promise.race([queryPromise, queryTimeoutPromise])
+    } catch (timeoutError) {
+      console.error('[getCurrentClinicId] Database query timeout:', timeoutError)
+      // 타임아웃 발생 시 세션 문제일 수 있으므로 갱신 시도
+      console.log('[getCurrentClinicId] Query timeout, attempting to refresh session...')
+      const refreshed = await handleSessionError(supabase)
+      if (refreshed) {
+        console.log('[getCurrentClinicId] Session refreshed, retrying query once...')
+        try {
+          queryResult = await Promise.race([
+            supabase.from('users').select('clinic_id').eq('id', user.id).single(),
+            new Promise<{ data: null, error: any }>((_, reject) =>
+              setTimeout(() => reject(new Error('Database query timeout (retry)')), 5000)
+            )
+          ])
+        } catch (retryError) {
+          console.error('[getCurrentClinicId] Query retry also timed out:', retryError)
+          return null
+        }
+      } else {
+        return null
+      }
+    }
+
+    const { data, error } = queryResult
 
     console.log('[getCurrentClinicId] Query result:', { data, error })
 
@@ -1365,7 +1432,8 @@ export const dataService = {
       // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
       const targetClinicId = clinicId || await getCurrentClinicId()
       if (!targetClinicId) {
-        throw new Error('User clinic information not available')
+        console.error('[getProtocolCategories] No clinic ID available - session may have expired')
+        throw new Error('인증 세션이 만료되었거나 사용자 정보를 가져올 수 없습니다. 페이지를 새로고침하거나 다시 로그인해주세요.')
       }
 
       const { data, error } = await supabase
@@ -1497,8 +1565,9 @@ export const dataService = {
       // clinic_id가 전달되지 않으면 getCurrentClinicId()로 가져오기
       const targetClinicId = clinicId || await getCurrentClinicId()
       if (!targetClinicId) {
-        console.error('[getProtocols] No clinic ID available')
-        throw new Error('User clinic information not available')
+        console.error('[getProtocols] No clinic ID available - session may have expired')
+        // 세션 만료 가능성이 높으므로 명확한 에러 메시지 반환
+        throw new Error('인증 세션이 만료되었거나 사용자 정보를 가져올 수 없습니다. 페이지를 새로고침하거나 다시 로그인해주세요.')
       }
 
       console.log('[getProtocols] Using clinic ID:', targetClinicId)

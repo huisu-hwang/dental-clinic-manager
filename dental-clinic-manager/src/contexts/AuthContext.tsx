@@ -147,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 // 승인 대기 중인 사용자는 pending-approval 페이지로 이동
                 if (result.data.status === 'pending' && window.location.pathname !== '/pending-approval') {
+                  setLoading(false) // 페이지 이동 전 로딩 상태 해제
                   window.location.href = '/pending-approval'
                   return
                 }
