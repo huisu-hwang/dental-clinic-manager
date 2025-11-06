@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "app/**/*.{js,ts,jsx,tsx}": {
+      "maxDuration": 60
+    },
+    "api/**/*.{js,ts,jsx,tsx}": {
+      "maxDuration": 60
+    }
+  },
+  "regions": ["icn1"]
+}

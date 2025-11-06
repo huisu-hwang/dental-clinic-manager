@@ -357,7 +357,7 @@ export const dataService = {
 
       if (!sessionData?.session) {
         console.warn('[DataService] No active session, attempting refresh...')
-        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 5000)
+        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 3000)
 
         if (needsReinitialization) {
           console.log('[DataService] Connection timeout detected, reinitializing Supabase client...')
@@ -592,7 +592,7 @@ export const dataService = {
 
       if (!sessionData?.session) {
         console.warn('[DataService] saveReport - No active session, attempting refresh...')
-        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 5000)
+        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 3000)
 
         if (needsReinitialization) {
           console.log('[DataService] saveReport - Connection timeout detected, reinitializing Supabase client...')
