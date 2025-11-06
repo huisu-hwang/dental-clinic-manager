@@ -1510,7 +1510,7 @@ export const dataService = {
           currentVersion:protocol_versions!inner(id, version_number, created_at, created_by_user:users!protocol_versions_created_by_fkey(id, name, email))
         `)
         .eq('clinic_id', targetClinicId)
-        .eq('currentVersion.id', supabase.raw('protocols.current_version_id'))
+        .eq('currentVersion.id', (supabase as any).raw('protocols.current_version_id'))
         .is('deleted_at', null)
 
       // 필터 적용
