@@ -1,4 +1,5 @@
-import { getSupabase } from './supabase'
+import { getSupabase, reinitializeSupabase } from './supabase'
+import { refreshSessionWithTimeout } from './sessionUtils'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
@@ -329,7 +330,7 @@ export const dataService = {
 
     console.log('[DataService] getReportByDate called with date:', targetDate, 'clinicId:', targetClinicId)
 
-    const supabase = getSupabase()
+    let supabase = getSupabase()
     if (!supabase) {
       console.error('[DataService] Supabase client not available')
       return {
@@ -343,6 +344,68 @@ export const dataService = {
           hasData: false
         }
       }
+    }
+
+    // 세션 체크 및 Connection Timeout 처리
+    try {
+      console.log('[DataService] Checking session status...')
+      let { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError) {
+        console.error('[DataService] Session error:', sessionError)
+      }
+
+      if (!sessionData?.session) {
+        console.warn('[DataService] No active session, attempting refresh...')
+        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 5000)
+
+        if (needsReinitialization) {
+          console.log('[DataService] Connection timeout detected, reinitializing Supabase client...')
+          const reinitializedClient = reinitializeSupabase()
+          if (!reinitializedClient) {
+            console.error('[DataService] Failed to reinitialize Supabase client')
+            return {
+              success: false,
+              error: 'Connection timeout - please try again',
+              data: {
+                dailyReport: null,
+                consultLogs: [],
+                giftLogs: [],
+                happyCallLogs: [],
+                hasData: false
+              }
+            }
+          }
+          console.log('[DataService] Supabase client reinitialized successfully')
+          supabase = reinitializedClient
+
+          // Recheck session after reinitialization
+          const recheckResult = await supabase.auth.getSession()
+          sessionData = recheckResult.data
+          sessionError = recheckResult.error
+
+          if (sessionError || !sessionData.session) {
+            console.error('[DataService] Session invalid even after reinitialization')
+            return {
+              success: false,
+              error: 'Session invalid - please login again',
+              data: {
+                dailyReport: null,
+                consultLogs: [],
+                giftLogs: [],
+                happyCallLogs: [],
+                hasData: false
+              }
+            }
+          }
+          console.log('[DataService] Session verified after reinitialization')
+        }
+      } else {
+        console.log('[DataService] Active session found')
+      }
+    } catch (sessionCheckError: any) {
+      console.error('[DataService] Error during session check:', sessionCheckError)
+      // Continue anyway - might still work
     }
 
     try {
