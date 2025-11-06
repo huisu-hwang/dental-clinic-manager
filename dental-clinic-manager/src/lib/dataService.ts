@@ -41,6 +41,39 @@ const getCachedClinicId = (): string | null => {
   return null
 }
 
+const getPersistedAuthPayload = (): { userData: string; source: 'session' | 'local' } | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const storageCandidates: Array<{ label: 'session' | 'local'; getStorage: () => Storage }> = [
+    {
+      label: 'session',
+      getStorage: () => window.sessionStorage
+    },
+    {
+      label: 'local',
+      getStorage: () => window.localStorage
+    }
+  ]
+
+  for (const candidate of storageCandidates) {
+    try {
+      const storage = candidate.getStorage()
+      const authStatus = storage.getItem('dental_auth')
+      const userData = storage.getItem('dental_user')
+
+      if (authStatus === 'true' && userData) {
+        return { userData, source: candidate.label }
+      }
+    } catch (error) {
+      console.warn(`[DataService] Failed to access ${candidate.label}Storage:`, error)
+    }
+  }
+
+  return null
+}
+
 const saveProtocolSteps = async (
   supabase: ReturnType<typeof getSupabase>,
   protocolId: string,
@@ -2240,12 +2273,12 @@ export const dataService = {
 
       // Supabase 세션이 없으면 localStorage에서 사용자 정보 가져오기
       if (typeof window !== 'undefined') {
-        const authStatus = localStorage.getItem('dental_auth')
-        const userData = localStorage.getItem('dental_user')
+        const persistedAuth = getPersistedAuthPayload()
 
-        if (authStatus === 'true' && userData) {
+        if (persistedAuth?.userData) {
           try {
-            const user = JSON.parse(userData)
+            const user = JSON.parse(persistedAuth.userData)
+            console.log(`[DataService] Restored user from ${persistedAuth.source}Storage`)
             return {
               data: {
                 user,
@@ -2253,7 +2286,7 @@ export const dataService = {
               }
             }
           } catch (parseError) {
-            console.error('[DataService] Failed to parse localStorage user data')
+            console.error('[DataService] Failed to parse stored user data')
           }
         }
       }
