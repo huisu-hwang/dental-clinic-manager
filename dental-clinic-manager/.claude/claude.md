@@ -177,12 +177,32 @@ Claude:
 
 모든 기능 구현은 다음 순서를 **반드시** 따릅니다:
 
+#### 일반 기능 개발:
 1. **/compact 실행** - 세션 초기화 및 컨텍스트 정리 (새 작업 시작 시)
 2. **🤖 Subagent 자동 선택** - 작업 유형에 맞는 전문 subagent 활용
-3. **🔍 근본 원인 분석 (버그 수정 시)** - 5 Whys 기법으로 근본 원인 파악
-4. **Sequential Thinking (ultrathink)** - 문제 분석 및 설계
-5. **계획 수립 (Planning)** - 구현 단계 정의
-6. **TDD (Test-Driven Development)** - 테스트 주도 개발
+3. **Sequential Thinking (ultrathink)** - 문제 분석 및 설계
+4. **계획 수립 (Planning)** - 구현 단계 정의
+5. **TDD (Test-Driven Development)** - 테스트 주도 개발
+
+#### 버그 수정 (추가 단계 필수):
+1. **/compact 실행** - 세션 초기화 및 컨텍스트 정리
+2. **🤖 Subagent 자동 선택** - `/bug-fix` 모드 활성화
+3. **🌐 Chrome DevTools MCP로 오류 재현 및 로그 확인 (필수!)** ← 신규 추가!
+   - localhost 개발 서버 접속
+   - 사용자가 보고한 작업 시나리오 재현
+   - 콘솔 에러 메시지 정확히 확인
+   - 네트워크 요청 실패 원인 파악
+   - 타이밍, connection error 등 측정
+4. **🔍 근본 원인 분석 (5 Whys + 콘솔 로그 기반)** - Chrome DevTools 로그 기반 분석
+5. **Sequential Thinking (ultrathink)** - 해결 방안 설계
+6. **계획 수립 (Planning)** - 구현 단계 정의
+7. **코드 수정** - 근본 원인 제거
+8. **🌐 Chrome DevTools MCP로 수정 검증 (필수!)** ← 신규 추가!
+   - 동일 시나리오 재현
+   - 콘솔 로그 확인 (예상한 로그 출력되는지)
+   - 타이밍 측정 (개선 효과 확인)
+   - 최종 정상 작동 확인
+9. **TDD (Test-Driven Development)** - 재발 방지 테스트 작성
 
 ---
 
@@ -216,11 +236,20 @@ Claude:
 Claude:
 1. /compact (컨텍스트 정리)
 2. /bug-fix (버그 수정 모드 자동 활성화)
-3. Sequential Thinking (문제 분석)
-4. Chrome DevTools로 재현
-5. 원인 특정 및 수정
-6. 테스트 및 검증
-7. Git commit & push
+3. 🌐 Chrome DevTools MCP로 오류 재현 (필수!)
+   - 개발 서버 접속 및 로그인
+   - 프로토콜 탭 클릭 시나리오 재현
+   - 콘솔 에러 메시지 확인
+   - 네트워크 요청 타임아웃 측정
+4. 🔍 근본 원인 분석 (5 Whys + 콘솔 로그 기반)
+   - Sequential Thinking으로 심층 분석
+5. 계획 수립 (TodoWrite)
+6. 코드 수정 (로그 기반 원인에 대한 수정)
+7. 🌐 Chrome DevTools MCP로 수정 검증 (필수!)
+   - 동일 시나리오 재현
+   - 콘솔 로그 확인 (에러 없어야 함)
+   - 타이밍 측정 (3분 이상 대기 후에도 정상 동작)
+8. Git commit & push
 ```
 
 **예시 2: 새 기능 개발**
@@ -725,6 +754,13 @@ const handleSubmit = async () => {
    - 사용자가 요청하지 않아도 자동으로 수행
    - 백업 및 협업을 위한 필수 작업
 
+8. **🌐 버그 수정 시 Chrome DevTools MCP 생략 (절대 금지)**
+   - "추측으로 고쳐보지" ❌
+   - 반드시 Chrome DevTools MCP로 콘솔 로그 확인 후 수정 ✅
+   - 오류 재현 단계 필수 (수정 전)
+   - 수정 검증 단계 필수 (수정 후)
+   - 로그 없이 코드 수정하면 재발 위험 높음
+
 ---
 
 ## 작업 문서화 가이드
@@ -1131,6 +1167,174 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 4. 다시 Chrome DevTools로 테스트
 5. 문제 해결 확인
 ```
+
+### 6. Chrome DevTools MCP 활용 (버그 수정 필수)
+
+**버그 수정 시 Chrome DevTools MCP 사용은 필수입니다.**
+
+#### 🎯 사용 시점
+
+**1. 오류 재현 및 분석 (필수)**
+- 사용자가 보고한 오류를 직접 재현
+- 콘솔 에러 메시지 정확히 확인
+- 네트워크 요청 실패 원인 파악
+- 타임아웃, connection error 등 정확한 시간 측정
+
+**2. 수정 후 검증 (필수)**
+- 코드 수정 후 실제로 문제가 해결되었는지 확인
+- 콘솔에 예상한 로그가 출력되는지 확인
+- 성능 개선 효과 측정 (타임아웃 시간 등)
+
+#### 🛠️ 주요 도구
+
+```typescript
+// 페이지 이동
+mcp__chrome-devtools__navigate_page({ url: 'http://localhost:3000/dashboard' })
+
+// 페이지 스냅샷 (UI 상태 확인)
+mcp__chrome-devtools__take_snapshot()
+
+// 콘솔 메시지 조회 (에러만)
+mcp__chrome-devtools__list_console_messages({ types: ['error'] })
+
+// 특정 콘솔 메시지 상세
+mcp__chrome-devtools__get_console_message({ msgid: 123 })
+
+// 네트워크 요청 목록
+mcp__chrome-devtools__list_network_requests()
+
+// 특정 네트워크 요청 상세
+mcp__chrome-devtools__get_network_request({ reqid: 456 })
+
+// 버튼 클릭
+mcp__chrome-devtools__click({ uid: 'save-button' })
+
+// 입력 필드 채우기
+mcp__chrome-devtools__fill({ uid: 'email-input', value: 'test@example.com' })
+
+// 특정 텍스트가 나타날 때까지 대기
+mcp__chrome-devtools__wait_for({ text: '저장 완료', timeout: 5000 })
+```
+
+#### 📝 버그 수정 워크플로우
+
+**Step 1: 오류 재현 및 로그 확인**
+
+```typescript
+// 1. 개발 서버 확인 (localhost:3000)
+// 2. 페이지 이동
+await mcp__chrome-devtools__navigate_page({
+  url: 'http://localhost:3000/dashboard'
+})
+
+// 3. 로그인 (필요 시)
+await mcp__chrome-devtools__fill({
+  uid: 'email-input',
+  value: 'test@example.com'
+})
+await mcp__chrome-devtools__click({ uid: 'login-button' })
+
+// 4. 사용자가 보고한 시나리오 재현
+// 예: 4분 대기 (connection timeout)
+await new Promise(resolve => setTimeout(resolve, 240000))
+
+// 5. 문제 행동 유발
+await mcp__chrome-devtools__click({ uid: 'save-button' })
+
+// 6. 콘솔 에러 확인
+const errors = await mcp__chrome-devtools__list_console_messages({
+  types: ['error']
+})
+// 결과: "저장 요청 시간이 초과되었습니다" 확인
+
+// 7. 네트워크 요청 확인
+const requests = await mcp__chrome-devtools__list_network_requests()
+// 결과: 30초 타임아웃 확인
+
+// 8. 정확한 타이밍 및 에러 메시지 기록
+```
+
+**Step 2: 근본 원인 분석 (5 Whys + 로그 기반)**
+
+Chrome DevTools에서 수집한 정보 기반으로:
+- **Why 1:** 왜 이 에러가 발생하는가? → 콘솔 에러 메시지 분석
+- **Why 2:** 왜 이 요청이 실패하는가? → 네트워크 요청 상태 코드 확인
+- **Why 3:** 왜 이 타이밍에 발생하는가? → 타임아웃 시간 측정 (정확히 30초)
+- **Why 4:** 왜 재시도가 안 되는가? → 콘솔 로그 순서 분석
+- **Why 5:** 근본 원인은? → 코드 + 로그 조합으로 파악
+
+**Step 3: 코드 수정**
+
+근본 원인에 기반한 수정 진행
+
+**Step 4: 수정 검증 (Chrome DevTools MCP로)**
+
+```typescript
+// 1. 코드 수정 후 개발 서버 재시작 확인
+
+// 2. 동일한 시나리오 재현
+await mcp__chrome-devtools__navigate_page({
+  url: 'http://localhost:3000/dashboard'
+})
+
+// 3. 4분 대기 후 저장
+await new Promise(resolve => setTimeout(resolve, 240000))
+await mcp__chrome-devtools__click({ uid: 'save-button' })
+
+// 4. 콘솔 로그 확인 (예상한 로그가 나오는지)
+const messages = await mcp__chrome-devtools__list_console_messages()
+// 예상: "[handleSessionError] Connection timeout detected"
+// 예상: "[handleSessionError] Client reinitialized successfully"
+
+// 5. 에러가 없는지 확인
+const errors = await mcp__chrome-devtools__list_console_messages({
+  types: ['error']
+})
+// 예상: 30초 타임아웃 에러 없음 ✅
+
+// 6. 성공 메시지 확인
+const snapshot = await mcp__chrome-devtools__take_snapshot()
+// "저장되었습니다" 등의 성공 메시지 확인
+
+// 7. 타이밍 측정
+// 30초 → 6~9초로 개선되었는지 확인
+```
+
+#### ⚠️ 주의사항
+
+**필수:**
+- ✅ 버그 수정 시 **반드시** Chrome DevTools MCP로 재현 및 검증
+- ✅ 콘솔 로그, 네트워크 요청을 **정확히** 기록
+- ✅ 수정 전/후 비교 (타이밍, 에러 발생 여부)
+- ✅ WORK_LOG.md에 Chrome DevTools 검증 결과 기록
+
+**금지:**
+- ❌ Chrome DevTools 없이 추측만으로 수정
+- ❌ 콘솔 로그 확인 없이 "아마 이것 때문일 거야" 식 접근
+- ❌ 수정 후 검증 없이 커밋
+- ❌ "로컬에서는 잘 되는데..." 식 변명
+
+#### 💡 FAQ
+
+**Q: 간단한 버그도 Chrome DevTools 필요?**
+A: 예. 간단해 보여도 실제 로그를 확인하면 예상과 다른 경우가 많습니다. 추측은 금물입니다.
+
+**Q: 로컬 서버가 없으면?**
+A: 개발 서버를 먼저 실행하거나, 프로덕션 환경에서 확인하세요. 버그 수정에는 실제 환경 확인이 필수입니다.
+
+**Q: Chrome DevTools MCP가 느리면?**
+A: 초기 설정은 시간이 걸리지만, 정확한 디버깅으로 장기적으로 시간 절약됩니다. 추측으로 여러 번 시도하는 것보다 빠릅니다.
+
+**Q: 사용자 환경을 재현할 수 없으면?**
+A: 최대한 비슷한 환경을 만들어 재현하세요. 브라우저 종류, 네트워크 속도 등을 고려합니다.
+
+#### 📊 효과
+
+- ✅ **정확한 오류 분석**: 추측이 아닌 실제 로그 기반
+- ✅ **근본 원인 파악 향상**: 콘솔 + 네트워크 정보로 5 Whys 정확도 증가
+- ✅ **수정 검증 자동화**: 수정 후 즉시 Chrome DevTools로 확인
+- ✅ **재발 방지**: 정확한 로그 기반 수정으로 임시 방편 방지
+- ✅ **작업 시간 단축**: 추측으로 여러 번 시도하는 대신 한 번에 정확히
 
 ---
 
