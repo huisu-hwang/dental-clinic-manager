@@ -568,7 +568,7 @@ export const dataService = {
     recallBookingCount: number
     specialNotes: string
   }) {
-    const supabase = getSupabase()
+    let supabase = getSupabase()
     if (!supabase) throw new Error('Supabase client not available')
 
     const {
@@ -580,6 +580,48 @@ export const dataService = {
       recallBookingCount,
       specialNotes
     } = data
+
+    // 세션 체크 및 Connection Timeout 처리
+    try {
+      console.log('[DataService] saveReport - Checking session status...')
+      let { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError) {
+        console.error('[DataService] saveReport - Session error:', sessionError)
+      }
+
+      if (!sessionData?.session) {
+        console.warn('[DataService] saveReport - No active session, attempting refresh...')
+        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 5000)
+
+        if (needsReinitialization) {
+          console.log('[DataService] saveReport - Connection timeout detected, reinitializing Supabase client...')
+          const reinitializedClient = reinitializeSupabase()
+          if (!reinitializedClient) {
+            console.error('[DataService] saveReport - Failed to reinitialize Supabase client')
+            throw new Error('Connection timeout - please try again')
+          }
+          console.log('[DataService] saveReport - Supabase client reinitialized successfully')
+          supabase = reinitializedClient
+
+          // Recheck session after reinitialization
+          const recheckResult = await supabase.auth.getSession()
+          sessionData = recheckResult.data
+          sessionError = recheckResult.error
+
+          if (sessionError || !sessionData.session) {
+            console.error('[DataService] saveReport - Session invalid even after reinitialization')
+            throw new Error('Session invalid - please login again')
+          }
+          console.log('[DataService] saveReport - Session verified after reinitialization')
+        }
+      } else {
+        console.log('[DataService] saveReport - Active session found')
+      }
+    } catch (sessionCheckError: any) {
+      console.error('[DataService] saveReport - Error during session check:', sessionCheckError)
+      throw sessionCheckError
+    }
 
     try {
       const clinicId = await getCurrentClinicId()
