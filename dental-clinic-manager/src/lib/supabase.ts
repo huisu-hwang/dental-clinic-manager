@@ -92,7 +92,6 @@ export const getSupabase = () => {
           detectSessionInUrl: true,
           storage: customStorage as any,
           storageKey: 'sb-beahjntkmkfhpcbhfnrr-auth-token',
-          // Set session timeout to 4 hours (14400 seconds)
           flowType: 'pkce',
         }
       })

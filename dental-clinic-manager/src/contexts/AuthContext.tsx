@@ -389,17 +389,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, showInactivityMessage ? 2000 : 100)
   }
 
-  // Auto logout after 4 hours of inactivity
+  // Auto logout after 4 hours of inactivity (only if rememberMe is false)
   const handleInactivity = () => {
     console.log('[AuthContext] User inactive for 4 hours, logging out...')
     logout(true)
   }
 
-  // Track user activity (only when user is logged in)
+  // Track user activity (only when user is logged in and rememberMe is false)
+  // If rememberMe is true, user stays logged in until manual logout
+  const rememberMe = getRememberMe()
   useActivityTracker({
     onInactive: handleInactivity,
     inactivityTimeout: 4 * 60 * 60 * 1000, // 4 hours in milliseconds
-    enabled: !!user && !loading && !isLoggingOut
+    enabled: !!user && !loading && !isLoggingOut && !rememberMe // rememberMe가 false일 때만 자동 로그아웃 활성화
   })
 
   const isAuthenticated = Boolean(user)

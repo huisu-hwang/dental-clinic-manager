@@ -6,19 +6,52 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
+ * Result type for session refresh operations
+ */
+export interface RefreshSessionResult {
+  session: any | null
+  error: string | null
+  needsReinitialization?: boolean
+}
+
+/**
+ * Check if an error is a connection timeout error
+ *
+ * @param error - Error object to check
+ * @returns True if the error indicates a connection timeout
+ */
+export function isConnectionError(error: any): boolean {
+  if (!error) return false
+
+  const errorMessage = error.message?.toLowerCase() || ''
+  const errorCode = error.code?.toUpperCase() || ''
+
+  // Connection timeout patterns
+  return (
+    errorCode === 'ECONNRESET' ||
+    errorCode === 'ETIMEDOUT' ||
+    errorCode === 'ENOTFOUND' ||
+    errorCode === 'ECONNREFUSED' ||
+    (errorMessage.includes('connection') && errorMessage.includes('timeout')) ||
+    errorMessage.includes('connection terminated') ||
+    errorMessage.includes('failed to fetch') ||
+    errorMessage.includes('network error') ||
+    errorMessage.includes('connection refused') ||
+    errorMessage.includes('connection reset')
+  )
+}
+
+/**
  * Refresh Supabase session with timeout
  *
  * @param supabase - Supabase client instance
  * @param timeoutMs - Timeout in milliseconds (default: 5000ms)
- * @returns Session data and error
+ * @returns Session data, error, and reinitialization flag
  */
 export async function refreshSessionWithTimeout(
   supabase: SupabaseClient,
   timeoutMs: number = 5000
-): Promise<{
-  session: any | null
-  error: string | null
-}> {
+): Promise<RefreshSessionResult> {
   try {
     console.log('[sessionUtils] Attempting to refresh session...')
 
@@ -53,7 +86,17 @@ export async function refreshSessionWithTimeout(
   } catch (error) {
     console.error('[sessionUtils] Session refresh failed:', error)
 
-    // Clear all session data
+    // Check for connection timeout
+    if (isConnectionError(error)) {
+      console.warn('[sessionUtils] Connection timeout detected, client reinitialization needed')
+      return {
+        session: null,
+        error: 'CONNECTION_TIMEOUT',
+        needsReinitialization: true
+      }
+    }
+
+    // Clear all session data for session-related errors
     console.log('[sessionUtils] Clearing session data...')
     clearSessionData()
 

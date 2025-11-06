@@ -1,7 +1,9 @@
-import { getSupabase } from './supabase'
+import { getSupabase, reinitializeSupabase } from './supabase'
+import { refreshSessionWithTimeout } from './sessionUtils'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
+import type { PostgrestError } from '@supabase/supabase-js'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
 const CLINIC_CACHE_KEY = 'dental_clinic_id'
@@ -66,8 +68,9 @@ const saveProtocolSteps = async (
 }
 
 // 세션 만료 확인 및 처리 함수
-async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Promise<boolean> {
-  if (!supabase) return false
+// Connection timeout 감지 시 Supabase client를 재초기화하고 반환
+async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Promise<any> {
+  if (!supabase) return null
 
   try {
     // 세션 갱신 시도 (타임아웃 포함)
@@ -76,7 +79,28 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
     // refreshSessionWithTimeout() 동적 import
     const { refreshSessionWithTimeout, handleSessionExpired } = await import('./sessionUtils')
 
-    const { session, error } = await refreshSessionWithTimeout(supabase, 5000)
+    const { session, error, needsReinitialization } = await refreshSessionWithTimeout(supabase, 5000)
+
+    // Connection timeout 감지 시 즉시 재초기화
+    if (needsReinitialization) {
+      console.log('[handleSessionError] Connection timeout detected, reinitializing Supabase client...')
+
+      try {
+        const { reinitializeSupabase } = await import('./supabase')
+        const reinitializedClient = await reinitializeSupabase()
+
+        if (reinitializedClient) {
+          console.log('[handleSessionError] Supabase client reinitialized successfully')
+          return reinitializedClient
+        } else {
+          console.error('[handleSessionError] Failed to reinitialize Supabase client')
+          return null
+        }
+      } catch (reinitError) {
+        console.error('[handleSessionError] Error during reinitialization:', reinitError)
+        return null
+      }
+    }
 
     if (error || !session) {
       console.error('[handleSessionError] Session refresh failed:', error)
@@ -86,11 +110,11 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
         console.log('[handleSessionError] Session expired, redirecting to login')
         handleSessionExpired('session_refresh_failed')
       }
-      return false
+      return null
     }
 
     console.log('[handleSessionError] Session refreshed successfully')
-    return true
+    return supabase // 기존 client 반환
   } catch (error) {
     console.error('[handleSessionError] Unexpected error:', error)
 
@@ -99,7 +123,7 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
       const { handleSessionExpired } = await import('./sessionUtils')
       handleSessionExpired('session_error')
     }
-    return false
+    return null
   }
 }
 
@@ -135,11 +159,12 @@ async function getCurrentClinicId(): Promise<string | null> {
       return null
     }
 
-    // getUser() 호출에 타임아웃 추가 (5초)
+    // getUser() 호출에 타임아웃 추가 (3초로 단축)
     console.log('[getCurrentClinicId] Fetching user with timeout...')
-    const getUserPromise = supabase.auth.getUser()
+    let currentSupabase = supabase
+    const getUserPromise = currentSupabase.auth.getUser()
     const timeoutPromise = new Promise<{ data: { user: null }, error: any }>((_, reject) =>
-      setTimeout(() => reject(new Error('User fetch timeout after 5 seconds')), 5000)
+      setTimeout(() => reject(new Error('User fetch timeout after 3 seconds')), 3000)
     )
 
     let getUserResult
@@ -148,16 +173,17 @@ async function getCurrentClinicId(): Promise<string | null> {
     } catch (timeoutError) {
       console.error('[getCurrentClinicId] getUser() timeout:', timeoutError)
       // 타임아웃 발생 시 세션 갱신 시도
-      console.log('[getCurrentClinicId] Timeout detected, attempting to refresh session...')
-      const refreshed = await handleSessionError(supabase)
-      if (refreshed) {
-        // 세션이 갱신되었으면 다시 시도 (단, 재귀는 1회만)
-        console.log('[getCurrentClinicId] Session refreshed, retrying once...')
+      console.log('[getCurrentClinicId] Timeout detected, attempting to handle session error...')
+      const refreshedClient = await handleSessionError(currentSupabase)
+      if (refreshedClient) {
+        // Client가 재초기화되었으면 다시 시도 (1회만)
+        console.log('[getCurrentClinicId] Client refreshed/reinitialized, retrying once...')
+        currentSupabase = refreshedClient // 재초기화된 client 사용
         try {
           getUserResult = await Promise.race([
-            supabase.auth.getUser(),
+            currentSupabase.auth.getUser(),
             new Promise<{ data: { user: null }, error: any }>((_, reject) =>
-              setTimeout(() => reject(new Error('User fetch timeout (retry)')), 5000)
+              setTimeout(() => reject(new Error('User fetch timeout (retry)')), 3000)
             )
           ])
         } catch (retryError) {
@@ -169,57 +195,28 @@ async function getCurrentClinicId(): Promise<string | null> {
       }
     }
 
-    let { data: userData, error: authError } = getUserResult
-    let user = userData?.user
+    const { data: userData, error: authError } = getUserResult
+    const user = userData?.user
 
     if (authError || !user) {
-      console.error('[getCurrentClinicId] Auth error:', authError)
-      // 세션 만료 에러인 경우 갱신 시도 (1회만)
-      if (authError?.message?.includes('session') || authError?.message?.includes('token') || authError?.message?.includes('JWT')) {
-        console.log('[getCurrentClinicId] Session error detected, attempting to refresh...')
-        const refreshed = await handleSessionError(supabase)
-        if (refreshed) {
-          // 세션이 갱신되었으면 다시 getUser() 시도 (재귀 아님)
-          console.log('[getCurrentClinicId] Session refreshed, retrying getUser() once...')
-          try {
-            const retryResult = await Promise.race([
-              supabase.auth.getUser(),
-              new Promise<{ data: { user: null }, error: any }>((_, reject) =>
-                setTimeout(() => reject(new Error('User fetch timeout (auth error retry)')), 5000)
-              )
-            ])
-            userData = retryResult.data
-            authError = retryResult.error as any
-            user = userData?.user
-          } catch (retryError) {
-            console.error('[getCurrentClinicId] Auth error retry failed:', retryError)
-            return null
-          }
-        } else {
-          return null
-        }
-      } else {
-        return null
-      }
-    }
-
-    // 최종 체크
-    if (!user) {
-      console.error('[getCurrentClinicId] No authenticated user after all checks')
+      console.error('[getCurrentClinicId] Auth error or no user:', authError)
+      // 이미 위에서 handleSessionError를 통해 재시도했으므로 더 이상 재시도하지 않음
       return null
     }
 
+    console.log('[getCurrentClinicId] User authenticated:', user.id)
+
     console.log('[getCurrentClinicId] Querying users table for user:', user.id)
 
-    // users 테이블 조회에 타임아웃 추가 (5초)
-    const queryPromise = supabase
+    // users 테이블 조회에 타임아웃 추가 (3초로 단축)
+    const queryPromise = currentSupabase
       .from('users')
       .select('clinic_id')
       .eq('id', user.id)
       .single()
 
     const queryTimeoutPromise = new Promise<{ data: null, error: any }>((_, reject) =>
-      setTimeout(() => reject(new Error('Database query timeout after 5 seconds')), 5000)
+      setTimeout(() => reject(new Error('Database query timeout after 3 seconds')), 3000)
     )
 
     let queryResult
@@ -227,25 +224,8 @@ async function getCurrentClinicId(): Promise<string | null> {
       queryResult = await Promise.race([queryPromise, queryTimeoutPromise])
     } catch (timeoutError) {
       console.error('[getCurrentClinicId] Database query timeout:', timeoutError)
-      // 타임아웃 발생 시 세션 문제일 수 있으므로 갱신 시도
-      console.log('[getCurrentClinicId] Query timeout, attempting to refresh session...')
-      const refreshed = await handleSessionError(supabase)
-      if (refreshed) {
-        console.log('[getCurrentClinicId] Session refreshed, retrying query once...')
-        try {
-          queryResult = await Promise.race([
-            supabase.from('users').select('clinic_id').eq('id', user.id).single(),
-            new Promise<{ data: null, error: any }>((_, reject) =>
-              setTimeout(() => reject(new Error('Database query timeout (retry)')), 5000)
-            )
-          ])
-        } catch (retryError) {
-          console.error('[getCurrentClinicId] Query retry also timed out:', retryError)
-          return null
-        }
-      } else {
-        return null
-      }
+      // 타임아웃 발생 - 더 이상 재시도하지 않음 (이미 위에서 client 재초기화 시도함)
+      return null
     }
 
     const { data, error } = queryResult
@@ -256,55 +236,16 @@ async function getCurrentClinicId(): Promise<string | null> {
       console.error('[getCurrentClinicId] Query error:', error)
       console.error('[getCurrentClinicId] Error code:', error.code)
       console.error('[getCurrentClinicId] Error message:', error.message)
-      console.error('[getCurrentClinicId] Error details:', error.details)
-      console.error('[getCurrentClinicId] Error hint:', error.hint)
-
-      // 인증 관련 에러인 경우 세션 갱신 시도 (1회만)
-      if (error.code === 'PGRST301' || error.message?.includes('JWT') || error.message?.includes('session')) {
-        console.log('[getCurrentClinicId] Auth error detected in query, attempting to refresh...')
-        const refreshed = await handleSessionError(supabase)
-        if (refreshed) {
-          // 세션이 갱신되었으면 다시 쿼리 시도 (재귀 아님)
-          console.log('[getCurrentClinicId] Session refreshed, retrying query once...')
-          try {
-            const retryResult = await Promise.race([
-              supabase.from('users').select('clinic_id').eq('id', user.id).single(),
-              new Promise<{ data: null, error: any }>((_, reject) =>
-                setTimeout(() => reject(new Error('Database query timeout (auth error retry)')), 5000)
-              )
-            ])
-            queryResult = retryResult
-          } catch (retryError) {
-            console.error('[getCurrentClinicId] Query retry after auth error failed:', retryError)
-            return null
-          }
-        } else {
-          return null
-        }
-      } else {
-        return null
-      }
-    }
-
-    // 재시도 후 다시 체크
-    if (!queryResult || queryResult.error) {
-      console.error('[getCurrentClinicId] Still have query error after retry')
+      // 이미 위에서 client 재초기화 시도했으므로 더 이상 재시도하지 않음
       return null
     }
 
-    const { data: finalData, error: finalError } = queryResult
-
-    if (finalError) {
-      console.error('[getCurrentClinicId] Final query check failed:', finalError)
-      return null
-    }
-
-    if (!finalData) {
+    if (!data) {
       console.error('[getCurrentClinicId] No data returned for user:', user.id)
       return null
     }
 
-    const clinicId = (finalData as any).clinic_id
+    const clinicId = (data as any).clinic_id
     if (clinicId) {
       persistClinicId(clinicId)
     }
@@ -389,7 +330,7 @@ export const dataService = {
 
     console.log('[DataService] getReportByDate called with date:', targetDate, 'clinicId:', targetClinicId)
 
-    const supabase = getSupabase()
+    let supabase = getSupabase()
     if (!supabase) {
       console.error('[DataService] Supabase client not available')
       return {
@@ -403,6 +344,68 @@ export const dataService = {
           hasData: false
         }
       }
+    }
+
+    // 세션 체크 및 Connection Timeout 처리
+    try {
+      console.log('[DataService] Checking session status...')
+      let { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError) {
+        console.error('[DataService] Session error:', sessionError)
+      }
+
+      if (!sessionData?.session) {
+        console.warn('[DataService] No active session, attempting refresh...')
+        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 5000)
+
+        if (needsReinitialization) {
+          console.log('[DataService] Connection timeout detected, reinitializing Supabase client...')
+          const reinitializedClient = reinitializeSupabase()
+          if (!reinitializedClient) {
+            console.error('[DataService] Failed to reinitialize Supabase client')
+            return {
+              success: false,
+              error: 'Connection timeout - please try again',
+              data: {
+                dailyReport: null,
+                consultLogs: [],
+                giftLogs: [],
+                happyCallLogs: [],
+                hasData: false
+              }
+            }
+          }
+          console.log('[DataService] Supabase client reinitialized successfully')
+          supabase = reinitializedClient
+
+          // Recheck session after reinitialization
+          const recheckResult = await supabase.auth.getSession()
+          sessionData = recheckResult.data
+          sessionError = recheckResult.error
+
+          if (sessionError || !sessionData.session) {
+            console.error('[DataService] Session invalid even after reinitialization')
+            return {
+              success: false,
+              error: 'Session invalid - please login again',
+              data: {
+                dailyReport: null,
+                consultLogs: [],
+                giftLogs: [],
+                happyCallLogs: [],
+                hasData: false
+              }
+            }
+          }
+          console.log('[DataService] Session verified after reinitialization')
+        }
+      } else {
+        console.log('[DataService] Active session found')
+      }
+    } catch (sessionCheckError: any) {
+      console.error('[DataService] Error during session check:', sessionCheckError)
+      // Continue anyway - might still work
     }
 
     try {
@@ -565,7 +568,7 @@ export const dataService = {
     recallBookingCount: number
     specialNotes: string
   }) {
-    const supabase = getSupabase()
+    let supabase = getSupabase()
     if (!supabase) throw new Error('Supabase client not available')
 
     const {
@@ -577,6 +580,48 @@ export const dataService = {
       recallBookingCount,
       specialNotes
     } = data
+
+    // 세션 체크 및 Connection Timeout 처리
+    try {
+      console.log('[DataService] saveReport - Checking session status...')
+      let { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError) {
+        console.error('[DataService] saveReport - Session error:', sessionError)
+      }
+
+      if (!sessionData?.session) {
+        console.warn('[DataService] saveReport - No active session, attempting refresh...')
+        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 5000)
+
+        if (needsReinitialization) {
+          console.log('[DataService] saveReport - Connection timeout detected, reinitializing Supabase client...')
+          const reinitializedClient = reinitializeSupabase()
+          if (!reinitializedClient) {
+            console.error('[DataService] saveReport - Failed to reinitialize Supabase client')
+            throw new Error('Connection timeout - please try again')
+          }
+          console.log('[DataService] saveReport - Supabase client reinitialized successfully')
+          supabase = reinitializedClient
+
+          // Recheck session after reinitialization
+          const recheckResult = await supabase.auth.getSession()
+          sessionData = recheckResult.data
+          sessionError = recheckResult.error
+
+          if (sessionError || !sessionData.session) {
+            console.error('[DataService] saveReport - Session invalid even after reinitialization')
+            throw new Error('Session invalid - please login again')
+          }
+          console.log('[DataService] saveReport - Session verified after reinitialization')
+        }
+      } else {
+        console.log('[DataService] saveReport - Active session found')
+      }
+    } catch (sessionCheckError: any) {
+      console.error('[DataService] saveReport - Error during session check:', sessionCheckError)
+      throw sessionCheckError
+    }
 
     try {
       const clinicId = await getCurrentClinicId()
@@ -602,14 +647,15 @@ export const dataService = {
       // --- 3. 기존 데이터 삭제 (존재하는 경우) ---
       if (existingReports && existingReports.length > 0) {
         console.log(`[DataService] Deleting existing data for date: ${date}`)
-        for (const report of existingReports) {
-          await Promise.all([
-            applyClinicFilter(supabase.from('consult_logs').delete().eq('date', date), clinicId),
-            applyClinicFilter(supabase.from('gift_logs').delete().eq('date', date), clinicId),
-            applyClinicFilter(supabase.from('happy_call_logs').delete().eq('date', date), clinicId),
-            supabase.from('daily_reports').delete().eq('id', report.id)
-          ])
-        }
+        const deletePromises = existingReports.map(report => 
+          supabase.from('daily_reports').delete().eq('id', report.id)
+        );
+        await Promise.all([
+          applyClinicFilter(supabase.from('consult_logs').delete().eq('date', date), clinicId),
+          applyClinicFilter(supabase.from('gift_logs').delete().eq('date', date), clinicId),
+          applyClinicFilter(supabase.from('happy_call_logs').delete().eq('date', date), clinicId),
+          ...deletePromises
+        ]);
       }
 
       // --- 4. 신규 데이터 생성 ---
@@ -624,8 +670,9 @@ export const dataService = {
         special_notes: specialNotes.trim() || null,
       }
 
-      const { error: dailyReportError } = await supabase.from('daily_reports').insert([dailyReport] as any)
-      if (dailyReportError) throw new Error(`일일 보고서 저장 실패: ${dailyReportError.message}`)
+      const insertPromises = [];
+
+      insertPromises.push(supabase.from('daily_reports').insert([dailyReport] as any));
 
       if (validConsults.length > 0) {
         const consultData = validConsults.map(row => ({
@@ -635,9 +682,8 @@ export const dataService = {
           consult_content: row.consult_content,
           consult_status: row.consult_status,
           remarks: row.remarks ?? ''
-        }))
-        const { error } = await supabase.from('consult_logs').insert(consultData as any)
-        if (error) throw new Error(`상담 기록 저장 실패: ${error.message}`)
+        }));
+        insertPromises.push(supabase.from('consult_logs').insert(consultData as any));
       }
 
       if (validGifts.length > 0) {
@@ -648,9 +694,8 @@ export const dataService = {
           gift_type: row.gift_type,
           naver_review: row.naver_review,
           notes: row.notes ?? ''
-        }))
-        const { error } = await supabase.from('gift_logs').insert(giftData as any)
-        if (error) throw new Error(`선물 기록 저장 실패: ${error.message}`)
+        }));
+        insertPromises.push(supabase.from('gift_logs').insert(giftData as any));
       }
 
       if (validHappyCalls.length > 0) {
@@ -660,9 +705,14 @@ export const dataService = {
           patient_name: row.patient_name,
           treatment: row.treatment,
           notes: row.notes
-        }))
-        const { error } = await supabase.from('happy_call_logs').insert(happyCallData as any)
-        if (error) throw new Error(`해피콜 기록 저장 실패: ${error.message}`)
+        }));
+        insertPromises.push(supabase.from('happy_call_logs').insert(happyCallData as any));
+      }
+
+      const results = await Promise.all(insertPromises);
+      const errors = results.map(r => r.error).filter((e): e is PostgrestError => e !== null);
+      if (errors.length > 0) {
+        throw new Error(`데이터 저장 실패: ${errors.map(e => e.message).join(', ')}`);
       }
 
       return { success: true }

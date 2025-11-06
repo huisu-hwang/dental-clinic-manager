@@ -65,7 +65,12 @@
       "mcp__chrome-devtools__list_pages",
       "mcp__chrome-devtools__fill",
       "mcp__chrome-devtools__get_console_message",
-      "Bash(PORT=3001 npm run dev:*)"
+      "Bash(PORT=3001 npm run dev:*)",
+      "Bash(npx shadcn@latest add table button dialog input card badge switch --yes)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(nul)",
+      "Bash(dir:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []

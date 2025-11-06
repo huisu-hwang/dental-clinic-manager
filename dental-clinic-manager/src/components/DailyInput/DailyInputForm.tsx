@@ -66,11 +66,11 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
     setLoading(true)
     setHasExistingData(false) // 로딩 시작 시 초기화
 
-    // 타임아웃 설정 (5초)
+    // 타임아웃 설정 (10초 - Connection Timeout 복구 시간 고려)
     const timeoutId = setTimeout(() => {
       console.log('[DailyInputForm] Load timeout - forcing loading to false')
       setLoading(false)
-    }, 5000)
+    }, 10000)
 
     try {
       console.log('[DailyInputForm] Calling dataService.getReportByDate...')
