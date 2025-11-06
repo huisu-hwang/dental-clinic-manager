@@ -2,6 +2,7 @@ import { getSupabase } from './supabase'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
+import type { PostgrestError } from '@supabase/supabase-js'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
 const CLINIC_CACHE_KEY = 'dental_clinic_id'
@@ -193,8 +194,8 @@ async function getCurrentClinicId(): Promise<string | null> {
       }
     }
 
-    let { data: userData, error: authError } = getUserResult
-    let user = userData?.user
+    const { data: userData, error: authError } = getUserResult
+    const user = userData?.user
 
     if (authError || !user) {
       console.error('[getCurrentClinicId] Auth error or no user:', authError)
@@ -604,7 +605,7 @@ export const dataService = {
       }
 
       const results = await Promise.all(insertPromises);
-      const errors = results.map(r => r.error).filter(Boolean);
+      const errors = results.map(r => r.error).filter((e): e is PostgrestError => e !== null);
       if (errors.length > 0) {
         throw new Error(`데이터 저장 실패: ${errors.map(e => e.message).join(', ')}`);
       }
