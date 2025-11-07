@@ -88,8 +88,8 @@ export const getSupabase = () => {
       supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         auth: {
           persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
+          autoRefreshToken: false,  // Vercel 환경에서 수동 세션 관리 (안정성 향상)
+          detectSessionInUrl: false, // URL 기반 세션 감지 비활성화 (불필요한 리다이렉트 방지)
           storage: customStorage as any,
           storageKey: 'sb-beahjntkmkfhpcbhfnrr-auth-token',
           flowType: 'pkce',
