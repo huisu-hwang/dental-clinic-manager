@@ -38,8 +38,12 @@ export async function createClient() {
             cookieStore.set(name, value, options)
           })
         } catch (error) {
-          // Server Component에서 setAll 호출 시 에러 발생 가능
-          // Middleware에서 처리되므로 무시
+          // Server Component에서는 쿠키 설정 불가 (Read-only)
+          // 이는 정상 동작이며, Middleware가 쿠키를 설정함
+          // 다만 디버깅을 위해 에러를 로깅
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[Server Client] setAll 호출 실패 (정상 - Middleware가 처리):', error)
+          }
         }
       },
     },

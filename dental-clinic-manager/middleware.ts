@@ -10,9 +10,14 @@ import { NextResponse, type NextRequest } from 'next/server'
  * 3. 갱신된 토큰을 브라우저에 전달 (response.cookies)
  *
  * 참고: https://supabase.com/docs/guides/auth/server-side/nextjs
+ *
+ * 중요: Supabase 공식 문서 패턴을 정확히 따름
+ * - NextResponse는 middleware 함수 시작 시 한 번만 생성
+ * - setAll에서는 response.cookies만 업데이트 (재생성 금지!)
  */
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
+  // 1. NextResponse를 한 번만 생성 (여기서만!)
+  const response = NextResponse.next({
     request,
   })
 
@@ -21,41 +26,34 @@ export async function middleware(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('[Middleware] Supabase 환경 변수가 설정되지 않았습니다.')
-    return supabaseResponse
+    return response
   }
 
+  // 2. Supabase 클라이언트 생성
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll()
       },
       setAll(cookiesToSet) {
-        // Server Component에 갱신된 토큰 전달
+        // 중요: response는 재생성하지 않고, 기존 response의 cookies만 업데이트
         cookiesToSet.forEach(({ name, value, options }) => {
+          // Server Component가 사용할 수 있도록 request에도 설정
           request.cookies.set(name, value)
-        })
-
-        // NextResponse 생성 (갱신된 쿠키 포함)
-        supabaseResponse = NextResponse.next({
-          request,
-        })
-
-        // 브라우저에 갱신된 토큰 전달
-        cookiesToSet.forEach(({ name, value, options }) => {
-          supabaseResponse.cookies.set(name, value, options)
+          // 브라우저로 전달할 response에 설정
+          response.cookies.set(name, value, options)
         })
       },
     },
   })
 
-  // IMPORTANT: getUser() 호출로 토큰 재검증
-  // 이 호출이 내부적으로 토큰 갱신을 트리거합니다
+  // 3. getUser() 호출로 토큰 재검증 및 갱신 트리거
+  // 만료된 토큰이 있으면 자동으로 refresh되고 setAll이 호출됨
   const {
     data: { user },
-    error,
   } = await supabase.auth.getUser()
 
-  // 로그인 페이지/회원가입 페이지는 인증 불필요
+  // 4. Public 경로 정의
   const isPublicPath =
     request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname === '/signup' ||
@@ -63,7 +61,7 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === '/update-password' ||
     request.nextUrl.pathname.startsWith('/test')
 
-  // 로그인 안 되어 있고, 보호된 페이지 접근 시 → 로그인 페이지로 리다이렉트
+  // 5. 인증 필요한 경로에 미인증 사용자 접근 시 리다이렉트
   if (!user && !isPublicPath) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/'
@@ -71,7 +69,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  return supabaseResponse
+  // 6. 갱신된 쿠키가 포함된 response 반환
+  return response
 }
 
 export const config = {
