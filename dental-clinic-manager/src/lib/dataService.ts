@@ -79,7 +79,7 @@ async function handleSessionError(supabase: ReturnType<typeof getSupabase>): Pro
     // refreshSessionWithTimeout() 동적 import
     const { refreshSessionWithTimeout, handleSessionExpired } = await import('./sessionUtils')
 
-    const { session, error, needsReinitialization } = await refreshSessionWithTimeout(supabase, 5000)
+    const { session, error, needsReinitialization } = await refreshSessionWithTimeout(supabase, 10000)
 
     // Connection timeout 감지 시 즉시 재초기화
     if (needsReinitialization) {
@@ -357,7 +357,24 @@ export const dataService = {
 
       if (!sessionData?.session) {
         console.warn('[DataService] No active session, attempting refresh...')
-        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 3000)
+        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 10000)
+
+        if (refreshError) {
+          console.error('[DataService] Session refresh failed:', refreshError)
+          if (refreshError === 'SESSION_EXPIRED' || refreshError === 'SESSION_REFRESH_TIMEOUT') {
+            return {
+              success: false,
+              error: 'Session expired - please login again',
+              data: {
+                dailyReport: null,
+                consultLogs: [],
+                giftLogs: [],
+                happyCallLogs: [],
+                hasData: false
+              }
+            }
+          }
+        }
 
         if (needsReinitialization) {
           console.log('[DataService] Connection timeout detected, reinitializing Supabase client...')
@@ -592,7 +609,14 @@ export const dataService = {
 
       if (!sessionData?.session) {
         console.warn('[DataService] saveReport - No active session, attempting refresh...')
-        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 3000)
+        const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 10000)
+
+        if (refreshError) {
+          console.error('[DataService] saveReport - Session refresh failed:', refreshError)
+          if (refreshError === 'SESSION_EXPIRED' || refreshError === 'SESSION_REFRESH_TIMEOUT') {
+            throw new Error('Session expired - please login again')
+          }
+        }
 
         if (needsReinitialization) {
           console.log('[DataService] saveReport - Connection timeout detected, reinitializing Supabase client...')

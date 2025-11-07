@@ -111,7 +111,16 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         if (sessionError || !sessionData.session) {
           console.warn('[useSupabaseData] 세션이 유효하지 않음, 갱신 시도...')
-          const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 5000)
+          const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 10000)
+
+          if (refreshError) {
+            console.error('[useSupabaseData] Session refresh failed:', refreshError)
+            if (refreshError === 'SESSION_EXPIRED' || refreshError === 'SESSION_REFRESH_TIMEOUT') {
+              handleSessionExpired('session_expired')
+              setLoading(false)
+              return
+            }
+          }
 
           // Connection timeout 감지 시 client 재초기화
           if (needsReinitialization) {
