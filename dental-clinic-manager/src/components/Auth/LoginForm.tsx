@@ -2,9 +2,8 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getSupabase, reinitializeSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { dataService } from '@/lib/dataService'
-import { setRememberMe } from '@/lib/customStorageAdapter'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 interface LoginFormProps {
@@ -48,20 +47,12 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
     setLoading(true)
 
     try {
-      // 0. 로그인 상태 유지 옵션 먼저 설정
-      console.log('[LoginForm] Setting remember me option:', rememberMe)
-      setRememberMe(rememberMe)
+      // Cookie-based session - Middleware가 자동으로 세션 관리
+      console.log('[LoginForm] Using cookie-based session (rememberMe: N/A)')
 
-      // 1. Supabase 클라이언트 재초기화 (새로운 storage adapter 적용)
-      console.log('[LoginForm] Reinitializing Supabase client with new storage settings...')
-      const supabase = reinitializeSupabase()
-
-      if (!supabase) {
-        console.error('[LoginForm] Supabase client is null')
-        setError('데이터베이스 연결에 실패했습니다. 환경 설정을 확인해주세요.')
-        setLoading(false)
-        return
-      }
+      // Supabase 클라이언트 생성
+      console.log('[LoginForm] Creating Supabase client...')
+      const supabase = createClient()
 
       // 1. 로그인 전에 기존 세션을 완전히 클리어 (타임아웃 5초)
       console.log('[LoginForm] Clearing any existing session...')
@@ -149,8 +140,8 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         login(formData.email, result.data) // email로 변경
       }
 
-      console.log('[LoginForm] Login successful, remember me:', rememberMe)
-      console.log('[LoginForm] Session storage type:', rememberMe ? 'localStorage (persistent)' : 'sessionStorage (temporary)')
+      console.log('[LoginForm] Login successful - Cookie-based session')
+      console.log('[LoginForm] Session managed by Middleware (automatic refresh)')
       console.log('[LoginForm] Calling onLoginSuccess...')
       // localStorage 저장이 완료될 때까지 약간 대기
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -242,12 +233,12 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  checked={true}
+                  disabled
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded opacity-50 cursor-not-allowed"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-700">
-                  로그인 상태 유지
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600">
+                  로그인 상태 자동 유지 (4시간)
                 </label>
               </div>
 

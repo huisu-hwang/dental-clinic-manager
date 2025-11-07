@@ -2,9 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { dataService } from '@/lib/dataService'
-import { clearAllSessions, getRememberMe } from '@/lib/customStorageAdapter'
 import type { Permission } from '@/types/permissions'
 import { useActivityTracker } from '@/hooks/useActivityTracker'
 
@@ -77,8 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         console.log('[AuthContext] Getting Supabase client...')
-        const supabase = getSupabase()
-        console.log('[AuthContext] Supabase client:', supabase ? 'obtained' : 'null')
+        const supabase = createClient()
+        console.log('[AuthContext] Supabase client obtained')
 
         if (supabase) {
           try {
@@ -291,17 +290,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = (userId: string, clinicInfo: any) => {
-    // rememberMe 플래그에 따라 storage 선택
-    const rememberMe = getRememberMe()
-    const storage = rememberMe ? window.localStorage : window.sessionStorage
-    console.log(`[AuthContext] Login using ${rememberMe ? 'localStorage' : 'sessionStorage'} (rememberMe: ${rememberMe})`)
+    console.log('[AuthContext] Login - Cookie-based session')
 
     // Check for master admin login
     if (userId === 'sani81@gmail.com') {
       const masterAdmin = { ...MASTER_ADMIN }
       setUser(masterAdmin)
-      storage.setItem('dental_auth', 'true')
-      storage.setItem('dental_user', JSON.stringify(masterAdmin))
+      localStorage.setItem('dental_auth', 'true')
+      localStorage.setItem('dental_user', JSON.stringify(masterAdmin))
       dataService.clearCachedClinicId()
       return
     }
@@ -315,20 +311,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
     setUser(userData)
-    storage.setItem('dental_auth', 'true')
-    storage.setItem('dental_user', JSON.stringify(userData))
+    localStorage.setItem('dental_auth', 'true')
+    localStorage.setItem('dental_user', JSON.stringify(userData))
     if (userData.clinic_id) {
       dataService.setCachedClinicId(userData.clinic_id)
     }
   }
 
   const updateUser = (updatedUserData: any) => {
-    // rememberMe 플래그에 따라 storage 선택
-    const rememberMe = getRememberMe()
-    const storage = rememberMe ? window.localStorage : window.sessionStorage
-
     setUser(updatedUserData)
-    storage.setItem('dental_user', JSON.stringify(updatedUserData))
+    localStorage.setItem('dental_user', JSON.stringify(updatedUserData))
     if (updatedUserData?.clinic_id) {
       dataService.setCachedClinicId(updatedUserData.clinic_id)
     }
@@ -348,32 +340,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoggingOut(true)
 
     // Supabase 로그아웃 시도 (먼저 실행, 타임아웃 5초)
-    const supabase = getSupabase()
-    if (supabase) {
-      try {
-        const signOutPromise = supabase.auth.signOut()
-        const timeoutPromise = new Promise<{ error: any }>((resolve) =>
-          setTimeout(() => resolve({ error: new Error('Logout timeout') }), 5000)
-        )
+    try {
+      const supabase = createClient()
+      const signOutPromise = supabase.auth.signOut()
+      const timeoutPromise = new Promise<{ error: any }>((resolve) =>
+        setTimeout(() => resolve({ error: new Error('Logout timeout') }), 5000)
+      )
 
-        const { error } = await Promise.race([signOutPromise, timeoutPromise])
-        if (error) {
-          console.error('Supabase logout error:', error)
-        } else {
-          console.log('Supabase 로그아웃 성공')
-        }
-      } catch (error) {
-        console.error('Logout error:', error)
+      const { error } = await Promise.race([signOutPromise, timeoutPromise])
+      if (error) {
+        console.error('Supabase logout error:', error)
+      } else {
+        console.log('Supabase 로그아웃 성공')
       }
+    } catch (error) {
+      console.error('Logout error:', error)
     }
 
     // 로컬 상태를 모두 초기화
     setUser(null)
     dataService.clearCachedClinicId()
 
-    // 모든 세션 데이터 완전 정리 (localStorage, sessionStorage 모두)
-    console.log('[Logout] Clearing all session data...')
-    clearAllSessions()
+    // localStorage 정리 (Cookie는 Supabase가 자동으로 정리)
+    console.log('[Logout] Clearing localStorage data...')
+    localStorage.removeItem('dental_auth')
+    localStorage.removeItem('dental_user')
 
     // 로그아웃 중임을 localStorage에도 저장
     localStorage.setItem('dental_logging_out', 'true')
@@ -389,19 +380,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, showInactivityMessage ? 2000 : 100)
   }
 
-  // Auto logout after 4 hours of inactivity (only if rememberMe is false)
+  // Auto logout after 4 hours of inactivity
   const handleInactivity = () => {
     console.log('[AuthContext] User inactive for 4 hours, logging out...')
     logout(true)
   }
 
-  // Track user activity (only when user is logged in and rememberMe is false)
-  // If rememberMe is true, user stays logged in until manual logout
-  const rememberMe = getRememberMe()
+  // Track user activity (only when user is logged in)
   useActivityTracker({
     onInactive: handleInactivity,
     inactivityTimeout: 4 * 60 * 60 * 1000, // 4 hours in milliseconds
-    enabled: !!user && !loading && !isLoggingOut && !rememberMe // rememberMe가 false일 때만 자동 로그아웃 활성화
+    enabled: !!user && !loading && !isLoggingOut
   })
 
   const isAuthenticated = Boolean(user)

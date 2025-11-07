@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from '@/lib/clinicScope'
 import { refreshSessionWithTimeout, handleSessionExpired } from '@/lib/sessionUtils'
 import type { DailyReport, ConsultLog, GiftLog, GiftInventory, InventoryLog } from '@/types'
@@ -30,7 +30,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
           return
         }
 
-        const supabase = getSupabase()
+        const supabase = createClient()
         if (!supabase) {
           setError('Supabase client not available')
           return
@@ -98,7 +98,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
         setLoading(true)
         setError(null)
 
-        const supabase = getSupabase()
+        const supabase = createClient()
         if (!supabase) {
           setError('Supabase client not available')
           setLoading(false)
@@ -395,7 +395,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
     // Call fetchAllData directly without creating a wrapper function
     fetchAllData(activeClinicId)
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase) {
       console.log('[useSupabaseData] No supabase client for subscription')
       return
