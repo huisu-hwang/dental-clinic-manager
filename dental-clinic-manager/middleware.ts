@@ -10,14 +10,15 @@ import { NextResponse, type NextRequest } from 'next/server'
  * 3. 갱신된 토큰을 브라우저에 전달 (response.cookies)
  *
  * 참고: https://supabase.com/docs/guides/auth/server-side/nextjs
+ * 공식 예제: https://github.com/supabase/supabase/blob/master/examples/auth/nextjs/utils/supabase/middleware.ts
  *
- * 중요: Supabase 공식 문서 패턴을 정확히 따름
- * - NextResponse는 middleware 함수 시작 시 한 번만 생성
- * - setAll에서는 response.cookies만 업데이트 (재생성 금지!)
+ * 중요: Supabase 공식 패턴을 정확히 준수
+ * - request.cookies.set() 호출 후 반드시 NextResponse 재생성 필요
+ * - 이렇게 해야 서버 컴포넌트가 갱신된 쿠키를 받을 수 있음
  */
 export async function middleware(request: NextRequest) {
-  // 1. NextResponse를 한 번만 생성 (여기서만!)
-  const response = NextResponse.next({
+  // 1. 초기 NextResponse 생성
+  let supabaseResponse = NextResponse.next({
     request,
   })
 
@@ -26,7 +27,7 @@ export async function middleware(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('[Middleware] Supabase 환경 변수가 설정되지 않았습니다.')
-    return response
+    return supabaseResponse
   }
 
   // 2. Supabase 클라이언트 생성
@@ -36,13 +37,22 @@ export async function middleware(request: NextRequest) {
         return request.cookies.getAll()
       },
       setAll(cookiesToSet) {
-        // 중요: response는 재생성하지 않고, 기존 response의 cookies만 업데이트
-        cookiesToSet.forEach(({ name, value, options }) => {
-          // Server Component가 사용할 수 있도록 request에도 설정
+        // 공식 Supabase 패턴 (https://github.com/supabase/supabase/blob/master/examples/auth/nextjs/utils/supabase/middleware.ts)
+        // 1단계: request.cookies에 설정 (Server Component가 읽을 수 있도록)
+        cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value)
-          // 브라우저로 전달할 response에 설정
-          response.cookies.set(name, value, options)
+        )
+
+        // 2단계: 수정된 request로 NextResponse 재생성 (핵심!)
+        // 이렇게 해야 서버 컴포넌트가 갱신된 쿠키를 받습니다
+        supabaseResponse = NextResponse.next({
+          request,
         })
+
+        // 3단계: response.cookies에 설정 (브라우저로 전달)
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        )
       },
     },
   })
@@ -70,7 +80,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 6. 갱신된 쿠키가 포함된 response 반환
-  return response
+  return supabaseResponse
 }
 
 export const config = {
