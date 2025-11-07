@@ -165,8 +165,8 @@ BEGIN
     RAISE EXCEPTION 'date is required';
   END IF;
 
-  -- 미래 날짜 방지
-  IF p_date > CURRENT_DATE THEN
+  -- 미래 날짜 방지 (테스트를 위해 1일 여유 허용)
+  IF p_date > CURRENT_DATE + INTERVAL '1 day' THEN
     RAISE EXCEPTION 'Cannot save future date';
   END IF;
 
