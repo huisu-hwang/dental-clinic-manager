@@ -25,22 +25,27 @@ import type { User } from '@/types/auth'
 import { encryptResidentNumber, decryptResidentNumber } from '@/utils/encryptionUtils'
 
 class ContractService {
-  private supabase: ReturnType<typeof getSupabase>
+  private getSupabaseClient() {
+    const supabase = getSupabase()
 
-  constructor() {
-    this.supabase = getSupabase()
+    if (!supabase) {
+      console.error('[contractService] Supabase client not available')
+    }
+
+    return supabase
   }
 
   /**
    * Check current Supabase session with auto-refresh
    */
   private async checkSession(): Promise<{ session: Session | null; error: string | null }> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { session: null, error: 'Database connection failed' }
     }
 
     console.log('[contractService] Checking session...')
-    const { data, error } = await this.supabase.auth.getSession()
+    const { data, error } = await supabase.auth.getSession()
 
     // Case 1: Session check error (possibly invalid token)
     if (error) {
@@ -49,7 +54,7 @@ class ContractService {
       // If it's a refresh token error, try to refresh the session
       if (error.message?.includes('Refresh Token') || error.message?.includes('Invalid')) {
         console.log('[contractService] Attempting to refresh session...')
-        const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(this.supabase)
+        const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(supabase)
 
         if (refreshError || !refreshedSession) {
           console.error('[contractService] Session refresh failed:', refreshError)
@@ -66,7 +71,7 @@ class ContractService {
     // Case 2: No session found, try to refresh
     if (!data.session) {
       console.log('[contractService] No session found, attempting to refresh...')
-      const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(this.supabase)
+      const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(supabase)
 
       if (refreshError || !refreshedSession) {
         console.error('[contractService] Session refresh failed:', refreshError)
@@ -90,13 +95,14 @@ class ContractService {
    * Create a new employment contract
    */
   async createContract(data: ContractFormData, currentUserId: string): Promise<CreateContractResponse> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { success: false, error: 'Database connection failed' }
     }
 
     try {
       // Get employee user data to auto-fill
-      const { data: employee, error: employeeError } = await this.supabase
+      const { data: employee, error: employeeError } = await supabase
         .from('users')
         .select('id, name, email, phone, address, resident_registration_number, clinic_id')
         .eq('id', data.employee_user_id)
@@ -107,7 +113,7 @@ class ContractService {
       }
 
       // Get clinic data
-      const { data: clinic, error: clinicError } = await this.supabase
+      const { data: clinic, error: clinicError } = await supabase
         .from('clinics')
         .select('id, name, address, owner_name')
         .eq('id', employee.clinic_id)
@@ -192,7 +198,7 @@ class ContractService {
       contractData.salary_total = salaryBase + salaryBonus + allowancesTotal
 
       // Insert contract
-      const { data: contract, error: insertError } = await this.supabase
+      const { data: contract, error: insertError } = await supabase
         .from('employment_contracts')
         .insert({
           clinic_id: employee.clinic_id,
@@ -226,12 +232,13 @@ class ContractService {
    * Get a single contract by ID
    */
   async getContract(contractId: string): Promise<{ data: EmploymentContract | null; error: string | null }> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { data: null, error: 'Database connection failed' }
     }
 
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('employment_contracts')
         .select(`
           *,
@@ -267,12 +274,13 @@ class ContractService {
     if (sessionCheck.error) {
       return { success: false, error: sessionCheck.error }
     }
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { success: false, error: 'Database connection failed' }
     }
 
     try {
-      let query = this.supabase
+      let query = supabase
         .from('employment_contracts')
         .select(`
           *,
@@ -336,12 +344,13 @@ class ContractService {
    * Get contracts for a specific user (employee view)
    */
   async getMyContracts(userId: string): Promise<GetContractsResponse> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { success: false, error: 'Database connection failed' }
     }
 
     try {
-      const { data, error, count } = await this.supabase
+      const { data, error, count } = await supabase
         .from('employment_contracts')
         .select(`
           *,
@@ -375,12 +384,13 @@ class ContractService {
     contractId: string,
     updates: Partial<EmploymentContract>
   ): Promise<CreateContractResponse> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { success: false, error: 'Database connection failed' }
     }
 
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('employment_contracts')
         .update({
           ...updates,
@@ -410,7 +420,8 @@ class ContractService {
     contractId: string,
     status: ContractStatus
   ): Promise<CreateContractResponse> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { success: false, error: 'Database connection failed' }
     }
 
@@ -424,7 +435,7 @@ class ContractService {
         updateData.completed_at = new Date().toISOString()
       }
 
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('employment_contracts')
         .update(updateData)
         .eq('id', contractId)
@@ -452,12 +463,13 @@ class ContractService {
     cancelledBy: string,
     reason: string
   ): Promise<CreateContractResponse> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { success: false, error: 'Database connection failed' }
     }
 
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('employment_contracts')
         .update({
           status: 'cancelled',
@@ -491,13 +503,14 @@ class ContractService {
    * Sign a contract
    */
   async signContract(data: ContractSigningData): Promise<SignContractResponse> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { success: false, error: 'Database connection failed' }
     }
 
     try {
       // Get current contract
-      const { data: contract, error: contractError } = await this.supabase
+      const { data: contract, error: contractError } = await supabase
         .from('employment_contracts')
         .select('*, signatures:contract_signatures(*)')
         .eq('id', data.contract_id)
@@ -517,7 +530,7 @@ class ContractService {
       }
 
       // Get current user info
-      const { data: authUser } = await this.supabase.auth.getUser()
+      const { data: authUser } = await supabase.auth.getUser()
       const currentUserId = authUser?.user?.id
 
       if (!currentUserId) {
@@ -525,7 +538,7 @@ class ContractService {
       }
 
       // Insert signature
-      const { data: signature, error: signError } = await this.supabase
+      const { data: signature, error: signError } = await supabase
         .from('contract_signatures')
         .insert({
           contract_id: data.contract_id,
@@ -586,7 +599,8 @@ class ContractService {
     hasEmployeeSignature: boolean
     signatures: ContractSignature[]
   }> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return {
         hasEmployerSignature: false,
         hasEmployeeSignature: false,
@@ -595,7 +609,7 @@ class ContractService {
     }
 
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('contract_signatures')
         .select('*')
         .eq('contract_id', contractId)
@@ -632,12 +646,13 @@ class ContractService {
    * Get all templates for a clinic
    */
   async getTemplates(clinicId: string): Promise<{ data: ContractTemplate[]; error: string | null }> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { data: [], error: 'Database connection failed' }
     }
 
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('employment_contract_templates')
         .select('*')
         .or(`clinic_id.eq.${clinicId},clinic_id.is.null`)
@@ -662,12 +677,13 @@ class ContractService {
    * Get default template
    */
   async getDefaultTemplate(clinicId?: string): Promise<{ data: ContractTemplate | null; error: string | null }> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { data: null, error: 'Database connection failed' }
     }
 
     try {
-      let query = this.supabase
+      let query = supabase
         .from('employment_contract_templates')
         .select('*')
         .eq('is_default', true)
@@ -698,12 +714,13 @@ class ContractService {
    * Get a single template by ID
    */
   async getTemplate(templateId: string): Promise<{ data: ContractTemplate | null; error: string | null }> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { data: null, error: 'Database connection failed' }
     }
 
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('employment_contract_templates')
         .select('*')
         .eq('id', templateId)
@@ -737,12 +754,13 @@ class ContractService {
     },
     currentUserId: string
   ): Promise<{ data: ContractTemplate | null; error: string | null }> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { data: null, error: 'Database connection failed' }
     }
 
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('employment_contract_templates')
         .insert({
           ...template,
@@ -779,12 +797,13 @@ class ContractService {
       version?: string
     }
   ): Promise<{ data: ContractTemplate | null; error: string | null }> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { data: null, error: 'Database connection failed' }
     }
 
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('employment_contract_templates')
         .update({
           ...updates,
@@ -812,12 +831,13 @@ class ContractService {
    * Delete a template (soft delete)
    */
   async deleteTemplate(templateId: string): Promise<{ success: boolean; error: string | null }> {
-    if (!this.supabase) {
+    const supabase = this.getSupabaseClient()
+    if (!supabase) {
       return { success: false, error: 'Database connection failed' }
     }
 
     try {
-      const { error } = await this.supabase
+      const { error } = await supabase
         .from('employment_contract_templates')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', templateId)
