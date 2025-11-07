@@ -98,7 +98,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
         setLoading(true)
         setError(null)
 
-        let supabase = getSupabase()
+        const supabase = getSupabase()
         if (!supabase) {
           setError('Supabase client not available')
           setLoading(false)
@@ -107,67 +107,19 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         // 세션 검증 및 갱신
         console.log('[useSupabaseData] 세션 확인 중...')
-        let { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
 
         if (sessionError || !sessionData.session) {
           console.warn('[useSupabaseData] 세션이 유효하지 않음, 갱신 시도...')
-          const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 10000)
+          const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(supabase, 5000)
 
-          if (refreshError) {
-            console.error('[useSupabaseData] Session refresh failed:', refreshError)
-            if (refreshError === 'SESSION_EXPIRED' || refreshError === 'SESSION_REFRESH_TIMEOUT') {
-              handleSessionExpired('session_expired')
-              setLoading(false)
-              return
-            }
-          }
-
-          // Connection timeout 감지 시 client 재초기화
-          if (needsReinitialization) {
-            console.log('[useSupabaseData] Connection timeout detected, reinitializing Supabase client...')
-
-            try {
-              const { reinitializeSupabase } = await import('@/lib/supabase')
-              const reinitializedClient = reinitializeSupabase()
-
-              if (!reinitializedClient) {
-                console.error('[useSupabaseData] Failed to reinitialize Supabase client')
-                handleSessionExpired('connection_timeout')
-                setLoading(false)
-                return
-              }
-
-              console.log('[useSupabaseData] Supabase client reinitialized successfully')
-              // 재초기화된 client 사용
-              supabase = reinitializedClient
-
-              // 재초기화 후 세션 다시 확인
-              const recheckResult = await supabase.auth.getSession()
-              sessionData = recheckResult.data
-              sessionError = recheckResult.error
-
-              if (sessionError || !sessionData.session) {
-                console.error('[useSupabaseData] Session invalid even after reinitialization')
-                handleSessionExpired('session_invalid')
-                setLoading(false)
-                return
-              }
-
-              console.log('[useSupabaseData] Session verified after reinitialization')
-            } catch (reinitError) {
-              console.error('[useSupabaseData] Error during client reinitialization:', reinitError)
-              handleSessionExpired('reinitialization_error')
-              setLoading(false)
-              return
-            }
-          } else if (refreshError || !refreshedSession) {
+          if (refreshError || !refreshedSession) {
             console.error('[useSupabaseData] 세션 갱신 실패:', refreshError)
             handleSessionExpired('session_expired')
             setLoading(false)
             return
-          } else {
-            console.log('[useSupabaseData] 세션 갱신 성공')
           }
+          console.log('[useSupabaseData] 세션 갱신 성공')
         } else {
           console.log('[useSupabaseData] 유효한 세션 확인됨')
         }
