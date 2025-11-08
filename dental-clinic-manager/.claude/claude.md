@@ -187,22 +187,27 @@ Claude:
 #### 버그 수정 (추가 단계 필수):
 1. **/compact 실행** - 세션 초기화 및 컨텍스트 정리
 2. **🤖 Subagent 자동 선택** - `/bug-fix` 모드 활성화
-3. **🌐 Chrome DevTools MCP로 오류 재현 및 로그 확인 (필수!)** ← 신규 추가!
+3. **🌐 Chrome DevTools MCP로 오류 재현 및 로그 확인 (필수!)**
    - localhost 개발 서버 접속
    - 사용자가 보고한 작업 시나리오 재현
    - 콘솔 에러 메시지 정확히 확인
    - 네트워크 요청 실패 원인 파악
    - 타이밍, connection error 등 측정
-4. **🔍 근본 원인 분석 (5 Whys + 콘솔 로그 기반)** - Chrome DevTools 로그 기반 분석
-5. **Sequential Thinking (ultrathink)** - 해결 방안 설계
-6. **계획 수립 (Planning)** - 구현 단계 정의
-7. **코드 수정** - 근본 원인 제거
-8. **🌐 Chrome DevTools MCP로 수정 검증 (필수!)** ← 신규 추가!
+4. **📚 Context7 MCP로 공식 문서 확인 (데이터베이스/라이브러리 문제 시 필수!)** ← 신규 추가!
+   - PostgreSQL, Supabase, PostgREST 등 관련 문서 조회
+   - 에러 메시지에 포함된 키워드로 검색
+   - 공식 문서의 권장 패턴 확인
+   - 타입 변환, 함수 시그니처 등 정확한 문법 확인
+5. **🔍 근본 원인 분석 (5 Whys + 콘솔 로그 + 공식 문서 기반)** - 모든 정보 종합 분석
+6. **Sequential Thinking (ultrathink)** - 해결 방안 설계
+7. **계획 수립 (Planning)** - 구현 단계 정의
+8. **코드 수정** - 근본 원인 제거 (공식 문서 패턴 적용)
+9. **🌐 Chrome DevTools MCP로 수정 검증 (필수!)**
    - 동일 시나리오 재현
    - 콘솔 로그 확인 (예상한 로그 출력되는지)
    - 타이밍 측정 (개선 효과 확인)
    - 최종 정상 작동 확인
-9. **TDD (Test-Driven Development)** - 재발 방지 테스트 작성
+10. **TDD (Test-Driven Development)** - 재발 방지 테스트 작성
 
 ---
 
@@ -761,6 +766,16 @@ const handleSubmit = async () => {
    - 수정 검증 단계 필수 (수정 후)
    - 로그 없이 코드 수정하면 재발 위험 높음
 
+9. **📚 데이터베이스/라이브러리 문제 시 Context7 MCP 생략 (절대 금지)** ← 신규 추가!
+   - "이렇게 하면 될 것 같은데" ❌
+   - 반드시 Context7 MCP로 공식 문서 확인 후 수정 ✅
+   - PostgreSQL, Supabase, PostgREST 등 정확한 문법 확인 필수
+   - 에러 메시지 키워드로 공식 문서 검색
+   - 추측으로 SQL 작성하면 타입 불일치, 함수 오버로딩 등 문제 발생
+   - **예시:**
+     - ❌ "jsonb_populate_record를 쓰면 될 것 같아"
+     - ✅ "context7로 PostgreSQL jsonb_populate_record 문서 확인 → 명시적 타입 캐스팅 필요 확인 → 코드 수정"
+
 ---
 
 ## 작업 문서화 가이드
@@ -1127,9 +1142,15 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 **언제 사용하는가?**
 
-1. **최신 라이브러리 문서 필요 시** → context7 사용
+1. **최신 라이브러리 문서 필요 시** → context7 사용 (최우선!)
    - Next.js, React, Supabase 등의 최신 API 확인
    - 예: "Next.js 15의 새로운 라우팅 방식은?"
+   - **데이터베이스 관련 문제 해결 시 필수:**
+     - PostgreSQL 공식 문서 확인
+     - Supabase RPC, PostgREST 문서 확인
+     - 타입 변환, 함수 오버로딩 등의 문법 확인
+   - 예: "PostgreSQL에서 JSONB를 테이블 레코드로 변환하는 방법"
+   - 예: "Supabase RPC 함수에서 TEXT를 DATE로 캐스팅하는 방법"
 
 2. **브라우저 테스트 필요 시** → chrome-devtools 또는 playwright 사용
    - UI 버그 재현 및 디버깅
@@ -1151,13 +1172,18 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - 수동으로 하면 시간이 오래 걸리는 작업
 - 브라우저 디버깅이 필요할 때
 - 최신 라이브러리 문서 확인이 필요할 때
+- **데이터베이스/SQL 관련 문제 해결 시 (필수!):**
+  - PostgreSQL 타입 변환 문법 확인
+  - Supabase RPC 함수 작성 시
+  - PostgREST 에러 메시지 해석 시
+  - JSONB 처리 관련 문제 시
 
 ❌ **불필요한 경우:**
 - 간단한 파일 읽기/쓰기 (Read, Write 도구 사용)
 - 코드 내 간단한 검색 (Grep 사용)
 - 기본 bash 명령 (Bash 도구 사용)
 
-**예시:**
+**예시 1: UI 버그 수정**
 ```
 사용자: "프로토콜 저장 시 무한 로딩 문제가 발생해"
 
@@ -1166,6 +1192,22 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 3. 코드 수정
 4. 다시 Chrome DevTools로 테스트
 5. 문제 해결 확인
+```
+
+**예시 2: 데이터베이스 문제 해결 (NEW!)**
+```
+사용자: "RPC 함수에서 'operator does not exist: text = date' 에러가 발생해"
+
+1. Sequential Thinking으로 에러 분석
+2. context7로 PostgreSQL 문서 확인
+   - libraryName: "postgresql"
+   - topic: "type casting", "date functions"
+3. context7로 Supabase 문서 확인
+   - libraryName: "supabase"
+   - topic: "RPC functions", "database functions"
+4. 공식 문서 기반으로 해결책 수립
+5. 코드 수정 (명시적 타입 캐스팅 적용)
+6. 테스트 및 검증
 ```
 
 ### 6. Chrome DevTools MCP 활용 (버그 수정 필수)
@@ -1489,6 +1531,16 @@ import { Button } from "@/components/ui/button"
 
 ## 변경 이력
 
+### 2025-11-08
+- 📚 **Context7 MCP 활용 의무화 (데이터베이스/라이브러리 문제 해결 시)**
+  - 버그 수정 워크플로우에 Context7 MCP 단계 추가 (4번째 단계)
+  - PostgreSQL, Supabase, PostgREST 등 공식 문서 확인 필수화
+  - MCP 활용 시나리오에 데이터베이스 관련 항목 추가
+  - 금지 사항에 "Context7 MCP 생략 금지" 추가 (9번째 항목)
+  - 에러 메시지 키워드로 공식 문서 검색하여 정확한 문법 확인
+  - 추측 기반 SQL 작성 대신 문서 기반 정확한 패턴 적용
+  - **배경:** RPC 함수 타입 불일치 문제 해결 과정에서 공식 문서 미확인으로 여러 시도 실패
+
 ### 2025-11-06 (3차 업데이트)
 - 📝 **작업 문서화 가이드 추가**
   - 모든 작업 완료 시 WORK_LOG.md 업데이트 의무화
@@ -1541,4 +1593,4 @@ import { Button } from "@/components/ui/button"
 
 ---
 
-마지막 업데이트: 2025-11-06 (작업 문서화 가이드 추가)
+마지막 업데이트: 2025-11-08 (Context7 MCP 활용 의무화)
