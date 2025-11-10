@@ -138,7 +138,7 @@ END $$;
  */
 CREATE OR REPLACE FUNCTION save_daily_report_v2(
   p_clinic_id UUID,
-  p_date DATE,
+  p_date TEXT,
   p_daily_report JSONB,
   p_consult_logs JSONB,
   p_gift_logs JSONB,
@@ -166,7 +166,7 @@ BEGIN
   END IF;
 
   -- 미래 날짜 방지 (테스트를 위해 1일 여유 허용)
-  IF p_date > CURRENT_DATE + INTERVAL '1 day' THEN
+  IF p_date::date > CURRENT_DATE + INTERVAL '1 day' THEN
     RAISE EXCEPTION 'Cannot save future date';
   END IF;
 
@@ -180,10 +180,10 @@ BEGIN
   -- 1. 기존 데이터 삭제 (UPSERT 효과)
   -- ============================================================
 
-  DELETE FROM daily_reports WHERE clinic_id = p_clinic_id AND date = p_date;
-  DELETE FROM consult_logs WHERE clinic_id = p_clinic_id AND date = p_date;
-  DELETE FROM gift_logs WHERE clinic_id = p_clinic_id AND date = p_date;
-  DELETE FROM happy_call_logs WHERE clinic_id = p_clinic_id AND date = p_date;
+  DELETE FROM daily_reports WHERE clinic_id = p_clinic_id AND date = p_date::date;
+  DELETE FROM consult_logs WHERE clinic_id = p_clinic_id AND date = p_date::date;
+  DELETE FROM gift_logs WHERE clinic_id = p_clinic_id AND date = p_date::date;
+  DELETE FROM happy_call_logs WHERE clinic_id = p_clinic_id AND date = p_date::date;
 
   -- ============================================================
   -- 2. daily_reports 삽입
