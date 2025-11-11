@@ -94,24 +94,25 @@ export const getSupabase = () => {
           storageKey: 'sb-beahjntkmkfhpcbhfnrr-auth-token',
           flowType: 'pkce',
         },
-        realtime: {
-          // Realtime 연결 최적화 설정
-          params: {
-            eventsPerSecond: 10, // 초당 이벤트 제한
-          },
-          // 하트비트 간격 설정 (기본 30초를 20초로 줄여 더 빠르게 연결 끊김 감지)
-          heartbeatIntervalMs: 20000,
-          // 타임아웃 설정 (기본 10초)
-          timeout: 10000,
-        },
         global: {
-          // HTTP 요청 타임아웃 설정 (기본값 없음, 명시적으로 설정)
+          // HTTP 요청 타임아웃 설정 - fetch 기반으로 서버리스 환경에 적합
           fetch: (url, options = {}) => {
+            // AbortSignal.timeout을 사용하여 요청 타임아웃 설정
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 30000) // 30초 타임아웃
+
             return fetch(url, {
               ...options,
-              // 60초 타임아웃 설정
-              signal: AbortSignal.timeout(60000),
+              signal: controller.signal,
+            }).finally(() => {
+              clearTimeout(timeoutId)
             })
+          },
+        },
+        // Realtime 기능 비활성화 (서버리스 환경에 부적합)
+        realtime: {
+          params: {
+            eventsPerSecond: 1, // 최소값으로 설정
           },
         },
       })

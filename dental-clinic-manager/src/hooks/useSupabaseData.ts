@@ -429,83 +429,21 @@ export const useSupabaseData = (clinicId?: string | null) => {
     }
 
     console.log('[useSupabaseData] Client-side, starting data fetch for clinic:', activeClinicId)
-    setLoading(true) // clinic_id 변경 시 로딩 상태를 true로 설정
+    setLoading(true)
 
-    // Call fetchAllData directly without creating a wrapper function
+    // 초기 데이터 로드
     fetchAllData(activeClinicId)
 
-    const supabase = getSupabase()
-    if (!supabase) {
-      console.log('[useSupabaseData] No supabase client for subscription')
-      return
-    }
-
-    let channel = supabase
-      .channel(`public-db-changes-${activeClinicId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', filter: `clinic_id=eq.${activeClinicId}` }, () => {
-        console.log('[useSupabaseData] Database change detected, reloading data')
-        fetchAllData(activeClinicId)
-      })
-      .subscribe((status, err) => {
-        console.log('[useSupabaseData] Subscription status:', status)
-        if (err) {
-          console.error('[useSupabaseData] Subscription error:', err)
-        }
-      })
-
-    // Realtime 연결 상태 모니터링 및 자동 재연결
-    let reconnectAttempts = 0
-    const maxReconnectAttempts = 5
-    const reconnectIntervalId = setInterval(() => {
-      const channelState = channel.state
-      console.log('[useSupabaseData] Channel state check:', channelState)
-
-      // 연결이 끊어졌거나 에러 상태인 경우 재연결 시도
-      if (channelState === 'closed' || channelState === 'errored') {
-        reconnectAttempts++
-        console.warn(`[useSupabaseData] Channel disconnected (state: ${channelState}), attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`)
-
-        if (reconnectAttempts <= maxReconnectAttempts) {
-          // 기존 채널 정리
-          supabase.removeChannel(channel).then(() => {
-            console.log('[useSupabaseData] Old channel removed')
-
-            // 새 채널 생성 및 구독
-            channel = supabase
-              .channel(`public-db-changes-${activeClinicId}-${Date.now()}`) // 타임스탬프 추가로 유니크한 채널명 생성
-              .on('postgres_changes', { event: '*', schema: 'public', filter: `clinic_id=eq.${activeClinicId}` }, () => {
-                console.log('[useSupabaseData] Database change detected (after reconnect), reloading data')
-                fetchAllData(activeClinicId)
-              })
-              .subscribe((status, err) => {
-                console.log('[useSupabaseData] Reconnection subscription status:', status)
-                if (err) {
-                  console.error('[useSupabaseData] Reconnection subscription error:', err)
-                } else if (status === 'SUBSCRIBED') {
-                  console.log('[useSupabaseData] Successfully reconnected to Realtime')
-                  reconnectAttempts = 0 // 재연결 성공 시 카운터 리셋
-                }
-              })
-          }).catch(err => {
-            console.error('[useSupabaseData] Error removing old channel:', err)
-          })
-        } else {
-          console.error('[useSupabaseData] Max reconnection attempts reached, stopping reconnection')
-          clearInterval(reconnectIntervalId)
-        }
-      } else if (channelState === 'joined') {
-        // 정상 연결 상태면 재연결 카운터 리셋
-        if (reconnectAttempts > 0) {
-          console.log('[useSupabaseData] Channel is healthy, resetting reconnect counter')
-          reconnectAttempts = 0
-        }
-      }
-    }, 30000) // 30초마다 연결 상태 확인 (3분 타임아웃보다 짧게 설정)
+    // Realtime WebSocket 대신 주기적 폴링 사용 (서버리스 환경에 적합)
+    // 60초마다 자동으로 데이터 새로고침
+    const pollingInterval = setInterval(() => {
+      console.log('[useSupabaseData] Polling: Refreshing data...')
+      fetchAllData(activeClinicId)
+    }, 60000) // 60초 간격
 
     return () => {
-      console.log('[useSupabaseData] Cleaning up subscription and monitor')
-      clearInterval(reconnectIntervalId)
-      supabase.removeChannel(channel)
+      console.log('[useSupabaseData] Cleaning up polling interval')
+      clearInterval(pollingInterval)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeClinicId])
