@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { dataService } from '@/lib/dataService'
 import type { Permission } from '@/types/permissions'
 import { useActivityTracker } from '@/hooks/useActivityTracker'
+import { SESSION_CHECK_TIMEOUT } from '@/lib/sessionUtils'
 
 export interface UserProfile {
   id: string
@@ -88,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
               const sessionPromise = supabase.auth.getSession()
               const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Session check timeout')), 10000)
+                setTimeout(() => reject(new Error('Session check timeout')), SESSION_CHECK_TIMEOUT)
               )
 
               const result = await Promise.race([
