@@ -22,6 +22,7 @@ interface DailyInputFormProps {
     happyCallRows: HappyCallRowData[]
     recallCount: number
     recallBookingCount: number
+    recallBookingNames: string
     specialNotes: string
   }) => void
   canCreate: boolean
@@ -42,6 +43,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
   ])
   const [recallCount, setRecallCount] = useState(0)
   const [recallBookingCount, setRecallBookingCount] = useState(0)
+  const [recallBookingNames, setRecallBookingNames] = useState('')
   const [specialNotes, setSpecialNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
@@ -54,6 +56,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
     setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
     setRecallCount(0)
     setRecallBookingCount(0)
+    setRecallBookingNames('')
     setSpecialNotes('')
   }, [])
 
@@ -101,6 +104,9 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
           setRecallCount(Number.isNaN(normalizedRecallCount) ? 0 : normalizedRecallCount)
           setRecallBookingCount(
             Number.isNaN(normalizedRecallBookingCount) ? 0 : normalizedRecallBookingCount
+          )
+          setRecallBookingNames(
+            typeof dailyReport.recall_booking_names === 'string' ? dailyReport.recall_booking_names : ''
           )
           setSpecialNotes(
             typeof dailyReport.special_notes === 'string' ? dailyReport.special_notes : ''
@@ -222,6 +228,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
           dailyReport: {
             recall_count: recallCount,
             recall_booking_count: recallBookingCount,
+            recall_booking_names: recallBookingNames,
             special_notes: specialNotes
           },
           consultLogs: filteredConsultLogs.map(row => ({
@@ -266,6 +273,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
           happyCallRows,
           recallCount,
           recallBookingCount,
+          recallBookingNames,
           specialNotes
         })
       }
@@ -321,7 +329,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
       {/* 리콜 결과 */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
         <h2 className="text-xl font-bold mb-4 border-b pb-3">[2] 환자 리콜 결과</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">리콜 건수</label>
             <input
@@ -341,6 +349,17 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
               value={recallBookingCount}
               onChange={(e) => setRecallBookingCount(parseInt(e.target.value) || 0)}
               className="w-full p-2 border border-slate-300 rounded-md"
+              readOnly={isReadOnly}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">예약 성공 환자 명</label>
+            <input
+              type="text"
+              value={recallBookingNames}
+              onChange={(e) => setRecallBookingNames(e.target.value)}
+              className="w-full p-2 border border-slate-300 rounded-md"
+              placeholder="예: 홍길동, 김철수, 이영희"
               readOnly={isReadOnly}
             />
           </div>
