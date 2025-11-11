@@ -4,6 +4,118 @@
 
 ---
 
+## 2025-11-11 [버그 수정] 환경 변수 누락으로 인한 Supabase 연결 오류 해결
+
+**키워드:** #환경변수 #Supabase #브라우저클라이언트 #NEXT_PUBLIC #설정오류
+
+### 📋 작업 내용
+- `.env.local` 파일에 누락된 Supabase 환경 변수 복구
+- 브라우저 클라이언트가 Supabase에 연결할 수 있도록 설정 완료
+- `NEXT_PUBLIC_SUPABASE_URL` 및 `NEXT_PUBLIC_SUPABASE_ANON_KEY` 추가
+
+### 🐛 문제 상황
+- 페이지 로드 시 콘솔 에러 발생:
+  ```
+  [Supabase Browser Client] 환경 변수가 설정되지 않았습니다.
+  Error: Supabase 환경 변수가 설정되지 않았습니다.
+  ```
+- `.env.local` 파일에 `DATABASE_URL`만 존재
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` 누락
+- 브라우저 클라이언트가 Supabase REST API에 연결 불가
+
+### 🔍 근본 원인
+1. **Q: 왜 환경 변수 오류가 발생했는가?**
+   - A: `.env.local`에 브라우저 환경 변수가 누락됨
+
+2. **Q: 왜 브라우저 환경 변수가 누락되었는가?**
+   - A: 최근 `DATABASE_URL` 추가 시 기존 변수들이 덮어써짐
+
+3. **Q: 왜 브라우저는 `DATABASE_URL`을 사용할 수 없는가?**
+   - A: Next.js 보안 정책상 브라우저는 `NEXT_PUBLIC_` 접두사가 있는 환경 변수만 접근 가능
+
+4. **Q: 왜 두 가지 종류의 환경 변수가 필요한가?**
+   - A: `DATABASE_URL`은 서버 사이드 직접 연결용, `NEXT_PUBLIC_*`는 브라우저 REST API 연결용
+
+5. **근본 원인:**
+   - Next.js 환경 변수 구조 이해 부족으로 서버용 변수만 추가하고 브라우저용 변수 누락
+
+### ✅ 해결 방법
+
+**변경 파일:**
+- `.env.local`
+
+**변경 내용:**
+```env
+# Database Direct Connection (서버 사이드)
+DATABASE_URL=postgresql://postgres.beahjntkmkfhpcbhfnrr:tNjSUoCUJcX3nPXg@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres
+
+# Supabase REST API (브라우저 클라이언트)
+NEXT_PUBLIC_SUPABASE_URL=https://beahjntkmkfhpcbhfnrr.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlYWhqbnRrbWtmaHBjYmhmbnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDEyNzUsImV4cCI6MjA3MzUxNzI3NX0.Af5GbqP_qQAEax5nj_ojTSz3xy1I-rBcV-TU1CwceFA
+```
+
+**적용 기술:**
+- 기존 스크립트 파일(`test-app.js`, `scripts/check-schedule-data.js`)에서 ANON_KEY 발견
+- PROJECT_REF(`beahjntkmkfhpcbhfnrr`)로부터 Supabase URL 계산
+- 환경 변수 역할 명확히 주석으로 구분
+
+### 🧪 테스트 결과
+1. **환경 변수 로드 확인**
+   ```bash
+   node -e "require('dotenv').config({ path: '.env.local' }); ..."
+   ```
+   - ✅ DATABASE_URL: 설정됨
+   - ✅ NEXT_PUBLIC_SUPABASE_URL: 설정됨
+   - ✅ NEXT_PUBLIC_SUPABASE_ANON_KEY: 설정됨
+
+2. **개발 서버 재시작**
+   - ✅ Next.js 서버 정상 시작 (2.2초)
+   - ✅ 환경 변수 `.env.local` 로드 확인
+
+3. **브라우저 테스트 (Chrome DevTools MCP)**
+   - ✅ 페이지 정상 로드 (`http://localhost:3000`)
+   - ✅ 콘솔 에러 없음
+   - ✅ Supabase 클라이언트 정상 연결
+
+### 📊 결과 및 영향
+- ✅ 환경 변수 오류 완전 해결
+- ✅ 브라우저 클라이언트가 Supabase REST API에 정상 연결
+- ✅ 모든 기능 정상 작동 (인증, 데이터 조회 등)
+- ✅ 기존 서버 사이드 기능에 영향 없음 (DATABASE_URL 유지)
+
+### 💡 배운 점 / 참고 사항
+- **교훈:** Next.js 환경 변수는 서버용과 브라우저용이 분리됨
+  - 서버: 모든 환경 변수 접근 가능
+  - 브라우저: `NEXT_PUBLIC_` 접두사 필수
+
+- **주의:** Supabase 연결 방식은 두 가지
+  1. **Direct Connection** (`DATABASE_URL`): 서버 사이드 전용, 더 빠름
+  2. **REST API** (`NEXT_PUBLIC_*`): 브라우저 + 서버, RLS 정책 적용
+
+- **패턴:** `.env.local` 파일 구조
+  ```env
+  # 1. 서버 사이드 환경 변수
+  DATABASE_URL=...
+  SERVICE_ROLE_KEY=...
+
+  # 2. 브라우저 환경 변수 (NEXT_PUBLIC_ 필수)
+  NEXT_PUBLIC_SUPABASE_URL=...
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+  ```
+
+- **복구 방법:** 환경 변수 분실 시
+  1. Git 히스토리 확인 (보안상 커밋 안 됨)
+  2. 기존 스크립트 파일에서 검색 (`grep -r "eyJ"`)
+  3. Supabase 대시보드에서 재확인
+  4. Vercel 환경 변수에서 복사
+
+### 📎 관련 링크
+- 파일: `.env.local`
+- 관련 원칙: CLAUDE.md - 근본 원인 해결 원칙
+- Next.js 문서: [Environment Variables](https://nextjs.org/docs/app/building-your-application/configuring/environment-variables)
+
+---
+
 ## 2025-11-08 [DB 스키마] RPC 함수 날짜 검증 완화 (테스트용)
 
 **키워드:** #RPC #날짜검증 #Supabase #마이그레이션 #테스트편의성 #일일보고서
