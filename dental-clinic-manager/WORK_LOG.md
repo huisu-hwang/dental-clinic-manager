@@ -4,6 +4,118 @@
 
 ---
 
+## 2025-11-11 [문서화] Context7 MCP 필수 사용 원칙 - 핵심 원칙으로 승격
+
+**키워드:** #Context7 #MCP #개발방법론 #공식문서 #베스트프랙티스 #문서화
+
+### 📋 작업 내용
+- CLAUDE.md에 "Context7 MCP 필수 사용 원칙" 독립 섹션 추가
+- 세션 관리 원칙 다음에 배치하여 핵심 원칙으로 강조
+- 모든 개발 작업에서 Context7 MCP 사용 의무화
+- 실제 성공 사례 3가지 포함 (환경 변수, Idle Timeout, 세션 관리)
+
+### 🎯 추가된 내용
+
+#### 1. Context7 MCP 개념 정의
+- 최신 공식 문서 실시간 조회 도구
+- 핵심 가치 4가지 명시
+  - 공식 문서 기반 개발
+  - 최신 API 정확성
+  - 문법 정확성 보장
+  - 베스트 프랙티스 학습
+
+#### 2. 필수 사용 시나리오 (7가지)
+| 상황 | 사용 이유 |
+|------|-----------|
+| 새 라이브러리 도입 | 올바른 사용법 확인 |
+| 데이터베이스 쿼리 | PostgreSQL/Supabase 문법 확인 |
+| 에러 해결 | 에러 메시지 키워드 검색 |
+| 코드 리뷰 | 베스트 프랙티스 검증 |
+| API 통합 | 최신 API 확인 |
+| 성능 최적화 | 공식 권장 패턴 |
+| 타입 오류 | 정확한 타입 정의 |
+
+#### 3. 사용 방법 가이드
+- Step 1: `resolve-library-id` - 라이브러리 ID 검색
+- Step 2: `get-library-docs` - 문서 조회
+- 주요 라이브러리 ID 목록 제공
+
+#### 4. 실제 성공 사례 (2025-11-11)
+**사례 1: 환경 변수 누락 문제**
+- Supabase 브라우저 클라이언트 연결 실패
+- Context7로 필수 환경 변수 확인
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` 추가
+- 한 번에 정확히 해결
+
+**사례 2: Idle Timeout 문제 근본 해결**
+- Transaction Mode (6543) 3분 idle timeout
+- Context7로 Connection Pooling 문서 조회
+- Session Mode (5432) 전환으로 제어 가능 확인
+- 근본적 해결
+
+**사례 3: 세션 관리 안정성 개선**
+- 세션 refresh 타임아웃 5초 (너무 짧음)
+- Context7로 Supabase Auth 공식 문서 조회
+- 공식 권장 10-15초, retry logic 패턴 학습
+- 베스트 프랙티스 적용
+
+#### 5. 필수 규칙 (예외 없음)
+1. 새 라이브러리/프레임워크 사용 시 Context7 필수
+2. 데이터베이스 관련 작업 시 Context7 필수
+3. 에러 발생 시 Context7로 에러 메시지 검색
+4. 코드 리뷰 시 Context7로 베스트 프랙티스 검증
+5. API 통합 시 Context7로 최신 API 확인
+
+#### 6. Context7 활용 워크플로우
+- **일반 개발:** /compact → Context7 문서 조회 → Sequential Thinking → 구현
+- **버그 수정:** /compact → Chrome DevTools → Context7 → 원인 분석 → 수정
+- **코드 리뷰:** /compact → 코드 읽기 → Context7 → 베스트 프랙티스 검증
+
+#### 7. 사용 효과 (Before/After)
+**Before (Context7 없이):**
+- 추측 기반 개발 → 여러 번 시도 → 시간 낭비
+- 오래된 튜토리얼 → deprecated API → 에러 발생
+- 타입 강제 캐스팅 → 런타임 에러
+- 임시 방편 → Technical Debt 증가
+
+**After (Context7 활용):**
+- 공식 문서 기반 → 첫 시도에 정확히 → 시간 절약
+- 최신 API → 베스트 프랙티스 → 안정성 향상
+- 정확한 타입 → 타입 안정성 → 에러 제거
+- 근본적 해결 → Technical Debt 감소
+
+#### 8. 학습 효과
+- 공식 문서 읽기 습관 형성
+- 라이브러리 아키텍처 이해도 향상
+- 베스트 프랙티스 자연스럽게 학습
+- 문제 해결 능력 향상
+- 코드 품질 지속적 개선
+
+### 🧪 변경 파일
+- `.claude/CLAUDE.md` - Context7 MCP 필수 사용 원칙 섹션 추가 (200줄)
+- `.claude/CLAUDE.md` - 변경 이력 업데이트 (2025-11-11)
+
+### 📊 결과 및 영향
+- ✅ Context7 MCP가 핵심 개발 원칙으로 확립
+- ✅ 추측 기반 개발 제거
+- ✅ 공식 문서 기반 정확한 개발 정착
+- ✅ 모든 개발 작업에 일관된 워크플로우 적용
+- ✅ 실제 사례로 효과성 입증
+
+### 💡 배운 점 / 참고 사항
+- **교훈:** Context7 MCP는 단순한 도구가 아닌 개발 방법론의 핵심
+- **효과:** 이전 대화에서 Context7 활용으로 3가지 문제를 공식 문서 기반으로 정확히 해결
+- **패턴:** Context7 → Sequential Thinking → 구현의 3단계 워크플로우 확립
+- **이후 작업:** 모든 개발 작업에서 Context7 MCP 우선 사용
+- **장기 효과:** 공식 문서 읽기 습관, 베스트 프랙티스 학습, 코드 품질 향상
+
+### 📎 관련 링크
+- 파일: `.claude/CLAUDE.md`
+- 섹션: "Context7 MCP 필수 사용 원칙 (Mandatory)"
+- 참고: 2025-11-11 대화 (환경 변수, Idle Timeout, 세션 관리 개선)
+
+---
+
 ## 2025-11-11 [코드 개선] Context7 기반 세션 관리 안정성 개선
 
 **키워드:** #Context7 #코드리뷰 #세션관리 #재시도로직 #ExponentialBackoff #Supabase공식문서
