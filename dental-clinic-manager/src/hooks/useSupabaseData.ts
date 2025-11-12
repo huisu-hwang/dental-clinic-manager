@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from '@/lib/clinicScope'
 import { refreshSessionWithTimeout, handleSessionExpired } from '@/lib/sessionUtils'
+import { TIMEOUTS } from '@/lib/constants/timeouts'
 import type { DailyReport, ConsultLog, GiftLog, GiftInventory, InventoryLog } from '@/types'
 
 export const useSupabaseData = (clinicId?: string | null) => {
@@ -111,7 +112,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         if (sessionError || !sessionData.session) {
           console.warn('[useSupabaseData] 세션이 유효하지 않음, 갱신 시도...')
-          const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(supabase, 5000)
+          const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(supabase, TIMEOUTS.SESSION_REFRESH)
 
           if (refreshError || !refreshedSession) {
             console.error('[useSupabaseData] 세션 갱신 실패:', refreshError)
@@ -154,14 +155,14 @@ export const useSupabaseData = (clinicId?: string | null) => {
           ])
         }
 
-        // 각 쿼리를 개별 타임아웃으로 감싸기 (30초 - idle 연결 재생성 시간 고려)
+        // 각 쿼리를 개별 타임아웃으로 감싸기 (60초 - idle 연결 재생성 시간 고려)
         const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
           withTimeout(
             Promise.resolve(applyClinicFilter(
               supabase.from('daily_reports').select('*'),
               targetClinicId
             ).then(result => result)),
-            60000,
+            TIMEOUTS.QUERY_LONG,
             'daily_reports'
           ),
           withTimeout(
@@ -169,7 +170,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('consult_logs').select('*'),
               targetClinicId
             ).then(result => result)),
-            60000,
+            TIMEOUTS.QUERY_LONG,
             'consult_logs'
           ),
           withTimeout(
@@ -177,7 +178,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('gift_logs').select('*'),
               targetClinicId
             ).then(result => result)),
-            60000,
+            TIMEOUTS.QUERY_LONG,
             'gift_logs'
           ),
           withTimeout(
@@ -185,7 +186,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('gift_inventory').select('*'),
               targetClinicId
             ).then(result => result)),
-            60000,
+            TIMEOUTS.QUERY_LONG,
             'gift_inventory'
           ),
           withTimeout(
@@ -193,7 +194,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('inventory_logs').select('*'),
               targetClinicId
             ).then(result => result)),
-            60000,
+            TIMEOUTS.QUERY_LONG,
             'inventory_logs'
           )
         ])
