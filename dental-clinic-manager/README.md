@@ -128,33 +128,23 @@ Vercel 대시보드 > Settings > Environment Variables에서 다음 환경 변�
 postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-[REGION].pooler.supabase.com:6543/postgres
 ```
 
-### Vercel Cron Job 자동 설정
+### Supabase Sleep 모드 안내 (무료 플랜)
 
-이 프로젝트는 Supabase 프로젝트가 자동으로 sleep 모드로 전환되는 것을 방지하기 위해 **Vercel Cron Job**을 사용합니다.
+Supabase 무료 플랜은 **15분 동안 활동이 없으면 자동으로 sleep 모드**로 전환됩니다.
 
-**설정 내용:**
-- 엔드포인트: `/api/keep-alive`
-- 실행 주기: 2분마다 (`*/2 * * * *`)
-- 목적: Supabase 프로젝트 wake-up, DB 연결 유지
+**영향:**
+- Sleep 모드에서 깨어날 때 첫 요청이 1-2초 지연될 수 있음
+- 이후 요청은 정상 속도로 작동
 
-**자동 활성화:**
-- `vercel.json`에 이미 설정되어 있어 별도 설정 불필요
-- 배포 후 Vercel 대시보드 > Cron Jobs에서 확인 가능
+**Transaction Mode로 해결됨:**
+- 3분 DB 연결 끊김 문제는 **Transaction Mode (port 6543)**로 완전 해결
+- Sleep 모드는 Supabase 인프라 레벨이며, 연결 끊김과는 무관
+- 첫 요청 지연은 미미하며, 대부분의 사용 사례에서 문제없음
 
-**수동 테스트:**
-```bash
-curl https://your-app.vercel.app/api/keep-alive
-```
-
-예상 응답:
-```json
-{
-  "success": true,
-  "timestamp": "2025-11-12T...",
-  "duration": 123,
-  "message": "Supabase project is active"
-}
-```
+**Sleep 방지 방법 (선택사항):**
+- **UptimeRobot** 같은 외부 모니터링 서비스 사용 (무료)
+- 5분마다 애플리케이션 URL 호출하여 활성 상태 유지
+- Vercel Pro Plan 업그레이드 시 Cron Jobs 사용 가능
 
 ## 문제 해결
 
@@ -171,9 +161,7 @@ curl https://your-app.vercel.app/api/keep-alive
 1. ✅ **Transaction Mode (port 6543) 사용** (이미 적용됨)
    - PgBouncer 커넥션 풀링으로 자동 관리
    - 서버리스 환경에 최적화
-2. ✅ **Keep-Alive Cron Job** (이미 적용됨)
-   - 2분마다 자동으로 DB 쿼리 실행
-   - Supabase 프로젝트 sleep 모드 방지
+   - **이것만으로 3분 연결 끊김 문제 완전 해결**
 
 **확인 방법:**
 ```bash
@@ -192,13 +180,10 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres
 - `supabase-schema.sql` 스크립트가 정상 실행되었는지 확인
 - RLS 정책이 올바르게 설정되었는지 확인
 
-### Vercel Cron Job 작동 확인
-```bash
-# Keep-alive 엔드포인트 수동 테스트
-curl https://your-app.vercel.app/api/keep-alive
-
-# Vercel 대시보드 > Cron Jobs 탭에서 실행 로그 확인
-```
+### Supabase Sleep 모드 (무료 플랜)
+- 15분 idle 후 첫 요청이 1-2초 지연될 수 있음
+- 이는 정상적인 동작이며, 3분 연결 끊김과는 무관
+- 외부 모니터링 서비스(UptimeRobot 등)로 방지 가능 (선택사항)
 
 ## 라이센스
 

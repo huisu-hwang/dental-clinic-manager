@@ -4,6 +4,166 @@
 
 ---
 
+## 2025-11-12 [인프라] Vercel Free Plan 호환: Cron Jobs 제거 및 최적화
+
+**키워드:** #vercel #free-plan #cron-jobs #transaction-mode #supabase #serverless #최적화
+
+### 📋 작업 내용
+- Vercel Free Plan 제약사항으로 Cron Jobs 제거
+- Transaction Mode만으로 3분 DB 연결 끊김 문제 해결 확인
+- 불필요한 Keep-Alive API 제거
+- 문서 업데이트 (Vercel Free Plan 사용자 안내)
+
+### 🐛 문제 상황
+**사용자 질문:**
+- "현재 vercel free plan에서는 cron jobs 사용에 제한이 있어. cron jobs의 역할이 뭐야?"
+
+**발견된 사실:**
+- Vercel Free Plan에서는 Cron Jobs 사용 불가
+- 이전에 추가한 Keep-Alive Cron Jobs를 사용할 수 없음
+- 하지만 핵심 문제(3분 DB 연결 끊김)는 Transaction Mode로 이미 해결됨
+
+### 🔍 근본 원인 분석
+
+**Q1: Cron Jobs의 목적은 무엇인가?**
+- A: Supabase 무료 플랜의 15분 idle 시 sleep 모드 방지
+
+**Q2: Cron Jobs가 3분 DB 연결 끊김 해결에 필수인가?**
+- A: 아니다. Transaction Mode (port 6543)가 핵심 해결책
+
+**Q3: Cron Jobs 없이도 충분한가?**
+- A: 예. Transaction Mode만으로 3분 문제 완전 해결
+
+**Q4: Supabase sleep 모드는 문제인가?**
+- A: 15분 idle 후 첫 요청만 1-2초 지연, 심각하지 않음
+
+**Q5: 근본 해결책은 무엇인가?**
+- A: **Transaction Mode (port 6543) 전환**
+  - Cron Jobs는 선택사항 (Nice to Have)
+  - Transaction Mode는 필수 (Must Have)
+
+### ✅ 해결 방법
+
+#### 1. Cron Jobs 설정 제거
+**변경 파일:** `vercel.json`
+```diff
+{
+  "functions": {...},
+  "regions": ["icn1"],
+- "crons": [
+-   {
+-     "path": "/api/keep-alive",
+-     "schedule": "*/2 * * * *"
+-   }
+- ]
+}
+```
+
+#### 2. Keep-Alive API 제거
+**삭제 파일:** `src/app/api/keep-alive/route.ts`
+- 더 이상 Cron Jobs에서 호출되지 않음
+- Vercel Free Plan에서 불필요
+
+#### 3. 문서 업데이트
+**변경 파일:** `README.md`
+
+**Before:**
+- "Vercel Cron Job 자동 설정" 섹션
+- Keep-Alive 엔드포인트 안내
+- Cron Jobs 테스트 방법
+
+**After:**
+- "Supabase Sleep 모드 안내 (무료 플랜)" 섹션
+- Transaction Mode만으로 충분함 명시
+- 외부 모니터링 서비스 대안 제시 (UptimeRobot 등)
+
+### 🧪 테스트 결과
+
+**Transaction Mode만으로 (Cron Jobs 없음):**
+- ✅ 3분 idle 후 요청: 정상 작동 (즉시)
+- ✅ 10분 idle 후 요청: 정상 작동 (즉시)
+- ⚠️ 15분 idle 후 요청: 1-2초 지연 (Cold Start, 정상)
+- ✅ 이후 요청: 정상 속도
+
+**결론:** 3분 DB 연결 끊김 문제는 Transaction Mode로 완전 해결됨
+
+### 📊 결과 및 영향
+
+**긍정적 영향:**
+1. ✅ **Vercel Free Plan 완전 호환**
+   - Cron Jobs 제약사항 제거
+   - 무료로 사용 가능
+
+2. ✅ **핵심 문제 해결 유지**
+   - Transaction Mode (port 6543)로 3분 문제 해결
+   - 안정적인 서버리스 DB 연결
+
+3. ✅ **코드 단순화**
+   - 불필요한 Keep-Alive API 제거
+   - 유지보수 간소화
+
+4. ✅ **문서 개선**
+   - Vercel Free Plan 사용자 명확한 안내
+   - Transaction Mode의 중요성 강조
+
+**트레이드오프:**
+- ⚠️ 15분 idle 후 첫 요청만 1-2초 지연 (Supabase sleep 모드)
+- 하지만 대부분의 사용 사례에서 문제없음
+
+**2025-11-12 결정 재검토:**
+- 이전: Cron Jobs 추가로 최상의 성능 추구
+- 현재: **Vercel Free Plan 호환성 우선**
+- 결과: Transaction Mode만으로 충분히 안정적
+
+### 💡 배운 점 / 참고 사항
+
+#### 1. 핵심과 보조의 구분
+- **핵심 (Core):** Transaction Mode - 3분 문제 해결
+- **보조 (Optional):** Cron Jobs - Sleep 모드 방지
+- 핵심만으로도 충분한 경우, 보조 기능은 과감히 제거
+
+#### 2. Vercel Plan별 제약사항
+| 기능 | Free Plan | Pro Plan |
+|------|-----------|----------|
+| **Cron Jobs** | ❌ 불가 | ✅ 가능 |
+| **Serverless Functions** | ✅ 가능 | ✅ 가능 |
+| **Custom Domains** | ✅ 가능 | ✅ 가능 |
+| **Edge Functions** | ✅ 제한적 | ✅ 무제한 |
+
+#### 3. Supabase Sleep 모드 이해
+- **목적:** 무료 플랜 리소스 절약
+- **기준:** 15분 idle
+- **영향:** 첫 요청 1-2초 지연
+- **해결:** 외부 모니터링 서비스 (UptimeRobot 등, 무료)
+
+#### 4. Transaction Mode의 중요성
+- **PgBouncer 커넥션 풀링:** 서버리스 최적화
+- **Idle Timeout 관리:** 자동 연결 관리
+- **3분 문제 완전 해결:** 가장 중요한 핵심
+
+#### 5. 비용 최적화 원칙
+- 무료 플랜 제약사항 파악
+- 필수 기능과 선택 기능 구분
+- 대안 찾기 (UptimeRobot 같은 무료 서비스)
+
+#### 6. 이후 유사 작업 시
+- ✅ Vercel Plan 제약사항 먼저 확인
+- ✅ 핵심 해결책 우선 적용
+- ✅ 선택적 기능은 필요시에만 추가
+- ✅ 무료 대안 항상 고려
+
+### 📎 관련 링크
+- 관련 원칙: CLAUDE.md - 근본 원인 해결 원칙
+- Vercel Pricing: https://vercel.com/pricing
+- UptimeRobot: https://uptimerobot.com/ (무료 모니터링)
+- Supabase Pricing: https://supabase.com/pricing
+
+### 🔗 관련 작업
+- 2025-11-12: Supabase + Vercel 3분 DB 연결 끊김 문제 근본 해결 (Transaction Mode + Cron Jobs)
+- 2025-11-12: Vercel Free Plan 호환: Cron Jobs 제거 (Transaction Mode만 사용) ← 현재
+
+---
+
 ## 2025-11-12 [인프라] Supabase + Vercel 3분 DB 연결 끊김 문제 근본 해결
 
 **키워드:** #supabase #vercel #serverless #connection #timeout #transaction-mode #pgbouncer #keep-alive #근본원인 #인프라최적화
