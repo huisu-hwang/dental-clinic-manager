@@ -40,8 +40,9 @@ const pool = new Pool({
   // Connection pool settings
   max: 1, // One connection per function instance (Vercel recommendation)
 
-  // Idle timeout: 30 seconds client-side
-  idleTimeoutMillis: 30000,
+  // ✨ Idle timeout: 10 minutes (increased from 30s to prevent premature disconnection)
+  // User reported 10-minute idle still fails with 30s setting
+  idleTimeoutMillis: 600000, // 10 minutes
 
   // Connection establishment timeout
   connectionTimeoutMillis: 10000,
@@ -61,54 +62,89 @@ attachDatabasePool(pool);
 /**
  * Auto-Reconnect Query Wrapper (Layer 2: Recovery)
  *
- * Detects connection errors and automatically retries with exponential backoff.
- * This ensures queries succeed even if the connection was dropped.
+ * User-requested implementation: Always check connection BEFORE query execution
+ *
+ * Flow:
+ * 1. Check connection status with SELECT 1
+ * 2. If connection is broken, retry connection (up to 3 times)
+ * 3. Once connection is verified, execute actual query
+ * 4. If query fails, retry (up to 3 times)
  *
  * @param text - SQL query string
  * @param params - Query parameters
- * @param retries - Maximum retry attempts (default: 3)
  * @returns Query result
  *
  * Features:
- * - Detects connection-related errors
- * - Automatic reconnection with ping test
- * - Exponential backoff (1s, 2s, 3s)
+ * - **Proactive connection check** (not reactive)
+ * - Verifies connection before every query
+ * - Automatic reconnection with exponential backoff
+ * - Double-layer retry: connection + query
  * - Detailed logging for debugging
  * - Transparent to calling code (same API)
  *
- * Connection Errors Handled:
- * - "Connection terminated"
- * - "ECONNREFUSED"
- * - "ETIMEDOUT"
- * - "connection is closed"
+ * This approach prevents timeout errors by ensuring connection is alive
+ * BEFORE attempting the actual query.
  */
-async function queryWithReconnect(text: string, params?: any[], retries = 3): Promise<any> {
-  let lastError: Error | null = null;
+async function queryWithReconnect(text: string, params?: any[]): Promise<any> {
+  const MAX_CONNECTION_RETRIES = 3;
+  const MAX_QUERY_RETRIES = 3;
 
-  for (let attempt = 0; attempt < retries; attempt++) {
+  // ⭐ Step 1: ALWAYS check connection status BEFORE query
+  let connectionVerified = false;
+
+  for (let attempt = 0; attempt < MAX_CONNECTION_RETRIES; attempt++) {
     try {
-      // Connection health check on retry attempts
+      // Ping database to verify connection is alive
+      await pool.query('SELECT 1');
+      connectionVerified = true;
+
       if (attempt > 0) {
-        console.log(`[DB] Reconnection attempt ${attempt + 1}/${retries}`);
-        // Ping test to verify connection is alive
-        await pool.query('SELECT 1');
-        console.log('[DB] Connection verified');
+        console.log(`[DB] ✅ Connection restored (attempt ${attempt + 1}/${MAX_CONNECTION_RETRIES})`);
       }
 
-      // Execute actual query
+      break; // Connection OK, proceed to query
+
+    } catch (error: any) {
+      console.error(`[DB] Connection check failed (attempt ${attempt + 1}/${MAX_CONNECTION_RETRIES}):`, {
+        message: error.message,
+        code: error.code,
+      });
+
+      // If not last attempt, wait and retry
+      if (attempt < MAX_CONNECTION_RETRIES - 1) {
+        const delayMs = 1000 * (attempt + 1); // 1s, 2s, 3s
+        console.log(`[DB] Waiting ${delayMs}ms before reconnection...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        // All connection attempts failed
+        throw new Error(`Database connection failed after ${MAX_CONNECTION_RETRIES} attempts: ${error.message}`);
+      }
+    }
+  }
+
+  if (!connectionVerified) {
+    throw new Error('Failed to verify database connection');
+  }
+
+  // ⭐ Step 2: Execute actual query (connection is now verified)
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < MAX_QUERY_RETRIES; attempt++) {
+    try {
       const result = await pool.query(text, params);
 
       if (attempt > 0) {
-        console.log('[DB] ✅ Query successful after reconnection');
+        console.log(`[DB] ✅ Query successful after retry (attempt ${attempt + 1}/${MAX_QUERY_RETRIES})`);
       }
 
       return result;
 
     } catch (error: any) {
       lastError = error;
-      console.error(`[DB] Query failed (attempt ${attempt + 1}/${retries}):`, {
+      console.error(`[DB] Query execution failed (attempt ${attempt + 1}/${MAX_QUERY_RETRIES}):`, {
         message: error.message,
         code: error.code,
+        query: text.substring(0, 100), // First 100 chars of query
       });
 
       // Check if this is a connection-related error
@@ -123,19 +159,18 @@ async function queryWithReconnect(text: string, params?: any[], retries = 3): Pr
         error.code === '08003' || // PostgreSQL: connection does not exist
         error.code === '08006';   // PostgreSQL: connection failure
 
-      // Only retry connection errors, and not on the last attempt
-      if (!isConnectionError || attempt === retries - 1) {
+      // Only retry connection errors
+      if (!isConnectionError || attempt === MAX_QUERY_RETRIES - 1) {
         throw error;
       }
 
-      // Exponential backoff before retry (1s, 2s, 3s)
+      // Exponential backoff before retry
       const delayMs = 1000 * (attempt + 1);
-      console.log(`[DB] Waiting ${delayMs}ms before retry...`);
+      console.log(`[DB] Waiting ${delayMs}ms before query retry...`);
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
 
-  // This should never be reached, but TypeScript requires it
   throw lastError || new Error('Query failed after retries');
 }
 
