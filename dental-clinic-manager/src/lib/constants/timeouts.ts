@@ -35,6 +35,12 @@ export const TIMEOUTS = {
   SESSION_TOTAL: 15000, // 15초
 
   /**
+   * 로그아웃 타임아웃
+   * Supabase signOut() 호출 시 최대 대기 시간
+   */
+  LOGOUT: 5000, // 5초
+
+  /**
    * 기본 데이터베이스 쿼리 타임아웃
    * 단순 SELECT 쿼리용
    */

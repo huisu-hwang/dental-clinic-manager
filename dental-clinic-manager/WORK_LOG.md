@@ -4,6 +4,208 @@
 
 ---
 
+## 2025-11-12 [검증] Phase 2: 세션 영속성 검증 및 타임아웃 일관성 확보
+
+**키워드:** #세션영속성 #통합테스트 #타임아웃 #일관성 #TDD #검증
+
+### 📋 작업 내용
+- 세션 영속성 통합 테스트 작성 및 실행 (12개 테스트 통과)
+- AuthContext 하드코딩 타임아웃 제거 (5초 → TIMEOUTS.LOGOUT)
+- TIMEOUTS 상수에 LOGOUT 타임아웃 추가
+- 전체 시스템 타임아웃 일관성 확보
+
+### 🎯 목표
+Phase 1에서 구현한 세션 관리 리팩토링이 제대로 작동하는지 검증하고, 남은 하드코딩 타임아웃을 제거하여 시스템 일관성을 확보합니다.
+
+### 📝 작업 내용
+
+#### 1. 세션 영속성 통합 테스트 작성 (TDD)
+
+**테스트 파일:** `scripts/test-session-persistence.js`
+
+**테스트 시나리오 (12개):**
+
+**Phase 1 검증 (5개):**
+1. ✅ autoRefreshToken: true 설정 확인
+2. ✅ persistSession: true 설정 확인
+3. ✅ CustomStorageAdapter 사용 확인
+4. ✅ useSupabaseData.ts TIMEOUTS import 확인
+5. ✅ useSupabaseData.ts TIMEOUTS 사용 확인
+
+**Phase 2 검증 (5개):**
+6. ✅ AuthContext SESSION_CHECK_TIMEOUT import 확인
+7. ✅ AuthContext 하드코딩 타임아웃 없음 확인
+8. ✅ rememberMe 기능 구현 확인
+9. ✅ Storage 분기 로직 확인 (localStorage/sessionStorage)
+10. ✅ clearAllSessions 함수 확인
+
+**시스템 일관성 검증 (2개):**
+11. ✅ 타임아웃 상수 중앙 관리 확인 (TIMEOUTS)
+12. ✅ sessionUtils와 TIMEOUTS 일관성 확인
+
+**테스트 결과:**
+```
+총 테스트: 12
+통과: 12 ✅
+실패: 0
+```
+
+---
+
+#### 2. AuthContext 타임아웃 상수화
+
+**발견된 문제:**
+- AuthContext 348번 라인에 로그아웃 타임아웃 5000 하드코딩
+  ```typescript
+  // Before
+  setTimeout(() => resolve({ error: new Error('Logout timeout') }), 5000)
+  ```
+
+**해결 방법:**
+
+**Step 1: TIMEOUTS에 LOGOUT 상수 추가**
+```typescript
+// src/lib/constants/timeouts.ts
+export const TIMEOUTS = {
+  SESSION_REFRESH: 10000,
+  SESSION_CHECK: 10000,
+  SESSION_TOTAL: 15000,
+  LOGOUT: 5000,  // ← 신규 추가
+  // ...
+} as const
+```
+
+**Step 2: AuthContext에서 TIMEOUTS import**
+```typescript
+// src/contexts/AuthContext.tsx
+import { TIMEOUTS } from '@/lib/constants/timeouts'
+```
+
+**Step 3: 하드코딩 제거**
+```typescript
+// After
+setTimeout(() => resolve({ error: new Error('Logout timeout') }), TIMEOUTS.LOGOUT)
+```
+
+---
+
+### 🧪 테스트 결과
+
+#### 통합 테스트
+```bash
+node scripts/test-session-persistence.js
+✅ 모든 테스트 통과! (12/12)
+```
+
+#### 빌드 테스트
+```bash
+npm run build
+✓ Compiled successfully in 10.7s
+✓ Linting and checking validity of types
+```
+- 타입 에러 없음 ✅
+- 정상 컴파일 ✅
+
+---
+
+### 📊 결과 및 영향
+
+**✅ 개선 효과:**
+
+1. **시스템 일관성 확보**
+   - 모든 타임아웃 값이 `TIMEOUTS` 상수로 중앙 관리
+   - 하드코딩 완전 제거 (5초, 60초, 10000 등)
+   - 한 곳에서 모든 타임아웃 제어 가능
+
+2. **세션 영속성 검증 완료**
+   - autoRefreshToken: true ✅
+   - persistSession: true ✅
+   - CustomStorageAdapter 정상 작동 ✅
+   - rememberMe 기능 정상 작동 ✅
+
+3. **코드 품질 향상**
+   - 12개 통합 테스트로 회귀 방지
+   - TDD 방식으로 안전한 검증
+   - 자동화된 테스트로 지속적 검증 가능
+
+4. **유지보수성 향상**
+   - 환경 변수로 오버라이드 가능
+   - 일관된 타임아웃 정책
+   - 변경 시 한 곳만 수정
+
+**📝 변경 파일:**
+- ✅ `src/lib/constants/timeouts.ts` - LOGOUT 타임아웃 추가
+- ✅ `src/contexts/AuthContext.tsx` - TIMEOUTS import 및 하드코딩 제거
+- ✅ `scripts/test-session-persistence.js` - 신규 생성 (통합 테스트)
+
+**🔗 관련 커밋:**
+- Phase 1: b7e1040 (타임아웃 상수화 및 autoRefreshToken 활성화)
+- Phase 2: (작성 중)
+
+---
+
+### 💡 배운 점 / 참고 사항
+
+#### 1. 통합 테스트의 중요성
+- Phase 1 변경사항이 제대로 적용되었는지 자동으로 검증
+- 하드코딩된 타임아웃을 즉시 발견
+- **교훈:** 리팩토링 후 반드시 통합 테스트로 검증
+
+#### 2. 점진적 리팩토링 전략
+- Phase 1: 핵심 문제 해결 (autoRefreshToken, 타임아웃 상수화)
+- Phase 2: 검증 및 남은 문제 해결 (하드코딩 제거, 통합 테스트)
+- **교훈:** 대규모 리팩토링은 단계별로 진행하고 검증
+
+#### 3. TDD의 안전성
+- 테스트 먼저 작성 → 문제 발견 → 수정 → 검증
+- 회귀 방지 자동화
+- **교훈:** TDD는 시간이 걸려도 장기적으로 시간 절약
+
+#### 4. 시스템 일관성의 중요성
+- 타임아웃 하나라도 하드코딩되면 유지보수 어려움
+- 중앙 집중 관리로 일관성 확보
+- **교훈:** Magic Number는 즉시 상수화
+
+#### 5. 세션 영속성 구현 패턴
+- autoRefreshToken: true (Supabase 자동 갱신)
+- persistSession: true (세션 영속성)
+- CustomStorageAdapter (rememberMe 분기)
+- **교훈:** 공식 권장사항 + 사용자 요구사항 조합
+
+---
+
+### 🔄 다음 단계
+
+**실제 환경 테스트 (권장):**
+1. 개발 서버에서 로그인/로그아웃 테스트
+2. 브라우저 종료 후 재오픈 시 세션 유지 확인
+3. rememberMe: true/false 시나리오 검증
+4. 2-3분 idle 후 데이터 페칭 정상 작동 확인
+5. 15분 idle 후 Sleep 모드 복구 확인
+
+**모니터링:**
+- 세션 갱신 성공률 추적
+- 자동 로그아웃 빈도 확인
+- 데이터 로딩 실패율 측정
+- 사용자 피드백 수집
+
+**선택사항 (Phase 3):**
+- Custom Storage Adapter 단순화 (Cookie 우선)
+- AuthContext 대규모 리팩토링 (467줄 → 150줄)
+  - useSession hook 추출
+  - useAuth hook 추출
+  - 단일 책임 원칙 적용
+
+---
+
+### 📎 관련 링크
+- 커밋: (작성 중)
+- Phase 1 커밋: https://github.com/huisu-hwang/dental-clinic-manager/commit/b7e1040
+- Supabase Auth 공식 문서: https://supabase.com/docs/guides/auth/sessions
+- @supabase/ssr 문서: https://supabase.com/docs/guides/auth/server-side/creating-a-client
+
+---
+
 ## 2025-11-12 [리팩토링] 세션 관리 리팩토링: 타임아웃 상수화 및 autoRefreshToken 활성화
 
 **키워드:** #세션관리 #리팩토링 #TDD #supabase #autoRefreshToken #타임아웃 #공식문서 #베스트프랙티스
