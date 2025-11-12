@@ -75,6 +75,203 @@ Claude:
 
 ---
 
+### 📚 Context7 MCP 필수 사용 원칙 (Mandatory)
+
+**모든 개발 작업에서 Context7 MCP를 적극적으로 활용합니다.**
+
+#### 🎯 Context7 MCP란?
+
+Context7 MCP는 **최신 공식 문서**를 실시간으로 조회하여 라이브러리, 프레임워크, 데이터베이스의 정확한 사용법을 확인할 수 있는 도구입니다.
+
+**핵심 가치:**
+- ✅ 추측이 아닌 **공식 문서 기반** 개발
+- ✅ 최신 버전의 **정확한 API** 확인
+- ✅ 타입 오류, 함수 오버로딩 등 **문법 정확성** 보장
+- ✅ 베스트 프랙티스 및 **권장 패턴** 학습
+
+#### 📋 필수 사용 시나리오
+
+| 상황 | Context7 사용 이유 | 예시 |
+|------|-------------------|------|
+| **새 라이브러리 도입** | 공식 문서로 올바른 사용법 확인 | Next.js 15 App Router 사용법 |
+| **데이터베이스 쿼리 작성** | PostgreSQL, Supabase 정확한 문법 확인 | JSONB 타입 변환, RPC 함수 작성 |
+| **에러 해결** | 에러 메시지 키워드로 공식 문서 검색 | "operator does not exist" 해결 |
+| **코드 리뷰** | 현재 코드가 베스트 프랙티스 준수하는지 검증 | 세션 관리 타임아웃 설정 확인 |
+| **API 통합** | 최신 API 시그니처 및 파라미터 확인 | Supabase Auth API, Storage API |
+| **성능 최적화** | 공식 권장 최적화 패턴 확인 | Connection Pooling 설정 |
+| **타입 오류** | 정확한 타입 정의 및 캐스팅 방법 확인 | TypeScript 제네릭, 유니온 타입 |
+
+#### 🔧 사용 방법
+
+**Step 1: 라이브러리 ID 검색**
+```javascript
+mcp__context7__resolve-library-id({
+  libraryName: "supabase"
+})
+// 결과: "/supabase/supabase"
+```
+
+**Step 2: 문서 조회**
+```javascript
+mcp__context7__get-library-docs({
+  context7CompatibleLibraryID: "/supabase/supabase",
+  topic: "authentication", // 또는 "database functions", "storage" 등
+  tokens: 5000 // 필요한 문서량 (기본값: 5000)
+})
+```
+
+**주요 라이브러리 ID:**
+- Next.js: `/vercel/next.js`
+- React: `/facebook/react`
+- Supabase: `/supabase/supabase`
+- PostgreSQL: `/postgres/postgres`
+- TypeScript: `/microsoft/TypeScript`
+- Tailwind CSS: `/tailwindlabs/tailwindcss`
+
+#### ✅ 실제 성공 사례 (2025-11-11)
+
+**사례 1: 환경 변수 누락 문제 해결**
+- **문제:** Supabase 브라우저 클라이언트 연결 실패
+- **Context7 활용:** Supabase 공식 문서에서 필수 환경 변수 확인
+  ```javascript
+  mcp__context7__get-library-docs({
+    context7CompatibleLibraryID: "/supabase/supabase",
+    topic: "environment variables"
+  })
+  ```
+- **결과:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` 누락 확인 및 추가
+- **배운 점:** 공식 문서 기반 설정으로 한 번에 정확히 해결
+
+**사례 2: Idle Timeout 문제 근본 해결**
+- **문제:** Transaction Mode (port 6543) 3분 idle timeout
+- **Context7 활용:** Supabase Connection Pooling 공식 문서 조회
+  ```javascript
+  mcp__context7__get-library-docs({
+    context7CompatibleLibraryID: "/supabase/supabase",
+    topic: "connection pooling"
+  })
+  ```
+- **결과:** Session Mode (port 5432) 전환으로 idle timeout 제어 가능 확인
+- **배운 점:** 추측으로 시도하지 않고 공식 문서로 최적의 솔루션 선택
+
+**사례 3: 세션 관리 안정성 개선**
+- **문제:** 세션 refresh 타임아웃 5초로 너무 짧음
+- **Context7 활용:** Supabase Auth 공식 문서 조회
+  ```javascript
+  mcp__context7__get-library-docs({
+    context7CompatibleLibraryID: "/supabase/supabase",
+    topic: "session management"
+  })
+  ```
+- **결과:** 공식 권장 타임아웃 10-15초 확인, retry logic 패턴 학습
+- **배운 점:** 공식 베스트 프랙티스 적용으로 코드 품질 향상
+
+#### 🚨 필수 규칙 (예외 없음)
+
+1. **새 라이브러리/프레임워크 사용 시 Context7 필수**
+   - ❌ "README 대충 보고 시작"
+   - ✅ "Context7로 공식 문서 정독 후 시작"
+
+2. **데이터베이스 관련 작업 시 Context7 필수**
+   - ❌ "SQL 추측으로 작성"
+   - ✅ "PostgreSQL/Supabase 공식 문서 확인 후 작성"
+
+3. **에러 발생 시 Context7로 에러 메시지 검색**
+   - ❌ "Stack Overflow 검색"
+   - ✅ "Context7로 공식 문서에서 에러 메시지 검색"
+
+4. **코드 리뷰 시 Context7로 베스트 프랙티스 검증**
+   - ❌ "내 경험으로 판단"
+   - ✅ "공식 문서 기준으로 검증"
+
+5. **API 통합 시 Context7로 최신 API 확인**
+   - ❌ "옛날 튜토리얼 참고"
+   - ✅ "최신 공식 API 문서 확인"
+
+#### 💡 Context7 활용 워크플로우
+
+**일반 개발 작업:**
+```
+1. /compact (세션 초기화)
+2. Context7로 관련 라이브러리 공식 문서 조회
+3. Sequential Thinking (공식 문서 기반 설계)
+4. 계획 수립 (TodoWrite)
+5. 구현 (공식 패턴 적용)
+6. 테스트
+7. Git commit & push
+```
+
+**버그 수정 작업:**
+```
+1. /compact (세션 초기화)
+2. Chrome DevTools로 오류 재현 및 로그 확인
+3. Context7로 에러 메시지 키워드 검색
+   - 에러 관련 공식 문서 조회
+   - 권장 해결 패턴 확인
+4. Sequential Thinking (공식 문서 기반 원인 분석)
+5. 코드 수정 (공식 패턴 적용)
+6. Chrome DevTools로 수정 검증
+7. Git commit & push
+```
+
+**코드 리뷰 작업:**
+```
+1. /compact (세션 초기화)
+2. 현재 코드 읽기
+3. Context7로 사용 중인 라이브러리 공식 문서 조회
+4. 베스트 프랙티스 준수 여부 확인
+5. 개선 사항 도출
+6. 리뷰 의견 작성
+```
+
+#### 📊 Context7 사용 효과
+
+**Before (Context7 없이):**
+- ❌ 추측 기반 개발 → 여러 번 시도 → 시간 낭비
+- ❌ 오래된 튜토리얼 참고 → deprecated API 사용 → 에러 발생
+- ❌ 타입 오류 → 타입 강제 캐스팅 → 런타임 에러
+- ❌ 성능 문제 → 임시 방편 → Technical Debt 증가
+
+**After (Context7 활용):**
+- ✅ 공식 문서 기반 개발 → 첫 시도에 정확히 → 시간 절약
+- ✅ 최신 API 확인 → 최신 베스트 프랙티스 적용 → 안정성 향상
+- ✅ 정확한 타입 → 타입 안정성 → 런타임 에러 제거
+- ✅ 공식 권장 패턴 → 근본적 해결 → Technical Debt 감소
+
+#### 🎓 학습 효과
+
+Context7을 지속적으로 사용하면:
+1. **공식 문서 읽기 습관** 형성
+2. **라이브러리 아키텍처** 이해도 향상
+3. **베스트 프랙티스** 자연스럽게 학습
+4. **문제 해결 능력** 향상 (공식 문서 기반 사고)
+5. **코드 품질** 지속적 개선
+
+#### ⚠️ 주의사항
+
+**Context7을 사용해도 되는 경우:**
+- ✅ 공식 문서가 있는 오픈소스 라이브러리
+- ✅ PostgreSQL, Supabase, Next.js 등 주요 프레임워크
+- ✅ 최신 버전 API 확인 필요 시
+
+**Context7 대신 다른 도구 사용:**
+- 프로젝트 내부 코드 확인 → Read, Grep 도구
+- 간단한 파일 작업 → Read, Write, Edit 도구
+- 브라우저 디버깅 → Chrome DevTools MCP
+
+#### 📝 정리
+
+**Context7 MCP는 추측을 제거하고 정확성을 보장하는 핵심 도구입니다.**
+
+- **언제:** 모든 개발 작업에서 (라이브러리, 데이터베이스, API 사용 시)
+- **왜:** 공식 문서 기반 개발로 정확성과 안정성 보장
+- **어떻게:** resolve-library-id → get-library-docs → 공식 패턴 적용
+- **효과:** 시간 절약, 코드 품질 향상, Technical Debt 감소
+
+**앞으로 모든 작업에서 Context7 MCP를 적극적으로 활용합니다.** (예외 없음)
+
+---
+
 ### 🔍 근본 원인 해결 원칙 (Root Cause Analysis)
 
 **문제 해결 시 반드시 준수:**
@@ -187,22 +384,27 @@ Claude:
 #### 버그 수정 (추가 단계 필수):
 1. **/compact 실행** - 세션 초기화 및 컨텍스트 정리
 2. **🤖 Subagent 자동 선택** - `/bug-fix` 모드 활성화
-3. **🌐 Chrome DevTools MCP로 오류 재현 및 로그 확인 (필수!)** ← 신규 추가!
+3. **🌐 Chrome DevTools MCP로 오류 재현 및 로그 확인 (필수!)**
    - localhost 개발 서버 접속
    - 사용자가 보고한 작업 시나리오 재현
    - 콘솔 에러 메시지 정확히 확인
    - 네트워크 요청 실패 원인 파악
    - 타이밍, connection error 등 측정
-4. **🔍 근본 원인 분석 (5 Whys + 콘솔 로그 기반)** - Chrome DevTools 로그 기반 분석
-5. **Sequential Thinking (ultrathink)** - 해결 방안 설계
-6. **계획 수립 (Planning)** - 구현 단계 정의
-7. **코드 수정** - 근본 원인 제거
-8. **🌐 Chrome DevTools MCP로 수정 검증 (필수!)** ← 신규 추가!
+4. **📚 Context7 MCP로 공식 문서 확인 (데이터베이스/라이브러리 문제 시 필수!)** ← 신규 추가!
+   - PostgreSQL, Supabase, PostgREST 등 관련 문서 조회
+   - 에러 메시지에 포함된 키워드로 검색
+   - 공식 문서의 권장 패턴 확인
+   - 타입 변환, 함수 시그니처 등 정확한 문법 확인
+5. **🔍 근본 원인 분석 (5 Whys + 콘솔 로그 + 공식 문서 기반)** - 모든 정보 종합 분석
+6. **Sequential Thinking (ultrathink)** - 해결 방안 설계
+7. **계획 수립 (Planning)** - 구현 단계 정의
+8. **코드 수정** - 근본 원인 제거 (공식 문서 패턴 적용)
+9. **🌐 Chrome DevTools MCP로 수정 검증 (필수!)**
    - 동일 시나리오 재현
    - 콘솔 로그 확인 (예상한 로그 출력되는지)
    - 타이밍 측정 (개선 효과 확인)
    - 최종 정상 작동 확인
-9. **TDD (Test-Driven Development)** - 재발 방지 테스트 작성
+10. **TDD (Test-Driven Development)** - 재발 방지 테스트 작성
 
 ---
 
@@ -761,6 +963,16 @@ const handleSubmit = async () => {
    - 수정 검증 단계 필수 (수정 후)
    - 로그 없이 코드 수정하면 재발 위험 높음
 
+9. **📚 데이터베이스/라이브러리 문제 시 Context7 MCP 생략 (절대 금지)** ← 신규 추가!
+   - "이렇게 하면 될 것 같은데" ❌
+   - 반드시 Context7 MCP로 공식 문서 확인 후 수정 ✅
+   - PostgreSQL, Supabase, PostgREST 등 정확한 문법 확인 필수
+   - 에러 메시지 키워드로 공식 문서 검색
+   - 추측으로 SQL 작성하면 타입 불일치, 함수 오버로딩 등 문제 발생
+   - **예시:**
+     - ❌ "jsonb_populate_record를 쓰면 될 것 같아"
+     - ✅ "context7로 PostgreSQL jsonb_populate_record 문서 확인 → 명시적 타입 캐스팅 필요 확인 → 코드 수정"
+
 ---
 
 ## 작업 문서화 가이드
@@ -1127,9 +1339,15 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 **언제 사용하는가?**
 
-1. **최신 라이브러리 문서 필요 시** → context7 사용
+1. **최신 라이브러리 문서 필요 시** → context7 사용 (최우선!)
    - Next.js, React, Supabase 등의 최신 API 확인
    - 예: "Next.js 15의 새로운 라우팅 방식은?"
+   - **데이터베이스 관련 문제 해결 시 필수:**
+     - PostgreSQL 공식 문서 확인
+     - Supabase RPC, PostgREST 문서 확인
+     - 타입 변환, 함수 오버로딩 등의 문법 확인
+   - 예: "PostgreSQL에서 JSONB를 테이블 레코드로 변환하는 방법"
+   - 예: "Supabase RPC 함수에서 TEXT를 DATE로 캐스팅하는 방법"
 
 2. **브라우저 테스트 필요 시** → chrome-devtools 또는 playwright 사용
    - UI 버그 재현 및 디버깅
@@ -1151,13 +1369,18 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - 수동으로 하면 시간이 오래 걸리는 작업
 - 브라우저 디버깅이 필요할 때
 - 최신 라이브러리 문서 확인이 필요할 때
+- **데이터베이스/SQL 관련 문제 해결 시 (필수!):**
+  - PostgreSQL 타입 변환 문법 확인
+  - Supabase RPC 함수 작성 시
+  - PostgREST 에러 메시지 해석 시
+  - JSONB 처리 관련 문제 시
 
 ❌ **불필요한 경우:**
 - 간단한 파일 읽기/쓰기 (Read, Write 도구 사용)
 - 코드 내 간단한 검색 (Grep 사용)
 - 기본 bash 명령 (Bash 도구 사용)
 
-**예시:**
+**예시 1: UI 버그 수정**
 ```
 사용자: "프로토콜 저장 시 무한 로딩 문제가 발생해"
 
@@ -1166,6 +1389,22 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 3. 코드 수정
 4. 다시 Chrome DevTools로 테스트
 5. 문제 해결 확인
+```
+
+**예시 2: 데이터베이스 문제 해결 (NEW!)**
+```
+사용자: "RPC 함수에서 'operator does not exist: text = date' 에러가 발생해"
+
+1. Sequential Thinking으로 에러 분석
+2. context7로 PostgreSQL 문서 확인
+   - libraryName: "postgresql"
+   - topic: "type casting", "date functions"
+3. context7로 Supabase 문서 확인
+   - libraryName: "supabase"
+   - topic: "RPC functions", "database functions"
+4. 공식 문서 기반으로 해결책 수립
+5. 코드 수정 (명시적 타입 캐스팅 적용)
+6. 테스트 및 검증
 ```
 
 ### 6. Chrome DevTools MCP 활용 (버그 수정 필수)
@@ -1489,6 +1728,32 @@ import { Button } from "@/components/ui/button"
 
 ## 변경 이력
 
+### 2025-11-11
+- 📚 **Context7 MCP 필수 사용 원칙 - 핵심 원칙으로 승격**
+  - 새로운 독립 섹션 "Context7 MCP 필수 사용 원칙 (Mandatory)" 추가
+  - 세션 관리 원칙 다음에 배치하여 핵심 원칙으로 강조
+  - **Context7 MCP란?** - 개념 및 핵심 가치 명확히 정의
+  - **필수 사용 시나리오** - 7가지 필수 사용 케이스 테이블로 정리
+  - **사용 방법** - resolve-library-id, get-library-docs 단계별 가이드
+  - **실제 성공 사례 3가지** - 환경 변수, Idle Timeout, 세션 관리 개선 사례
+  - **필수 규칙 5가지** - 예외 없는 Context7 사용 규칙 명시
+  - **Context7 활용 워크플로우** - 일반 개발, 버그 수정, 코드 리뷰별 워크플로우
+  - **사용 효과 비교** - Before/After로 효과 명확히 제시
+  - **학습 효과** - 장기적 개발 역량 향상 효과
+  - **주의사항** - 적절한 사용과 다른 도구와의 구분
+  - **배경:** 이전 대화에서 Context7 활용으로 큰 성과를 거둠 (환경 변수 해결, Session Mode 전환, 세션 관리 개선)
+  - **효과:** 추측 기반 개발 제거, 공식 문서 기반 정확한 개발 정착
+
+### 2025-11-08
+- 📚 **Context7 MCP 활용 의무화 (데이터베이스/라이브러리 문제 해결 시)**
+  - 버그 수정 워크플로우에 Context7 MCP 단계 추가 (4번째 단계)
+  - PostgreSQL, Supabase, PostgREST 등 공식 문서 확인 필수화
+  - MCP 활용 시나리오에 데이터베이스 관련 항목 추가
+  - 금지 사항에 "Context7 MCP 생략 금지" 추가 (9번째 항목)
+  - 에러 메시지 키워드로 공식 문서 검색하여 정확한 문법 확인
+  - 추측 기반 SQL 작성 대신 문서 기반 정확한 패턴 적용
+  - **배경:** RPC 함수 타입 불일치 문제 해결 과정에서 공식 문서 미확인으로 여러 시도 실패
+
 ### 2025-11-06 (3차 업데이트)
 - 📝 **작업 문서화 가이드 추가**
   - 모든 작업 완료 시 WORK_LOG.md 업데이트 의무화
@@ -1541,4 +1806,4 @@ import { Button } from "@/components/ui/button"
 
 ---
 
-마지막 업데이트: 2025-11-06 (작업 문서화 가이드 추가)
+마지막 업데이트: 2025-11-08 (Context7 MCP 활용 의무화)

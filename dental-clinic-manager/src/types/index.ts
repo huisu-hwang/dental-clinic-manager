@@ -3,6 +3,7 @@ export interface DailyReport {
   date: string;
   recall_count: number;
   recall_booking_count: number;
+  recall_booking_names?: string;
   consult_proceed: number;
   consult_hold: number;
   naver_review_count: number;

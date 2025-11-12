@@ -6,8 +6,12 @@ import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
+import { saveDailyReport } from '@/app/actions/dailyReport'
 import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
+
+// Feature Flag: 신규 아키텍처 사용 여부
+const USE_NEW_ARCHITECTURE = process.env.NEXT_PUBLIC_USE_NEW_DAILY_REPORT === 'true'
 
 interface DailyInputFormProps {
   giftInventory: GiftInventory[]
@@ -18,6 +22,7 @@ interface DailyInputFormProps {
     happyCallRows: HappyCallRowData[]
     recallCount: number
     recallBookingCount: number
+    recallBookingNames: string
     specialNotes: string
   }) => void
   canCreate: boolean
@@ -38,6 +43,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
   ])
   const [recallCount, setRecallCount] = useState(0)
   const [recallBookingCount, setRecallBookingCount] = useState(0)
+  const [recallBookingNames, setRecallBookingNames] = useState('')
   const [specialNotes, setSpecialNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
@@ -50,6 +56,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
     setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
     setRecallCount(0)
     setRecallBookingCount(0)
+    setRecallBookingNames('')
     setSpecialNotes('')
   }, [])
 
@@ -97,6 +104,9 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
           setRecallCount(Number.isNaN(normalizedRecallCount) ? 0 : normalizedRecallCount)
           setRecallBookingCount(
             Number.isNaN(normalizedRecallBookingCount) ? 0 : normalizedRecallBookingCount
+          )
+          setRecallBookingNames(
+            typeof dailyReport.recall_booking_names === 'string' ? dailyReport.recall_booking_names : ''
           )
           setSpecialNotes(
             typeof dailyReport.special_notes === 'string' ? dailyReport.special_notes : ''
@@ -199,22 +209,81 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
     }
 
     setLoading(true)
+    console.log(`[DailyInputForm] handleSave - Using ${USE_NEW_ARCHITECTURE ? 'NEW' : 'OLD'} architecture`)
+
     try {
-      await onSaveReport({
-        date: reportDate,
-        consultRows,
-        giftRows,
-        happyCallRows,
-        recallCount,
-        recallBookingCount,
-        specialNotes
-      })
+      if (USE_NEW_ARCHITECTURE) {
+        // ============================================================
+        // 신규 아키텍처: Server Action 직접 호출
+        // ============================================================
+        console.log('[DailyInputForm] Calling Server Action...')
+
+        // 빈 데이터 필터링
+        const filteredConsultLogs = consultRows.filter(row => row.patient_name?.trim())
+        const filteredGiftLogs = giftRows.filter(row => row.patient_name?.trim())
+        const filteredHappyCallLogs = happyCallRows.filter(row => row.patient_name?.trim())
+
+        const result = await saveDailyReport({
+          date: reportDate,
+          dailyReport: {
+            recall_count: recallCount,
+            recall_booking_count: recallBookingCount,
+            recall_booking_names: recallBookingNames,
+            special_notes: specialNotes
+          },
+          consultLogs: filteredConsultLogs.map(row => ({
+            date: reportDate,
+            patient_name: row.patient_name,
+            consult_content: row.consult_content || '',
+            consult_status: row.consult_status,
+            remarks: row.remarks || ''
+          })),
+          giftLogs: filteredGiftLogs.map(row => ({
+            date: reportDate,
+            patient_name: row.patient_name,
+            gift_type: row.gift_type || '',
+            naver_review: row.naver_review,
+            notes: row.notes || ''
+          })),
+          happyCallLogs: filteredHappyCallLogs.map(row => ({
+            date: reportDate,
+            patient_name: row.patient_name,
+            treatment: row.treatment || '',
+            notes: row.notes || ''
+          }))
+        })
+
+        if (!result.success) {
+          console.error('[DailyInputForm] Server Action failed:', result.error)
+          throw new Error(result.error || '저장에 실패했습니다.')
+        }
+
+        console.log('[DailyInputForm] Server Action succeeded:', result)
+        alert('보고서가 성공적으로 저장되었습니다.')
+      } else {
+        // ============================================================
+        // 기존 아키텍처: onSaveReport prop 사용
+        // ============================================================
+        console.log('[DailyInputForm] Using legacy onSaveReport...')
+
+        await onSaveReport({
+          date: reportDate,
+          consultRows,
+          giftRows,
+          happyCallRows,
+          recallCount,
+          recallBookingCount,
+          recallBookingNames,
+          specialNotes
+        })
+      }
 
       // 저장 성공 후 기존 데이터가 있다고 표시
       setHasExistingData(true)
     } catch (error) {
-      console.error('보고서 저장 중 오류 발생:', error)
-      alert('보고서 저장 중 오류가 발생했습니다. 다시 시도해주세요.')
+      console.error('[DailyInputForm] Save error:', error)
+      const errorMessage = error instanceof Error ? error.message : '보고서 저장 중 오류가 발생했습니다.'
+      alert(errorMessage + ' 다시 시도해주세요.')
     } finally {
       setLoading(false)
     }
@@ -260,7 +329,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
       {/* 리콜 결과 */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
         <h2 className="text-xl font-bold mb-4 border-b pb-3">[2] 환자 리콜 결과</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">리콜 건수</label>
             <input
@@ -280,6 +349,17 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
               value={recallBookingCount}
               onChange={(e) => setRecallBookingCount(parseInt(e.target.value) || 0)}
               className="w-full p-2 border border-slate-300 rounded-md"
+              readOnly={isReadOnly}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">예약 성공 환자 명</label>
+            <input
+              type="text"
+              value={recallBookingNames}
+              onChange={(e) => setRecallBookingNames(e.target.value)}
+              className="w-full p-2 border border-slate-300 rounded-md"
+              placeholder="예: 홍길동, 김철수, 이영희"
               readOnly={isReadOnly}
             />
           </div>

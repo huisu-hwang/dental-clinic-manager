@@ -1,0 +1,214 @@
+
+> dental-clinic-manager@0.1.0 build
+> next build
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Project\dental_clinic_manager\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * C:\Project\dental_clinic_manager\dental-clinic-manager\package-lock.json
+
+   ▲ Next.js 15.5.3
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 8.4s
+   Linting and checking validity of types ...
+
+./src/app/admin/page.tsx
+30:9  Warning: 'showToast' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/dashboard/contracts/new/page.tsx
+91:6  Warning: React Hook useEffect has a missing dependency: 'loadEmployees'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/dashboard/page.tsx
+35:26  Warning: 'canAccessTab' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/master/page.tsx
+42:6  Warning: React Hook useEffect has a missing dependency: 'checkMasterPermission'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/pending-approval/page.tsx
+16:6  Warning: React Hook useEffect has a missing dependency: 'checkUserStatus'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Admin/ClinicsManagement.tsx
+8:3  Warning: 'ChartBarIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+13:3  Warning: 'FunnelIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+265:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+300:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Admin/SystemMonitoring.tsx
+74:6  Warning: React Hook useEffect has a missing dependency: 'fetchSystemMetrics'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Attendance/AttendanceHistory.tsx
+25:6  Warning: React Hook useEffect has a missing dependency: 'loadRecords'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Attendance/AttendanceStats.tsx
+19:6  Warning: React Hook useEffect has a missing dependency: 'loadStatistics'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Attendance/CheckInOut.tsx
+19:10  Warning: 'showScanner' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+19:23  Warning: 'setShowScanner' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+70:6  Warning: React Hook useEffect has a missing dependency: 'loadTodayAttendance'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Attendance/QRCodeDisplay.tsx
+40:6  Warning: React Hook useEffect has a missing dependency: 'loadQRCode'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+54:6  Warning: React Hook useEffect has a missing dependency: 'loadQRCode'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Attendance/QRScanner.tsx
+36:10  Warning: 'errorMessage' is defined but never used.  @typescript-eslint/no-unused-vars
+73:6  Warning: React Hook useEffect has a missing dependency: 'startScanner'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Attendance/ScheduleManagement.tsx
+40:6  Warning: React Hook useEffect has a missing dependency: 'loadUsers'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+46:6  Warning: React Hook useEffect has a missing dependency: 'loadUserSchedule'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+203:11  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+207:16  Warning: '_' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+216:19  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Attendance/TeamStatus.tsx
+20:6  Warning: React Hook useEffect has a missing dependency: 'loadTeamStatus'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+33:6  Warning: React Hook useEffect has a missing dependency: 'loadTeamStatus'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Auth/EnhancedSignupForm.tsx
+22:10  Warning: 'selectedClinicId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+130:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Auth/LoginForm.tsx
+5:10  Warning: 'getSupabase' is defined but never used.  @typescript-eslint/no-unused-vars
+7:10  Warning: 'setRememberMe' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Auth/SignupForm.tsx
+10:3  Warning: 'sanitizeResidentNumberInput' is defined but never used.  @typescript-eslint/no-unused-vars
+24:3  Warning: 'onSearchClinics' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Contract/ContractDetail.tsx
+33:10  Warning: 'decryptedResidentNumber' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+38:6  Warning: React Hook useEffect has a missing dependency: 'loadContract'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Contract/ContractList.tsx
+124:6  Warning: React Hook useEffect has missing dependencies: 'currentUser?.role' and 'filters'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Contract/TemplateManagement.tsx
+36:6  Warning: React Hook useEffect has a missing dependency: 'loadTemplates'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/DailyInput/GiftTable.tsx
+15:9  Warning: 'getUsedQuantity' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Layout/ManagementTabNavigation.tsx
+30:3  Warning: 'userRole' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Management/AccountProfile.tsx
+23:3  Warning: 'maskResidentNumber' is defined but never used.  @typescript-eslint/no-unused-vars
+36:10  Warning: 'loading' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+36:19  Warning: 'setLoading' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+51:10  Warning: 'showResidentNumber' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+51:30  Warning: 'setShowResidentNumber' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Management/ClinicHoursSettings.tsx
+35:6  Warning: React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Management/ClinicSettings.tsx
+6:3  Warning: 'GlobeAltIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+77:6  Warning: React Hook useEffect has a missing dependency: 'fetchClinicInfo'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Management/PermissionSelector.tsx
+157:21  Warning: 'someChecked' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Management/ProtocolManagement.tsx
+71:6  Warning: React Hook useEffect has missing dependencies: 'fetchCategories' and 'fetchProtocols'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+168:6  Warning: React Hook useEffect has a missing dependency: 'fetchProtocols'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+196:33  Warning: 'protocolId' is defined but never used.  @typescript-eslint/no-unused-vars
+222:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Management/StaffManagement.tsx
+12:3  Warning: 'ShieldCheckIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+13:3  Warning: 'TrashIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+88:6  Warning: React Hook useEffect has missing dependencies: 'fetchJoinRequests' and 'fetchStaff'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+153:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+221:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+242:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+656:22  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Protocol/EnhancedTiptapEditor.tsx
+163:34  Warning: '_slice' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Protocol/ProtocolForm.tsx
+3:40  Warning: 'useRef' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Protocol/ProtocolVersionHistory.tsx
+75:31  Warning: 'index' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Protocol/TiptapEditor.tsx
+24:3  Warning: 'placeholder' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/contexts/AuthContext.tsx
+291:6  Warning: React Hook useEffect has a missing dependency: 'isLoggingOut'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/lib/attendanceService.ts
+56:38  Warning: 'checkError' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+320:42  Warning: 'checkError' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+433:42  Warning: 'checkError' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/branchService.ts
+12:3  Warning: 'BranchesResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+15:3  Warning: 'validateBranch' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/contractService.ts
+22:3  Warning: 'SignerType' is defined but never used.  @typescript-eslint/no-unused-vars
+24:15  Warning: 'User' is defined but never used.  @typescript-eslint/no-unused-vars
+25:10  Warning: 'encryptResidentNumber' is defined but never used.  @typescript-eslint/no-unused-vars
+128:18  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+618:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/dataService.ts
+75:13  Warning: 'data' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+2086:15  Warning: 'data' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+2189:18  Warning: 'supabaseError' is defined but never used.  @typescript-eslint/no-unused-vars
+2208:20  Warning: 'parseError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/supabase.ts
+103:66  Warning: 'session' is defined but never used.  @typescript-eslint/no-unused-vars
+117:44  Warning: 'data' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/utils/encryptionUtils.ts
+193:12  Warning: '_e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/18) ...
+   Generating static pages (4/18) 
+   Generating static pages (8/18) 
+[Supabase] Running on server-side, returning null
+   Generating static pages (13/18) 
+ ✓ Generating static pages (18/18)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    9.12 kB         510 kB
+├ ○ /_not-found                            995 B         103 kB
+├ ○ /admin                               9.76 kB         169 kB
+├ ƒ /api/contracts/[id]                    123 B         102 kB
+├ ○ /attendance                          1.84 kB         298 kB
+├ ○ /dashboard                             195 B         501 kB
+├ ○ /dashboard/contracts                 3.79 kB         172 kB
+├ ƒ /dashboard/contracts/[id]            8.92 kB         177 kB
+├ ○ /dashboard/contracts/new             6.07 kB         174 kB
+├ ○ /dashboard/contracts/templates       3.75 kB         171 kB
+├ ○ /management                          39.1 kB         392 kB
+├ ○ /master                              5.85 kB         165 kB
+├ ○ /pending-approval                    3.93 kB         145 kB
+├ ○ /test                                2.52 kB         144 kB
+├ ○ /test-protocol                       3.52 kB         319 kB
+├ ○ /test/permissions                    3.42 kB         158 kB
+└ ○ /update-password                     3.82 kB         145 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/255-40634877ae3e8e9d.js       45.7 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB
+  └ other shared chunks (total)             2 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

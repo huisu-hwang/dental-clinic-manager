@@ -88,8 +88,19 @@ export const getSupabase = () => {
       supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         auth: {
           persistSession: true,
+          /**
+           * autoRefreshToken: Supabase가 자동으로 만료된 토큰을 갱신
+           *
+           * Supabase 공식 권장:
+           * - Serverless 환경(Vercel)에서 stateless 세션 관리에 적합
+           * - 미들웨어에서 supabase.auth.getUser() 호출로 토큰 재검증
+           * - 리프레시 토큰 재사용 간격: 10초 (기본, 변경 비권장)
+           *
+           * @see https://supabase.com/docs/guides/auth/sessions
+           * @see https://supabase.com/docs/guides/auth/server-side/creating-a-client
+           */
           autoRefreshToken: true,
-          detectSessionInUrl: true,
+          detectSessionInUrl: false, // URL 기반 세션 감지 비활성화 (불필요한 리다이렉트 방지)
           storage: customStorage as any,
           storageKey: 'sb-beahjntkmkfhpcbhfnrr-auth-token',
           flowType: 'pkce',

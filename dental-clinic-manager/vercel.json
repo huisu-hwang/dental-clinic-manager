@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "src/app/**/*.{js,ts,jsx,tsx}": {
+      "maxDuration": 60
+    }
+  },
+  "regions": ["icn1"]
+}

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from '@/lib/clinicScope'
 import { refreshSessionWithTimeout, handleSessionExpired } from '@/lib/sessionUtils'
+import { TIMEOUTS } from '@/lib/constants/timeouts'
 import type { DailyReport, ConsultLog, GiftLog, GiftInventory, InventoryLog } from '@/types'
 
 export const useSupabaseData = (clinicId?: string | null) => {
@@ -30,7 +31,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
           return
         }
 
-        const supabase = getSupabase()
+        const supabase = createClient()
         if (!supabase) {
           setError('Supabase client not available')
           return
@@ -98,7 +99,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
         setLoading(true)
         setError(null)
 
-        let supabase = getSupabase()
+        const supabase = createClient()
         if (!supabase) {
           setError('Supabase client not available')
           setLoading(false)
@@ -107,58 +108,19 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         // 세션 검증 및 갱신
         console.log('[useSupabaseData] 세션 확인 중...')
-        let { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
 
         if (sessionError || !sessionData.session) {
           console.warn('[useSupabaseData] 세션이 유효하지 않음, 갱신 시도...')
-          const { session: refreshedSession, error: refreshError, needsReinitialization } = await refreshSessionWithTimeout(supabase, 5000)
+          const { session: refreshedSession, error: refreshError } = await refreshSessionWithTimeout(supabase, TIMEOUTS.SESSION_REFRESH)
 
-          // Connection timeout 감지 시 client 재초기화
-          if (needsReinitialization) {
-            console.log('[useSupabaseData] Connection timeout detected, reinitializing Supabase client...')
-
-            try {
-              const { reinitializeSupabase } = await import('@/lib/supabase')
-              const reinitializedClient = reinitializeSupabase()
-
-              if (!reinitializedClient) {
-                console.error('[useSupabaseData] Failed to reinitialize Supabase client')
-                handleSessionExpired('connection_timeout')
-                setLoading(false)
-                return
-              }
-
-              console.log('[useSupabaseData] Supabase client reinitialized successfully')
-              // 재초기화된 client 사용
-              supabase = reinitializedClient
-
-              // 재초기화 후 세션 다시 확인
-              const recheckResult = await supabase.auth.getSession()
-              sessionData = recheckResult.data
-              sessionError = recheckResult.error
-
-              if (sessionError || !sessionData.session) {
-                console.error('[useSupabaseData] Session invalid even after reinitialization')
-                handleSessionExpired('session_invalid')
-                setLoading(false)
-                return
-              }
-
-              console.log('[useSupabaseData] Session verified after reinitialization')
-            } catch (reinitError) {
-              console.error('[useSupabaseData] Error during client reinitialization:', reinitError)
-              handleSessionExpired('reinitialization_error')
-              setLoading(false)
-              return
-            }
-          } else if (refreshError || !refreshedSession) {
+          if (refreshError || !refreshedSession) {
             console.error('[useSupabaseData] 세션 갱신 실패:', refreshError)
             handleSessionExpired('session_expired')
             setLoading(false)
             return
-          } else {
-            console.log('[useSupabaseData] 세션 갱신 성공')
           }
+          console.log('[useSupabaseData] 세션 갱신 성공')
         } else {
           console.log('[useSupabaseData] 유효한 세션 확인됨')
         }
@@ -193,14 +155,14 @@ export const useSupabaseData = (clinicId?: string | null) => {
           ])
         }
 
-        // 각 쿼리를 개별 타임아웃으로 감싸기 (30초 - idle 연결 재생성 시간 고려)
+        // 각 쿼리를 개별 타임아웃으로 감싸기 (60초 - idle 연결 재생성 시간 고려)
         const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
           withTimeout(
             Promise.resolve(applyClinicFilter(
               supabase.from('daily_reports').select('*'),
               targetClinicId
             ).then(result => result)),
-            60000,
+            TIMEOUTS.QUERY_LONG,
             'daily_reports'
           ),
           withTimeout(
@@ -208,7 +170,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('consult_logs').select('*'),
               targetClinicId
             ).then(result => result)),
-            60000,
+            TIMEOUTS.QUERY_LONG,
             'consult_logs'
           ),
           withTimeout(
@@ -216,7 +178,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('gift_logs').select('*'),
               targetClinicId
             ).then(result => result)),
-            60000,
+            TIMEOUTS.QUERY_LONG,
             'gift_logs'
           ),
           withTimeout(
@@ -224,7 +186,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('gift_inventory').select('*'),
               targetClinicId
             ).then(result => result)),
-            60000,
+            TIMEOUTS.QUERY_LONG,
             'gift_inventory'
           ),
           withTimeout(
@@ -232,7 +194,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
               supabase.from('inventory_logs').select('*'),
               targetClinicId
             ).then(result => result)),
-            60000,
+            TIMEOUTS.QUERY_LONG,
             'inventory_logs'
           )
         ])
@@ -434,7 +396,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
     // Call fetchAllData directly without creating a wrapper function
     fetchAllData(activeClinicId)
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase) {
       console.log('[useSupabaseData] No supabase client for subscription')
       return

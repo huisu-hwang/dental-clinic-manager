@@ -1,9 +1,17 @@
 /**
  * Session Management Utilities
  * Handles Supabase session refresh with timeout and error handling
+ *
+ * Based on Supabase official documentation and best practices
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+
+/**
+ * Timeout constants (Context7 공식 문서 권장: 10-15초)
+ */
+export const SESSION_REFRESH_TIMEOUT = 10000  // 10초 (5초에서 증가)
+export const SESSION_CHECK_TIMEOUT = 10000    // 10초
 
 /**
  * Result type for session refresh operations
@@ -42,72 +50,116 @@ export function isConnectionError(error: any): boolean {
 }
 
 /**
- * Refresh Supabase session with timeout
+ * Refresh Supabase session with timeout and retry logic
+ *
+ * Improved based on Context7 official documentation:
+ * - Timeout increased from 5s to 10s (recommended 10-15s)
+ * - Retry logic added for transient network failures
+ * - Exponential backoff for retries (1s, 2s)
+ * - Enhanced logging with attempt numbers
  *
  * @param supabase - Supabase client instance
- * @param timeoutMs - Timeout in milliseconds (default: 5000ms)
+ * @param timeoutMs - Timeout in milliseconds (default: 10000ms)
+ * @param maxRetries - Maximum number of retry attempts (default: 2)
  * @returns Session data, error, and reinitialization flag
  */
 export async function refreshSessionWithTimeout(
   supabase: SupabaseClient,
-  timeoutMs: number = 5000
+  timeoutMs: number = SESSION_REFRESH_TIMEOUT,
+  maxRetries: number = 2
 ): Promise<RefreshSessionResult> {
-  try {
-    console.log('[sessionUtils] Attempting to refresh session...')
+  // Retry loop with exponential backoff
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      console.log(`[sessionUtils] Attempting to refresh session... (Attempt ${attempt + 1}/${maxRetries})`)
 
-    // Create refresh promise
-    const refreshPromise = supabase.auth.refreshSession()
+      // Create refresh promise
+      const refreshPromise = supabase.auth.refreshSession()
 
-    // Create timeout promise
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('Session refresh timeout'))
-      }, timeoutMs)
-    })
+      // Create timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Session refresh timeout'))
+        }, timeoutMs)
+      })
 
-    // Race between refresh and timeout
-    const result = await Promise.race([refreshPromise, timeoutPromise]) as any
+      // Race between refresh and timeout
+      const result = await Promise.race([refreshPromise, timeoutPromise]) as any
 
-    // Check for errors
-    if (result?.error) {
-      console.error('[sessionUtils] Session refresh error:', result.error.message)
-      return { session: null, error: 'SESSION_EXPIRED' }
-    }
+      // Check for errors from Supabase
+      if (result?.error) {
+        console.error(`[sessionUtils] Attempt ${attempt + 1}/${maxRetries} failed:`, result.error.message)
 
-    // Check if session exists
-    if (!result?.data?.session) {
-      console.error('[sessionUtils] No session returned from refresh')
-      return { session: null, error: 'SESSION_EXPIRED' }
-    }
+        // Retry on last attempt
+        if (attempt === maxRetries - 1) {
+          return { session: null, error: 'SESSION_EXPIRED' }
+        }
 
-    console.log('[sessionUtils] Session refreshed successfully')
-    return { session: result.data.session, error: null }
-
-  } catch (error) {
-    console.error('[sessionUtils] Session refresh failed:', error)
-
-    // Check for connection timeout
-    if (isConnectionError(error)) {
-      console.warn('[sessionUtils] Connection timeout detected, client reinitialization needed')
-      return {
-        session: null,
-        error: 'CONNECTION_TIMEOUT',
-        needsReinitialization: true
+        // Exponential backoff before retry
+        const backoffMs = 1000 * (attempt + 1)  // 1s, 2s
+        console.log(`[sessionUtils] Retrying in ${backoffMs}ms...`)
+        await new Promise(resolve => setTimeout(resolve, backoffMs))
+        continue
       }
+
+      // Check if session exists
+      if (!result?.data?.session) {
+        console.error(`[sessionUtils] Attempt ${attempt + 1}/${maxRetries}: No session returned from refresh`)
+
+        if (attempt === maxRetries - 1) {
+          return { session: null, error: 'SESSION_EXPIRED' }
+        }
+
+        // Exponential backoff before retry
+        const backoffMs = 1000 * (attempt + 1)
+        console.log(`[sessionUtils] Retrying in ${backoffMs}ms...`)
+        await new Promise(resolve => setTimeout(resolve, backoffMs))
+        continue
+      }
+
+      console.log(`[sessionUtils] Session refreshed successfully (Attempt ${attempt + 1}/${maxRetries})`)
+      return { session: result.data.session, error: null }
+
+    } catch (error) {
+      console.error(`[sessionUtils] Attempt ${attempt + 1}/${maxRetries} error:`, error)
+
+      // Check for connection timeout
+      if (isConnectionError(error)) {
+        console.warn('[sessionUtils] Connection timeout detected')
+
+        if (attempt === maxRetries - 1) {
+          console.warn('[sessionUtils] Max retries reached, client reinitialization needed')
+          return {
+            session: null,
+            error: 'CONNECTION_TIMEOUT',
+            needsReinitialization: true
+          }
+        }
+
+        // Exponential backoff for connection errors
+        const backoffMs = 1000 * (attempt + 1)
+        console.log(`[sessionUtils] Retrying connection in ${backoffMs}ms...`)
+        await new Promise(resolve => setTimeout(resolve, backoffMs))
+        continue
+      }
+
+      // Non-retryable error: clear session and exit
+      console.log('[sessionUtils] Non-retryable error detected, clearing session data...')
+      clearSessionData()
+
+      // Timeout error
+      if (error instanceof Error && error.message.includes('timeout')) {
+        return { session: null, error: 'SESSION_REFRESH_TIMEOUT' }
+      }
+
+      // Other errors
+      return { session: null, error: 'SESSION_EXPIRED' }
     }
-
-    // Clear all session data for session-related errors
-    console.log('[sessionUtils] Clearing session data...')
-    clearSessionData()
-
-    // Timeout error
-    if (error instanceof Error && error.message.includes('timeout')) {
-      return { session: null, error: 'SESSION_REFRESH_TIMEOUT' }
-    }
-
-    // Other errors
-    return { session: null, error: 'SESSION_EXPIRED' }
   }
+
+  // Should never reach here, but just in case
+  console.error('[sessionUtils] Unexpected: exited retry loop without returning')
+  return { session: null, error: 'SESSION_EXPIRED' }
 }
 
 /**
