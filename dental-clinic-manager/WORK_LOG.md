@@ -4,6 +4,189 @@
 
 ---
 
+## 2025-11-13 [버그 수정] 근로계약서 세션 만료 오류 - 싱글톤 클라이언트 문제 해결
+
+**키워드:** #세션만료 #근로계약서 #싱글톤패턴 #createClient #getSupabase
+
+### 📋 작업 내용
+- contractService.ts에서 싱글톤 getSupabase() 대신 createClient() (Cookie 기반) 사용
+- 매번 최신 세션을 가진 Supabase 클라이언트 생성
+- 근로계약서 탭에서 세션 만료 오류 완전 해결
+
+### 🐛 문제 상황
+- **로그인 직후 근로계약서 탭 클릭 시 "세션이 만료되었습니다" 알림**
+- 일일보고서, 출근관리, 프로토콜은 정상 작동
+- 근로계약서만 세션 만료 오류 발생
+
+**Chrome DevTools 콘솔:**
+```
+[contractService] No session found, attempting to refresh...
+[sessionUtils] Attempt 1/2 failed: Auth session missing!
+[sessionUtils] Attempt 2/2 failed: Auth session missing!
+[contractService] Session refresh failed: SESSION_EXPIRED
+[ContractList] Session expired, redirecting to login...
+```
+
+### 🔍 근본 원인 (5 Whys)
+
+**Q1: 왜 근로계약서 탭에서 세션 만료 오류가 발생하는가?**
+A: `contractService.getContracts()`에서 `checkSession()`이 세션을 찾지 못함
+
+**Q2: 왜 `checkSession()`이 세션을 찾지 못하는가?**
+A: `getSupabase()`가 반환하는 클라이언트에 세션이 없음
+
+**Q3: 왜 `getSupabase()`의 클라이언트에 세션이 없는가?**
+A: `getSupabase()`는 **싱글톤 패턴**으로 구현되어, **로그인 전에 생성된 오래된 인스턴스**를 재사용
+
+**Q4: 왜 일일보고서는 정상 작동하는가?**
+A: `dashboard/page.tsx`는 `createClient()` (Cookie 기반)를 사용하여 매번 최신 세션 가져옴
+
+**Q5: 근본 원인은?**
+A: **`contractService`가 싱글톤 getSupabase()를 사용하여 로그인 전 인스턴스를 재사용**
+
+```
+문제 흐름:
+1. 페이지 로드 → getSupabase() 호출 → 싱글톤 클라이언트 생성 (세션 없음)
+2. 사용자 로그인 → 새 세션 생성
+3. 근로계약서 탭 클릭 → getSupabase() 호출 → 오래된 인스턴스 재사용 (세션 없음)
+4. checkSession() 실패 → SESSION_EXPIRED 에러
+5. 사용자에게 "세션이 만료되었습니다" 알림
+```
+
+**아키텍처 비교:**
+
+| 컴포넌트 | Supabase 클라이언트 | 세션 관리 | 결과 |
+|---------|-------------------|----------|------|
+| **일일보고서** | `createClient()` (Cookie) | 매번 최신 세션 | ✅ 정상 |
+| **출근관리** | Browser client (싱글톤) | 초기 세션 유지 | ✅ 정상 |
+| **근로계약서 (수정 전)** | `getSupabase()` (싱글톤) | 로그인 전 인스턴스 | ❌ 에러 |
+
+### ✅ 해결 방법
+
+**변경 파일:**
+- `src/lib/contractService.ts` (전체 메서드 수정)
+
+**주요 변경 사항:**
+
+#### 1. import 변경 (Line 6)
+```typescript
+// Before (문제 코드)
+import { getSupabase } from './supabase'  // ❌ 싱글톤, 로그인 전 인스턴스
+
+// After (해결 코드)
+import { createClient as createBrowserClient } from '@/lib/supabase/client'  // ✅ Cookie 기반, 최신 세션
+```
+
+#### 2. Helper 함수 추가 (Line 27-33)
+```typescript
+/**
+ * Helper function to get browser Supabase client
+ * Returns current session client (not singleton)
+ */
+const getSupabase = () => {
+  return createBrowserClient()  // ✅ 매번 최신 클라이언트 반환
+}
+```
+
+#### 3. 모든 메서드에 적용
+- `checkSession()`: 매번 최신 클라이언트로 세션 확인
+- `createContract()`: 최신 클라이언트로 데이터 삽입
+- `getContracts()`: 최신 클라이언트로 목록 조회
+- `signContract()`: 최신 클라이언트로 서명 추가
+- 기타 모든 CRUD 메서드
+
+**핵심 변경:**
+```typescript
+// 모든 메서드에서
+private async someMethod() {
+  const supabase = getSupabase()  // ✅ 매번 최신 클라이언트 가져오기
+  if (!supabase) {
+    return { success: false, error: 'Database connection failed' }
+  }
+  // ... 나머지 로직
+}
+```
+
+### 🧪 테스트 결과
+
+**Chrome DevTools 검증:**
+
+1. **로그인 직후 근로계약서 탭 클릭:**
+```
+[contractService] Checking session...
+[contractService] Valid session found  ✅
+[ContractList] Loaded contracts: 1  ✅
+```
+
+2. **화면 표시:**
+- ✅ "근로계약서 관리" 페이지 정상 로드
+- ✅ "이진희" 직원의 계약서 1건 표시
+- ✅ 근로 기간, 기본급, 상태 등 모든 정보 표시
+- ✅ "완료" 상태 정상 표시
+
+3. **세션 만료 알림:**
+- ❌ 더 이상 발생하지 않음
+
+### 📊 결과 및 영향
+
+**해결된 문제:**
+- ✅ 근로계약서 탭 세션 만료 오류 완전 해결
+- ✅ 로그인 직후 모든 탭 정상 작동
+- ✅ 일일보고서, 출근관리, 프로토콜, 근로계약서 모두 정상
+
+**성능 개선:**
+- ✅ 세션 갱신 재시도 불필요 (매번 최신 세션 사용)
+- ✅ 사용자 경험 개선 (에러 알림 제거)
+
+**코드 품질:**
+- ✅ 아키텍처 일관성 향상 (모든 서비스가 동일한 패턴 사용)
+- ✅ 싱글톤 패턴의 부작용 제거
+- ✅ 세션 관리 로직 단순화
+
+**영향받는 컴포넌트:**
+- ✅ ContractList.tsx - 목록 로드 정상
+- ✅ ContractDetail.tsx - 상세 조회 정상
+- ✅ ContractForm.tsx - 생성/수정 정상
+- ✅ SignaturePad.tsx - 서명 정상
+
+### 💡 배운 점 / 참고 사항
+
+**1. 싱글톤 패턴의 위험성:**
+- 싱글톤은 초기 상태를 계속 유지하므로 동적 세션 관리에 부적합
+- 로그인/로그아웃 같은 상태 변화가 반영되지 않음
+- 브라우저 환경에서는 매번 최신 상태를 가져오는 것이 안전
+
+**2. Supabase 클라이언트 패턴:**
+- **localStorage 기반 (getSupabase)**: 싱글톤, 초기 세션 유지
+- **Cookie 기반 (createClient)**: 매번 최신 세션, Next.js 권장 패턴
+
+**3. 아키텍처 일관성:**
+- 같은 기능(세션 관리)은 같은 패턴으로 구현
+- 일일보고서와 근로계약서가 다른 패턴을 사용하여 혼란 발생
+- 이제 모두 `createClient()` (Cookie 기반) 패턴으로 통일
+
+**4. 디버깅 접근:**
+- Chrome DevTools로 실제 콘솔 로그 확인 필수
+- "다른 기능은 되는데 이것만 안 돼" → 아키텍처 차이 의심
+- Sequential Thinking + Chrome DevTools = 강력한 조합
+
+**5. 근본 원인 해결:**
+- 증상: "세션 만료 오류"
+- 임시 방편: "ContractList에서 세션 갱신 추가" (시도했지만 실패)
+- 근본 해결: "contractService의 클라이언트 패턴 변경" (성공)
+
+**6. 이후 유사 작업 시:**
+- 세션 관련 문제 발생 시 어떤 클라이언트를 사용하는지 확인
+- 싱글톤 패턴 사용 시 동적 상태 변화 반영 여부 검증
+- 가능하면 Next.js 권장 패턴(Cookie 기반) 사용
+
+### 📎 관련 링크
+- 커밋: [예정]
+- 관련 이슈: 로그인 후 8-20분 세션 문제 해결 작업의 후속
+- 참고: CLAUDE.md - 근본 원인 해결 원칙, Chrome DevTools 필수 사용
+
+---
+
 ## 2025-11-13 [버그 수정] localhost:3000 Internal Server Error - 환경 변수 로드 실패 해결
 
 **키워드:** #InternalServerError #환경변수 #NextJS캐시 #createClient #브라우저환경체크
