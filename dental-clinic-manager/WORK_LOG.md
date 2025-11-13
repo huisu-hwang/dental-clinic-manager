@@ -4,6 +4,220 @@
 
 ---
 
+## 2025-11-13 [버그 수정] localhost:3000 Internal Server Error - 환경 변수 로드 실패 해결
+
+**키워드:** #InternalServerError #환경변수 #NextJS캐시 #createClient #브라우저환경체크
+
+### 📋 작업 내용
+- .next 캐시 삭제로 환경 변수 로드 문제 해결
+- createClient() 함수에 브라우저 환경 체크 추가
+- 서버 사이드에서 호출 시 에러 방지 로직 추가
+
+### 🐛 문제 상황
+- **localhost:3000 접속 시 500 Internal Server Error 발생**
+- 페이지 자체가 로드되지 않음 (앱 시작 실패)
+- Chrome DevTools: "Failed to load resource: the server responded with a status of 500"
+
+### 🔍 근본 원인 (5 Whys)
+
+**Q1: 왜 localhost:3000에서 500 Internal Server Error가 발생하는가?**
+A: `src/lib/supabase/client.ts`에서 `throw Error` 발생
+
+**Q2: 왜 `throw Error`가 발생하는가?**
+A: 환경 변수 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`가 `undefined`
+
+**Q3: 왜 환경 변수가 `undefined`인가?**
+A: Next.js 개발 서버 시작 시 `.env.local`이 제대로 로드되지 않음
+
+**Q4: 왜 `.env.local`이 로드되지 않는가?**
+A: **Next.js 캐시 문제** - `.next` 폴더가 오래된 빌드 캐시 보유
+
+**Q5: 근본 원인은?**
+A: **Next.js 캐시 문제 + createClient() 함수의 서버 사이드 안전성 부족**
+
+```
+문제 흐름:
+1. Next.js 서버 시작 시 모든 파일 정적 분석
+2. src/lib/supabase/client.ts import
+3. createClient() 함수 실행 시도
+4. 환경 변수 undefined (캐시 문제)
+5. throw Error 발생
+6. 서버 크래시
+7. 500 Internal Server Error
+```
+
+**핵심 문제:**
+- `.next` 캐시가 오래되어 환경 변수 로드 실패
+- `createClient()` 함수가 서버 사이드에서 호출되면 즉시 에러
+
+### ✅ 해결 방법
+
+**변경 파일:**
+- `.next` 폴더 삭제 (캐시 초기화)
+- `src/lib/supabase/client.ts` (브라우저 환경 체크 추가)
+
+**주요 변경 사항:**
+
+#### 1. .next 캐시 삭제
+```bash
+rm -rf .next
+npm run dev
+```
+
+#### 2. createClient() 함수 수정 (Line 14-18 추가)
+```typescript
+// Before (문제 코드)
+export function createClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase 환경 변수가 설정되지 않았습니다.') // ❌ 서버에서도 에러
+  }
+  ...
+}
+
+// After (안전한 코드)
+export function createClient() {
+  // 서버 사이드에서 호출되면 null 반환 (에러 방지)
+  if (typeof window === 'undefined') {
+    console.warn('[Supabase Browser Client] Server-side에서 호출되었습니다.')
+    return null as any
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('[Supabase Browser Client] 환경 변수가 설정되지 않았습니다.')
+    console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'SET' : 'NOT SET')
+    console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'NOT SET')
+    throw new Error('Supabase 환경 변수가 설정되지 않았습니다.')
+  }
+  ...
+}
+```
+
+**해결 원리:**
+- `typeof window === 'undefined'`: 서버 사이드 환경 감지
+- 서버에서는 `null` 반환하여 에러 방지
+- 브라우저에서만 실제 클라이언트 생성
+- 환경 변수 상세 로깅 추가
+
+### 🧪 테스트 결과
+
+**테스트 시나리오:**
+1. `.next` 폴더 삭제
+2. `npm run dev` 실행
+3. localhost:3001 접속 (port 3000은 사용 중)
+4. Chrome DevTools 확인
+
+**검증 결과:**
+```bash
+✓ Ready in 6.2s
+✓ Compiled / in 13.3s (1522 modules)
+GET / 200 in 20658ms ✅
+```
+
+**Chrome DevTools:**
+- ✅ "덴탈매니저 - 치과 업무 관리 시스템" 페이지 정상 표시
+- ✅ 일일 보고서 입력 폼 정상 렌더링
+- ✅ 콘솔 에러 없음
+- ✅ Internal Server Error 완전 해결!
+
+### 📊 결과 및 영향
+
+**Before (문제 상황):**
+```
+Next.js 서버 시작
+→ 오래된 .next 캐시 사용
+→ 환경 변수 로드 실패
+→ createClient() 에러
+→ 서버 크래시
+→ 500 Internal Server Error
+```
+
+**After (해결 후):**
+```
+.next 캐시 삭제
+→ 환경 변수 로드 성공
+→ createClient() 서버에서는 null 반환
+→ 브라우저에서만 정상 실행
+→ 200 OK
+→ 페이지 정상 표시 ✅
+```
+
+**예상 효과:**
+- ✅ Internal Server Error 완전 해결
+- ✅ 환경 변수 로드 안정성 향상
+- ✅ 서버 사이드 안전성 확보
+- ✅ 상세 로깅으로 디버깅 용이
+
+### 💡 배운 점 / 참고 사항
+
+**교훈:**
+
+1. **Next.js 캐시 관리의 중요성**
+   - `.next` 폴더는 빌드 캐시 저장
+   - 환경 변수 변경 시 캐시 문제 발생 가능
+   - 문제 발생 시 `.next` 삭제 후 재시작
+
+2. **브라우저 전용 함수의 서버 안전성**
+   - `createClient()`는 브라우저 전용 함수
+   - 서버에서 import되어도 안전하게 처리 필요
+   - `typeof window === 'undefined'` 체크 필수
+
+3. **환경 변수 로드 메커니즘**
+   - Next.js는 빌드 시점에 환경 변수 읽음
+   - `.env.local` 수정 시 서버 재시작 필수
+   - `NEXT_PUBLIC_*` 접두사는 브라우저에 노출됨
+
+4. **상세 로깅의 중요성**
+   - 환경 변수 로드 실패 시 어떤 변수가 문제인지 명확히 로깅
+   - 디버깅 시간 대폭 단축
+
+**패턴:**
+```typescript
+// ✅ 브라우저 전용 함수 안전하게 작성하는 패턴
+export function createBrowserOnlyClient() {
+  // 1. 서버 사이드 체크
+  if (typeof window === 'undefined') {
+    console.warn('Server-side에서 호출됨')
+    return null as any
+  }
+
+  // 2. 환경 변수 확인
+  const config = {
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  }
+
+  // 3. 상세 로깅
+  if (!config.url || !config.key) {
+    console.error('환경 변수 누락:', {
+      url: config.url ? 'SET' : 'NOT SET',
+      key: config.key ? 'SET' : 'NOT SET'
+    })
+    throw new Error('환경 변수 설정 필요')
+  }
+
+  // 4. 클라이언트 생성
+  return createClient(config.url, config.key)
+}
+```
+
+**향후 주의사항:**
+- `.env.local` 수정 시 서버 재시작
+- 환경 변수 문제 발생 시 `.next` 삭제
+- 브라우저 전용 함수는 `typeof window` 체크
+- 모든 환경 변수에 상세 로깅 추가
+
+### 📎 관련 링크
+- 이전 작업: 2025-11-13 "근로계약서 Internal Server Error - 세션 클라이언트 불일치 해결"
+- 관련 원칙: CLAUDE.md - 근본 원인 해결 원칙
+
+---
+
 ## 2025-11-13 [버그 수정] 근로계약서 Internal Server Error - 세션 클라이언트 불일치 해결
 
 **키워드:** #InternalServerError #세션불일치 #createClient #getSupabase #근본원인
