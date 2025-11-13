@@ -4,6 +4,136 @@
 
 ---
 
+## 2025-11-13 [버그 수정] 근로계약서 세션 만료 오류 - 일일보고서 패턴 적용
+
+**키워드:** #근로계약서 #세션만료 #refreshSession #일관성 #패턴적용
+
+### 📋 작업 내용
+- 근로계약서 목록 로딩 시 세션 갱신 로직 추가
+- 일일보고서와 동일한 패턴 적용
+- ContractList 컴포넌트의 두 loadContracts 함수 모두 수정
+
+### 🐛 문제 상황
+- **일일보고서**: ✅ 클라이언트 세션 갱신 추가로 정상 작동
+- **프로토콜**: ✅ 정상 작동
+- **근로계약서**: ❌ "세션이 만료되었습니다. 다시 로그인해주세요" 오류 발생
+
+### 🔍 근본 원인 (5 Whys)
+
+**Q1: 왜 근로계약서만 세션 만료 오류가 발생하는가?**
+A: `contractService.getContracts()`가 세션 체크 후 만료 시 에러 반환
+
+**Q2: 왜 세션 체크가 실패하는가?**
+A: `contractService` 내부의 `checkSession()` 로직이 세션 갱신을 시도하지만 실패
+
+**Q3: 왜 프로토콜은 정상 작동하는가?**
+A: `dataService.getProtocols()`는 세션 체크를 하지 않고 브라우저 클라이언트의 자동 갱신에만 의존
+
+**Q4: 왜 일일보고서는 정상 작동하는가?**
+A: `handleSaveReport`에서 **명시적으로 `refreshSession()` 호출 후** Server Action 실행
+
+**Q5: 근본 원인은?**
+A: **일관성 없는 세션 관리 패턴**
+- 일일보고서: ✅ 명시적 세션 갱신
+- 프로토콜: ⚠️ 자동 갱신 의존
+- 근로계약서: ❌ 내부 체크만 있고 명시적 갱신 없음
+
+### ✅ 해결 방법
+
+**핵심 아이디어:**
+- 일일보고서와 동일한 패턴 적용
+- 데이터 로딩 전 **명시적으로 세션 갱신**
+
+**변경 파일:**
+- `src/components/Contract/ContractList.tsx`
+
+**주요 변경 사항:**
+
+#### 1. Import 추가 (라인 11)
+```typescript
+import { getSupabase } from '@/lib/supabase/getSupabase'
+```
+
+#### 2. useEffect 내부 loadContracts (라인 65-73)
+```typescript
+// 세션 갱신 먼저 (일일보고서 패턴)
+const supabase = getSupabase()
+const { error: refreshError } = await supabase.auth.refreshSession()
+
+if (refreshError) {
+  console.error('[ContractList] Session refresh failed:', refreshError)
+} else {
+  console.log('[ContractList] Session refreshed successfully')
+}
+
+const response = await contractService.getContracts(clinicId, filters)
+```
+
+#### 3. 별도 loadContracts 함수 (라인 143-151)
+```typescript
+// 세션 갱신 먼저 (일일보고서 패턴)
+const supabase = getSupabase()
+const { error: refreshError } = await supabase.auth.refreshSession()
+
+if (refreshError) {
+  console.error('[ContractList] Session refresh failed:', refreshError)
+} else {
+  console.log('[ContractList] Session refreshed successfully')
+}
+
+const response = await contractService.getContracts(clinicId, filters)
+```
+
+### 🧪 테스트 계획
+
+**테스트 시나리오:**
+1. localhost:3000 로그인
+2. 11분 이상 대기
+3. 근로계약서 탭 클릭
+4. 예상 결과: ✅ 세션 갱신 후 목록 정상 표시
+
+**검증 포인트:**
+- 콘솔에 "Session refreshed successfully" 로그 출력
+- 세션 만료 오류 메시지 없음
+- 근로계약서 목록 정상 표시
+
+### 📊 결과 및 영향
+
+**일관성 확보:**
+- ✅ 일일보고서: 세션 갱신 → 저장
+- ✅ 근로계약서: 세션 갱신 → 목록 로딩
+- ⚠️ 프로토콜: 자동 갱신 의존 (향후 개선 필요)
+
+**예상 효과:**
+- ✅ 근로계약서 탭 정상 작동
+- ✅ 11분 이상 대기 후에도 안정적으로 작동
+- ✅ 사용자 경험 개선 (세션 만료 오류 제거)
+
+### 💡 배운 점 / 참고 사항
+
+**교훈:**
+1. **일관된 패턴 적용**: 같은 문제는 같은 방식으로 해결
+2. **명시적 세션 관리**: 자동 갱신에만 의존하지 말고 명시적으로 갱신
+3. **사용자 피드백 활용**: 실제 사용 중 발견한 문제를 즉시 해결
+
+**패턴:**
+```typescript
+// 모든 데이터 로딩 전 표준 패턴
+const supabase = getSupabase()
+await supabase.auth.refreshSession()
+// 그 다음 데이터 페칭
+```
+
+**향후 작업:**
+- 프로토콜에도 동일한 패턴 적용 검토
+- 다른 컴포넌트에서도 일관된 세션 관리 적용
+
+### 📎 관련 링크
+- 참고 작업: 2025-11-13 "11분 후 일일보고서 저장 실패 - 클라이언트 측 세션 갱신 추가"
+- 관련 원칙: CLAUDE.md - 기존 기능 보호 원칙, 최소 침습 원칙
+
+---
+
 ## 2025-11-13 [버그 수정] 11분 후 일일보고서 저장 실패 - 클라이언트 측 세션 갱신 추가
 
 **키워드:** #11분문제 #클라이언트세션갱신 #근본해결 #최소수정 #아키텍처불일치
