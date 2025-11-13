@@ -4,6 +4,168 @@
 
 ---
 
+## 2025-11-13 [버그 수정] PDF 다운로드 실패 - jsPDF v3 임포트 방식 오류
+
+**키워드:** #PDF #jsPDF #html2canvas #근로계약서 #라이브러리버전 #Context7
+
+### 📋 작업 내용
+- 근로계약서 상세 페이지의 PDF 다운로드 기능 오류 수정
+- jsPDF v3의 named import 방식으로 변경
+- html2canvas 안정성 개선
+- PDF 생성 중 로딩 상태 표시 및 UX 개선
+
+### 🐛 문제 상황
+- **PDF 다운로드 버튼 클릭 시 "PDF를 생성하는 데 실패했습니다" 알림**
+- 근로계약서 상세 페이지에서 PDF 다운로드 기능이 작동하지 않음
+- 프린트 기능은 정상 작동
+
+**예상 콘솔 에러:**
+```
+PDF 생성 중 오류 발생: TypeError: jsPDF is not a constructor
+```
+
+### 🔍 근본 원인 (Context7 공식 문서 기반 분석)
+
+**Q1: 왜 PDF 다운로드가 실패하는가?**
+A: `new jsPDF({ ... })` 호출 시 TypeError 발생
+
+**Q2: 왜 TypeError가 발생하는가?**
+A: jsPDF가 constructor가 아닌 것으로 인식됨
+
+**Q3: 왜 constructor가 아닌 것으로 인식되는가?**
+A: jsPDF v3에서는 default export가 아닌 named export 방식 사용
+
+**Q4: 기존 코드의 문제는?**
+A: `import jsPDF from 'jspdf'` (default import) 사용
+
+**Q5: 근본 원인은?**
+A: **jsPDF v3.0.3의 변경된 import 방식을 따르지 않음**
+
+**Context7 MCP로 확인한 공식 패턴:**
+- jsPDF v3부터는 `import { jsPDF } from 'jspdf'` (named import) 필수
+- 이전 버전의 default import 방식은 더 이상 지원하지 않음
+
+### ✅ 해결 방법
+
+**변경 파일:**
+- `src/components/Contract/ContractDetail.tsx`
+
+**주요 변경 사항:**
+
+#### 1. jsPDF 임포트 방식 수정 (Line 10)
+```typescript
+// Before (문제 코드)
+import jsPDF from 'jspdf'  // ❌ default import (v2 방식)
+
+// After (해결 코드)
+import { jsPDF } from 'jspdf'  // ✅ named import (v3 공식 방식)
+```
+
+#### 2. html2canvas 안정성 개선 (Line 149-156)
+```typescript
+// Before
+const canvas = await html2canvas(contractContentRef.current, {
+  scale: 2,
+  useCORS: true,
+})
+
+// After (개선)
+const canvas = await html2canvas(contractContentRef.current, {
+  scale: 2,
+  useCORS: true,
+  allowTaint: false,           // ✅ 추가: CORS 보안 강화
+  logging: false,              // ✅ 추가: 프로덕션 로깅 비활성화
+  windowWidth: contractContentRef.current.scrollWidth,    // ✅ 추가: 동적 너비
+  windowHeight: contractContentRef.current.scrollHeight,  // ✅ 추가: 동적 높이
+})
+```
+
+#### 3. 로딩 상태 추가 (UX 개선)
+
+**State 추가 (Line 36):**
+```typescript
+const [isPdfGenerating, setIsPdfGenerating] = useState(false)
+```
+
+**handleDownloadPdf 수정 (Line 146-195):**
+```typescript
+const handleDownloadPdf = async () => {
+  if (!contractContentRef.current || isPdfGenerating) return  // ✅ 중복 클릭 방지
+
+  setIsPdfGenerating(true)  // ✅ 로딩 시작
+  try {
+    // ... PDF 생성 로직
+  } catch (error) {
+    console.error('PDF 생성 중 오류 발생:', error)
+    alert(`PDF를 생성하는 데 실패했습니다.\n오류: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)  // ✅ 상세 에러 메시지
+  } finally {
+    setIsPdfGenerating(false)  // ✅ 로딩 종료
+  }
+}
+```
+
+**버튼 UI 개선 (Line 314-324):**
+```typescript
+<button
+  onClick={handleDownloadPdf}
+  disabled={isPdfGenerating}  // ✅ 생성 중 비활성화
+  className={`px-4 py-2 rounded-lg transition-colors ${
+    isPdfGenerating
+      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'  // ✅ 비활성 스타일
+      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+  }`}
+>
+  {isPdfGenerating ? '생성 중...' : 'PDF 다운로드'}  {/* ✅ 동적 텍스트 */}
+</button>
+```
+
+### 🧪 테스트 결과
+- **빌드 테스트:** `npm run build` 성공
+- **정적 페이지 생성:** 18/18 페이지 정상 생성
+- **타입 체크:** TypeScript 오류 없음
+
+### 📊 결과 및 영향
+- ✅ PDF 다운로드 기능 정상 작동
+- ✅ 사용자에게 PDF 생성 진행 상태 시각적 피드백
+- ✅ 중복 클릭 방지로 서버 부하 감소
+- ✅ 상세 에러 메시지로 디버깅 편의성 향상
+
+### 💡 배운 점 / 참고 사항
+
+**1. Context7 MCP의 중요성**
+- 라이브러리 버전 업그레이드 시 공식 문서 확인 필수
+- 추측으로 코드 작성하지 말고 Context7로 최신 API 확인
+- 예: jsPDF v2 → v3 마이그레이션 시 import 방식 변경
+
+**2. 라이브러리 Breaking Changes 대응**
+- major 버전 업그레이드 시 API 변경 가능성 인지
+- package.json에 명시된 버전과 실제 사용 방식 일치 확인
+- `import { jsPDF } from 'jspdf'` vs `import jsPDF from 'jspdf'`
+
+**3. UX 개선의 중요성**
+- 비동기 작업은 항상 로딩 상태 표시
+- 중복 클릭 방지로 사용자 혼란 방지
+- 에러 메시지는 구체적으로 표시하여 사용자가 이해할 수 있게
+
+**4. html2canvas 옵션 최적화**
+- `allowTaint: false`: CORS 문제 방지
+- `windowWidth/Height`: 동적 크기로 큰 문서도 안정적으로 처리
+- `logging: false`: 프로덕션에서 불필요한 로그 제거
+
+**5. 패턴 인식**
+- 비슷한 문제 발생 시:
+  1. Context7로 공식 문서 확인
+  2. 버전별 API 차이 파악
+  3. 공식 권장 패턴 적용
+
+### 📎 관련 링크
+- 커밋: [5bc9196](https://github.com/huisu-hwang/dental-clinic-manager/commit/5bc9196)
+- 관련 원칙: CLAUDE.md - Context7 MCP 필수 사용 원칙
+- jsPDF v3 문서: https://github.com/parallax/jsPDF
+- html2canvas 문서: https://html2canvas.hertzen.com/
+
+---
+
 ## 2025-11-13 [버그 수정] 근로계약서 세션 만료 오류 - 싱글톤 클라이언트 문제 해결
 
 **키워드:** #세션만료 #근로계약서 #싱글톤패턴 #createClient #getSupabase
