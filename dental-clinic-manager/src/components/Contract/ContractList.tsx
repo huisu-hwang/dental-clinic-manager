@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
-import { getSupabase } from '@/lib/supabase/getSupabase'
+import { createClient } from '@/lib/supabase/client'
 import type { EmploymentContract, ContractStatus, ContractListFilters } from '@/types/contract'
 import type { UserProfile } from '@/contexts/AuthContext'
 
@@ -63,7 +63,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
         console.log('[ContractList] Current user role:', currentUser?.role)
 
         // 세션 갱신 먼저 (일일보고서 패턴)
-        const supabase = getSupabase()
+        const supabase = createClient()
         const { error: refreshError } = await supabase.auth.refreshSession()
 
         if (refreshError) {
@@ -141,7 +141,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
     try {
       // 세션 갱신 먼저 (일일보고서 패턴)
-      const supabase = getSupabase()
+      const supabase = createClient()
       const { error: refreshError } = await supabase.auth.refreshSession()
 
       if (refreshError) {
