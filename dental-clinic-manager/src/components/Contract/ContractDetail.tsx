@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
+import { jsPDF } from 'jspdf'
 import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
 import SignaturePad from './SignaturePad'
@@ -33,6 +33,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
     hasEmployeeSignature: false
   })
   const [decryptedResidentNumber, setDecryptedResidentNumber] = useState<string>('')
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false)
   const contractContentRef = useRef<HTMLDivElement>(null)
 
   // Load contract
@@ -143,12 +144,17 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
   }
 
   const handleDownloadPdf = async () => {
-    if (!contractContentRef.current) return
+    if (!contractContentRef.current || isPdfGenerating) return
 
+    setIsPdfGenerating(true)
     try {
       const canvas = await html2canvas(contractContentRef.current, {
         scale: 2, // Higher scale for better quality
         useCORS: true,
+        allowTaint: false,
+        logging: false,
+        windowWidth: contractContentRef.current.scrollWidth,
+        windowHeight: contractContentRef.current.scrollHeight,
       })
 
       const imgData = canvas.toDataURL('image/png')
@@ -182,7 +188,9 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       pdf.save(`근로계약서_${contract?.employee?.name || '문서'}.pdf`)
     } catch (error) {
       console.error('PDF 생성 중 오류 발생:', error)
-      alert('PDF를 생성하는 데 실패했습니다.')
+      alert(`PDF를 생성하는 데 실패했습니다.\n오류: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+    } finally {
+      setIsPdfGenerating(false)
     }
   }
 
@@ -305,9 +313,14 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           )}
           <button
             onClick={handleDownloadPdf}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            disabled={isPdfGenerating}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              isPdfGenerating
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
           >
-            PDF 다운로드
+            {isPdfGenerating ? '생성 중...' : 'PDF 다운로드'}
           </button>
           <button
             onClick={handlePrint}
