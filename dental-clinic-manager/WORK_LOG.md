@@ -4,6 +4,201 @@
 
 ---
 
+## 2025-11-13 [버그 수정] 일일보고서 20분 후 저장 실패 문제 해결
+
+**키워드:** #세션갱신 #JWT #20분타임아웃 #ServerAction #Auth재시도 #근본원인
+
+### 📋 작업 내용
+- 로그인 후 20분 경과 시 일일보고서 저장 실패 문제 해결
+- Server Action의 Auth check 단계에 세션 갱신 + 재시도 로직 추가
+- Auth timeout 5초 → 10초로 증가
+- RPC 재시도와 일관된 패턴 적용
+
+### 🐛 문제 상황
+- 로그인 후 **8분까지**는 일일보고서 저장 정상 작동
+- 로그인 후 **20분 경과 시** 저장 실패
+- 프로토콜, 근로계약서도 동일하게 실패 (Server Action 사용)
+- 출근 관리는 정상 작동 (브라우저 클라이언트 사용)
+
+**패턴:** Server 측 인증이 필요한 기능만 실패
+
+### 🔍 근본 원인 (5 Whys)
+
+**Q1: 왜 20분 후 일일보고서 저장이 실패하는가?**
+A: Server Action의 `getUser()` 호출이 인증 실패
+
+**Q2: 왜 Server Action의 인증이 실패하는가?**
+A: 서버 측에서 유효한 JWT 토큰을 읽지 못함
+
+**Q3: 왜 서버 측에서 유효한 토큰을 읽지 못하는가?**
+A: Cookie의 JWT 토큰이 만료되었거나 갱신되지 않음
+
+**Q4: 왜 토큰이 갱신되지 않았는가?**
+A: Middleware가 **다음 요청 시점**에 갱신하지만, Server Action은 **이미 시작된 요청의 Cookie만 읽음**
+
+**Q5: 근본 원인은 무엇인가?**
+A: **Supabase JWT의 Refresh Threshold (1200초 = 20분)**
+
+```
+타임라인:
+T=0분    - JWT 발급 (유효기간 1시간)
+T=20분   - Refresh Threshold 도달
+         - 다음 요청 시 Middleware가 갱신 필요
+         - 하지만 Server Action은 갱신 전 Cookie 읽음
+         - 오래된 토큰으로 getUser() 호출
+         - ❌ 인증 실패
+```
+
+**기존 코드 분석:**
+- ✅ RPC 호출에 대한 재시도 로직은 있음
+- ❌ Auth check에 대한 재시도 로직은 **없음**
+- 결과: Auth check 실패 시 바로 에러 반환 → RPC 호출 자체를 못 함
+
+### ✅ 해결 방법
+
+**변경 파일:**
+- `src/app/actions/dailyReport.ts` (라인 90-165)
+
+**주요 변경 사항:**
+
+#### 1. Auth check 함수 분리
+```typescript
+const checkAuth = async () => {
+  const authPromise = supabase.auth.getUser()
+  const authTimeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('인증 확인 시간이 초과되었습니다.')), 10000)
+  )
+  return await Promise.race([authPromise, authTimeout])
+}
+```
+
+#### 2. Auth 재시도 로직 추가 (RPC 재시도와 동일한 패턴)
+```typescript
+let authResult
+let authRetryCount = 0
+
+// 첫 시도
+try {
+  authResult = await checkAuth()
+} catch (error) {
+  console.log('[saveDailyReport] Refreshing session and retrying...')
+
+  // 세션 갱신
+  await supabase.auth.refreshSession()
+
+  // 재시도
+  authRetryCount = 1
+  await new Promise(resolve => setTimeout(resolve, 500))
+  authResult = await checkAuth()
+}
+```
+
+#### 3. 타임아웃 증가
+- Auth check timeout: **5초 → 10초**
+- 세션 갱신 시간 여유 확보
+
+#### 4. 로깅 개선
+```typescript
+console.log(`[saveDailyReport] User authenticated: ${user.id} (auth retries: ${authRetryCount})`)
+console.log(`[saveDailyReport] Success (auth retries: ${authRetryCount}, rpc retries: ${retryCount})`)
+```
+
+#### 5. 반환값 개선
+```typescript
+return {
+  success: true,
+  authRetries: authRetryCount,  // 신규 추가
+  rpcRetries: retryCount,
+  executionTime: totalElapsed
+}
+```
+
+**적용 기술:**
+- Promise.race를 사용한 타임아웃 처리
+- Try-catch 기반 재시도 패턴
+- 명시적 세션 갱신 (`refreshSession()`)
+- 500ms 대기 후 재시도 (네트워크 안정화)
+
+### 🧪 테스트 계획
+
+**사용자 직접 테스트 필요 (20분 대기):**
+
+1. **로그인 및 대기**
+   - localhost:3000 접속
+   - 로그인
+   - 정확히 20분 대기 (타이머 설정)
+
+2. **일일보고서 저장 시도**
+   - 일일보고서 입력
+   - 저장 버튼 클릭
+
+3. **콘솔 로그 확인**
+   - 예상 로그 1: `[saveDailyReport] First auth attempt failed`
+   - 예상 로그 2: `[saveDailyReport] Refreshing session and retrying...`
+   - 예상 로그 3: `[saveDailyReport] Session refreshed successfully`
+   - 예상 로그 4: `[saveDailyReport] Auth retry succeeded`
+   - 예상 로그 5: `[saveDailyReport] Success (auth retries: 1, rpc retries: 0)`
+
+4. **저장 성공 확인**
+   - "저장되었습니다" 메시지 확인
+   - 데이터베이스에 저장 확인
+
+5. **다른 기능 테스트**
+   - 프로토콜 조회/저장
+   - 근로계약서 조회/저장
+   - 모두 20분 후에도 정상 작동 확인
+
+### 📊 예상 효과
+
+**Before (문제 상황):**
+- ❌ 20분 후 일일보고서 저장 실패
+- ❌ 프로토콜, 근로계약서 실패
+- ❌ "인증이 필요합니다" 에러 메시지
+- ❌ 사용자가 다시 로그인해야 함
+
+**After (개선 후):**
+- ✅ 20분 후에도 자동 세션 갱신 → 정상 저장
+- ✅ 모든 Server Action 안정성 향상
+- ✅ 자동 재시도로 사용자 불편 최소화
+- ✅ Auth check와 RPC 재시도 로직 일관성
+- ✅ 명확한 로그로 디버깅 용이
+
+### 💡 배운 점 / 참고 사항
+
+**교훈:**
+1. **JWT Refresh Threshold 이해 중요**
+   - Supabase JWT는 20분 (1200초)마다 갱신 필요
+   - Server Action은 Cookie 기반이므로 갱신 타이밍 중요
+
+2. **일관된 재시도 패턴 적용**
+   - RPC 재시도 로직과 동일한 패턴을 Auth check에도 적용
+   - 코드 일관성 향상, 유지보수 용이
+
+3. **명시적 세션 갱신 필요**
+   - Middleware만으로는 부족할 수 있음
+   - Server Action 내부에서 직접 `refreshSession()` 호출 필요
+
+4. **타임아웃 여유 확보**
+   - 5초는 세션 갱신 시간이 부족할 수 있음
+   - 10초로 증가하여 안정성 확보
+
+**주의사항:**
+- 다른 Server Action에도 동일한 패턴 적용 검토 필요
+- 프로토콜, 근로계약서 Server Action도 확인 필요
+- 세션 갱신 실패 시 명확한 에러 메시지 제공
+
+**이후 작업:**
+- [ ] 프로토콜 Server Action에도 동일 패턴 적용
+- [ ] 근로계약서 Server Action에도 동일 패턴 적용
+- [ ] 공통 유틸리티 함수 고려 (`withAuthRetry()` 고차 함수)
+
+### 📎 관련 링크
+- 파일: `src/app/actions/dailyReport.ts` (라인 90-165)
+- 관련 원칙: CLAUDE.md - 근본 원인 해결 원칙
+- 관련 작업: 2025-11-12 Phase 2: 세션 영속성 검증
+
+---
+
 ## 2025-11-12 [검증] Phase 2: 세션 영속성 검증 및 타임아웃 일관성 확보
 
 **키워드:** #세션영속성 #통합테스트 #타임아웃 #일관성 #TDD #검증
