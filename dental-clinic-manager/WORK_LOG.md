@@ -4,6 +4,210 @@
 
 ---
 
+## 2025-11-13 [버그 수정] 근로계약서 Internal Server Error - 세션 클라이언트 불일치 해결
+
+**키워드:** #InternalServerError #세션불일치 #createClient #getSupabase #근본원인
+
+### 📋 작업 내용
+- ContractList에서 추가한 세션 갱신 로직 제거
+- createClient import 제거
+- contractService 자체 세션 관리에 의존
+
+### 🐛 문제 상황
+- 근로계약서 탭 클릭 시 **Internal Server Error** 발생
+- 빌드는 성공했지만 런타임 에러 발생
+
+### 🔍 근본 원인 (5 Whys)
+
+**Q1: 왜 Internal Server Error가 발생하는가?**
+A: contractService.getContracts() 호출 시 세션 인증 실패
+
+**Q2: 왜 세션 인증이 실패하는가?**
+A: contractService가 세션을 찾지 못함
+
+**Q3: 왜 세션을 찾지 못하는가?**
+A: ContractList에서 갱신한 세션을 contractService가 볼 수 없음
+
+**Q4: 왜 갱신한 세션을 볼 수 없는가?**
+A: **두 개의 다른 Supabase 클라이언트가 다른 스토리지를 사용**
+
+**Q5: 근본 원인은?**
+A: **세션 클라이언트 불일치 (Storage Mismatch)**
+
+```
+ContractList.tsx
+- createClient() from '@/lib/supabase/client'
+- @supabase/ssr 패키지
+- Cookie 기반 세션 스토리지
+- 매번 새 인스턴스 생성
+↓ 세션 갱신
+Cookie에 저장됨
+
+contractService.ts
+- getSupabase() from '@/lib/supabase'
+- @supabase/supabase-js 패키지
+- localStorage 기반 세션 스토리지
+- Singleton 패턴
+↓ 세션 조회
+localStorage에서 조회 ❌ (Cookie 못 봄)
+→ 세션 없음 → 인증 실패 → Internal Server Error
+```
+
+**핵심 문제:**
+- ContractList: Cookie 스토리지에 세션 저장
+- contractService: localStorage에서 세션 조회
+- **서로 다른 스토리지** → 세션 공유 불가능
+
+### ✅ 해결 방법
+
+**변경 파일:**
+- `src/components/Contract/ContractList.tsx`
+
+**주요 변경 사항:**
+
+#### 1. createClient import 제거 (Line 11 삭제)
+```typescript
+// Before
+import { createClient } from '@/lib/supabase/client'
+
+// After
+// (import 제거)
+```
+
+#### 2. useEffect 내부 세션 갱신 코드 제거 (Line 65-73 삭제)
+```typescript
+// Before
+const supabase = createClient()
+const { error: refreshError } = await supabase.auth.refreshSession()
+if (refreshError) {
+  console.error('[ContractList] Session refresh failed:', refreshError)
+} else {
+  console.log('[ContractList] Session refreshed successfully')
+}
+
+// After
+// (코드 제거)
+const response = await contractService.getContracts(clinicId, filters)
+```
+
+#### 3. loadContracts 함수 내 세션 갱신 코드 제거 (Line 143-151 삭제)
+```typescript
+// Before
+const supabase = createClient()
+const { error: refreshError } = await supabase.auth.refreshSession()
+if (refreshError) {
+  console.error('[ContractList] Session refresh failed:', refreshError)
+} else {
+  console.log('[ContractList] Session refreshed successfully')
+}
+
+// After
+// (코드 제거)
+const response = await contractService.getContracts(clinicId, filters)
+```
+
+**해결 원리:**
+- ContractList는 UI만 담당
+- contractService가 자체적으로 `checkSession()` 메서드로 세션 관리
+- 일관된 클라이언트 사용으로 세션 공유 보장
+
+### 🧪 테스트 계획
+
+**테스트 시나리오:**
+1. 개발 서버 재시작: `npm run dev`
+2. 로그인 후 대시보드 접근
+3. 근로계약서 탭 클릭
+4. 예상 결과: ✅ 목록 정상 표시
+
+**세션 만료 시나리오:**
+1. 2-3분 이상 대기
+2. 근로계약서 탭 클릭
+3. contractService.checkSession()이 자동으로 세션 갱신 처리
+4. 예상 결과: ✅ 정상 작동
+
+### 📊 결과 및 영향
+
+**Before (문제 코드):**
+```typescript
+ContractList:
+  createClient() → Cookie에 세션 갱신
+contractService:
+  getSupabase() → localStorage에서 세션 조회 ❌
+  → 세션 없음 → Internal Server Error
+```
+
+**After (해결 코드):**
+```typescript
+ContractList:
+  (세션 관리 안 함)
+contractService:
+  getSupabase() → localStorage에서 세션 조회 ✅
+  checkSession() → 필요 시 자동 갱신 ✅
+  → 일관된 스토리지 → 정상 작동
+```
+
+**예상 효과:**
+- ✅ Internal Server Error 해결
+- ✅ 세션 관리 책임 분리 (UI vs Service)
+- ✅ 일관된 Supabase 클라이언트 사용
+- ✅ 코드 단순화 (중복 제거)
+
+### 💡 배운 점 / 참고 사항
+
+**교훈:**
+
+1. **일관된 Supabase 클라이언트 사용의 중요성**
+   - 동일 프로젝트 내에서 여러 Supabase 클라이언트 생성 방법 혼용 금지
+   - createClient (Cookie) vs getSupabase (localStorage) 차이 이해
+   - 세션 스토리지 불일치 → 세션 공유 불가능
+
+2. **세션 관리 책임 분리**
+   - **UI 컴포넌트**: 데이터 표시 및 사용자 상호작용만 담당
+   - **Service 레이어**: 데이터 페칭 + 세션 관리 담당
+   - 각 레이어의 책임을 명확히 분리
+
+3. **Service 레이어의 자율성 존중**
+   - contractService는 이미 checkSession() 메서드 보유
+   - UI에서 중복으로 세션 관리할 필요 없음
+   - Service가 자체적으로 세션 처리하도록 신뢰
+
+4. **일일보고서와의 차이점**
+   - 일일보고서: Server Action 사용 → createClient() 적합
+   - 근로계약서: Service 레이어 사용 → getSupabase() 일관성 유지
+
+**패턴:**
+```typescript
+// ❌ 잘못된 패턴 (세션 클라이언트 불일치)
+// UI 컴포넌트
+const supabase = createClient()  // Cookie 기반
+await supabase.auth.refreshSession()
+
+// Service 레이어
+const supabase = getSupabase()  // localStorage 기반
+await supabase.from('table').select()
+
+// ✅ 올바른 패턴 (일관된 클라이언트)
+// UI 컴포넌트
+// (세션 관리 안 함)
+
+// Service 레이어
+const supabase = getSupabase()  // localStorage 기반
+await checkSession()  // 자체 세션 관리
+await supabase.from('table').select()
+```
+
+**향후 주의사항:**
+- Service 레이어를 사용하는 경우 UI에서 세션 관리하지 않기
+- 일일보고서처럼 Server Action을 사용하는 경우만 createClient() 사용
+- 동일 프로젝트 내에서 세션 스토리지 일관성 유지
+
+### 📎 관련 링크
+- 이전 작업 (실패): 2025-11-13 "근로계약서 세션 만료 오류 - 일일보고서 패턴 적용"
+- 이전 작업 (빌드 오류): 2025-11-13 "ContractList import 경로 수정"
+- 관련 원칙: CLAUDE.md - 근본 원인 해결 원칙, 아키텍처 차이 이해
+
+---
+
 ## 2025-11-13 [버그 수정] 근로계약서 세션 만료 오류 - 일일보고서 패턴 적용
 
 **키워드:** #근로계약서 #세션만료 #refreshSession #일관성 #패턴적용
