@@ -347,7 +347,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       </div>
 
       {/* Contract Document */}
-      <div ref={contractContentRef} className="bg-white p-8 md:p-12 rounded-lg shadow-lg border border-gray-200">
+      <div ref={contractContentRef} className="contract-print-content bg-white p-8 md:p-12 rounded-lg shadow-lg border border-gray-200">
         {/* Title */}
         <h1 className="text-3xl font-bold text-center mb-8">근로계약서</h1>
 
