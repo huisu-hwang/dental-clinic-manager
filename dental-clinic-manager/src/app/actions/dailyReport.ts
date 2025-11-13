@@ -87,34 +87,82 @@ export async function saveDailyReport(formData: {
     const supabase = await createClient()
 
     // ============================================================
-    // 3. 세션 확인 (타임아웃 5초)
+    // 3. 세션 확인 (타임아웃 10초, 재시도 1회)
     // ============================================================
 
-    const authStartTime = Date.now()
-    console.log('[saveDailyReport] Checking user session...')
+    /**
+     * Auth check 함수
+     */
+    const checkAuth = async () => {
+      const authStartTime = Date.now()
+      console.log('[saveDailyReport] Checking user session...')
 
-    const authPromise = supabase.auth.getUser()
-    const authTimeout = new Promise<never>((_, reject) =>
-      setTimeout(() => {
-        console.error('[saveDailyReport] Auth timeout after 5000ms')
-        reject(new Error('인증 확인 시간이 초과되었습니다.'))
-      }, 5000)
-    )
+      const authPromise = supabase.auth.getUser()
+      const authTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => {
+          console.error('[saveDailyReport] Auth timeout after 10000ms')
+          reject(new Error('인증 확인 시간이 초과되었습니다.'))
+        }, 10000)
+      )
 
-    const { data: { user }, error: authError } = await Promise.race([
-      authPromise,
-      authTimeout
-    ]) as any
+      const result = await Promise.race([authPromise, authTimeout]) as any
+      const authElapsed = Date.now() - authStartTime
+      console.log(`[saveDailyReport] Auth check completed in ${authElapsed}ms`)
 
-    const authElapsed = Date.now() - authStartTime
-    console.log(`[saveDailyReport] Auth check completed in ${authElapsed}ms`)
+      return result
+    }
+
+    let authResult
+    let authRetryCount = 0
+
+    // 첫 시도
+    try {
+      authResult = await checkAuth()
+    } catch (error: any) {
+      console.warn(`[saveDailyReport] First auth attempt failed: ${error.message}`)
+      console.log('[saveDailyReport] Refreshing session and retrying...')
+
+      // 세션 갱신
+      try {
+        const { error: refreshError } = await supabase.auth.refreshSession()
+        if (refreshError) {
+          console.error('[saveDailyReport] Session refresh failed:', refreshError)
+          throw refreshError
+        }
+        console.log('[saveDailyReport] Session refreshed successfully')
+      } catch (refreshError: any) {
+        console.error('[saveDailyReport] Failed to refresh session:', refreshError)
+        return {
+          success: false,
+          error: '세션 갱신에 실패했습니다. 다시 로그인해주세요.'
+        }
+      }
+
+      // 재시도 전 짧은 대기
+      await new Promise(resolve => setTimeout(resolve, 500))
+      authRetryCount = 1
+
+      // 재시도
+      try {
+        authResult = await checkAuth()
+        console.log('[saveDailyReport] Auth retry succeeded')
+      } catch (retryError: any) {
+        console.error(`[saveDailyReport] Auth retry failed: ${retryError.message}`)
+        return {
+          success: false,
+          error: '인증에 실패했습니다. 다시 로그인해주세요.'
+        }
+      }
+    }
+
+    const { data: { user }, error: authError } = authResult
 
     if (authError || !user) {
       console.error('[saveDailyReport] Auth error:', authError)
       return { success: false, error: '인증이 필요합니다. 다시 로그인해주세요.' }
     }
 
-    console.log(`[saveDailyReport] User authenticated: ${user.id}`)
+    console.log(`[saveDailyReport] User authenticated: ${user.id} (auth retries: ${authRetryCount})`)
 
     // ============================================================
     // 4. clinic_id 조회 (타임아웃 3초)
@@ -229,7 +277,7 @@ export async function saveDailyReport(formData: {
     // ============================================================
 
     const totalElapsed = Date.now() - startTime
-    console.log(`[saveDailyReport] Success in ${totalElapsed}ms (retries: ${retryCount}):`, rpcData)
+    console.log(`[saveDailyReport] Success in ${totalElapsed}ms (auth retries: ${authRetryCount}, rpc retries: ${retryCount}):`, rpcData)
 
     // 캐시 무효화 (dashboard 페이지 재검증)
     revalidatePath('/dashboard')
@@ -237,7 +285,8 @@ export async function saveDailyReport(formData: {
     return {
       success: true,
       executionTime: totalElapsed,
-      retries: retryCount,
+      authRetries: authRetryCount,
+      rpcRetries: retryCount,
       details: rpcData
     }
 

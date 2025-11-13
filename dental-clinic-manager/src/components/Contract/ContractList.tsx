@@ -60,6 +60,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       try {
         console.log('[ContractList] Loading contracts...')
         console.log('[ContractList] Current user role:', currentUser?.role)
+
         const response = await contractService.getContracts(clinicId, filters)
 
         if (!isMounted) {

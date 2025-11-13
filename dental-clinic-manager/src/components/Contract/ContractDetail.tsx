@@ -5,11 +5,13 @@
  * Displays full contract details with signature capability
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { toPng } from 'html-to-image'
+import { jsPDF } from 'jspdf'
 import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
 import SignaturePad from './SignaturePad'
-import type { EmploymentContract, ContractSigningData, SignerType } from '@/types/contract'
+import type { EmploymentContract, ContractSigningData, SignerType, ContractSignature } from '@/types/contract'
 import type { UserProfile } from '@/contexts/AuthContext'
 import { formatResidentNumber, maskResidentNumber } from '@/utils/residentNumberUtils'
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
@@ -26,11 +28,18 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
   const [error, setError] = useState<string | null>(null)
   const [showSignatureModal, setShowSignatureModal] = useState(false)
   const [signerType, setSignerType] = useState<SignerType>('employee')
-  const [signatureStatus, setSignatureStatus] = useState({
+  const [signatureStatus, setSignatureStatus] = useState<{
+    hasEmployerSignature: boolean
+    hasEmployeeSignature: boolean
+    signatures: ContractSignature[]
+  }>({
     hasEmployerSignature: false,
-    hasEmployeeSignature: false
+    hasEmployeeSignature: false,
+    signatures: []
   })
   const [decryptedResidentNumber, setDecryptedResidentNumber] = useState<string>('')
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false)
+  const contractContentRef = useRef<HTMLDivElement>(null)
 
   // Load contract
   useEffect(() => {
@@ -136,6 +145,59 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
     } else {
       // Employee can sign
       return contract.employee_user_id === currentUser.id && !signatureStatus.hasEmployeeSignature
+    }
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!contractContentRef.current || isPdfGenerating) return
+
+    setIsPdfGenerating(true)
+    try {
+      // Convert DOM to image using html-to-image (supports oklch colors)
+      const imgData = await toPng(contractContentRef.current, {
+        quality: 0.95,
+        pixelRatio: 2, // Higher quality
+      })
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+      })
+
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+
+      // Get image dimensions
+      const img = new Image()
+      img.src = imgData
+      await new Promise((resolve) => { img.onload = resolve })
+
+      const imgWidth = img.width
+      const imgHeight = img.height
+      const ratio = imgWidth / imgHeight
+      const width = pdfWidth
+      const height = width / ratio
+
+      let position = 0
+      let heightLeft = height
+
+      pdf.addImage(imgData, 'PNG', 0, position, width, height)
+      heightLeft -= pdfHeight
+
+      while (heightLeft > 0) {
+        position = heightLeft - height
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, width, height)
+        heightLeft -= pdfHeight
+      }
+
+      pdf.save(`근로계약서_${contract?.employee?.name || '문서'}.pdf`)
+    } catch (error) {
+      console.error('PDF 생성 중 오류 발생:', error)
+      alert(`PDF를 생성하는 데 실패했습니다.\n오류: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+    } finally {
+      setIsPdfGenerating(false)
     }
   }
 
@@ -257,10 +319,21 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
             </button>
           )}
           <button
-            onClick={handlePrint}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            onClick={handleDownloadPdf}
+            disabled={isPdfGenerating}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              isPdfGenerating
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
           >
-            인쇄
+            {isPdfGenerating ? '생성 중...' : 'PDF 다운로드'}
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            프린트
           </button>
           {(currentUser.role === 'owner' || currentUser.role === 'manager') && contract.status !== 'cancelled' && (
             <button
@@ -274,7 +347,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       </div>
 
       {/* Contract Document */}
-      <div className="bg-white p-8 md:p-12 rounded-lg shadow-lg border border-gray-200">
+      <div ref={contractContentRef} className="contract-print-content bg-white p-8 md:p-12 rounded-lg shadow-lg border border-gray-200">
         {/* Title */}
         <h1 className="text-3xl font-bold text-center mb-8">근로계약서</h1>
 
@@ -539,12 +612,27 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
               <h3 className="font-bold mb-4 text-center">사용자 (갑)</h3>
               {signatureStatus.hasEmployerSignature ? (
                 <div className="text-center">
-                  <div className="bg-green-50 border border-green-200 rounded p-4 mb-2">
-                    <p className="text-green-800 font-semibold">✓ 서명 완료</p>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    서명일: {contract.updated_at && formatDate(contract.updated_at)}
-                  </p>
+                  {(() => {
+                    const employerSignature = signatureStatus.signatures.find(s => s.signer_type === 'employer')
+                    return employerSignature ? (
+                      <>
+                        <div className="bg-white border border-gray-300 rounded p-4 mb-2 flex justify-center items-center min-h-[120px]">
+                          <img
+                            src={employerSignature.signature_data}
+                            alt="원장 서명"
+                            className="max-h-24 w-auto"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          서명일: {contract.updated_at && formatDate(contract.updated_at)}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="bg-green-50 border border-green-200 rounded p-4 mb-2">
+                        <p className="text-green-800 font-semibold">✓ 서명 완료</p>
+                      </div>
+                    )
+                  })()}
                 </div>
               ) : (
                 <div className="text-center">
@@ -568,12 +656,27 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
               <h3 className="font-bold mb-4 text-center">근로자 (을)</h3>
               {signatureStatus.hasEmployeeSignature ? (
                 <div className="text-center">
-                  <div className="bg-green-50 border border-green-200 rounded p-4 mb-2">
-                    <p className="text-green-800 font-semibold">✓ 서명 완료</p>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    서명일: {contract.updated_at && formatDate(contract.updated_at)}
-                  </p>
+                  {(() => {
+                    const employeeSignature = signatureStatus.signatures.find(s => s.signer_type === 'employee')
+                    return employeeSignature ? (
+                      <>
+                        <div className="bg-white border border-gray-300 rounded p-4 mb-2 flex justify-center items-center min-h-[120px]">
+                          <img
+                            src={employeeSignature.signature_data}
+                            alt="직원 서명"
+                            className="max-h-24 w-auto"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          서명일: {contract.updated_at && formatDate(contract.updated_at)}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="bg-green-50 border border-green-200 rounded p-4 mb-2">
+                        <p className="text-green-800 font-semibold">✓ 서명 완료</p>
+                      </div>
+                    )
+                  })()}
                 </div>
               ) : (
                 <div className="text-center">

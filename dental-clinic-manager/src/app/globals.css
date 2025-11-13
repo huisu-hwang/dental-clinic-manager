@@ -269,3 +269,30 @@ body {
 .prose li {
   margin: 0.25rem 0;
 }
+
+/* Print Styles - Contract Detail */
+@media print {
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only contract content */
+  .contract-print-content,
+  .contract-print-content * {
+    visibility: visible;
+  }
+
+  /* Position contract content at top of page */
+  .contract-print-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Remove margins for better print layout */
+  @page {
+    margin: 1cm;
+  }
+}
