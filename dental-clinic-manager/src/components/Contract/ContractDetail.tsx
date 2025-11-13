@@ -5,7 +5,9 @@
  * Displays full contract details with signature capability
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
 import SignaturePad from './SignaturePad'
@@ -31,6 +33,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
     hasEmployeeSignature: false
   })
   const [decryptedResidentNumber, setDecryptedResidentNumber] = useState<string>('')
+  const contractContentRef = useRef<HTMLDivElement>(null)
 
   // Load contract
   useEffect(() => {
@@ -136,6 +139,50 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
     } else {
       // Employee can sign
       return contract.employee_user_id === currentUser.id && !signatureStatus.hasEmployeeSignature
+    }
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!contractContentRef.current) return
+
+    try {
+      const canvas = await html2canvas(contractContentRef.current, {
+        scale: 2, // Higher scale for better quality
+        useCORS: true,
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+      })
+
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      const canvasWidth = canvas.width
+      const canvasHeight = canvas.height
+      const ratio = canvasWidth / canvasHeight
+      const width = pdfWidth
+      const height = width / ratio
+
+      let position = 0
+      let heightLeft = height
+
+      pdf.addImage(imgData, 'PNG', 0, position, width, height)
+      heightLeft -= pdfHeight
+
+      while (heightLeft > 0) {
+        position = heightLeft - height
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, width, height)
+        heightLeft -= pdfHeight
+      }
+
+      pdf.save(`근로계약서_${contract?.employee?.name || '문서'}.pdf`)
+    } catch (error) {
+      console.error('PDF 생성 중 오류 발생:', error)
+      alert('PDF를 생성하는 데 실패했습니다.')
     }
   }
 
@@ -257,10 +304,16 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
             </button>
           )}
           <button
-            onClick={handlePrint}
+            onClick={handleDownloadPdf}
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
           >
-            인쇄
+            PDF 다운로드
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            프린트
           </button>
           {(currentUser.role === 'owner' || currentUser.role === 'manager') && contract.status !== 'cancelled' && (
             <button
@@ -274,7 +327,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       </div>
 
       {/* Contract Document */}
-      <div className="bg-white p-8 md:p-12 rounded-lg shadow-lg border border-gray-200">
+      <div ref={contractContentRef} className="bg-white p-8 md:p-12 rounded-lg shadow-lg border border-gray-200">
         {/* Title */}
         <h1 className="text-3xl font-bold text-center mb-8">근로계약서</h1>
 
