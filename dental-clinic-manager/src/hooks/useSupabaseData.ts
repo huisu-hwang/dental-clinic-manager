@@ -45,11 +45,11 @@ export const useSupabaseData = (clinicId?: string | null) => {
           applyClinicFilter(
             supabase.from('gift_inventory').select('*'),
             targetClinicId
-          ).then(result => result),
+          ),
           applyClinicFilter(
             supabase.from('inventory_logs').select('*'),
             targetClinicId
-          ).then(result => result)
+          )
         ])
 
         if (inventoryError) throw inventoryError
@@ -161,7 +161,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
             Promise.resolve(applyClinicFilter(
               supabase.from('daily_reports').select('*'),
               targetClinicId
-            ).then(result => result)),
+            )),
             TIMEOUTS.QUERY_LONG,
             'daily_reports'
           ),
@@ -169,7 +169,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
             Promise.resolve(applyClinicFilter(
               supabase.from('consult_logs').select('*'),
               targetClinicId
-            ).then(result => result)),
+            )),
             TIMEOUTS.QUERY_LONG,
             'consult_logs'
           ),
@@ -177,7 +177,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
             Promise.resolve(applyClinicFilter(
               supabase.from('gift_logs').select('*'),
               targetClinicId
-            ).then(result => result)),
+            )),
             TIMEOUTS.QUERY_LONG,
             'gift_logs'
           ),
@@ -185,7 +185,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
             Promise.resolve(applyClinicFilter(
               supabase.from('gift_inventory').select('*'),
               targetClinicId
-            ).then(result => result)),
+            )),
             TIMEOUTS.QUERY_LONG,
             'gift_inventory'
           ),
@@ -193,7 +193,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
             Promise.resolve(applyClinicFilter(
               supabase.from('inventory_logs').select('*'),
               targetClinicId
-            ).then(result => result)),
+            )),
             TIMEOUTS.QUERY_LONG,
             'inventory_logs'
           )
