@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
+import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import DailyInputForm from '@/components/DailyInput/DailyInputForm'
@@ -125,6 +126,10 @@ export default function DashboardPage() {
     }
 
     try {
+      // 세션 갱신 (11분 문제 해결)
+      const supabase = createClient()
+      await supabase.auth.refreshSession()
+
       // 타임아웃 설정 (30초)
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('저장 요청 시간이 초과되었습니다. 네트워크 연결을 확인하거나 다시 로그인해주세요.')), 30000)
