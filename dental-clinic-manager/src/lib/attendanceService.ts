@@ -3,7 +3,7 @@
 // Attendance Management Service
 // ============================================
 
-import { getSupabase } from './supabase'
+import { createClient } from './supabase/client'
 import type {
   AttendanceQRCode,
   QRCodeGenerateInput,
@@ -18,6 +18,7 @@ import type {
   AttendanceStatistics,
   TeamAttendanceStatus,
   AttendanceEditRequest,
+  AttendanceStatus,
 } from '@/types/attendance'
 
 /**
@@ -27,7 +28,7 @@ import type {
 export async function generateDailyQRCode(
   input: QRCodeGenerateInput
 ): Promise<{ success: boolean; qrCode?: AttendanceQRCode; error?: string }> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { success: false, error: 'Database connection not available' }
   }
@@ -105,7 +106,7 @@ export async function getQRCodeForToday(
   clinicId: string,
   branchId?: string
 ): Promise<{ success: boolean; qrCode?: AttendanceQRCode; error?: string }> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { success: false, error: 'Database connection not available' }
   }
@@ -180,7 +181,7 @@ function calculateDistance(
 export async function validateQRCode(
   request: QRCodeValidationRequest
 ): Promise<QRCodeValidationResult> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { is_valid: false, error_message: 'Database connection not available' }
   }
@@ -253,7 +254,7 @@ async function getUserScheduleForDate(
   userId: string,
   date: string
 ): Promise<{ start_time?: string; end_time?: string } | null> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) return null
 
   try {
@@ -315,7 +316,7 @@ export async function autoCheckInOut(request: {
   longitude?: number
   device_info?: string
 }): Promise<AttendanceCheckResponse> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { success: false, message: 'Database connection not available' }
   }
@@ -383,7 +384,7 @@ export async function autoCheckInOut(request: {
  * 출근 체크 함수
  */
 export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckResponse> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { success: false, message: 'Database connection not available' }
   }
@@ -496,7 +497,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
  * 퇴근 체크 함수
  */
 export async function checkOut(request: CheckOutRequest): Promise<AttendanceCheckResponse> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { success: false, message: 'Database connection not available' }
   }
@@ -589,7 +590,7 @@ export async function getAttendanceRecords(
   page: number = 1,
   pageSize: number = 50
 ): Promise<AttendanceRecordsResponse> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { records: [], total_count: 0, page, page_size: pageSize, has_more: false }
   }
@@ -648,7 +649,7 @@ export async function getAttendanceRecords(
 export async function getTodayAttendance(
   userId: string
 ): Promise<{ success: boolean; record?: AttendanceRecord; error?: string }> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { success: false, error: 'Database connection not available' }
   }
@@ -684,7 +685,7 @@ export async function getMonthlyStatistics(
   year: number,
   month: number
 ): Promise<{ success: boolean; statistics?: AttendanceStatistics; error?: string }> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { success: false, error: 'Database connection not available' }
   }
@@ -718,7 +719,7 @@ export async function updateMonthlyStatistics(
   year: number,
   month: number
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { success: false, error: 'Database connection not available' }
   }
@@ -751,7 +752,7 @@ export async function getTeamAttendanceStatus(
   date: string,
   branchId?: string
 ): Promise<{ success: boolean; status?: TeamAttendanceStatus; error?: string }> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { success: false, error: 'Database connection not available' }
   }
@@ -791,9 +792,18 @@ export async function getTeamAttendanceStatus(
       return { success: false, error: recordsError.message }
     }
 
-    const recordMap = new Map(records?.map((r) => [r.user_id, r]) || [])
+    const recordMap = new Map(records?.map((r: AttendanceRecord) => [r.user_id, r]) || [])
 
-    const employees = (users || []).map((user) => {
+    type EmployeeStatusItem = {
+      user_id: string
+      user_name: string
+      status: AttendanceStatus
+      check_in_time?: string | null
+      scheduled_start?: string | null
+      late_minutes: number
+    }
+
+    const employees: EmployeeStatusItem[] = (users || []).map((user: { id: string; name: string; role: string }) => {
       const record = recordMap.get(user.id) as AttendanceRecord | undefined
 
       return {
@@ -834,7 +844,7 @@ export async function getTeamAttendanceStatus(
 export async function editAttendanceRecord(
   request: AttendanceEditRequest
 ): Promise<{ success: boolean; record?: AttendanceRecord; error?: string }> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     return { success: false, error: 'Database connection not available' }
   }
