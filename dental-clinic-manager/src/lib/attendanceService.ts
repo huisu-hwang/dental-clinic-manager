@@ -60,8 +60,10 @@ export async function generateDailyQRCode(
       return { success: true, qrCode: existingQR as AttendanceQRCode }
     }
 
-    // 새 QR 코드 생성 (UUID 기반)
-    const qrCodeValue = `ATTENDANCE_${clinic_id}_${today}_${crypto.randomUUID()}`
+    // 새 QR 코드 생성 (URL 기반 - 핸드폰 카메라 직접 스캔 가능)
+    const uuid = crypto.randomUUID()
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const qrCodeValue = `${baseUrl}/qr/${uuid}`
 
     // QR 코드 저장
     const { data: newQR, error: insertError } = await supabase
@@ -69,7 +71,7 @@ export async function generateDailyQRCode(
       .insert({
         clinic_id,
         branch_id, // 지점 ID 포함
-        qr_code: qrCodeValue,
+        qr_code: uuid, // UUID만 저장 (URL은 프론트엔드에서 동적 생성)
         valid_date: today,
         latitude,
         longitude,
@@ -78,6 +80,11 @@ export async function generateDailyQRCode(
       })
       .select()
       .single()
+
+    // 반환 시 전체 URL로 변환
+    if (newQR) {
+      newQR.qr_code = qrCodeValue
+    }
 
     if (insertError) {
       console.error('[generateDailyQRCode] Error:', insertError)
@@ -126,7 +133,16 @@ export async function getQRCodeForToday(
       return { success: false, error: 'QR code not found for today' }
     }
 
-    return { success: true, qrCode: data as AttendanceQRCode }
+    // DB에 저장된 UUID를 URL 형식으로 변환
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const qrCode = data as AttendanceQRCode
+
+    // qr_code가 이미 URL 형식이 아니면 변환
+    if (!qrCode.qr_code.startsWith('http')) {
+      qrCode.qr_code = `${baseUrl}/qr/${qrCode.qr_code}`
+    }
+
+    return { success: true, qrCode }
   } catch (error: any) {
     console.error('[getQRCodeForToday] Error:', error)
     return { success: false, error: error.message }
@@ -285,6 +301,81 @@ async function getUserScheduleForDate(
   } catch (error) {
     console.error('[getUserScheduleForDate] Error:', error)
     return null
+  }
+}
+
+/**
+ * QR 코드 스캔 시 자동으로 출근/퇴근 판단하여 처리
+ * 핸드폰 카메라로 QR 코드를 직접 스캔하면 호출됨
+ */
+export async function autoCheckInOut(request: {
+  user_id: string
+  qr_code: string  // UUID 또는 전체 URL
+  latitude?: number
+  longitude?: number
+  device_info?: string
+}): Promise<AttendanceCheckResponse> {
+  const supabase = getSupabase()
+  if (!supabase) {
+    return { success: false, message: 'Database connection not available' }
+  }
+
+  try {
+    const { user_id, latitude, longitude, device_info } = request
+    let { qr_code } = request
+
+    // URL에서 UUID 추출 (예: https://domain.com/qr/uuid → uuid)
+    if (qr_code.includes('/qr/')) {
+      const parts = qr_code.split('/qr/')
+      qr_code = parts[parts.length - 1]
+    }
+
+    // 오늘 날짜
+    const today = new Date().toISOString().split('T')[0]
+
+    // 오늘 출퇴근 기록 확인
+    const { data: todayRecord } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('work_date', today)
+      .maybeSingle()
+
+    // 출근/퇴근 자동 판단
+    if (!todayRecord || !todayRecord.check_in_time) {
+      // 출근 처리
+      return await checkIn({
+        user_id,
+        qr_code,
+        work_date: today,
+        latitude,
+        longitude,
+        device_info,
+      })
+    } else if (!todayRecord.check_out_time) {
+      // 퇴근 처리
+      return await checkOut({
+        user_id,
+        qr_code,
+        work_date: today,
+        latitude,
+        longitude,
+        device_info,
+      })
+    } else {
+      // 이미 퇴근 완료
+      return {
+        success: false,
+        message: '오늘 이미 퇴근하셨습니다.',
+        record: todayRecord as AttendanceRecord,
+      }
+    }
+  } catch (error: any) {
+    console.error('[autoCheckInOut] Error:', error)
+    return {
+      success: false,
+      message: error.message || 'Auto check-in/out failed',
+    }
   }
 }
 
@@ -785,6 +876,7 @@ export const attendanceService = {
   generateDailyQRCode,
   getQRCodeForToday,
   validateQRCode,
+  autoCheckInOut,
   checkIn,
   checkOut,
   getAttendanceRecords,

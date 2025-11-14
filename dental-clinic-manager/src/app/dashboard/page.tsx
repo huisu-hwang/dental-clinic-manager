@@ -1,18 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { createClient } from '@/lib/supabase/client'
-import Header from '@/components/Layout/Header'
-import TabNavigation from '@/components/Layout/TabNavigation'
 import DailyInputForm from '@/components/DailyInput/DailyInputForm'
 import StatsContainer from '@/components/Stats/StatsContainer'
 import LogsSection from '@/components/Logs/LogsSection'
 import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
-import AccountProfile from '@/components/Management/AccountProfile'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import Toast from '@/components/ui/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
@@ -31,10 +28,9 @@ import { inspectDatabase } from '@/utils/dbInspector'
 import type { ConsultRowData, GiftRowData, HappyCallRowData } from '@/types'
 
 export default function DashboardPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, logout, updateUser } = useAuth()
-  const { hasPermission, canAccessTab } = usePermissions()
+  const { user } = useAuth()
+  const { hasPermission } = usePermissions()
 
   // 권한 상태 정의
   const canCreateReport = hasPermission('daily_report_create')
@@ -49,12 +45,10 @@ export default function DashboardPage() {
   const canViewTeam = hasPermission('attendance_view_all')
   const canManageQR = hasPermission('qr_code_manage')
 
-  // URL 쿼리 파라미터에서 초기 탭 읽기
-  const initialTab = searchParams.get('tab') || 'daily-input'
-  const [activeTab, setActiveTab] = useState(initialTab)
+  // URL 쿼리 파라미터에서 활성 탭 읽기
+  const activeTab = searchParams.get('tab') || 'daily-input'
   const [statsSubTab, setStatsSubTab] = useState<'weekly' | 'monthly' | 'annual'>('weekly')
   const [attendanceSubTab, setAttendanceSubTab] = useState<'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'>('checkin')
-  const [showProfile, setShowProfile] = useState(false)
   const [dbStatus, setDbStatus] = useState<'connected' | 'connecting' | 'error'>('connecting')
   const [toast, setToast] = useState<{
     show: boolean
@@ -99,13 +93,6 @@ export default function DashboardPage() {
       }
     }
   }, [loading, error])
-
-  // Redirect to contracts page when contracts tab is selected
-  useEffect(() => {
-    if (activeTab === 'contracts') {
-      router.push('/dashboard/contracts')
-    }
-  }, [activeTab, router])
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ show: true, message, type })
@@ -239,54 +226,17 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
-        <div className="container mx-auto p-4 md:p-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p>데이터를 불러오는 중...</p>
-            </div>
-          </div>
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>데이터를 불러오는 중...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
-      <div className="container mx-auto p-4 md:p-8">
-        <Header
-          dbStatus={dbStatus}
-          user={user}
-          onLogout={() => logout()} // 이벤트 객체가 전달되지 않도록 래핑
-          onProfileClick={() => setShowProfile(true)}
-        />
-
-        {/* Profile Modal */}
-        {showProfile && user && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowProfile(false)}
-          >
-            <div
-              className="max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <AccountProfile
-                currentUser={user}
-                onClose={() => setShowProfile(false)}
-                onUpdate={(updatedUserData) => {
-                  updateUser(updatedUserData) // AuthContext와 localStorage 업데이트
-                  setShowProfile(false) // 모달 닫기
-                  showToast('프로필이 성공적으로 업데이트되었습니다.', 'success')
-                }}
-              />
-            </div>
-          </div>
-        )}
-        <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-
-        <main>
+    <>
           {/* 일일 보고서 입력 */}
           {activeTab === 'daily-input' && (
             <DailyInputForm
@@ -606,8 +556,6 @@ export default function DashboardPage() {
               <GuideSection />
             </div>
           )}
-        </main>
-      </div>
 
       <Toast
         message={toast.message}
@@ -615,6 +563,6 @@ export default function DashboardPage() {
         show={toast.show}
         onClose={() => setToast(prev => ({ ...prev, show: false }))}
       />
-    </div>
+    </>
   )
 }
