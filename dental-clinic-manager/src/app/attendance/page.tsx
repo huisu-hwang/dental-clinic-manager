@@ -26,11 +26,11 @@ export default function AttendancePage() {
     if (tab === 'attendance') return // Already on attendance page
     if (tab === 'daily-input') router.push('/dashboard')
     else if (tab === 'contracts') router.push('/dashboard/contracts')
-    else if (tab === 'stats') router.push('/dashboard') // TODO: stats page
-    else if (tab === 'logs') router.push('/dashboard') // TODO: logs page
-    else if (tab === 'protocols') router.push('/dashboard') // TODO: protocols page
-    else if (tab === 'settings') router.push('/dashboard') // TODO: settings page
-    else if (tab === 'guide') router.push('/dashboard') // TODO: guide page
+    else if (tab === 'stats') router.push('/dashboard?tab=stats')
+    else if (tab === 'logs') router.push('/dashboard?tab=logs')
+    else if (tab === 'protocols') router.push('/dashboard?tab=protocols')
+    else if (tab === 'settings') router.push('/dashboard?tab=settings')
+    else if (tab === 'guide') router.push('/dashboard?tab=guide')
     else router.push('/dashboard')
   }
 

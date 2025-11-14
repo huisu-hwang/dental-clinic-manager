@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { createClient } from '@/lib/supabase/client'
@@ -32,6 +32,7 @@ import type { ConsultRowData, GiftRowData, HappyCallRowData } from '@/types'
 
 export default function DashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, logout, updateUser } = useAuth()
   const { hasPermission, canAccessTab } = usePermissions()
 
@@ -47,7 +48,10 @@ export default function DashboardPage() {
   const canManageSchedule = hasPermission('schedule_manage')
   const canViewTeam = hasPermission('attendance_view_all')
   const canManageQR = hasPermission('qr_code_manage')
-  const [activeTab, setActiveTab] = useState('daily-input')
+
+  // URL 쿼리 파라미터에서 초기 탭 읽기
+  const initialTab = searchParams.get('tab') || 'daily-input'
+  const [activeTab, setActiveTab] = useState(initialTab)
   const [statsSubTab, setStatsSubTab] = useState<'weekly' | 'monthly' | 'annual'>('weekly')
   const [attendanceSubTab, setAttendanceSubTab] = useState<'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'>('checkin')
   const [showProfile, setShowProfile] = useState(false)

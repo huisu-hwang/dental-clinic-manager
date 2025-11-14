@@ -1,4 +1,5 @@
 import { createClient } from './supabase/client'
+import { ensureConnection } from './supabase/connectionCheck'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
 import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
@@ -129,7 +130,7 @@ async function getCurrentClinicId(): Promise<string | null> {
       }
     }
 
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) {
       console.error('[getCurrentClinicId] Supabase client not available')
       return null
@@ -320,7 +321,7 @@ async function getCurrentClinicId(): Promise<string | null> {
 export const dataService = {
   // 공개된 병원 목록 검색
   async searchPublicClinics() {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -340,7 +341,7 @@ export const dataService = {
 
   // 사용자 ID로 프로필 정보 가져오기 (소속 병원 정보 포함)
   async getUserProfileById(id: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) {
       console.warn('[dataService] Supabase client not available in getUserProfileById (likely server-side).')
       return { error: 'Supabase client not available' }
@@ -389,7 +390,8 @@ export const dataService = {
 
     console.log('[DataService] getReportByDate called with date:', targetDate, 'clinicId:', targetClinicId)
 
-    const supabase = createClient()
+    // 데이터베이스 연결 확인 및 세션 갱신
+    const supabase = await ensureConnection()
     if (!supabase) {
       console.error('[DataService] Supabase client not available')
       return {
@@ -565,7 +567,7 @@ export const dataService = {
     recallBookingCount: number
     specialNotes: string
   }) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     const {
@@ -674,7 +676,7 @@ export const dataService = {
 
   // 날짜별 보고서 삭제
   async deleteReportByDate(date: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -776,7 +778,7 @@ export const dataService = {
 
   // 일일 보고서 통계 재계산 (데이터 불일치 해결용)
   async recalculateDailyReportStats(date: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -865,7 +867,7 @@ export const dataService = {
 
   // 재고 업데이트
   async updateStock(id: number, quantity: number, item: { name: string; stock: number }) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -913,7 +915,7 @@ export const dataService = {
 
   // 선물 아이템 추가
   async addGiftItem(name: string, stock: number) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -954,7 +956,7 @@ export const dataService = {
 
   // 선물 아이템 삭제
   async deleteGiftItem(id: number) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -981,7 +983,7 @@ export const dataService = {
 
   // 재고 데이터 수정 (잘못된 재고 수치 복구)
   async fixInventoryData() {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1099,7 +1101,7 @@ export const dataService = {
 
   // 사용자 프로필 업데이트
   async updateUserProfile(id: string, updates: { name?: string; phone?: string; address?: string; resident_registration_number?: string }) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1126,7 +1128,7 @@ export const dataService = {
 
   // 현재 사용자 프로필 가져오기
   async getUserProfile() {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1149,7 +1151,7 @@ export const dataService = {
 
   // 모든 병원 목록 가져오기 (마스터 전용)
   async getAllClinics() {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1171,7 +1173,7 @@ export const dataService = {
 
   // 모든 사용자 목록 가져오기 (마스터 전용)
   async getAllUsers() {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1193,7 +1195,7 @@ export const dataService = {
 
   // 시스템 통계 가져오기 (마스터 전용)
   async getSystemStatistics() {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1233,7 +1235,7 @@ export const dataService = {
 
   // 병원 삭제 (마스터 전용)
   async deleteClinic(clinicId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1260,7 +1262,7 @@ export const dataService = {
 
   // 사용자 삭제 (마스터 전용)
   async deleteUser(userId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1279,7 +1281,7 @@ export const dataService = {
 
   // 사용자 권한 업데이트
   async updateUserPermissions(userId: string, permissions: string[]) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1315,7 +1317,7 @@ export const dataService = {
 
   // 직원 정보 업데이트 (주소, 주민번호 등)
   async updateStaffInfo(userId: string, updates: { name?: string; phone?: string; address?: string; resident_registration_number?: string }) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1354,7 +1356,7 @@ export const dataService = {
 
   // 사용자 승인 (직원 관리)
   async approveUser(userId: string, clinicId: string, permissions?: string[]) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1401,7 +1403,7 @@ export const dataService = {
 
   // 사용자 거절 (직원 관리)
   async rejectUser(userId: string, clinicId: string, reason: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1427,7 +1429,7 @@ export const dataService = {
 
   // 병원 계정 상태 변경 (마스터 전용)
   async updateClinicStatus(clinicId: string, status: 'active' | 'suspended') {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1448,7 +1450,7 @@ export const dataService = {
 
   // 병원별 사용자 목록 조회 (마스터 전용)
   async getUsersByClinic(clinicId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1472,7 +1474,7 @@ export const dataService = {
 
   // 프로토콜 카테고리 목록 조회
   async getProtocolCategories(clinicId?: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1499,7 +1501,7 @@ export const dataService = {
 
   // 프로토콜 카테고리 생성
   async createProtocolCategory(categoryData: { name: string; description?: string; color?: string; display_order?: number }) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) {
       return { error: 'Supabase client not available' }
     }
@@ -1551,7 +1553,7 @@ export const dataService = {
 
   // 프로토콜 카테고리 수정
   async updateProtocolCategory(categoryId: string, updates: { name?: string; description?: string; color?: string; display_order?: number }) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1578,7 +1580,7 @@ export const dataService = {
 
   // 프로토콜 카테고리 삭제
   async deleteProtocolCategory(categoryId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1603,7 +1605,7 @@ export const dataService = {
 
   // 프로토콜 목록 조회
   async getProtocols(clinicId?: string, filters?: { status?: string; category_id?: string; search?: string }) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1659,7 +1661,7 @@ export const dataService = {
 
   // 프로토콜 상세 조회 (ID로)
   async getProtocolById(protocolId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1770,7 +1772,7 @@ export const dataService = {
       contentLength: formData.content?.length || 0
     })
 
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) {
       console.error('[createProtocol] Supabase client not available')
       throw new Error('Supabase client not available')
@@ -1879,7 +1881,7 @@ export const dataService = {
 
   // 프로토콜 수정 (새 버전 생성)
   async updateProtocol(protocolId: string, formData: ProtocolFormData) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1955,7 +1957,7 @@ export const dataService = {
 
   // 프로토콜 삭제 (소프트 삭제)
   async deleteProtocol(protocolId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -1980,7 +1982,7 @@ export const dataService = {
 
   // 프로토콜 버전 히스토리 조회
   async getProtocolVersions(protocolId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -2020,7 +2022,7 @@ export const dataService = {
 
   // 프로토콜 버전 복원
   async restoreProtocolVersion(protocolId: string, versionId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -2123,7 +2125,7 @@ export const dataService = {
 
   // 비밀번호 확인 (재인증)
   async verifyPassword(email: string, password: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -2150,7 +2152,7 @@ export const dataService = {
 
   // 비밀번호 업데이트
   async updatePassword(newPassword: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -2180,7 +2182,7 @@ export const dataService = {
       const clinicId = await getCurrentClinicId()
 
       // Supabase 세션 확인 시도
-      const supabase = createClient()
+      const supabase = await ensureConnection()
       if (supabase) {
         try {
           console.log('[DataService] Checking session...')
@@ -2287,7 +2289,7 @@ export const dataService = {
 
   // 지점 목록 조회
   async getBranches(filter?: { is_active?: boolean }): Promise<{ data?: ClinicBranch[], total_count?: number, error?: string }> {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -2320,7 +2322,7 @@ export const dataService = {
 
   // 단일 지점 조회
   async getBranchById(branchId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -2356,7 +2358,7 @@ export const dataService = {
     is_active?: boolean
     display_order?: number
   }) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -2400,7 +2402,7 @@ export const dataService = {
     is_active?: boolean
     display_order?: number
   }) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -2429,7 +2431,7 @@ export const dataService = {
 
   // 지점 삭제 (soft delete - is_active를 false로 설정)
   async deleteBranch(branchId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -2456,7 +2458,7 @@ export const dataService = {
 
   // 지점 완전 삭제 (hard delete - owner만 사용)
   async hardDeleteBranch(branchId: string) {
-    const supabase = createClient()
+    const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {

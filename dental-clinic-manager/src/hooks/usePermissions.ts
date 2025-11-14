@@ -8,10 +8,14 @@ import { DEFAULT_PERMISSIONS, PERMISSION_DESCRIPTIONS } from '@/types/permission
 export function usePermissions() {
   const { user } = useAuth()
   const [permissions, setPermissions] = useState<Set<Permission>>(new Set())
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    setIsLoading(true)
+
     if (!user) {
       setPermissions(new Set())
+      setIsLoading(false)
       return
     }
 
@@ -29,6 +33,7 @@ export function usePermissions() {
     }
 
     setPermissions(new Set(userPermissions))
+    setIsLoading(false)
   }, [user])
 
   const hasPermission = (permission: Permission): boolean => {
@@ -60,5 +65,6 @@ export function usePermissions() {
     permissions,
     hasPermission,
     canAccessTab,
+    isLoading,
   }
 }

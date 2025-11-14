@@ -8,10 +8,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
- * Timeout constants (Context7 공식 문서 권장: 10-15초)
+ * Timeout constants (공격적 최적화: 빠른 사용자 경험 우선)
  */
-export const SESSION_REFRESH_TIMEOUT = 10000  // 10초 (5초에서 증가)
-export const SESSION_CHECK_TIMEOUT = 10000    // 10초
+export const SESSION_REFRESH_TIMEOUT = 5000  // 5초 (10초에서 감소 - 공격적 최적화)
+export const SESSION_CHECK_TIMEOUT = 3000    // 3초 (10초에서 감소 - 공격적 최적화)
 
 /**
  * Result type for session refresh operations

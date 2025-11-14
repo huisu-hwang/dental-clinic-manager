@@ -7,7 +7,8 @@
  * 참고:
  * - Supabase 공식 문서: JWT 기본 만료 시간 1시간
  * - Supabase 공식 문서: 리프레시 토큰 재사용 간격 10초 (기본, 변경 비권장)
- * - sessionUtils.ts: SESSION_REFRESH_TIMEOUT = 10000ms (10초)
+ * - sessionUtils.ts: SESSION_REFRESH_TIMEOUT = 5000ms (5초 - 공격적 최적화)
+ * - 공격적 최적화: 빠른 사용자 경험 우선 (느린 3G 환경에서 일부 실패 가능성)
  *
  * @see https://supabase.com/docs/guides/auth/sessions
  */
@@ -18,21 +19,23 @@
 export const TIMEOUTS = {
   /**
    * 세션 갱신 타임아웃
-   * Supabase 리프레시 토큰 재사용 간격(10초)에 맞춤
+   * 공격적 최적화: 5초로 감소 (빠른 사용자 경험 우선)
    */
-  SESSION_REFRESH: 10000, // 10초
+  SESSION_REFRESH: 5000, // 5초 (10초에서 감소)
 
   /**
    * 세션 체크 타임아웃
    * getSession() 호출 시 최대 대기 시간
+   * 공격적 최적화: 3초로 감소
    */
-  SESSION_CHECK: 10000, // 10초
+  SESSION_CHECK: 3000, // 3초 (10초에서 감소)
 
   /**
    * 전체 세션 체크 타임아웃
    * AuthContext에서 사용 (세션 체크 + 사용자 프로필 로드)
+   * 공격적 최적화: 8초로 감소 (3초 체크 + 5초 갱신)
    */
-  SESSION_TOTAL: 15000, // 15초
+  SESSION_TOTAL: 8000, // 8초 (15초에서 감소)
 
   /**
    * 로그아웃 타임아웃
