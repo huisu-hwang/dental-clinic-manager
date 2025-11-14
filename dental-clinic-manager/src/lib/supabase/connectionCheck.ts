@@ -28,10 +28,10 @@ export async function ensureConnection() {
   }
 
   try {
-    // 1. 세션 확인 (타임아웃 10초로 증가)
+    // 1. 세션 확인 (타임아웃 3초 - 공격적 최적화)
     const sessionPromise = supabase.auth.getSession()
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Session check timeout')), 10000)
+      setTimeout(() => reject(new Error('Session check timeout')), 3000)
     )
 
     const { data: { session }, error: sessionError } = await Promise.race([
@@ -56,14 +56,14 @@ export async function ensureConnection() {
     let refreshError: any = null
     let refreshData: any = null
 
-    // 최대 3회 재시도
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      console.log(`[ensureConnection] Refresh attempt ${attempt}/3`)
+    // 최대 2회 재시도 (공격적 최적화)
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      console.log(`[ensureConnection] Refresh attempt ${attempt}/2`)
 
       try {
         const refreshPromise = supabase.auth.refreshSession()
         const refreshTimeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Session refresh timeout')), 15000) // 15초로 증가
+          setTimeout(() => reject(new Error('Session refresh timeout')), 5000) // 5초로 감소
         )
 
         const result = await Promise.race([
@@ -84,8 +84,8 @@ export async function ensureConnection() {
         console.warn(`[ensureConnection] Refresh attempt ${attempt} failed:`, refreshError)
 
         // 마지막 시도가 아니면 백오프 후 재시도
-        if (attempt < 3) {
-          const backoffMs = attempt * 1000 // 1초, 2초
+        if (attempt < 2) {
+          const backoffMs = attempt * 1000 // 1초
           console.log(`[ensureConnection] Waiting ${backoffMs}ms before retry...`)
           await new Promise(resolve => setTimeout(resolve, backoffMs))
         }
@@ -95,7 +95,7 @@ export async function ensureConnection() {
         refreshError = error
 
         // 마지막 시도가 아니면 백오프 후 재시도
-        if (attempt < 3) {
+        if (attempt < 2) {
           const backoffMs = attempt * 1000
           await new Promise(resolve => setTimeout(resolve, backoffMs))
         }
