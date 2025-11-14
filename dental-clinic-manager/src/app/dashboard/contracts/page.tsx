@@ -19,7 +19,13 @@ export default function ContractsPage() {
   const handleTabChange = (tab: string) => {
     if (tab === 'contracts') return // Already on contracts page
     if (tab === 'daily-input') router.push('/dashboard')
-    else router.push('/dashboard') // For now, all other tabs go to dashboard
+    else if (tab === 'attendance') router.push('/attendance')
+    else if (tab === 'stats') router.push('/dashboard?tab=stats')
+    else if (tab === 'logs') router.push('/dashboard?tab=logs')
+    else if (tab === 'protocols') router.push('/dashboard?tab=protocols')
+    else if (tab === 'settings') router.push('/management')
+    else if (tab === 'guide') router.push('/dashboard?tab=guide')
+    else router.push('/dashboard')
   }
 
   // Check user and permissions loading state
