@@ -1,16 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import LandingPage from '@/components/Landing/LandingPage'
 import LoginForm from '@/components/Auth/LoginForm'
 import SignupForm from '@/components/Auth/SignupForm'
-import DashboardPage from './dashboard/page'
 import ForgotPasswordForm from '@/components/Auth/ForgotPasswordForm'
 
-type AppState = 'landing' | 'login' | 'signup' | 'forgotPassword' | 'dashboard'
+type AppState = 'landing' | 'login' | 'signup' | 'forgotPassword'
 
 export default function AuthApp() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { isAuthenticated, loading } = useAuth()
   const [appState, setAppState] = useState<AppState>('landing')
 
@@ -26,9 +28,17 @@ export default function AuthApp() {
     )
   }
 
-  // 인증된 경우 대시보드 표시
+  // 인증된 경우 대시보드로 리디렉션
+  useEffect(() => {
+    if (isAuthenticated) {
+      const redirect = searchParams.get('redirect')
+      router.push(redirect || '/dashboard')
+    }
+  }, [isAuthenticated, router, searchParams])
+
+  // 인증되지 않은 경우만 계속 진행
   if (isAuthenticated) {
-    return <DashboardPage />
+    return null // 리디렉션 중
   }
 
   // 인증되지 않은 경우 앱 상태에 따라 화면 표시
