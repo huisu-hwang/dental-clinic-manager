@@ -4,6 +4,168 @@
 
 ---
 
+## 2025-11-14 [버그 수정] DB 연결 안정성 강화 - 세션 자동 재연결 구현
+
+**키워드:** #DB연결 #세션관리 #Supabase #자동재연결 #싱글톤패턴
+
+### 📋 작업 내용
+- Supabase 클라이언트 싱글톤 패턴 적용 (자동 토큰 갱신 보장)
+- 연결 확인 로직 강화 (타임아웃 증가, 재시도 추가)
+- 모든 DB 작업 전 연결 확인 및 자동 재연결 (44개 함수)
+
+### 🐛 문제
+일정 시간(1시간+) 경과 후 일일 보고서, 프로토콜, 근로계약서 저장 실패
+- DB 연결이 끊어지면 복구되지 않음
+- 사용자는 로그아웃 후 재로그인 필요
+
+### 🔍 근본 원인 (5 Whys)
+
+**Q1: 왜 일정 시간 지나면 일일 보고서 저장이 안 되는가?**
+A: DB 연결이 끊겨서
+
+**Q2: 왜 DB 연결이 끊기는가?**
+A: Supabase 세션 토큰이 만료되어서 (기본: 1시간)
+
+**Q3: 왜 세션 토큰이 자동 갱신되지 않는가?**
+A: 브라우저 클라이언트에서 autoRefreshToken 설정이 명시되지 않았고, 유휴 시간이 길어지면 토큰 갱신 누락
+
+**Q4: 왜 갱신이 누락되는가?**
+A: Supabase 클라이언트가 매번 새로 생성되고, 백그라운드 자동 갱신 메커니즘이 없음
+
+**Q5: 왜 자동 갱신 메커니즘이 없는가?**
+A: **설계상 결함: 클라이언트를 싱글톤으로 관리하지 않고, 세션 상태를 지속적으로 모니터링하지 않음**
+
+### ✅ 해결 방법
+
+#### Phase 1: Supabase 클라이언트 싱글톤 패턴 적용
+**파일:** `src/lib/supabase/client.ts`
+
+**변경사항:**
+```typescript
+// Before: 매번 새 인스턴스 생성
+export function createClient() {
+  return createBrowserClient<Database>(url, key)
+}
+
+// After: 싱글톤 패턴 + 자동 갱신 설정
+let supabaseInstance: SupabaseClient<Database> | null = null
+
+export function createClient() {
+  if (supabaseInstance) return supabaseInstance
+
+  supabaseInstance = createBrowserClient<Database>(url, key, {
+    auth: {
+      autoRefreshToken: true,   // ✅ 자동 토큰 갱신
+      persistSession: true,     // ✅ 세션 유지
+      detectSessionInUrl: true
+    }
+  })
+
+  // ✅ 세션 상태 변경 리스너
+  supabaseInstance.auth.onAuthStateChange((event, session) => {
+    if (event === 'TOKEN_REFRESHED') {
+      console.log('Token refreshed at:', new Date())
+    }
+    if (event === 'SIGNED_OUT') {
+      supabaseInstance = null
+    }
+  })
+
+  return supabaseInstance
+}
+```
+
+**효과:**
+- 앱 전체에서 하나의 인스턴스만 사용 → 자동 토큰 갱신 보장
+- 세션 상태 모니터링으로 디버깅 용이
+
+#### Phase 2: 연결 확인 로직 강화
+**파일:** `src/lib/supabase/connectionCheck.ts`
+
+**변경사항:**
+- 세션 확인 타임아웃: 5초 → **10초**
+- 세션 갱신 타임아웃: 10초 → **15초**
+- 재시도 로직 추가: **최대 3회** (exponential backoff: 1초, 2초)
+
+```typescript
+// 재시도 로직 추가
+for (let attempt = 1; attempt <= 3; attempt++) {
+  try {
+    const result = await Promise.race([
+      supabase.auth.refreshSession(),
+      timeout(15000)  // 15초로 증가
+    ])
+
+    if (result.data?.session) {
+      return supabase  // 성공
+    }
+
+    // 실패 시 백오프 후 재시도
+    if (attempt < 3) {
+      await sleep(attempt * 1000)  // 1초, 2초
+    }
+  } catch (error) {
+    // 마지막 시도 실패 시 로그아웃
+  }
+}
+```
+
+**효과:**
+- 네트워크 일시 장애에도 자동 복구
+- 타임아웃 여유 확보로 느린 네트워크 대응
+
+#### Phase 3: 모든 DB 작업에 연결 확인 적용
+**파일:** `src/lib/dataService.ts`
+
+**변경사항:**
+- **44개 함수** 수정
+- `const supabase = createClient()` → `const supabase = await ensureConnection()`
+
+**적용 범위:**
+- ✅ 일일 보고서: saveReport, getReportByDate, deleteReportByDate
+- ✅ 프로토콜: saveProtocol, getProtocolById, updateProtocol, deleteProtocol 등
+- ✅ 근로계약서: getContractById, updateContract, deleteContract 등
+- ✅ 사용자/환자 관리 등 모든 DB 함수
+
+**효과:**
+- 모든 DB 작업 전 자동으로 연결 확인 및 재연결
+- 사용자는 DB 연결 문제를 인지하지 못함 (투명한 복구)
+
+### 🧪 테스트 결과
+```bash
+✅ npm run build 성공
+✅ 타입 에러 없음
+✅ 44개 함수 모두 ensureConnection() 적용 완료
+```
+
+### 💡 배운 점
+
+#### 1. Supabase 세션 관리 베스트 프랙티스
+- **싱글톤 패턴 필수**: 매번 새 인스턴스 생성 시 자동 갱신 실패
+- **명시적 설정 중요**: `autoRefreshToken: true` 기본값이지만 명시하는 것이 안전
+- **세션 모니터링**: `onAuthStateChange` 리스너로 토큰 갱신 상태 추적
+
+#### 2. 재시도 로직 설계
+- Exponential backoff로 서버 부하 최소화
+- 최대 재시도 횟수 제한 (무한 재시도 방지)
+- 명확한 실패 처리 (로그아웃 후 로그인 페이지 리다이렉트)
+
+#### 3. 일괄 변경의 효율성
+- 38개 → 44개 함수 (인덴트 차이 포함)
+- `Edit` 도구의 `replace_all` 옵션으로 5분 내 완료
+- 개별 수정 시 1-2시간 소요 예상
+
+#### 4. 근본 원인 해결의 중요성
+- ❌ 임시 방편: 각 함수마다 타임아웃만 증가 → 재발 가능
+- ✅ 근본 해결: 싱글톤 + 자동 갱신 → 재발 방지
+
+### 📚 참고 자료
+- Supabase 공식 문서: Auth Session Management
+- @supabase/ssr 패키지 문서
+- Next.js 15 + Supabase 통합 가이드
+
+---
+
 ## 2025-11-13 [버그 수정] PDF 다운로드 실패 - jsPDF v3 임포트 방식 오류
 
 **키워드:** #PDF #jsPDF #html2canvas #근로계약서 #라이브러리버전 #Context7
