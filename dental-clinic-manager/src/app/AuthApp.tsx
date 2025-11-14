@@ -16,6 +16,14 @@ export default function AuthApp() {
   const { isAuthenticated, loading } = useAuth()
   const [appState, setAppState] = useState<AppState>('landing')
 
+  // 인증된 경우 대시보드로 리디렉션
+  useEffect(() => {
+    if (isAuthenticated) {
+      const redirect = searchParams.get('redirect')
+      router.push(redirect || '/dashboard')
+    }
+  }, [isAuthenticated, router, searchParams])
+
   // 인증 상태 확인 중 로딩
   if (loading) {
     return (
@@ -27,14 +35,6 @@ export default function AuthApp() {
       </div>
     )
   }
-
-  // 인증된 경우 대시보드로 리디렉션
-  useEffect(() => {
-    if (isAuthenticated) {
-      const redirect = searchParams.get('redirect')
-      router.push(redirect || '/dashboard')
-    }
-  }, [isAuthenticated, router, searchParams])
 
   // 인증되지 않은 경우만 계속 진행
   if (isAuthenticated) {

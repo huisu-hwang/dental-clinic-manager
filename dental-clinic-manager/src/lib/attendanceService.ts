@@ -18,6 +18,7 @@ import type {
   AttendanceStatistics,
   TeamAttendanceStatus,
   AttendanceEditRequest,
+  AttendanceStatus,
 } from '@/types/attendance'
 
 /**
@@ -791,9 +792,18 @@ export async function getTeamAttendanceStatus(
       return { success: false, error: recordsError.message }
     }
 
-    const recordMap = new Map(records?.map((r) => [r.user_id, r]) || [])
+    const recordMap = new Map(records?.map((r: AttendanceRecord) => [r.user_id, r]) || [])
 
-    const employees = (users || []).map((user) => {
+    type EmployeeStatusItem = {
+      user_id: string
+      user_name: string
+      status: AttendanceStatus
+      check_in_time?: string | null
+      scheduled_start?: string | null
+      late_minutes: number
+    }
+
+    const employees: EmployeeStatusItem[] = (users || []).map((user: { id: string; name: string; role: string }) => {
       const record = recordMap.get(user.id) as AttendanceRecord | undefined
 
       return {
