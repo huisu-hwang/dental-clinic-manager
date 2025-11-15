@@ -4,6 +4,103 @@
 
 ---
 
+## 2025-11-14 [기능 개발] 통합 QR 코드 - GPS 자동 지점 감지 (작업 중)
+
+**키워드:** #출근관리 #지점관리 #GPS #자동감지 #QR코드
+
+### 📋 작업 내용
+- QR 코드 1개로 여러 지점에서 사용 가능하도록 개선
+- GPS 좌표로 가장 가까운 지점 자동 감지 기능 구현
+- `findNearestBranch()` 함수 추가 (Haversine 공식 기반)
+- `checkIn()` 함수 수정 (통합 QR 지원)
+
+### 🎯 요구사항
+- **기존:** 지점마다 개별 QR 코드 필요 → 관리 복잡
+- **개선:** QR 코드 1개로 모든 지점에서 사용 가능
+- **자동화:** 직원이 어느 지점에 있는지 GPS로 자동 감지
+
+### ✅ 구현 완료
+1. **findNearestBranch() 함수** (`attendanceService.ts:186-244`)
+   ```typescript
+   // GPS 좌표로 가장 가까운 지점 찾기
+   - 모든 활성 지점 조회
+   - Haversine 공식으로 거리 계산
+   - attendance_radius_meters 범위 검증
+   - 가장 가까운 지점 반환
+   ```
+
+2. **checkIn() 함수 수정** (`attendanceService.ts:480-505`)
+   ```typescript
+   // 통합 QR 감지 시
+   if (!validation.branch_id && latitude && longitude) {
+     const nearestBranch = await findNearestBranch(...)
+     if (nearestBranch.withinRadius) {
+       finalBranchId = nearestBranch.branch.id
+       message = `${nearestBranch.branch.branch_name}에서 출근하셨습니다.`
+     } else {
+       return error: "본점에서 150m 떨어져 있습니다. 100m 이내로 접근해주세요."
+     }
+   }
+   ```
+
+3. **Import 추가**
+   - `getBranches` from './branchService'
+   - `ClinicBranch` type from '@/types/branch'
+
+### 🔄 동작 흐름
+```
+통합 QR 스캔 (branch_id=null)
+  ↓
+사용자 GPS 좌표 수집
+  ↓
+findNearestBranch(clinicId, lat, lng)
+  ↓
+모든 지점과 거리 계산
+  ↓
+가장 가까운 지점 선택
+  ↓
+범위 내 (100m) 검증
+  ├─ YES → "본점에서 출근하셨습니다" + branch_id 자동 저장
+  └─ NO → "본점에서 150m 떨어져 있습니다..."
+```
+
+### ⚠️ 미해결 이슈
+**RLS 정책 문제**
+- `clinic_branches` 테이블의 RLS 정책이 데이터 조회 차단
+- `getBranches()` 호출 시 0개 반환
+- 원인 미파악 (진단 SQL 준비 완료)
+
+**진단 필요 사항:**
+- `auth.uid()` null 여부
+- `users` 테이블에 사용자 존재 여부
+- `users.clinic_id`와 `clinic_branches.clinic_id` 일치 여부
+
+### 📝 다음 작업 (내일)
+1. **RLS 문제 근본 원인 파악** (30분)
+   - Supabase SQL Editor에서 진단 SQL 실행
+   - auth.uid(), users 테이블, clinic_id 일치 여부 확인
+
+2. **RLS 정책 수정 또는 우회** (30분-1시간)
+   - Case A: RLS 정책 수정
+   - Case B: 개발 환경에서만 RLS 비활성화
+
+3. **통합 QR 기능 테스트** (30분)
+   - 통합 QR 생성 및 스캔 테스트
+   - 본점, 강남역 사무실 각각 테스트
+   - attendance_records에 branch_id 저장 확인
+
+4. **디버그 로그 정리 & Git 커밋** (20분)
+
+### 💡 배운 점
+- **Haversine 공식**: 지구 표면의 두 좌표 간 거리 계산
+- **통합 QR 설계**: `branch_id=null`로 통합 QR 구분
+- **기존 기능 보호**: 지점별 QR도 계속 작동 (하위 호환)
+
+### 📂 변경된 파일
+- ✅ `src/lib/attendanceService.ts` (수정 완료)
+
+---
+
 ## 2025-11-14 [버그 수정] 근로계약서 탭 권한 체크 시 빨간 경고 깜빡임 해결
 
 **키워드:** #UX개선 #권한체크 #비동기처리 #로딩상태

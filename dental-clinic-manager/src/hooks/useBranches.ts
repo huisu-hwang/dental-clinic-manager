@@ -59,7 +59,10 @@ export function useBranches(options: UseBranchesOptions = {}): UseBranchesReturn
 
   // 지점 목록 로드
   useEffect(() => {
+    console.log('[useBranches] clinicId:', clinicId, 'userBranchId:', userBranchId, 'userRole:', userRole)
+
     if (!clinicId) {
+      console.log('[useBranches] No clinicId provided, skipping load')
       setIsLoading(false)
       return
     }
@@ -68,14 +71,22 @@ export function useBranches(options: UseBranchesOptions = {}): UseBranchesReturn
       setIsLoading(true)
       setError(null)
 
+      console.log('[useBranches] Loading branches for clinic:', clinicId)
       const result = await getBranches({
         clinic_id: clinicId,
         is_active: true
       })
 
+      console.log('[useBranches] Result.success:', result.success)
+      console.log('[useBranches] Result.branches length:', result.branches?.length)
+      console.log('[useBranches] Result.branches data:', JSON.stringify(result.branches))
+      console.log('[useBranches] Result.error:', result.error)
+
       if (result.success && result.branches) {
+        console.log('[useBranches] Loaded branches:', result.branches.length)
         setBranches(result.branches)
       } else {
+        console.error('[useBranches] Error loading branches:', result.error)
         setError(result.error || '지점 목록을 불러올 수 없습니다.')
         setBranches([])
       }

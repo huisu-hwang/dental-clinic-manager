@@ -42,6 +42,15 @@ body {
   pointer-events: none;
 }
 
+/* Preserve leading spaces in protocol editor */
+.protocol-editor-content,
+.protocol-editor-content p,
+.protocol-editor-content div,
+.protocol-editor-content li,
+.protocol-editor-content span {
+  white-space: pre-wrap;
+}
+
 /* Protocol Images */
 .protocol-image {
   max-width: 100%;
