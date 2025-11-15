@@ -4,7 +4,86 @@
 
 ---
 
-## 2025-11-14 [기능 개발] 통합 QR 코드 - GPS 자동 지점 감지 (작업 중)
+## 2025-11-15 [버그 수정] clinic_branches RLS 정책 문제 해결 ✅
+
+**키워드:** #RLS #Supabase #권한 #버그수정 #근본원인분석
+
+### 🐛 문제
+- `clinic_branches` 테이블에서 `getBranches()` 호출 시 0개 반환
+- 통합 QR 코드 기능에서 `findNearestBranch()` 실패
+- 지점 관리 페이지 로딩 실패
+
+### 🔍 근본 원인 (5 Whys)
+
+**Q1: 왜 getBranches()가 0개를 반환하는가?**
+A: clinic_branches 테이블에서 SELECT 쿼리가 실패함
+
+**Q2: 왜 SELECT 쿼리가 실패하는가?**
+A: RLS(Row Level Security) 정책이 데이터 조회를 차단함
+
+**Q3: 왜 RLS 정책이 조회를 차단하는가?**
+A: clinic_branches 테이블에 RLS가 활성화되었지만 정책이 적용되지 않음
+
+**Q4: 왜 정책이 적용되지 않았는가?**
+A: `20251114_add_clinic_branches_rls.sql` 마이그레이션이 데이터베이스에 실행되지 않음
+
+**Q5: 근본 원인은?**
+A: **Supabase 마이그레이션 파일이 로컬에만 존재하고, 원격 데이터베이스에는 적용되지 않음**
+
+### ✅ 해결 방법
+
+1. **근본 원인 분석 (Context7 + Sequential Thinking)**
+   - Supabase RLS 공식 문서 확인
+   - `getSupabase()` 함수 분석 → Anon Key 사용 확인
+   - RLS 정책 마이그레이션 파일 발견
+
+2. **RLS 정책 적용**
+   - Supabase SQL Editor에서 마이그레이션 SQL 실행
+   - 3개 정책 생성:
+     - "Users can view branches from their clinic" (SELECT)
+     - "Owners can manage branches in their clinic" (ALL)
+     - "Managers can manage branches in their clinic" (ALL)
+
+3. **검증**
+   - 브라우저에서 지점 관리 페이지 확인 → 2개 지점 표시 성공
+   - Chrome DevTools로 로그 확인 → 에러 없음
+
+### 📝 적용된 RLS 정책
+
+```sql
+-- Policy: All authenticated users can view branches from their clinic
+CREATE POLICY "Users can view branches from their clinic"
+ON public.clinic_branches
+FOR SELECT
+TO authenticated
+USING (
+  clinic_id IN (
+    SELECT clinic_id
+    FROM public.users
+    WHERE id = auth.uid()
+  )
+);
+```
+
+### 🧪 테스트 결과
+- ✅ 지점 관리 페이지 정상 로딩 (2개 지점 표시)
+- ✅ `getBranches()` 함수 정상 작동
+- ✅ RLS 정책 정상 적용 확인
+
+### 💡 배운 점
+- **RLS 정책 적용 워크플로우**: 로컬 마이그레이션 파일 작성 → Supabase SQL Editor에서 실행
+- **Supabase 클라이언트 타입**: Anon Key(RLS 적용) vs Service Role Key(RLS 우회)
+- **근본 원인 분석의 중요성**: 증상이 아닌 원인을 해결해야 재발 방지
+- **Context7의 유용성**: 공식 문서로 빠른 문제 해결
+
+### 📂 변경된 파일
+- ✅ `src/lib/branchService.ts` (디버그 로그 제거)
+- ✅ `scripts/check-and-apply-rls.js` (RLS 확인 스크립트 추가)
+- ✅ Supabase: `clinic_branches` 테이블 RLS 정책 적용
+
+---
+
+## 2025-11-14 [기능 개발] 통합 QR 코드 - GPS 자동 지점 감지 (완료 대기 중)
 
 **키워드:** #출근관리 #지점관리 #GPS #자동감지 #QR코드
 
@@ -21,27 +100,13 @@
 
 ### ✅ 구현 완료
 1. **findNearestBranch() 함수** (`attendanceService.ts:186-244`)
-   ```typescript
-   // GPS 좌표로 가장 가까운 지점 찾기
-   - 모든 활성 지점 조회
+   - GPS 좌표로 가장 가까운 지점 찾기
    - Haversine 공식으로 거리 계산
    - attendance_radius_meters 범위 검증
-   - 가장 가까운 지점 반환
-   ```
 
 2. **checkIn() 함수 수정** (`attendanceService.ts:480-505`)
-   ```typescript
-   // 통합 QR 감지 시
-   if (!validation.branch_id && latitude && longitude) {
-     const nearestBranch = await findNearestBranch(...)
-     if (nearestBranch.withinRadius) {
-       finalBranchId = nearestBranch.branch.id
-       message = `${nearestBranch.branch.branch_name}에서 출근하셨습니다.`
-     } else {
-       return error: "본점에서 150m 떨어져 있습니다. 100m 이내로 접근해주세요."
-     }
-   }
-   ```
+   - 통합 QR 지원 로직 추가
+   - GPS 기반 자동 지점 감지
 
 3. **Import 추가**
    - `getBranches` from './branchService'
@@ -64,32 +129,10 @@ findNearestBranch(clinicId, lat, lng)
   └─ NO → "본점에서 150m 떨어져 있습니다..."
 ```
 
-### ⚠️ 미해결 이슈
-**RLS 정책 문제**
-- `clinic_branches` 테이블의 RLS 정책이 데이터 조회 차단
-- `getBranches()` 호출 시 0개 반환
-- 원인 미파악 (진단 SQL 준비 완료)
-
-**진단 필요 사항:**
-- `auth.uid()` null 여부
-- `users` 테이블에 사용자 존재 여부
-- `users.clinic_id`와 `clinic_branches.clinic_id` 일치 여부
-
-### 📝 다음 작업 (내일)
-1. **RLS 문제 근본 원인 파악** (30분)
-   - Supabase SQL Editor에서 진단 SQL 실행
-   - auth.uid(), users 테이블, clinic_id 일치 여부 확인
-
-2. **RLS 정책 수정 또는 우회** (30분-1시간)
-   - Case A: RLS 정책 수정
-   - Case B: 개발 환경에서만 RLS 비활성화
-
-3. **통합 QR 기능 테스트** (30분)
-   - 통합 QR 생성 및 스캔 테스트
-   - 본점, 강남역 사무실 각각 테스트
-   - attendance_records에 branch_id 저장 확인
-
-4. **디버그 로그 정리 & Git 커밋** (20분)
+### 📝 다음 작업
+- 통합 QR 기능 실제 테스트 (QR 스캔)
+- 본점, 강남역 사무실 각각 테스트
+- attendance_records에 branch_id 저장 확인
 
 ### 💡 배운 점
 - **Haversine 공식**: 지구 표면의 두 좌표 간 거리 계산
@@ -97,7 +140,8 @@ findNearestBranch(clinicId, lat, lng)
 - **기존 기능 보호**: 지점별 QR도 계속 작동 (하위 호환)
 
 ### 📂 변경된 파일
-- ✅ `src/lib/attendanceService.ts` (수정 완료)
+- ✅ `src/lib/attendanceService.ts` (findNearestBranch, checkIn 수정)
+- ✅ `src/lib/branchService.ts` (getBranches 함수 추가)
 
 ---
 

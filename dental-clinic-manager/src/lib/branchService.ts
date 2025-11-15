@@ -27,11 +27,6 @@ export async function getBranches(
   }
 
   try {
-    console.log('[getBranches] Query params:', {
-      clinic_id: filter.clinic_id,
-      is_active: filter.is_active
-    })
-
     let query = supabase
       .from('clinic_branches')
       .select('*')
@@ -46,21 +41,11 @@ export async function getBranches(
 
     const { data, error } = await query
 
-    console.log('[getBranches] Query result:', {
-      dataLength: data?.length,
-      error: error ? JSON.stringify(error) : null,
-      hasData: !!data,
-      isArray: Array.isArray(data),
-      actualData: JSON.stringify(data)
-    })
-
     if (error) {
       console.error('[getBranches] Error:', error)
       return { success: false, error: error.message }
     }
 
-    console.log('[getBranches] Returning branches count:', data?.length)
-    console.log('[getBranches] Returning branches data:', JSON.stringify(data))
     return { success: true, branches: data as ClinicBranch[] }
   } catch (error: any) {
     console.error('[getBranches] Unexpected error:', error)
