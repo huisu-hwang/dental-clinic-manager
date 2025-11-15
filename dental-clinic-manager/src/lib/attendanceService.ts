@@ -481,7 +481,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
     let finalBranchId = validation.branch_id
     let detectedBranchName: string | undefined
 
-    if (!validation.branch_id && latitude && longitude) {
+    if (!validation.branch_id && latitude && longitude && validation.clinic_id) {
       console.log('[checkIn] 통합 QR 감지, GPS로 지점 찾기 시작')
       const nearestBranch = await findNearestBranch(
         validation.clinic_id,
