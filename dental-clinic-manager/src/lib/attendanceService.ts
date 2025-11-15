@@ -865,7 +865,8 @@ export async function getTeamAttendanceStatus(
       .eq('status', 'active')
 
     if (branchId) {
-      usersQuery = usersQuery.eq('primary_branch_id', branchId)
+      // primary_branch_id가 일치하거나 NULL인 사용자 포함 (지점 미배정 직원)
+      usersQuery = usersQuery.or(`primary_branch_id.eq.${branchId},primary_branch_id.is.null`)
     }
 
     const { data: users, error: usersError } = await usersQuery
@@ -874,18 +875,32 @@ export async function getTeamAttendanceStatus(
       return { success: false, error: usersError.message }
     }
 
-    // 해당 날짜의 출퇴근 기록 조회 (지점별 필터링)
-    let recordsQuery = supabase
+    // 직원이 없으면 빈 상태 반환
+    if (!users || users.length === 0) {
+      return {
+        success: true,
+        status: {
+          date,
+          total_employees: 0,
+          checked_in: 0,
+          not_checked_in: 0,
+          on_leave: 0,
+          late_count: 0,
+          employees: [],
+        },
+      }
+    }
+
+    // user_id 리스트 추출
+    const userIds = users.map((u: { id: string }) => u.id)
+
+    // 해당 날짜의 출퇴근 기록 조회 (user_id IN 방식 - branch_id 불일치 문제 해결)
+    const { data: records, error: recordsError } = await supabase
       .from('attendance_records')
       .select('*')
       .eq('clinic_id', clinicId)
       .eq('work_date', date)
-
-    if (branchId) {
-      recordsQuery = recordsQuery.eq('branch_id', branchId)
-    }
-
-    const { data: records, error: recordsError } = await recordsQuery
+      .in('user_id', userIds)
 
     if (recordsError) {
       return { success: false, error: recordsError.message }

@@ -4,6 +4,145 @@
 
 ---
 
+## 2025-11-15 [버그 수정] 팀 출근 현황 표시 문제 해결 (진행 중) 🔄
+
+**키워드:** #출근관리 #RLS #primary_branch_id #디버깅
+
+### 🐛 문제
+- 개인 출근 기록은 본인이 볼 수 있음
+- 팀 출근 현황에서는 출근 기록이 표시되지 않음
+- 모든 직원이 "결근"으로 표시됨
+
+### 🔍 근본 원인 분석 (5 Whys)
+
+**Phase 1: 사용자 필터링 문제**
+
+**Q1: 왜 팀 출근 현황에 출근 기록이 표시되지 않는가?**
+A: `getTeamAttendanceStatus` 함수에서 `branch_id`로 출근 기록 필터링 시 불일치
+
+**Q2: 왜 branch_id가 불일치하는가?**
+A: GPS 실패 시 `branch_id`가 NULL로 저장되지만, 쿼리는 특정 `branch_id` 값으로 필터링
+
+**Q3: 왜 branch_id로 필터링하는가?**
+A: 초기 구현에서 사용자와 출근 기록을 동일한 `branch_id`로 매칭하려고 시도
+
+**Q4: 근본 원인은?**
+A: **branch_id 기반 필터링 대신 user_id 기반 필터링이 필요**
+
+**Phase 2: RLS 정책 문제 (발견됨)**
+
+**Q1: 왜 user_id IN 방식으로 수정 후에도 데이터가 조회되지 않는가?**
+A: 네트워크 요청이 빈 배열 `[]` 반환
+
+**Q2: 왜 빈 배열이 반환되는가?**
+A: Service role로는 데이터 조회되지만, 사용자 인증으로는 빈 배열 → RLS 정책 문제
+
+**Q3: RLS 정책에 무슨 문제가 있는가?**
+A: `attendance_records` 테이블에 중복/충돌하는 RLS 정책 발견:
+- "Users can view own clinic attendance" (SELECT, authenticated) - 정상
+- "Users can view own attendance" (SELECT, public) - 자기 기록만
+- "Users can manage own attendance" (ALL, public) - 자기 기록만
+
+**Q4: 왜 "Users can view own clinic attendance" 정책이 작동하지 않는가?**
+A: 서브쿼리 `SELECT clinic_id FROM users WHERE id = auth.uid()`가 예상대로 작동하지 않는 것으로 추정
+
+**Q5: 근본 원인은?**
+A: **RLS 정책 평가 로직 또는 auth.uid() 컨텍스트 문제 - 추가 디버깅 필요**
+
+### ✅ 해결 방법 (Phase 1 완료)
+
+1. **DB 직접 확인**
+   - `scripts/check-attendance-records.js` 생성
+   - 아스클의 출근 기록 확인: ✅ 존재함 (status: early_leave, branch_id: NULL)
+   - primary_branch_id도 NULL 확인
+
+2. **사용자 필터링 로직 수정**
+   - `attendanceService.ts:867-870` 수정
+   - `primary_branch_id`가 NULL인 사용자도 포함하도록 변경:
+   ```typescript
+   if (branchId) {
+     usersQuery = usersQuery.or(`primary_branch_id.eq.${branchId},primary_branch_id.is.null`)
+   }
+   ```
+
+3. **출근 기록 쿼리 수정**
+   - `attendanceService.ts:893-902` 수정
+   - `branch_id` 기반 → `user_id IN` 방식으로 변경:
+   ```typescript
+   const userIds = users.map((u: { id: string }) => u.id)
+   const { data: records } = await supabase
+     .from('attendance_records')
+     .select('*')
+     .eq('clinic_id', clinicId)
+     .eq('work_date', date)
+     .in('user_id', userIds)
+   ```
+
+4. **Chrome DevTools로 검증**
+   - users 쿼리: ✅ 아스클 포함 (6명 조회)
+   - attendance_records 쿼리: ❌ 빈 배열 반환 → RLS 문제 발견
+
+### 🔄 진행 중 작업
+
+1. **RLS 정책 검증 및 재생성**
+   - `20251115_verify_attendance_rls.sql` 생성
+   - RLS 활성화 확인
+   - 기존 정책 재생성
+   - **대기:** Supabase Dashboard 실행 필요
+
+2. **auth.uid() 디버깅**
+   - `20251115_debug_rls_auth.sql` 생성
+   - auth.uid() 반환값 확인
+   - 서브쿼리 결과 확인
+   - RLS 정책 수동 테스트
+   - **대기:** Supabase Dashboard 실행 필요
+
+### 🧪 테스트 결과 (부분 완료)
+
+**성공:**
+- ✅ DB 직접 쿼리: 출근 기록 존재 확인
+- ✅ users 쿼리: 아스클 포함 6명 조회
+- ✅ user_id IN 쿼리 구조: 올바르게 생성됨
+
+**실패:**
+- ❌ attendance_records RLS: 빈 배열 반환
+- ❌ 팀 출근 현황 UI: 모든 직원 "결근" 표시
+
+### 📝 다음 단계
+
+1. Supabase Dashboard에서 디버그 SQL 실행:
+   - `20251115_debug_rls_auth.sql`
+   - auth.uid() 및 서브쿼리 결과 확인
+
+2. RLS 정책 문제 해결:
+   - 중복 정책 제거 또는 수정
+   - "Users can view own clinic attendance" 정책 검증
+
+3. 수정 후 재테스트:
+   - Chrome DevTools로 검증
+   - 팀 출근 현황에서 아스클 출근 기록 표시 확인
+
+### 💡 배운 점
+
+1. **RLS 정책 중복 주의**
+   - 같은 테이블에 여러 SELECT 정책이 있으면 OR 로직으로 평가됨
+   - 하지만 서브쿼리가 예상대로 작동하지 않으면 문제 발생
+
+2. **Service Role vs User Auth 차이**
+   - Service role은 RLS 우회 가능
+   - User auth는 RLS 정책 적용
+   - 디버깅 시 두 가지 모두 테스트 필요
+
+3. **primary_branch_id NULL 처리**
+   - 지점 미배정 직원은 `primary_branch_id`가 NULL
+   - 필터링 시 NULL 케이스 고려 필요
+
+4. **Chrome DevTools의 중요성**
+   - 네트워크 요청/응답으로 실제 쿼리 확인 가능
+   - Service role과 user auth의 차이 명확히 파악
+
+---
+
 ## 2025-11-15 [보안 강화] 근로계약서 RLS 권한 수정 ✅
 
 **키워드:** #보안 #RLS #근로계약서 #권한관리 #개인정보보호
