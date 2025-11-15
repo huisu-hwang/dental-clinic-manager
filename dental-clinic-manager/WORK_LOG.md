@@ -4,6 +4,110 @@
 
 ---
 
+## 2025-11-15 [보안 강화] 근로계약서 RLS 권한 수정 ✅
+
+**키워드:** #보안 #RLS #근로계약서 #권한관리 #개인정보보호
+
+### 🐛 문제
+- 부원장 계정으로 로그인 시 다른 직원의 근로계약서가 모두 보임
+- 민감한 개인정보(주민번호, 주소, 급여) 무단 열람 가능
+- 근로계약서는 원장과 계약 당사자만 볼 수 있어야 함
+
+### 🔍 근본 원인 (5 Whys)
+
+**Q1: 왜 부원장이 다른 직원의 근로계약서를 볼 수 있는가?**
+A: RLS 정책에서 'vice_director', 'manager' 역할에 조회 권한 부여
+
+**Q2: 왜 부원장/매니저에게 조회 권한이 있는가?**
+A: `20251029_create_employment_contract_tables.sql`에서 초기 설계 시 포함됨
+
+**Q3: 왜 초기 설계에 포함되었는가?**
+A: 관리 편의성을 위해 관리자 역할에게 광범위한 권한 부여
+
+**Q4: 왜 "Service role can select all contracts" 정책이 존재하는가?**
+A: `20251106_add_delete_policy_contracts.sql`에서 API route용으로 생성했지만, 모든 사용자에게 적용됨
+
+**Q5: 근본 원인은?**
+A: **RLS 정책 설계 오류 - 민감한 개인정보 보호 원칙을 위반하고 과도한 권한 부여**
+
+### ✅ 해결 방법
+
+1. **Sequential Thinking으로 문제 분석**
+   - RLS 정책 코드 검토
+   - 'vice_director', 'manager' 제거 필요성 확인
+   - "Service role can select all contracts" 정책의 문제점 발견
+
+2. **마이그레이션 파일 작성**
+   - `20251115_fix_contract_rls_permissions.sql` 생성
+   - 기존 정책 모두 삭제
+   - 새로운 제한적 정책 생성
+
+3. **Supabase Dashboard에서 마이그레이션 실행**
+   - 1단계: DROP POLICY (모든 기존 정책 삭제)
+   - 2단계: CREATE POLICY (새로운 정책 생성)
+
+4. **Chrome DevTools로 검증**
+   - 부원장 계정으로 로그인
+   - 근로계약서 목록: "근로계약서가 없습니다" (0건) ✅
+   - 다른 직원 계약서 접근 차단 확인
+
+### 📝 적용된 RLS 정책
+
+```sql
+-- SELECT: 원장과 계약 당사자만 조회 가능
+CREATE POLICY "Only owner and contract parties can view contracts"
+ON employment_contracts FOR SELECT
+USING (
+    employee_user_id = auth.uid() OR
+    employer_user_id = auth.uid() OR
+    clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid() AND role = 'owner')
+);
+
+-- INSERT: 원장만 생성 가능
+CREATE POLICY "Only owners can create contracts"
+ON employment_contracts FOR INSERT
+WITH CHECK (
+    clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid() AND role = 'owner')
+);
+
+-- UPDATE: 원장과 계약 당사자만 수정 가능
+CREATE POLICY "Only owner and contract parties can update contracts"
+ON employment_contracts FOR UPDATE
+USING (
+    employee_user_id = auth.uid() OR
+    employer_user_id = auth.uid() OR
+    clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid() AND role = 'owner')
+);
+
+-- DELETE: 원장만 삭제 가능
+CREATE POLICY "Only owners can delete contracts"
+ON employment_contracts FOR DELETE
+USING (
+    clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid() AND role = 'owner')
+);
+```
+
+### 🧪 테스트 결과
+- ✅ 부원장 계정: 다른 직원 계약서 조회 불가 (0건)
+- ✅ 원장 계정: 모든 계약서 조회 가능 (예상)
+- ✅ 직원 본인: 자신의 계약서만 조회 가능 (예상)
+- ✅ RLS 정책 정상 적용 확인
+
+### 💡 배운 점
+- **최소 권한 원칙**: 민감한 정보는 필요한 사람만 접근 가능하도록 설계
+- **RLS 정책의 OR 조건**: 여러 정책 중 하나라도 true면 접근 허용 → 과도한 권한 정책 주의
+- **근본 원인 분석의 중요성**: "Service role can select all contracts" 정책이 모든 제한을 무력화
+- **Chrome DevTools 검증**: 실제 사용자 시나리오로 보안 정책 테스트
+- **보안 우선 설계**: 초기 설계 시 개인정보 보호 원칙 적용 필수
+
+### 📂 변경된 파일
+- ✅ `supabase/migrations/20251115_fix_contract_rls_permissions.sql` (신규)
+- ✅ Supabase: `employment_contracts` 테이블 RLS 정책 수정
+- ✅ Supabase: `contract_signatures` 테이블 RLS 정책 수정
+- ✅ Supabase: `contract_change_history` 테이블 RLS 정책 수정
+
+---
+
 ## 2025-11-15 [버그 수정] clinic_branches RLS 정책 문제 해결 ✅
 
 **키워드:** #RLS #Supabase #권한 #버그수정 #근본원인분석
