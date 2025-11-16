@@ -886,6 +886,7 @@ export async function getTeamAttendanceStatus(
           date,
           total_employees: 0,
           checked_in: 0,
+          checked_out: 0,
           not_checked_in: 0,
           on_leave: 0,
           late_count: 0,
