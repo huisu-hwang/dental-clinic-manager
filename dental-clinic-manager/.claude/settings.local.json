@@ -70,7 +70,8 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(nul)",
       "Bash(dir:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "mcp__chrome-devtools__handle_dialog"
     ],
     "deny": [],
     "ask": []

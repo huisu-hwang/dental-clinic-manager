@@ -4,6 +4,7 @@
 // ============================================
 
 import { createClient } from './supabase/client'
+import { getBranches } from './branchService'
 import type {
   AttendanceQRCode,
   QRCodeGenerateInput,
@@ -20,6 +21,7 @@ import type {
   AttendanceEditRequest,
   AttendanceStatus,
 } from '@/types/attendance'
+import type { ClinicBranch } from '@/types/branch'
 
 /**
  * QR 코드 생성 함수
@@ -172,6 +174,73 @@ function calculateDistance(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 
   return R * c // 미터 단위
+}
+
+/**
+ * GPS 좌표로 가장 가까운 지점 찾기
+ * @param clinicId 병원 ID
+ * @param latitude 사용자 위도
+ * @param longitude 사용자 경도
+ * @returns 가장 가까운 지점 정보 또는 null
+ */
+async function findNearestBranch(
+  clinicId: string,
+  latitude: number,
+  longitude: number
+): Promise<{
+  branch: ClinicBranch
+  distance: number
+  withinRadius: boolean
+} | null> {
+  // 1. 모든 활성 지점 조회
+  const result = await getBranches({
+    clinic_id: clinicId,
+    is_active: true,
+  })
+
+  if (!result.success || !result.branches) {
+    console.log('[findNearestBranch] Failed to load branches:', result.error)
+    return null
+  }
+
+  // 2. 위치 정보가 있는 지점만 필터링
+  const branchesWithLocation = result.branches.filter(
+    (b) => b.latitude && b.longitude
+  )
+
+  if (branchesWithLocation.length === 0) {
+    console.log('[findNearestBranch] No branches with location data')
+    return null
+  }
+
+  console.log('[findNearestBranch] Found branches with location:', branchesWithLocation.length)
+
+  // 3. 각 지점과의 거리 계산
+  const distances = branchesWithLocation.map((branch) => ({
+    branch,
+    distance: calculateDistance(
+      latitude,
+      longitude,
+      branch.latitude!,
+      branch.longitude!
+    ),
+  }))
+
+  // 4. 가장 가까운 지점 선택
+  distances.sort((a, b) => a.distance - b.distance)
+  const nearest = distances[0]
+
+  console.log('[findNearestBranch] Nearest branch:', {
+    name: nearest.branch.branch_name,
+    distance: Math.round(nearest.distance),
+    radius: nearest.branch.attendance_radius_meters,
+  })
+
+  return {
+    branch: nearest.branch,
+    distance: Math.round(nearest.distance),
+    withinRadius: nearest.distance <= nearest.branch.attendance_radius_meters,
+  }
 }
 
 /**
@@ -415,6 +484,33 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
       }
     }
 
+    // 통합 QR인 경우 (branch_id가 없음) → GPS로 지점 자동 감지
+    let finalBranchId = validation.branch_id
+    let detectedBranchName: string | undefined
+
+    if (!validation.branch_id && latitude && longitude && validation.clinic_id) {
+      console.log('[checkIn] 통합 QR 감지, GPS로 지점 찾기 시작')
+      const nearestBranch = await findNearestBranch(
+        validation.clinic_id,
+        latitude,
+        longitude
+      )
+
+      if (nearestBranch) {
+        if (!nearestBranch.withinRadius) {
+          return {
+            success: false,
+            message: `가장 가까운 지점(${nearestBranch.branch.branch_name})에서 ${nearestBranch.distance}m 떨어져 있습니다. ${nearestBranch.branch.attendance_radius_meters}m 이내로 접근해주세요.`,
+          }
+        }
+        finalBranchId = nearestBranch.branch.id
+        detectedBranchName = nearestBranch.branch.branch_name
+        console.log('[checkIn] 자동 감지된 지점:', detectedBranchName)
+      } else {
+        console.log('[checkIn] 지점 자동 감지 실패, branch_id=null로 저장')
+      }
+    }
+
     // 이미 출근 기록이 있는지 확인
     const { data: existingRecord, error: checkError } = await supabase
       .from('attendance_records')
@@ -448,7 +544,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
           check_in_device_info: device_info,
           scheduled_start: schedule?.start_time,
           scheduled_end: schedule?.end_time,
-          branch_id: validation.branch_id, // 지점 ID 저장
+          branch_id: finalBranchId, // 자동 감지된 또는 QR의 branch_id
         })
         .eq('id', existingRecord.id)
         .select()
@@ -471,7 +567,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
         .insert({
           user_id,
           clinic_id: validation.clinic_id,
-          branch_id: validation.branch_id, // 지점 ID 저장
+          branch_id: finalBranchId, // 자동 감지된 또는 QR의 branch_id
           work_date,
           check_in_time: checkInTime,
           check_in_latitude: latitude,
@@ -669,10 +765,9 @@ export async function getTodayAttendance(
       .select('*')
       .eq('user_id', userId)
       .eq('work_date', today)
-      .single()
+      .maybeSingle()
 
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116은 "not found" 에러
+    if (error) {
       console.error('[getTodayAttendance] Error:', error)
       return { success: false, error: error.message }
     }
@@ -773,7 +868,8 @@ export async function getTeamAttendanceStatus(
       .eq('status', 'active')
 
     if (branchId) {
-      usersQuery = usersQuery.eq('primary_branch_id', branchId)
+      // primary_branch_id가 일치하거나 NULL인 사용자 포함 (지점 미배정 직원)
+      usersQuery = usersQuery.or(`primary_branch_id.eq.${branchId},primary_branch_id.is.null`)
     }
 
     const { data: users, error: usersError } = await usersQuery
@@ -782,18 +878,32 @@ export async function getTeamAttendanceStatus(
       return { success: false, error: usersError.message }
     }
 
-    // 해당 날짜의 출퇴근 기록 조회 (지점별 필터링)
-    let recordsQuery = supabase
+    // 직원이 없으면 빈 상태 반환
+    if (!users || users.length === 0) {
+      return {
+        success: true,
+        status: {
+          date,
+          total_employees: 0,
+          checked_in: 0,
+          not_checked_in: 0,
+          on_leave: 0,
+          late_count: 0,
+          employees: [],
+        },
+      }
+    }
+
+    // user_id 리스트 추출
+    const userIds = users.map((u: { id: string }) => u.id)
+
+    // 해당 날짜의 출퇴근 기록 조회 (user_id IN 방식 - branch_id 불일치 문제 해결)
+    const { data: records, error: recordsError } = await supabase
       .from('attendance_records')
       .select('*')
       .eq('clinic_id', clinicId)
       .eq('work_date', date)
-
-    if (branchId) {
-      recordsQuery = recordsQuery.eq('branch_id', branchId)
-    }
-
-    const { data: records, error: recordsError } = await recordsQuery
+      .in('user_id', userIds)
 
     if (recordsError) {
       return { success: false, error: recordsError.message }

@@ -282,9 +282,9 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
                   </TableCell>
                   <TableCell className="text-center">
                     {branch.is_active ? (
-                      <Badge variant="default">활성</Badge>
+                      <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">활성</Badge>
                     ) : (
-                      <Badge variant="secondary">비활성</Badge>
+                      <Badge className="border border-slate-300 bg-slate-100 text-slate-600">비활성</Badge>
                     )}
                   </TableCell>
                   {canManage && (
@@ -444,12 +444,19 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
             </div>
 
             {/* 활성 상태 */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <Switch
                 checked={formData.is_active}
                 onCheckedChange={(checked) => handleInputChange('is_active', checked)}
+                className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300"
               />
-              <label className="text-sm font-medium">활성 상태</label>
+              <span
+                className={`text-sm font-semibold ${
+                  formData.is_active ? 'text-emerald-600' : 'text-slate-500'
+                }`}
+              >
+                {formData.is_active ? '활성' : '비활성'}
+              </span>
             </div>
           </div>
 

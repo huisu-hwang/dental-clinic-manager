@@ -110,6 +110,9 @@ export default function CheckInOut() {
         setTodayRecord(result.record || null)
         setQrCode('')
         await loadTodayAttendance()
+
+        // 팀 출근 현황 업데이트 이벤트 발송
+        window.dispatchEvent(new CustomEvent('attendance-updated'))
       } else {
         setMessage({ type: 'error', text: result.message || '출근 처리 실패' })
       }
@@ -146,6 +149,9 @@ export default function CheckInOut() {
         setTodayRecord(result.record || null)
         setQrCode('')
         await loadTodayAttendance()
+
+        // 팀 출근 현황 업데이트 이벤트 발송
+        window.dispatchEvent(new CustomEvent('attendance-updated'))
       } else {
         setMessage({ type: 'error', text: result.message || '퇴근 처리 실패' })
       }

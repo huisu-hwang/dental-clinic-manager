@@ -4,6 +4,390 @@
 
 ---
 
+## 2025-11-15 [버그 수정] 팀 출근 현황 표시 문제 해결 (진행 중) 🔄
+
+**키워드:** #출근관리 #RLS #primary_branch_id #디버깅
+
+### 🐛 문제
+- 개인 출근 기록은 본인이 볼 수 있음
+- 팀 출근 현황에서는 출근 기록이 표시되지 않음
+- 모든 직원이 "결근"으로 표시됨
+
+### 🔍 근본 원인 분석 (5 Whys)
+
+**Phase 1: 사용자 필터링 문제**
+
+**Q1: 왜 팀 출근 현황에 출근 기록이 표시되지 않는가?**
+A: `getTeamAttendanceStatus` 함수에서 `branch_id`로 출근 기록 필터링 시 불일치
+
+**Q2: 왜 branch_id가 불일치하는가?**
+A: GPS 실패 시 `branch_id`가 NULL로 저장되지만, 쿼리는 특정 `branch_id` 값으로 필터링
+
+**Q3: 왜 branch_id로 필터링하는가?**
+A: 초기 구현에서 사용자와 출근 기록을 동일한 `branch_id`로 매칭하려고 시도
+
+**Q4: 근본 원인은?**
+A: **branch_id 기반 필터링 대신 user_id 기반 필터링이 필요**
+
+**Phase 2: RLS 정책 문제 (발견됨)**
+
+**Q1: 왜 user_id IN 방식으로 수정 후에도 데이터가 조회되지 않는가?**
+A: 네트워크 요청이 빈 배열 `[]` 반환
+
+**Q2: 왜 빈 배열이 반환되는가?**
+A: Service role로는 데이터 조회되지만, 사용자 인증으로는 빈 배열 → RLS 정책 문제
+
+**Q3: RLS 정책에 무슨 문제가 있는가?**
+A: `attendance_records` 테이블에 중복/충돌하는 RLS 정책 발견:
+- "Users can view own clinic attendance" (SELECT, authenticated) - 정상
+- "Users can view own attendance" (SELECT, public) - 자기 기록만
+- "Users can manage own attendance" (ALL, public) - 자기 기록만
+
+**Q4: 왜 "Users can view own clinic attendance" 정책이 작동하지 않는가?**
+A: 서브쿼리 `SELECT clinic_id FROM users WHERE id = auth.uid()`가 예상대로 작동하지 않는 것으로 추정
+
+**Q5: 근본 원인은?**
+A: **RLS 정책 평가 로직 또는 auth.uid() 컨텍스트 문제 - 추가 디버깅 필요**
+
+### ✅ 해결 방법 (Phase 1 완료)
+
+1. **DB 직접 확인**
+   - `scripts/check-attendance-records.js` 생성
+   - 아스클의 출근 기록 확인: ✅ 존재함 (status: early_leave, branch_id: NULL)
+   - primary_branch_id도 NULL 확인
+
+2. **사용자 필터링 로직 수정**
+   - `attendanceService.ts:867-870` 수정
+   - `primary_branch_id`가 NULL인 사용자도 포함하도록 변경:
+   ```typescript
+   if (branchId) {
+     usersQuery = usersQuery.or(`primary_branch_id.eq.${branchId},primary_branch_id.is.null`)
+   }
+   ```
+
+3. **출근 기록 쿼리 수정**
+   - `attendanceService.ts:893-902` 수정
+   - `branch_id` 기반 → `user_id IN` 방식으로 변경:
+   ```typescript
+   const userIds = users.map((u: { id: string }) => u.id)
+   const { data: records } = await supabase
+     .from('attendance_records')
+     .select('*')
+     .eq('clinic_id', clinicId)
+     .eq('work_date', date)
+     .in('user_id', userIds)
+   ```
+
+4. **Chrome DevTools로 검증**
+   - users 쿼리: ✅ 아스클 포함 (6명 조회)
+   - attendance_records 쿼리: ❌ 빈 배열 반환 → RLS 문제 발견
+
+### 🔄 진행 중 작업
+
+1. **RLS 정책 검증 및 재생성**
+   - `20251115_verify_attendance_rls.sql` 생성
+   - RLS 활성화 확인
+   - 기존 정책 재생성
+   - **대기:** Supabase Dashboard 실행 필요
+
+2. **auth.uid() 디버깅**
+   - `20251115_debug_rls_auth.sql` 생성
+   - auth.uid() 반환값 확인
+   - 서브쿼리 결과 확인
+   - RLS 정책 수동 테스트
+   - **대기:** Supabase Dashboard 실행 필요
+
+### 🧪 테스트 결과 (부분 완료)
+
+**성공:**
+- ✅ DB 직접 쿼리: 출근 기록 존재 확인
+- ✅ users 쿼리: 아스클 포함 6명 조회
+- ✅ user_id IN 쿼리 구조: 올바르게 생성됨
+
+**실패:**
+- ❌ attendance_records RLS: 빈 배열 반환
+- ❌ 팀 출근 현황 UI: 모든 직원 "결근" 표시
+
+### 📝 다음 단계
+
+1. Supabase Dashboard에서 디버그 SQL 실행:
+   - `20251115_debug_rls_auth.sql`
+   - auth.uid() 및 서브쿼리 결과 확인
+
+2. RLS 정책 문제 해결:
+   - 중복 정책 제거 또는 수정
+   - "Users can view own clinic attendance" 정책 검증
+
+3. 수정 후 재테스트:
+   - Chrome DevTools로 검증
+   - 팀 출근 현황에서 아스클 출근 기록 표시 확인
+
+### 💡 배운 점
+
+1. **RLS 정책 중복 주의**
+   - 같은 테이블에 여러 SELECT 정책이 있으면 OR 로직으로 평가됨
+   - 하지만 서브쿼리가 예상대로 작동하지 않으면 문제 발생
+
+2. **Service Role vs User Auth 차이**
+   - Service role은 RLS 우회 가능
+   - User auth는 RLS 정책 적용
+   - 디버깅 시 두 가지 모두 테스트 필요
+
+3. **primary_branch_id NULL 처리**
+   - 지점 미배정 직원은 `primary_branch_id`가 NULL
+   - 필터링 시 NULL 케이스 고려 필요
+
+4. **Chrome DevTools의 중요성**
+   - 네트워크 요청/응답으로 실제 쿼리 확인 가능
+   - Service role과 user auth의 차이 명확히 파악
+
+---
+
+## 2025-11-15 [보안 강화] 근로계약서 RLS 권한 수정 ✅
+
+**키워드:** #보안 #RLS #근로계약서 #권한관리 #개인정보보호
+
+### 🐛 문제
+- 부원장 계정으로 로그인 시 다른 직원의 근로계약서가 모두 보임
+- 민감한 개인정보(주민번호, 주소, 급여) 무단 열람 가능
+- 근로계약서는 원장과 계약 당사자만 볼 수 있어야 함
+
+### 🔍 근본 원인 (5 Whys)
+
+**Q1: 왜 부원장이 다른 직원의 근로계약서를 볼 수 있는가?**
+A: RLS 정책에서 'vice_director', 'manager' 역할에 조회 권한 부여
+
+**Q2: 왜 부원장/매니저에게 조회 권한이 있는가?**
+A: `20251029_create_employment_contract_tables.sql`에서 초기 설계 시 포함됨
+
+**Q3: 왜 초기 설계에 포함되었는가?**
+A: 관리 편의성을 위해 관리자 역할에게 광범위한 권한 부여
+
+**Q4: 왜 "Service role can select all contracts" 정책이 존재하는가?**
+A: `20251106_add_delete_policy_contracts.sql`에서 API route용으로 생성했지만, 모든 사용자에게 적용됨
+
+**Q5: 근본 원인은?**
+A: **RLS 정책 설계 오류 - 민감한 개인정보 보호 원칙을 위반하고 과도한 권한 부여**
+
+### ✅ 해결 방법
+
+1. **Sequential Thinking으로 문제 분석**
+   - RLS 정책 코드 검토
+   - 'vice_director', 'manager' 제거 필요성 확인
+   - "Service role can select all contracts" 정책의 문제점 발견
+
+2. **마이그레이션 파일 작성**
+   - `20251115_fix_contract_rls_permissions.sql` 생성
+   - 기존 정책 모두 삭제
+   - 새로운 제한적 정책 생성
+
+3. **Supabase Dashboard에서 마이그레이션 실행**
+   - 1단계: DROP POLICY (모든 기존 정책 삭제)
+   - 2단계: CREATE POLICY (새로운 정책 생성)
+
+4. **Chrome DevTools로 검증**
+   - 부원장 계정으로 로그인
+   - 근로계약서 목록: "근로계약서가 없습니다" (0건) ✅
+   - 다른 직원 계약서 접근 차단 확인
+
+### 📝 적용된 RLS 정책
+
+```sql
+-- SELECT: 원장과 계약 당사자만 조회 가능
+CREATE POLICY "Only owner and contract parties can view contracts"
+ON employment_contracts FOR SELECT
+USING (
+    employee_user_id = auth.uid() OR
+    employer_user_id = auth.uid() OR
+    clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid() AND role = 'owner')
+);
+
+-- INSERT: 원장만 생성 가능
+CREATE POLICY "Only owners can create contracts"
+ON employment_contracts FOR INSERT
+WITH CHECK (
+    clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid() AND role = 'owner')
+);
+
+-- UPDATE: 원장과 계약 당사자만 수정 가능
+CREATE POLICY "Only owner and contract parties can update contracts"
+ON employment_contracts FOR UPDATE
+USING (
+    employee_user_id = auth.uid() OR
+    employer_user_id = auth.uid() OR
+    clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid() AND role = 'owner')
+);
+
+-- DELETE: 원장만 삭제 가능
+CREATE POLICY "Only owners can delete contracts"
+ON employment_contracts FOR DELETE
+USING (
+    clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid() AND role = 'owner')
+);
+```
+
+### 🧪 테스트 결과
+- ✅ 부원장 계정: 다른 직원 계약서 조회 불가 (0건)
+- ✅ 원장 계정: 모든 계약서 조회 가능 (예상)
+- ✅ 직원 본인: 자신의 계약서만 조회 가능 (예상)
+- ✅ RLS 정책 정상 적용 확인
+
+### 💡 배운 점
+- **최소 권한 원칙**: 민감한 정보는 필요한 사람만 접근 가능하도록 설계
+- **RLS 정책의 OR 조건**: 여러 정책 중 하나라도 true면 접근 허용 → 과도한 권한 정책 주의
+- **근본 원인 분석의 중요성**: "Service role can select all contracts" 정책이 모든 제한을 무력화
+- **Chrome DevTools 검증**: 실제 사용자 시나리오로 보안 정책 테스트
+- **보안 우선 설계**: 초기 설계 시 개인정보 보호 원칙 적용 필수
+
+### 📂 변경된 파일
+- ✅ `supabase/migrations/20251115_fix_contract_rls_permissions.sql` (신규)
+- ✅ Supabase: `employment_contracts` 테이블 RLS 정책 수정
+- ✅ Supabase: `contract_signatures` 테이블 RLS 정책 수정
+- ✅ Supabase: `contract_change_history` 테이블 RLS 정책 수정
+
+---
+
+## 2025-11-15 [버그 수정] clinic_branches RLS 정책 문제 해결 ✅
+
+**키워드:** #RLS #Supabase #권한 #버그수정 #근본원인분석
+
+### 🐛 문제
+- `clinic_branches` 테이블에서 `getBranches()` 호출 시 0개 반환
+- 통합 QR 코드 기능에서 `findNearestBranch()` 실패
+- 지점 관리 페이지 로딩 실패
+
+### 🔍 근본 원인 (5 Whys)
+
+**Q1: 왜 getBranches()가 0개를 반환하는가?**
+A: clinic_branches 테이블에서 SELECT 쿼리가 실패함
+
+**Q2: 왜 SELECT 쿼리가 실패하는가?**
+A: RLS(Row Level Security) 정책이 데이터 조회를 차단함
+
+**Q3: 왜 RLS 정책이 조회를 차단하는가?**
+A: clinic_branches 테이블에 RLS가 활성화되었지만 정책이 적용되지 않음
+
+**Q4: 왜 정책이 적용되지 않았는가?**
+A: `20251114_add_clinic_branches_rls.sql` 마이그레이션이 데이터베이스에 실행되지 않음
+
+**Q5: 근본 원인은?**
+A: **Supabase 마이그레이션 파일이 로컬에만 존재하고, 원격 데이터베이스에는 적용되지 않음**
+
+### ✅ 해결 방법
+
+1. **근본 원인 분석 (Context7 + Sequential Thinking)**
+   - Supabase RLS 공식 문서 확인
+   - `getSupabase()` 함수 분석 → Anon Key 사용 확인
+   - RLS 정책 마이그레이션 파일 발견
+
+2. **RLS 정책 적용**
+   - Supabase SQL Editor에서 마이그레이션 SQL 실행
+   - 3개 정책 생성:
+     - "Users can view branches from their clinic" (SELECT)
+     - "Owners can manage branches in their clinic" (ALL)
+     - "Managers can manage branches in their clinic" (ALL)
+
+3. **검증**
+   - 브라우저에서 지점 관리 페이지 확인 → 2개 지점 표시 성공
+   - Chrome DevTools로 로그 확인 → 에러 없음
+
+### 📝 적용된 RLS 정책
+
+```sql
+-- Policy: All authenticated users can view branches from their clinic
+CREATE POLICY "Users can view branches from their clinic"
+ON public.clinic_branches
+FOR SELECT
+TO authenticated
+USING (
+  clinic_id IN (
+    SELECT clinic_id
+    FROM public.users
+    WHERE id = auth.uid()
+  )
+);
+```
+
+### 🧪 테스트 결과
+- ✅ 지점 관리 페이지 정상 로딩 (2개 지점 표시)
+- ✅ `getBranches()` 함수 정상 작동
+- ✅ RLS 정책 정상 적용 확인
+
+### 💡 배운 점
+- **RLS 정책 적용 워크플로우**: 로컬 마이그레이션 파일 작성 → Supabase SQL Editor에서 실행
+- **Supabase 클라이언트 타입**: Anon Key(RLS 적용) vs Service Role Key(RLS 우회)
+- **근본 원인 분석의 중요성**: 증상이 아닌 원인을 해결해야 재발 방지
+- **Context7의 유용성**: 공식 문서로 빠른 문제 해결
+
+### 📂 변경된 파일
+- ✅ `src/lib/branchService.ts` (디버그 로그 제거)
+- ✅ `scripts/check-and-apply-rls.js` (RLS 확인 스크립트 추가)
+- ✅ Supabase: `clinic_branches` 테이블 RLS 정책 적용
+
+---
+
+## 2025-11-14 [기능 개발] 통합 QR 코드 - GPS 자동 지점 감지 (완료 대기 중)
+
+**키워드:** #출근관리 #지점관리 #GPS #자동감지 #QR코드
+
+### 📋 작업 내용
+- QR 코드 1개로 여러 지점에서 사용 가능하도록 개선
+- GPS 좌표로 가장 가까운 지점 자동 감지 기능 구현
+- `findNearestBranch()` 함수 추가 (Haversine 공식 기반)
+- `checkIn()` 함수 수정 (통합 QR 지원)
+
+### 🎯 요구사항
+- **기존:** 지점마다 개별 QR 코드 필요 → 관리 복잡
+- **개선:** QR 코드 1개로 모든 지점에서 사용 가능
+- **자동화:** 직원이 어느 지점에 있는지 GPS로 자동 감지
+
+### ✅ 구현 완료
+1. **findNearestBranch() 함수** (`attendanceService.ts:186-244`)
+   - GPS 좌표로 가장 가까운 지점 찾기
+   - Haversine 공식으로 거리 계산
+   - attendance_radius_meters 범위 검증
+
+2. **checkIn() 함수 수정** (`attendanceService.ts:480-505`)
+   - 통합 QR 지원 로직 추가
+   - GPS 기반 자동 지점 감지
+
+3. **Import 추가**
+   - `getBranches` from './branchService'
+   - `ClinicBranch` type from '@/types/branch'
+
+### 🔄 동작 흐름
+```
+통합 QR 스캔 (branch_id=null)
+  ↓
+사용자 GPS 좌표 수집
+  ↓
+findNearestBranch(clinicId, lat, lng)
+  ↓
+모든 지점과 거리 계산
+  ↓
+가장 가까운 지점 선택
+  ↓
+범위 내 (100m) 검증
+  ├─ YES → "본점에서 출근하셨습니다" + branch_id 자동 저장
+  └─ NO → "본점에서 150m 떨어져 있습니다..."
+```
+
+### 📝 다음 작업
+- 통합 QR 기능 실제 테스트 (QR 스캔)
+- 본점, 강남역 사무실 각각 테스트
+- attendance_records에 branch_id 저장 확인
+
+### 💡 배운 점
+- **Haversine 공식**: 지구 표면의 두 좌표 간 거리 계산
+- **통합 QR 설계**: `branch_id=null`로 통합 QR 구분
+- **기존 기능 보호**: 지점별 QR도 계속 작동 (하위 호환)
+
+### 📂 변경된 파일
+- ✅ `src/lib/attendanceService.ts` (findNearestBranch, checkIn 수정)
+- ✅ `src/lib/branchService.ts` (getBranches 함수 추가)
+
+---
+
 ## 2025-11-14 [버그 수정] 근로계약서 탭 권한 체크 시 빨간 경고 깜빡임 해결
 
 **키워드:** #UX개선 #권한체크 #비동기처리 #로딩상태

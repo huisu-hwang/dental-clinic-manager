@@ -5,6 +5,8 @@ import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
 import type { TeamAttendanceStatus } from '@/types/attendance'
 import { ATTENDANCE_STATUS_NAMES, ATTENDANCE_STATUS_COLORS } from '@/types/attendance'
+import BranchSelector from './BranchSelector'
+import { useBranches } from '@/hooks/useBranches'
 
 export default function TeamStatus() {
   const { user } = useAuth()
@@ -13,11 +15,18 @@ export default function TeamStatus() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [autoRefresh, setAutoRefresh] = useState(true)
 
+  // 지점 선택 관리
+  const { selectedBranchId, selectedBranch } = useBranches({
+    clinicId: user?.clinic_id,
+    userBranchId: user?.primary_branch_id,
+    userRole: user?.role,
+  })
+
   useEffect(() => {
     if (user?.clinic_id) {
       loadTeamStatus()
     }
-  }, [user, selectedDate])
+  }, [user, selectedDate, selectedBranchId])
 
   // 자동 새로고침 (1분마다)
   useEffect(() => {
@@ -32,12 +41,30 @@ export default function TeamStatus() {
     return () => clearInterval(interval)
   }, [autoRefresh, selectedDate])
 
+  // 실시간 업데이트 (출퇴근 체크 시 이벤트 수신)
+  useEffect(() => {
+    const handleAttendanceUpdate = () => {
+      // 오늘 날짜일 때만 리로드
+      if (selectedDate === new Date().toISOString().split('T')[0]) {
+        console.log('[TeamStatus] Attendance updated event received, reloading...')
+        loadTeamStatus()
+      }
+    }
+
+    window.addEventListener('attendance-updated', handleAttendanceUpdate)
+    return () => window.removeEventListener('attendance-updated', handleAttendanceUpdate)
+  }, [selectedDate])
+
   const loadTeamStatus = async () => {
     if (!user?.clinic_id) return
 
     setLoading(true)
     try {
-      const result = await attendanceService.getTeamAttendanceStatus(user.clinic_id, selectedDate)
+      const result = await attendanceService.getTeamAttendanceStatus(
+        user.clinic_id,
+        selectedDate,
+        selectedBranchId || undefined
+      )
       if (result.success && result.status) {
         setTeamStatus(result.status)
       }
@@ -109,7 +136,9 @@ export default function TeamStatus() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">팀 출퇴근 현황</h1>
           <p className="mt-1 text-sm text-gray-600">
-            전체 직원의 출퇴근 상태를 실시간으로 확인합니다.
+            {selectedBranch
+              ? `${selectedBranch.branch_name} 직원의 출퇴근 상태를 실시간으로 확인합니다.`
+              : '전체 직원의 출퇴근 상태를 실시간으로 확인합니다.'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -131,6 +160,16 @@ export default function TeamStatus() {
           </button>
         </div>
       </div>
+
+      {/* 지점 선택 */}
+      {user?.clinic_id && (
+        <BranchSelector
+          clinicId={user.clinic_id}
+          userBranchId={user.primary_branch_id}
+          userRole={user.role}
+          showAllOption={true}
+        />
+      )}
 
       {/* 날짜 선택 */}
       <div className="bg-white rounded-lg shadow p-6">
