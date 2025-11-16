@@ -308,12 +308,13 @@ export interface AttendanceDashboard {
 }
 
 /**
- * 팀 출근 현황 (관리자용)
+ * 팀 출퇴근 현황 (관리자용)
  */
 export interface TeamAttendanceStatus {
   date: string;
   total_employees: number;
   checked_in: number;
+  checked_out: number;
   not_checked_in: number;
   on_leave: number;
   late_count: number;
@@ -322,8 +323,11 @@ export interface TeamAttendanceStatus {
     user_name: string;
     status: AttendanceStatus;
     check_in_time?: string | null;
+    check_out_time?: string | null;
     scheduled_start?: string | null;
+    scheduled_end?: string | null;
     late_minutes: number;
+    early_leave_minutes: number;
   }[];
 }
 
