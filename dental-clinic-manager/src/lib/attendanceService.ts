@@ -799,8 +799,11 @@ export async function getTeamAttendanceStatus(
       user_name: string
       status: AttendanceStatus
       check_in_time?: string | null
+      check_out_time?: string | null
       scheduled_start?: string | null
+      scheduled_end?: string | null
       late_minutes: number
+      early_leave_minutes: number
     }
 
     const employees: EmployeeStatusItem[] = (users || []).map((user: { id: string; name: string; role: string }) => {
@@ -811,12 +814,16 @@ export async function getTeamAttendanceStatus(
         user_name: user.name,
         status: record?.status || 'absent',
         check_in_time: record?.check_in_time,
+        check_out_time: record?.check_out_time,
         scheduled_start: record?.scheduled_start,
+        scheduled_end: record?.scheduled_end,
         late_minutes: record?.late_minutes || 0,
+        early_leave_minutes: record?.early_leave_minutes || 0,
       }
     })
 
     const checkedIn = employees.filter((e) => e.check_in_time).length
+    const checkedOut = employees.filter((e) => e.check_out_time).length
     const onLeave = employees.filter((e) => e.status === 'leave').length
     const lateCount = employees.filter((e) => e.status === 'late').length
 
@@ -826,6 +833,7 @@ export async function getTeamAttendanceStatus(
         date,
         total_employees: employees.length,
         checked_in: checkedIn,
+        checked_out: checkedOut,
         not_checked_in: employees.length - checkedIn - onLeave,
         on_leave: onLeave,
         late_count: lateCount,
