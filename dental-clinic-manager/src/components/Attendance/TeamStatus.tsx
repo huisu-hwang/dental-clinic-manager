@@ -107,7 +107,7 @@ export default function TeamStatus() {
       {/* 헤더 */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">팀 출근 현황</h1>
+          <h1 className="text-2xl font-bold text-gray-900">팀 출퇴근 현황</h1>
           <p className="mt-1 text-sm text-gray-600">
             전체 직원의 출퇴근 상태를 실시간으로 확인합니다.
           </p>
@@ -158,7 +158,7 @@ export default function TeamStatus() {
       ) : teamStatus ? (
         <>
           {/* 요약 통계 */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -196,6 +196,26 @@ export default function TeamStatus() {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
+                  <p className="text-sm text-gray-600">퇴근 완료</p>
+                  <p className="text-3xl font-bold text-blue-600">{teamStatus.checked_out || 0}명</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {teamStatus.checked_in > 0
+                  ? (((teamStatus.checked_out || 0) / teamStatus.checked_in) * 100).toFixed(0)
+                  : 0}
+                % 퇴근률
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between">
+                <div>
                   <p className="text-sm text-gray-600">미출근</p>
                   <p className="text-3xl font-bold text-orange-600">{teamStatus.not_checked_in}명</p>
                 </div>
@@ -225,7 +245,7 @@ export default function TeamStatus() {
           {/* 직원 목록 */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">직원별 출근 현황</h2>
+              <h2 className="text-lg font-semibold text-gray-900">직원별 출퇴근 현황</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -241,10 +261,19 @@ export default function TeamStatus() {
                       출근 시간
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      예정 시간
+                      예정 출근
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      지각 시간
+                      퇴근 시간
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      예정 퇴근
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      지각
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      조퇴
                     </th>
                   </tr>
                 </thead>
@@ -278,10 +307,27 @@ export default function TeamStatus() {
                           ? employee.scheduled_start.substring(0, 5)
                           : '-'}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatTime(employee.check_out_time)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {employee.scheduled_end
+                          ? employee.scheduled_end.substring(0, 5)
+                          : '-'}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {employee.late_minutes > 0 ? (
                           <span className="text-yellow-600 font-medium">
                             {employee.late_minutes}분
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {employee.early_leave_minutes > 0 ? (
+                          <span className="text-orange-600 font-medium">
+                            {employee.early_leave_minutes}분
                           </span>
                         ) : (
                           <span className="text-gray-400">-</span>
