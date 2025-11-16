@@ -187,7 +187,14 @@ export async function validateQRCode(
   }
 
   try {
-    const { qr_code, latitude, longitude } = request
+    let { qr_code } = request
+    const { latitude, longitude } = request
+
+    // URL에서 UUID 추출 (예: https://domain.com/qr/uuid → uuid)
+    if (qr_code.includes('/qr/')) {
+      const parts = qr_code.split('/qr/')
+      qr_code = parts[parts.length - 1]
+    }
 
     // QR 코드 조회
     const { data: qrData, error: qrError } = await supabase
