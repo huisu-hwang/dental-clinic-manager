@@ -419,7 +419,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
     if (existingRecord && existingRecord.check_in_time) {
       return {
         success: false,
-        message: 'Already checked in for today',
+        message: '오늘 이미 출근하셨습니다.',
         record: existingRecord as AttendanceRecord,
       }
     }
@@ -454,7 +454,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 
       return {
         success: true,
-        message: 'Checked in successfully',
+        message: '출근 처리되었습니다.',
         record: updatedRecord as AttendanceRecord,
       }
     } else {
@@ -483,7 +483,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 
       return {
         success: true,
-        message: 'Checked in successfully',
+        message: '출근 처리되었습니다.',
         record: newRecord as AttendanceRecord,
       }
     }
@@ -532,21 +532,21 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
     if (!existingRecord) {
       return {
         success: false,
-        message: 'No check-in record found. Please check in first.',
+        message: '출근 기록이 없습니다. 먼저 출근해주세요.',
       }
     }
 
     if (!existingRecord.check_in_time) {
       return {
         success: false,
-        message: 'No check-in time recorded. Please check in first.',
+        message: '출근 시간이 기록되지 않았습니다. 먼저 출근해주세요.',
       }
     }
 
     if (existingRecord.check_out_time) {
       return {
         success: false,
-        message: 'Already checked out for today',
+        message: '오늘 이미 퇴근하셨습니다.',
         record: existingRecord as AttendanceRecord,
       }
     }
@@ -573,7 +573,7 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
 
     return {
       success: true,
-      message: 'Checked out successfully',
+      message: '퇴근 처리되었습니다.',
       record: updatedRecord as AttendanceRecord,
     }
   } catch (error: any) {
