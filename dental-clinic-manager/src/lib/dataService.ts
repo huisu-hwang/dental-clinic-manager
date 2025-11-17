@@ -1239,20 +1239,56 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
-      // 관련 데이터 먼저 삭제
+      // 1. 해당 병원의 모든 사용자 ID 조회
+      console.log('[deleteClinic] Fetching users for clinic:', clinicId)
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('clinic_id', clinicId)
+
+      if (usersError) {
+        console.error('[deleteClinic] Error fetching users:', usersError)
+        throw usersError
+      }
+
+      // 2. 각 사용자의 auth.users 삭제 (고아 계정 방지)
+      if (users && users.length > 0) {
+        console.log(`[deleteClinic] Deleting ${users.length} auth users`)
+        for (const user of users) {
+          try {
+            const { error: authDeleteError } = await supabase.auth.admin.deleteUser(user.id)
+            if (authDeleteError) {
+              console.error(`[deleteClinic] Error deleting auth user ${user.id}:`, authDeleteError)
+              // 계속 진행 (일부 실패해도 나머지는 삭제)
+            } else {
+              console.log(`[deleteClinic] Deleted auth user ${user.id}`)
+            }
+          } catch (err) {
+            console.error(`[deleteClinic] Exception deleting auth user ${user.id}:`, err)
+          }
+        }
+      }
+
+      // 3. 관련 데이터 삭제 (CASCADE로 처리되지 않는 것들)
+      console.log('[deleteClinic] Deleting related data')
       await supabase.from('appointments').delete().eq('clinic_id', clinicId)
       await supabase.from('inventory').delete().eq('clinic_id', clinicId)
       await supabase.from('inventory_categories').delete().eq('clinic_id', clinicId)
       await supabase.from('patients').delete().eq('clinic_id', clinicId)
+
+      // 4. users 삭제 (auth.users는 이미 삭제했으므로 public.users만 삭제)
       await supabase.from('users').delete().eq('clinic_id', clinicId)
 
-      // 병원 삭제
+      // 5. 병원 삭제
+      console.log('[deleteClinic] Deleting clinic')
       const { error } = await supabase
         .from('clinics')
         .delete()
         .eq('id', clinicId)
 
       if (error) throw error
+
+      console.log('[deleteClinic] Clinic deleted successfully')
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting clinic:', error)
@@ -1266,12 +1302,26 @@ export const dataService = {
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      // 1. auth.users 삭제 (고아 계정 방지)
+      console.log('[deleteUser] Deleting auth user:', userId)
+      const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId)
+
+      if (authDeleteError) {
+        console.error('[deleteUser] Error deleting auth user:', authDeleteError)
+        throw authDeleteError
+      }
+
+      console.log('[deleteUser] Auth user deleted, deleting public user')
+
+      // 2. public.users 삭제 (CASCADE로 관련 데이터 자동 삭제)
       const { error } = await supabase
         .from('users')
         .delete()
         .eq('id', userId)
 
       if (error) throw error
+
+      console.log('[deleteUser] User deleted successfully')
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting user:', error)

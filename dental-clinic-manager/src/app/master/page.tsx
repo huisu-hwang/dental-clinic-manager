@@ -116,7 +116,44 @@ export default function MasterAdminPage() {
   }
 
   const handleDeleteClinic = async (clinicId: string) => {
-    if (!confirm('정말로 이 병원과 모든 관련 데이터를 삭제하시겠습니까?')) {
+    // 병원 정보 조회
+    const clinic = clinics.find(c => c.id === clinicId)
+    if (!clinic) {
+      alert('병원 정보를 찾을 수 없습니다.')
+      return
+    }
+
+    // 해당 병원의 사용자 수 계산
+    const clinicUserCount = users.filter(u => u.clinic_id === clinicId).length
+
+    // 1단계: 상세한 경고 메시지
+    const confirmed = confirm(
+      `⚠️ 병원 삭제 경고 ⚠️\n\n` +
+      `병원명: ${clinic.name}\n` +
+      `소속 사용자 수: ${clinicUserCount}명\n\n` +
+      `삭제될 데이터:\n` +
+      `- 병원 정보\n` +
+      `- 소속 직원 ${clinicUserCount}명의 계정 (인증 정보 포함)\n` +
+      `- 모든 환자 정보\n` +
+      `- 모든 예약 기록\n` +
+      `- 모든 근태 기록\n` +
+      `- 모든 근로계약서\n` +
+      `- 기타 모든 관련 데이터\n\n` +
+      `⚠️ 이 작업은 되돌릴 수 없습니다! ⚠️\n\n` +
+      `계속하시겠습니까?`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    // 2단계: 병원명 타이핑 확인 (실수 방지)
+    const typedName = prompt(
+      `정말로 삭제하시려면 병원명을 정확히 입력하세요:\n\n"${clinic.name}"`
+    )
+
+    if (typedName !== clinic.name) {
+      alert('병원명이 일치하지 않습니다. 삭제가 취소되었습니다.')
       return
     }
 
@@ -131,7 +168,40 @@ export default function MasterAdminPage() {
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('정말로 이 사용자를 삭제하시겠습니까?')) {
+    // 사용자 정보 조회 (users 또는 pendingUsers에서)
+    const user = users.find(u => u.id === userId) || pendingUsers.find(u => u.id === userId)
+    if (!user) {
+      alert('사용자 정보를 찾을 수 없습니다.')
+      return
+    }
+
+    // 1단계: 상세한 경고 메시지
+    const confirmed = confirm(
+      `⚠️ 사용자 삭제 경고 ⚠️\n\n` +
+      `이름: ${user.name}\n` +
+      `이메일: ${user.email}\n` +
+      `역할: ${user.role}\n` +
+      `소속: ${user.clinic?.name || '미지정'}\n\n` +
+      `삭제될 데이터:\n` +
+      `- 사용자 계정 (인증 정보 포함)\n` +
+      `- 근태 기록\n` +
+      `- 근로계약서\n` +
+      `- 기타 모든 관련 데이터\n\n` +
+      `⚠️ 이 작업은 되돌릴 수 없습니다! ⚠️\n\n` +
+      `계속하시겠습니까?`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    // 2단계: 이름 타이핑 확인 (실수 방지)
+    const typedName = prompt(
+      `정말로 삭제하시려면 사용자 이름을 정확히 입력하세요:\n\n"${user.name}"`
+    )
+
+    if (typedName !== user.name) {
+      alert('이름이 일치하지 않습니다. 삭제가 취소되었습니다.')
       return
     }
 
