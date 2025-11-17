@@ -164,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (result.data.clinic?.status === 'suspended') {
                   alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
                   await supabase.auth.signOut()
+                  window.location.href = '/'
                   return
                 }
 
@@ -217,6 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     if (result.data.clinic?.status === 'suspended') {
                       alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
                       await supabase.auth.signOut()
+                      window.location.href = '/'
                       return
                     }
 
