@@ -92,7 +92,22 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
 
       if (authError) {
         console.error('[LoginForm] Auth error:', authError)
-        setError('아이디 또는 비밀번호가 올바르지 않습니다.')
+        console.error('[LoginForm] Error details:', {
+          message: authError.message,
+          status: authError.status,
+          name: authError.name
+        })
+
+        // 에러 타입에 따라 다른 메시지 표시
+        if (authError.message.includes('Email not confirmed') ||
+            authError.message.includes('email_not_confirmed')) {
+          setError('이메일 인증이 완료되지 않았습니다. 가입 시 입력한 이메일에서 인증 링크를 확인해주세요.')
+        } else if (authError.message.includes('Invalid login credentials')) {
+          setError('아이디 또는 비밀번호가 올바르지 않습니다.')
+        } else {
+          setError('로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+        }
+
         setLoading(false)
         return
       }
@@ -238,7 +253,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600">
-                  로그인 상태 자동 유지 (4시간)
+                  로그인 상태 자동 유지
                 </label>
               </div>
 

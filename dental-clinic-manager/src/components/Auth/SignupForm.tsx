@@ -263,7 +263,7 @@ export default function SignupForm({
       }
 
       console.log('[Signup] Signup completed successfully!');
-      setSuccess('회원가입 신청이 완료되었습니다. 이메일을 확인하여 인증을 완료해주세요.');
+      setSuccess('회원가입 신청이 완료되었습니다. 가입하신 이메일에서 인증 링크를 확인하신 후 로그인해주세요.');
       setTimeout(() => {
         onSignupSuccess({
           email: formData.userId,
