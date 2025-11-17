@@ -10,6 +10,8 @@ import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
 import type { EmploymentContract, ContractStatus, ContractListFilters } from '@/types/contract'
 import type { UserProfile } from '@/contexts/AuthContext'
+import { checkSecuritySession, setSecuritySession } from '@/lib/securitySession'
+import PasswordVerificationModal from '@/components/Security/PasswordVerificationModal'
 
 interface ContractListProps {
   currentUser: UserProfile
@@ -46,8 +48,47 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
   const [contractToDelete, setContractToDelete] = useState<EmploymentContract | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // Security verification state
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [isVerified, setIsVerified] = useState(false)
+
+  // Check security session on mount
+  useEffect(() => {
+    console.log('[ContractList] Checking security session...')
+    const hasValidSession = checkSecuritySession('contract')
+
+    if (hasValidSession) {
+      console.log('[ContractList] Valid security session found')
+      setIsVerified(true)
+    } else {
+      console.log('[ContractList] No valid security session, showing password modal')
+      setShowPasswordModal(true)
+      setLoading(false) // Stop loading while waiting for password
+    }
+  }, [])
+
+  // Handle successful password verification
+  const handlePasswordVerified = () => {
+    console.log('[ContractList] Password verified, creating security session')
+    setSecuritySession('contract')
+    setShowPasswordModal(false)
+    setIsVerified(true)
+    setLoading(true) // Resume loading to fetch contracts
+  }
+
+  // Handle password verification cancel
+  const handlePasswordCancel = () => {
+    console.log('[ContractList] Password verification cancelled, redirecting to dashboard')
+    router.push('/dashboard')
+  }
+
   // Load contracts
   useEffect(() => {
+    // Don't load contracts until verified
+    if (!isVerified) {
+      console.log('[ContractList] Not verified yet, skipping contract load')
+      return
+    }
     const abortController = new AbortController()
     let isMounted = true
 
@@ -122,7 +163,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       abortController.abort()
       console.log('[ContractList] Cleanup: aborted pending requests')
     }
-  }, [clinicId, filters.status, filters.employee_user_id, filters.search])
+  }, [clinicId, filters.status, filters.employee_user_id, filters.search, isVerified])
 
   const loadContracts = async () => {
     setLoading(true)
@@ -503,6 +544,14 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
           </div>
         </div>
       )}
+
+      {/* Password Verification Modal */}
+      <PasswordVerificationModal
+        isOpen={showPasswordModal}
+        onVerified={handlePasswordVerified}
+        onCancel={handlePasswordCancel}
+        purpose="contract"
+      />
     </div>
   )
 }

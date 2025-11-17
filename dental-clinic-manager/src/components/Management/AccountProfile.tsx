@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { dataService } from '@/lib/dataService'
 import {
   UserCircleIcon,
@@ -24,6 +25,8 @@ import {
   checkPersonalInfoCompletion
 } from '@/utils/residentNumberUtils'
 import { encryptResidentNumber, decryptResidentNumber } from '@/utils/encryptionUtils'
+import { checkSecuritySession, setSecuritySession } from '@/lib/securitySession'
+import PasswordVerificationModal from '@/components/Security/PasswordVerificationModal'
 
 interface AccountProfileProps {
   currentUser: UserProfile
@@ -32,12 +35,17 @@ interface AccountProfileProps {
 }
 
 export default function AccountProfile({ currentUser, onClose, onUpdate }: AccountProfileProps) {
+  const router = useRouter()
   const [user, setUser] = useState<any>(currentUser)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showPasswordChange, setShowPasswordChange] = useState(false)
+
+  // Security verification state
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [isVerified, setIsVerified] = useState(false)
 
   const [formData, setFormData] = useState({
     name: currentUser?.name || '',
@@ -56,6 +64,38 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
     newPassword: '',
     confirmPassword: ''
   })
+
+  // Check security session on mount
+  useEffect(() => {
+    console.log('[AccountProfile] Checking security session...')
+    const hasValidSession = checkSecuritySession('profile')
+
+    if (hasValidSession) {
+      console.log('[AccountProfile] Valid security session found')
+      setIsVerified(true)
+    } else {
+      console.log('[AccountProfile] No valid security session, showing password modal')
+      setShowPasswordModal(true)
+    }
+  }, [])
+
+  // Handle successful password verification
+  const handlePasswordVerified = () => {
+    console.log('[AccountProfile] Password verified, creating security session')
+    setSecuritySession('profile')
+    setShowPasswordModal(false)
+    setIsVerified(true)
+  }
+
+  // Handle password verification cancel
+  const handlePasswordCancel = () => {
+    console.log('[AccountProfile] Password verification cancelled')
+    if (onClose) {
+      onClose()
+    } else {
+      router.push('/dashboard')
+    }
+  }
 
   useEffect(() => {
     if (currentUser) {
@@ -95,6 +135,29 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
   // 타입 안전성을 위한 처리
   if (!currentUser) {
     return null
+  }
+
+  // Show password modal if not verified
+  if (!isVerified) {
+    return (
+      <>
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center">
+          <LockClosedIcon className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-slate-800 mb-2">본인 확인이 필요합니다</h2>
+          <p className="text-slate-600">
+            계정 정보는 민감한 개인정보입니다.
+            <br />
+            비밀번호를 입력하여 본인 확인을 진행해주세요.
+          </p>
+        </div>
+        <PasswordVerificationModal
+          isOpen={showPasswordModal}
+          onVerified={handlePasswordVerified}
+          onCancel={handlePasswordCancel}
+          purpose="profile"
+        />
+      </>
+    )
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
