@@ -160,6 +160,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   return
                 }
 
+                // 소속 병원이 중지된 경우 로그아웃
+                if (result.data.clinic?.status === 'suspended') {
+                  alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
+                  await supabase.auth.signOut()
+                  return
+                }
+
                 setUser(result.data)
                 if (result.data.clinic_id) {
                   dataService.setCachedClinicId(result.data.clinic_id)
@@ -206,6 +213,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (!isLoggingOut) {
                   const result = await dataService.getUserProfileById(session.user.id)
                   if (result.success && result.data) {
+                    // 소속 병원이 중지된 경우 로그아웃
+                    if (result.data.clinic?.status === 'suspended') {
+                      alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
+                      await supabase.auth.signOut()
+                      return
+                    }
+
                     setUser(result.data)
                     if (result.data.clinic_id) {
                       dataService.setCachedClinicId(result.data.clinic_id)

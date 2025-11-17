@@ -150,6 +150,15 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
           return
         }
 
+        // 3.5. 소속 병원의 중지 상태 검증
+        if (result.data.clinic?.status === 'suspended') {
+          console.warn('[LoginForm] Clinic is suspended:', result.data.clinic.id)
+          setError('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
+          await supabase.auth.signOut()
+          setLoading(false)
+          return
+        }
+
         // 4. AuthContext에 완전한 사용자 정보로 로그인 처리
         console.log('[LoginForm] Logging in with profile:', result.data)
         login(formData.email, result.data) // email로 변경
