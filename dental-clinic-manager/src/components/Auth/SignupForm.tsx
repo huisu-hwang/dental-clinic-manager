@@ -264,11 +264,11 @@ export default function SignupForm({
 
       console.log('[Signup] Signup completed successfully!');
 
-      // 역할별 성공 메시지
+      // 역할별 성공 메시지 - 이메일 인증 강조
       if (formData.role === 'owner') {
-        setSuccess('회원가입 신청이 완료되었습니다. 이메일 인증 후 마스터 관리자의 승인을 받으시면 로그인하실 수 있습니다.');
+        setSuccess(`회원가입 신청이 완료되었습니다!\n\n📧 ${formData.userId}로 인증 이메일이 발송되었습니다.\n\n1️⃣ 이메일함을 확인하여 인증 링크를 클릭해주세요.\n2️⃣ 이메일 인증 완료 후 마스터 관리자의 승인을 받으시면 로그인하실 수 있습니다.\n\n※ 이메일이 보이지 않으면 스팸함을 확인해주세요.`);
       } else {
-        setSuccess('회원가입 신청이 완료되었습니다. 이메일 인증 후 병원 관리자의 승인을 받으시면 로그인하실 수 있습니다.');
+        setSuccess(`회원가입 신청이 완료되었습니다!\n\n📧 ${formData.userId}로 인증 이메일이 발송되었습니다.\n\n1️⃣ 이메일함을 확인하여 인증 링크를 클릭해주세요.\n2️⃣ 이메일 인증 완료 후 병원 관리자의 승인을 받으시면 로그인하실 수 있습니다.\n\n※ 이메일이 보이지 않으면 스팸함을 확인해주세요.`);
       }
 
       setTimeout(() => {
@@ -277,7 +277,7 @@ export default function SignupForm({
           name: formData.name,
           role: formData.role
         });
-      }, 4000);
+      }, 8000);
 
     } catch (error: unknown) {
       console.error('[Signup] Signup error:', error);
@@ -681,8 +681,19 @@ export default function SignupForm({
             )}
 
             {success && (
-              <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
-                {success}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-green-800 font-semibold whitespace-pre-line leading-relaxed">
+                      {success}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
