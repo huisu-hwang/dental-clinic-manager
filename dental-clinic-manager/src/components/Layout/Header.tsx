@@ -75,16 +75,6 @@ export default function Header({ dbStatus = 'connected', user, onLogout, showMan
               </Link>
             )}
 
-            {/* Attendance Link */}
-            <Link
-              href="/attendance"
-              className="flex items-center space-x-1 px-3 py-2 text-sm text-green-600 hover:text-green-700 hover:bg-green-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-green-200 transform hover:scale-105"
-              title="출근 관리"
-            >
-              <Clock className="w-4 h-4 transition-transform hover:rotate-12" />
-              <span className="font-medium">출근</span>
-            </Link>
-
             {/* Management Link */}
             {showManagementLink && user.role === 'owner' && (
               <Link

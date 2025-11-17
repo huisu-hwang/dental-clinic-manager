@@ -36,10 +36,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return 'attendance'
     }
 
-    // Management 페이지 (현재 /management)
-    if (pathname.startsWith('/management')) {
-      return 'settings'
-    }
 
     // Dashboard 페이지 내 쿼리 파라미터 기반 탭
     const tab = searchParams.get('tab')
@@ -58,7 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } else if (tab === 'attendance') {
       router.push('/attendance')
     } else if (tab === 'settings') {
-      router.push('/management')
+      router.push('/dashboard?tab=settings')
     } else if (tab === 'daily-input') {
       router.push('/dashboard')
     } else if (tab === 'stats') {

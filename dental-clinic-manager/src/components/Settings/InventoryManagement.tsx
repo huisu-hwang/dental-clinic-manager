@@ -52,7 +52,7 @@ export default function InventoryManagement({
       <h2 className="text-2xl font-bold border-b pb-4">설정</h2>
       
       <div>
-        <h3 className="text-xl font-semibold mb-3">선물 종류 및 재고 관리</h3>
+        <h3 className="text-xl font-semibold mb-3">선물 및 재고 관리</h3>
         
         {/* 새 선물 추가 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4 p-4 border rounded-md bg-slate-50">
@@ -117,11 +117,6 @@ export default function InventoryManagement({
         </div>
       </div>
 
-      {/* 재고 관리 도구 */}
-      <div>
-        <h3 className="text-xl font-semibold mb-3">재고 관리 도구</h3>
-
-      </div>
     </div>
   )
 }
