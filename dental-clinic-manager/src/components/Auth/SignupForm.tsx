@@ -209,44 +209,35 @@ export default function SignupForm({
 
       if (formData.role === 'owner') {
         // 시나리오 A: 대표원장으로 신규 병원 생성
-        console.log('[Signup] Creating new clinic...');
-        const { data: clinicData, error: clinicError } = await (supabase.from('clinics') as any)
-          .insert({
-            name: formData.clinicName,
-            owner_name: formData.clinicOwnerName,
-            address: formData.clinicAddress,
-            phone: formData.clinicPhone,
-            email: formData.clinicEmail,
-          })
-          .select()
-          .single();
-
-        console.log('[Signup] Clinic creation result:', { clinicData, clinicError });
-
-        if (clinicError) {
-          console.error('[Signup] Clinic creation error:', clinicError);
-          throw new Error('병원 정보 생성 실패: ' + clinicError.message);
-        }
-
-        console.log('[Signup] Creating user profile...');
-        const { error: userProfileError } = await (supabase.from('users') as any).insert({
-          id: newUserId,
-          clinic_id: clinicData.id,
-          email: formData.userId,
-          name: formData.name,
-          phone: formData.phone,
-          address: formData.address,
-          resident_registration_number: encryptedResidentNumber,
-          role: 'owner',
-          status: 'active',
+        // SECURITY DEFINER 함수를 사용하여 RLS 우회 및 트랜잭션 보장
+        console.log('[Signup] Creating new clinic with owner via RPC...');
+        const { data: result, error: rpcError } = await supabase.rpc('create_clinic_with_owner', {
+          p_user_id: newUserId,
+          p_clinic_name: formData.clinicName,
+          p_owner_name: formData.clinicOwnerName,
+          p_clinic_address: formData.clinicAddress,
+          p_clinic_phone: formData.clinicPhone,
+          p_clinic_email: formData.clinicEmail,
+          p_user_name: formData.name,
+          p_user_email: formData.userId,
+          p_user_phone: formData.phone,
+          p_user_address: formData.address,
+          p_resident_number: encryptedResidentNumber,
         });
 
-        console.log('[Signup] User profile creation result:', { userProfileError });
+        console.log('[Signup] RPC result:', { result, rpcError });
 
-        if (userProfileError) {
-          console.error('[Signup] User profile creation error:', userProfileError);
-          throw new Error('프로필 생성 실패: ' + userProfileError.message);
+        if (rpcError) {
+          console.error('[Signup] RPC error:', rpcError);
+          throw new Error('병원 정보 생성 실패: ' + rpcError.message);
         }
+
+        if (!result || !result.success) {
+          console.error('[Signup] RPC returned unsuccessful result');
+          throw new Error('병원 정보 생성 실패: 알 수 없는 오류');
+        }
+
+        console.log('[Signup] Clinic and user created successfully:', result);
 
       } else {
         // 시나리오 B: 기존 병원에 가입 신청
