@@ -185,11 +185,11 @@ export default function SignupForm({
 
       // 1. 인증 사용자 생성
       console.log('[Signup] Creating auth user...');
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError} = await supabase.auth.signUp({
         email: formData.userId,
         password: formData.password,
         options: {
-          emailRedirectTo: undefined, // 이메일 확인 링크 비활성화
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
       });
 
@@ -263,7 +263,14 @@ export default function SignupForm({
       }
 
       console.log('[Signup] Signup completed successfully!');
-      setSuccess('회원가입 신청이 완료되었습니다. 가입하신 이메일에서 인증 링크를 확인하신 후 로그인해주세요.');
+
+      // 역할별 성공 메시지
+      if (formData.role === 'owner') {
+        setSuccess('회원가입 신청이 완료되었습니다. 이메일 인증 후 마스터 관리자의 승인을 받으시면 로그인하실 수 있습니다.');
+      } else {
+        setSuccess('회원가입 신청이 완료되었습니다. 이메일 인증 후 병원 관리자의 승인을 받으시면 로그인하실 수 있습니다.');
+      }
+
       setTimeout(() => {
         onSignupSuccess({
           email: formData.userId,

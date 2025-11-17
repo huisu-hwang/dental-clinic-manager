@@ -1468,6 +1468,57 @@ export const dataService = {
     }
   },
 
+  // 이메일 인증 상태를 포함한 모든 사용자 조회 (마스터 전용)
+  async getAllUsersWithEmailStatus() {
+    const supabase = await ensureConnection()
+    if (!supabase) {
+      return { data: null, error: 'Supabase client not available' }
+    }
+
+    try {
+      // 1. public.users 데이터 조회
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select(`
+          *,
+          clinic:clinics(name)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (usersError) {
+        console.error('Error fetching users:', usersError)
+        return { data: null, error: usersError.message }
+      }
+
+      // 2. auth.users 데이터 조회 (Admin API)
+      const { data: { users: authUsers }, error: authError } =
+        await supabase.auth.admin.listUsers()
+
+      if (authError) {
+        console.error('Error fetching auth users:', authError)
+        return { data: null, error: authError.message }
+      }
+
+      // 3. 데이터 병합
+      const mergedData = users.map(user => {
+        const authUser = authUsers.find(au => au.id === user.id)
+        return {
+          ...user,
+          email_confirmed_at: authUser?.email_confirmed_at,
+          email_verified: !!authUser?.email_confirmed_at
+        }
+      })
+
+      return { data: mergedData, error: null }
+    } catch (error: unknown) {
+      console.error('Error in getAllUsersWithEmailStatus:', error)
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  },
+
   // ========================================
   // 프로토콜 관리 함수들
   // ========================================

@@ -85,8 +85,8 @@ export default function MasterAdminPage() {
       console.log('[Master] Clinics result:', clinicsResult)
       setClinics(clinicsResult?.data || [])
 
-      // 사용자 목록 조회
-      const usersResult = await dataService.getAllUsers()
+      // 사용자 목록 조회 (이메일 인증 상태 포함)
+      const usersResult = await dataService.getAllUsersWithEmailStatus()
       console.log('[Master] Users result:', usersResult)
       const allUsers = usersResult?.data || []
       setUsers(allUsers)
@@ -345,6 +345,7 @@ export default function MasterAdminPage() {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이름</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이메일</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이메일 인증</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">전화번호</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">소속 병원</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">역할</th>
@@ -357,6 +358,15 @@ export default function MasterAdminPage() {
                       <tr key={user.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.name}</td>
                         <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            user.email_verified
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {user.email_verified ? '✓ 인증완료' : '⚠️ 미인증'}
+                          </span>
+                        </td>
                         <td className="px-6 py-4 text-sm text-gray-500">{user.phone || '-'}</td>
                         <td className="px-6 py-4 text-sm text-gray-500">{user.clinic?.name || '-'}</td>
                         <td className="px-6 py-4">
