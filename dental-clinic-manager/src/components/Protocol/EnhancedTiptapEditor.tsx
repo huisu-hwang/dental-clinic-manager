@@ -2,6 +2,7 @@
 
 import { useEditor, EditorContent } from '@tiptap/react'
 import { useCallback, useEffect, useState } from 'react'
+
 import StarterKit from '@tiptap/starter-kit'
 import Heading from '@tiptap/extension-heading'
 import Image from '@tiptap/extension-image'
@@ -41,6 +42,347 @@ interface EnhancedTiptapEditorProps {
   placeholder?: string
   editable?: boolean
   onImageUpload?: (url: string) => void
+}
+
+const isBrowser = typeof window !== 'undefined'
+
+const SAFE_STYLE_PROPERTIES = new Set<string>([
+  'color',
+  'background',
+  'background-color',
+  'background-image',
+  'background-position',
+  'background-repeat',
+  'background-size',
+  'border',
+  'border-top',
+  'border-right',
+  'border-bottom',
+  'border-left',
+  'border-color',
+  'border-width',
+  'border-style',
+  'border-collapse',
+  'border-spacing',
+  'box-sizing',
+  'font-family',
+  'font-size',
+  'font-style',
+  'font-weight',
+  'font-variant',
+  'font-stretch',
+  'letter-spacing',
+  'line-height',
+  'list-style',
+  'list-style-type',
+  'list-style-image',
+  'list-style-position',
+  'margin',
+  'margin-top',
+  'margin-right',
+  'margin-bottom',
+  'margin-left',
+  'padding',
+  'padding-top',
+  'padding-right',
+  'padding-bottom',
+  'padding-left',
+  'text-align',
+  'text-decoration',
+  'text-decoration-line',
+  'text-decoration-color',
+  'text-decoration-style',
+  'text-indent',
+  'text-transform',
+  'text-shadow',
+  'text-overflow',
+  'text-wrap',
+  'white-space',
+  'word-break',
+  'word-spacing',
+  'background-clip',
+  'background-origin',
+  'display',
+  'float',
+  'clear',
+  'width',
+  'min-width',
+  'max-width',
+  'height',
+  'min-height',
+  'max-height',
+  'vertical-align',
+  'overflow',
+  'overflow-x',
+  'overflow-y',
+  'opacity',
+  'gap',
+  'align-items',
+  'justify-content'
+])
+
+const FONT_SIZE_MAP: Record<string, string> = {
+  '1': '0.75rem',
+  '2': '0.875rem',
+  '3': '1rem',
+  '4': '1.125rem',
+  '5': '1.25rem',
+  '6': '1.5rem',
+  '7': '2rem'
+}
+
+const isValidCssColor = (value: string) => {
+  if (!isBrowser || !value) {
+    return false
+  }
+
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return false
+  }
+
+  if (typeof CSS !== 'undefined' && typeof CSS.supports === 'function') {
+    return CSS.supports('color', trimmed)
+  }
+
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(trimmed)
+}
+
+const parseStyleString = (style?: string | null) => {
+  const styleObject: Record<string, string> = {}
+  if (!style) {
+    return styleObject
+  }
+
+  style
+    .split(';')
+    .map(rule => rule.trim())
+    .filter(Boolean)
+    .forEach((declaration) => {
+      const [property, ...valueParts] = declaration.split(':')
+      if (!property || valueParts.length === 0) {
+        return
+      }
+      const propertyName = property.trim().toLowerCase()
+      const value = valueParts.join(':').trim()
+      if (!propertyName || !value) {
+        return
+      }
+      styleObject[propertyName] = value
+    })
+
+  return styleObject
+}
+
+const stringifyStyleObject = (styleObject: Record<string, string>) =>
+  Object.entries(styleObject)
+    .map(([property, value]) => `${property}: ${value}`)
+    .join('; ')
+
+const mergeStyleStrings = (...styles: (string | null | undefined)[]) => {
+  const merged: Record<string, string> = {}
+
+  styles
+    .filter((style): style is string => Boolean(style && style.trim()))
+    .forEach((style) => {
+      const styleObject = parseStyleString(style)
+      Object.entries(styleObject).forEach(([property, value]) => {
+        if (!SAFE_STYLE_PROPERTIES.size || SAFE_STYLE_PROPERTIES.has(property)) {
+          merged[property] = value
+        }
+      })
+    })
+
+  return stringifyStyleObject(merged)
+}
+
+const mapFontSizeValue = (value?: string | null) => {
+  if (!value) {
+    return null
+  }
+
+  const normalized = value.trim()
+  if (!normalized) {
+    return null
+  }
+
+  if (FONT_SIZE_MAP[normalized]) {
+    return FONT_SIZE_MAP[normalized]
+  }
+
+  if (/^\d+(px|pt|em|rem|%)$/i.test(normalized)) {
+    return normalized
+  }
+
+  const numericValue = Number(normalized)
+  if (!Number.isNaN(numericValue) && numericValue > 0) {
+    return `${numericValue}px`
+  }
+
+  return null
+}
+
+const extractClassStyleMap = (doc: Document) => {
+  const classStyleMap: Record<string, string> = {}
+  let removed = false
+
+  doc.querySelectorAll('style').forEach((styleTag) => {
+    const styleContent = styleTag.textContent ?? ''
+    const ruleRegex = /([^\{]+)\{([^}]*)\}/g
+    let match: RegExpExecArray | null
+
+    while ((match = ruleRegex.exec(styleContent)) !== null) {
+      const selectors = match[1]
+        .split(',')
+        .map(selector => selector.trim())
+        .filter(Boolean)
+
+      selectors.forEach((selector) => {
+        if (!selector.startsWith('.')) {
+          return
+        }
+        const className = selector.slice(1)
+        const declarations = mergeStyleStrings(match[2])
+        if (className && declarations) {
+          classStyleMap[className] = declarations
+        }
+      })
+    }
+
+    styleTag.remove()
+    removed = true
+  })
+
+  return { classStyleMap, removed }
+}
+
+const normalizeClipboardHtml = (html: string): string | null => {
+  if (!isBrowser || !html) {
+    return null
+  }
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const body = doc.body
+
+  if (!body) {
+    return null
+  }
+
+  let mutated = false
+
+  body.querySelectorAll('font').forEach((fontNode) => {
+    const span = doc.createElement('span')
+    while (fontNode.firstChild) {
+      span.appendChild(fontNode.firstChild)
+    }
+
+    const styleParts: string[] = []
+    const inlineStyle = fontNode.getAttribute('style')?.trim()
+    if (inlineStyle) {
+      styleParts.push(inlineStyle)
+    }
+
+    const colorValue = fontNode.getAttribute('color')?.trim()
+    if (colorValue && isValidCssColor(colorValue)) {
+      styleParts.unshift(`color: ${colorValue}`)
+    }
+
+    const fontFace = fontNode.getAttribute('face')?.trim()
+    if (fontFace) {
+      styleParts.push(`font-family: ${fontFace}`)
+    }
+
+    const fontSize = mapFontSizeValue(fontNode.getAttribute('size'))
+    if (fontSize) {
+      styleParts.push(`font-size: ${fontSize}`)
+    }
+
+    const mergedStyle = mergeStyleStrings(...styleParts)
+    if (mergedStyle) {
+      span.setAttribute('style', mergedStyle)
+    }
+
+    fontNode.replaceWith(span)
+    mutated = true
+  })
+
+  const { classStyleMap, removed } = extractClassStyleMap(doc)
+  if (removed) {
+    mutated = true
+  }
+
+  if (Object.keys(classStyleMap).length > 0) {
+    body.querySelectorAll<HTMLElement>('[class]').forEach((node) => {
+      const classAttr = node.getAttribute('class')
+      if (!classAttr) {
+        return
+      }
+
+      const classes = classAttr.split(/\s+/).filter(Boolean)
+      if (classes.length === 0) {
+        node.removeAttribute('class')
+        return
+      }
+
+      const inheritedStyles = classes
+        .map(cls => classStyleMap[cls])
+        .filter((style): style is string => Boolean(style))
+
+      if (inheritedStyles.length > 0) {
+        const mergedStyle = mergeStyleStrings(...inheritedStyles, node.getAttribute('style'))
+        if (mergedStyle) {
+          node.setAttribute('style', mergedStyle)
+          mutated = true
+        }
+      }
+
+      const remainingClasses = classes.filter(cls => !classStyleMap[cls])
+      if (remainingClasses.length > 0) {
+        node.setAttribute('class', remainingClasses.join(' '))
+      } else {
+        node.removeAttribute('class')
+      }
+    })
+  }
+
+  body.querySelectorAll<HTMLElement>('*').forEach((node) => {
+    const colorAttribute = node.getAttribute('color')?.trim()
+    if (colorAttribute && isValidCssColor(colorAttribute)) {
+      const mergedStyle = mergeStyleStrings(`color: ${colorAttribute}`, node.getAttribute('style'))
+      if (mergedStyle) {
+        node.setAttribute('style', mergedStyle)
+      }
+      node.removeAttribute('color')
+      mutated = true
+    }
+
+    const backgroundAttribute = node.getAttribute('bgcolor')?.trim()
+    if (backgroundAttribute && isValidCssColor(backgroundAttribute)) {
+      const mergedStyle = mergeStyleStrings(`background-color: ${backgroundAttribute}`, node.getAttribute('style'))
+      if (mergedStyle) {
+        node.setAttribute('style', mergedStyle)
+      }
+      node.removeAttribute('bgcolor')
+      mutated = true
+    }
+
+    const existingStyle = node.getAttribute('style')
+    if (existingStyle) {
+      const sanitizedStyle = mergeStyleStrings(existingStyle)
+      if (sanitizedStyle) {
+        if (sanitizedStyle !== existingStyle) {
+          node.setAttribute('style', sanitizedStyle)
+          mutated = true
+        }
+      } else {
+        node.removeAttribute('style')
+        mutated = true
+      }
+    }
+  })
+
+  return mutated ? body.innerHTML : null
 }
 
 export default function EnhancedTiptapEditor({
@@ -173,6 +515,16 @@ export default function EnhancedTiptapEditor({
             }
           }
         }
+
+        const html = event.clipboardData?.getData('text/html')
+        const normalizedHtml = html ? normalizeClipboardHtml(html) : null
+
+        if (normalizedHtml && editor) {
+          event.preventDefault()
+          editor.chain().focus().insertContent(normalizedHtml).run()
+          return true
+        }
+
         return false
       },
       handleKeyDown: (view, event) => {
