@@ -233,9 +233,9 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  checked={true}
-                  disabled
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded opacity-50 cursor-not-allowed"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600">
                   로그인 상태 자동 유지 (4시간)
