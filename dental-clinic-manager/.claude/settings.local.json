@@ -71,7 +71,8 @@
       "Bash(nul)",
       "Bash(dir:*)",
       "Bash(tee:*)",
-      "mcp__chrome-devtools__handle_dialog"
+      "mcp__chrome-devtools__handle_dialog",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
