@@ -87,6 +87,17 @@ export default function SignupForm({
     }
   }, [formData.password, formData.confirmPassword]);
 
+  // 대표원장일 때 치과 정보를 사용자 정보와 자동 동기화
+  useEffect(() => {
+    if (formData.role === 'owner') {
+      setFormData(prev => ({
+        ...prev,
+        clinicOwnerName: prev.name,
+        clinicEmail: prev.userId
+      }));
+    }
+  }, [formData.role, formData.name, formData.userId]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { // HTMLSelectElement 추가
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
@@ -509,10 +520,20 @@ export default function SignupForm({
                       name="clinicOwnerName"
                       value={formData.clinicOwnerName}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full p-3 border rounded-md ${
+                        formData.role === 'owner'
+                          ? 'bg-slate-100 border-slate-300 text-slate-600 cursor-not-allowed'
+                          : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                      }`}
                       placeholder="홍길동"
-                      disabled={loading}
+                      disabled={loading || formData.role === 'owner'}
+                      readOnly={formData.role === 'owner'}
                     />
+                    {formData.role === 'owner' && (
+                      <p className="mt-1 text-xs text-blue-600">
+                        ℹ️ 대표원장 이름이 자동으로 사용됩니다
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -575,10 +596,20 @@ export default function SignupForm({
                       name="clinicEmail"
                       value={formData.clinicEmail}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full p-3 border rounded-md ${
+                        formData.role === 'owner'
+                          ? 'bg-slate-100 border-slate-300 text-slate-600 cursor-not-allowed'
+                          : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                      }`}
                       placeholder="clinic@example.com"
-                      disabled={loading}
+                      disabled={loading || formData.role === 'owner'}
+                      readOnly={formData.role === 'owner'}
                     />
+                    {formData.role === 'owner' && (
+                      <p className="mt-1 text-xs text-blue-600">
+                        ℹ️ 대표원장 이메일이 자동으로 사용됩니다
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
