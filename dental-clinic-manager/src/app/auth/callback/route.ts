@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   console.log('[Auth Callback] Processing email verification', { token_hash, type })
 
   if (token_hash && type) {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const { error } = await supabase.auth.verifyOtp({
       type: type as any,

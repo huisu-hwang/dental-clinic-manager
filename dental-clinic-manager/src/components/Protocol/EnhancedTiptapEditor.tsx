@@ -237,12 +237,14 @@ const extractClassStyleMap = (doc: Document) => {
         .map(selector => selector.trim())
         .filter(Boolean)
 
+      const styleDeclarations = match[2]
+
       selectors.forEach((selector) => {
         if (!selector.startsWith('.')) {
           return
         }
         const className = selector.slice(1)
-        const declarations = mergeStyleStrings(match[2])
+        const declarations = mergeStyleStrings(styleDeclarations)
         if (className && declarations) {
           classStyleMap[className] = declarations
         }

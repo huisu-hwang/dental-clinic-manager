@@ -1500,8 +1500,8 @@ export const dataService = {
       }
 
       // 3. 데이터 병합
-      const mergedData = users.map(user => {
-        const authUser = authUsers.find(au => au.id === user.id)
+      const mergedData = users.map((user: any) => {
+        const authUser = authUsers.find((au: any) => au.id === user.id)
         return {
           ...user,
           email_confirmed_at: authUser?.email_confirmed_at,
