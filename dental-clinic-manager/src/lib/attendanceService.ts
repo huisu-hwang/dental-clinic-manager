@@ -256,7 +256,14 @@ export async function validateQRCode(
   }
 
   try {
-    const { qr_code, latitude, longitude } = request
+    let { qr_code } = request
+    const { latitude, longitude } = request
+
+    // URL에서 UUID 추출 (예: https://domain.com/qr/uuid → uuid)
+    if (qr_code.includes('/qr/')) {
+      const parts = qr_code.split('/qr/')
+      qr_code = parts[parts.length - 1]
+    }
 
     // QR 코드 조회
     const { data: qrData, error: qrError } = await supabase
@@ -515,7 +522,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
     if (existingRecord && existingRecord.check_in_time) {
       return {
         success: false,
-        message: 'Already checked in for today',
+        message: '오늘 이미 출근하셨습니다.',
         record: existingRecord as AttendanceRecord,
       }
     }
@@ -550,9 +557,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 
       return {
         success: true,
-        message: detectedBranchName
-          ? `${detectedBranchName}에서 출근하셨습니다.`
-          : 'Checked in successfully',
+        message: '출근 처리되었습니다.',
         record: updatedRecord as AttendanceRecord,
       }
     } else {
@@ -581,9 +586,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 
       return {
         success: true,
-        message: detectedBranchName
-          ? `${detectedBranchName}에서 출근하셨습니다.`
-          : 'Checked in successfully',
+        message: '출근 처리되었습니다.',
         record: newRecord as AttendanceRecord,
       }
     }
@@ -632,21 +635,21 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
     if (!existingRecord) {
       return {
         success: false,
-        message: 'No check-in record found. Please check in first.',
+        message: '출근 기록이 없습니다. 먼저 출근해주세요.',
       }
     }
 
     if (!existingRecord.check_in_time) {
       return {
         success: false,
-        message: 'No check-in time recorded. Please check in first.',
+        message: '출근 시간이 기록되지 않았습니다. 먼저 출근해주세요.',
       }
     }
 
     if (existingRecord.check_out_time) {
       return {
         success: false,
-        message: 'Already checked out for today',
+        message: '오늘 이미 퇴근하셨습니다.',
         record: existingRecord as AttendanceRecord,
       }
     }
@@ -673,7 +676,7 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
 
     return {
       success: true,
-      message: 'Checked out successfully',
+      message: '퇴근 처리되었습니다.',
       record: updatedRecord as AttendanceRecord,
     }
   } catch (error: any) {
@@ -883,6 +886,7 @@ export async function getTeamAttendanceStatus(
           date,
           total_employees: 0,
           checked_in: 0,
+          checked_out: 0,
           not_checked_in: 0,
           on_leave: 0,
           late_count: 0,
@@ -913,8 +917,11 @@ export async function getTeamAttendanceStatus(
       user_name: string
       status: AttendanceStatus
       check_in_time?: string | null
+      check_out_time?: string | null
       scheduled_start?: string | null
+      scheduled_end?: string | null
       late_minutes: number
+      early_leave_minutes: number
     }
 
     const employees: EmployeeStatusItem[] = (users || []).map((user: { id: string; name: string; role: string }) => {
@@ -925,12 +932,16 @@ export async function getTeamAttendanceStatus(
         user_name: user.name,
         status: record?.status || 'absent',
         check_in_time: record?.check_in_time,
+        check_out_time: record?.check_out_time,
         scheduled_start: record?.scheduled_start,
+        scheduled_end: record?.scheduled_end,
         late_minutes: record?.late_minutes || 0,
+        early_leave_minutes: record?.early_leave_minutes || 0,
       }
     })
 
     const checkedIn = employees.filter((e) => e.check_in_time).length
+    const checkedOut = employees.filter((e) => e.check_out_time).length
     const onLeave = employees.filter((e) => e.status === 'leave').length
     const lateCount = employees.filter((e) => e.status === 'late').length
 
@@ -940,6 +951,7 @@ export async function getTeamAttendanceStatus(
         date,
         total_employees: employees.length,
         checked_in: checkedIn,
+        checked_out: checkedOut,
         not_checked_in: employees.length - checkedIn - onLeave,
         on_leave: onLeave,
         late_count: lateCount,
