@@ -4,6 +4,77 @@
 
 ---
 
+## 2025-11-18 [버그 수정] Admin API "User not allowed" 에러 해결
+
+**키워드:** #AdminAPI #ServiceRoleKey #NextJS #APIRoute #Context7 #보안
+
+### 📋 작업 내용
+- API Route 생성하여 서버에서 Admin API 호출
+- master/page.tsx에서 fetch로 API Route 호출하도록 수정
+- SUPABASE_SERVICE_ROLE_KEY 환경 변수 추가
+- **Context7으로 Supabase 공식 문서 확인 후 구현** ✨
+
+### 🐛 문제
+**증상:**
+```
+AuthApiError: User not allowed
+
+at async Object.getAllUsersWithEmailStatus (src\lib\dataService.ts:1545:9)
+at async loadData (src\app\master\page.tsx:89:27)
+```
+
+### 🔍 근본 원인 (Context7 확인)
+**Supabase 공식 문서:**
+> Any method under `supabase.auth.admin` namespace requires a `service_role` key.
+> These methods should be called on a trusted server. **Never expose your service_role key in the browser.**
+
+- 브라우저(Client Component)에서 ANON_KEY로 `supabase.auth.admin.listUsers()` 호출
+- Admin API는 SERVICE_ROLE_KEY 필수 (서버 전용)
+
+### ✅ 해결 방법 (Context7 공식 패턴)
+
+**Supabase 공식 Admin Client 초기화:**
+```typescript
+const supabase = createClient(url, service_role_key, {
+  auth: {
+    autoRefreshToken: false,  // 서버 환경
+    persistSession: false     // 서버 환경
+  }
+})
+```
+
+**1. API Route 생성** (`src/app/api/admin/users/route.ts`)
+**2. master/page.tsx 수정** (fetch('/api/admin/users'))
+**3. 환경 변수 추가** (SUPABASE_SERVICE_ROLE_KEY)
+
+### 🧪 테스트 결과
+✅ `GET /api/admin/users 200 in 3139ms`
+✅ 11명 사용자 + 이메일 인증 상태 정상 표시
+✅ "User not allowed" 에러 해결
+
+### 💡 배운 점
+
+#### Context7 MCP의 중요성 ✨
+> **항상 Context7으로 공식 문서를 먼저 확인하자!**
+
+**Before Context7:**
+- 추측으로 해결 시도 → 시행착오 반복
+
+**After Context7:**
+- Supabase 공식 패턴 확인 → 한 번에 해결
+- `autoRefreshToken: false`, `persistSession: false` 등 정확한 설정
+
+### 📊 관련 파일
+- `src/app/api/admin/users/route.ts` (신규)
+- `src/app/master/page.tsx:89-91` (수정)
+- `.env.local` (SUPABASE_SERVICE_ROLE_KEY 추가)
+
+### 🔗 Context7 참고 문서
+- `/supabase/supabase` - Admin API 공식 가이드
+- Next.js App Router API Route 패턴
+
+---
+
 ## 2025-11-18 [버그 수정] 대표원장 가입 시 마스터 승인 필수화
 
 **키워드:** #회원가입 #승인프로세스 #RPC #마이그레이션 #보안
