@@ -65,7 +65,7 @@ BEGIN
     p_resident_number,
     'owner',
     v_clinic_id,
-    'active'
+    'pending'
   );
 
   -- 3. Return result
