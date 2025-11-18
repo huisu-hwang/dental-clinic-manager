@@ -4,6 +4,130 @@
 
 ---
 
+## 2025-11-18 [보안 강화] 이메일 인증 후 승인 대기 사용자 자동 로그인 차단
+
+**키워드:** #보안 #인증 #이메일인증 #CallbackRoute #RootCauseAnalysis
+
+### 📋 작업 내용
+- 이메일 인증 콜백에서 사용자 status 기반 리다이렉트 로직 추가
+- pending/rejected/suspended 사용자는 `/pending-approval` 페이지로 안내
+- active 사용자만 메인 페이지 접근 허용
+
+### 🐛 문제
+
+**증상:**
+- 신규 대표원장이 회원가입 후 이메일 인증만 완료하면 마스터 승인 없이 로그인됨
+- Supabase 이메일 인증 링크 클릭 → 바로 메인 페이지(hi-clinic.co.kr)로 연결
+- 승인 안된 계정으로 로그인하면 빈 일일 보고서 폼으로 연결 (아무것도 입력 불가)
+- "승인 대기 중" 안내 없이 혼란스러운 UX
+
+**보안 영향:**
+- 이메일 인증만으로 시스템 접근 가능 (마스터 승인 우회)
+- LoginForm.tsx의 status 체크를 완전히 우회
+- pending 사용자가 제한된 기능에 접근 시도
+
+### 🔍 근본 원인 (5 Whys 분석)
+
+**Q1: 왜 pending 사용자가 메인 페이지에 접근할 수 있었나?**
+→ A: 이메일 인증 링크 클릭 시 자동으로 로그인 세션 생성되고 메인 페이지로 리다이렉트됨
+
+**Q2: 왜 이메일 인증만으로 로그인 세션이 생성되나?**
+→ A: `/auth/callback`에서 `verifyOtp()` 성공 시 자동으로 Supabase 세션 생성
+
+**Q3: 왜 callback에서 status를 확인하지 않았나?**
+→ A: 이메일 인증 = 시스템 접근 권한으로 잘못 가정했기 때문
+
+**Q4: 왜 LoginForm.tsx의 status 체크가 작동하지 않았나?**
+→ A: 사용자가 LoginForm을 거치지 않고 이메일 링크로 직접 로그인했기 때문
+
+**Q5: 왜 빈 폼이 표시되었나?**
+→ A: Middleware는 Supabase 세션만 확인하고 status는 확인하지 않아서 접근 허용됨
+
+**결론:** 이메일 인증 ≠ 시스템 접근 권한. **이메일 인증 직후에도 status 검증 필수**
+
+### ✅ 해결 방법
+
+**파일:** `src/app/auth/callback/route.ts`
+
+**위치:** Lines 27-63
+
+**핵심 로직:**
+```typescript
+// 이메일 인증 성공 후 사용자 프로필 조회
+const { data: { user } } = await supabase.auth.getUser()
+
+if (user) {
+  const { data: profile } = await supabase
+    .from('users')
+    .select('status, email')
+    .eq('id', user.id)
+    .single()
+
+  // status에 따라 적절한 페이지로 리다이렉트
+  if (profile?.status === 'pending') {
+    return NextResponse.redirect(new URL('/pending-approval', request.url))
+  } else if (profile?.status === 'rejected') {
+    return NextResponse.redirect(new URL('/pending-approval', request.url))
+  } else if (profile?.status === 'suspended') {
+    return NextResponse.redirect(new URL('/pending-approval', request.url))
+  }
+  // status='active'만 메인 페이지로
+}
+
+return NextResponse.redirect(new URL(next, request.url))
+```
+
+### 🔒 보안 개선 효과
+
+**Before (취약점):**
+```
+이메일 인증 링크 클릭 → 자동 로그인 → 메인 페이지 ❌
+(pending 사용자도 접근 가능)
+```
+
+**After (보안 강화):**
+```
+이메일 인증 링크 클릭 → status 확인
+  ├─ pending → /pending-approval (승인 대기 안내) ✅
+  ├─ rejected → /pending-approval (거절 안내) ✅
+  ├─ suspended → /pending-approval (중지 안내) ✅
+  └─ active → 메인 페이지 ✅
+```
+
+**다층 방어 (Defense in Depth):**
+1. **이메일 인증 콜백** (Line 27-63): status 기반 리다이렉트 ✅ ← **새로 추가**
+2. **LoginForm.tsx** (Line 162-178): 로그인 시 status 검증 ✅
+3. **AuthContext.checkAuth()**: 페이지 로드 시 검증 ✅
+4. **Middleware.ts**: 세션 확인 ✅
+
+### 💡 핵심 교훈
+
+**1. 인증(Authentication) ≠ 인가(Authorization)**
+- 이메일 인증: "당신이 이메일 주인이 맞습니다" ✓
+- 시스템 접근 권한: "당신은 승인받았습니다" ✓✓
+- 두 가지는 별개의 검증 과정
+
+**2. 모든 진입점에서 권한 검증 필수**
+- LoginForm을 우회하는 경로 존재 (이메일 링크)
+- 모든 진입점에서 동일한 검증 필요
+
+**3. 사용자 경험과 보안의 균형**
+- pending 사용자에게 명확한 안내 제공 (/pending-approval)
+- 빈 화면 대신 상태별 적절한 메시지
+
+### 📝 관련 파일
+- `src/app/auth/callback/route.ts:27-63` (status 기반 리다이렉트 추가)
+- `src/app/pending-approval/page.tsx` (승인 대기 안내 페이지)
+
+### 📧 향후 개선 사항 (선택)
+
+**승인 완료 알림 기능:**
+- Supabase Database Webhook으로 status 변경 감지
+- 승인 시 자동 이메일/SMS 발송
+- Sendgrid, Twilio 등 외부 서비스 연동 필요
+
+---
+
 ## 2025-11-18 [UI/UX 개선] 회원가입 완료 후 버튼 중복 표시 방지
 
 **키워드:** #UX개선 #회원가입 #조건부렌더링 #UI일관성

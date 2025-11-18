@@ -26,7 +26,40 @@ export async function GET(request: NextRequest) {
 
     if (!error) {
       console.log('[Auth Callback] Email verification successful')
-      // 인증 성공 시 지정된 페이지로 리다이렉트
+
+      // 사용자 프로필 조회하여 status 확인
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user) {
+        console.log('[Auth Callback] Checking user status for:', user.id)
+        const { data: profile, error: profileError } = await supabase
+          .from('users')
+          .select('status, email')
+          .eq('id', user.id)
+          .single()
+
+        if (profileError) {
+          console.error('[Auth Callback] Error fetching user profile:', profileError)
+        } else if (profile) {
+          console.log('[Auth Callback] User profile:', { status: profile.status, email: profile.email })
+
+          // status에 따라 적절한 페이지로 리다이렉트
+          if (profile.status === 'pending') {
+            console.log('[Auth Callback] User is pending approval, redirecting to /pending-approval')
+            return NextResponse.redirect(new URL('/pending-approval', request.url))
+          } else if (profile.status === 'rejected') {
+            console.log('[Auth Callback] User was rejected, redirecting to /pending-approval')
+            return NextResponse.redirect(new URL('/pending-approval', request.url))
+          } else if (profile.status === 'suspended') {
+            console.log('[Auth Callback] User is suspended, redirecting to /pending-approval')
+            return NextResponse.redirect(new URL('/pending-approval', request.url))
+          }
+          // status='active'만 메인 페이지로
+          console.log('[Auth Callback] User is active, redirecting to:', next)
+        }
+      }
+
+      // status='active' 또는 프로필 조회 실패 시 지정된 페이지로 리다이렉트
       return NextResponse.redirect(new URL(next, request.url))
     }
 
