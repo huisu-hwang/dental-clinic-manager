@@ -86,7 +86,9 @@ export default function MasterAdminPage() {
       setClinics(clinicsResult?.data || [])
 
       // 사용자 목록 조회 (이메일 인증 상태 포함)
-      const usersResult = await dataService.getAllUsersWithEmailStatus()
+      // Admin API Route를 통해 서버에서 조회 (SERVICE_ROLE_KEY 사용)
+      const response = await fetch('/api/admin/users')
+      const usersResult = await response.json()
       console.log('[Master] Users result:', usersResult)
       const allUsers = usersResult?.data || []
       setUsers(allUsers)
