@@ -4,6 +4,138 @@
 
 ---
 
+## 2025-11-18 [버그 수정] Admin API 종합 마이그레이션 (deleteUser, rejectUser, deleteClinic)
+
+**키워드:** #AdminAPI #ServiceRoleKey #NextJS #APIRoute #보안 #마이그레이션
+
+### 📋 작업 내용
+- 모든 Admin API 호출을 서버 측 API Route로 마이그레이션
+- 3개 API Route 생성: DELETE /api/admin/users/delete, POST /api/admin/users/reject, DELETE /api/admin/clinics/delete
+- dataService.ts의 3개 함수 수정하여 API Route 호출로 변경
+- Chrome DevTools로 실제 시나리오 테스트 및 검증
+
+### 🐛 문제
+**증상 1: deleteUser 에러**
+```
+AuthApiError: User not allowed
+at async Object.deleteUser (src\lib\dataService.ts:1307:42)
+```
+
+**증상 2: rejectUser 빈 에러 객체**
+```
+Error rejecting user: {}
+at Object.rejectUser (src\lib\dataService.ts:1475:15)
+```
+
+### 🔍 근본 원인
+1. **deleteUser, deleteClinic**: Browser에서 ANON_KEY로 `supabase.auth.admin.deleteUser()` 호출
+   - Admin API는 SERVICE_ROLE_KEY 필수 (서버 전용)
+
+2. **rejectUser**:
+   - `review_note` 컬럼이 `users` 테이블이 아닌 `clinic_join_requests` 테이블에 존재
+   - Cookie 파싱 로직 오류 (base64 인코딩된 값을 JSON.parse 시도)
+
+### ✅ 해결 방법
+
+**패턴:** listUsers 성공 사례와 동일한 방식 적용
+
+**1. API Routes 생성 (3개)**
+
+`src/app/api/admin/users/delete/route.ts`:
+```typescript
+export async function DELETE(request: Request) {
+  const supabase = createClient(url, SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  })
+
+  // 1. auth.users 삭제 (Admin API)
+  await supabase.auth.admin.deleteUser(userId)
+
+  // 2. public.users 삭제
+  await supabase.from('users').delete().eq('id', userId)
+}
+```
+
+`src/app/api/admin/users/reject/route.ts`:
+```typescript
+export async function POST(request: Request) {
+  const supabase = createClient(url, SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  })
+
+  // users 테이블 업데이트 (review_note 제거)
+  await supabase.from('users').update({
+    status: 'rejected',
+    approved_at: new Date().toISOString()
+  })
+}
+```
+
+`src/app/api/admin/clinics/delete/route.ts`:
+```typescript
+export async function DELETE(request: Request) {
+  // 1. 병원의 모든 사용자 조회
+  // 2. 각 사용자의 auth.users 삭제 (Admin API)
+  // 3. 관련 데이터 삭제 (appointments, inventory, etc.)
+  // 4. public.users 삭제
+  // 5. clinics 삭제
+}
+```
+
+**2. dataService.ts 수정 (3개 함수)**
+
+Before:
+```typescript
+const supabase = await ensureConnection()  // ANON_KEY
+await supabase.auth.admin.deleteUser(userId)  // ❌ 권한 없음
+```
+
+After:
+```typescript
+const response = await fetch('/api/admin/users/delete', {
+  method: 'DELETE',
+  body: JSON.stringify({ userId })
+})
+```
+
+### 🧪 테스트 결과 (Chrome DevTools)
+✅ **rejectUser 테스트**
+- 거절 사유 입력 → 정상 처리
+- 승인 대기 목록에서 제거 확인
+- 콘솔 로그: `[Admin API - Reject User] User rejected successfully`
+- 결과: "사용자가 거절되었습니다." 알림 표시
+
+✅ **데이터베이스 확인**
+- 거절된 사용자 status='rejected' 업데이트 확인
+- approved_at 타임스탬프 기록 확인
+
+### 💡 배운 점
+
+**1. Admin API 보안 패턴**
+- **절대 원칙**: SERVICE_ROLE_KEY는 브라우저에 노출 금지
+- **해결책**: 모든 Admin API 호출은 서버 측(API Route)에서만 실행
+- **검증**: Context7으로 Supabase 공식 문서 확인 필수
+
+**2. 데이터베이스 스키마 확인 중요성**
+- `review_note` 컬럼 위치 확인 (users vs clinic_join_requests)
+- 마이그레이션 파일로 실제 스키마 검증
+- 에러 메시지 "Could not find column" → 즉시 스키마 확인
+
+**3. 체계적 마이그레이션**
+- 유사한 문제는 일괄 해결 (deleteUser, rejectUser, deleteClinic)
+- 성공 사례 패턴 재사용 (listUsers → 다른 Admin API)
+- Chrome DevTools로 실제 사용자 시나리오 검증
+
+### 📝 관련 파일
+- `src/app/api/admin/users/delete/route.ts` (NEW)
+- `src/app/api/admin/users/reject/route.ts` (NEW)
+- `src/app/api/admin/clinics/delete/route.ts` (NEW)
+- `src/lib/dataService.ts:1237-1260` (deleteClinic 수정)
+- `src/lib/dataService.ts:1262-1323` (deleteUser 수정)
+- `src/lib/dataService.ts:1447-1471` (rejectUser 수정)
+
+---
+
 ## 2025-11-18 [버그 수정] Admin API "User not allowed" 에러 해결
 
 **키워드:** #AdminAPI #ServiceRoleKey #NextJS #APIRoute #Context7 #보안

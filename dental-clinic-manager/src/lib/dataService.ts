@@ -1235,58 +1235,21 @@ export const dataService = {
 
   // 병원 삭제 (마스터 전용)
   async deleteClinic(clinicId: string) {
-    const supabase = await ensureConnection()
-    if (!supabase) throw new Error('Supabase client not available')
-
     try {
-      // 1. 해당 병원의 모든 사용자 ID 조회
-      console.log('[deleteClinic] Fetching users for clinic:', clinicId)
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('clinic_id', clinicId)
+      console.log('[deleteClinic] Calling Admin API to delete clinic:', clinicId)
 
-      if (usersError) {
-        console.error('[deleteClinic] Error fetching users:', usersError)
-        throw usersError
+      const response = await fetch('/api/admin/clinics/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clinicId })
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        console.error('[deleteClinic] Error from Admin API:', result.error)
+        throw new Error(result.error)
       }
-
-      // 2. 각 사용자의 auth.users 삭제 (고아 계정 방지)
-      if (users && users.length > 0) {
-        console.log(`[deleteClinic] Deleting ${users.length} auth users`)
-        for (const user of users) {
-          try {
-            const { error: authDeleteError } = await supabase.auth.admin.deleteUser(user.id)
-            if (authDeleteError) {
-              console.error(`[deleteClinic] Error deleting auth user ${user.id}:`, authDeleteError)
-              // 계속 진행 (일부 실패해도 나머지는 삭제)
-            } else {
-              console.log(`[deleteClinic] Deleted auth user ${user.id}`)
-            }
-          } catch (err) {
-            console.error(`[deleteClinic] Exception deleting auth user ${user.id}:`, err)
-          }
-        }
-      }
-
-      // 3. 관련 데이터 삭제 (CASCADE로 처리되지 않는 것들)
-      console.log('[deleteClinic] Deleting related data')
-      await supabase.from('appointments').delete().eq('clinic_id', clinicId)
-      await supabase.from('inventory').delete().eq('clinic_id', clinicId)
-      await supabase.from('inventory_categories').delete().eq('clinic_id', clinicId)
-      await supabase.from('patients').delete().eq('clinic_id', clinicId)
-
-      // 4. users 삭제 (auth.users는 이미 삭제했으므로 public.users만 삭제)
-      await supabase.from('users').delete().eq('clinic_id', clinicId)
-
-      // 5. 병원 삭제
-      console.log('[deleteClinic] Deleting clinic')
-      const { error } = await supabase
-        .from('clinics')
-        .delete()
-        .eq('id', clinicId)
-
-      if (error) throw error
 
       console.log('[deleteClinic] Clinic deleted successfully')
       return { success: true }
@@ -1298,28 +1261,21 @@ export const dataService = {
 
   // 사용자 삭제 (마스터 전용)
   async deleteUser(userId: string) {
-    const supabase = await ensureConnection()
-    if (!supabase) throw new Error('Supabase client not available')
-
     try {
-      // 1. auth.users 삭제 (고아 계정 방지)
-      console.log('[deleteUser] Deleting auth user:', userId)
-      const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId)
+      console.log('[deleteUser] Calling Admin API to delete user:', userId)
 
-      if (authDeleteError) {
-        console.error('[deleteUser] Error deleting auth user:', authDeleteError)
-        throw authDeleteError
+      const response = await fetch('/api/admin/users/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        console.error('[deleteUser] Error from Admin API:', result.error)
+        throw new Error(result.error)
       }
-
-      console.log('[deleteUser] Auth user deleted, deleting public user')
-
-      // 2. public.users 삭제 (CASCADE로 관련 데이터 자동 삭제)
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', userId)
-
-      if (error) throw error
 
       console.log('[deleteUser] User deleted successfully')
       return { success: true }
@@ -1453,23 +1409,23 @@ export const dataService = {
 
   // 사용자 거절 (직원 관리)
   async rejectUser(userId: string, clinicId: string, reason: string) {
-    const supabase = await ensureConnection()
-    if (!supabase) throw new Error('Supabase client not available')
-
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      console.log('[rejectUser] Calling Admin API to reject user:', userId)
 
-      const { error } = await (supabase.from('users') as any)
-        .update({
-          status: 'rejected',
-          review_note: reason,
-          approved_by: user?.id,
-          approved_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
-        .eq('clinic_id', clinicId)
+      const response = await fetch('/api/admin/users/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, clinicId, reason })
+      })
 
-      if (error) throw error
+      const result = await response.json()
+
+      if (!result.success) {
+        console.error('[rejectUser] Error from Admin API:', result.error)
+        throw new Error(result.error)
+      }
+
+      console.log('[rejectUser] User rejected successfully')
       return { success: true }
     } catch (error: unknown) {
       console.error('Error rejecting user:', error)
