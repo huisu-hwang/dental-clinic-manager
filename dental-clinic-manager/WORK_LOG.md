@@ -4,6 +4,103 @@
 
 ---
 
+## 2025-11-18 [UI/UX 개선] 회원가입 완료 후 수동 페이지 전환
+
+**키워드:** #UX개선 #회원가입 #사용자경험
+
+### 📋 작업 내용
+- 회원가입 완료 후 자동 화면 전환 제거 (8초 타이머 삭제)
+- "로그인 페이지로 가기" 버튼 추가
+- 사용자가 직접 버튼 클릭하여 로그인 페이지로 이동
+
+### 🎯 개선 목표
+**Before (문제점):**
+- 회원가입 완료 후 8초 후 자동으로 로그인 페이지로 이동
+- 사용자가 성공 메시지를 충분히 읽기 어려움
+- 예상치 못한 화면 전환으로 혼란 가능
+
+**After (개선):**
+- 사용자가 성공 메시지를 충분히 확인할 시간 제공
+- 명확한 "로그인 페이지로 가기" 버튼으로 액션 유도
+- 사용자 주도적인 화면 전환
+
+### ✅ 구현 내용
+
+**파일:** `src/components/Auth/SignupForm.tsx`
+
+**1. 자동 redirect 타이머 제거**
+- Lines 285-291 제거
+
+Before:
+```typescript
+setTimeout(() => {
+  onSignupSuccess({
+    email: formData.userId,
+    name: formData.name,
+    role: formData.role
+  });
+}, 8000);  // 8초 후 자동 이동
+```
+
+After:
+```typescript
+// 타이머 완전 제거
+```
+
+**2. 성공 메시지에 버튼 추가**
+- Lines 706-731 수정
+
+```typescript
+{success && (
+  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
+    {/* 성공 메시지 */}
+    <div className="flex items-start space-x-3 mb-4">
+      {/* ... 기존 메시지 ... */}
+    </div>
+
+    {/* 새로 추가된 버튼 */}
+    <button
+      onClick={() => onSignupSuccess({
+        email: formData.userId,
+        name: formData.name,
+        role: formData.role
+      })}
+      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors shadow-sm hover:shadow-md"
+    >
+      로그인 페이지로 가기
+    </button>
+  </div>
+)}
+```
+
+### 🔄 변경 후 동작 흐름
+
+1. 사용자가 회원가입 양식 작성 및 제출
+2. 성공 시 이메일 인증 안내 메시지 표시
+3. **사용자가 메시지를 읽고 충분히 확인**
+4. **"로그인 페이지로 가기" 버튼 클릭**
+5. 로그인 페이지로 이동
+
+### 💡 UX 개선 효과
+
+**1. 사용자 제어권 향상**
+- 자동 전환이 아닌 사용자 주도적 페이지 이동
+- 성공 메시지를 충분히 읽을 수 있는 시간 확보
+
+**2. 명확한 액션 유도**
+- "로그인 페이지로 가기" 명확한 버튼 레이블
+- 다음 단계가 무엇인지 직관적으로 이해
+
+**3. 예상 가능한 UX**
+- 갑작스러운 화면 전환 제거
+- 사용자가 준비되었을 때 이동
+
+### 📝 관련 파일
+- `src/components/Auth/SignupForm.tsx:285-291` (타이머 제거)
+- `src/components/Auth/SignupForm.tsx:706-731` (버튼 추가)
+
+---
+
 ## 2025-11-18 [버그 수정] Admin API 종합 마이그레이션 (deleteUser, rejectUser, deleteClinic)
 
 **키워드:** #AdminAPI #ServiceRoleKey #NextJS #APIRoute #보안 #마이그레이션

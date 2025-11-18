@@ -282,14 +282,6 @@ export default function SignupForm({
         setSuccess(`회원가입 신청이 완료되었습니다!\n\n📧 ${formData.userId}로 인증 이메일이 발송되었습니다.\n\n1️⃣ 이메일함을 확인하여 인증 링크를 클릭해주세요.\n2️⃣ 이메일 인증 완료 후 병원 관리자의 승인을 받으시면 로그인하실 수 있습니다.\n\n※ 이메일이 보이지 않으면 스팸함을 확인해주세요.`);
       }
 
-      setTimeout(() => {
-        onSignupSuccess({
-          email: formData.userId,
-          name: formData.name,
-          role: formData.role
-        });
-      }, 8000);
-
     } catch (error: unknown) {
       console.error('[Signup] Signup error:', error);
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
@@ -713,7 +705,7 @@ export default function SignupForm({
 
             {success && (
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
-                <div className="flex items-start space-x-3">
+                <div className="flex items-start space-x-3 mb-4">
                   <div className="flex-shrink-0">
                     <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -725,6 +717,16 @@ export default function SignupForm({
                     </p>
                   </div>
                 </div>
+                <button
+                  onClick={() => onSignupSuccess({
+                    email: formData.userId,
+                    name: formData.name,
+                    role: formData.role
+                  })}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors shadow-sm hover:shadow-md"
+                >
+                  로그인 페이지로 가기
+                </button>
               </div>
             )}
 
