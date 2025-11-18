@@ -4,6 +4,146 @@
 
 ---
 
+## 2025-11-18 [버그 수정] 대표원장 가입 시 마스터 승인 필수화
+
+**키워드:** #회원가입 #승인프로세스 #RPC #마이그레이션 #보안
+
+### 📋 작업 내용
+- `create_clinic_with_owner` RPC 함수 수정: status='active' → 'pending'
+- 대표원장 가입 시 이메일 인증 + 마스터 승인 후 로그인 가능하도록 변경
+- 마스터 대시보드에 이메일 인증 상태 표시 (기존 구현 확인)
+- Supabase RPC 함수 자동 적용 스크립트 작성
+
+### 🐛 문제
+**증상:**
+1. 대표원장이 이메일 인증만 하면 마스터 승인 없이 바로 대시보드 접근 가능
+2. 마스터 대시보드의 승인 대기 목록이 비어있음 (대표원장이 표시되지 않음)
+
+**요구사항:**
+- 대표원장도 이메일 인증 + 마스터 승인 후에만 로그인 가능
+- 승인 대기 목록에서 이메일 인증 상태 확인 가능
+
+### 🔍 근본 원인 (5 Whys)
+
+**Why 1: 왜 대표원장이 바로 로그인되는가?**
+→ `status='active'`로 사용자가 생성되기 때문
+
+**Why 2: 왜 status='active'로 생성되는가?**
+→ Supabase RPC 함수 `create_clinic_with_owner`가 'active'로 INSERT하기 때문
+
+**Why 3: 왜 RPC 함수가 'active'로 설정하는가?**
+→ 마이그레이션 파일이 수정되었지만 Supabase에 적용되지 않았기 때문
+
+**Why 4: 왜 마이그레이션이 적용되지 않았는가?**
+→ 로컬에서 파일을 수정했지만 **Supabase Studio나 CLI로 실행하지 않았기 때문**
+
+**Why 5 (근본 원인): 왜 실행하지 않았는가?**
+→ 커밋만 하고 **Supabase에 직접 SQL을 실행하는 절차를 누락**했기 때문
+
+### ✅ 해결 방법
+
+#### 1. 자동 적용 스크립트 작성
+**파일:** `scripts/apply-rpc-pending-fix.js`
+- PostgreSQL 직접 연결하여 마이그레이션 SQL 실행
+- 함수 존재 여부 및 'pending' 설정 검증
+- 에러 발생 시 수동 적용 방법 안내
+
+**핵심 코드:**
+```javascript
+const { Pool } = require('pg')
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+})
+
+const client = await pool.connect()
+await client.query(sqlContent) // 마이그레이션 SQL 실행
+```
+
+#### 2. Supabase RPC 함수 업데이트
+**파일:** `supabase/migrations/20251117_create_clinic_with_owner.sql:68`
+```sql
+INSERT INTO users (...)
+VALUES (
+  ...,
+  'owner',
+  v_clinic_id,
+  'pending'  -- ← 'active'에서 'pending'으로 변경
+);
+```
+
+#### 3. 마스터 대시보드 확인
+**파일:** `src/app/master/page.tsx:418, 431-439`
+- 이미 "이메일 인증" 컬럼이 구현되어 있음을 확인
+- `email_verified` 상태에 따라 뱃지 표시:
+  - ✓ 인증완료 (녹색)
+  - ⚠️ 미인증 (노란색)
+
+### 🧪 테스트 결과
+
+#### 1. RPC 함수 업데이트 검증
+```bash
+$ node scripts/apply-rpc-pending-fix.js
+🚀 RPC 함수 업데이트 시작...
+✅ 데이터베이스 연결 성공
+✅ SQL 실행 완료
+✅ 함수 확인 완료: create_clinic_with_owner 존재
+✅ status='pending' 설정 확인 완료
+🎉 작업 완료!
+```
+
+#### 2. Chrome DevTools 테스트
+- 회원가입 페이지 정상 작동 확인
+- 대표원장 회원가입 폼 표시 확인
+- 마스터 대시보드 이메일 인증 상태 컬럼 확인
+
+#### 3. 기존 데이터 처리
+- 사용자 선택: 기존 'active' 상태 대표원장은 그대로 유지
+- 새로 가입하는 대표원장부터 승인 필요
+
+### 💡 배운 점
+
+#### 1. 마이그레이션 적용 프로세스
+- **교훈:** 마이그레이션 파일 수정만으로는 데이터베이스에 반영되지 않음
+- **해결:** Supabase Studio SQL Editor 또는 자동화 스크립트 필요
+- **개선:** PostgreSQL Pool을 사용한 자동 적용 스크립트 작성
+
+#### 2. RPC 함수 디버깅
+- **검증 방법:** Supabase Studio의 Database → Functions에서 함수 정의 확인
+- **테스트 방법:** `information_schema.routines` 테이블 쿼리로 함수 존재 및 정의 확인
+```sql
+SELECT routine_name, routine_definition
+FROM information_schema.routines
+WHERE routine_schema = 'public'
+AND routine_name = 'create_clinic_with_owner'
+```
+
+#### 3. 이중 승인 시스템
+- **Supabase 이메일 인증:** `auth.users.email_confirmed_at`
+- **마스터 관리자 승인:** `public.users.status`
+- **통합 확인:** `getAllUsersWithEmailStatus()` 메서드로 두 상태 병합
+
+#### 4. 환경 변수 관리
+- `.env.local` 파일에서 `DATABASE_URL` 사용
+- `dotenv` 패키지로 환경 변수 로드
+- PostgreSQL SSL 연결 설정 필요: `{ ssl: { rejectUnauthorized: false } }`
+
+### 📊 관련 파일
+
+| 파일 | 라인 | 변경 내용 |
+|------|------|----------|
+| `supabase/migrations/20251117_create_clinic_with_owner.sql` | 68 | status: 'pending' |
+| `scripts/apply-rpc-pending-fix.js` | - | 신규 생성 (마이그레이션 자동 적용) |
+| `src/app/master/page.tsx` | 418, 431-439 | 이메일 인증 상태 표시 (기존) |
+| `src/lib/dataService.ts` | 1522-1570 | `getAllUsersWithEmailStatus()` (기존) |
+
+### 🔗 참고 자료
+- Supabase RPC Functions: Security Definer 사용
+- PostgreSQL `pg` 패키지: Connection Pool 관리
+- Git Commit: `6c8ceb6` (develop 브랜치)
+
+---
+
 ## 2025-11-15 [버그 수정] 팀 출근 현황 표시 문제 해결 (진행 중) 🔄
 
 **키워드:** #출근관리 #RLS #primary_branch_id #디버깅
