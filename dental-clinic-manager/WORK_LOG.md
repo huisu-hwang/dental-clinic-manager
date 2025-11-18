@@ -4,6 +4,113 @@
 
 ---
 
+## 2025-11-18 [보안 강화] 승인 대기/거절 사용자 로그인 차단
+
+**키워드:** #보안 #인증 #사용자상태검증 #LoginForm #RootCauseAnalysis
+
+### 📋 작업 내용
+- LoginForm.tsx에 사용자 상태(status) 검증 로직 추가
+- 'pending' (승인 대기) 및 'rejected' (거절) 사용자의 로그인 차단
+- 상태별 명확한 에러 메시지 제공
+
+### 🐛 문제
+**증상:**
+- 대표 원장 계정으로 회원가입 후 이메일 인증만 완료하면 마스터 승인 없이 로그인 가능
+- 로그인 과정에서 "승인 중입니다" 메시지가 잠깐 보이다가 메인 대시보드로 전환됨
+- 거절된 사용자도 로그인 시도 시 차단되지 않음
+
+**보안 영향:**
+- 승인되지 않은 사용자가 시스템에 접근 가능
+- 관리자의 승인 프로세스가 우회됨
+
+### 🔍 근본 원인 (5 Whys 분석)
+
+**Q1: 왜 pending 사용자가 로그인할 수 있었나?**
+→ A: LoginForm.tsx에서 사용자 status를 검증하지 않음
+
+**Q2: 왜 status 검증이 없었나?**
+→ A: clinic.status만 체크하고 user.status는 체크하지 않음 (line 154-160)
+
+**Q3: 왜 user.status 체크를 누락했나?**
+→ A: AuthContext의 checkAuth()가 처리한다고 가정했기 때문
+
+**Q4: 왜 checkAuth()가 처리하지 못했나?**
+→ A: checkAuth()는 페이지 로드 시에만 실행되며, 로그인 흐름 중에는 실행되지 않음
+
+**Q5: 왜 타이밍 이슈가 발생했나?**
+→ A: LoginForm에서 login() 호출 → localStorage 저장 → window.location.reload() → 리다이렉트 발생 → checkAuth() 실행 전에 대시보드로 이동
+
+**결론:** 인증 상태 검증은 **가장 빠른 지점(LoginForm)**에서 수행해야 함
+
+### ✅ 해결 방법
+
+**파일:** `src/components/Auth/LoginForm.tsx`
+
+**위치:** Lines 162-178 (clinic.status 체크 바로 다음)
+
+**1. 승인 대기 사용자 차단**
+```typescript
+// 3.6. 승인 대기 중인 사용자 체크
+if (result.data.status === 'pending') {
+  console.warn('[LoginForm] User is pending approval:', result.data.id)
+  setError('승인 대기 중입니다.\n\n1️⃣ 이메일 인증을 완료하셨습니다.\n2️⃣ 관리자의 승인을 기다리고 있습니다.\n\n승인 후 로그인이 가능합니다.')
+  await supabase.auth.signOut()  // Supabase 세션 클리어
+  setLoading(false)
+  return  // login() 호출 방지
+}
+```
+
+**2. 거절된 사용자 차단**
+```typescript
+// 3.7. 거절된 사용자 체크
+if (result.data.status === 'rejected') {
+  console.warn('[LoginForm] User was rejected:', result.data.id)
+  setError('가입 신청이 거절되었습니다.\n\n관리자에게 문의해주세요.')
+  await supabase.auth.signOut()  // Supabase 세션 클리어
+  setLoading(false)
+  return  // login() 호출 방지
+}
+```
+
+### 🔒 보안 개선 효과
+
+**Before (취약점):**
+```
+회원가입 → 이메일 인증 → 즉시 로그인 가능 ❌
+```
+
+**After (보안 강화):**
+```
+회원가입 → 이메일 인증 → 마스터 승인 대기
+                         ↓
+                   승인 후 로그인 가능 ✅
+```
+
+**검증 레이어:**
+1. **LoginForm.tsx** (Line 162-178): 최초 진입점에서 차단 ✅ ← **새로 추가**
+2. **AuthContext.checkAuth()** (Line 149-154): 페이지 로드 시 이중 검증 ✅
+3. **Middleware.ts**: 라우트 레벨 접근 제어 ✅
+
+### 💡 핵심 교훈
+
+**1. Defense in Depth (다층 방어)**
+- 인증 검증을 여러 레이어에서 수행 (LoginForm + AuthContext + Middleware)
+- 하나의 레이어가 실패해도 다른 레이어가 보호
+
+**2. Fail-Fast Principle (빠른 실패)**
+- 가능한 한 빠른 시점(LoginForm)에서 유효하지 않은 요청 차단
+- 불필요한 처리 방지 및 명확한 사용자 피드백
+
+**3. 타이밍 이슈 주의**
+- 비동기 흐름(reload, redirect)에서는 순서 보장 불가
+- 의존적인 검증은 동일 흐름 내에서 수행 필요
+
+### 📝 관련 파일
+- `src/components/Auth/LoginForm.tsx:162-178` (status 검증 추가)
+- `src/contexts/AuthContext.tsx:149-154` (기존 pending 체크 유지)
+
+---
+
 ## 2025-11-18 [UI/UX 개선] 회원가입 완료 후 수동 페이지 전환
 
 **키워드:** #UX개선 #회원가입 #사용자경험
