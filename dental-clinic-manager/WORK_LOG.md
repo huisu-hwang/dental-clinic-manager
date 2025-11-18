@@ -4,6 +4,201 @@
 
 ---
 
+## 2025-11-18 [기능 개발] Supabase Edge Functions + Database Trigger로 승인 이메일 마이그레이션
+
+**키워드:** #Supabase #EdgeFunctions #DatabaseTrigger #Resend #이메일자동화 #Context7
+
+### 📋 작업 내용
+- Next.js API Route 방식에서 Supabase Edge Functions + Database Trigger 방식으로 마이그레이션
+- Context7 MCP를 사용하여 Supabase 공식 문서 기반으로 정확한 구현
+- 완전히 Supabase 생태계 내에서 동작하는 자동화된 이메일 발송 시스템 구축
+
+### 🎯 마이그레이션 목표
+
+**Before (Next.js API Route):**
+```
+사용자 승인 버튼 클릭
+  ↓
+dataService.approveUser()
+  ↓
+/api/admin/users/approve (Next.js API Route)
+  ↓
+Supabase UPDATE + Resend 이메일 발송
+```
+
+**After (Supabase Edge Functions + Trigger):**
+```
+사용자 승인 버튼 클릭
+  ↓
+dataService.approveUser() → Supabase UPDATE
+  ↓
+Database Trigger 자동 감지
+  ↓
+Edge Function 호출 (send-approval-email)
+  ↓
+Resend API로 이메일 발송
+```
+
+### ✅ 구현 내용
+
+**1. Supabase 프로젝트 초기화**
+```bash
+npx supabase init
+```
+
+**2. Edge Function 생성** (`supabase/functions/send-approval-email/index.ts`)
+```typescript
+import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { Resend } from 'npm:resend@4.0.0'
+
+Deno.serve(async (req) => {
+  // 1. 환경 변수에서 RESEND_API_KEY 가져오기
+  // 2. 요청에서 userId, clinicId 추출
+  // 3. Supabase에서 사용자 정보 조회
+  // 4. Resend로 이메일 발송
+  // 5. 성공 응답 반환
+})
+```
+
+**3. Database Trigger Migration** (`supabase/migrations/20251118_create_approval_email_trigger.sql`)
+```sql
+-- Edge Function 호출 함수
+CREATE OR REPLACE FUNCTION notify_user_approval()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.status = 'pending' AND NEW.status = 'active' THEN
+    PERFORM supabase_functions.http_request(
+      'https://beahjntkmkfhpcbhfnrr.supabase.co/functions/v1/send-approval-email',
+      'POST',
+      '{"Content-Type":"application/json"}',
+      json_build_object('userId', NEW.id, 'clinicId', NEW.clinic_id)::text,
+      '5000'
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger 생성
+CREATE TRIGGER users_approval_notification_trigger
+  AFTER UPDATE ON public.users
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_user_approval();
+```
+
+**4. dataService.ts 수정**
+```typescript
+async approveUser(userId: string, clinicId: string, permissions?: string[]) {
+  // API Route 호출 제거
+  // 단순히 Supabase에서 직접 status 업데이트
+  // Database Trigger가 자동으로 이메일 발송 처리
+  await supabase.from('users').update({ status: 'active' }).eq('id', userId)
+}
+```
+
+### 🛠️ 기술 스택
+
+| 기술 | 역할 | 비고 |
+|------|------|------|
+| Supabase Edge Functions | 서버리스 함수 실행 | Deno 런타임 |
+| Database Triggers | 자동 이벤트 감지 | PostgreSQL 네이티브 |
+| Resend API | 이메일 발송 | npm 패키지 (4.0.0) |
+| Context7 MCP | 공식 문서 조회 | Supabase 공식 문서 기반 |
+
+### 📂 변경된 파일
+
+**생성:**
+- `supabase/functions/send-approval-email/index.ts` - Edge Function 코드
+- `supabase/migrations/20251118_create_approval_email_trigger.sql` - Database Trigger
+- `supabase/config.toml` - Supabase 프로젝트 설정
+- `supabase/DEPLOYMENT_GUIDE.md` - 배포 가이드
+
+**수정:**
+- `src/lib/dataService.ts` - approveUser 함수 (API Route → 직접 UPDATE)
+
+**삭제 가능:**
+- `src/app/api/admin/users/approve/route.ts` - 더 이상 사용하지 않음 (선택 사항)
+
+### 🚀 배포 단계
+
+```bash
+# 1. Supabase 로그인
+npx supabase login
+
+# 2. 프로젝트 링크
+npx supabase link --project-ref beahjntkmkfhpcbhfnrr
+
+# 3. Secrets 설정
+npx supabase secrets set RESEND_API_KEY=re_xxxxxxxx
+npx supabase secrets set NEXT_PUBLIC_APP_URL=https://hi-clinic.co.kr
+
+# 4. Edge Function 배포
+npx supabase functions deploy send-approval-email
+
+# 5. Migration 적용
+npx supabase db push
+```
+
+### 🧪 테스트
+
+**Supabase 대시보드에서 테스트:**
+1. Table Editor → `users` 테이블
+2. status='pending' 사용자 선택
+3. status를 'active'로 변경
+4. 이메일 수신 확인
+
+**로그 확인:**
+```bash
+# Edge Function 로그
+npx supabase functions logs send-approval-email
+
+# Database 로그
+Supabase Dashboard → Logs → PostgreSQL Logs
+```
+
+### 💡 배운 점
+
+**1. Context7 MCP의 중요성**
+- Supabase 공식 문서를 직접 확인하여 정확한 구현 방법 습득
+- `supabase_functions.http_request` 함수의 정확한 사용법 확인
+- Database Webhooks 구현 방법 이해
+
+**2. Supabase Edge Functions의 장점**
+- 완전히 Supabase 생태계 내에서 동작
+- Next.js 서버 불필요 (서버리스)
+- Database Trigger와의 완벽한 통합
+- 글로벌 Edge 네트워크에서 실행 (낮은 레이턴시)
+
+**3. Database Trigger의 강력함**
+- 데이터 변경 시 자동으로 로직 실행
+- 애플리케이션 코드와 분리된 자동화
+- 실패해도 원본 트랜잭션에 영향 없음 (비동기)
+
+**4. Deno vs Node.js**
+- Deno는 TypeScript 네이티브 지원
+- npm 패키지를 `npm:package@version` 형식으로 import
+- `Deno.env.get()`으로 환경 변수 접근
+
+### ⚖️ 비교: Next.js API vs Supabase Edge Functions
+
+| 항목 | Next.js API | Supabase Edge Functions |
+|------|-------------|------------------------|
+| 설정 복잡도 | ⭐ 간단 | ⭐⭐⭐ 복잡 |
+| 실행 위치 | Next.js 서버 | Supabase 글로벌 Edge |
+| 의존성 | Next.js 필요 | 독립적 |
+| 자동화 | 수동 API 호출 | 트리거 자동 실행 |
+| 유지보수 | ⭐⭐⭐ 쉬움 | ⭐⭐ 중간 |
+| 비용 | Vercel/서버 비용 | Supabase 플랜에 포함 |
+
+### 🎓 참고 링크
+
+- [Supabase Edge Functions 문서](https://supabase.com/docs/guides/functions)
+- [Supabase Database Webhooks 문서](https://supabase.com/docs/guides/database/webhooks)
+- [Context7 MCP - Supabase 문서](/websites/supabase)
+- [배포 가이드](./supabase/DEPLOYMENT_GUIDE.md)
+
+---
+
 ## 2025-11-18 [기능 개발] 승인 완료 이메일 알림 기능 구현
 
 **키워드:** #이메일알림 #Resend #AdminAPI #사용자경험

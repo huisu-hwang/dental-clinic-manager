@@ -1361,30 +1361,39 @@ export const dataService = {
   },
 
   // 사용자 승인 (직원 관리)
+  // Database Trigger가 자동으로 승인 이메일을 발송합니다.
   async approveUser(userId: string, clinicId: string, permissions?: string[]) {
     try {
-      console.log('[approveUser] Calling Admin API to approve user:', userId)
+      const supabase = await ensureConnection()
 
-      const response = await fetch('/api/admin/users/approve', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          clinicId,
-          permissions
-        }),
-      })
+      console.log('[approveUser] Approving user:', userId)
 
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        console.error('[approveUser] Admin API error:', result.error)
-        return { error: result.error || 'Failed to approve user' }
+      // 업데이트 데이터 준비
+      const updateData: any = {
+        status: 'active',
+        approved_at: new Date().toISOString()
       }
 
-      console.log('[approveUser] User approved successfully via Admin API')
+      // 권한이 지정된 경우 저장
+      if (permissions && permissions.length > 0) {
+        updateData.permissions = permissions
+      }
+
+      // 사용자 상태를 'active'로 업데이트
+      // Database Trigger (users_approval_notification_trigger)가
+      // 자동으로 Edge Function을 호출하여 승인 이메일을 발송합니다.
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', userId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[approveUser] Database error:', error)
+        return { error: error.message }
+      }
+
+      console.log('[approveUser] User approved successfully (email will be sent by trigger)')
       return { success: true }
     } catch (error: unknown) {
       console.error('[approveUser] Unexpected error:', error)
