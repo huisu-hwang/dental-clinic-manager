@@ -730,13 +730,15 @@ export default function SignupForm({
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
-            >
-              {loading ? '가입 중...' : '회원가입 완료'}
-            </button>
+            {!success && (
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+              >
+                {loading ? '가입 중...' : '회원가입 완료'}
+              </button>
+            )}
           </form>
 
           <div className="mt-6 text-center">

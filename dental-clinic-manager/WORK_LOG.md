@@ -4,6 +4,93 @@
 
 ---
 
+## 2025-11-18 [UI/UX 개선] 회원가입 완료 후 버튼 중복 표시 방지
+
+**키워드:** #UX개선 #회원가입 #조건부렌더링 #UI일관성
+
+### 📋 작업 내용
+- 회원가입 완료 후 "회원가입 완료" 버튼 자동 숨김 처리
+- 성공 메시지 표시 시 "로그인 페이지로 가기" 버튼만 보이도록 개선
+- 조건부 렌더링(`{!success && ...}`)을 통한 버튼 상호배제 구현
+
+### 🎯 개선 목표
+
+**Before (문제점):**
+- 회원가입 성공 후 두 개의 버튼이 동시에 표시됨:
+  1. "회원가입 완료" 버튼 (기능 없음, 혼란 유발)
+  2. "로그인 페이지로 가기" 버튼 (실제 동작)
+- 사용자가 어떤 버튼을 눌러야 할지 혼란스러움
+- UI가 지저분하고 일관성 부족
+
+**After (개선):**
+- 회원가입 완료 시 "회원가입 완료" 버튼이 자동으로 숨겨짐
+- "로그인 페이지로 가기" 버튼만 명확하게 표시
+- 사용자에게 명확한 다음 액션 제시
+
+### ✅ 구현 내용
+
+**파일:** `src/components/Auth/SignupForm.tsx`
+
+**위치:** Lines 733-741
+
+**Before:**
+```jsx
+<button
+  type="submit"
+  disabled={loading}
+  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+>
+  {loading ? '가입 중...' : '회원가입 완료'}
+</button>
+```
+
+**After:**
+```jsx
+{!success && (
+  <button
+    type="submit"
+    disabled={loading}
+    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+  >
+    {loading ? '가입 중...' : '회원가입 완료'}
+  </button>
+)}
+```
+
+### 🔄 동작 흐름
+
+**1. 회원가입 폼 작성 단계**
+- ✅ "회원가입 완료" 버튼 표시
+- ❌ 성공 메시지 영역 숨김
+
+**2. 회원가입 완료 버튼 클릭**
+- `handleSubmit` 함수 실행
+- Supabase Auth로 계정 생성
+- 성공 시 `setSuccess(...)` 호출
+
+**3. 회원가입 성공 후**
+- ❌ "회원가입 완료" 버튼 자동 숨김 (`!success` 조건)
+- ✅ 성공 메시지 + "로그인 페이지로 가기" 버튼 표시
+
+### 💡 UX 개선 효과
+
+**1. 인터페이스 명확성 향상**
+- 상황별로 필요한 버튼만 표시
+- 버튼 중복으로 인한 혼란 제거
+
+**2. 사용자 액션 유도 개선**
+- 다음 단계가 명확함 ("로그인 페이지로 가기")
+- 불필요한 선택지 제거로 의사결정 단순화
+
+**3. UI 일관성 유지**
+- 성공 메시지와 액션 버튼의 논리적 그룹핑
+- 깔끔한 화면 구성
+
+### 📝 관련 파일
+- `src/components/Auth/SignupForm.tsx:733-741` (조건부 렌더링 추가)
+
+---
+
 ## 2025-11-18 [보안 강화] 승인 대기/거절 사용자 로그인 차단
 
 **키워드:** #보안 #인증 #사용자상태검증 #LoginForm #RootCauseAnalysis
