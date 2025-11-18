@@ -4,6 +4,132 @@
 
 ---
 
+## 2025-11-18 [기능 개발] 승인 완료 이메일 알림 기능 구현
+
+**키워드:** #이메일알림 #Resend #AdminAPI #사용자경험
+
+### 📋 작업 내용
+- Resend.com을 사용한 승인 완료 이메일 발송 기능 구현
+- `/api/admin/users/approve` Admin API Route 생성
+- dataService.ts approveUser 함수를 API Route 호출로 마이그레이션
+- 승인 시 자동 이메일 발송으로 사용자 경험 개선
+
+### 🎯 구현 목표
+
+**Before:**
+- 사용자가 승인되었는지 직접 확인해야 함
+- pending-approval 페이지에서 수동으로 "승인 상태 확인" 버튼 클릭
+
+**After:**
+- 승인 시 자동으로 이메일 알림 수신
+- 이메일에서 바로 로그인 페이지로 이동 가능
+- 명확한 승인 완료 안내
+
+### ✅ 구현 내용
+
+**1. Resend.com SDK 설치**
+```bash
+npm install resend
+```
+
+**2. Admin API Route 생성** (`src/app/api/admin/users/approve/route.ts`)
+```typescript
+export async function POST(request: Request) {
+  // 1. 사용자 승인 (status='active' 변경)
+  // 2. Resend를 사용한 이메일 발송
+  // 3. 이메일 발송 실패해도 승인은 성공으로 처리
+}
+```
+
+**3. 이메일 템플릿**
+```html
+<h2>회원가입 승인 완료</h2>
+<p>안녕하세요, {사용자명}님!</p>
+<p>{병원명}의 회원가입이 승인되었습니다.</p>
+<p>이제 덴탈매니저의 모든 기능을 사용하실 수 있습니다.</p>
+<a href="로그인페이지">로그인하러 가기</a>
+```
+
+**4. dataService.ts 수정**
+```typescript
+// Before: 직접 Supabase 호출
+async approveUser(userId, clinicId, permissions) {
+  const supabase = await ensureConnection()
+  await supabase.from('users').update(...)
+}
+
+// After: Admin API Route 호출
+async approveUser(userId, clinicId, permissions) {
+  const response = await fetch('/api/admin/users/approve', {
+    method: 'POST',
+    body: JSON.stringify({ userId, clinicId, permissions })
+  })
+}
+```
+
+### 🔧 환경 변수 설정
+
+**필수 환경 변수:**
+```env
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxx
+NEXT_PUBLIC_APP_URL=https://hi-clinic.co.kr
+```
+
+**Resend.com 설정 방법:**
+1. https://resend.com 가입
+2. API Keys 생성
+3. .env.local에 RESEND_API_KEY 추가
+4. 도메인 인증 (noreply@hi-clinic.co.kr)
+
+**참고:**
+- RESEND_API_KEY가 없어도 승인 기능은 정상 작동
+- 이메일 발송만 생략됨
+- 무료 tier: 월 3,000통
+
+### 📧 이메일 발송 로직
+
+**성공 케이스:**
+1. 사용자 승인 성공 → status='active'
+2. RESEND_API_KEY 확인 → 있으면 이메일 발송
+3. 이메일 발송 성공 → 로그 기록
+
+**실패 처리:**
+1. 이메일 발송 실패 → 에러 로그만 기록
+2. **승인은 성공으로 처리** (중요!)
+3. 사용자는 수동으로 로그인 가능
+
+### 💡 핵심 설계 원칙
+
+**1. Graceful Degradation (점진적 저하)**
+- 이메일 서비스 장애 시에도 핵심 기능(승인) 정상 작동
+- 이메일은 부가 기능으로 설계
+
+**2. 서버 사이드 보안**
+- RESEND_API_KEY는 서버에서만 사용
+- 클라이언트에 노출되지 않음
+
+**3. 일관된 Admin API 패턴**
+- approveUser도 deleteUser, rejectUser처럼 Admin API Route 사용
+- SERVICE_ROLE_KEY로 RLS 우회
+
+### 📝 관련 파일
+- `src/app/api/admin/users/approve/route.ts` (새로 생성)
+- `src/lib/dataService.ts:1364-1394` (API Route 호출로 변경)
+- `package.json` (resend 추가)
+
+### 🚀 다음 단계 (선택 사항)
+
+**이메일 템플릿 개선:**
+- React Email로 템플릿 작성
+- 브랜드 색상 및 로고 추가
+- 반응형 디자인 적용
+
+**SMS 알림 추가:**
+- Twilio 연동
+- 이메일과 SMS 동시 발송 옵션
+
+---
+
 ## 2025-11-18 [보안 강화] 이메일 인증 후 승인 대기 사용자 자동 로그인 차단
 
 **키워드:** #보안 #인증 #이메일인증 #CallbackRoute #RootCauseAnalysis

@@ -1362,47 +1362,33 @@ export const dataService = {
 
   // 사용자 승인 (직원 관리)
   async approveUser(userId: string, clinicId: string, permissions?: string[]) {
-    const supabase = await ensureConnection()
-    if (!supabase) throw new Error('Supabase client not available')
-
     try {
-      console.log('Approving user:', { userId, clinicId, permissions })
+      console.log('[approveUser] Calling Admin API to approve user:', userId)
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        throw new Error('Current user not found')
+      const response = await fetch('/api/admin/users/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          clinicId,
+          permissions
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        console.error('[approveUser] Admin API error:', result.error)
+        return { error: result.error || 'Failed to approve user' }
       }
 
-      const updateData: any = {
-        status: 'active',
-        approved_by: user.id,
-        approved_at: new Date().toISOString()
-      }
-
-      // 권한이 지정된 경우 저장
-      if (permissions && permissions.length > 0) {
-        updateData.permissions = permissions
-      }
-
-      console.log('Update data:', updateData)
-
-      const { data, error } = await (supabase.from('users') as any)
-        .update(updateData)
-        .eq('id', userId)
-        .eq('clinic_id', clinicId)
-        .select()
-
-      if (error) {
-        console.error('Supabase update error:', error)
-        throw error
-      }
-
-      console.log('Updated user data:', data)
+      console.log('[approveUser] User approved successfully via Admin API')
       return { success: true }
     } catch (error: unknown) {
-      console.error('Error approving user - Full error:', error)
+      console.error('[approveUser] Unexpected error:', error)
       const errorMessage = error instanceof Error ? error.message : JSON.stringify(error)
-      console.error('Error message:', errorMessage)
       return { error: errorMessage }
     }
   },
