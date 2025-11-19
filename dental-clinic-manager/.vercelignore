@@ -1,0 +1,8 @@
+# Supabase Edge Functions (별도 배포)
+supabase/
+
+# SQL 파일
+*.sql
+
+# 개발/배포 스크립트
+scripts/
