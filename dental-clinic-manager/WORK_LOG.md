@@ -4,6 +4,137 @@
 
 ---
 
+## 2025-11-19 [버그 수정] Vercel 빌드 에러 해결 - Supabase Edge Functions 제외
+
+**키워드:** #Vercel #빌드에러 #TypeScript #Deno #tsconfig #Context7 #근본원인분석
+
+### 📋 작업 내용
+- Vercel 빌드 시 Deno 런타임 전용 코드 컴파일 시도로 인한 타입 에러 해결
+- tsconfig.json 및 .vercelignore 파일 수정으로 빌드 최적화
+
+### 🐛 문제
+
+**증상:**
+```
+Failed to compile.
+
+./supabase/functions/send-approval-email/index.ts:3:30
+Type error: Cannot find module 'jsr:@supabase/supabase-js@2' or its corresponding type declarations.
+```
+
+**발견 경로:**
+- 사용자 보고: "현재 vercel 빌드 에러 발생"
+- 로컬에서 `npm run build` 재현 성공
+
+### 🔍 근본 원인 (5 Whys)
+
+1. **왜 에러가 발생했는가?**
+   - Next.js 빌드가 `jsr:@supabase/supabase-js@2` 모듈을 찾을 수 없음
+
+2. **왜 모듈을 찾을 수 없는가?**
+   - `jsr:` 프로토콜은 Deno 런타임 전용 문법으로, Node.js/TypeScript가 이해할 수 없음
+
+3. **왜 Deno 전용 코드가 Next.js 빌드에 포함되었는가?**
+   - `tsconfig.json`의 `"include": ["**/*.ts", "**/*.tsx"]` 패턴이 프로젝트 루트의 모든 TypeScript 파일을 포함
+
+4. **왜 supabase/functions가 제외되지 않았는가?**
+   - `tsconfig.json`의 `exclude`에 `"supabase"` 디렉토리가 명시되지 않음
+
+5. **왜 이전에는 문제가 없었는가?**
+   - 커밋 `0f61ecd` (2025-11-18)에서 Supabase Edge Functions를 처음 도입
+   - 기존에는 supabase/functions/ 디렉토리가 존재하지 않았음
+
+### ✅ 해결 방법
+
+**1. tsconfig.json 수정** (`tsconfig.json:26`)
+```json
+// Before
+"exclude": ["node_modules"]
+
+// After
+"exclude": ["node_modules", "supabase"]
+```
+
+**2. .vercelignore 파일 생성** (신규 파일)
+```
+# Supabase Edge Functions (별도 배포)
+supabase/
+
+# SQL 파일
+*.sql
+
+# 개발/배포 스크립트
+scripts/
+```
+
+### 🧪 테스트 결과
+
+**로컬 빌드 테스트:**
+```bash
+$ npm run build
+
+✓ Compiled successfully in 9.3s
+✓ Generating static pages (25/25)
+```
+
+**검증 항목:**
+- ✅ `npm run build` 성공
+- ✅ TypeScript 컴파일 에러 없음
+- ✅ supabase/ 디렉토리는 빌드 대상에서 제외됨
+- ✅ src/ 디렉토리의 Supabase imports 정상 작동
+
+**빌드 성능 개선:**
+- 컴파일 시간: 9.3초
+- 생성된 페이지: 25개
+- TypeScript 경고: 68개 (에러 아님, 코드 품질 개선 제안)
+
+### 💡 배운 점
+
+**1. 환경 분리 (Environment Separation)**
+- Deno 런타임용 코드 (Edge Functions)와 Node.js 런타임용 코드 (Next.js)는 명확히 분리 필요
+- `tsconfig.json`의 `exclude`로 빌드 대상을 엄격하게 관리
+
+**2. Vercel 배포 최적화**
+- `.vercelignore`로 불필요한 파일 배포 제외
+- 빌드 시간 단축 및 배포 크기 감소
+
+**3. 근본 원인 분석의 중요성**
+- 5 Whys 기법으로 "언제부터 문제가 시작되었는지" 파악
+- 특정 커밋(`0f61ecd`)에서 Edge Functions 도입 시점 확인
+- 임시 방편이 아닌 근본적인 해결책 적용
+
+**4. Deno vs Node.js 차이**
+- `jsr:` - Deno 전용 레지스트리 프로토콜
+- `npm:` - Deno에서 npm 패키지 사용 시 필요한 프로토콜
+- Next.js는 Node.js 기반이므로 Deno 전용 문법 사용 불가
+
+### 📊 영향 범위
+
+**긍정적 영향:**
+- ✅ Vercel 빌드 성공
+- ✅ TypeScript 타입 체크 속도 향상
+- ✅ 배포 파일 크기 감소
+
+**영향받지 않는 기능:**
+- ✅ src/ 디렉토리의 모든 코드 정상 작동
+- ✅ @supabase/supabase-js (npm 패키지) 정상 작동
+- ✅ Supabase Edge Functions는 별도 배포되므로 영향 없음
+
+### 🔗 관련 작업
+- 2025-11-18: Supabase Edge Functions + Database Trigger 도입 (문제 발생 원인)
+
+### 📝 커밋
+```
+commit 5cd5105
+fix: Vercel 빌드 에러 해결 - Supabase Edge Functions 제외
+
+- tsconfig.json의 exclude에 "supabase" 추가
+- .vercelignore 파일 생성 (supabase/, *.sql, scripts/ 제외)
+- npm run build 성공 (9.3초)
+```
+
+---
+
 ## 2025-11-18 [기능 개발] Supabase Edge Functions + Database Trigger로 승인 이메일 마이그레이션
 
 **키워드:** #Supabase #EdgeFunctions #DatabaseTrigger #Resend #이메일자동화 #Context7
