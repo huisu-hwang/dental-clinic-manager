@@ -29,16 +29,6 @@ export interface AuthContextType {
   loading: boolean
 }
 
-// Temporary master admin credentials for testing
-const MASTER_ADMIN: UserProfile = {
-  id: 'master-admin-001',
-  email: 'sani81@gmail.com',
-  name: 'Master Administrator',
-  role: 'master_admin',
-  status: 'active',
-  userId: 'sani81@gmail.com'
-}
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -147,12 +137,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 console.log('AuthContext: 사용자 프로필 로드 성공', result.data)
 
                 // 승인 대기/거절된 사용자는 pending-approval 페이지로 이동 (세션 유지)
-                if ((result.data.status === 'pending' || result.data.status === 'rejected') &&
-                    window.location.pathname !== '/pending-approval') {
-                  console.warn('[AuthContext] User status:', result.data.status, '- redirecting to /pending-approval')
-                  setLoading(false) // 페이지 이동 전 로딩 상태 해제
-                  // 세션 유지 (signOut 제거) - 사용자가 안내 페이지를 볼 수 있도록
-                  window.location.href = '/pending-approval'
+                if (result.data.status === 'pending' || result.data.status === 'rejected') {
+                  console.warn('[AuthContext] User status:', result.data.status, '- restricting access')
+
+                  if (window.location.pathname !== '/pending-approval') {
+                    console.log('[AuthContext] Redirecting to /pending-approval')
+                    window.location.href = '/pending-approval'
+                  }
+
+                  // 중요: 승인 대기/거절 상태에서는 user state를 설정하지 않음
+                  setLoading(false)
                   return
                 }
 
@@ -317,16 +311,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (userId: string, clinicInfo: any) => {
     console.log('[AuthContext] Login - Cookie-based session')
 
-    // Check for master admin login
-    if (userId === 'sani81@gmail.com') {
-      const masterAdmin = { ...MASTER_ADMIN }
-      setUser(masterAdmin)
-      localStorage.setItem('dental_auth', 'true')
-      localStorage.setItem('dental_user', JSON.stringify(masterAdmin))
-      dataService.clearCachedClinicId()
-      return
-    }
-
     // clinicInfo가 users 테이블의 레코드 전체를 포함한다고 가정합니다.
     // 로그인 ID(userId)와 clinicInfo의 이메일이 다를 수 있으므로, clinicInfo의 데이터를 우선합니다.
     const userData = {
@@ -334,12 +318,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userId: userId, // 로그인 시 사용한 ID는 별도로 저장
     };
 
-
     setUser(userData)
     localStorage.setItem('dental_auth', 'true')
     localStorage.setItem('dental_user', JSON.stringify(userData))
     if (userData.clinic_id) {
       dataService.setCachedClinicId(userData.clinic_id)
+    } else {
+      // clinic_id가 없는 경우 (마스터 관리자 등) 캐시 클리어
+      dataService.clearCachedClinicId()
     }
   }
 
@@ -352,15 +338,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoggingOut(true)
       localStorage.setItem('dental_logging_out', 'true')
-      
+
       const supabase = createClient()
       await supabase.auth.signOut()
-      
+
       setUser(null)
       localStorage.removeItem('dental_auth')
       localStorage.removeItem('dental_user')
       dataService.clearCachedClinicId()
-      
+
       window.location.href = '/'
     } catch (error) {
       console.error('Logout error:', error)

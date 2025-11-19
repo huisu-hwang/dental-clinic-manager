@@ -4,6 +4,214 @@
 
 ---
 
+## 2025-11-20 [버그 수정] 승인 전 대표원장 계정 로그인 리다이렉트 문제 해결
+
+**키워드:** #버그수정 #승인대기 #마스터계정 #리다이렉트 #근본원인해결
+
+### 📋 작업 내용
+- 승인 전(status='pending') 대표원장 계정(sani81@gmail.com) 로그인 시 `/pending-approval` 페이지가 아닌 `/dashboard`로 이동하는 문제 해결
+- 마스터 계정 특별 처리 로직 제거하여 모든 계정이 동일한 승인 체크 프로세스를 거치도록 통일
+- 일관된 로그인 플로우로 유지보수성 향상
+
+### 🐛 문제
+
+**증상:**
+- 승인 전(status='pending') 대표원장 계정으로 로그인
+- `/pending-approval` 페이지가 아닌 `/dashboard`로 이동
+- 승인 대기 안내 메시지를 볼 수 없음
+
+**발견 경로:**
+- 사용자 보고: 승인 전 대표원장이 로그인하면 대시보드로 이동함
+
+### 🔍 근본 원인 (5 Whys 분석)
+
+1. **Why?** 승인 전 대표원장이 `/dashboard`로 이동하는가?
+   → LoginForm.tsx 123-137번 줄에서 `sani81@gmail.com` 계정을 특별 처리하여 하드코딩된 `status: 'active'`를 설정하기 때문
+
+2. **Why?** 특별 처리 로직이 존재하는가?
+   → 마스터 계정을 DB 조회 없이 빠르게 로그인시키려는 의도였음
+
+3. **Why?** DB 조회를 하지 않는가?
+   → 하드코딩된 `MASTER_ADMIN` 객체를 사용하여 성능 최적화를 시도했기 때문
+
+4. **Why?** 하드코딩된 객체가 문제인가?
+   → DB의 실제 status 값(pending, rejected 등)을 무시하고 항상 'active'로 설정하기 때문
+
+5. **Why?** 이것이 리다이렉트 문제를 일으키는가?
+   → 승인 상태 체크 로직(LoginForm.tsx 165-184번 줄)을 완전히 우회하여 `/pending-approval`로 리다이렉트되지 않기 때문
+
+**근본 원인:**
+- `LoginForm.tsx`와 `AuthContext.tsx`에 있는 `sani81@gmail.com` 특별 처리 로직이 데이터베이스의 실제 승인 상태를 무시하고 항상 `status: 'active'`로 설정하여 승인 체크 로직을 우회함
+
+### ✅ 해결 방법
+
+#### 1. LoginForm.tsx 수정 (src/components/Auth/LoginForm.tsx)
+
+**변경: 마스터 계정 특별 처리 로직 제거** (lines 123-137 삭제)
+
+```typescript
+// BEFORE (문제)
+// 2. 마스터 계정 특별 처리
+if (formData.email === 'sani81@gmail.com') {
+  // 마스터 계정은 프로필 조회 없이 바로 로그인 처리
+  const masterProfile = {
+    id: authData.user.id,
+    email: 'sani81@gmail.com',
+    name: 'Master Administrator',
+    role: 'master_admin',
+    status: 'active',  // ❌ 항상 'active'로 하드코딩
+    userId: 'sani81@gmail.com',
+    clinic_id: null,
+    clinic: null
+  }
+  login(formData.email, masterProfile)
+} else {
+  // 일반 사용자는 DB 조회...
+}
+
+// AFTER (해결)
+// 2. public.users 테이블에서 전체 프로필 정보 조회
+console.log('[LoginForm] Fetching user profile for ID:', authData.user.id)
+const result = await dataService.getUserProfileById(authData.user.id)
+// 모든 계정이 동일하게 DB 조회 → 승인 상태 체크
+```
+
+**효과:**
+- 마스터 계정도 일반 사용자와 동일하게 DB 프로필 조회
+- 승인 상태 체크 로직(148-168번 줄)을 정상적으로 거침
+- `status === 'pending'`이면 `/pending-approval`로 리다이렉트
+
+#### 2. AuthContext.tsx 수정 (src/contexts/AuthContext.tsx)
+
+**변경 1: MASTER_ADMIN 상수 삭제** (lines 32-39 삭제)
+```typescript
+// BEFORE (문제)
+const MASTER_ADMIN: UserProfile = {
+  id: 'master-admin-001',
+  email: 'sani81@gmail.com',
+  name: 'Master Administrator',
+  role: 'master_admin',
+  status: 'active',  // ❌ 하드코딩
+  userId: 'sani81@gmail.com'
+}
+
+// AFTER (해결)
+// 삭제됨 - 더 이상 사용하지 않음
+```
+
+**변경 2: login 함수에서 마스터 계정 체크 제거** (lines 314-322 삭제)
+```typescript
+// BEFORE (문제)
+const login = (userId: string, clinicInfo: any) => {
+  // Check for master admin login
+  if (userId === 'sani81@gmail.com') {
+    const masterAdmin = { ...MASTER_ADMIN }  // ❌ 하드코딩 사용
+    setUser(masterAdmin)
+    localStorage.setItem('dental_user', JSON.stringify(masterAdmin))
+    return
+  }
+  // 일반 사용자 처리...
+}
+
+// AFTER (해결)
+const login = (userId: string, clinicInfo: any) => {
+  // clinicInfo가 users 테이블의 레코드 전체를 포함
+  const userData = {
+    ...clinicInfo,
+    userId: userId,
+  }
+  setUser(userData)
+  localStorage.setItem('dental_user', JSON.stringify(userData))
+  if (userData.clinic_id) {
+    dataService.setCachedClinicId(userData.clinic_id)
+  } else {
+    dataService.clearCachedClinicId()  // 마스터 관리자 등
+  }
+}
+```
+
+**효과:**
+- 모든 계정이 동일한 로그인 처리 로직 사용
+- DB에서 조회한 실제 프로필 정보(status 포함) 사용
+- 코드 일관성 향상 및 유지보수 용이
+
+#### 3. AuthApp.tsx 추가 방어 로직 (src/app/AuthApp.tsx)
+
+**변경: user.status 체크 추가** (lines 19-31)
+```typescript
+// BEFORE
+useEffect(() => {
+  if (isAuthenticated) {
+    const redirect = searchParams.get('redirect')
+    router.push(redirect || '/dashboard')
+  }
+}, [isAuthenticated, router, searchParams])
+
+// AFTER (이중 방어)
+useEffect(() => {
+  if (isAuthenticated) {
+    // 승인 대기/거절 사용자는 /pending-approval로 리다이렉트
+    if (user?.status === 'pending' || user?.status === 'rejected') {
+      router.push('/pending-approval')
+      return
+    }
+
+    const redirect = searchParams.get('redirect')
+    router.push(redirect || '/dashboard')
+  }
+}, [isAuthenticated, user, router, searchParams])
+```
+
+**효과:**
+- Race condition 방지 (LoginForm의 리다이렉트와 AuthApp의 리다이렉트 경쟁)
+- 추가 안전장치로 승인되지 않은 사용자가 대시보드에 접근하는 것 방지
+
+### 🧪 테스트 결과
+
+**코드 검증:**
+- ✅ LoginForm.tsx: 마스터 계정 특별 처리 로직 제거됨
+- ✅ AuthContext.tsx: MASTER_ADMIN 상수 및 login 함수 특별 처리 제거됨
+- ✅ AuthApp.tsx: user.status 체크 추가 방어 로직 적용됨
+- ✅ Chrome DevTools: 코드 정상 로드 확인
+
+**테스트 방법 (사용자 수동 테스트 필요):**
+1. Supabase DB에서 `sani81@gmail.com` 계정의 status를 'pending'으로 변경
+2. 로그인 시도
+3. `/pending-approval` 페이지로 이동 확인
+4. 페이지에 머물러 있는지 확인 (리다이렉트 루프 없음)
+
+### 💡 배운 점
+
+1. **특별 처리 로직의 위험성**
+   - 성능 최적화를 위한 특별 처리가 오히려 버그의 원인이 됨
+   - "모든 사용자에게 동일한 규칙 적용" 원칙의 중요성
+
+2. **하드코딩의 문제**
+   - DB의 실제 데이터를 무시하는 하드코딩은 데이터 불일치 발생
+   - 항상 Single Source of Truth (DB)를 우선해야 함
+
+3. **근본 원인 해결의 중요성**
+   - 임시 방편: AuthApp에만 status 체크 추가 → 문제 재발 가능
+   - 근본 해결: 특별 처리 로직 자체를 제거 → 문제 완전 해결
+
+4. **코드 일관성**
+   - 마스터 계정도 일반 사용자와 동일한 플로우를 거치도록 통일
+   - 코드 가독성 향상 및 유지보수 용이
+
+### 📚 참고사항
+
+**관련 파일:**
+- `src/components/Auth/LoginForm.tsx`: 로그인 처리 로직
+- `src/contexts/AuthContext.tsx`: 인증 컨텍스트 및 세션 관리
+- `src/app/AuthApp.tsx`: 인증 상태에 따른 리다이렉트
+- `src/app/pending-approval/page.tsx`: 승인 대기 안내 페이지
+
+**관련 이슈:**
+- 2025-11-20: 승인 대기/거절 사용자 안내 페이지 깜빡임 문제
+- 마스터 계정 특별 처리로 인한 승인 체크 우회 문제
+
+---
+
 ## 2025-11-20 [버그 수정] 승인 대기/거절 사용자 안내 페이지 깜빡임 문제 해결
 
 **키워드:** #버그수정 #승인대기 #인증 #세션관리 #UX개선

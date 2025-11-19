@@ -120,73 +120,56 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         return
       }
 
-      // 2. 마스터 계정 특별 처리
-      if (formData.email === 'sani81@gmail.com') {
-        // 마스터 계정은 프로필 조회 없이 바로 로그인 처리
-        const masterProfile = {
-          id: authData.user.id,
-          email: 'sani81@gmail.com',
-          name: 'Master Administrator',
-          role: 'master_admin',
-          status: 'active',
-          userId: 'sani81@gmail.com',
-          clinic_id: null, // 마스터는 특정 병원에 소속되지 않음
-          clinic: null
-        }
-        console.log('[LoginForm] Master login with profile:', masterProfile)
-        login(formData.email, masterProfile)
-      } else {
-        // 3. 일반 사용자는 public.users 테이블에서 전체 프로필 정보 조회
-        console.log('[LoginForm] Fetching user profile for ID:', authData.user.id)
-        const profileStartTime = Date.now()
-        const result = await dataService.getUserProfileById(authData.user.id)
-        const profileElapsed = Date.now() - profileStartTime
-        console.log(`[LoginForm] Profile fetched in ${profileElapsed}ms:`, result.data)
+      // 2. public.users 테이블에서 전체 프로필 정보 조회
+      console.log('[LoginForm] Fetching user profile for ID:', authData.user.id)
+      const profileStartTime = Date.now()
+      const result = await dataService.getUserProfileById(authData.user.id)
+      const profileElapsed = Date.now() - profileStartTime
+      console.log(`[LoginForm] Profile fetched in ${profileElapsed}ms:`, result.data)
 
-        if (result.error || !result.data) {
-          console.error('[LoginForm] Profile fetch failed:', result.error)
-          setError('로그인에 성공했으나, 프로필 정보를 불러오는 데 실패했습니다.')
-          // 이 경우, 사용자는 인증되었지만 앱 사용에 필요한 정보가 부족하므로 로그아웃 처리
-          await supabase.auth.signOut()
-          setLoading(false)
-          return
-        }
-
-        // 3.5. 소속 병원의 중지 상태 검증
-        if (result.data.clinic?.status === 'suspended') {
-          console.warn('[LoginForm] Clinic is suspended:', result.data.clinic.id)
-          setError('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
-          await supabase.auth.signOut()
-          setLoading(false)
-          return
-        }
-
-        // 3.6. 승인 대기 중인 사용자 체크
-        if (result.data.status === 'pending') {
-          console.warn('[LoginForm] User is pending approval, keeping session and redirecting:', result.data.id)
-          // 세션 유지 (signOut 제거) - 사용자가 /pending-approval 페이지에서 상태를 확인할 수 있도록
-          login(formData.email, result.data)
-          setLoading(false)
-          // /pending-approval 페이지로 직접 리다이렉트
-          router.push('/pending-approval')
-          return
-        }
-
-        // 3.7. 거절된 사용자 체크
-        if (result.data.status === 'rejected') {
-          console.warn('[LoginForm] User was rejected, keeping session and redirecting:', result.data.id)
-          // 세션 유지 (signOut 제거) - 사용자가 거절 사유를 확인할 수 있도록
-          login(formData.email, result.data)
-          setLoading(false)
-          // /pending-approval 페이지로 직접 리다이렉트 (거절 메시지 표시)
-          router.push('/pending-approval')
-          return
-        }
-
-        // 4. AuthContext에 완전한 사용자 정보로 로그인 처리 (status='active'만 통과)
-        console.log('[LoginForm] Logging in with profile:', result.data)
-        login(formData.email, result.data) // email로 변경
+      if (result.error || !result.data) {
+        console.error('[LoginForm] Profile fetch failed:', result.error)
+        setError('로그인에 성공했으나, 프로필 정보를 불러오는 데 실패했습니다.')
+        // 이 경우, 사용자는 인증되었지만 앱 사용에 필요한 정보가 부족하므로 로그아웃 처리
+        await supabase.auth.signOut()
+        setLoading(false)
+        return
       }
+
+      // 3. 소속 병원의 중지 상태 검증
+      if (result.data.clinic?.status === 'suspended') {
+        console.warn('[LoginForm] Clinic is suspended:', result.data.clinic.id)
+        setError('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
+        await supabase.auth.signOut()
+        setLoading(false)
+        return
+      }
+
+      // 4. 승인 대기 중인 사용자 체크
+      if (result.data.status === 'pending') {
+        console.warn('[LoginForm] User is pending approval, keeping session and redirecting:', result.data.id)
+        // 세션 유지 (signOut 제거) - 사용자가 /pending-approval 페이지에서 상태를 확인할 수 있도록
+        login(formData.email, result.data)
+        setLoading(false)
+        // /pending-approval 페이지로 직접 리다이렉트
+        router.push('/pending-approval')
+        return
+      }
+
+      // 5. 거절된 사용자 체크
+      if (result.data.status === 'rejected') {
+        console.warn('[LoginForm] User was rejected, keeping session and redirecting:', result.data.id)
+        // 세션 유지 (signOut 제거) - 사용자가 거절 사유를 확인할 수 있도록
+        login(formData.email, result.data)
+        setLoading(false)
+        // /pending-approval 페이지로 직접 리다이렉트 (거절 메시지 표시)
+        router.push('/pending-approval')
+        return
+      }
+
+      // 6. AuthContext에 완전한 사용자 정보로 로그인 처리 (status='active'만 통과)
+      console.log('[LoginForm] Logging in with profile:', result.data)
+      login(formData.email, result.data) // email로 변경
 
       console.log('[LoginForm] Login successful - Cookie-based session')
       console.log('[LoginForm] Session managed by Middleware (automatic refresh)')

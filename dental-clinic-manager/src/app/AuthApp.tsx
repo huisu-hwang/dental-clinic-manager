@@ -13,16 +13,22 @@ type AppState = 'landing' | 'login' | 'signup' | 'forgotPassword'
 export default function AuthApp() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, user, loading } = useAuth()
   const [appState, setAppState] = useState<AppState>('landing')
 
-  // 인증된 경우 대시보드로 리디렉션
+  // 인증된 경우 대시보드로 리디렉션 (승인된 사용자만)
   useEffect(() => {
     if (isAuthenticated) {
+      // 승인 대기/거절 사용자는 /pending-approval로 리다이렉트
+      if (user?.status === 'pending' || user?.status === 'rejected') {
+        router.push('/pending-approval')
+        return
+      }
+
       const redirect = searchParams.get('redirect')
       router.push(redirect || '/dashboard')
     }
-  }, [isAuthenticated, router, searchParams])
+  }, [isAuthenticated, user, router, searchParams])
 
   // 인증 상태 확인 중 로딩
   if (loading) {
