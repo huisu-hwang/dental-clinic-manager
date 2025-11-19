@@ -94,9 +94,28 @@ export default function MasterAdminPage() {
       setUsers(allUsers)
 
       // 승인 대기 중인 사용자 필터링
+      console.log('[Master] Total users loaded:', allUsers.length)
+      console.log('[Master] All users:', allUsers.map((u: any) => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        status: u.status,
+        role: u.role,
+        clinic_id: u.clinic_id,
+        clinic_name: u.clinic?.name
+      })))
+      console.log('[Master] Users by status:', {
+        pending: allUsers.filter((u: any) => u.status === 'pending').length,
+        active: allUsers.filter((u: any) => u.status === 'active').length,
+        rejected: allUsers.filter((u: any) => u.status === 'rejected').length,
+        suspended: allUsers.filter((u: any) => u.status === 'suspended').length,
+        other: allUsers.filter((u: any) => !['pending', 'active', 'rejected', 'suspended'].includes(u.status)).length
+      })
+
       const pending = allUsers.filter((u: any) => u.status === 'pending')
       setPendingUsers(pending)
       console.log('[Master] Pending users:', pending.length)
+      console.log('[Master] Pending users details:', pending)
 
       // 통계 데이터 조회
       const statsResult = await dataService.getSystemStatistics()

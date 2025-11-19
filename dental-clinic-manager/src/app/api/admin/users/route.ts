@@ -44,11 +44,12 @@ export async function GET() {
     console.log('[Admin API] Fetching users from public.users table...')
 
     // 1. public.users 테이블에서 사용자 목록 조회
+    // !left를 사용하여 LEFT JOIN 명시 (clinic_id가 null이어도 포함)
     const { data: publicUsers, error: publicError } = await supabase
       .from('users')
       .select(`
         *,
-        clinic:clinics(name)
+        clinic:clinics!left(name)
       `)
       .order('created_at', { ascending: false })
 
