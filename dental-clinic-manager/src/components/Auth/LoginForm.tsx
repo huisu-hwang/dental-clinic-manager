@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { dataService } from '@/lib/dataService'
@@ -14,6 +15,7 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotPassword, onLoginSuccess }: LoginFormProps) {
+  const router = useRouter()
   const { login } = useAuth()
   const [formData, setFormData] = useState({
     email: '', // userId를 email로 변경
@@ -161,19 +163,23 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
 
         // 3.6. 승인 대기 중인 사용자 체크
         if (result.data.status === 'pending') {
-          console.warn('[LoginForm] User is pending approval:', result.data.id)
-          setError('🕐 승인 대기 중입니다.\n\n관리자의 승인을 기다리고 있습니다.\n조금만 더 기다려주세요!')
-          await supabase.auth.signOut()
+          console.warn('[LoginForm] User is pending approval, keeping session and redirecting:', result.data.id)
+          // 세션 유지 (signOut 제거) - 사용자가 /pending-approval 페이지에서 상태를 확인할 수 있도록
+          login(formData.email, result.data)
           setLoading(false)
+          // /pending-approval 페이지로 직접 리다이렉트
+          router.push('/pending-approval')
           return
         }
 
         // 3.7. 거절된 사용자 체크
         if (result.data.status === 'rejected') {
-          console.warn('[LoginForm] User was rejected:', result.data.id)
-          setError('❌ 승인이 거절되었습니다.\n\n내부 규정으로 인해 승인이 거절되었습니다.\n자세한 내용을 알고 싶으신 경우는\nhiclinic.inc@gmail.com로 문의 바랍니다.')
-          await supabase.auth.signOut()
+          console.warn('[LoginForm] User was rejected, keeping session and redirecting:', result.data.id)
+          // 세션 유지 (signOut 제거) - 사용자가 거절 사유를 확인할 수 있도록
+          login(formData.email, result.data)
           setLoading(false)
+          // /pending-approval 페이지로 직접 리다이렉트 (거절 메시지 표시)
+          router.push('/pending-approval')
           return
         }
 

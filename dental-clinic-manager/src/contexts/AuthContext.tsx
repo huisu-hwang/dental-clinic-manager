@@ -146,18 +146,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (result.success && result.data) {
                 console.log('AuthContext: 사용자 프로필 로드 성공', result.data)
 
-                // 승인 대기 중인 사용자는 pending-approval 페이지로 이동
-                if (result.data.status === 'pending' && window.location.pathname !== '/pending-approval') {
+                // 승인 대기/거절된 사용자는 pending-approval 페이지로 이동 (세션 유지)
+                if ((result.data.status === 'pending' || result.data.status === 'rejected') &&
+                    window.location.pathname !== '/pending-approval') {
+                  console.warn('[AuthContext] User status:', result.data.status, '- redirecting to /pending-approval')
                   setLoading(false) // 페이지 이동 전 로딩 상태 해제
+                  // 세션 유지 (signOut 제거) - 사용자가 안내 페이지를 볼 수 있도록
                   window.location.href = '/pending-approval'
-                  return
-                }
-
-                // 거절된 사용자는 로그아웃
-                if (result.data.status === 'rejected') {
-                  await supabase.auth.signOut()
-                  alert('❌ 승인이 거절되었습니다.\n\n내부 규정으로 인해 승인이 거절되었습니다.\n자세한 내용을 알고 싶으신 경우는 hiclinic.inc@gmail.com로 문의 바랍니다.')
-                  window.location.href = '/'
                   return
                 }
 
@@ -216,18 +211,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   // skipConnectionCheck: 토큰 갱신 중 중복 세션 체크 방지
                   const result = await dataService.getUserProfileById(session.user.id, { skipConnectionCheck: true })
                   if (result.success && result.data) {
-                    // 승인 대기 중인 사용자 체크
-                    if (result.data.status === 'pending') {
-                      await supabase.auth.signOut()
-                      window.location.href = '/pending-approval'
-                      return
-                    }
-
-                    // 거절된 사용자 체크
-                    if (result.data.status === 'rejected') {
-                      await supabase.auth.signOut()
-                      alert('❌ 승인이 거절되었습니다.\n\n내부 규정으로 인해 승인이 거절되었습니다.\n자세한 내용을 알고 싶으신 경우는 hiclinic.inc@gmail.com로 문의 바랍니다.')
-                      window.location.href = '/'
+                    // 승인 대기/거절된 사용자 체크 (세션 유지)
+                    if (result.data.status === 'pending' || result.data.status === 'rejected') {
+                      console.warn('[AuthContext] SIGNED_IN event - User status:', result.data.status)
+                      // 세션 유지 (signOut 제거) - 사용자가 안내 페이지를 볼 수 있도록
+                      if (window.location.pathname !== '/pending-approval') {
+                        window.location.href = '/pending-approval'
+                      }
                       return
                     }
 
@@ -356,70 +346,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUser = (updatedUserData: any) => {
     setUser(updatedUserData)
     localStorage.setItem('dental_user', JSON.stringify(updatedUserData))
-    if (updatedUserData?.clinic_id) {
-      dataService.setCachedClinicId(updatedUserData.clinic_id)
+    try {
+      const parsedUser = JSON.parse(userData)
+      console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
+      setUser(parsedUser)
+    } catch (e) {
+      console.error('Failed to parse localStorage user data:', e)
     }
   }
+}
 
-  const logout = async (showInactivityMessage = false) => {
-    console.log('Logout 시작...')
+// Auth 상태 변경 리스너 설정
+const { data: authListener } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+  console.log('Auth state changed:', event)
 
-    // 로그아웃 중 플래그 설정
-    setIsLoggingOut(true)
+  // 로그아웃 중이면 무시
+  const loggingOut = localStorage.getItem('dental_logging_out')
+  if (loggingOut === 'true') {
+    console.log('로그아웃 중이므로 auth state change 무시')
+    return
+  }
 
-    // Show inactivity modal if requested
-    if (showInactivityMessage) {
-      setShowInactivityModal(true)
-      // Wait for user to see the message
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
+  // PASSWORD_RECOVERY 이벤트는 update-password 페이지에서 처리
+  if (event === 'PASSWORD_RECOVERY') {
+    console.log('PASSWORD_RECOVERY 이벤트 감지')
+    return
+  }
 
-    // Supabase 로그아웃 시도 (먼저 실행, 타임아웃 설정)
-    try {
-      const supabase = createClient()
-      const signOutPromise = supabase.auth.signOut()
-      const timeoutPromise = new Promise<{ error: any }>((resolve) =>
-        setTimeout(() => resolve({ error: new Error('Logout timeout') }), TIMEOUTS.LOGOUT)
-      )
+  if (event === 'SIGNED_IN' && session?.user) {
+    if (!isLoggingOut) {
+      // skipConnectionCheck: 토큰 갱신 중 중복 세션 체크 방지
+      const result = await dataService.getUserProfileById(session.user.id, { skipConnectionCheck: true })
+      if (result.success && result.data) {
+        // 승인 대기 중인 사용자 체크
+        if (result.data.status === 'pending') {
+          await supabase.auth.signOut()
+          window.location.href = '/pending-approval'
+          return
+        }
 
-      const { error } = await Promise.race([signOutPromise, timeoutPromise])
-      if (error) {
-        console.error('Supabase logout error:', error)
-      } else {
-        console.log('Supabase 로그아웃 성공')
+        // 거절된 사용자 체크
+        if (result.data.status === 'rejected') {
+          await supabase.auth.signOut()
+          alert('❌ 승인이 거절되었습니다.\n\n내부 규정으로 인해 승인이 거절되었습니다.\n자세한 내용을 알고 싶으신 경우는 hiclinic.inc@gmail.com로 문의 바랍니다.')
+          window.location.href = '/'
+          return
+        }
+
+        // 소속 병원이 중지된 경우 로그아웃
+        if (result.data.clinic?.status === 'suspended') {
+          alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
+          await supabase.auth.signOut()
+          window.location.href = '/'
+          return
+        }
+
+        setUser(result.data)
+        if (result.data.clinic_id) {
+          dataService.setCachedClinicId(result.data.clinic_id)
+        }
       }
-    } catch (error) {
-      console.error('Logout error:', error)
     }
-
-    // 로컬 상태를 모두 초기화
+  } else if (event === 'SIGNED_OUT') {
     setUser(null)
-    dataService.clearCachedClinicId()
-
-    // localStorage 정리 (Cookie는 Supabase가 자동으로 정리)
-    console.log('[Logout] Clearing localStorage data...')
     localStorage.removeItem('dental_auth')
     localStorage.removeItem('dental_user')
-
-    // 로그아웃 중임을 localStorage에도 저장
-    localStorage.setItem('dental_logging_out', 'true')
-
-    // 강제로 홈 페이지로 리디렉션
-    console.log('홈 페이지로 리디렉션...')
-
-    // 약간의 지연 후 리디렉션 (상태 업데이트가 완료되도록)
-    setTimeout(() => {
-      localStorage.removeItem('dental_logging_out')
-      setShowInactivityModal(false)
-      window.location.href = '/'
-    }, showInactivityMessage ? 2000 : 100)
+    dataService.clearCachedClinicId()
+  } else if (event === 'TOKEN_REFRESHED') {
+    console.log('[AuthContext] Token refreshed successfully')
+  } else if (event === 'USER_UPDATED') {
+    console.log('[AuthContext] User updated')
   }
+})
 
-  const isAuthenticated = Boolean(user)
+subscription = authListener.subscription
+} catch (sessionError) {
+  console.error('[AuthContext] Session check error:', sessionError)
+  // 세션 확인 실패 시 localStorage 확인
+  const authStatus = localStorage.getItem('dental_auth')
+  const userData = localStorage.getItem('dental_user')
 
-  // 로딩 중일 때 로딩 화면 표시
-  if (loading) {
-    return (
+  if (authStatus === 'true' && userData) {
+    try {
+      const parsedUser = JSON.parse(userData)
+      console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
+      setUser(parsedUser)
+    } catch (e) {
+      console.error('Failed to parse localStorage user data:', e)
+    }
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto mb-4"></div>

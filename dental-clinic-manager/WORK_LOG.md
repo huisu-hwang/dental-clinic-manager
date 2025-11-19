@@ -4,6 +4,240 @@
 
 ---
 
+## 2025-11-20 [버그 수정] 승인 대기/거절 사용자 안내 페이지 깜빡임 문제 해결
+
+**키워드:** #버그수정 #승인대기 #인증 #세션관리 #UX개선
+
+### 📋 작업 내용
+- 승인 대기/거절 사용자 로그인 시 안내 페이지가 깜빡이며 사라지는 문제 해결
+- 세션 강제 종료 로직 제거하여 사용자가 안내 페이지를 정상적으로 볼 수 있도록 개선
+
+### 🐛 문제
+
+**증상:**
+- 승인 대기/거절 사용자가 로그인 시도
+- `/pending-approval` 페이지가 300ms 정도만 표시됨
+- 즉시 랜딩 페이지(`/`)로 리다이렉트됨
+- 사용자가 안내 메시지를 읽을 수 없음
+- "승인 상태 확인" 버튼을 클릭할 기회가 없음
+
+**발견 경로:**
+- 사용자 보고: 승인 전 로그인 시 안내 페이지가 잠깐 보였다가 바로 사라짐
+
+### 🔍 근본 원인 (Timeline 분석)
+
+**문제 발생 흐름:**
+
+1. **사용자가 로그인 시도** (LoginForm.tsx)
+   - Supabase 인증 성공
+   - 사용자 프로필 조회 → `status === 'pending'` 확인
+
+2. **LoginForm이 즉시 로그아웃 처리** (line 166) ← 근본 원인!
+   ```typescript
+   await supabase.auth.signOut()  // ❌ 세션 파괴!
+   ```
+
+3. **Parent 컴포넌트가 `/pending-approval`로 리다이렉트**
+   - 페이지가 마운트되고 렌더링 시작 (300ms)
+
+4. **pending-approval 페이지가 세션 확인** (line 27)
+   ```typescript
+   const { data: { user } } = await supabase.auth.getUser()
+   // user === null (세션이 없음!)
+   ```
+
+5. **세션이 없어서 `/`로 리다이렉트** (line 29)
+   ```typescript
+   if (!user) {
+     router.push('/')  // ❌ 다시 랜딩 페이지로!
+     return
+   }
+   ```
+
+**근본 원인:**
+- **LoginForm.tsx**: pending/rejected 사용자를 즉시 `signOut()`으로 로그아웃
+- **AuthContext.tsx**: onAuthStateChange에서도 pending/rejected 사용자를 `signOut()`
+- **pending-approval 페이지**: 유효한 세션이 필요하지만 세션이 파괴됨
+- **결과**: 페이지가 깜빡이고 사라지는 현상 발생
+
+### ✅ 해결 방법
+
+#### 1. LoginForm.tsx 수정 (src/components/Auth/LoginForm.tsx)
+
+**변경 1: useRouter import 추가** (line 4)
+```typescript
+import { useRouter } from 'next/navigation'
+```
+
+**변경 2: router 초기화** (line 18)
+```typescript
+const router = useRouter()
+```
+
+**변경 3: Pending 사용자 처리 개선** (lines 165-173)
+```typescript
+// BEFORE (문제)
+if (result.data.status === 'pending') {
+  setError('🕐 승인 대기 중입니다...')
+  await supabase.auth.signOut()  // ❌ 세션 파괴!
+  setLoading(false)
+  return
+}
+
+// AFTER (해결)
+if (result.data.status === 'pending') {
+  console.warn('[LoginForm] User is pending approval, keeping session and redirecting:', result.data.id)
+  // 세션 유지 (signOut 제거) - 사용자가 /pending-approval 페이지에서 상태를 확인할 수 있도록
+  login(formData.email, result.data)  // AuthContext에 저장
+  setLoading(false)
+  // /pending-approval 페이지로 직접 리다이렉트
+  router.push('/pending-approval')
+  return
+}
+```
+
+**변경 4: Rejected 사용자 처리 개선** (lines 176-184)
+```typescript
+// BEFORE (문제)
+if (result.data.status === 'rejected') {
+  setError('❌ 승인이 거절되었습니다...')
+  await supabase.auth.signOut()  // ❌ 세션 파괴!
+  setLoading(false)
+  return
+}
+
+// AFTER (해결)
+if (result.data.status === 'rejected') {
+  console.warn('[LoginForm] User was rejected, keeping session and redirecting:', result.data.id)
+  // 세션 유지 (signOut 제거) - 사용자가 거절 사유를 확인할 수 있도록
+  login(formData.email, result.data)  // AuthContext에 저장
+  setLoading(false)
+  // /pending-approval 페이지로 직접 리다이렉트 (거절 메시지 표시)
+  router.push('/pending-approval')
+  return
+}
+```
+
+#### 2. AuthContext.tsx 수정 (src/contexts/AuthContext.tsx)
+
+**변경 1: 초기 로드 시 pending/rejected 처리** (lines 149-157)
+```typescript
+// BEFORE (문제)
+if (result.data.status === 'pending' && window.location.pathname !== '/pending-approval') {
+  setLoading(false)
+  window.location.href = '/pending-approval'
+  return
+}
+
+if (result.data.status === 'rejected') {
+  await supabase.auth.signOut()  // ❌ 세션 파괴!
+  alert('❌ 승인이 거절되었습니다...')
+  window.location.href = '/'
+  return
+}
+
+// AFTER (해결)
+if ((result.data.status === 'pending' || result.data.status === 'rejected') &&
+    window.location.pathname !== '/pending-approval') {
+  console.warn('[AuthContext] User status:', result.data.status, '- redirecting to /pending-approval')
+  setLoading(false)
+  // 세션 유지 (signOut 제거) - 사용자가 안내 페이지를 볼 수 있도록
+  window.location.href = '/pending-approval'
+  return
+}
+```
+
+**변경 2: SIGNED_IN 이벤트 처리** (lines 214-222)
+```typescript
+// BEFORE (문제)
+if (result.data.status === 'pending') {
+  await supabase.auth.signOut()  // ❌ 세션 파괴!
+  window.location.href = '/pending-approval'
+  return
+}
+
+if (result.data.status === 'rejected') {
+  await supabase.auth.signOut()  // ❌ 세션 파괴!
+  alert('❌ 승인이 거절되었습니다...')
+  window.location.href = '/'
+  return
+}
+
+// AFTER (해결)
+if (result.data.status === 'pending' || result.data.status === 'rejected') {
+  console.warn('[AuthContext] SIGNED_IN event - User status:', result.data.status)
+  // 세션 유지 (signOut 제거) - 사용자가 안내 페이지를 볼 수 있도록
+  if (window.location.pathname !== '/pending-approval') {
+    window.location.href = '/pending-approval'
+  }
+  return
+}
+```
+
+#### 3. pending-approval/page.tsx - 수정 불필요
+
+**현재 코드는 정상 작동:**
+- 세션이 유지되면 `getUser()` 성공
+- 사용자 상태에 따라 올바른 UI 표시
+- **변경 불필요**
+
+### 🧪 테스트 결과
+
+**Pending 사용자 로그인:**
+- ✅ `/pending-approval` 페이지에 정상적으로 머무름
+- ✅ "🕐 승인 대기 중" 메시지 표시
+- ✅ "승인 상태 확인" 버튼 작동
+- ✅ "이메일 확인하러 가기" 버튼 작동
+- ✅ "로그아웃" 버튼으로 명시적 로그아웃 가능
+
+**Rejected 사용자 로그인:**
+- ✅ `/pending-approval` 페이지에 정상적으로 머무름
+- ✅ "❌ 승인이 거절되었습니다" 메시지 표시
+- ✅ 거절 사유 표시 (있는 경우)
+- ✅ 문의 이메일 링크 표시 (`hiclinic.inc@gmail.com`)
+- ✅ "로그아웃" 버튼으로 명시적 로그아웃 가능
+
+**페이지 깜빡임:**
+- ❌ 이전: 300ms만 보이고 사라짐
+- ✅ 이후: 페이지가 안정적으로 표시됨
+
+### 💡 배운 점
+
+**1. 세션 관리와 UX의 상관관계**
+- 세션을 너무 빨리 파괴하면 사용자에게 중요한 정보를 보여줄 수 없음
+- Pending/Rejected 사용자도 제한된 세션이 필요함
+- 명시적 로그아웃은 사용자가 "로그아웃" 버튼을 클릭할 때만 수행
+
+**2. 상태별 접근 제어 전략**
+- **Active 사용자**: 전체 기능 접근 가능
+- **Pending/Rejected 사용자**: 안내 페이지만 접근 가능 (세션 유지)
+- **Suspended 병원 소속**: 즉시 로그아웃 (보안상 필요)
+
+**3. 다중 리다이렉트 체인의 위험성**
+- LoginForm → Parent → pending-approval → 각각 리다이렉트 로직
+- 세션 상태가 일관되지 않으면 예상치 못한 리다이렉트 루프 발생
+- 해결: 각 단계에서 일관된 세션 상태 유지
+
+**4. 타이밍 이슈 디버깅**
+- "깜빡임" 현상은 보통 비동기 작업 + 리다이렉트의 타이밍 문제
+- Timeline 분석 (1단계 → 2단계 → ... 5단계)이 근본 원인 파악에 효과적
+
+### 📚 참고 자료
+
+- Next.js useRouter: https://nextjs.org/docs/app/api-reference/functions/use-router
+- Supabase Session Management: https://supabase.com/docs/guides/auth/sessions
+- UX Design Patterns: Clear user feedback before state changes
+
+### 🔗 관련 파일
+
+- `src/components/Auth/LoginForm.tsx:4` - useRouter import 추가
+- `src/components/Auth/LoginForm.tsx:18` - router 초기화
+- `src/components/Auth/LoginForm.tsx:165-184` - pending/rejected 처리 개선
+- `src/contexts/AuthContext.tsx:149-157` - 초기 로드 시 처리 개선
+- `src/contexts/AuthContext.tsx:214-222` - SIGNED_IN 이벤트 처리 개선
+
+---
+
 ## 2025-11-20 [버그 수정] Vercel 배포 환경 승인 대기 회원 미표시 문제 해결
 
 **키워드:** #버그수정 #Vercel #환경변수 #마스터대시보드 #에러처리
