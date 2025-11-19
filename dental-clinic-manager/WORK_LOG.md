@@ -4,6 +4,126 @@
 
 ---
 
+## 2025-11-19 [UX 개선] 회원가입 완료 후 이메일 인증 버튼 추가
+
+**키워드:** #회원가입 #이메일인증 #UX개선 #사용자경험
+
+### 📋 작업 내용
+- 회원가입 완료 후 "이메일 인증하러 가기" 버튼 추가
+- 사용자의 이메일 제공업체 자동 감지 및 링크 연결
+- 성공 메시지 간소화 및 명확화
+
+### 🐛 문제
+
+**증상:**
+- 회원가입 완료 후 "로그인 페이지로 가기" 버튼만 표시
+- 사용자가 이메일 인증을 바로 하기 어려움
+- 이메일 인증이 필요하다는 안내만 있고 직접 이동 기능 없음
+
+**발견 경로:**
+- 사용자 보고: 회원가입 후 이메일 인증 버튼이 보이지 않음
+
+### 🔍 근본 원인
+
+**문제 분석:**
+1. SignupForm에서 회원가입 완료 시 "로그인 페이지로 가기" 버튼만 제공
+2. 사용자가 수동으로 이메일 앱을 열어야 하는 불편함
+3. 이메일 인증 프로세스가 끊김
+
+### ✅ 해결 방법
+
+**1. handleGoToEmailProvider 함수 추가** (`SignupForm.tsx:106-132`)
+```typescript
+const handleGoToEmailProvider = () => {
+  if (!formData.userId) return;
+
+  const email = formData.userId;
+  const domain = email.substring(email.lastIndexOf('@') + 1);
+
+  const emailProviderLinks: { [key: string]: string } = {
+    'gmail.com': 'https://mail.google.com',
+    'naver.com': 'https://mail.naver.com',
+    'hanmail.net': 'https://mail.daum.net',
+    'daum.net': 'https://mail.daum.net',
+    // ... 기타 이메일 제공업체
+  };
+
+  const url = emailProviderLinks[domain];
+  if (url) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
+```
+
+**2. 성공 메시지 간소화** (`SignupForm.tsx:307`)
+```typescript
+// BEFORE (장황한 메시지)
+setSuccess(`회원가입 신청이 완료되었습니다!\n\n📧 ${formData.userId}로 인증 이메일이 발송되었습니다.\n\n1️⃣ 이메일함을 확인하여 인증 링크를 클릭해주세요.\n2️⃣ 이메일 인증 완료 후 관리자의 승인을 받으시면 로그인하실 수 있습니다.`);
+
+// AFTER (간결하고 명확)
+setSuccess(`📧 이메일 인증이 필요합니다!\n\n${formData.userId}로 인증 이메일이 발송되었습니다.\n\n아래 버튼을 클릭하여 이메일함에서\n인증 링크를 확인해주세요.`);
+```
+
+**3. 버튼 UI 개선** (`SignupForm.tsx:744-762`)
+```typescript
+// Primary 버튼: 이메일 인증하러 가기
+<button
+  onClick={handleGoToEmailProvider}
+  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md">
+  <span>📧</span>
+  <span>이메일 인증하러 가기</span>
+</button>
+
+// Secondary 버튼: 나중에 하기
+<button
+  onClick={() => onSignupSuccess({...})}
+  className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2.5 px-4 rounded-md">
+  나중에 하기
+</button>
+```
+
+### 🧪 테스트 시나리오
+
+**시나리오 1: Gmail 사용자**
+1. user@gmail.com으로 회원가입
+2. ✅ "📧 이메일 인증하러 가기" 버튼 표시
+3. ✅ 버튼 클릭 → https://mail.google.com 새 탭 오픈
+4. ✅ 이메일 확인 후 인증 완료
+
+**시나리오 2: Naver 사용자**
+1. user@naver.com으로 회원가입
+2. ✅ 버튼 클릭 → https://mail.naver.com 새 탭 오픈
+
+**시나리오 3: 나중에 인증**
+1. 회원가입 완료
+2. ✅ "나중에 하기" 버튼 클릭
+3. ✅ 로그인 페이지로 이동
+
+**지원하는 이메일 제공업체:**
+- Gmail, Naver, Daum/Hanmail/Kakao, Nate
+- iCloud/Me/Mac, Outlook/Hotmail/Live
+
+### 💡 배운 점
+
+1. **사용자 플로우의 연속성**
+   - 회원가입 → 이메일 인증 → 로그인의 플로우가 끊기지 않도록
+   - 각 단계에서 다음 단계로의 명확한 액션 제공
+
+2. **자동화를 통한 UX 개선**
+   - 사용자가 수동으로 이메일 앱을 찾지 않도록
+   - 도메인 자동 감지로 적절한 이메일 서비스로 연결
+
+3. **Primary/Secondary 버튼 구분**
+   - Primary: 권장 액션 (이메일 인증)
+   - Secondary: 대안 액션 (나중에 하기)
+   - 시각적 위계로 사용자 행동 유도
+
+4. **메시지 간소화의 중요성**
+   - 너무 장황한 안내는 오히려 사용자를 혼란스럽게 함
+   - 핵심만 간결하게 전달 + 버튼으로 액션 유도
+
+---
+
 ## 2025-11-19 [보안 강화] 승인되지 않은 사용자 로그인 차단 및 메시지 개선
 
 **키워드:** #사용자승인 #로그인보안 #Status체크 #UX개선

@@ -103,6 +103,34 @@ export default function SignupForm({
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
+  const handleGoToEmailProvider = () => {
+    if (!formData.userId) return;
+
+    const email = formData.userId;
+    const domain = email.substring(email.lastIndexOf('@') + 1);
+
+    const emailProviderLinks: { [key: string]: string } = {
+      'gmail.com': 'https://mail.google.com',
+      'naver.com': 'https://mail.naver.com',
+      'hanmail.net': 'https://mail.daum.net',
+      'daum.net': 'https://mail.daum.net',
+      'kakao.com': 'https://mail.daum.net',
+      'nate.com': 'https://mail.nate.com',
+      'icloud.com': 'https://www.icloud.com/mail',
+      'me.com': 'https://www.icloud.com/mail',
+      'mac.com': 'https://www.icloud.com/mail',
+      'outlook.com': 'https://outlook.live.com',
+      'hotmail.com': 'https://outlook.live.com',
+      'live.com': 'https://outlook.live.com',
+    };
+
+    const url = emailProviderLinks[domain];
+
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
   const validateForm = () => {
     const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
     const phoneRegex = /^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/;
@@ -276,11 +304,7 @@ export default function SignupForm({
       console.log('[Signup] Signup completed successfully!');
 
       // 역할별 성공 메시지 - 이메일 인증 강조
-      if (formData.role === 'owner') {
-        setSuccess(`회원가입 신청이 완료되었습니다!\n\n📧 ${formData.userId}로 인증 이메일이 발송되었습니다.\n\n1️⃣ 이메일함을 확인하여 인증 링크를 클릭해주세요.\n2️⃣ 이메일 인증 완료 후 마스터 관리자의 승인을 받으시면 로그인하실 수 있습니다.\n\n※ 이메일이 보이지 않으면 스팸함을 확인해주세요.`);
-      } else {
-        setSuccess(`회원가입 신청이 완료되었습니다!\n\n📧 ${formData.userId}로 인증 이메일이 발송되었습니다.\n\n1️⃣ 이메일함을 확인하여 인증 링크를 클릭해주세요.\n2️⃣ 이메일 인증 완료 후 병원 관리자의 승인을 받으시면 로그인하실 수 있습니다.\n\n※ 이메일이 보이지 않으면 스팸함을 확인해주세요.`);
-      }
+      setSuccess(`📧 이메일 인증이 필요합니다!\n\n${formData.userId}로 인증 이메일이 발송되었습니다.\n\n아래 버튼을 클릭하여 이메일함에서\n인증 링크를 확인해주세요.\n\n※ 이메일이 보이지 않으면 스팸함을 확인해주세요.`);
 
     } catch (error: unknown) {
       console.error('[Signup] Signup error:', error);
@@ -717,16 +741,25 @@ export default function SignupForm({
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => onSignupSuccess({
-                    email: formData.userId,
-                    name: formData.name,
-                    role: formData.role
-                  })}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors shadow-sm hover:shadow-md"
-                >
-                  로그인 페이지로 가기
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleGoToEmailProvider}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition-colors shadow-sm hover:shadow-md flex items-center justify-center space-x-2"
+                  >
+                    <span>📧</span>
+                    <span>이메일 인증하러 가기</span>
+                  </button>
+                  <button
+                    onClick={() => onSignupSuccess({
+                      email: formData.userId,
+                      name: formData.name,
+                      role: formData.role
+                    })}
+                    className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2.5 px-4 rounded-md transition-colors"
+                  >
+                    나중에 하기
+                  </button>
+                </div>
               </div>
             )}
 
