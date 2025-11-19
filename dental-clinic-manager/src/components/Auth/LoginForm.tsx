@@ -125,7 +125,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
           id: authData.user.id,
           email: 'sani81@gmail.com',
           name: 'Master Administrator',
-          role: 'master',
+          role: 'master_admin',
           status: 'active',
           userId: 'sani81@gmail.com',
           clinic_id: null, // 마스터는 특정 병원에 소속되지 않음

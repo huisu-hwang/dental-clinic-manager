@@ -109,9 +109,9 @@ export async function ensureConnection() {
     if (typeof window !== 'undefined') {
       console.log('[ensureConnection] Redirecting to login page...')
 
-      // 현재 페이지를 returnUrl로 저장
+      // 현재 페이지를 redirect 파라미터로 저장 (AuthApp과 일치)
       const currentPath = window.location.pathname + window.location.search
-      window.location.href = `/login?returnUrl=${encodeURIComponent(currentPath)}`
+      window.location.href = `/?redirect=${encodeURIComponent(currentPath)}`
     }
 
     throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')

@@ -46,8 +46,8 @@ export default function MasterAdminPage() {
       console.log('[Master] Checking permission for user:', user)
 
       // localStorage에서 직접 확인 (빠른 체크)
-      if (user?.role === 'master') {
-        console.log('[Master] User is master, loading data...')
+      if (user?.role === 'master_admin') {
+        console.log('[Master] User is master_admin, loading data...')
         loadData()
         return
       }
@@ -57,7 +57,7 @@ export default function MasterAdminPage() {
       const userData = result?.data as any
       console.log('[Master] User profile from DB:', userData)
 
-      if (userData?.role !== 'master') {
+      if (userData?.role !== 'master_admin') {
         alert('마스터 관리자 권한이 필요합니다.')
         router.push('/dashboard')
         return
@@ -65,9 +65,9 @@ export default function MasterAdminPage() {
       loadData()
     } catch (error) {
       console.error('[Master] 권한 확인 실패:', error)
-      // 에러가 발생해도 user.role이 master면 진행
-      if (user?.role === 'master') {
-        console.log('[Master] Error occurred but user is master, proceeding...')
+      // 에러가 발생해도 user.role이 master_admin이면 진행
+      if (user?.role === 'master_admin') {
+        console.log('[Master] Error occurred but user is master_admin, proceeding...')
         loadData()
       } else {
         router.push('/dashboard')
@@ -620,11 +620,11 @@ export default function MasterAdminPage() {
                       <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-xs rounded-full ${
-                          user.role === 'master' ? 'bg-purple-100 text-purple-800' :
+                          user.role === 'master_admin' ? 'bg-purple-100 text-purple-800' :
                           user.role === 'owner' ? 'bg-blue-100 text-blue-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {user.role === 'master' ? '마스터' :
+                          {user.role === 'master_admin' ? '마스터' :
                            user.role === 'owner' ? '대표원장' :
                            user.role}
                         </span>
@@ -647,7 +647,7 @@ export default function MasterAdminPage() {
                         {new Date(user.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        {user.role !== 'master' && (
+                        {user.role !== 'master_admin' && (
                           <button
                             onClick={() => handleDeleteUser(user.id)}
                             className="text-red-600 hover:text-red-900 text-sm font-medium"
@@ -682,7 +682,7 @@ export default function MasterAdminPage() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">마스터 관리자</span>
-                  <span className="text-sm font-medium">{users.filter(u => u.role === 'master').length}</span>
+                  <span className="text-sm font-medium">{users.filter(u => u.role === 'master_admin').length}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">대표원장</span>

@@ -4,6 +4,127 @@
 
 ---
 
+## 2025-11-19 [버그 수정] 로그인 페이지 404 오류 및 Role 불일치 문제 해결
+
+**키워드:** #로그인 #404 #Role불일치 #마스터관리자 #근본원인분석
+
+### 📋 작업 내용
+- 세션 만료 시 로그인 페이지 404 오류 수정
+- 데이터베이스 스키마와 코드 간 role 값 불일치 수정 ('master' → 'master_admin')
+- 승인 대기 목록 정상 표시 확인
+
+### 🐛 문제
+
+**증상:**
+- 마스터 계정에서 승인 대기 중인 병원 회원 목록이 보이지 않음
+- 세션 만료 시 `/login` 페이지로 리디렉션되어 404 에러 발생
+
+**발견 경로:**
+- Chrome DevTools 콘솔 로그 분석
+- `/login` 페이지 접근 시 404 에러 확인
+
+### 🔍 근본 원인 (5 Whys)
+
+**문제 1: 승인 대기 목록 미표시**
+
+1. **왜 승인 대기 목록이 보이지 않는가?**
+   - 마스터 페이지에 접근할 수 없었기 때문
+
+2. **왜 마스터 페이지에 접근할 수 없었는가?**
+   - 세션 만료 시 로그인 페이지로 리디렉션되지만 404 에러 발생
+
+3. **왜 404 에러가 발생했는가?**
+   - `connectionCheck.ts`에서 `/login` 페이지로 리디렉션하지만, 실제 로그인 페이지는 `/` (루트)
+
+4. **왜 로그인 페이지 경로가 다른가?**
+   - Next.js App Router 구조에서 `/` 경로가 `AuthApp` 컴포넌트로 로그인 처리
+   - `/login` 경로는 존재하지 않음
+
+5. **근본 원인:**
+   - 로그인 페이지 경로 불일치: 코드에서는 `/login` 사용, 실제는 `/` 사용
+
+**문제 2: Role 값 불일치**
+
+1. **왜 role 불일치가 있는가?**
+   - 데이터베이스 스키마: `role IN ('master_admin', 'owner', ...)`
+   - 코드: `role === 'master'`
+
+2. **왜 이런 불일치가 발생했는가?**
+   - 초기 개발 시 데이터베이스 스키마 확인 없이 임의로 'master' 값 사용
+
+3. **근본 원인:**
+   - 데이터베이스 스키마와 코드 간 일관성 부족
+
+### ✅ 해결 방법
+
+**1. connectionCheck.ts 수정** (`src/lib/supabase/connectionCheck.ts:114`)
+```typescript
+// BEFORE
+window.location.href = `/login?returnUrl=${encodeURIComponent(currentPath)}`
+
+// AFTER
+window.location.href = `/?redirect=${encodeURIComponent(currentPath)}`
+```
+- `/login` → `/`로 변경
+- 파라미터 이름 통일: `returnUrl` → `redirect` (AuthApp에서 사용하는 파라미터)
+
+**2. Role 값 'master' → 'master_admin' 일괄 수정**
+
+수정 파일:
+- `src/contexts/AuthContext.tsx:37` - MASTER_ADMIN 상수
+- `src/components/Auth/LoginForm.tsx:128` - 마스터 로그인 프로필
+- `src/app/master/page.tsx:49, 60, 69, 623, 627, 650, 685` - 권한 체크 및 UI
+- `src/components/Layout/Header.tsx:21, 67` - 마스터 여부 체크
+
+```typescript
+// BEFORE
+role: 'master'
+user?.role === 'master'
+
+// AFTER
+role: 'master_admin'
+user?.role === 'master_admin'
+```
+
+### 🧪 테스트 결과
+
+1. **로그인 후 마스터 페이지 접근**
+   - ✅ `/master` 페이지 정상 접근
+   - ✅ 승인 대기 목록 3명 표시 확인
+
+2. **Chrome DevTools 콘솔 로그**
+   ```
+   [Master] Total users loaded: 14
+   [Master] Pending users: 3
+   [Master] Pending users details: [array]
+   ```
+   - ✅ API 정상 작동
+   - ✅ 프론트엔드 필터링 정상
+
+3. **세션 만료 시 리디렉션**
+   - ✅ 404 대신 정상적으로 로그인 페이지(/) 표시
+
+### 💡 배운 점
+
+1. **근본 원인 분석의 중요성**
+   - 증상(승인 대기 목록 미표시)만 보고 데이터 조회 로직을 의심
+   - 실제 근본 원인은 로그인 페이지 경로 오류
+   - Chrome DevTools로 실제 사용자 플로우 재현이 핵심
+
+2. **데이터베이스 스키마 우선주의**
+   - 코드를 작성하기 전 반드시 DB 스키마의 제약사항 확인 필요
+   - 특히 ENUM 타입, CHECK 제약조건은 코드와 일치해야 함
+
+3. **일관성 있는 명명 규칙**
+   - 로그인 리디렉션 파라미터: `returnUrl` vs `redirect`
+   - 파라미터 이름을 통일하여 혼란 방지
+
+4. **Chrome DevTools MCP의 효과**
+   - 콘솔 로그, 네트워크 탭, 페이지 스냅샷을 통한 실시간 디버깅
+   - 추측이 아닌 실제 데이터 기반 문제 해결
+
+---
+
 ## 2025-11-19 [버그 수정] 토큰 갱신 중 데이터베이스 연결 타임아웃 Race Condition 해결
 
 **키워드:** #RaceCondition #TokenRefresh #Supabase #Auth #근본원인분석

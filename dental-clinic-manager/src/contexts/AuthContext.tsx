@@ -34,7 +34,7 @@ const MASTER_ADMIN: UserProfile = {
   id: 'master-admin-001',
   email: 'sani81@gmail.com',
   name: 'Master Administrator',
-  role: 'master',
+  role: 'master_admin',
   status: 'active',
   userId: 'sani81@gmail.com'
 }

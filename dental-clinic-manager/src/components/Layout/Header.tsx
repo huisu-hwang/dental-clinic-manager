@@ -18,7 +18,7 @@ export default function Header({ dbStatus = 'connected', user, onLogout, showMan
   console.log('[Header] User info:', {
     user,
     role: user?.role,
-    isMaster: user?.role === 'master'
+    isMaster: user?.role === 'master_admin'
   })
 
   const getStatusColor = () => {
@@ -64,7 +64,7 @@ export default function Header({ dbStatus = 'connected', user, onLogout, showMan
         {user && onLogout && (
           <div className="flex items-center space-x-2">
             {/* Master Admin Link */}
-            {user.role === 'master' && (
+            {user.role === 'master_admin' && (
               <Link
                 href="/master"
                 className="flex items-center space-x-1 px-3 py-2 text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-purple-200 transform hover:scale-105"
