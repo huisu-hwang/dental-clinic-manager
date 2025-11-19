@@ -23,6 +23,7 @@ export default function MasterAdminPage() {
     totalAppointments: 0
   })
   const [loadingData, setLoadingData] = useState(true)
+  const [dataError, setDataError] = useState<string | null>(null)
   const [selectedClinic, setSelectedClinic] = useState<any>(null)
   const [showUsersModal, setShowUsersModal] = useState(false)
   const [clinicUsers, setClinicUsers] = useState<any[]>([])
@@ -77,6 +78,7 @@ export default function MasterAdminPage() {
 
   const loadData = async () => {
     setLoadingData(true)
+    setDataError(null)
     try {
       console.log('[Master] Loading data...')
 
@@ -90,6 +92,26 @@ export default function MasterAdminPage() {
       const response = await fetch('/api/admin/users')
       const usersResult = await response.json()
       console.log('[Master] Users result:', usersResult)
+
+      // API 에러 체크
+      if (!response.ok || usersResult?.error) {
+        const errorMsg = usersResult?.error || 'Unknown error'
+        console.error('[Master] API Error:', errorMsg)
+
+        // 환경 변수 누락 에러인지 확인
+        if (errorMsg.includes('Missing Supabase credentials') ||
+            errorMsg.includes('Server configuration error')) {
+          setDataError('⚠️ 서버 설정 오류: Vercel 환경 변수가 올바르게 설정되지 않았습니다.\n\nVERCEL_SERVICE_ROLE_KEY 환경 변수를 확인해주세요.')
+        } else {
+          setDataError(`⚠️ 데이터를 불러오는데 실패했습니다.\n\n오류: ${errorMsg}`)
+        }
+
+        setClinics([])
+        setUsers([])
+        setPendingUsers([])
+        return
+      }
+
       const allUsers = usersResult?.data || []
       setUsers(allUsers)
 
@@ -127,7 +149,14 @@ export default function MasterAdminPage() {
       console.log('[Master] Data loaded successfully')
     } catch (error) {
       console.error('[Master] 데이터 로드 실패:', error)
-      // 에러가 발생해도 빈 데이터로 UI는 표시
+
+      // 네트워크 에러인지 확인
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setDataError('⚠️ 네트워크 연결 오류\n\n서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.')
+      } else {
+        setDataError('⚠️ 예상치 못한 오류가 발생했습니다.\n\n콘솔 로그를 확인해주세요.')
+      }
+
       setClinics([])
       setUsers([])
       setPendingUsers([])
@@ -425,7 +454,31 @@ export default function MasterAdminPage() {
               <h2 className="text-xl font-semibold">승인 대기 중인 사용자</h2>
               <p className="text-sm text-gray-500 mt-1">새로 가입한 사용자를 승인하거나 거절할 수 있습니다.</p>
             </div>
-            {pendingUsers.length === 0 ? (
+            {dataError ? (
+              <div className="p-8">
+                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div className="ml-3 flex-1">
+                      <h3 className="text-lg font-medium text-red-800 mb-2">데이터 로드 실패</h3>
+                      <p className="text-sm text-red-700 whitespace-pre-line">{dataError}</p>
+                      <div className="mt-4">
+                        <button
+                          onClick={loadData}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                        >
+                          다시 시도
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : pendingUsers.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 승인 대기 중인 사용자가 없습니다.
               </div>

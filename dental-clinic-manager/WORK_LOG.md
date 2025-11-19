@@ -4,6 +4,226 @@
 
 ---
 
+## 2025-11-20 [버그 수정] Vercel 배포 환경 승인 대기 회원 미표시 문제 해결
+
+**키워드:** #버그수정 #Vercel #환경변수 #마스터대시보드 #에러처리
+
+### 📋 작업 내용
+- Vercel 환경 변수 누락으로 인한 승인 대기 회원 미표시 문제 진단
+- Master 페이지 에러 처리 개선 (사용자에게 명확한 에러 메시지 표시)
+- Admin API 로깅 강화 (환경 변수 누락 시 상세한 정보 출력)
+
+### 🐛 문제
+
+**증상:**
+- 로컬 빌드: 마스터 계정에서 승인 대기 회원 목록 정상 표시 ✅
+- Vercel 배포: 마스터 계정에서 승인 대기 회원 목록이 비어 있음 ❌
+- 사용자에게 "승인 대기 중인 사용자가 없습니다" 메시지만 표시
+
+**발견 경로:**
+- 사용자 보고: Vercel에서 빌드된 환경에서만 승인 대기 회원이 안 보임
+
+### 🔍 근본 원인 (5 Whys 분석)
+
+**Q1: 왜 Vercel에서 승인 대기 회원이 보이지 않나?**
+A: `/api/admin/users` API가 실패하거나 빈 데이터를 반환함
+
+**Q2: 왜 API가 실패하나?**
+A: `SUPABASE_SERVICE_ROLE_KEY` 환경 변수를 찾을 수 없음
+
+**Q3: 왜 환경 변수가 없나?**
+A: Vercel 프로젝트 설정의 Environment Variables에 설정되지 않음
+
+**Q4: 왜 로컬에서는 작동하나?**
+A: 로컬 `.env.local` 파일에 해당 값이 있음
+
+**Q5: 왜 사용자가 문제를 인지하지 못했나?**
+A: Master 페이지가 에러를 조용히 catch하여 빈 배열만 표시했기 때문
+
+**근본 원인:**
+- Vercel Environment Variables에 `SUPABASE_SERVICE_ROLE_KEY` 미설정
+- 에러 발생 시 사용자에게 명확한 알림 없음 (silent failure)
+
+### ✅ 해결 방법
+
+#### 1. Master 페이지 에러 처리 개선 (`src/app/master/page.tsx`)
+
+**변경 1: 에러 상태 추가** (line 26)
+```typescript
+const [dataError, setDataError] = useState<string | null>(null)
+```
+
+**변경 2: API 응답 검증 및 에러 분류** (lines 96-112)
+```typescript
+// API 에러 체크
+if (!response.ok || usersResult?.error) {
+  const errorMsg = usersResult?.error || 'Unknown error'
+  console.error('[Master] API Error:', errorMsg)
+
+  // 환경 변수 누락 에러인지 확인
+  if (errorMsg.includes('Missing Supabase credentials') ||
+      errorMsg.includes('Server configuration error')) {
+    setDataError('⚠️ 서버 설정 오류: Vercel 환경 변수가 올바르게 설정되지 않았습니다.\n\nVERCEL_SERVICE_ROLE_KEY 환경 변수를 확인해주세요.')
+  } else {
+    setDataError(`⚠️ 데이터를 불러오는데 실패했습니다.\n\n오류: ${errorMsg}`)
+  }
+
+  setClinics([])
+  setUsers([])
+  setPendingUsers([])
+  return
+}
+```
+
+**변경 3: 네트워크 에러 처리** (lines 150-158)
+```typescript
+} catch (error) {
+  console.error('[Master] 데이터 로드 실패:', error)
+
+  // 네트워크 에러인지 확인
+  if (error instanceof TypeError && error.message.includes('fetch')) {
+    setDataError('⚠️ 네트워크 연결 오류\n\n서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.')
+  } else {
+    setDataError('⚠️ 예상치 못한 오류가 발생했습니다.\n\n콘솔 로그를 확인해주세요.')
+  }
+
+  setClinics([])
+  setUsers([])
+  setPendingUsers([])
+}
+```
+
+**변경 4: 에러 UI 추가** (lines 457-480)
+```typescript
+{dataError ? (
+  <div className="p-8">
+    <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6">
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div className="ml-3 flex-1">
+          <h3 className="text-lg font-medium text-red-800 mb-2">데이터 로드 실패</h3>
+          <p className="text-sm text-red-700 whitespace-pre-line">{dataError}</p>
+          <div className="mt-4">
+            <button
+              onClick={loadData}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              다시 시도
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+) : pendingUsers.length === 0 ? (
+  // 기존 "승인 대기 중인 사용자가 없습니다" UI
+) : (
+  // 테이블 UI
+)}
+```
+
+#### 2. Admin API 로깅 강화 (`src/app/api/admin/users/route.ts`)
+
+**변경 1: 환경 변수 검증 로깅** (lines 24-29)
+```typescript
+console.log('[Admin API] Environment check:', {
+  hasSupabaseUrl: !!supabaseUrl,
+  hasServiceRoleKey: !!serviceRoleKey,
+  supabaseUrlLength: supabaseUrl?.length || 0,
+  serviceRoleKeyLength: serviceRoleKey?.length || 0
+})
+```
+
+**변경 2: 누락 변수 명시** (lines 31-39)
+```typescript
+if (!supabaseUrl || !serviceRoleKey) {
+  const missingVars = []
+  if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
+  if (!serviceRoleKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY')
+
+  console.error('[Admin API] ⚠️ CRITICAL: Missing environment variables:', missingVars.join(', '))
+  console.error('[Admin API] This will cause pending users to be invisible in the master dashboard.')
+  console.error('[Admin API] Please set the following in Vercel Environment Variables:')
+  missingVars.forEach(v => console.error(`  - ${v}`))
+
+  return NextResponse.json(
+    {
+      data: null,
+      error: 'Server configuration error: Missing Supabase credentials'
+    },
+    { status: 500 }
+  )
+}
+```
+
+#### 3. Vercel 환경 변수 설정 가이드
+
+**확인 방법:**
+1. Vercel Dashboard → 프로젝트 선택
+2. Settings → Environment Variables
+3. 필수 변수 확인:
+   - `NEXT_PUBLIC_SUPABASE_URL` ✅
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` ✅
+   - `SUPABASE_SERVICE_ROLE_KEY` ⚠️ (누락 시 문제 발생)
+
+**설정 방법:**
+1. Add New 버튼 클릭
+2. 변수명: `SUPABASE_SERVICE_ROLE_KEY`
+3. 값: `.env.local`의 동일한 값 복사
+4. Environment: Production, Preview, Development 모두 선택
+5. Save 후 재배포
+
+### 🧪 테스트 결과
+
+**로컬 환경:**
+- ✅ 승인 대기 회원 정상 표시
+- ✅ 에러 발생 시 명확한 메시지 표시
+
+**Vercel 배포 (환경 변수 누락 시):**
+- ✅ "서버 설정 오류: Vercel 환경 변수가 올바르게 설정되지 않았습니다" 메시지 표시
+- ✅ "다시 시도" 버튼 제공
+- ✅ Vercel Function Logs에 상세한 에러 로그 출력
+
+**Vercel 배포 (환경 변수 설정 후):**
+- ✅ 승인 대기 회원 정상 표시 (예상)
+
+### 💡 배운 점
+
+**1. Silent Failure의 위험성**
+- 에러를 조용히 catch하면 사용자가 문제를 인지하지 못함
+- 항상 명확한 에러 메시지를 사용자에게 표시해야 함
+
+**2. 환경별 차이 디버깅**
+- 로컬 vs 배포 환경의 가장 큰 차이점: 환경 변수
+- 환경 변수 누락 여부를 명확히 로깅하여 Vercel Logs에서 추적 가능하게 해야 함
+
+**3. 에러 분류의 중요성**
+- 환경 변수 누락 vs 네트워크 오류 vs 기타 오류
+- 각 에러 타입에 맞는 해결 방법을 사용자에게 안내
+
+**4. 관리자 API의 특수성**
+- `SUPABASE_SERVICE_ROLE_KEY`는 RLS를 우회하므로 필수
+- 클라이언트에 노출되면 안 되므로 서버 환경 변수로만 관리
+
+### 📚 참고 자료
+
+- Supabase Admin API: https://supabase.com/docs/reference/javascript/admin-api
+- Vercel Environment Variables: https://vercel.com/docs/environment-variables
+- Next.js API Routes: https://nextjs.org/docs/api-routes/introduction
+
+### 🔗 관련 파일
+
+- `src/app/master/page.tsx:26` - dataError state 추가
+- `src/app/master/page.tsx:79-166` - loadData 에러 처리 개선
+- `src/app/master/page.tsx:457-480` - 에러 UI 추가
+- `src/app/api/admin/users/route.ts:24-48` - 환경 변수 검증 및 로깅 강화
+
+---
+
 ## 2025-11-19 [UX 개선] 회원가입 완료 후 이메일 인증 버튼 추가
 
 **키워드:** #회원가입 #이메일인증 #UX개선 #사용자경험

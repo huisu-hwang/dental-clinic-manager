@@ -21,8 +21,23 @@ export async function GET() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+    console.log('[Admin API] Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceRoleKey: !!serviceRoleKey,
+      supabaseUrlLength: supabaseUrl?.length || 0,
+      serviceRoleKeyLength: serviceRoleKey?.length || 0
+    })
+
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error('[Admin API] Missing environment variables')
+      const missingVars = []
+      if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
+      if (!serviceRoleKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY')
+
+      console.error('[Admin API] ⚠️ CRITICAL: Missing environment variables:', missingVars.join(', '))
+      console.error('[Admin API] This will cause pending users to be invisible in the master dashboard.')
+      console.error('[Admin API] Please set the following in Vercel Environment Variables:')
+      missingVars.forEach(v => console.error(`  - ${v}`))
+
       return NextResponse.json(
         {
           data: null,
