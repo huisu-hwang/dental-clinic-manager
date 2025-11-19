@@ -4,6 +4,114 @@
 
 ---
 
+## 2025-11-19 [버그 수정] 토큰 갱신 중 데이터베이스 연결 타임아웃 Race Condition 해결
+
+**키워드:** #RaceCondition #TokenRefresh #Supabase #Auth #근본원인분석
+
+### 📋 작업 내용
+- 토큰 갱신 중 데이터베이스 연결 타임아웃 에러 해결
+- `getUserProfileById`에 `skipConnectionCheck` 옵션 추가
+- `onAuthStateChange` 콜백에서 중복 세션 체크 방지
+
+### 🐛 문제
+
+**증상:**
+```
+Error: 데이터베이스 연결에 실패했습니다. 네트워크를 확인해주세요.
+    at connectionCheck.ts:124
+    at dataService.ts:344 (ensureConnection)
+    at AuthContext.tsx:215 (getUserProfileById)
+    at onAuthStateChange callback
+    at Supabase _recoverAndRefresh
+```
+
+**발견 경로:**
+- 사용자 보고: 콘솔 에러 메시지 제공
+- 토큰 갱신(TOKEN_REFRESHED) 이벤트 중 발생
+
+### 🔍 근본 원인 (5 Whys)
+
+1. **왜 데이터베이스 연결 에러가 발생했는가?**
+   - `ensureConnection()` 함수의 세션 체크가 타임아웃
+
+2. **왜 세션 체크가 타임아웃되었는가?**
+   - Supabase가 이미 토큰 갱신 중(`_recoverAndRefresh`) 세션을 체크하고 있는 상태에서 동시에 또 다른 세션 체크 시도
+
+3. **왜 동시에 세션 체크가 발생했는가?**
+   - `onAuthStateChange` 콜백에서 `getUserProfileById()` 호출
+   - `getUserProfileById()` → `ensureConnection()` → `supabase.auth.getSession()` 호출
+
+4. **왜 onAuthStateChange에서 getUserProfileById를 호출했는가?**
+   - 로그인 시 사용자 프로필 정보를 가져오기 위해 (정상적인 로직)
+
+5. **근본 원인:**
+   - **Race Condition**: Supabase 내부의 토큰 갱신 프로세스와 애플리케이션 코드의 세션 체크가 동시에 실행되어 충돌
+
+### ✅ 해결 방법
+
+**1. dataService.ts 수정** (`src/lib/dataService.ts:343-347`)
+```typescript
+// BEFORE
+async getUserProfileById(id: string) {
+  const supabase = await ensureConnection()
+  // ...
+}
+
+// AFTER
+async getUserProfileById(id: string, options?: { skipConnectionCheck?: boolean }) {
+  // skipConnectionCheck 옵션: 토큰 갱신 중 중복 세션 체크 방지
+  const supabase = options?.skipConnectionCheck
+    ? createClient()  // 이미 Supabase가 세션 체크 중일 때는 바로 클라이언트 생성
+    : await ensureConnection()  // 일반적인 경우 연결 상태 확인
+  // ...
+}
+```
+
+**2. AuthContext.tsx 수정** (`src/contexts/AuthContext.tsx:216`)
+```typescript
+// BEFORE
+const result = await dataService.getUserProfileById(session.user.id)
+
+// AFTER
+const result = await dataService.getUserProfileById(session.user.id, { skipConnectionCheck: true })
+```
+
+### 🧪 테스트 시나리오
+
+1. **토큰 갱신 시 에러 없이 정상 동작 확인**
+   - 1시간 후 자동 토큰 갱신 대기
+   - 콘솔에 에러 메시지 없음 확인
+
+2. **일반 로그인 시 정상 동작 확인**
+   - 새로운 브라우저 탭에서 로그인
+   - 사용자 프로필 정상 로딩 확인
+
+### 💡 배운 점
+
+1. **Race Condition 인식**
+   - 비동기 작업 중 동일 리소스에 대한 중복 접근은 타임아웃/데드락 발생 가능
+   - Stack trace 분석으로 호출 순서 파악 필요
+
+2. **방어적 프로그래밍의 역설**
+   - `ensureConnection()`은 연결 상태를 확인하는 방어 코드
+   - 그러나 Supabase 내부 프로세스와 충돌하여 오히려 문제 발생
+   - 상황에 따라 방어 로직을 건너뛸 수 있는 escape hatch 필요
+
+3. **옵션 파라미터 패턴**
+   - 기존 API를 깨지 않으면서 새 기능 추가: `options?: { skipConnectionCheck?: boolean }`
+   - 하위 호환성 유지하면서 점진적 개선 가능
+
+4. **Supabase Auth 내부 동작**
+   - `_recoverAndRefresh`: 토큰 갱신 내부 프로세스
+   - `onAuthStateChange`: 인증 상태 변경 콜백 (SIGNED_IN, TOKEN_REFRESHED 등)
+   - 두 프로세스가 동시에 실행될 수 있음을 인지
+
+### 🔗 관련 파일
+- `src/lib/dataService.ts` (Line 343-352)
+- `src/contexts/AuthContext.tsx` (Line 216)
+
+---
+
 ## 2025-11-19 [버그 수정] Vercel 빌드 에러 해결 - Supabase Edge Functions 제외
 
 **키워드:** #Vercel #빌드에러 #TypeScript #Deno #tsconfig #Context7 #근본원인분석
