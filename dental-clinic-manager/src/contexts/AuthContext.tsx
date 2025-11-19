@@ -212,7 +212,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
               if (event === 'SIGNED_IN' && session?.user) {
                 if (!isLoggingOut) {
-                  const result = await dataService.getUserProfileById(session.user.id)
+                  // skipConnectionCheck: 토큰 갱신 중 중복 세션 체크 방지
+                  const result = await dataService.getUserProfileById(session.user.id, { skipConnectionCheck: true })
                   if (result.success && result.data) {
                     // 소속 병원이 중지된 경우 로그아웃
                     if (result.data.clinic?.status === 'suspended') {
