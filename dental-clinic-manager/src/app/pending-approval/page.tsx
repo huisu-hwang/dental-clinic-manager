@@ -69,6 +69,36 @@ export default function PendingApprovalPage() {
     setCheckingStatus(false)
   }
 
+  const handleGoToEmailProvider = () => {
+    if (!userInfo?.email) return;
+
+    const email = userInfo.email;
+    const domain = email.substring(email.lastIndexOf('@') + 1);
+
+    const emailProviderLinks: { [key: string]: string } = {
+      'gmail.com': 'https://mail.google.com',
+      'naver.com': 'https://mail.naver.com',
+      'hanmail.net': 'https://mail.daum.net',
+      'daum.net': 'https://mail.daum.net',
+      'kakao.com': 'https://mail.daum.net',
+      'nate.com': 'https://mail.nate.com',
+      'icloud.com': 'https://www.icloud.com/mail',
+      'me.com': 'https://www.icloud.com/mail',
+      'mac.com': 'https://www.icloud.com/mail',
+      'outlook.com': 'https://outlook.live.com',
+      'hotmail.com': 'https://outlook.live.com',
+      'live.com': 'https://outlook.live.com',
+    };
+
+    const url = emailProviderLinks[domain];
+
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    // URL이 없는 경우, 사용자는 수동으로 이메일을 확인해야 합니다.
+    // 여기에 toast 알림 등을 추가하여 사용자 경험을 향상시킬 수 있습니다.
+  }
+
   const handleLogout = async () => {
     const supabase = getSupabase()
     if (supabase) {
@@ -104,10 +134,14 @@ export default function PendingApprovalPage() {
                 <XCircleIcon className="h-16 w-16 text-red-500" />
               </div>
               <h2 className="text-2xl font-bold text-center text-slate-800 mb-4">
-                가입 신청이 거절되었습니다
+                ❌ 승인이 거절되었습니다
               </h2>
               <p className="text-center text-slate-600 mb-6">
-                죄송합니다. 병원 관리자가 회원가입 신청을 거절하였습니다.
+                내부 규정으로 인해 승인이 거절되었습니다.<br />
+                자세한 내용을 알고 싶으신 경우는<br />
+                <a href="mailto:hiclinic.inc@gmail.com" className="text-blue-600 hover:text-blue-700 font-medium">
+                  hiclinic.inc@gmail.com
+                </a>로 문의 바랍니다.
               </p>
               {userInfo.review_note && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
@@ -123,11 +157,11 @@ export default function PendingApprovalPage() {
                 <ClockIcon className="h-16 w-16 text-blue-500" />
               </div>
               <h2 className="text-2xl font-bold text-center text-slate-800 mb-4">
-                승인 대기 중
+                🕐 승인 대기 중
               </h2>
               <p className="text-center text-slate-600 mb-6">
-                회원가입 신청이 접수되었습니다.<br />
-                병원 관리자의 승인을 기다리고 있습니다.
+                관리자의 승인을 기다리고 있습니다.<br />
+                조금만 더 기다려주세요!
               </p>
 
               {userInfo && (
@@ -166,6 +200,13 @@ export default function PendingApprovalPage() {
               >
                 {checkingStatus ? '확인 중...' : '승인 상태 확인'}
               </button>
+
+              <button
+                onClick={handleGoToEmailProvider}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition-colors mb-3"
+              >
+                이메일 확인하러 가기
+              </button>
             </>
           )}
 
@@ -182,7 +223,9 @@ export default function PendingApprovalPage() {
             문의사항이 있으신가요?
           </p>
           <p className="text-sm text-slate-600">
-            병원 관리자에게 직접 문의해 주세요.
+            <a href="mailto:hiclinic.inc@gmail.com" className="text-blue-600 hover:text-blue-700">
+              hiclinic.inc@gmail.com
+            </a>로 문의해 주세요.
           </p>
         </div>
       </div>

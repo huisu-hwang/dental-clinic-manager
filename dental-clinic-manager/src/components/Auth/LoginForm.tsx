@@ -162,7 +162,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         // 3.6. 승인 대기 중인 사용자 체크
         if (result.data.status === 'pending') {
           console.warn('[LoginForm] User is pending approval:', result.data.id)
-          setError('승인 대기 중입니다.\n\n1️⃣ 이메일 인증을 완료하셨습니다.\n2️⃣ 관리자의 승인을 기다리고 있습니다.\n\n승인 후 로그인이 가능합니다.')
+          setError('🕐 승인 대기 중입니다.\n\n관리자의 승인을 기다리고 있습니다.\n조금만 더 기다려주세요!')
           await supabase.auth.signOut()
           setLoading(false)
           return
@@ -171,7 +171,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         // 3.7. 거절된 사용자 체크
         if (result.data.status === 'rejected') {
           console.warn('[LoginForm] User was rejected:', result.data.id)
-          setError('가입 신청이 거절되었습니다.\n\n관리자에게 문의해주세요.')
+          setError('❌ 승인이 거절되었습니다.\n\n내부 규정으로 인해 승인이 거절되었습니다.\n자세한 내용을 알고 싶으신 경우는\nhiclinic.inc@gmail.com로 문의 바랍니다.')
           await supabase.auth.signOut()
           setLoading(false)
           return

@@ -4,6 +4,137 @@
 
 ---
 
+## 2025-11-19 [보안 강화] 승인되지 않은 사용자 로그인 차단 및 메시지 개선
+
+**키워드:** #사용자승인 #로그인보안 #Status체크 #UX개선
+
+### 📋 작업 내용
+- 승인 대기(pending) 및 거절(rejected) 사용자의 로그인 차단 강화
+- 사용자 상태별 안내 메시지 개선
+- AuthContext, LoginForm, pending-approval 페이지 전반에 걸친 일관된 메시지 적용
+
+### 🐛 문제
+
+**증상:**
+- 승인되지 않은 사용자(status='pending')나 거절된 사용자(status='rejected')가 로그인 후 빈 일일보고서 화면 표시
+- 사용자에게 명확한 안내 메시지 부족
+
+**발견 경로:**
+- 사용자 보고: 승인 대기/거절 사용자가 로그인되어 빈 화면 표시
+
+### 🔍 근본 원인
+
+**문제 분석:**
+1. LoginForm에 status 체크 로직은 존재했으나 메시지가 불명확
+2. AuthContext의 onAuthStateChange에서 pending/rejected 체크 누락
+3. 사용자 안내 메시지가 일관성 없고 불친절
+
+### ✅ 해결 방법
+
+**1. LoginForm.tsx 메시지 개선** (`src/components/Auth/LoginForm.tsx:163-178`)
+```typescript
+// Pending 사용자
+setError('🕐 승인 대기 중입니다.\n\n관리자의 승인을 기다리고 있습니다.\n조금만 더 기다려주세요!')
+
+// Rejected 사용자
+setError('❌ 승인이 거절되었습니다.\n\n내부 규정으로 인해 승인이 거절되었습니다.\n자세한 내용을 알고 싶으신 경우는\nhiclinic.inc@gmail.com로 문의 바랍니다.')
+```
+
+**2. AuthContext.tsx 체크 강화** (`src/contexts/AuthContext.tsx`)
+
+*초기 로드 시 (Line 157-162):*
+```typescript
+// 거절된 사용자는 로그아웃 후 안내 메시지
+if (result.data.status === 'rejected') {
+  await supabase.auth.signOut()
+  alert('❌ 승인이 거절되었습니다.\n\n내부 규정으로 인해 승인이 거절되었습니다.\n자세한 내용을 알고 싶으신 경우는 hiclinic.inc@gmail.com로 문의 바랍니다.')
+  window.location.href = '/'
+  return
+}
+```
+
+*onAuthStateChange SIGNED_IN 이벤트 (Line 219-232):*
+```typescript
+// 승인 대기 중인 사용자 체크
+if (result.data.status === 'pending') {
+  await supabase.auth.signOut()
+  window.location.href = '/pending-approval'
+  return
+}
+
+// 거절된 사용자 체크
+if (result.data.status === 'rejected') {
+  await supabase.auth.signOut()
+  alert('❌ 승인이 거절되었습니다...')
+  window.location.href = '/'
+  return
+}
+```
+
+**3. pending-approval 페이지 메시지 개선** (`src/app/pending-approval/page.tsx:137-165`)
+```typescript
+// Rejected 상태
+<h2>❌ 승인이 거절되었습니다</h2>
+<p>
+  내부 규정으로 인해 승인이 거절되었습니다.<br />
+  자세한 내용을 알고 싶으신 경우는<br />
+  <a href="mailto:hiclinic.inc@gmail.com">hiclinic.inc@gmail.com</a>로 문의 바랍니다.
+</p>
+
+// Pending 상태
+<h2>🕐 승인 대기 중</h2>
+<p>
+  관리자의 승인을 기다리고 있습니다.<br />
+  조금만 더 기다려주세요!
+</p>
+```
+
+### 🧪 테스트 시나리오
+
+**시나리오 1: Pending 사용자 로그인 시도**
+1. pending 상태 사용자로 로그인 시도
+2. ✅ 로그인 폼에서 에러 메시지 표시: "🕐 승인 대기 중입니다..."
+3. ✅ 자동 로그아웃 처리
+
+**시나리오 2: Rejected 사용자 로그인 시도**
+1. rejected 상태 사용자로 로그인 시도
+2. ✅ 로그인 폼에서 에러 메시지 표시: "❌ 승인이 거절되었습니다..."
+3. ✅ 문의처 안내: hiclinic.inc@gmail.com
+4. ✅ 자동 로그아웃 처리
+
+**시나리오 3: 로그인된 상태에서 관리자가 상태 변경**
+1. active 사용자가 로그인 중
+2. 관리자가 해당 사용자를 rejected로 변경
+3. ✅ AuthContext의 onAuthStateChange에서 감지
+4. ✅ 자동 로그아웃 및 안내 메시지
+
+**시나리오 4: /pending-approval 페이지 직접 접근**
+1. pending 사용자가 페이지 새로고침 또는 직접 접근
+2. ✅ 승인 대기 안내 페이지 표시
+3. ✅ "조금만 더 기다려주세요!" 메시지
+
+### 💡 배운 점
+
+1. **다층 방어 (Defense in Depth)**
+   - 로그인 시점, 페이지 로드 시점, 상태 변경 시점 모두에서 체크
+   - 한 곳에서만 체크하면 우회 가능성 존재
+
+2. **일관성 있는 UX**
+   - 동일한 상황에서는 동일한 메시지와 처리 방식 적용
+   - pending → `/pending-approval` 페이지
+   - rejected → 로그아웃 + alert + 홈으로 이동
+
+3. **사용자 친화적 메시지**
+   - 단순 "거절되었습니다" → "내부 규정으로 인해..."
+   - "관리자에게 문의하세요" → 구체적인 이메일 주소 제공
+   - 이모지(🕐, ❌) 사용으로 시각적 전달력 향상
+
+4. **보안과 UX의 균형**
+   - 보안: 승인되지 않은 사용자는 어떤 경우에도 서비스 접근 불가
+   - UX: 왜 접근이 불가한지, 어떻게 해결할 수 있는지 명확히 안내
+
+---
+
 ## 2025-11-19 [버그 수정] 로그인 페이지 404 오류 및 Role 불일치 문제 해결
 
 **키워드:** #로그인 #404 #Role불일치 #마스터관리자 #근본원인분석

@@ -155,8 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 // 거절된 사용자는 로그아웃
                 if (result.data.status === 'rejected') {
-                  alert('가입 신청이 거절되었습니다. 관리자에게 문의해주세요.')
                   await supabase.auth.signOut()
+                  alert('❌ 승인이 거절되었습니다.\n\n내부 규정으로 인해 승인이 거절되었습니다.\n자세한 내용을 알고 싶으신 경우는 hiclinic.inc@gmail.com로 문의 바랍니다.')
+                  window.location.href = '/'
                   return
                 }
 
@@ -215,6 +216,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   // skipConnectionCheck: 토큰 갱신 중 중복 세션 체크 방지
                   const result = await dataService.getUserProfileById(session.user.id, { skipConnectionCheck: true })
                   if (result.success && result.data) {
+                    // 승인 대기 중인 사용자 체크
+                    if (result.data.status === 'pending') {
+                      await supabase.auth.signOut()
+                      window.location.href = '/pending-approval'
+                      return
+                    }
+
+                    // 거절된 사용자 체크
+                    if (result.data.status === 'rejected') {
+                      await supabase.auth.signOut()
+                      alert('❌ 승인이 거절되었습니다.\n\n내부 규정으로 인해 승인이 거절되었습니다.\n자세한 내용을 알고 싶으신 경우는 hiclinic.inc@gmail.com로 문의 바랍니다.')
+                      window.location.href = '/'
+                      return
+                    }
+
                     // 소속 병원이 중지된 경우 로그아웃
                     if (result.data.clinic?.status === 'suspended') {
                       alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
