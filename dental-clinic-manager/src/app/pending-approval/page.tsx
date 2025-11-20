@@ -239,7 +239,7 @@ export default function PendingApprovalPage() {
             onClick={handleLogout}
             className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-4 rounded-md transition-colors"
           >
-            로그아웃
+            메인화면으로 이동
           </button>
         </div>
 
