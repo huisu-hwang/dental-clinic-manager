@@ -73,11 +73,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto p-4 md:p-8">
-        <Header
-          user={user}
-          onLogout={logout}
-          onProfileClick={() => setShowProfile(true)}
-        />
+        <div className="sticky top-0 z-10 bg-slate-50 pt-4 md:pt-8">
+          <Header
+            user={user}
+            onLogout={logout}
+            onProfileClick={() => setShowProfile(true)}
+          />
+          <TabNavigation activeTab={getActiveTab()} onTabChange={handleTabChange} />
+        </div>
 
         {/* Profile Modal */}
         {showProfile && user && (
@@ -101,8 +104,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
         )}
-
-        <TabNavigation activeTab={getActiveTab()} onTabChange={handleTabChange} />
         <main>{children}</main>
       </div>
 

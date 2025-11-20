@@ -40,7 +40,7 @@ export default function Header({ dbStatus = 'connected', user, onLogout, showMan
   }
 
   return (
-    <header className="mb-8 flex flex-wrap justify-between items-center gap-4">
+    <header className="mb-8 flex flex-wrap justify-between items-center gap-4 shadow-md">
       <div>
         <Link href="/dashboard" className="group">
           <div className="flex items-center space-x-4 cursor-pointer transition-transform duration-200 hover:scale-105">

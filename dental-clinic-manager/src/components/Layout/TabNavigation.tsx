@@ -2,6 +2,16 @@
 
 import { usePermissions } from '@/hooks/usePermissions'
 import type { Permission } from '@/types/permissions'
+import { 
+  ClipboardList, 
+  Clock, 
+  BarChart3, 
+  History, 
+  BookOpen, 
+  FileSignature, 
+  Package, 
+  HelpCircle 
+} from 'lucide-react'
 
 interface TabNavigationProps {
   activeTab: string
@@ -11,18 +21,19 @@ interface TabNavigationProps {
 interface Tab {
   id: string
   label: string
+  icon: React.ElementType
   requiredPermissions?: Permission[]
 }
 
 const tabs: Tab[] = [
-  { id: 'daily-input', label: '일일보고서', requiredPermissions: ['daily_report_view'] },
-  { id: 'attendance', label: '출근 관리', requiredPermissions: ['attendance_check_in', 'attendance_view_own'] },
-  { id: 'stats', label: '통계', requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'] },
-  { id: 'logs', label: '상세 기록', requiredPermissions: ['logs_view'] },
-  { id: 'protocols', label: '진료 프로토콜', requiredPermissions: ['protocol_view'] },
-  { id: 'contracts', label: '근로계약서', requiredPermissions: ['contract_view'] },
-  { id: 'settings', label: '재고 관리', requiredPermissions: ['inventory_view'] },
-  { id: 'guide', label: '사용 안내', requiredPermissions: ['guide_view'] }
+  { id: 'daily-input', label: '일일보고서', icon: ClipboardList, requiredPermissions: ['daily_report_view'] },
+  { id: 'attendance', label: '출근 관리', icon: Clock, requiredPermissions: ['attendance_check_in', 'attendance_view_own'] },
+  { id: 'stats', label: '통계', icon: BarChart3, requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'] },
+  { id: 'logs', label: '상세 기록', icon: History, requiredPermissions: ['logs_view'] },
+  { id: 'protocols', label: '진료 프로토콜', icon: BookOpen, requiredPermissions: ['protocol_view'] },
+  { id: 'contracts', label: '근로계약서', icon: FileSignature, requiredPermissions: ['contract_view'] },
+  { id: 'settings', label: '재고 관리', icon: Package, requiredPermissions: ['inventory_view'] },
+  { id: 'guide', label: '사용 안내', icon: HelpCircle, requiredPermissions: ['guide_view'] }
 ]
 
 export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
@@ -42,20 +53,31 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
   }
 
   return (
-    <nav className="flex border-b border-slate-200 mb-6 overflow-x-auto">
-      {visibleTabs.map(tab => (
-        <button
-          key={tab.id}
-          className={`py-3 px-6 border-b-2 border-transparent text-slate-600 flex-shrink-0 transition-colors ${
-            activeTab === tab.id
-              ? 'border-blue-500 text-blue-500 font-bold'
-              : 'hover:text-slate-800'
-          }`}
-          onClick={() => onTabChange(tab.id)}
-        >
-          {tab.label}
-        </button>
-      ))}
+    <nav className="flex border-b border-slate-200 mb-6 overflow-x-auto pt-2 px-1">
+      {visibleTabs.map(tab => {
+        const isActive = activeTab === tab.id
+        const Icon = tab.icon
+        
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={`
+              group flex items-center space-x-2 py-3 px-5 rounded-t-lg text-sm font-medium transition-all duration-200 ease-in-out whitespace-nowrap border-t border-l border-r -mb-px relative mr-1
+              ${isActive 
+                ? 'bg-white border-slate-200 text-blue-600 z-10 shadow-[0_-2px_3px_rgba(0,0,0,0.02)]' 
+                : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+              }
+            `}
+          >
+            <Icon className={`w-4 h-4 ${isActive ? 'text-blue-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
+            <span>{tab.label}</span>
+            {isActive && (
+              <div className="absolute bottom-[-1px] left-0 right-0 h-[1px] bg-white" />
+            )}
+          </button>
+        )
+      })}
     </nav>
   )
 }
