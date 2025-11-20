@@ -55,6 +55,14 @@ mcp__context7__get-library-docs({
 - ✅ 수정 후: 동일 시나리오로 검증
 - ❌ 추측으로 수정 금지
 
+### 6. 코드 리뷰 필수 (Git Commit 전)
+**모든 커밋 전에 자신이 작성한 코드를 리뷰**
+
+- ✅ 커밋 전: 변경된 모든 파일 리뷰
+- ✅ 체크리스트: 보안, 성능, 가독성, 테스트, 호환성
+- ✅ 문제 발견 시: 즉시 수정 후 재리뷰
+- ❌ 리뷰 없이 커밋 금지
+
 ---
 
 ## 📋 개발 프로세스
@@ -65,7 +73,8 @@ mcp__context7__get-library-docs({
 3. Sequential Thinking (문제 분석)
 4. 계획 수립 (TodoWrite)
 5. TDD (테스트 주도 개발)
-6. Git commit & push
+6. **코드 리뷰 (Self-Review)**
+7. Git commit & push
 
 ### 버그 수정
 1. `/compact` 실행
@@ -75,7 +84,8 @@ mcp__context7__get-library-docs({
 5. Sequential Thinking (해결 방안 설계)
 6. 코드 수정
 7. **Chrome DevTools로 수정 검증**
-8. Git commit & push
+8. **코드 리뷰 (Self-Review)**
+9. Git commit & push
 
 ### Subagent 활용
 
@@ -105,6 +115,8 @@ mcp__context7__get-library-docs({
 
 ### 구현 후
 - [ ] 모든 테스트 통과
+- [ ] **코드 리뷰 (Self-Review) 완료 (필수)**
+- [ ] **리뷰 체크리스트 모두 통과 (필수)**
 - [ ] **WORK_LOG.md 업데이트 (필수)**
 - [ ] **Git commit & push (필수)**
 
@@ -132,6 +144,10 @@ mcp__context7__get-library-docs({
 
 7. **WORK_LOG.md 업데이트 생략 (절대 금지)**
    - ❌ "나중에 정리" → ✅ 작업 직후 즉시 기록
+
+8. **코드 리뷰 생략 (절대 금지)**
+   - ❌ "간단한 수정이라서..." → ✅ 모든 커밋에 리뷰 필수
+   - ❌ "나중에 리뷰" → ✅ 커밋 직전 즉시 리뷰
 
 ---
 
@@ -191,6 +207,63 @@ git push origin [브랜치명]
 - `docs`: 문서
 - `perf`: 성능 개선
 - `security`: 보안 강화
+
+### 코드 리뷰 프로세스 (Self-Review)
+
+#### 리뷰 시점
+**Git commit 직전 필수**
+
+#### 리뷰 절차
+
+**Step 1: 변경 파일 확인**
+```bash
+git status
+git diff
+```
+
+**Step 2: 체크리스트**
+
+**보안 (Security)**
+- [ ] 환경 변수 노출 없음
+- [ ] SQL Injection 방어
+- [ ] XSS 방어
+- [ ] 민감 정보 로깅 없음
+
+**성능 (Performance)**
+- [ ] 불필요한 리렌더링 없음
+- [ ] N+1 쿼리 없음
+- [ ] 메모리 누수 없음
+- [ ] 무한 루프 위험 없음
+
+**가독성 (Readability)**
+- [ ] 명확한 변수/함수명
+- [ ] 적절한 주석
+- [ ] 일관된 코드 스타일
+- [ ] 복잡도 적정 수준
+
+**테스트 (Testing)**
+- [ ] 에지 케이스 처리
+- [ ] 에러 핸들링
+- [ ] 테스트 코드 작성 (가능한 경우)
+- [ ] 수동 테스트 완료
+
+**기존 기능 (Compatibility)**
+- [ ] 하위 호환성 유지
+- [ ] 기존 API 영향 없음
+- [ ] 타입 안정성
+
+**Step 3: 문제 발견 시**
+```
+문제 발견 → 즉시 수정 → Step 1부터 재리뷰
+```
+
+**Step 4: 승인 후 커밋**
+```bash
+# 모든 체크리스트 통과 시에만 커밋
+git add [파일들...]
+git commit -m "..."
+git push origin [브랜치명]
+```
 
 ### Chrome DevTools MCP
 ```javascript
