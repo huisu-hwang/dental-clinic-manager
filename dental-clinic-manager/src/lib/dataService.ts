@@ -340,11 +340,8 @@ export const dataService = {
   },
 
   // 사용자 ID로 프로필 정보 가져오기 (소속 병원 정보 포함)
-  async getUserProfileById(id: string, options?: { skipConnectionCheck?: boolean }) {
-    // skipConnectionCheck 옵션: 토큰 갱신 중 중복 세션 체크 방지
-    const supabase = options?.skipConnectionCheck
-      ? createClient()  // 이미 Supabase가 세션 체크 중일 때는 바로 클라이언트 생성
-      : await ensureConnection()  // 일반적인 경우 연결 상태 확인
+  async getUserProfileById(id: string) {
+    const supabase = await ensureConnection()
 
     if (!supabase) {
       console.warn('[dataService] Supabase client not available in getUserProfileById (likely server-side).')

@@ -206,8 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
               if (event === 'SIGNED_IN' && session?.user) {
                 if (!isLoggingOut) {
-                  // skipConnectionCheck: 토큰 갱신 중 중복 세션 체크 방지
-                  const result = await dataService.getUserProfileById(session.user.id, { skipConnectionCheck: true })
+                  const result = await dataService.getUserProfileById(session.user.id)
                   if (result.success && result.data) {
                     // 승인 대기/거절된 사용자 체크 (세션 유지)
                     if (result.data.status === 'pending' || result.data.status === 'rejected') {
