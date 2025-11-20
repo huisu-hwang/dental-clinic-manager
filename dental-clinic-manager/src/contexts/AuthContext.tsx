@@ -8,6 +8,7 @@ import type { Permission } from '@/types/permissions'
 import { useActivityTracker } from '@/hooks/useActivityTracker'
 import { SESSION_CHECK_TIMEOUT } from '@/lib/sessionUtils'
 import { TIMEOUTS } from '@/lib/constants/timeouts'
+import { useRouter } from 'next/navigation'
 
 export interface UserProfile {
   id: string
@@ -32,6 +33,7 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter()
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -140,12 +142,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (result.data.status === 'pending' || result.data.status === 'rejected') {
                   console.warn('[AuthContext] User status:', result.data.status, '- restricting access')
 
+                  // pending/rejected 사용자도 user state 설정 (페이지에서 사용자 정보 표시용)
+                  setUser(result.data)
+
                   if (window.location.pathname !== '/pending-approval') {
                     console.log('[AuthContext] Redirecting to /pending-approval')
-                    window.location.href = '/pending-approval'
+                    router.push('/pending-approval')
                   }
 
-                  // 중요: 승인 대기/거절 상태에서는 user state를 설정하지 않음
                   setLoading(false)
                   return
                 }
@@ -208,9 +212,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     // 승인 대기/거절된 사용자 체크 (세션 유지)
                     if (result.data.status === 'pending' || result.data.status === 'rejected') {
                       console.warn('[AuthContext] SIGNED_IN event - User status:', result.data.status)
+
+                      // pending/rejected 사용자도 user state 설정 (페이지에서 사용자 정보 표시용)
+                      setUser(result.data)
+
                       // 세션 유지 (signOut 제거) - 사용자가 안내 페이지를 볼 수 있도록
                       if (window.location.pathname !== '/pending-approval') {
-                        window.location.href = '/pending-approval'
+                        router.push('/pending-approval')
                       }
                       return
                     }

@@ -4,76 +4,99 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ClockIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function PendingApprovalPage() {
   const router = useRouter()
-  const [userInfo, setUserInfo] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading } = useAuth()
+  const [clinicInfo, setClinicInfo] = useState<any>(null)
   const [checkingStatus, setCheckingStatus] = useState(false)
 
   useEffect(() => {
-    checkUserStatus()
-  }, [])
-
-  const checkUserStatus = async () => {
-    setLoading(true)
-    const supabase = getSupabase()
-    if (!supabase) {
-      router.push('/')
-      return
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
+    if (!loading) {
+      // user가 없으면 홈으로 리다이렉트
       if (!user) {
         router.push('/')
         return
       }
 
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select(`
-          *,
-          clinics (*)
-        `)
-        .eq('id', user.id)
-        .single()
-
-      if (error || !userData) {
-        router.push('/')
-        return
-      }
-
       // 이미 승인된 경우 대시보드로 이동
-      if ((userData as any).status === 'active') {
+      if (user.status === 'active') {
         router.push('/dashboard')
         return
       }
 
-      // 거절된 경우
-      if ((userData as any).status === 'rejected') {
-        setUserInfo({ ...(userData as any), status: 'rejected' })
-      } else {
-        setUserInfo(userData as any)
+      // clinic 정보가 없으면 조회 (한 번만)
+      if (!user.clinic && !clinicInfo && user.clinic_id) {
+        loadClinicInfo()
+      }
+    }
+  }, [user, loading, router])
+
+  const loadClinicInfo = async () => {
+    if (!user?.clinic_id) return
+
+    const supabase = getSupabase()
+    if (!supabase) return
+
+    try {
+      const { data, error } = await supabase
+        .from('clinics')
+        .select('*')
+        .eq('id', user.clinic_id)
+        .single()
+
+      if (!error && data) {
+        setClinicInfo(data)
       }
     } catch (error) {
-      console.error('Error checking status:', error)
-    } finally {
-      setLoading(false)
+      console.error('Error loading clinic info:', error)
     }
   }
 
   const handleCheckStatus = async () => {
     setCheckingStatus(true)
-    await checkUserStatus()
-    setCheckingStatus(false)
+
+    const supabase = getSupabase()
+    if (!supabase || !user) {
+      setCheckingStatus(false)
+      return
+    }
+
+    try {
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('status')
+        .eq('id', user.id)
+        .single()
+
+      if (error) {
+        console.error('Error checking status:', error)
+        alert('상태 확인 중 오류가 발생했습니다.')
+        return
+      }
+
+      // 승인된 경우 대시보드로 이동
+      if (userData?.status === 'active') {
+        router.push('/dashboard')
+        return
+      }
+
+      // 여전히 대기 중이면 알림
+      alert('아직 승인 대기 중입니다. 조금만 더 기다려주세요.')
+    } catch (error) {
+      console.error('Error checking status:', error)
+      alert('상태 확인 중 오류가 발생했습니다.')
+    } finally {
+      setCheckingStatus(false)
+    }
   }
 
   const handleGoToEmailProvider = () => {
-    if (!userInfo?.email) return;
+    if (!user?.email) return
 
-    const email = userInfo.email;
-    const domain = email.substring(email.lastIndexOf('@') + 1);
+    const email = user.email
+    const domain = email.substring(email.lastIndexOf('@') + 1)
 
     const emailProviderLinks: { [key: string]: string } = {
       'gmail.com': 'https://mail.google.com',
@@ -88,15 +111,13 @@ export default function PendingApprovalPage() {
       'outlook.com': 'https://outlook.live.com',
       'hotmail.com': 'https://outlook.live.com',
       'live.com': 'https://outlook.live.com',
-    };
+    }
 
-    const url = emailProviderLinks[domain];
+    const url = emailProviderLinks[domain]
 
     if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
+      window.open(url, '_blank', 'noopener,noreferrer')
     }
-    // URL이 없는 경우, 사용자는 수동으로 이메일을 확인해야 합니다.
-    // 여기에 toast 알림 등을 추가하여 사용자 경험을 향상시킬 수 있습니다.
   }
 
   const handleLogout = async () => {
@@ -107,12 +128,18 @@ export default function PendingApprovalPage() {
     router.push('/')
   }
 
+  // AuthContext의 loading 중이거나 user가 없으면 로딩 표시
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     )
+  }
+
+  // user가 없으면 null 반환 (useEffect에서 리다이렉트 처리됨)
+  if (!user) {
+    return null
   }
 
   return (
@@ -128,7 +155,7 @@ export default function PendingApprovalPage() {
         </div>
 
         <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
-          {userInfo?.status === 'rejected' ? (
+          {user.status === 'rejected' ? (
             <>
               <div className="flex justify-center mb-6">
                 <XCircleIcon className="h-16 w-16 text-red-500" />
@@ -143,10 +170,10 @@ export default function PendingApprovalPage() {
                   hiclinic.inc@gmail.com
                 </a>로 문의 바랍니다.
               </p>
-              {userInfo.review_note && (
+              {user.review_note && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
                   <p className="text-sm text-red-800">
-                    <strong>거절 사유:</strong> {userInfo.review_note}
+                    <strong>거절 사유:</strong> {user.review_note}
                   </p>
                 </div>
               )}
@@ -164,23 +191,21 @@ export default function PendingApprovalPage() {
                 조금만 더 기다려주세요!
               </p>
 
-              {userInfo && (
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
-                  <h3 className="font-semibold text-blue-900 mb-2">신청 정보</h3>
-                  <div className="space-y-1 text-sm text-blue-800">
-                    <p><strong>이름:</strong> {userInfo.name}</p>
-                    <p><strong>이메일:</strong> {userInfo.email}</p>
-                    <p><strong>신청 병원:</strong> {userInfo.clinics?.name || '정보 없음'}</p>
-                    <p><strong>신청 직급:</strong> {
-                      userInfo.role === 'vice_director' ? '부원장' :
-                      userInfo.role === 'manager' ? '실장' :
-                      userInfo.role === 'team_leader' ? '진료팀장' :
-                      userInfo.role === 'staff' ? '진료팀원' : userInfo.role
-                    }</p>
-                    <p><strong>신청일:</strong> {new Date(userInfo.created_at).toLocaleDateString('ko-KR')}</p>
-                  </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+                <h3 className="font-semibold text-blue-900 mb-2">신청 정보</h3>
+                <div className="space-y-1 text-sm text-blue-800">
+                  <p><strong>이름:</strong> {user.name}</p>
+                  <p><strong>이메일:</strong> {user.email}</p>
+                  <p><strong>신청 병원:</strong> {user.clinic?.name || clinicInfo?.name || '정보 없음'}</p>
+                  <p><strong>신청 직급:</strong> {
+                    user.role === 'vice_director' ? '부원장' :
+                    user.role === 'manager' ? '실장' :
+                    user.role === 'team_leader' ? '진료팀장' :
+                    user.role === 'staff' ? '진료팀원' : user.role
+                  }</p>
+                  <p><strong>신청일:</strong> {new Date(user.created_at).toLocaleDateString('ko-KR')}</p>
                 </div>
-              )}
+              </div>
 
               <div className="bg-gray-50 border border-gray-200 rounded-md p-4 mb-6">
                 <p className="text-sm text-gray-700">
