@@ -244,6 +244,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 dataService.clearCachedClinicId()
               } else if (event === 'TOKEN_REFRESHED') {
                 console.log('[AuthContext] Token refreshed successfully')
+                // 토큰 갱신 시 세션 유지 확인을 위해 프로필 다시 로드
+                if (session?.user) {
+                   console.log('[AuthContext] Refreshing user profile after token refresh...')
+                   // skipConnectionCheck: true로 DB 부하 줄임
+                   const result = await dataService.getUserProfileById(session.user.id, { skipConnectionCheck: true })
+                   if (result.success && result.data) {
+                     setUser(result.data)
+                   }
+                }
               } else if (event === 'USER_UPDATED') {
                 console.log('[AuthContext] User updated')
               }
