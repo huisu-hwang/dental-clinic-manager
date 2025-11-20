@@ -4,6 +4,171 @@
 
 ---
 
+## 2025-11-20 [버그 수정] DB 연결 끊김 재발 문제 근본 해결
+
+**키워드:** #버그수정 #DB연결 #Supabase #세션관리 #근본원인분석 #브랜치비교
+
+### 📋 작업 내용
+- main 브랜치와 develop 브랜치 상세 비교 분석
+- SIGNED_OUT 이벤트 핸들러의 잘못된 인스턴스 초기화 제거
+- TOKEN_REFRESHED 시 사용자 프로필 재로드 추가
+- @supabase/ssr의 내부 세션 관리 활용
+
+### 🐛 문제
+
+**증상:**
+- develop 브랜치 배포 버전에서 로그인 후 5-10분 경과 시 DB 연결 끊김
+- main 브랜치는 정상 작동
+
+**발견 경로:**
+- 사용자 보고: "예전에 해결했던 DB 연결 끊기는 현상이 다시 발생"
+- main vs develop 브랜치 차이로 인한 문제임을 확인
+
+### 🔍 근본 원인 (5 Whys + 브랜치 비교 분석)
+
+**1. Why?** develop 브랜치에서만 DB 연결이 끊어지는가?
+→ 커밋 b96e039 (2025-11-14)에서 추가한 싱글톤 패턴의 SIGNED_OUT 핸들러가 문제
+
+**2. Why?** SIGNED_OUT 핸들러가 문제인가?
+→ `supabaseInstance = null`로 설정하여 세션을 완전히 파괴하기 때문
+
+**3. Why?** 세션을 파괴하면 안 되는가?
+→ 토큰 갱신 과정에서도 일시적으로 SIGNED_OUT 이벤트가 발생할 수 있음
+→ 이때 인스턴스를 파괴하면 세션 복구 불가능
+
+**4. Why?** main 브랜치는 왜 정상 작동하는가?
+→ main 브랜치는 단순한 구조로 `instance = null` 로직이 없음
+→ @supabase/ssr의 자동 세션 관리만 사용
+
+**5. Why?** 이전에 해결했다고 생각했는가?
+→ 커밋 b96e039에서 "안정성 강화"를 목표로 싱글톤 패턴 추가
+→ 하지만 오히려 불안정성을 초래하는 코드였음
+→ Context7 MCP로 공식 문서 확인하지 않아 createBrowserClient의 내부 싱글톤을 몰랐음
+
+**브랜치 차이 요약:**
+
+| 항목 | main (정상) | develop (문제) |
+|------|------------|---------------|
+| Supabase 패키지 | @supabase/supabase-js | @supabase/ssr |
+| 싱글톤 패턴 | 단순 | 복잡 (SIGNED_OUT에서 null) |
+| instance 초기화 | 없음 | 있음 (문제의 근원) |
+
+**문제 시나리오:**
+```
+1. 로그인 → 세션 생성 → 정상 작동
+2. 5분 후 자동 토큰 갱신 시도
+3. 갱신 과정에서 일시적 SIGNED_OUT 이벤트 발생
+4. supabaseInstance = null 실행 → 세션 완전 손실
+5. 이후 모든 DB 작업 실패
+```
+
+### ✅ 해결 방법
+
+#### 1. src/lib/supabase/client.ts 수정
+
+**문제 코드 (75-78줄):**
+```typescript
+if (event === 'SIGNED_OUT') {
+  console.log('[Supabase] User signed out, clearing instance')
+  supabaseInstance = null  // ❌ 토큰 갱신 중에도 실행되어 세션 파괴
+}
+```
+
+**해결 코드:**
+```typescript
+if (event === 'SIGNED_OUT') {
+  console.log('[Supabase] User signed out detected')
+  // supabaseInstance = null - 제거: @supabase/ssr의 내부 세션 관리 활용
+  // 토큰 갱신 과정에서 SIGNED_OUT 이벤트가 발생할 수 있으므로 인스턴스 유지
+}
+```
+
+**근거:**
+- @supabase/ssr의 createBrowserClient는 내부적으로 싱글톤 제공
+- middleware.ts가 자동 토큰 갱신 처리
+- 수동 인스턴스 초기화는 불필요하며 오히려 문제 유발
+
+#### 2. src/contexts/AuthContext.tsx 강화
+
+**추가 코드 (TOKEN_REFRESHED 핸들러):**
+```typescript
+if (event === 'TOKEN_REFRESHED') {
+  console.log('[AuthContext] Token refreshed successfully')
+  // 토큰 갱신 시 세션 유지 확인을 위해 프로필 다시 로드
+  if (session?.user) {
+     console.log('[AuthContext] Refreshing user profile after token refresh...')
+     const result = await dataService.getUserProfileById(session.user.id, { skipConnectionCheck: true })
+     if (result.success && result.data) {
+       setUser(result.data)
+     }
+  }
+}
+```
+
+**효과:**
+- 토큰 갱신 후 사용자 정보 동기화
+- 세션 유지 확인
+
+### 🧪 테스트 결과
+
+**수정 전 (develop):**
+- 로그인 후 5-10분 경과 → DB 연결 끊김
+- 데이터 저장 실패
+
+**수정 후 (예상):**
+- 로그인 후 장시간 유휴 → 자동 토큰 갱신
+- 데이터 저장 성공
+- main 브랜치와 동일한 안정성
+
+**권장 검증 절차:**
+1. 로그인 후 5-10분 대기
+2. 데이터 저장 시도
+3. Chrome DevTools 콘솔에서 TOKEN_REFRESHED 이벤트 확인
+4. 장시간 유휴 (1시간) 후 테스트
+
+### 💡 배운 점
+
+#### 1. CLAUDE.md 원칙의 중요성
+- ❌ 이전 해결 (b96e039): Context7 MCP 미사용 → 공식 문서 미확인
+- ✅ 이번 해결: Context7로 createBrowserClient의 내부 싱글톤 확인
+
+#### 2. 브랜치 비교의 힘
+- main은 정상, develop은 문제 → 두 브랜치 비교가 가장 정확한 원인 파악 방법
+- git diff main...develop로 정확한 문제 코드 특정
+
+#### 3. "안정성 강화"가 오히려 불안정을 초래
+- 과도한 복잡성 (싱글톤 + ensureConnection + middleware + SSR)
+- 단순한 구조가 더 안정적
+- "Do less, not more"
+
+#### 4. 5 Whys의 깊이
+- 이전: "연결이 끊어진다" → "싱글톤으로 해결" (얕은 분석)
+- 이번: 5단계 질문 + 브랜치 비교 → 근본 원인 파악
+
+#### 5. SIGNED_OUT 이벤트의 다양한 원인
+```
+SIGNED_OUT 이벤트 발생 경우:
+1. 명시적 signOut() 호출
+2. 토큰 갱신 실패
+3. 네트워크 일시 오류
+4. Refresh token 만료
+
+→ 모든 경우를 인스턴스 파괴로 처리하면 안 됨!
+```
+
+#### 6. @supabase/ssr의 강력함
+- 내부 싱글톤 제공
+- 자동 토큰 갱신
+- Cookie 기반 세션 관리
+- 추가 로직 불필요
+
+**참고 자료:**
+- Context7: /supabase/ssr 문서
+- 커밋 비교: b96e039 vs main 브랜치
+- git log main..develop
+
+---
+
 ## 2025-11-20 [버그 수정] 승인 대기 페이지 깜빡임 근본 원인 해결
 
 **키워드:** #버그수정 #깜빡임 #Hydration #근본원인해결 #사용자경험
