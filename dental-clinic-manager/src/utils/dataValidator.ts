@@ -1,12 +1,7 @@
-import { getSupabase } from '@/lib/supabase'
-
+import { createClient } from '@/lib/supabase/client'
 export const validateDataConnection = async () => {
   try {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Supabase 클라이언트를 초기화할 수 없습니다.' }
-    }
-
+    const supabase = createClient()
     // 각 테이블의 데이터 개수 확인
     const results = await Promise.all([
       supabase.from('daily_reports').select('*', { count: 'exact', head: true }),

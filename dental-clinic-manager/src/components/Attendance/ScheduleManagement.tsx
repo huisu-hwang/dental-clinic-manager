@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { workScheduleService } from '@/lib/workScheduleService'
 import { clinicHoursService } from '@/lib/clinicHoursService'
 import { useAuth } from '@/contexts/AuthContext'
@@ -48,10 +49,7 @@ export default function ScheduleManagement() {
   const loadUsers = async () => {
     if (!user?.clinic_id) return
 
-    try {
-      const { getSupabase } = await import('@/lib/supabase')
-      const supabase = getSupabase()
-      if (!supabase) return
+    try {      const supabase = createClient()
 
       const { data, error } = await supabase
         .from('users')

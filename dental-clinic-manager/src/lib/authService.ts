@@ -1,4 +1,4 @@
-import { getSupabase } from './supabase'
+import { createClient } from './supabase/client'
 import type { User, Clinic, Permission, UserRole } from '@/types/auth'
 
 export const authService = {
@@ -14,11 +14,7 @@ export const authService = {
     token?: string
     error?: string
   }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection not available' }
-    }
-
+    const supabase = createClient()
     try {
       // Get user by email
       const { data: userData, error: userError } = await supabase
@@ -120,11 +116,7 @@ export const authService = {
     clinicEmail: string
     businessNumber?: string
   }): Promise<{ success: boolean; error?: string }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection not available' }
-    }
-
+    const supabase = createClient()
     try {
       // 1. Create user with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -208,11 +200,7 @@ export const authService = {
     role: UserRole
     invitedBy: string
   }): Promise<{ success: boolean; error?: string }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection not available' }
-    }
-
+    const supabase = createClient()
     try {
       // Check if email already exists in the clinic
       const { data: existingUser } = await supabase
@@ -270,11 +258,7 @@ export const authService = {
     name: string
     phone?: string
   }): Promise<{ success: boolean; error?: string }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection not available' }
-    }
-
+    const supabase = createClient()
     try {
       // Get invitation
       const { data: invitation, error: inviteError } = await supabase
@@ -335,7 +319,7 @@ export const authService = {
   },
 
   async getUserPermissions(userId: string): Promise<Permission[]> {
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase) {
       return []
     }

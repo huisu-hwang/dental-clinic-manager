@@ -12,7 +12,7 @@
 // 삭제 예정일: 2025-12-31
 // ============================================
 
-import { getSupabase } from './supabase'
+import { createClient } from './supabase/client'
 import type {
   WorkSchedule,
   WorkScheduleInput,
@@ -25,11 +25,7 @@ import type {
 export async function createWorkSchedule(
   input: WorkScheduleInput
 ): Promise<{ success: boolean; schedule?: WorkSchedule; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     const { data, error } = await supabase
       .from('work_schedules')
@@ -56,11 +52,7 @@ export async function updateWorkSchedule(
   scheduleId: string,
   updates: Partial<WorkScheduleInput>
 ): Promise<{ success: boolean; schedule?: WorkSchedule; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     const { data, error } = await supabase
       .from('work_schedules')
@@ -87,11 +79,7 @@ export async function updateWorkSchedule(
 export async function deleteWorkSchedule(
   scheduleId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     const { error } = await supabase.from('work_schedules').delete().eq('id', scheduleId)
 
@@ -114,11 +102,7 @@ export async function getWeeklySchedule(
   userId: string,
   effectiveDate?: string
 ): Promise<{ success: boolean; schedule?: WeeklySchedule; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     const date = effectiveDate || new Date().toISOString().split('T')[0]
 
@@ -155,11 +139,7 @@ export async function getScheduleForDate(
   userId: string,
   date: string
 ): Promise<{ success: boolean; schedule?: WorkSchedule; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     const dayOfWeek = new Date(date).getDay()
 
@@ -192,11 +172,7 @@ export async function getClinicSchedules(
   clinicId: string,
   effectiveDate?: string
 ): Promise<{ success: boolean; schedules?: WeeklySchedule[]; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     const date = effectiveDate || new Date().toISOString().split('T')[0]
 
@@ -253,11 +229,7 @@ export async function createWeeklyScheduleBulk(
   effectiveFrom: string,
   effectiveUntil?: string
 ): Promise<{ success: boolean; schedules?: WorkSchedule[]; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     // 모든 요일에 대해 스케줄 생성 (0=일, 1=월, ..., 6=토)
     const schedules = Array.from({ length: 7 }, (_, dayOfWeek) => ({
@@ -295,11 +267,7 @@ export async function updateWeeklyScheduleBulk(
   workDays: number[],
   effectiveFrom: string
 ): Promise<{ success: boolean; schedules?: WorkSchedule[]; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     // 기존 스케줄 종료일 설정 (새 스케줄 시작 전날)
     const previousDay = new Date(effectiveFrom)
@@ -354,11 +322,7 @@ export async function updateDaySchedule(
   isWorkDay: boolean,
   effectiveFrom: string
 ): Promise<{ success: boolean; schedule?: WorkSchedule; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     // 기존 스케줄 종료
     const previousDay = new Date(effectiveFrom)
@@ -420,11 +384,7 @@ export async function updateDaySchedule(
 export async function deleteAllUserSchedules(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     const { error } = await supabase.from('work_schedules').delete().eq('user_id', userId)
 
@@ -449,11 +409,7 @@ export async function copyScheduleTemplate(
   toClinicId: string,
   effectiveFrom: string
 ): Promise<{ success: boolean; schedules?: WorkSchedule[]; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     // 원본 스케줄 조회
     const { data: sourceSchedules, error: fetchError } = await supabase

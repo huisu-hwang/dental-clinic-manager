@@ -3,7 +3,7 @@
 // Branch Management Service
 // ============================================
 
-import { getSupabase } from './supabase'
+import { createClient } from './supabase/client'
 import type {
   ClinicBranch,
   CreateBranchInput,
@@ -21,11 +21,7 @@ import type {
 export async function getBranches(
   filter: BranchFilter
 ): Promise<{ success: boolean; branches?: ClinicBranch[]; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     let query = supabase
       .from('clinic_branches')
@@ -59,11 +55,7 @@ export async function getBranches(
 export async function getBranchById(
   branchId: string
 ): Promise<{ success: boolean; branch?: ClinicBranch; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     const { data, error } = await supabase
       .from('clinic_branches')
@@ -94,11 +86,7 @@ export async function createBranch(
   input: CreateBranchInput,
   currentUserId: string
 ): Promise<{ success: boolean; branch?: ClinicBranch; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     // 유효성 검증
     const { validateBranch } = await import('@/types/branch')
@@ -144,11 +132,7 @@ export async function updateBranch(
   branchId: string,
   input: UpdateBranchInput
 ): Promise<{ success: boolean; branch?: ClinicBranch; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     // 유효성 검증
     const { validateBranch } = await import('@/types/branch')
@@ -195,11 +179,7 @@ export async function updateBranch(
 export async function deleteBranch(
   branchId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     // 1. 지점 확인
     const { data: branch, error: fetchError } = await supabase
@@ -293,11 +273,7 @@ export async function getBranchAttendanceStats(
   clinicId: string,
   date: string
 ): Promise<{ success: boolean; stats?: BranchAttendanceStats[]; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     // 1. 병원의 모든 활성 지점 조회
     const branchesResult = await getBranches({ clinic_id: clinicId, is_active: true })
@@ -366,11 +342,7 @@ export async function getBranchAttendanceStats(
 export async function getDefaultBranch(
   clinicId: string
 ): Promise<{ success: boolean; branch?: ClinicBranch; error?: string }> {
-  const supabase = getSupabase()
-  if (!supabase) {
-    return { success: false, error: 'Database connection not available' }
-  }
-
+  const supabase = createClient()
   try {
     const { data, error } = await supabase
       .from('clinic_branches')

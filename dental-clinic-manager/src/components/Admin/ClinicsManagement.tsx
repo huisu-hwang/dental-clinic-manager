@@ -12,7 +12,7 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { Clinic, SubscriptionTier } from '@/types/auth'
 
 interface ExtendedClinic extends Clinic {
@@ -48,7 +48,7 @@ export default function ClinicsManagement() {
   const fetchClinics = async () => {
     setLoading(true)
     setError('')
-    const supabase = getSupabase()
+    const supabase = createClient()
 
     if (!supabase) {
       console.error('Supabase client not initialized')
@@ -164,7 +164,7 @@ export default function ClinicsManagement() {
   }
 
   const fetchStatistics = async () => {
-    const supabase = getSupabase()
+    const supabase = createClient()
 
     if (!supabase) {
       console.error('Supabase client not initialized for statistics')
@@ -246,8 +246,7 @@ export default function ClinicsManagement() {
   }
 
   const handleUpdateClinicStatus = async (clinicId: string, newStatus: 'active' | 'suspended' | 'cancelled') => {
-    const supabase = getSupabase()
-    if (!supabase) return
+    const supabase = createClient()
 
     try {
       const { error } = await (supabase as any)
@@ -273,8 +272,7 @@ export default function ClinicsManagement() {
     maxUsers: number,
     expiresAt?: Date
   ) => {
-    const supabase = getSupabase()
-    if (!supabase) return
+    const supabase = createClient()
 
     try {
       const updateData: any = {

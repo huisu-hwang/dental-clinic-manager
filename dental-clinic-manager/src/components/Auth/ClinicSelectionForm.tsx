@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { MagnifyingGlassIcon, BuildingOfficeIcon, PlusCircleIcon, LockClosedIcon, HomeIcon, IdentificationIcon } from '@heroicons/react/24/outline'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { formatResidentNumber, validateResidentNumberWithMessage } from '@/utils/residentNumberUtils'
 import { encryptResidentNumber } from '@/utils/encryptionUtils'
 
@@ -53,7 +53,7 @@ export default function ClinicSelectionForm({
 
   const fetchPublicClinics = async () => {
     setLoading(true)
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase) {
       setError('데이터베이스 연결에 실패했습니다.')
       setLoading(false)
@@ -120,7 +120,7 @@ export default function ClinicSelectionForm({
 
     setSubmitting(true)
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase) {
       setError('데이터베이스 연결에 실패했습니다.')
       setSubmitting(false)

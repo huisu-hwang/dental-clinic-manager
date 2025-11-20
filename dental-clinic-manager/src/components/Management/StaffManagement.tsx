@@ -16,7 +16,7 @@ import {
   IdentificationIcon,
   PencilIcon
 } from '@heroicons/react/24/outline'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { authService } from '@/lib/authService'
 import { dataService } from '@/lib/dataService'
 import { UserProfile } from '@/contexts/AuthContext'
@@ -88,7 +88,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   }, [currentUser.clinic_id])
 
   const fetchStaff = async () => {
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase || !currentUser.clinic_id) return
 
     try {
@@ -128,7 +128,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
   const fetchJoinRequests = async () => {
     setLoading(true)
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase || !currentUser.clinic_id) {
       setLoading(false)
       return
@@ -224,8 +224,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   }
 
   const handleSuspendUser = async (userId: string) => {
-    const supabase = getSupabase()
-    if (!supabase) return
+    const supabase = createClient()
 
     try {
       const { error } = await (supabase as any)

@@ -1,4 +1,4 @@
-import { getSupabase } from './supabase'
+import { createClient } from './supabase/client'
 import type { ProtocolCategory, TagSuggestion } from '@/types'
 
 /**
@@ -51,7 +51,7 @@ export const tagSuggestionService = {
     frequent: TagSuggestion[]
   }> {
     try {
-      const supabase = getSupabase()
+      const supabase = createClient()
       if (!supabase) throw new Error('Supabase client is not initialized')
       const suggestions = {
         keywords: [] as string[],
@@ -173,7 +173,7 @@ export const tagSuggestionService = {
     if (!tags || tags.length === 0) return
 
     try {
-      const supabase = getSupabase()
+      const supabase = createClient()
       if (!supabase) throw new Error('Supabase client is not initialized')
 
       // 각 태그에 대해 통계 업데이트
@@ -218,7 +218,7 @@ export const tagSuggestionService = {
     if (!query || query.length < 1) return []
 
     try {
-      const supabase = getSupabase()
+      const supabase = createClient()
       if (!supabase) throw new Error('Supabase client is not initialized')
 
       const { data } = await supabase

@@ -910,7 +910,7 @@ export async function getTeamAttendanceStatus(
       return { success: false, error: recordsError.message }
     }
 
-    const recordMap = new Map(records?.map((r: AttendanceRecord) => [r.user_id, r]) || [])
+    const recordMap = new Map(((records as AttendanceRecord[]) || []).map((r: AttendanceRecord) => [r.user_id, r]) || [])
 
     type EmployeeStatusItem = {
       user_id: string

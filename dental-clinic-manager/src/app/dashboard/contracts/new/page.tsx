@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import ContractForm from '@/components/Contract/ContractForm'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { User } from '@/types/auth'
 
 export default function NewContractPage() {
@@ -39,7 +39,7 @@ export default function NewContractPage() {
     }
 
     try {
-      const supabase = getSupabase()
+      const supabase = createClient()
       if (!supabase) {
         console.error('[Contract New] Supabase client not available')
         setLoading(false)

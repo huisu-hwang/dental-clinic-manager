@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getSupabase } from '@/lib/supabase'
-
+import { createClient } from '@/lib/supabase/client'
 export default function TestPage() {
   const [status, setStatus] = useState<string>('초기화 중...')
   const [loading, setLoading] = useState(true)
@@ -15,7 +14,7 @@ export default function TestPage() {
       setStatus('Supabase 클라이언트 가져오는 중...')
 
       try {
-        const supabase = getSupabase()
+        const supabase = createClient()
 
         if (!supabase) {
           setError('Supabase 클라이언트를 가져올 수 없습니다')

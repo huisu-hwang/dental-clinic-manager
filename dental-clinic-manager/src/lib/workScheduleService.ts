@@ -3,7 +3,7 @@
  * 개인 근무 스케줄 관리 서비스
  */
 
-import { getSupabase } from './supabase'
+import { createClient } from './supabase/client'
 import type { WorkSchedule } from '@/types/workSchedule'
 import { convertClinicHoursToWorkSchedule } from '@/utils/workScheduleUtils'
 import { clinicHoursService } from './clinicHoursService'
@@ -27,7 +27,7 @@ export async function getUserWorkSchedule(userId: string): Promise<WorkScheduleR
   console.log('[WorkScheduleService] Getting work schedule for user:', userId)
 
   try {
-    const supabase = getSupabase()
+    const supabase = createClient()
 
     if (!supabase) {
       throw new Error('Supabase client not initialized')
@@ -79,7 +79,7 @@ export async function updateUserWorkSchedule(
   console.log('[WorkScheduleService] Updating work schedule for user:', userId, workSchedule)
 
   try {
-    const supabase = getSupabase()
+    const supabase = createClient()
 
     if (!supabase) {
       throw new Error('Supabase client not initialized')

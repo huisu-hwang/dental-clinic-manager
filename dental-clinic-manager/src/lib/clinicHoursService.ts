@@ -2,7 +2,7 @@
  * 병원 진료시간 및 휴진일 관리 서비스
  */
 
-import { getSupabase } from './supabase'
+import { createClient } from './supabase/client'
 import type { ClinicHours, ClinicHoliday, ClinicHoursInput, ClinicHolidayInput } from '@/types/clinic'
 
 export const clinicHoursService = {
@@ -10,11 +10,7 @@ export const clinicHoursService = {
    * 병원의 진료시간 조회
    */
   async getClinicHours(clinicId: string) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') }
-    }
-
+    const supabase = createClient()
     const { data, error } = await supabase
       .from('clinic_hours')
       .select('*')
@@ -28,11 +24,7 @@ export const clinicHoursService = {
    * 병원 진료시간 업데이트 (전체 요일)
    */
   async updateClinicHours(clinicId: string, hoursData: ClinicHoursInput[]) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') }
-    }
-
+    const supabase = createClient()
     try {
       // 먼저 기존 데이터 삭제
       const { error: deleteError } = await supabase
@@ -68,11 +60,7 @@ export const clinicHoursService = {
    * 특정 요일의 진료시간 업데이트
    */
   async updateDayHours(clinicId: string, dayOfWeek: number, hours: ClinicHoursInput) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') }
-    }
-
+    const supabase = createClient()
     const updateData = {
       is_open: hours.is_open,
       open_time: hours.is_open ? hours.open_time : null,
@@ -98,11 +86,7 @@ export const clinicHoursService = {
    * 기본 진료시간 생성
    */
   async createDefaultHours(clinicId: string) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') }
-    }
-
+    const supabase = createClient()
     const { data, error } = await supabase.rpc('create_default_clinic_hours', {
       p_clinic_id: clinicId,
     })
@@ -114,11 +98,7 @@ export const clinicHoursService = {
    * 병원의 휴진일 조회
    */
   async getClinicHolidays(clinicId: string) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') }
-    }
-
+    const supabase = createClient()
     const { data, error } = await supabase
       .from('clinic_holidays')
       .select('*')
@@ -132,11 +112,7 @@ export const clinicHoursService = {
    * 휴진일 추가
    */
   async addClinicHoliday(clinicId: string, holiday: ClinicHolidayInput) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') }
-    }
-
+    const supabase = createClient()
     const { data, error } = await supabase
       .from('clinic_holidays')
       .insert({
@@ -154,11 +130,7 @@ export const clinicHoursService = {
    * 휴진일 삭제
    */
   async deleteClinicHoliday(holidayId: string) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { error: new Error('Supabase client not available') }
-    }
-
+    const supabase = createClient()
     const { error } = await supabase
       .from('clinic_holidays')
       .delete()
@@ -171,8 +143,7 @@ export const clinicHoursService = {
    * 특정 날짜가 휴진일인지 확인
    */
   async isHoliday(clinicId: string, date: string): Promise<boolean> {
-    const supabase = getSupabase()
-    if (!supabase) return false
+    const supabase = createClient()
 
     const { data, error } = await supabase
       .from('clinic_holidays')
@@ -188,11 +159,7 @@ export const clinicHoursService = {
    * 특정 요일의 진료시간 조회
    */
   async getDayHours(clinicId: string, dayOfWeek: number) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') }
-    }
-
+    const supabase = createClient()
     const { data, error } = await supabase
       .from('clinic_hours')
       .select('*')

@@ -1,7 +1,6 @@
-import { getSupabase } from '@/lib/supabase'
-
+import { createClient } from '@/lib/supabase/client'
 export const inspectDatabase = async () => {
-  const supabase = getSupabase()
+  const supabase = createClient()
   if (!supabase) {
     throw new Error('Supabase client not available')
   }

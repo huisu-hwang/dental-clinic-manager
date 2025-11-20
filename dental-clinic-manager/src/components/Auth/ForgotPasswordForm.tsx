@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { getSupabase } from '@/lib/supabase'
-
+import { createClient } from '@/lib/supabase/client'
 interface ForgotPasswordFormProps {
   onBackToLogin: () => void
 }
@@ -19,7 +18,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
     setMessage('')
     setLoading(true)
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase) {
       setError('데이터베이스 연결에 실패했습니다.')
       setLoading(false)

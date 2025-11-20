@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ClockIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function PendingApprovalPage() {
@@ -36,8 +36,7 @@ export default function PendingApprovalPage() {
   const loadClinicInfo = async () => {
     if (!user?.clinic_id) return
 
-    const supabase = getSupabase()
-    if (!supabase) return
+    const supabase = createClient()
 
     try {
       const { data, error } = await supabase
@@ -57,7 +56,7 @@ export default function PendingApprovalPage() {
   const handleCheckStatus = async () => {
     setCheckingStatus(true)
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase || !user) {
       setCheckingStatus(false)
       return
@@ -121,7 +120,7 @@ export default function PendingApprovalPage() {
   }
 
   const handleLogout = async () => {
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (supabase) {
       await supabase.auth.signOut()
     }

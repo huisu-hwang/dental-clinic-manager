@@ -9,7 +9,7 @@ import {
   ShieldCheckIcon,
   ClockIcon
 } from '@heroicons/react/24/outline'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { UserProfile } from '@/contexts/AuthContext'
 import ClinicHoursSettings from './ClinicHoursSettings'
 
@@ -78,7 +78,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
 
   const fetchClinicInfo = async () => {
     setLoading(true)
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase || !currentUser.clinic_id) {
       setLoading(false)
       setError('병원 정보를 불러올 수 없습니다.')
@@ -136,7 +136,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
     setSuccess('')
     setSaving(true)
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase) {
       setError('데이터베이스 연결에 실패했습니다.')
       setSaving(false)

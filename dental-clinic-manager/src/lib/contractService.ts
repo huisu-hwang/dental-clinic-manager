@@ -3,7 +3,7 @@
  * Handles CRUD operations for employment contracts, templates, and signatures
  */
 
-import { createClient as createBrowserClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import type { Session } from '@supabase/supabase-js'
 import { clinicHoursService } from './clinicHoursService'
 import { refreshSessionWithTimeout } from './sessionUtils'
@@ -24,14 +24,6 @@ import type {
 import type { User } from '@/types/auth'
 import { encryptResidentNumber, decryptResidentNumber } from '@/utils/encryptionUtils'
 
-/**
- * Helper function to get browser Supabase client
- * Returns current session client (not singleton)
- */
-const getSupabase = () => {
-  return createBrowserClient()
-}
-
 class ContractService {
   /**
    * Check current Supabase session with auto-refresh
@@ -39,11 +31,7 @@ class ContractService {
    */
   private async checkSession(): Promise<{ session: Session | null; error: string | null }> {
     // ✅ 매번 최신 클라이언트 가져오기 (로그인 후 세션 포함)
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { session: null, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     console.log('[contractService] Checking session...')
     const { data, error } = await supabase.auth.getSession()
 
@@ -95,11 +83,7 @@ class ContractService {
    * Create a new employment contract
    */
   async createContract(data: ContractFormData, currentUserId: string): Promise<CreateContractResponse> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       // Get employee user data to auto-fill
       const { data: employee, error: employeeError } = await supabase
@@ -232,11 +216,7 @@ class ContractService {
    * Get a single contract by ID
    */
   async getContract(contractId: string): Promise<{ data: EmploymentContract | null; error: string | null }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('employment_contracts')
@@ -275,11 +255,7 @@ class ContractService {
       return { success: false, error: sessionCheck.error }
     }
 
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       let query = supabase
         .from('employment_contracts')
@@ -345,11 +321,7 @@ class ContractService {
    * Get contracts for a specific user (employee view)
    */
   async getMyContracts(userId: string): Promise<GetContractsResponse> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       const { data, error, count } = await supabase
         .from('employment_contracts')
@@ -385,11 +357,7 @@ class ContractService {
     contractId: string,
     updates: Partial<EmploymentContract>
   ): Promise<CreateContractResponse> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('employment_contracts')
@@ -421,11 +389,7 @@ class ContractService {
     contractId: string,
     status: ContractStatus
   ): Promise<CreateContractResponse> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       const updateData: any = {
         status,
@@ -464,11 +428,7 @@ class ContractService {
     cancelledBy: string,
     reason: string
   ): Promise<CreateContractResponse> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('employment_contracts')
@@ -504,11 +464,7 @@ class ContractService {
    * Sign a contract
    */
   async signContract(data: ContractSigningData): Promise<SignContractResponse> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       // Get current contract
       const { data: contract, error: contractError } = await supabase
@@ -600,15 +556,7 @@ class ContractService {
     hasEmployeeSignature: boolean
     signatures: ContractSignature[]
   }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return {
-        hasEmployerSignature: false,
-        hasEmployeeSignature: false,
-        signatures: []
-      }
-    }
-
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('contract_signatures')
@@ -647,11 +595,7 @@ class ContractService {
    * Get all templates for a clinic
    */
   async getTemplates(clinicId: string): Promise<{ data: ContractTemplate[]; error: string | null }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: [], error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('employment_contract_templates')
@@ -678,11 +622,7 @@ class ContractService {
    * Get default template
    */
   async getDefaultTemplate(clinicId?: string): Promise<{ data: ContractTemplate | null; error: string | null }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       let query = supabase
         .from('employment_contract_templates')
@@ -715,11 +655,7 @@ class ContractService {
    * Get a single template by ID
    */
   async getTemplate(templateId: string): Promise<{ data: ContractTemplate | null; error: string | null }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('employment_contract_templates')
@@ -755,11 +691,7 @@ class ContractService {
     },
     currentUserId: string
   ): Promise<{ data: ContractTemplate | null; error: string | null }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('employment_contract_templates')
@@ -798,11 +730,7 @@ class ContractService {
       version?: string
     }
   ): Promise<{ data: ContractTemplate | null; error: string | null }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('employment_contract_templates')
@@ -832,11 +760,7 @@ class ContractService {
    * Delete a template (soft delete)
    */
   async deleteTemplate(templateId: string): Promise<{ success: boolean; error: string | null }> {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { success: false, error: 'Database connection failed' }
-    }
-
+    const supabase = createClient()
     try {
       const { error } = await supabase
         .from('employment_contract_templates')

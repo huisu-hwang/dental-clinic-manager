@@ -9,8 +9,7 @@ import {
   ArrowPathIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
-import { getSupabase } from '@/lib/supabase'
-
+import { createClient } from '@/lib/supabase/client'
 interface SystemMetrics {
   database: {
     status: 'healthy' | 'warning' | 'error'
@@ -77,7 +76,7 @@ export default function SystemMonitoring() {
     if (refreshing) return
     setRefreshing(true)
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase) {
       setLoading(false)
       setRefreshing(false)

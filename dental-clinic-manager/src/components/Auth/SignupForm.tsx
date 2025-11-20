@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { EyeIcon, EyeSlashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { dataService } from '@/lib/dataService'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { encryptResidentNumber } from '@/utils/encryptionUtils'
 import {
   validateResidentNumberWithMessage,
@@ -205,7 +205,7 @@ export default function SignupForm({
 
     setLoading(true);
 
-    const supabase = getSupabase();
+    const supabase = createClient();
     if (!supabase) {
       setError('데이터베이스 연결에 실패했습니다.');
       setLoading(false);
