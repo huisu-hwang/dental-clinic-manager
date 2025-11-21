@@ -73,8 +73,9 @@ export function createClient() {
     }
 
     if (event === 'SIGNED_OUT') {
-      console.log('[Supabase] User signed out, clearing instance')
-      supabaseInstance = null
+      console.log('[Supabase] User signed out detected')
+      // supabaseInstance = null - 제거: @supabase/ssr의 내부 세션 관리 활용
+      // 토큰 갱신 과정에서 SIGNED_OUT 이벤트가 발생할 수 있으므로 인스턴스 유지
     }
 
     if (event === 'SIGNED_IN') {

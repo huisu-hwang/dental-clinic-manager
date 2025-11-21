@@ -25,26 +25,8 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
       console.log('[ForgotPassword] 비밀번호 재설정 요청:', email);
 
       // 비밀번호 재설정 링크 전송
-      // Supabase Auth가 자동으로 이메일 존재 여부 확인
-      // 보안상 이메일 존재 여부와 관계없이 항상 성공 응답 (이메일 enumeration 공격 방지)
-
-      // 환경에 따라 동적으로 Redirect URL 결정
-      const getRedirectUrl = () => {
-        // Vercel 배포 환경 (preview/production)
-        if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-          return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/update-password`;
-        }
-
-        // 프로덕션 환경 (명시적 Site URL 설정)
-        if (process.env.NEXT_PUBLIC_SITE_URL) {
-          return `${process.env.NEXT_PUBLIC_SITE_URL}/update-password`;
-        }
-
-        // 개발 환경 (localhost) - 현재 접속한 도메인 사용
-        return `${window.location.origin}/update-password`;
-      };
-
-      const redirectUrl = getRedirectUrl();
+      // auth/callback을 경유하여 PKCE 인증 코드를 처리하고 update-password로 리다이렉트
+      const redirectUrl = `${window.location.origin}/auth/callback?next=/update-password`;
       console.log('[ForgotPassword] Redirect URL:', redirectUrl);
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
