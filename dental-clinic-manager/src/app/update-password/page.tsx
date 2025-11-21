@@ -25,53 +25,40 @@ export default function UpdatePasswordPage() {
 
     console.log('[PasswordReset] 페이지 로드됨');
     console.log('[PasswordReset] URL:', window.location.href);
+    console.log('[PasswordReset] Search params:', window.location.search);
     console.log('[PasswordReset] Hash:', window.location.hash);
 
-    let recoveryDetected = false;
+    // Supabase가 자동으로 URL의 code 파라미터를 감지하고 토큰 교환 수행
+    // detectSessionInUrl: true 설정 덕분에 자동 처리됨
 
-    // 1. URL 해시에서 토큰 확인
-    const hash = window.location.hash;
-    if (hash) {
-      const hashParams = new URLSearchParams(hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const type = hashParams.get('type');
-
-      if (accessToken && type === 'recovery') {
-        console.log('[PasswordReset] Recovery 토큰 감지');
-        recoveryDetected = true;
-        setIsRecoveryMode(true);
-        setCheckingAuth(false);
-      }
-    }
-
-    // 2. 현재 세션 확인
+    // 1. 현재 세션 확인
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session) {
-        console.log('[PasswordReset] 활성 세션 감지');
+        console.log('[PasswordReset] 활성 세션 감지 - Recovery 모드 활성화');
         setIsRecoveryMode(true);
-      }
-      if (!recoveryDetected) {
         setCheckingAuth(false);
       }
     });
 
-    // 3. Auth 상태 변경 감지
+    // 2. Auth 상태 변경 감지 (PASSWORD_RECOVERY 이벤트 대기)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       console.log('[PasswordReset] Auth 이벤트:', event);
 
-      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-        console.log('[PasswordReset] Recovery 모드 활성화');
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('[PasswordReset] PASSWORD_RECOVERY 이벤트 감지 - Recovery 모드 활성화');
+        setIsRecoveryMode(true);
+        setCheckingAuth(false);
+      } else if (event === 'SIGNED_IN' && session) {
+        console.log('[PasswordReset] SIGNED_IN 이벤트 감지 - Recovery 모드 활성화');
         setIsRecoveryMode(true);
         setCheckingAuth(false);
       }
     });
 
-    // 4. 타임아웃: 5초 후에도 토큰이 없으면 체크 종료
+    // 3. 타임아웃: 5초 후에도 토큰이 없으면 체크 종료
     const timeout = setTimeout(() => {
-      if (!recoveryDetected) {
-        console.log('[PasswordReset] 토큰 감지 타임아웃');
-        setCheckingAuth(false);
-      }
+      console.log('[PasswordReset] 토큰 감지 타임아웃 - 유효한 토큰이 없음');
+      setCheckingAuth(false);
     }, 5000);
 
     return () => {
