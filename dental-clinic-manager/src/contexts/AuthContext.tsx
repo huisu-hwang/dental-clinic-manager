@@ -198,9 +198,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return
               }
 
-              // PASSWORD_RECOVERY 이벤트는 update-password 페이지에서 처리
+              // PASSWORD_RECOVERY 이벤트: update-password 페이지로 리다이렉트
               if (event === 'PASSWORD_RECOVERY') {
-                console.log('PASSWORD_RECOVERY 이벤트 감지')
+                console.log('PASSWORD_RECOVERY 이벤트 감지 - /update-password로 리다이렉트')
+
+                // 현재 페이지가 update-password가 아니면 리다이렉트 (URL 해시 포함)
+                if (typeof window !== 'undefined' && window.location.pathname !== '/update-password') {
+                  window.location.href = '/update-password' + window.location.hash
+                }
                 return
               }
 

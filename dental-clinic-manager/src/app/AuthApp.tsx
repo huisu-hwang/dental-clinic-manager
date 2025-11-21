@@ -18,6 +18,17 @@ export default function AuthApp() {
 
   // 인증된 경우 대시보드로 리디렉션 (승인된 사용자만)
   useEffect(() => {
+    // Recovery 모드 확인 (URL 해시에 type=recovery 있는지) - 이중 안전장치
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash
+      const hashParams = new URLSearchParams(hash.substring(1))
+      if (hashParams.get('type') === 'recovery') {
+        console.log('[AuthApp] Recovery 모드 감지 - /update-password로 리다이렉트')
+        router.push('/update-password' + hash)
+        return
+      }
+    }
+
     if (isAuthenticated) {
       // 승인 대기/거절 사용자는 /pending-approval로 리다이렉트
       if (user?.status === 'pending' || user?.status === 'rejected') {
