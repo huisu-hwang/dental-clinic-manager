@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 
 interface ForgotPasswordFormProps {
   onBackToLogin: () => void
@@ -19,32 +19,32 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
     setMessage('')
     setLoading(true)
 
-    const supabase = getSupabase()
-    if (!supabase) {
-      setError('데이터베이스 연결에 실패했습니다.')
-      setLoading(false)
-      return
-    }
+    const supabase = createClient()
 
     try {
       console.log('[ForgotPassword] 비밀번호 재설정 요청:', email);
 
-      // 먼저 해당 이메일이 존재하는지 확인
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('email')
-        .eq('email', email)
-        .single()
-
-      if (!existingUser) {
-        setError('등록되지 않은 이메일 주소입니다.')
-        setLoading(false)
-        return
-      }
-
       // 비밀번호 재설정 링크 전송
-      // auth/callback을 경유하여 PKCE 인증 코드를 처리하고 update-password로 리다이렉트
-      const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent('/update-password')}`;
+      // Supabase Auth가 자동으로 이메일 존재 여부 확인
+      // 보안상 이메일 존재 여부와 관계없이 항상 성공 응답 (이메일 enumeration 공격 방지)
+
+      // 환경에 따라 동적으로 Redirect URL 결정
+      const getRedirectUrl = () => {
+        // Vercel 배포 환경 (preview/production)
+        if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+          return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/update-password`;
+        }
+
+        // 프로덕션 환경 (명시적 Site URL 설정)
+        if (process.env.NEXT_PUBLIC_SITE_URL) {
+          return `${process.env.NEXT_PUBLIC_SITE_URL}/update-password`;
+        }
+
+        // 개발 환경 (localhost) - 현재 접속한 도메인 사용
+        return `${window.location.origin}/update-password`;
+      };
+
+      const redirectUrl = getRedirectUrl();
       console.log('[ForgotPassword] Redirect URL:', redirectUrl);
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
@@ -62,7 +62,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
         }
       } else {
         console.log('[ForgotPassword] 재설정 이메일 전송 성공');
-        setMessage('비밀번호 재설정 링크를 이메일로 보냈습니다. 받은 편지함을 확인하고 링크를 클릭해주세요. (링크는 24시간 동안 유효합니다)')
+        setMessage('비밀번호 재설정 요청이 처리되었습니다. 이메일을 확인해주세요. (링크는 24시간 동안 유효합니다)')
       }
     } catch (err) {
       console.error('[ForgotPassword] 처리 중 오류:', err)
