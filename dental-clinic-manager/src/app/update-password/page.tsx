@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
-import { getSupabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('')
@@ -16,7 +16,7 @@ export default function UpdatePasswordPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const supabase = getSupabase();
+    const supabase = createClient();
     if (!supabase) {
       setError('데이터베이스 연결에 실패했습니다.');
       setCheckingAuth(false);
@@ -98,7 +98,7 @@ export default function UpdatePasswordPage() {
         return
     }
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     if (!supabase) {
         setError('데이터베이스 연결에 실패했습니다.')
         setLoading(false)
