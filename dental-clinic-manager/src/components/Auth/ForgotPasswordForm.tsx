@@ -44,7 +44,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
 
       // 비밀번호 재설정 링크 전송
       // auth/callback을 경유하여 PKCE 인증 코드를 처리하고 update-password로 리다이렉트
-      const redirectUrl = `${window.location.origin}/auth/callback?next=/update-password`;
+      const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent('/update-password')}`;
       console.log('[ForgotPassword] Redirect URL:', redirectUrl);
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {

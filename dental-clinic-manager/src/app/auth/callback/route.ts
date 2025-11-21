@@ -13,7 +13,13 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type')
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
+  let next = searchParams.get('next') ?? '/'
+
+  // 비밀번호 재설정(recovery) 타입인 경우 강제로 비밀번호 변경 페이지로 이동
+  if (type === 'recovery') {
+    console.log('[Auth Callback] Recovery type detected, forcing next to /update-password')
+    next = '/update-password'
+  }
 
   console.log('[Auth Callback] Processing auth callback', { hasTokenHash: !!token_hash, hasCode: !!code, type, next })
 
