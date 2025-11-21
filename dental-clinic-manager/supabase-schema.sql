@@ -3,30 +3,36 @@
 -- 일일 보고서 종합 테이블
 CREATE TABLE IF NOT EXISTS daily_reports (
     id SERIAL PRIMARY KEY,
-    date DATE NOT NULL UNIQUE,
+    clinic_id UUID REFERENCES clinics(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
     recall_count INTEGER DEFAULT 0,
     recall_booking_count INTEGER DEFAULT 0,
     consult_proceed INTEGER DEFAULT 0,
     consult_hold INTEGER DEFAULT 0,
     naver_review_count INTEGER DEFAULT 0,
+    special_notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT daily_reports_clinic_date_key UNIQUE (clinic_id, date)
 );
 
 -- 상담 상세 기록 테이블
 CREATE TABLE IF NOT EXISTS consult_logs (
     id SERIAL PRIMARY KEY,
+    clinic_id UUID REFERENCES clinics(id) ON DELETE CASCADE,
     date DATE NOT NULL,
     patient_name VARCHAR(100) NOT NULL,
     consult_content TEXT,
     consult_status VARCHAR(1) NOT NULL CHECK (consult_status IN ('O', 'X')),
     hold_reason TEXT,
+    remarks TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 선물/리뷰 상세 기록 테이블
 CREATE TABLE IF NOT EXISTS gift_logs (
     id SERIAL PRIMARY KEY,
+    clinic_id UUID REFERENCES clinics(id) ON DELETE CASCADE,
     date DATE NOT NULL,
     patient_name VARCHAR(100) NOT NULL,
     gift_type VARCHAR(100),
@@ -38,15 +44,18 @@ CREATE TABLE IF NOT EXISTS gift_logs (
 -- 선물 재고 관리 테이블
 CREATE TABLE IF NOT EXISTS gift_inventory (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
+    clinic_id UUID REFERENCES clinics(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
     stock INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT gift_inventory_clinic_name_key UNIQUE (clinic_id, name)
 );
 
 -- 재고 입출고 기록 테이블
 CREATE TABLE IF NOT EXISTS inventory_logs (
     id SERIAL PRIMARY KEY,
+    clinic_id UUID REFERENCES clinics(id) ON DELETE CASCADE,
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     name VARCHAR(100) NOT NULL,
     reason TEXT NOT NULL,
@@ -56,12 +65,13 @@ CREATE TABLE IF NOT EXISTS inventory_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 인덱스 생성
-CREATE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(date);
-CREATE INDEX IF NOT EXISTS idx_consult_logs_date ON consult_logs(date);
-CREATE INDEX IF NOT EXISTS idx_gift_logs_date ON gift_logs(date);
-CREATE INDEX IF NOT EXISTS idx_inventory_logs_timestamp ON inventory_logs(timestamp);
-CREATE INDEX IF NOT EXISTS idx_inventory_logs_name ON inventory_logs(name);
+-- 인덱스 생성 (멀티테넌트 지원)
+CREATE INDEX IF NOT EXISTS idx_daily_reports_clinic_date ON daily_reports(clinic_id, date);
+CREATE INDEX IF NOT EXISTS idx_consult_logs_clinic_date ON consult_logs(clinic_id, date);
+CREATE INDEX IF NOT EXISTS idx_gift_logs_clinic_date ON gift_logs(clinic_id, date);
+CREATE INDEX IF NOT EXISTS idx_gift_inventory_clinic_id ON gift_inventory(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_logs_clinic_timestamp ON inventory_logs(clinic_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_inventory_logs_clinic_name ON inventory_logs(clinic_id, name);
 
 -- RLS (Row Level Security) 정책 설정
 ALTER TABLE daily_reports ENABLE ROW LEVEL SECURITY;
