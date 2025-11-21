@@ -12,10 +12,26 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type')
+  const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/'
 
-  console.log('[Auth Callback] Processing email verification', { token_hash, type })
+  console.log('[Auth Callback] Processing auth callback', { hasTokenHash: !!token_hash, hasCode: !!code, type, next })
 
+  // 1. PKCE Code Flow 처리
+  if (code) {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (!error) {
+      console.log('[Auth Callback] Code exchange successful, redirecting to:', next)
+      return NextResponse.redirect(new URL(next, request.url))
+    }
+    
+    console.error('[Auth Callback] Code exchange failed:', error)
+    return NextResponse.redirect(new URL('/auth/auth-code-error', request.url))
+  }
+
+  // 2. Implicit/MagicLink Flow 처리 (token_hash)
   if (token_hash && type) {
     const supabase = await createClient()
 
