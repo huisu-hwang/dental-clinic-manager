@@ -35,9 +35,20 @@ AS $$
 DECLARE
   v_clinic_id uuid;
   v_result json;
+  v_existing_user_id uuid;
 BEGIN
   -- Use the provided user_id (from signup)
   -- No auth.uid() check needed since this is only called during signup
+
+  -- 0. Check if email already exists in users table
+  SELECT id INTO v_existing_user_id
+  FROM users
+  WHERE email = p_user_email
+  LIMIT 1;
+
+  IF v_existing_user_id IS NOT NULL THEN
+    RAISE EXCEPTION 'DUPLICATE_EMAIL: 이미 사용 중인 이메일입니다. 다른 이메일을 사용하거나, 기존 계정의 데이터를 완전히 삭제한 후 다시 시도해주세요.';
+  END IF;
 
   -- 1. Insert clinic (RLS bypassed by SECURITY DEFINER)
   INSERT INTO clinics (name, owner_name, address, phone, email)

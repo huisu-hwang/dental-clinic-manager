@@ -268,6 +268,11 @@ export default function SignupForm({
 
         if (rpcError) {
           console.error('[Signup] RPC error:', rpcError);
+          // Check if it's a duplicate email error
+          if (rpcError.message && rpcError.message.includes('DUPLICATE_EMAIL')) {
+            const customMessage = rpcError.message.replace('DUPLICATE_EMAIL:', '').trim();
+            throw new Error(customMessage || '이미 사용 중인 이메일입니다.');
+          }
           throw new Error('병원 정보 생성 실패: ' + rpcError.message);
         }
 
@@ -297,6 +302,13 @@ export default function SignupForm({
 
         if (userProfileError) {
           console.error('[Signup] User profile creation error:', userProfileError);
+          // Check if it's a duplicate email error
+          if (userProfileError.message && (
+            userProfileError.message.includes('duplicate key value violates unique constraint "users_email_key"') ||
+            userProfileError.message.includes('DUPLICATE_EMAIL')
+          )) {
+            throw new Error('이미 사용 중인 이메일입니다. 다른 이메일을 사용하거나, 기존 계정의 데이터를 완전히 삭제한 후 다시 시도해주세요.');
+          }
           throw new Error('가입 신청 실패: ' + userProfileError.message);
         }
       }
