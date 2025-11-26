@@ -569,7 +569,9 @@ export const dataService = {
     recallBookingNames: string
     specialNotes: string
   }) {
-    const supabase = await ensureConnection()
+    // handleSaveReport에서 이미 세션 갱신을 시도하므로 ensureConnection 대신 createClient 직접 사용
+    // 이렇게 하면 중복된 세션 체크로 인한 타임아웃 문제를 방지
+    const supabase = createClient()
     if (!supabase) throw new Error('Supabase client not available')
 
     const {
