@@ -340,8 +340,8 @@ export const dataService = {
   },
 
   // 사용자 ID로 프로필 정보 가져오기 (소속 병원 정보 포함)
-  async getUserProfileById(id: string) {
-    const supabase = await ensureConnection()
+  async getUserProfileById(id: string, options?: { skipConnectionCheck?: boolean }) {
+    const supabase = options?.skipConnectionCheck ? createClient() : await ensureConnection()
 
     if (!supabase) {
       console.warn('[dataService] Supabase client not available in getUserProfileById (likely server-side).')
@@ -566,6 +566,7 @@ export const dataService = {
     happyCallRows: HappyCallRowData[]
     recallCount: number
     recallBookingCount: number
+    recallBookingNames: string
     specialNotes: string
   }) {
     const supabase = await ensureConnection()
@@ -578,6 +579,7 @@ export const dataService = {
       happyCallRows,
       recallCount,
       recallBookingCount,
+      recallBookingNames,
       specialNotes
     } = data
 
@@ -621,6 +623,7 @@ export const dataService = {
         date,
         recall_count: recallCount,
         recall_booking_count: recallBookingCount,
+        recall_booking_names: recallBookingNames?.trim() || null,
         consult_proceed: validConsults.filter(c => c.consult_status === 'O').length,
         consult_hold: validConsults.filter(c => c.consult_status === 'X').length,
         naver_review_count: validGifts.filter(g => g.naver_review === 'O').length,

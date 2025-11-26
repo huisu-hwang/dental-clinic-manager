@@ -106,6 +106,7 @@ export default function DashboardPage() {
     happyCallRows: HappyCallRowData[]
     recallCount: number
     recallBookingCount: number
+    recallBookingNames: string
     specialNotes: string
   }) => {
     if (!canCreateReport && !canEditReport) {
@@ -118,9 +119,18 @@ export default function DashboardPage() {
     }
 
     try {
-      // 세션 갱신 (11분 문제 해결)
+      // 세션 갱신 (11분 문제 해결) - 타임아웃 추가
       const supabase = createClient()
-      await supabase.auth.refreshSession()
+      try {
+        const refreshPromise = supabase.auth.refreshSession()
+        const refreshTimeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Session refresh timeout')), 5000)
+        )
+        await Promise.race([refreshPromise, refreshTimeout])
+      } catch (refreshError) {
+        // 세션 갱신 실패해도 저장은 시도
+        console.warn('Session refresh failed, proceeding with save:', refreshError)
+      }
 
       // 타임아웃 설정 (30초)
       const timeoutPromise = new Promise((_, reject) =>
