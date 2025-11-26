@@ -650,6 +650,11 @@ export default function SignupForm({
                       }}
                       onFocus={() => setShowClinicSearchResults(clinicSearchQuery.length > 0)}
                       onBlur={() => setTimeout(() => setShowClinicSearchResults(false), 200)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                        }
+                      }}
                       className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                       disabled={loading || isSearchingClinics}
                     />
