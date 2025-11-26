@@ -251,8 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // 토큰 갱신 시 세션 유지 확인을 위해 프로필 다시 로드
                 if (session?.user) {
                    console.log('[AuthContext] Refreshing user profile after token refresh...')
-                   // skipConnectionCheck: true로 DB 부하 줄임
-                   const result = await dataService.getUserProfileById(session.user.id, { skipConnectionCheck: true })
+                   const result = await dataService.getUserProfileById(session.user.id)
                    if (result.success && result.data) {
                      setUser(result.data)
                    }
