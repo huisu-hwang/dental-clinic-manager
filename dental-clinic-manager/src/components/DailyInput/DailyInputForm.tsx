@@ -7,7 +7,7 @@ import HappyCallTable from './HappyCallTable'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
 import { saveDailyReport } from '@/app/actions/dailyReport'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, SpecialNotesHistory } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
 
 // Feature Flag: 신규 아키텍처 사용 여부
@@ -45,6 +45,9 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
   const [recallBookingCount, setRecallBookingCount] = useState(0)
   const [recallBookingNames, setRecallBookingNames] = useState('')
   const [specialNotes, setSpecialNotes] = useState('')
+  const [specialNotesHistory, setSpecialNotesHistory] = useState<SpecialNotesHistory[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
   const isReadOnly = hasExistingData ? !canEdit : !canCreate
@@ -58,6 +61,25 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
     setRecallBookingCount(0)
     setRecallBookingNames('')
     setSpecialNotes('')
+    setSpecialNotesHistory([])
+    setShowHistory(false)
+  }, [])
+
+  // 특이사항 이력 조회
+  const loadSpecialNotesHistory = useCallback(async (date: string) => {
+    if (!date) return
+
+    setHistoryLoading(true)
+    try {
+      const result = await dataService.getSpecialNotesHistory(date)
+      if (result.data) {
+        setSpecialNotesHistory(result.data)
+      }
+    } catch (error) {
+      console.error('[DailyInputForm] 특이사항 이력 조회 실패:', error)
+    } finally {
+      setHistoryLoading(false)
+    }
   }, [])
 
   // 날짜별 데이터 로드
@@ -150,10 +172,14 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
         }
         
         setHasExistingData(true)
+        // 특이사항 이력 조회
+        loadSpecialNotesHistory(date)
       } else {
         // 기존 데이터가 없으면 빈 폼으로 리셋
         resetFormData()
         setHasExistingData(false)
+        // 기존 데이터 없어도 이력은 조회 (이전에 저장 후 삭제한 경우 대비)
+        loadSpecialNotesHistory(date)
       }
     } catch (error) {
       console.error('[DailyInputForm] 데이터 로드 실패:', error)
@@ -166,7 +192,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
       console.log('[DailyInputForm] Setting loading to false')
       setLoading(false)
     }
-  }, [currentUser?.clinic_id, resetFormData])
+  }, [currentUser?.clinic_id, resetFormData, loadSpecialNotesHistory])
 
   // 날짜 변경 핸들러
   const handleDateChange = (newDate: string) => {
@@ -280,6 +306,22 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
 
       // 저장 성공 후 기존 데이터가 있다고 표시
       setHasExistingData(true)
+
+      // 특이사항이 있으면 이력 저장
+      if (specialNotes.trim()) {
+        try {
+          await dataService.saveSpecialNotesHistory(
+            reportDate,
+            specialNotes,
+            currentUser?.name || currentUser?.email || '알 수 없음'
+          )
+          // 이력 목록 새로고침
+          await loadSpecialNotesHistory(reportDate)
+        } catch (historyError) {
+          console.error('[DailyInputForm] 특이사항 이력 저장 실패:', historyError)
+          // 이력 저장 실패해도 보고서 저장은 성공했으므로 에러 표시하지 않음
+        }
+      }
     } catch (error) {
       console.error('[DailyInputForm] Save error:', error)
       const errorMessage = error instanceof Error ? error.message : '보고서 저장 중 오류가 발생했습니다.'
@@ -383,7 +425,70 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
 
       {/* 기타 특이사항 */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <h2 className="text-xl font-bold mb-4 border-b pb-3">[5] 기타 특이사항</h2>
+        <div className="flex items-center justify-between mb-4 border-b pb-3">
+          <h2 className="text-xl font-bold">[5] 기타 특이사항</h2>
+          {specialNotesHistory.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowHistory(!showHistory)}
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              수정 이력 ({specialNotesHistory.length})
+            </button>
+          )}
+        </div>
+
+        {/* 수정 이력 표시 */}
+        {showHistory && (
+          <div className="mb-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              기타 특이사항 수정 이력
+            </h3>
+            {historyLoading ? (
+              <div className="text-center py-4 text-slate-500 text-sm">
+                이력을 불러오는 중...
+              </div>
+            ) : specialNotesHistory.length === 0 ? (
+              <div className="text-center py-4 text-slate-500 text-sm">
+                수정 이력이 없습니다.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {specialNotesHistory.map((history, index) => (
+                  <div
+                    key={history.id || index}
+                    className="bg-white rounded-md p-3 border border-slate-200 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-blue-600">
+                        {history.created_by_name || '알 수 없음'}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(history.created_at).toLocaleString('ko-KR', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                      {history.content}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div>
           <label htmlFor="special-notes" className="block text-sm font-medium text-slate-700 mb-2">
             특이사항 내용

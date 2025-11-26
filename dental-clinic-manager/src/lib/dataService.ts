@@ -2534,5 +2534,72 @@ export const dataService = {
       console.error('[DataService] Error hard deleting branch:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
+  },
+
+  // ========================================
+  // 기타 특이사항 이력 관리 함수들
+  // Special Notes History Management Functions
+  // ========================================
+
+  // 특이사항 이력 조회
+  async getSpecialNotesHistory(date: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('special_notes_history')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .eq('report_date', date)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data: data || [] }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching special notes history:', error)
+      return { data: [], error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 특이사항 이력 저장
+  async saveSpecialNotesHistory(date: string, content: string, userName?: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      // 현재 사용자 정보 가져오기
+      const { data: { user } } = await supabase.auth.getUser()
+
+      const historyEntry = {
+        clinic_id: clinicId,
+        report_date: date,
+        content: content.trim(),
+        created_by: user?.id || null,
+        created_by_name: userName || '알 수 없음'
+      }
+
+      const { error } = await supabase
+        .from('special_notes_history')
+        .insert([historyEntry])
+
+      if (error) throw error
+
+      console.log('[DataService] Special notes history saved successfully')
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('[DataService] Error saving special notes history:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
   }
 }

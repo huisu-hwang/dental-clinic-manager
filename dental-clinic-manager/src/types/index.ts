@@ -96,6 +96,16 @@ export interface HappyCallRowData {
   notes: string;
 }
 
+export interface SpecialNotesHistory {
+  id?: number;
+  clinic_id: string;
+  report_date: string;
+  content: string;
+  created_by?: string;
+  created_by_name?: string;
+  created_at: string;
+}
+
 // ========================================
 // Protocol Management Types
 // ========================================
