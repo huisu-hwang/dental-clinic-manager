@@ -28,10 +28,11 @@ export const mediaService = {
       }
 
       // 파일명 생성 (타임스탬프 + 랜덤 문자열)
+      // RLS 정책에 맞는 경로: protocols/public/{filename}
       const timestamp = Date.now()
       const randomString = Math.random().toString(36).substring(2, 15)
       const fileExt = file.name.split('.').pop()
-      const fileName = `protocol-images/${timestamp}_${randomString}.${fileExt}`
+      const fileName = `protocols/public/${timestamp}_${randomString}.${fileExt}`
 
       console.log('[MediaService] Uploading image:', fileName, 'Size:', file.size)
 
@@ -82,12 +83,14 @@ export const mediaService = {
       }
 
       // Storage URL에서 파일 경로 추출
+      // 새 경로: protocol-media/protocols/public/...
+      // 기존 경로: protocol-media/protocol-images/... (하위 호환성)
       const matches = filePath.match(/protocol-media\/(.+)/)
       if (!matches) {
         return { error: '유효하지 않은 파일 경로입니다.' }
       }
 
-      const path = matches[0]
+      const path = matches[1] // URL에서 버킷 이후 경로만 추출
       console.log('[MediaService] Deleting file:', path)
 
       const { error } = await supabase.storage
