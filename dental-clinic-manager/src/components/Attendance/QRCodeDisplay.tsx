@@ -192,7 +192,109 @@ export default function QRCodeDisplay() {
   }
 
   const printQRCode = () => {
-    window.print()
+    if (!canvasRef.current || !qrCode) return
+
+    // Canvas를 이미지 데이터로 변환
+    const qrImageData = canvasRef.current.toDataURL('image/png')
+
+    // 유효 기간 텍스트 생성
+    const validityText = qrCode.valid_until && qrCode.valid_until !== qrCode.valid_date
+      ? `유효 기간: ${new Date(qrCode.valid_date).toLocaleDateString('ko-KR')} ~ ${new Date(qrCode.valid_until).toLocaleDateString('ko-KR')}`
+      : `유효 날짜: ${new Date(qrCode.valid_date).toLocaleDateString('ko-KR')}`
+
+    // 새 창 열기
+    const printWindow = window.open('', '_blank', 'width=400,height=600')
+    if (!printWindow) {
+      setMessage({ type: 'error', text: '팝업이 차단되었습니다. 팝업을 허용해주세요.' })
+      return
+    }
+
+    // 인쇄용 HTML 작성
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR 코드 인쇄</title>
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              background: white;
+            }
+            .container {
+              text-align: center;
+              padding: 40px;
+            }
+            .qr-wrapper {
+              display: inline-block;
+              padding: 24px;
+              border: 4px solid #e5e7eb;
+              border-radius: 12px;
+              background: white;
+              margin-bottom: 24px;
+            }
+            .qr-image {
+              width: 256px;
+              height: 256px;
+              image-rendering: pixelated;
+            }
+            .title {
+              font-size: 24px;
+              font-weight: 700;
+              color: #111827;
+              margin-bottom: 12px;
+            }
+            .validity {
+              font-size: 14px;
+              color: #4b5563;
+              margin-bottom: 8px;
+            }
+            .radius {
+              font-size: 12px;
+              color: #6b7280;
+            }
+            @media print {
+              body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .container {
+                padding: 20px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="qr-wrapper">
+              <img src="${qrImageData}" alt="QR Code" class="qr-image" />
+            </div>
+            <div class="title">출퇴근 인증</div>
+            <div class="validity">${validityText}</div>
+            <div class="radius">인증 반경: ${qrCode.radius_meters}m 이내</div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.onafterprint = function() {
+                  window.close();
+                };
+              }, 100);
+            };
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
   }
 
   return (
