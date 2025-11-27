@@ -8,12 +8,13 @@ import AttendanceStats from '@/components/Attendance/AttendanceStats'
 import ScheduleManagement from '@/components/Attendance/ScheduleManagement'
 import TeamStatus from '@/components/Attendance/TeamStatus'
 import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
+import QRCodeView from '@/components/Attendance/QRCodeView'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 
-type TabType = 'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'
+type TabType = 'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qrview' | 'qr'
 
 export default function AttendancePage() {
   const router = useRouter()
@@ -40,6 +41,7 @@ export default function AttendancePage() {
   const canViewStats = hasPermission('attendance_stats_view')
   const canManageSchedule = hasPermission('schedule_manage')
   const canViewTeam = hasPermission('attendance_view_all')
+  const canViewQR = hasPermission('attendance_check_in') // QR 코드 보기는 출퇴근 체크 권한이 있으면 가능
   const canManageQR = hasPermission('qr_code_manage')
 
   if (!user) {
@@ -156,6 +158,22 @@ export default function AttendancePage() {
               </button>
             )}
 
+            {canViewQR && (
+              <button
+                onClick={() => setActiveTab('qrview')}
+                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                  activeTab === 'qrview'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+                QR 코드 보기
+              </button>
+            )}
+
             {canManageQR && (
               <button
                 onClick={() => setActiveTab('qr')}
@@ -183,6 +201,7 @@ export default function AttendancePage() {
             {activeTab === 'stats' && canViewStats && <AttendanceStats />}
             {activeTab === 'schedule' && canManageSchedule && <ScheduleManagement />}
             {activeTab === 'team' && canViewTeam && <TeamStatus />}
+            {activeTab === 'qrview' && canViewQR && <QRCodeView />}
             {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
           </div>
         </div>

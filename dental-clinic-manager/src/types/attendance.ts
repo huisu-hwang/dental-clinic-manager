@@ -45,6 +45,32 @@ export interface WeeklySchedule {
 }
 
 /**
+ * QR 코드 갱신 주기
+ * QR Code Refresh Period
+ */
+export type QRCodeRefreshPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+/**
+ * QR 코드 갱신 주기 한글 매핑
+ */
+export const QR_REFRESH_PERIOD_NAMES: Record<QRCodeRefreshPeriod, string> = {
+  daily: '매일',
+  weekly: '매주',
+  monthly: '매월',
+  yearly: '매년',
+};
+
+/**
+ * QR 코드 갱신 주기별 일수
+ */
+export const QR_REFRESH_PERIOD_DAYS: Record<QRCodeRefreshPeriod, number> = {
+  daily: 1,
+  weekly: 7,
+  monthly: 30,
+  yearly: 365,
+};
+
+/**
  * QR 코드
  * Attendance QR Code
  */
@@ -53,7 +79,9 @@ export interface AttendanceQRCode {
   clinic_id: string;
   branch_id?: string | null; // 지점 ID (선택)
   qr_code: string; // QR 코드 값 (UUID)
-  valid_date: string; // YYYY-MM-DD 형식
+  valid_date: string; // YYYY-MM-DD 형식 (시작일)
+  valid_until: string; // YYYY-MM-DD 형식 (종료일)
+  refresh_period: QRCodeRefreshPeriod; // 갱신 주기
   latitude?: number | null; // 병원/지점 위도
   longitude?: number | null; // 병원/지점 경도
   radius_meters: number; // 인증 허용 반경 (미터)
@@ -71,6 +99,8 @@ export interface QRCodeGenerateInput {
   latitude?: number;
   longitude?: number;
   radius_meters?: number;
+  refresh_period?: QRCodeRefreshPeriod; // 갱신 주기 (기본: daily)
+  force_regenerate?: boolean; // 강제 재생성 여부
 }
 
 /**
