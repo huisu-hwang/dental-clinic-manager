@@ -9,6 +9,7 @@ import {
   autoFormatResidentNumber,
   sanitizeResidentNumberInput
 } from '@/utils/residentNumberUtils'
+import { autoFormatPhoneNumber } from '@/utils/phoneUtils'
 
 interface SignupFormProps {
   onBackToLanding: () => void
@@ -388,9 +389,13 @@ export default function SignupForm({
                   id="phone"
                   name="phone"
                   value={formData.phone}
-                  onChange={handleInputChange}
+                  onChange={(e) => {
+                    const formatted = autoFormatPhoneNumber(e.target.value);
+                    setFormData(prev => ({ ...prev, phone: formatted.value }));
+                  }}
                   className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   placeholder="010-1234-5678"
+                  maxLength={13}
                   required
                   disabled={loading}
                 />
@@ -595,9 +600,13 @@ export default function SignupForm({
                       id="clinicPhone"
                       name="clinicPhone"
                       value={formData.clinicPhone}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const formatted = autoFormatPhoneNumber(e.target.value);
+                        setFormData(prev => ({ ...prev, clinicPhone: formatted.value }));
+                      }}
                       className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                       placeholder="02-1234-5678"
+                      maxLength={13}
                       disabled={loading}
                     />
                   </div>
