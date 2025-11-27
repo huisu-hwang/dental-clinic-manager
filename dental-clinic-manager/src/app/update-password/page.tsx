@@ -105,11 +105,27 @@ export default function UpdatePasswordPage() {
         return
     }
 
+    // 세션 확인 (필수)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+        console.error('[PasswordReset] 세션 없음 - updateUser 호출 불가')
+        setError('세션이 만료되었거나 유효하지 않습니다. 비밀번호 재설정 이메일을 다시 요청해주세요.')
+        setLoading(false)
+        return
+    }
+
+    console.log('[PasswordReset] 세션 확인됨, 비밀번호 업데이트 시도:', session.user.id)
+
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
       console.error('비밀번호 업데이트 오류:', updateError)
-      setError('비밀번호 업데이트에 실패했습니다. 다시 시도해주세요.')
+      // 에러 메시지 상세화
+      if (updateError.message.includes('should be different')) {
+         setError('새 비밀번호는 이전 비밀번호와 달라야 합니다.')
+      } else {
+         setError(`비밀번호 업데이트 실패: ${updateError.message}`)
+      }
     } else {
       setMessage('비밀번호가 성공적으로 변경되었습니다. 잠시 후 대시보드로 이동합니다.')
 
