@@ -24,8 +24,26 @@ import type {
 import type { ClinicBranch } from '@/types/branch'
 
 /**
+ * 유효 기간(일수) 계산 함수
+ */
+function calculateValidityDays(validity_type?: string, validity_days?: number): number {
+  switch (validity_type) {
+    case 'daily':
+      return 1
+    case 'weekly':
+      return 7
+    case 'monthly':
+      return 30
+    case 'custom':
+      return validity_days && validity_days > 0 ? validity_days : 1
+    default:
+      return 1 // 기본값: 1일
+  }
+}
+
+/**
  * QR 코드 생성 함수
- * 병원별로 일일 QR 코드를 생성합니다.
+ * 병원별로 QR 코드를 생성합니다. 유효 기간을 사용자가 지정할 수 있습니다.
  */
 export async function generateDailyQRCode(
   input: QRCodeGenerateInput
@@ -36,18 +54,40 @@ export async function generateDailyQRCode(
   }
 
   try {
-    const { clinic_id, branch_id, latitude, longitude, radius_meters = 100 } = input
+    const {
+      clinic_id,
+      branch_id,
+      latitude,
+      longitude,
+      radius_meters = 100,
+      validity_type = 'daily',
+      validity_days: customValidityDays
+    } = input
 
     // 오늘 날짜
     const today = new Date().toISOString().split('T')[0]
 
-    // 이미 오늘 생성된 QR 코드가 있는지 확인
+    // 유효 기간 계산
+    const validityDays = calculateValidityDays(validity_type, customValidityDays)
+
+    // 종료 날짜 계산
+    const validUntilDate = new Date()
+    validUntilDate.setDate(validUntilDate.getDate() + validityDays - 1)
+    const validUntil = validUntilDate.toISOString().split('T')[0]
+
+    // 만료 시간 계산 (종료 날짜의 다음 날 00:00)
+    const expiresAtDate = new Date(validUntilDate)
+    expiresAtDate.setDate(expiresAtDate.getDate() + 1)
+    expiresAtDate.setHours(0, 0, 0, 0)
+    const expiresAt = expiresAtDate.toISOString()
+
+    // 현재 유효한 QR 코드가 있는지 확인 (오늘이 유효 기간 내에 있는 코드)
     let existingQRQuery = supabase
       .from('attendance_qr_codes')
       .select('*')
       .eq('clinic_id', clinic_id)
-      .eq('valid_date', today)
       .eq('is_active', true)
+      .lte('valid_date', today) // 시작일이 오늘 이전이거나 오늘
 
     // branch_id 조건 추가 (하위 호환성 유지)
     if (branch_id) {
@@ -56,11 +96,21 @@ export async function generateDailyQRCode(
       existingQRQuery = existingQRQuery.is('branch_id', null)
     }
 
-    const { data: existingQR, error: checkError } = await existingQRQuery.single()
+    const { data: existingQRList, error: checkError } = await existingQRQuery
 
-    if (existingQR) {
-      // 이미 존재하면 반환
-      return { success: true, qrCode: existingQR as AttendanceQRCode }
+    // 유효한 기존 QR 코드 찾기
+    if (existingQRList && existingQRList.length > 0) {
+      for (const existingQR of existingQRList) {
+        const qrValidUntil = existingQR.valid_until || existingQR.valid_date
+        if (qrValidUntil >= today) {
+          // 유효한 QR 코드가 있으면 반환
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+          if (!existingQR.qr_code.startsWith('http')) {
+            existingQR.qr_code = `${baseUrl}/qr/${existingQR.qr_code}`
+          }
+          return { success: true, qrCode: existingQR as AttendanceQRCode }
+        }
+      }
     }
 
     // 새 QR 코드 생성 (URL 기반 - 핸드폰 카메라 직접 스캔 가능)
@@ -76,10 +126,14 @@ export async function generateDailyQRCode(
         branch_id, // 지점 ID 포함
         qr_code: uuid, // UUID만 저장 (URL은 프론트엔드에서 동적 생성)
         valid_date: today,
+        valid_until: validUntil,
+        validity_type,
+        validity_days: validityDays,
         latitude,
         longitude,
         radius_meters,
         is_active: true,
+        expires_at: expiresAt,
       })
       .select()
       .single()
@@ -103,6 +157,7 @@ export async function generateDailyQRCode(
 
 /**
  * QR 코드 조회 함수
+ * 오늘 유효한 QR 코드를 조회합니다 (유효 기간 범위 내)
  */
 export async function getQRCodeForToday(
   clinicId: string,
@@ -116,12 +171,14 @@ export async function getQRCodeForToday(
   try {
     const today = new Date().toISOString().split('T')[0]
 
+    // 오늘이 유효 기간 내에 있는 QR 코드 조회
     let query = supabase
       .from('attendance_qr_codes')
       .select('*')
       .eq('clinic_id', clinicId)
-      .eq('valid_date', today)
       .eq('is_active', true)
+      .lte('valid_date', today) // 시작일이 오늘 이전이거나 오늘
+      .order('created_at', { ascending: false })
 
     // branch_id 조건 추가 (하위 호환성 유지)
     if (branchId) {
@@ -130,22 +187,32 @@ export async function getQRCodeForToday(
       query = query.is('branch_id', null)
     }
 
-    const { data, error } = await query.single()
+    const { data: qrList, error } = await query
 
-    if (error || !data) {
-      return { success: false, error: 'QR code not found for today' }
+    if (error) {
+      console.error('[getQRCodeForToday] Query error:', error)
+      return { success: false, error: error.message }
     }
 
-    // DB에 저장된 UUID를 URL 형식으로 변환
+    if (!qrList || qrList.length === 0) {
+      return { success: false, error: 'QR code not found' }
+    }
+
+    // 유효 기간 내의 QR 코드 찾기
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-    const qrCode = data as AttendanceQRCode
 
-    // qr_code가 이미 URL 형식이 아니면 변환
-    if (!qrCode.qr_code.startsWith('http')) {
-      qrCode.qr_code = `${baseUrl}/qr/${qrCode.qr_code}`
+    for (const qr of qrList) {
+      const validUntil = qr.valid_until || qr.valid_date
+      if (validUntil >= today) {
+        // qr_code가 이미 URL 형식이 아니면 변환
+        if (!qr.qr_code.startsWith('http')) {
+          qr.qr_code = `${baseUrl}/qr/${qr.qr_code}`
+        }
+        return { success: true, qrCode: qr as AttendanceQRCode }
+      }
     }
 
-    return { success: true, qrCode }
+    return { success: false, error: 'No valid QR code found for today' }
   } catch (error: any) {
     console.error('[getQRCodeForToday] Error:', error)
     return { success: false, error: error.message }
@@ -279,10 +346,13 @@ export async function validateQRCode(
 
     const qrCode = qrData as AttendanceQRCode
 
-    // 날짜 검증 (오늘만 유효)
+    // 날짜 검증 (유효 기간 범위 확인)
     const today = new Date().toISOString().split('T')[0]
-    if (qrCode.valid_date !== today) {
-      return { is_valid: false, error_message: 'QR code expired. Please scan today\'s QR code.' }
+    const validFrom = qrCode.valid_date
+    const validUntil = qrCode.valid_until || qrCode.valid_date // valid_until이 없으면 당일만 유효
+
+    if (today < validFrom || today > validUntil) {
+      return { is_valid: false, error_message: 'QR 코드가 만료되었습니다. 새로운 QR 코드를 스캔해주세요.' }
     }
 
     // 위치 검증 (위치 정보가 있는 경우)

@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
-import type { AttendanceQRCode, QRCodeGenerateInput } from '@/types/attendance'
+import type { AttendanceQRCode, QRCodeGenerateInput, QRCodeValidityType } from '@/types/attendance'
+import { QR_CODE_VALIDITY_OPTIONS } from '@/types/attendance'
 import QRCode from 'qrcode'
 
 export default function QRCodeDisplay() {
@@ -15,6 +16,8 @@ export default function QRCodeDisplay() {
   const [longitude, setLongitude] = useState('')
   const [radiusMeters, setRadiusMeters] = useState('100')
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [validityType, setValidityType] = useState<QRCodeValidityType>('daily')
+  const [customValidityDays, setCustomValidityDays] = useState('7')
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // 현재 위치 가져오기
@@ -108,10 +111,13 @@ export default function QRCodeDisplay() {
     try {
       const hasLocation = latitude.trim() !== '' && longitude.trim() !== ''
       const parsedRadius = parseInt(radiusMeters, 10)
+      const parsedCustomDays = parseInt(customValidityDays, 10)
 
       const request: QRCodeGenerateInput = {
         clinic_id: user.clinic_id,
         radius_meters: Number.isFinite(parsedRadius) ? parsedRadius : undefined,
+        validity_type: validityType,
+        validity_days: validityType === 'custom' && Number.isFinite(parsedCustomDays) ? parsedCustomDays : undefined,
       }
 
       if (hasLocation) {
@@ -234,7 +240,11 @@ export default function QRCodeDisplay() {
               출퇴근 인증
             </div>
             <div className="text-sm text-gray-600">
-              유효 날짜: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')}
+              {qrCode.valid_until && qrCode.valid_until !== qrCode.valid_date ? (
+                <>유효 기간: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')} ~ {new Date(qrCode.valid_until).toLocaleDateString('ko-KR')}</>
+              ) : (
+                <>유효 날짜: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')}</>
+              )}
             </div>
             <div className="text-xs text-gray-500">
               인증 반경: {qrCode.radius_meters}m 이내
@@ -335,6 +345,46 @@ export default function QRCodeDisplay() {
             </p>
           </div>
 
+          {/* QR 코드 유효 기간 설정 */}
+          <div className="border-t border-gray-200 pt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              QR 코드 유효 기간
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <select
+                value={validityType}
+                onChange={(e) => setValidityType(e.target.value as QRCodeValidityType)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {QR_CODE_VALIDITY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {validityType === 'custom' && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max="365"
+                    value={customValidityDays}
+                    onChange={(e) => setCustomValidityDays(e.target.value)}
+                    placeholder="7"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <span className="text-sm text-gray-600">일</span>
+                </div>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-gray-500">
+              {validityType === 'daily' && '매일 자정에 새 QR 코드가 필요합니다.'}
+              {validityType === 'weekly' && '7일 동안 동일한 QR 코드를 사용할 수 있습니다.'}
+              {validityType === 'monthly' && '30일 동안 동일한 QR 코드를 사용할 수 있습니다.'}
+              {validityType === 'custom' && '지정한 기간 동안 동일한 QR 코드를 사용할 수 있습니다.'}
+            </p>
+          </div>
+
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -344,7 +394,7 @@ export default function QRCodeDisplay() {
               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
             <label htmlFor="autoRefresh" className="ml-2 text-sm text-gray-700">
-              자정에 자동으로 새 QR 코드 생성
+              유효 기간 만료 시 자동으로 새 QR 코드 로드
             </label>
           </div>
 
@@ -362,10 +412,11 @@ export default function QRCodeDisplay() {
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800 print:hidden">
         <h3 className="font-semibold mb-2">📋 사용 안내</h3>
         <ul className="space-y-1">
-          <li>• QR 코드는 하루 단위로 유효하며, 날짜가 바뀌면 새로 생성해야 합니다.</li>
+          <li>• QR 코드 유효 기간을 설정하여 매일/매주/매월 또는 원하는 기간 동안 사용할 수 있습니다.</li>
           <li>• 위치 정보는 출퇴근 인증 시 거리 검증에 사용됩니다.</li>
           <li>• QR 코드를 출력하여 출입구에 부착하거나 태블릿으로 표시하세요.</li>
           <li>• 인증 반경은 병원 규모에 맞게 조정하세요 (기본 100m).</li>
+          <li>• 유효한 QR 코드가 있으면 기존 코드가 유지되고, 만료 후 새 코드를 생성해야 합니다.</li>
         </ul>
       </div>
     </div>
