@@ -1,4 +1,4 @@
-import { getSupabase } from './supabase'
+import { createClient } from './supabase/client'
 
 interface UploadResult {
   url?: string
@@ -11,10 +11,14 @@ export const mediaService = {
    */
   async uploadProtocolImage(file: File): Promise<UploadResult> {
     try {
-      const supabase = getSupabase()
+      const supabase = createClient()
       if (!supabase) {
         return { error: 'Supabase client not available' }
       }
+
+      // 세션 확인 (인증 상태 디버깅)
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('[MediaService] Session check:', session ? 'authenticated' : 'not authenticated')
 
       // 파일 검증
       const maxSize = 10 * 1024 * 1024 // 10MB
@@ -76,7 +80,7 @@ export const mediaService = {
    */
   async deleteProtocolMedia(filePath: string): Promise<{ error?: string }> {
     try {
-      const supabase = getSupabase()
+      const supabase = createClient()
       if (!supabase) {
         return { error: 'Supabase client not available' }
       }
