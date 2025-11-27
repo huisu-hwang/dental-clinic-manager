@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import ClinicSelectionForm from './ClinicSelectionForm'
 import { authService } from '@/lib/authService'
+import { autoFormatPhoneNumber } from '@/utils/phoneUtils'
 
 interface EnhancedSignupFormProps {
   onBackToLanding: () => void
@@ -327,9 +328,13 @@ export default function EnhancedSignupForm({
                       id="clinicPhone"
                       name="clinicPhone"
                       value={formData.clinicPhone}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const formatted = autoFormatPhoneNumber(e.target.value);
+                        setFormData(prev => ({ ...prev, clinicPhone: formatted.value }));
+                      }}
                       className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                       placeholder="02-1234-5678"
+                      maxLength={13}
                       disabled={loading}
                     />
                   </div>

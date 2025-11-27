@@ -5,6 +5,7 @@ import { MagnifyingGlassIcon, BuildingOfficeIcon, PlusCircleIcon, LockClosedIcon
 import { getSupabase } from '@/lib/supabase'
 import { formatResidentNumber, validateResidentNumberWithMessage } from '@/utils/residentNumberUtils'
 import { encryptResidentNumber } from '@/utils/encryptionUtils'
+import { autoFormatPhoneNumber } from '@/utils/phoneUtils'
 
 interface ClinicSelectionFormProps {
   onBack: () => void
@@ -385,9 +386,13 @@ export default function ClinicSelectionForm({
                 <input
                   type="tel"
                   value={joinRequestData.phone}
-                  onChange={(e) => setJoinRequestData({ ...joinRequestData, phone: e.target.value })}
+                  onChange={(e) => {
+                    const formatted = autoFormatPhoneNumber(e.target.value);
+                    setJoinRequestData({ ...joinRequestData, phone: formatted.value });
+                  }}
                   className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   placeholder="010-1234-5678"
+                  maxLength={13}
                   required
                   disabled={submitting}
                 />
