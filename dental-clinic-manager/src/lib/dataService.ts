@@ -566,6 +566,7 @@ export const dataService = {
     happyCallRows: HappyCallRowData[]
     recallCount: number
     recallBookingCount: number
+    recallBookingNames: string
     specialNotes: string
   }) {
     const supabase = await ensureConnection()
@@ -578,6 +579,7 @@ export const dataService = {
       happyCallRows,
       recallCount,
       recallBookingCount,
+      recallBookingNames,
       specialNotes
     } = data
 
@@ -621,6 +623,7 @@ export const dataService = {
         date,
         recall_count: recallCount,
         recall_booking_count: recallBookingCount,
+        recall_booking_names: recallBookingNames.trim() || null,
         consult_proceed: validConsults.filter(c => c.consult_status === 'O').length,
         consult_hold: validConsults.filter(c => c.consult_status === 'X').length,
         naver_review_count: validGifts.filter(g => g.naver_review === 'O').length,

@@ -106,6 +106,7 @@ export default function DashboardPage() {
     happyCallRows: HappyCallRowData[]
     recallCount: number
     recallBookingCount: number
+    recallBookingNames: string
     specialNotes: string
   }) => {
     if (!canCreateReport && !canEditReport) {
