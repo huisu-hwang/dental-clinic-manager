@@ -121,90 +121,105 @@ export default function ManagementPage() {
   }
 
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
-      <div className="container mx-auto p-4 md:p-8">
-        <Header
-          dbStatus="connected"
-          user={user}
-          onLogout={logout}
-          onProfileClick={() => setShowProfile(true)}
-        />
-
-        {/* Main Tab Navigation */}
-        <TabNavigation activeTab="settings" onTabChange={handleMainTabChange} />
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">병원 관리</h1>
-          <p className="text-slate-600">
-            직원, 설정, 통계를 관리하고 병원 운영을 최적화하세요.
-          </p>
+    <div className="min-h-screen bg-slate-100">
+      {/* Header - 상단 고정 */}
+      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200">
+        <div className="h-full px-4 flex items-center">
+          <Header
+            dbStatus="connected"
+            user={user}
+            onLogout={logout}
+            onProfileClick={() => setShowProfile(true)}
+          />
         </div>
+      </div>
 
-        {/* Profile Modal */}
-        {showProfile && user && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <AccountProfile
-                currentUser={user}
-                onClose={() => setShowProfile(false)}
-                onUpdate={(updatedUserData) => {
-                  updateUser(updatedUserData) // AuthContext와 localStorage 업데이트
-                  setShowProfile(false) // 모달 닫기
-                  showToast('프로필이 성공적으로 업데이트되었습니다.', 'success')
-                }}
+      {/* 좌측 사이드바 - 고정 */}
+      <aside className="fixed left-0 top-14 w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-2 px-2">
+        <TabNavigation activeTab="settings" onTabChange={handleMainTabChange} />
+      </aside>
+
+      {/* 메인 콘텐츠 - 헤더와 사이드바 공간 확보 */}
+      <div className="ml-56 pt-14">
+        <main className="pt-1.5 px-4 pb-4">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-slate-800">병원 관리</h1>
+            <p className="text-sm text-slate-500">
+              직원, 설정, 통계를 관리하고 병원 운영을 최적화하세요.
+            </p>
+          </div>
+
+          {/* Management Sub Navigation */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="border-b border-slate-200">
+              <ManagementTabNavigation
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                userRole={user.role || ''}
               />
             </div>
+
+            <div className="p-6">
+              {/* Staff Management Tab */}
+              {activeTab === 'staff' && (
+                <StaffManagement currentUser={user} />
+              )}
+
+              {/* Branch Management Tab */}
+              {activeTab === 'branches' && (
+                <BranchManagement currentUser={user} />
+              )}
+
+              {/* Clinic Settings Tab */}
+              {activeTab === 'clinic' && (
+                <ClinicSettings currentUser={user} />
+              )}
+
+              {/* Protocol Management Tab */}
+              {activeTab === 'protocols' && (
+                <ProtocolManagement currentUser={user} />
+              )}
+
+              {/* Analytics Tab */}
+              {activeTab === 'analytics' && (
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800 mb-4">통계 분석</h2>
+                  <div className="text-center py-12">
+                    <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* System Settings Tab */}
+              {activeTab === 'system' && user.role === 'owner' && (
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800 mb-4">시스템 설정</h2>
+                  <div className="text-center py-12">
+                    <p className="text-slate-600">시스템 설정 기능은 곧 제공될 예정입니다.</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-
-        <main>
-          <ManagementTabNavigation
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            userRole={user.role || ''}
-          />
-
-          {/* Staff Management Tab */}
-          {activeTab === 'staff' && (
-            <StaffManagement currentUser={user} />
-          )}
-
-          {/* Branch Management Tab */}
-          {activeTab === 'branches' && (
-            <BranchManagement currentUser={user} />
-          )}
-
-          {/* Clinic Settings Tab */}
-          {activeTab === 'clinic' && (
-            <ClinicSettings currentUser={user} />
-          )}
-
-          {/* Protocol Management Tab */}
-          {activeTab === 'protocols' && (
-            <ProtocolManagement currentUser={user} />
-          )}
-
-          {/* Analytics Tab */}
-          {activeTab === 'analytics' && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-              <h2 className="text-xl font-bold text-slate-800 mb-4">통계 분석</h2>
-              <div className="text-center py-12">
-                <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
-              </div>
-            </div>
-          )}
-
-          {/* System Settings Tab */}
-          {activeTab === 'system' && user.role === 'owner' && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-              <h2 className="text-xl font-bold text-slate-800 mb-4">시스템 설정</h2>
-              <div className="text-center py-12">
-                <p className="text-slate-600">시스템 설정 기능은 곧 제공될 예정입니다.</p>
-              </div>
-            </div>
-          )}
         </main>
       </div>
+
+      {/* Profile Modal */}
+      {showProfile && user && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <AccountProfile
+              currentUser={user}
+              onClose={() => setShowProfile(false)}
+              onUpdate={(updatedUserData) => {
+                updateUser(updatedUserData)
+                setShowProfile(false)
+                showToast('프로필이 성공적으로 업데이트되었습니다.', 'success')
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <Toast
         message={toast.message}
