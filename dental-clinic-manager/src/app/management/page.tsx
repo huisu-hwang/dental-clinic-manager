@@ -2,17 +2,27 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Settings, Users, Building2, Building, FileText, BarChart3, Cog } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
-import ManagementTabNavigation from '@/components/Layout/ManagementTabNavigation'
 import StaffManagement from '@/components/Management/StaffManagement'
 import BranchManagement from '@/components/Management/BranchManagement'
 import ClinicSettings from '@/components/Management/ClinicSettings'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/ui/Toast'
+
+// 서브 탭 설정
+const subTabs = [
+  { id: 'staff', label: '직원 관리', icon: Users, permissions: ['staff_view', 'staff_manage'] },
+  { id: 'branches', label: '지점 관리', icon: Building2, permissions: ['clinic_settings'] },
+  { id: 'clinic', label: '병원 설정', icon: Building, permissions: ['clinic_settings'] },
+  { id: 'protocols', label: '프로토콜 관리', icon: FileText, permissions: ['protocol_view', 'protocol_create', 'protocol_edit'] },
+  { id: 'analytics', label: '통계 분석', icon: BarChart3, permissions: ['stats_monthly_view', 'stats_annual_view'] },
+  { id: 'system', label: '시스템 설정', icon: Cog, permissions: ['clinic_settings'] },
+] as const
 
 export default function ManagementPage() {
   const router = useRouter()
@@ -142,21 +152,48 @@ export default function ManagementPage() {
       {/* 메인 콘텐츠 - 헤더와 사이드바 공간 확보 */}
       <div className="ml-56 pt-14">
         <main className="pt-1.5 px-4 pb-4">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-800">병원 관리</h1>
-            <p className="text-sm text-slate-500">
-              직원, 설정, 통계를 관리하고 병원 운영을 최적화하세요.
-            </p>
-          </div>
-
-          {/* Management Sub Navigation */}
+          {/* 통일된 카드 레이아웃 */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="border-b border-slate-200">
-              <ManagementTabNavigation
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                userRole={user.role || ''}
-              />
+            {/* 블루 그라데이션 헤더 */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Settings className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">병원 관리</h2>
+                    <p className="text-blue-100 text-sm">Hospital Management</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 서브 탭 네비게이션 */}
+            <div className="border-b border-slate-200 bg-slate-50">
+              <nav className="flex space-x-1 p-2 overflow-x-auto" aria-label="Tabs">
+                {subTabs.map((tab) => {
+                  const hasTabPermission = tab.permissions.some(p => hasPermission(p as any))
+                  if (!hasTabPermission) return null
+                  if (tab.id === 'system' && user.role !== 'owner') return null
+
+                  const Icon = tab.icon
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? 'bg-white text-blue-600 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 mr-2" />
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </nav>
             </div>
 
             <div className="p-6">
@@ -182,21 +219,17 @@ export default function ManagementPage() {
 
               {/* Analytics Tab */}
               {activeTab === 'analytics' && (
-                <div>
-                  <h2 className="text-xl font-bold text-slate-800 mb-4">통계 분석</h2>
-                  <div className="text-center py-12">
-                    <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
-                  </div>
+                <div className="text-center py-12">
+                  <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
                 </div>
               )}
 
               {/* System Settings Tab */}
               {activeTab === 'system' && user.role === 'owner' && (
-                <div>
-                  <h2 className="text-xl font-bold text-slate-800 mb-4">시스템 설정</h2>
-                  <div className="text-center py-12">
-                    <p className="text-slate-600">시스템 설정 기능은 곧 제공될 예정입니다.</p>
-                  </div>
+                <div className="text-center py-12">
+                  <Cog className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-600">시스템 설정 기능은 곧 제공될 예정입니다.</p>
                 </div>
               )}
             </div>
