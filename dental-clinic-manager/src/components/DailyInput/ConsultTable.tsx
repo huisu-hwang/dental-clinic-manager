@@ -32,70 +32,70 @@ export default function ConsultTable({ consultRows, onConsultRowsChange, isReadO
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-      <h2 className="text-xl font-bold mb-4 border-b pb-3">[1] 치과 환자 상담 결과</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-100 text-slate-600 uppercase">
-            <tr>
-              <th className="p-3">환자명</th>
-              <th className="p-3">상담내용</th>
-              <th className="p-3">진행여부</th>
-              <th className="p-3">참고사항</th>
-              <th className="p-3"></th>
+    <div>
+      <div className="overflow-x-auto border border-slate-200 rounded-lg">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">환자명</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">상담내용</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">진행여부</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">참고사항</th>
+              <th className="px-4 py-3 w-12"></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {consultRows.map((row, index) => (
-              <tr key={index} className="border-b">
-                <td className="p-2">
+              <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                <td className="px-4 py-2">
                   <input
                     type="text"
-                    className="w-full p-2 border rounded-md"
+                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="홍길동"
                     value={row.patient_name}
                     onChange={(e) => updateRow(index, 'patient_name', e.target.value)}
                     readOnly={isReadOnly}
                   />
                 </td>
-                <td className="p-2">
+                <td className="px-4 py-2">
                   <input
                     type="text"
-                    className="w-full p-2 border rounded-md"
+                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="상담 내용 요약"
                     value={row.consult_content}
                     onChange={(e) => updateRow(index, 'consult_content', e.target.value)}
                     readOnly={isReadOnly}
                   />
                 </td>
-                <td className="p-2">
+                <td className="px-4 py-2">
                   <select
-                    className="w-full p-2 border rounded-md"
+                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={row.consult_status}
                     onChange={(e) => updateRow(index, 'consult_status', e.target.value as 'O' | 'X')}
                     disabled={isReadOnly}
                   >
-                    <option value="O">O</option>
-                    <option value="X">X</option>
+                    <option value="O">O (진행)</option>
+                    <option value="X">X (보류)</option>
                   </select>
                 </td>
-                <td className="p-2">
+                <td className="px-4 py-2">
                   <input
                     type="text"
-                    className="w-full p-2 border rounded-md"
-                    placeholder="참고 사항 (선택)"
+                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="참고 사항"
                     value={row.remarks}
                     onChange={(e) => updateRow(index, 'remarks', e.target.value)}
                     readOnly={isReadOnly}
                   />
                 </td>
-                <td className="p-2 text-center">
+                <td className="px-4 py-2 text-center">
                   <button
-                    className="text-red-500 hover:text-red-700 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => removeRow(index)}
                     disabled={isReadOnly}
+                    title="삭제"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4" />
                   </button>
                 </td>
               </tr>
@@ -105,11 +105,11 @@ export default function ConsultTable({ consultRows, onConsultRowsChange, isReadO
       </div>
       <button
         onClick={addRow}
-        className="mt-4 text-blue-600 font-semibold text-sm py-2 px-4 rounded-md hover:bg-blue-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="mt-3 inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isReadOnly}
       >
-        <Plus className="w-4 h-4" />
-        <span>상담 기록 추가</span>
+        <Plus className="w-4 h-4 mr-1" />
+        행 추가
       </button>
     </div>
   )
