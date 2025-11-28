@@ -73,7 +73,7 @@ export default function AttendancePage() {
 
       {/* 메인 콘텐츠 - 헤더와 사이드바 공간 확보 */}
       <div className="ml-56 pt-14">
-        <main className="p-4">
+        <main className="pt-1.5 px-4 pb-4">
           {/* 페이지 제목 */}
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-slate-800">출근 관리</h1>

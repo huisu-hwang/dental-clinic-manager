@@ -90,7 +90,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* 메인 콘텐츠 - 헤더와 사이드바 공간 확보 */}
       <div className="ml-56 pt-14">
-        <main className="p-4">{children}</main>
+        <main className="pt-1.5 px-4 pb-4">{children}</main>
       </div>
 
       {/* Profile Modal */}
