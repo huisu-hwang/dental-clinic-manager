@@ -75,7 +75,7 @@ export default function AttendancePage() {
         </div>
 
         {/* 서브 탭 네비게이션 */}
-        <nav className="flex gap-1 mb-4 overflow-x-auto bg-slate-100/80 p-1 rounded-xl" aria-label="Tabs">
+        <nav className="flex gap-1 mb-4 ml-2 overflow-x-auto bg-slate-100/80 p-1 rounded-xl" aria-label="Tabs">
           {canCheckIn && (
             <button
               onClick={() => setActiveTab('checkin')}

@@ -53,7 +53,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
   }
 
   return (
-    <nav className="flex gap-1 mt-3 mb-4 overflow-x-auto bg-slate-100/80 p-1 rounded-xl">
+    <nav className="flex gap-1 mt-3 mb-4 ml-2 overflow-x-auto bg-slate-100/80 p-1 rounded-xl">
       {visibleTabs.map(tab => {
         const isActive = activeTab === tab.id
         const Icon = tab.icon
