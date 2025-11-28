@@ -55,17 +55,24 @@ export default function AttendancePage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="container mx-auto p-4 md:p-8">
-        {/* Header */}
-        <Header
-          dbStatus="connected"
-          user={user}
-          onLogout={() => logout()}
-        />
+      {/* Header - 상단 고정 */}
+      <div className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
+        <div className="container mx-auto px-4 md:px-8 py-4">
+          <Header
+            dbStatus="connected"
+            user={user}
+            onLogout={() => logout()}
+          />
+        </div>
+      </div>
 
-        {/* Main Tab Navigation */}
+      {/* 좌측 사이드바 - 고정 */}
+      <aside className="fixed left-0 top-[73px] w-56 h-[calc(100vh-73px)] bg-white border-r border-slate-200 p-4 overflow-y-auto z-10">
         <TabNavigation activeTab="attendance" onTabChange={handleMainTabChange} />
+      </aside>
 
+      {/* 메인 콘텐츠 - 사이드바 너비만큼 마진 */}
+      <div className="ml-56 p-4 md:p-8">
         {/* 페이지 제목 */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900">출근 관리</h1>
