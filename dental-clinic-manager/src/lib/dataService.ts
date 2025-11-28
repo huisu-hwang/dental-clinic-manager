@@ -2575,7 +2575,7 @@ export const dataService = {
         .from('special_notes_history') as any)
         .insert([{
           clinic_id: clinicId,
-          date: date,
+          report_date: date,
           content: content.trim(),
           author_id: authorId,
           author_name: authorName,
@@ -2615,15 +2615,15 @@ export const dataService = {
         .from('special_notes_history')
         .select('*', { count: 'exact' })
         .eq('clinic_id', clinicId)
-        .order('date', { ascending: false })
+        .order('report_date', { ascending: false })
         .order('edited_at', { ascending: false })
 
       // 날짜 범위 필터
       if (params?.startDate) {
-        query = query.gte('date', params.startDate)
+        query = query.gte('report_date', params.startDate)
       }
       if (params?.endDate) {
-        query = query.lte('date', params.endDate)
+        query = query.lte('report_date', params.endDate)
       }
 
       // 페이지네이션
@@ -2675,15 +2675,15 @@ export const dataService = {
         .select('*', { count: 'exact' })
         .eq('clinic_id', clinicId)
         .ilike('content', `%${searchQuery}%`)
-        .order('date', { ascending: false })
+        .order('report_date', { ascending: false })
         .order('edited_at', { ascending: false })
 
       // 날짜 범위 필터
       if (params.startDate) {
-        query = query.gte('date', params.startDate)
+        query = query.gte('report_date', params.startDate)
       }
       if (params.endDate) {
-        query = query.lte('date', params.endDate)
+        query = query.lte('report_date', params.endDate)
       }
 
       // 결과 제한
@@ -2722,7 +2722,7 @@ export const dataService = {
         .from('special_notes_history')
         .select('*')
         .eq('clinic_id', clinicId)
-        .eq('date', date)
+        .eq('report_date', date)
         .order('edited_at', { ascending: false })
 
       if (error) throw error
@@ -2754,14 +2754,14 @@ export const dataService = {
         .from('special_notes_history')
         .select('*')
         .eq('clinic_id', clinicId)
-        .order('date', { ascending: false })
+        .order('report_date', { ascending: false })
         .order('edited_at', { ascending: false })
 
       if (params?.startDate) {
-        query = query.gte('date', params.startDate)
+        query = query.gte('report_date', params.startDate)
       }
       if (params?.endDate) {
-        query = query.lte('date', params.endDate)
+        query = query.lte('report_date', params.endDate)
       }
 
       const { data, error } = await query
@@ -2772,9 +2772,9 @@ export const dataService = {
       const groupedByDate = new Map<string, SpecialNotesHistory[]>()
 
       for (const note of (data as SpecialNotesHistory[])) {
-        const existing = groupedByDate.get(note.date) || []
+        const existing = groupedByDate.get(note.report_date) || []
         existing.push(note)
-        groupedByDate.set(note.date, existing)
+        groupedByDate.set(note.report_date, existing)
       }
 
       // 각 날짜의 최신 노트와 수정 횟수 계산

@@ -14,7 +14,7 @@
 CREATE TABLE IF NOT EXISTS special_notes_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   clinic_id UUID REFERENCES clinics(id) ON DELETE CASCADE NOT NULL,
-  date DATE NOT NULL,                           -- 보고서 날짜 (특이사항이 속한 날짜)
+  report_date DATE NOT NULL,                    -- 보고서 날짜 (특이사항이 속한 날짜)
   content TEXT NOT NULL,                        -- 특이사항 내용
   author_id UUID REFERENCES users(id),          -- 작성자 ID
   author_name VARCHAR(100) NOT NULL,            -- 작성자 이름 (사용자가 삭제되어도 이름 유지)
@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS special_notes_history (
 -- ====================
 
 CREATE INDEX idx_special_notes_history_clinic_id ON special_notes_history(clinic_id);
-CREATE INDEX idx_special_notes_history_date ON special_notes_history(date);
-CREATE INDEX idx_special_notes_history_clinic_date ON special_notes_history(clinic_id, date);
+CREATE INDEX idx_special_notes_history_report_date ON special_notes_history(report_date);
+CREATE INDEX idx_special_notes_history_clinic_date ON special_notes_history(clinic_id, report_date);
 CREATE INDEX idx_special_notes_history_edited_at ON special_notes_history(edited_at);
 CREATE INDEX idx_special_notes_history_author_id ON special_notes_history(author_id);
 
@@ -68,7 +68,7 @@ GRANT SELECT, INSERT ON special_notes_history TO authenticated;
 -- ====================
 
 COMMENT ON TABLE special_notes_history IS '기타 특이사항 수정 히스토리 테이블';
-COMMENT ON COLUMN special_notes_history.date IS '보고서 날짜 (특이사항이 속한 날짜)';
+COMMENT ON COLUMN special_notes_history.report_date IS '보고서 날짜 (특이사항이 속한 날짜)';
 COMMENT ON COLUMN special_notes_history.content IS '특이사항 내용';
 COMMENT ON COLUMN special_notes_history.author_id IS '작성/수정자 ID';
 COMMENT ON COLUMN special_notes_history.author_name IS '작성/수정자 이름 (이력 보존용)';

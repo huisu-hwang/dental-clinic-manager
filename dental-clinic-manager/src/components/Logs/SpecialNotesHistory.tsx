@@ -151,7 +151,7 @@ export default function SpecialNotesHistory({ clinicId }: SpecialNotesHistoryPro
             className="p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
           >
             <div className="flex justify-between items-start mb-2">
-              <span className="font-medium text-blue-600">{formatDate(note.date)}</span>
+              <span className="font-medium text-blue-600">{formatDate(note.report_date)}</span>
               <div className="flex items-center gap-2">
                 {note.is_past_date_edit && (
                   <span className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded">

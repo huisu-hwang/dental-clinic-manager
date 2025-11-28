@@ -289,7 +289,7 @@ export async function saveDailyReport(formData: {
           .from('special_notes_history')
           .insert({
             clinic_id: userProfile.clinic_id,
-            date: formData.date,
+            report_date: formData.date,
             content: specialNotes,
             author_id: user.id,
             author_name: userProfile.name || '알 수 없음',

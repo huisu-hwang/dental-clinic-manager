@@ -61,7 +61,7 @@ export interface HappyCallLog {
 export interface SpecialNotesHistory {
   id: string;
   clinic_id: string;
-  date: string;
+  report_date: string;
   content: string;
   author_id?: string | null;
   author_name: string;
