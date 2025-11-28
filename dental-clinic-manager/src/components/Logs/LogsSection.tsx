@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog } from '@/types'
+import SpecialNotesHistory from './SpecialNotesHistory'
 
 interface LogsSectionProps {
   dailyReports: DailyReport[]
@@ -274,6 +275,9 @@ export default function LogsSection({
           </table>
         </div>
       </div>
+
+      {/* 기타 특이사항 기록 */}
+      <SpecialNotesHistory />
     </div>
   )
 }

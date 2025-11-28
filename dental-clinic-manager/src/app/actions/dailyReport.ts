@@ -169,11 +169,11 @@ export async function saveDailyReport(formData: {
     // ============================================================
 
     const clinicStartTime = Date.now()
-    console.log('[saveDailyReport] Fetching clinic_id...')
+    console.log('[saveDailyReport] Fetching clinic_id and user name...')
 
     const clinicPromise = supabase
       .from('users')
-      .select('clinic_id')
+      .select('clinic_id, name')
       .eq('id', user.id)
       .single()
 
@@ -197,7 +197,7 @@ export async function saveDailyReport(formData: {
       return { success: false, error: '병원 정보를 찾을 수 없습니다.' }
     }
 
-    console.log(`[saveDailyReport] Clinic ID: ${userProfile.clinic_id}`)
+    console.log(`[saveDailyReport] Clinic ID: ${userProfile.clinic_id}, User: ${userProfile.name}`)
 
     // ============================================================
     // 5. RPC 호출 (타임아웃 10초, 재시도 1회)
@@ -273,7 +273,43 @@ export async function saveDailyReport(formData: {
     }
 
     // ============================================================
-    // 6. 성공
+    // 6. 특이사항 히스토리 저장
+    // ============================================================
+
+    const specialNotes = formData.dailyReport?.special_notes?.trim()
+    if (specialNotes) {
+      try {
+        console.log('[saveDailyReport] Saving special notes history...')
+
+        // 오늘 날짜와 비교하여 과거 날짜 수정인지 확인
+        const today = new Date().toISOString().split('T')[0]
+        const isPastDateEdit = formData.date < today
+
+        const { error: historyError } = await supabase
+          .from('special_notes_history')
+          .insert({
+            clinic_id: userProfile.clinic_id,
+            date: formData.date,
+            content: specialNotes,
+            author_id: user.id,
+            author_name: userProfile.name || '알 수 없음',
+            is_past_date_edit: isPastDateEdit,
+            edited_at: new Date().toISOString()
+          })
+
+        if (historyError) {
+          // 히스토리 저장 실패는 로그만 남기고 전체 저장은 성공으로 처리
+          console.error('[saveDailyReport] Failed to save special notes history:', historyError)
+        } else {
+          console.log(`[saveDailyReport] Special notes history saved (isPastDateEdit: ${isPastDateEdit})`)
+        }
+      } catch (historyError) {
+        console.error('[saveDailyReport] Error saving special notes history:', historyError)
+      }
+    }
+
+    // ============================================================
+    // 7. 성공
     // ============================================================
 
     const totalElapsed = Date.now() - startTime
@@ -292,7 +328,7 @@ export async function saveDailyReport(formData: {
 
   } catch (error: any) {
     // ============================================================
-    // 7. 에러 처리
+    // 8. 에러 처리
     // ============================================================
 
     const totalElapsed = Date.now() - startTime
