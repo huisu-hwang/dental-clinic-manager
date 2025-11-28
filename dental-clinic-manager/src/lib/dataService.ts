@@ -319,9 +319,11 @@ async function getCurrentClinicId(): Promise<string | null> {
 }
 
 export const dataService = {
-  // 공개된 병원 목록 검색
+  // 공개된 병원 목록 검색 (비로그인 사용자도 접근 가능)
   async searchPublicClinics() {
-    const supabase = await ensureConnection()
+    // 회원가입 시 호출되므로 ensureConnection() 대신 createClient() 사용
+    // ensureConnection()은 세션이 없으면 랜딩페이지로 리다이렉트하기 때문
+    const supabase = createClient()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
