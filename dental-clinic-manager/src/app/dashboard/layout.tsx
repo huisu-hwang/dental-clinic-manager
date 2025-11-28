@@ -71,10 +71,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-100">
       {/* Header - 상단 고정 */}
-      <div className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
-        <div className="container mx-auto px-4 md:px-8 py-4">
+      <div className="fixed top-0 left-0 right-0 z-30 h-16 bg-white border-b border-slate-200 shadow-sm">
+        <div className="h-full px-6 flex items-center">
           <Header
             user={user}
             onLogout={logout}
@@ -84,13 +84,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* 좌측 사이드바 - 고정 */}
-      <aside className="fixed left-0 top-[73px] w-56 h-[calc(100vh-73px)] bg-white border-r border-slate-200 p-4 overflow-y-auto z-10">
-        <TabNavigation activeTab={getActiveTab()} onTabChange={handleTabChange} />
+      <aside className="fixed left-0 top-16 w-60 h-[calc(100vh-4rem)] bg-white border-r border-slate-200 shadow-sm z-20 flex flex-col">
+        {/* 사이드바 헤더 */}
+        <div className="px-5 py-4 border-b border-slate-100">
+          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">메뉴</h2>
+        </div>
+        {/* 네비게이션 */}
+        <div className="flex-1 overflow-y-auto px-3 py-3">
+          <TabNavigation activeTab={getActiveTab()} onTabChange={handleTabChange} />
+        </div>
       </aside>
 
-      {/* 메인 콘텐츠 - 사이드바 너비만큼 마진 */}
-      <div className="ml-56 p-4 md:p-8">
-        <main>{children}</main>
+      {/* 메인 콘텐츠 - 헤더와 사이드바 공간 확보 */}
+      <div className="ml-60 pt-16">
+        <main className="p-6">{children}</main>
       </div>
 
       {/* Profile Modal */}

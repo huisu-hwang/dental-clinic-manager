@@ -63,15 +63,15 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={`
-              group flex items-center space-x-3 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out whitespace-nowrap relative
+              group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 ease-in-out whitespace-nowrap relative
               ${isActive
-                ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-500'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800 border-l-4 border-transparent'
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
               }
             `}
           >
-            <Icon className={`w-5 h-5 ${isActive ? 'text-blue-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span>{tab.label}</span>
+            <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+            <span className="truncate">{tab.label}</span>
           </button>
         )
       })}
