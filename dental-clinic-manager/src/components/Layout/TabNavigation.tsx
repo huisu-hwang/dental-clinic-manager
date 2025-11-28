@@ -53,28 +53,25 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
   }
 
   return (
-    <nav className="flex border-b border-slate-200 mb-6 overflow-x-auto pt-2 px-1">
+    <nav className="flex flex-col space-y-1 w-full">
       {visibleTabs.map(tab => {
         const isActive = activeTab === tab.id
         const Icon = tab.icon
-        
+
         return (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={`
-              group flex items-center space-x-2 py-3 px-5 rounded-t-lg text-sm font-medium transition-all duration-200 ease-in-out whitespace-nowrap border-t border-l border-r -mb-px relative mr-1
-              ${isActive 
-                ? 'bg-white border-slate-200 text-blue-600 z-10 shadow-[0_-2px_3px_rgba(0,0,0,0.02)]' 
-                : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+              group flex items-center space-x-3 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out whitespace-nowrap relative
+              ${isActive
+                ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-500'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800 border-l-4 border-transparent'
               }
             `}
           >
-            <Icon className={`w-4 h-4 ${isActive ? 'text-blue-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
+            <Icon className={`w-5 h-5 ${isActive ? 'text-blue-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
             <span>{tab.label}</span>
-            {isActive && (
-              <div className="absolute bottom-[-1px] left-0 right-0 h-[1px] bg-white" />
-            )}
           </button>
         )
       })}
