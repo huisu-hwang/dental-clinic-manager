@@ -80,23 +80,23 @@ export default function ManagementTabNavigation({
   })
 
   return (
-    <div className="border-b border-slate-200 mb-6">
-      <nav className="-mb-px flex space-x-8">
-        {visibleTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center ${
-              activeTab === tab.id
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            }`}
-          >
-            <tab.icon className="h-5 w-5 mr-2" />
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-    </div>
+    <nav className="flex gap-1 mt-3 mb-4 overflow-x-auto bg-slate-100/80 p-1 rounded-xl">
+      {visibleTabs.map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => onTabChange(tab.id)}
+          className={`
+            group flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out whitespace-nowrap
+            ${activeTab === tab.id
+              ? 'bg-white text-blue-600 shadow-sm border border-slate-200/60'
+              : 'text-slate-500 hover:bg-white/60 hover:text-slate-700'
+            }
+          `}
+        >
+          <tab.icon className={`h-4 w-4 ${activeTab === tab.id ? 'text-blue-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
+          <span>{tab.label}</span>
+        </button>
+      ))}
+    </nav>
   )
 }

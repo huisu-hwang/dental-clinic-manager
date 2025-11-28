@@ -121,21 +121,23 @@ export default function ManagementPage() {
   }
 
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
-      <div className="container mx-auto p-4 md:p-8">
-        <Header
-          dbStatus="connected"
-          user={user}
-          onLogout={logout}
-          onProfileClick={() => setShowProfile(true)}
-        />
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 text-slate-800 font-sans min-h-screen">
+      <div className="container mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-6">
+        <div className="sticky top-0 z-10 bg-gradient-to-br from-slate-50 to-slate-100 pb-1 pt-2">
+          <Header
+            dbStatus="connected"
+            user={user}
+            onLogout={logout}
+            onProfileClick={() => setShowProfile(true)}
+          />
 
-        {/* Main Tab Navigation */}
-        <TabNavigation activeTab="settings" onTabChange={handleMainTabChange} />
+          {/* Main Tab Navigation */}
+          <TabNavigation activeTab="settings" onTabChange={handleMainTabChange} />
+        </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">병원 관리</h1>
-          <p className="text-slate-600">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-800 mb-1">병원 관리</h1>
+          <p className="text-sm text-slate-500">
             직원, 설정, 통계를 관리하고 병원 운영을 최적화하세요.
           </p>
         </div>
