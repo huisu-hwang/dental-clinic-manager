@@ -83,17 +83,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </div>
 
-      {/* 사이드바 + 콘텐츠 영역 */}
-      <div className="flex">
-        {/* 좌측 사이드바 */}
-        <aside className="w-56 min-h-[calc(100vh-80px)] bg-white border-r border-slate-200 sticky top-[80px] self-start p-4">
-          <TabNavigation activeTab={getActiveTab()} onTabChange={handleTabChange} />
-        </aside>
+      {/* 좌측 사이드바 - 고정 */}
+      <aside className="fixed left-0 top-[73px] w-56 h-[calc(100vh-73px)] bg-white border-r border-slate-200 p-4 overflow-y-auto z-10">
+        <TabNavigation activeTab={getActiveTab()} onTabChange={handleTabChange} />
+      </aside>
 
-        {/* 메인 콘텐츠 */}
-        <div className="flex-1 p-4 md:p-8">
-          <main>{children}</main>
-        </div>
+      {/* 메인 콘텐츠 - 사이드바 너비만큼 마진 */}
+      <div className="ml-56 p-4 md:p-8">
+        <main>{children}</main>
       </div>
 
       {/* Profile Modal */}
