@@ -29,7 +29,8 @@ export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange, i
 
   return (
     <div>
-      <div className="overflow-x-auto border border-slate-200 rounded-lg">
+      {/* 데스크탑: 테이블 형식 */}
+      <div className="hidden sm:block overflow-x-auto border border-slate-200 rounded-lg">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
@@ -87,9 +88,64 @@ export default function HappyCallTable({ happyCallRows, onHappyCallRowsChange, i
           </tbody>
         </table>
       </div>
+
+      {/* 모바일: 카드 형식 */}
+      <div className="sm:hidden space-y-3">
+        {happyCallRows.map((row, index) => (
+          <div key={index} className="border border-slate-200 rounded-lg p-3 bg-white">
+            <div className="flex justify-between items-start mb-3">
+              <span className="text-xs font-medium text-slate-500">#{index + 1}</span>
+              <button
+                onClick={() => removeRow(index)}
+                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="삭제"
+                disabled={isReadOnly}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">환자명</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="홍길동"
+                  value={row.patient_name}
+                  onChange={(e) => updateRow(index, 'patient_name', e.target.value)}
+                  readOnly={isReadOnly}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">진료 내용</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="진료 내용"
+                  value={row.treatment}
+                  onChange={(e) => updateRow(index, 'treatment', e.target.value)}
+                  readOnly={isReadOnly}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">특이사항</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="특이사항"
+                  value={row.notes}
+                  onChange={(e) => updateRow(index, 'notes', e.target.value)}
+                  readOnly={isReadOnly}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <button
         onClick={addRow}
-        className="mt-3 inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="mt-3 inline-flex items-center px-3 py-2 sm:py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center sm:justify-start"
         disabled={isReadOnly}
       >
         <Plus className="w-4 h-4 mr-1" />

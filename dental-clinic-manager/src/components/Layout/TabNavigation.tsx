@@ -2,20 +2,21 @@
 
 import { usePermissions } from '@/hooks/usePermissions'
 import type { Permission } from '@/types/permissions'
-import { 
-  ClipboardList, 
-  Clock, 
-  BarChart3, 
-  History, 
-  BookOpen, 
-  FileSignature, 
-  Package, 
-  HelpCircle 
+import {
+  ClipboardList,
+  Clock,
+  BarChart3,
+  History,
+  BookOpen,
+  FileSignature,
+  Package,
+  HelpCircle
 } from 'lucide-react'
 
 interface TabNavigationProps {
   activeTab: string
   onTabChange: (tab: string) => void
+  onItemClick?: () => void  // 모바일에서 메뉴 닫기용
 }
 
 interface Tab {
@@ -36,7 +37,7 @@ const tabs: Tab[] = [
   { id: 'guide', label: '사용 안내', icon: HelpCircle, requiredPermissions: ['guide_view'] }
 ]
 
-export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
+export default function TabNavigation({ activeTab, onTabChange, onItemClick }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
 
   // 권한이 있는 탭만 필터링
@@ -47,6 +48,19 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
     return tab.requiredPermissions.some(perm => hasPermission(perm))
   })
 
+  // 현재 선택된 탭이 권한이 없는 탭이면 첫 번째 탭으로 변경
+  if (visibleTabs.length > 0 && !visibleTabs.find(tab => tab.id === activeTab)) {
+    onTabChange(visibleTabs[0].id)
+  }
+
+  const handleTabClick = (tabId: string) => {
+    onTabChange(tabId)
+    // 모바일에서 메뉴 아이템 클릭 시 메뉴 닫기
+    if (onItemClick) {
+      onItemClick()
+    }
+  }
+
   return (
     <nav className="flex flex-col space-y-1 w-full">
       {visibleTabs.map(tab => {
@@ -56,9 +70,9 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
         return (
           <button
             key={tab.id}
-            onClick={() => onTabChange(tab.id)}
+            onClick={() => handleTabClick(tab.id)}
             className={`
-              group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 ease-in-out whitespace-nowrap relative
+              group flex items-center space-x-3 py-3 lg:py-2.5 px-4 lg:px-3 rounded-xl text-sm font-medium transition-all duration-200 ease-in-out whitespace-nowrap relative
               ${isActive
                 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'

@@ -277,11 +277,11 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
 
   // 섹션 헤더 컴포넌트
   const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
-    <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
-        <Icon className="w-4 h-4" />
+    <div className="flex items-center space-x-2 sm:space-x-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
+      <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
+        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </div>
-      <h3 className="text-base font-semibold text-slate-800">
+      <h3 className="text-sm sm:text-base font-semibold text-slate-800">
         <span className="text-blue-600 mr-1">{number}.</span>
         {title}
       </h3>
@@ -289,27 +289,27 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
   )
 
   return (
-    <div className="space-y-0">
-      {/* 보고서 헤더 - 스크롤 시 고정 */}
-      <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* 보고서 헤더 */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">일일 업무 보고서</h2>
-              <p className="text-blue-100 text-sm">Daily Report</p>
+              <h2 className="text-base sm:text-lg font-bold text-white">일일 업무 보고서</h2>
+              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Daily Report</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             {loading && (
-              <span className="px-3 py-1 bg-white/20 rounded-full text-white text-xs">
+              <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
                 로딩 중...
               </span>
             )}
             {hasExistingData && !loading && (
-              <span className="px-3 py-1 bg-green-500/80 rounded-full text-white text-xs">
+              <span className="px-2 sm:px-3 py-1 bg-green-500/80 rounded-full text-white text-xs">
                 기존 데이터
               </span>
             )}
@@ -318,8 +318,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
       </div>
 
       {/* 보고서 본문 */}
-      <div className="bg-white rounded-b-xl shadow-sm border border-slate-200 border-t-0">
-      <div className="p-6 space-y-6">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         {/* 기본 정보 */}
         <div>
           <SectionHeader number={1} title="기본 정보" icon={Calendar} />
@@ -430,11 +429,11 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
 
       {/* 저장 버튼 영역 */}
       {(canCreate || canEdit) && (
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end space-x-3">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
           <button
             type="button"
             onClick={resetForm}
-            className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center justify-center px-4 py-2.5 sm:py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors disabled:opacity-50 order-2 sm:order-1"
             disabled={isReadOnly}
           >
             <RotateCcw className="w-4 h-4 mr-2" />
@@ -443,7 +442,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
           <button
             type="button"
             onClick={(e) => handleSave(e)}
-            className="inline-flex items-center px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center px-5 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
             disabled={loading || isReadOnly}
           >
             <Save className="w-4 h-4 mr-2" />

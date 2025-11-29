@@ -6,7 +6,7 @@
  * 자동으로 출근/퇴근 처리를 수행합니다.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { attendanceService } from '@/lib/attendanceService'
@@ -16,14 +16,27 @@ type ProcessStatus = 'loading' | 'success' | 'error'
 export default function QRAttendancePage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [status, setStatus] = useState<ProcessStatus>('loading')
   const [message, setMessage] = useState('')
   const [actionType, setActionType] = useState<'check-in' | 'check-out' | 'error'>('check-in')
+  const hasProcessed = useRef(false)
 
   useEffect(() => {
+    // 인증 상태 확인 중이면 대기
+    if (authLoading) {
+      console.log('[QRAttendancePage] Auth loading, waiting...')
+      return
+    }
+
+    // 중복 실행 방지
+    if (hasProcessed.current) {
+      return
+    }
+
+    hasProcessed.current = true
     processAttendance()
-  }, [params.code, user])
+  }, [params.code, user, authLoading])
 
   const processAttendance = async () => {
     const code = params.code as string
@@ -104,7 +117,7 @@ export default function QRAttendancePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        {status === 'loading' && <LoadingScreen />}
+        {status === 'loading' && <LoadingScreen isAuthLoading={authLoading} />}
         {status === 'success' && <SuccessScreen message={message} actionType={actionType} />}
         {status === 'error' && <ErrorScreen message={message} />}
       </div>
@@ -113,7 +126,7 @@ export default function QRAttendancePage() {
 }
 
 // 로딩 화면
-function LoadingScreen() {
+function LoadingScreen({ isAuthLoading }: { isAuthLoading: boolean }) {
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
       <div className="flex justify-center mb-6">
@@ -122,8 +135,12 @@ function LoadingScreen() {
           <div className="absolute top-0 left-0 w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">처리 중...</h2>
-      <p className="text-gray-600">출퇴근 정보를 확인하고 있습니다.</p>
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+        {isAuthLoading ? '인증 확인 중...' : '처리 중...'}
+      </h2>
+      <p className="text-gray-600">
+        {isAuthLoading ? '로그인 상태를 확인하고 있습니다.' : '출퇴근 정보를 확인하고 있습니다.'}
+      </p>
     </div>
   )
 }
