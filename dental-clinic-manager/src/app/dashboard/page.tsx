@@ -10,7 +10,7 @@ import StatsContainer from '@/components/Stats/StatsContainer'
 import LogsSection from '@/components/Logs/LogsSection'
 import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
-import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode } from 'lucide-react'
+import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 } from 'lucide-react'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import Toast from '@/components/ui/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
@@ -370,9 +370,22 @@ export default function DashboardPage() {
 
           {/* 통계 */}
           {activeTab === 'stats' && (
-            <div className="space-y-4">
+            <div className="space-y-0">
+              {/* 통계 헤더 - 스크롤 시 고정 */}
+              <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">통계</h2>
+                    <p className="text-blue-100 text-sm">Statistics</p>
+                  </div>
+                </div>
+              </div>
+
               {/* 통계 서브 탭 네비게이션 - 스크롤 시 고정 */}
-              <div className="sticky top-14 z-10 bg-white border-b border-gray-200 rounded-t-lg">
+              <div className="sticky top-[104px] z-10 bg-white border-x border-b border-gray-200">
                 <div className="px-4 sm:px-6 lg:px-8">
                   <nav className="flex space-x-8 overflow-x-auto" aria-label="Tabs">
                     <button
@@ -420,7 +433,7 @@ export default function DashboardPage() {
               </div>
 
               {/* 통계 콘텐츠 */}
-              <div className="bg-white rounded-b-lg shadow-sm border border-slate-200 p-6">
+              <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
                 {statsSubTab === 'weekly' && (
                   <>
                     <div className="flex justify-end mb-4">
