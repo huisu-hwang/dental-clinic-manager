@@ -146,7 +146,7 @@ export default function ManagementPage() {
 
       {/* 좌측 사이드바 - 콘텐츠와 함께 중앙 정렬 */}
       <aside className="fixed top-14 w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3 left-[calc(50%-700px)]">
-        <TabNavigation activeTab="settings" onTabChange={handleMainTabChange} />
+        <TabNavigation activeTab="" onTabChange={handleMainTabChange} />
       </aside>
 
       {/* 메인 콘텐츠 */}

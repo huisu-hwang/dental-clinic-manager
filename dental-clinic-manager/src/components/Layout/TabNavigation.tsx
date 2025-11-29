@@ -47,11 +47,6 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
     return tab.requiredPermissions.some(perm => hasPermission(perm))
   })
 
-  // 현재 선택된 탭이 권한이 없는 탭이면 첫 번째 탭으로 변경
-  if (visibleTabs.length > 0 && !visibleTabs.find(tab => tab.id === activeTab)) {
-    onTabChange(visibleTabs[0].id)
-  }
-
   return (
     <nav className="flex flex-col space-y-1 w-full">
       {visibleTabs.map(tab => {
