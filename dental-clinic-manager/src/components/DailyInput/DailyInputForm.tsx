@@ -450,6 +450,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
           </button>
         </div>
       )}
+      </div>
     </div>
   )
 }

@@ -325,10 +325,13 @@ export default function LogsSection({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 기타 특이사항 기록 */}
-      <SpecialNotesHistory />
+        {/* 기타 특이사항 기록 */}
+        <div>
+          <SectionHeader number={5} title="기타 특이사항 기록" icon={FileText} />
+          <SpecialNotesHistory />
+        </div>
+      </div>
     </div>
   )
 }
