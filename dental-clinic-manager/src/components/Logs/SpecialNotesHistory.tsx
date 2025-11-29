@@ -28,11 +28,13 @@ export default function SpecialNotesHistory({ clinicId }: SpecialNotesHistoryPro
   const loadNotes = useCallback(async () => {
     setLoading(true)
     try {
+      console.log('[SpecialNotesHistory] Loading notes...')
       const result = await dataService.getLatestSpecialNotesByDate({
         limit: 100
       })
 
       if (result.success && result.data) {
+        console.log(`[SpecialNotesHistory] Loaded ${result.data.length} notes`)
         setNotes(result.data)
       }
     } catch (error) {
@@ -42,9 +44,11 @@ export default function SpecialNotesHistory({ clinicId }: SpecialNotesHistoryPro
     }
   }, [])
 
+  // 컴포넌트 마운트 시 항상 최신 데이터 로드
   useEffect(() => {
     loadNotes()
-  }, [loadNotes])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 의도적으로 빈 의존성 배열 사용 - 마운트 시에만 실행
 
   // 검색 처리
   const handleSearch = async () => {

@@ -673,6 +673,53 @@ export const dataService = {
         if (error) throw new Error(`해피콜 기록 저장 실패: ${error.message}`)
       }
 
+      // --- 5. 특이사항 히스토리 저장 ---
+      const trimmedSpecialNotes = specialNotes?.trim()
+      if (trimmedSpecialNotes) {
+        try {
+          // 현재 사용자 정보 가져오기
+          const { data: { user } } = await supabase.auth.getUser()
+          let authorName = '알 수 없음'
+
+          if (user) {
+            const { data: userProfile } = await supabase
+              .from('users')
+              .select('name')
+              .eq('id', user.id)
+              .single()
+
+            if (userProfile?.name) {
+              authorName = userProfile.name
+            }
+          }
+
+          // 오늘 날짜와 비교하여 과거 날짜 수정인지 확인
+          const today = new Date().toISOString().split('T')[0]
+          const isPastDateEdit = date < today
+
+          const { error: historyError } = await supabase
+            .from('special_notes_history')
+            .insert({
+              clinic_id: clinicId,
+              report_date: date,
+              content: trimmedSpecialNotes,
+              author_id: user?.id || null,
+              author_name: authorName,
+              is_past_date_edit: isPastDateEdit,
+              edited_at: new Date().toISOString()
+            })
+
+          if (historyError) {
+            // 히스토리 저장 실패는 로그만 남기고 전체 저장은 성공으로 처리
+            console.error('[DataService] Failed to save special notes history:', historyError)
+          } else {
+            console.log(`[DataService] Special notes history saved (isPastDateEdit: ${isPastDateEdit})`)
+          }
+        } catch (historyError) {
+          console.error('[DataService] Error saving special notes history:', historyError)
+        }
+      }
+
       return { success: true }
     } catch (error: unknown) {
       console.error('Error saving report:', error)
