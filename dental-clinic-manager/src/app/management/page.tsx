@@ -215,7 +215,7 @@ export default function ManagementPage() {
 
               {/* Protocol Management Tab */}
               {activeTab === 'protocols' && (
-                <ProtocolManagement currentUser={user} />
+                <ProtocolManagement currentUser={user} hideHeader />
               )}
 
               {/* Analytics Tab */}

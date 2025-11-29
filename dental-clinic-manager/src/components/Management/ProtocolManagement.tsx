@@ -23,11 +23,13 @@ import type { Protocol, ProtocolCategory, ProtocolFormData } from '@/types'
 
 interface ProtocolManagementProps {
   currentUser: UserProfile
+  hideHeader?: boolean
 }
 
-export default function ProtocolManagement({ currentUser }: ProtocolManagementProps) {
+export default function ProtocolManagement({ currentUser, hideHeader = false }: ProtocolManagementProps) {
   const { hasPermission } = usePermissions()
   const [activeSubTab, setActiveSubTab] = useState<'list' | 'categories'>('list')
+  const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [protocols, setProtocols] = useState<Protocol[]>([])
   const [categories, setCategories] = useState<ProtocolCategory[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,8 +59,14 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
           fetchProtocols(),
           fetchCategories()
         ])
+        if (isMounted) {
+          setInitialLoadDone(true)
+        }
       } catch (err) {
         console.error('[ProtocolManagement] Failed to fetch initial data:', err)
+        if (isMounted) {
+          setInitialLoadDone(true)
+        }
       }
     }
 
@@ -140,6 +148,9 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
   }
 
   useEffect(() => {
+    // 초기 로딩이 완료되기 전에는 실행하지 않음 (중복 호출 방지)
+    if (!initialLoadDone) return
+
     let isMounted = true
 
     const debounceTimer = setTimeout(() => {
@@ -153,7 +164,7 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
       isMounted = false
       clearTimeout(debounceTimer)
     }
-  }, [searchTerm, selectedStatus, selectedCategory])
+  }, [searchTerm, selectedStatus, selectedCategory, initialLoadDone])
 
   const handleCreateProtocol = async (formData: ProtocolFormData) => {
     const result = await dataService.createProtocol(formData)
@@ -273,49 +284,53 @@ export default function ProtocolManagement({ currentUser }: ProtocolManagementPr
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      {/* 블루 그라데이션 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-white">진료 프로토콜</h2>
-            <p className="text-blue-100 text-sm">Protocol Management</p>
+    <div className={hideHeader ? '' : 'bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden'}>
+      {/* 블루 그라데이션 헤더 - hideHeader가 true면 숨김 */}
+      {!hideHeader && (
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">진료 프로토콜</h2>
+              <p className="text-blue-100 text-sm">Protocol Management</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 서브 탭 네비게이션 - sticky */}
-      <div className="sticky top-14 z-10 border-b border-slate-200 bg-slate-50">
-        <nav className="flex space-x-1 p-2" aria-label="Tabs">
-          <button
-            onClick={() => setActiveSubTab('list')}
-            className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-              activeSubTab === 'list'
-                ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            프로토콜 목록
-          </button>
-          <button
-            onClick={() => setActiveSubTab('categories')}
-            className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-              activeSubTab === 'categories'
-                ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <Folder className="w-4 h-4 mr-2" />
-            카테고리 관리
-          </button>
-        </nav>
-      </div>
+      {/* 서브 탭 네비게이션 - hideHeader가 true면 숨김 */}
+      {!hideHeader && (
+        <div className="sticky top-14 z-10 border-b border-slate-200 bg-slate-50">
+          <nav className="flex space-x-1 p-2" aria-label="Tabs">
+            <button
+              onClick={() => setActiveSubTab('list')}
+              className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activeSubTab === 'list'
+                  ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              프로토콜 목록
+            </button>
+            <button
+              onClick={() => setActiveSubTab('categories')}
+              className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activeSubTab === 'categories'
+                  ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <Folder className="w-4 h-4 mr-2" />
+              카테고리 관리
+            </button>
+          </nav>
+        </div>
+      )}
 
-      <div className="p-6">
+      <div className={hideHeader ? '' : 'p-6'}>
         {/* Protocol List Tab */}
         {activeSubTab === 'list' && (
           <div className="space-y-6">
