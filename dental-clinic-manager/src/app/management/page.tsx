@@ -153,10 +153,8 @@ export default function ManagementPage() {
       <div className="pt-14">
         <main className="max-w-[1400px] mx-auto pl-60 pr-6 pt-4 pb-6">
           <div className="max-w-6xl">
-            {/* 통일된 카드 레이아웃 */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            {/* 블루 그라데이션 헤더 */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+            {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
+            <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -171,7 +169,7 @@ export default function ManagementPage() {
             </div>
 
             {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
-            <div className="sticky top-14 z-10 border-b border-slate-200 bg-slate-50">
+            <div className="sticky top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
               <nav className="flex space-x-1 p-2 overflow-x-auto" aria-label="Tabs">
                 {subTabs.map((tab) => {
                   const hasTabPermission = tab.permissions.some(p => hasPermission(p as any))
@@ -197,7 +195,8 @@ export default function ManagementPage() {
               </nav>
             </div>
 
-            <div className="p-6">
+            {/* 탭 콘텐츠 */}
+            <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
               <div key={activeTab} className="tab-content">
                 {/* Staff Management Tab */}
                 {activeTab === 'staff' && (
@@ -236,7 +235,6 @@ export default function ManagementPage() {
                 )}
               </div>
             </div>
-          </div>
           </div>
         </main>
       </div>

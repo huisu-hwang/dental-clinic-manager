@@ -293,9 +293,9 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      {/* 블루 그라데이션 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+    <div>
+      {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
+      <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -318,8 +318,8 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
         </div>
       </div>
 
-      {/* 필터 영역 - sticky */}
-      <div className="sticky top-14 z-10 border-b border-slate-200 bg-slate-50 p-4">
+      {/* 필터 영역 - 스크롤 시 고정 */}
+      <div className="sticky top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50 p-4">
         <div className="flex flex-col md:flex-row gap-4">
           {/* 검색 */}
           <div className="flex-1 relative">
@@ -361,7 +361,8 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
         </div>
       </div>
 
-      <div className="p-6">
+      {/* 콘텐츠 영역 */}
+      <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
         {/* 계약서 목록 */}
         {contracts.length === 0 ? (
           <div className="text-center py-12 bg-slate-50 rounded-lg">

@@ -61,9 +61,9 @@ export default function InventoryManagement({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      {/* 블루 그라데이션 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+    <div>
+      {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
+      <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
             <Settings className="w-5 h-5 text-white" />
@@ -75,7 +75,8 @@ export default function InventoryManagement({
         </div>
       </div>
 
-      <div className="p-6 space-y-8">
+      {/* 콘텐츠 영역 */}
+      <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6 space-y-8">
         {/* 새 선물 추가 */}
         <div>
           <SectionHeader number={1} title="신규 선물 추가" icon={Plus} />

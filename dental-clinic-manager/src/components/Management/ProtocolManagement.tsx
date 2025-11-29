@@ -284,10 +284,10 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
   }
 
   return (
-    <div className={hideHeader ? '' : 'bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden'}>
-      {/* 블루 그라데이션 헤더 - hideHeader가 true면 숨김 */}
+    <div>
+      {/* 블루 그라데이션 헤더 - hideHeader가 true면 숨김, 스크롤 시 고정 */}
       {!hideHeader && (
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+        <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
               <FileText className="w-5 h-5 text-white" />
@@ -300,9 +300,9 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
         </div>
       )}
 
-      {/* 서브 탭 네비게이션 - hideHeader가 true면 숨김 */}
+      {/* 서브 탭 네비게이션 - hideHeader가 true면 숨김, 스크롤 시 고정 */}
       {!hideHeader && (
-        <div className="sticky top-14 z-10 border-b border-slate-200 bg-slate-50">
+        <div className="sticky top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
           <nav className="flex space-x-1 p-2" aria-label="Tabs">
             <button
               onClick={() => setActiveSubTab('list')}
@@ -330,7 +330,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
         </div>
       )}
 
-      <div className={hideHeader ? '' : 'p-6'}>
+      <div className={hideHeader ? '' : 'bg-white border-x border-b border-slate-200 rounded-b-xl p-6'}>
         {/* Protocol List Tab */}
         {activeSubTab === 'list' && (
           <div className="space-y-6">
