@@ -206,6 +206,26 @@ export default function DashboardPage() {
     }
   }
 
+  const handleUpdateConsultStatus = async (consultId: number): Promise<{ success?: boolean; error?: string }> => {
+    try {
+      const result = await dataService.updateConsultStatusToCompleted(consultId)
+      if (result.error) {
+        showToast(`상태 변경 실패: ${result.error}`, 'error')
+        return { error: result.error }
+      } else {
+        const message = result.patientName
+          ? `${result.patientName} 환자의 상담이 진행 완료로 변경되었습니다.`
+          : '상담 상태가 변경되었습니다.'
+        showToast(message, 'success')
+        refetch() // 데이터 새로고침
+        return { success: true }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      showToast(`상태 변경 실패: ${errorMessage}`, 'error')
+      return { error: errorMessage }
+    }
+  }
 
   // 통계 계산
   const getStats = (periodType: 'weekly' | 'monthly' | 'annual', value: string) => {
@@ -546,6 +566,7 @@ export default function DashboardPage() {
               inventoryLogs={inventoryLogs}
               onDeleteReport={handleDeleteReport}
               onRecalculateStats={handleRecalculateStats}
+              onUpdateConsultStatus={handleUpdateConsultStatus}
               canDelete={canDeleteReport}
             />
           )}
