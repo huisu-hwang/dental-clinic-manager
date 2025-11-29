@@ -256,7 +256,12 @@ export default function MasterAdminPage() {
     }
 
     try {
-      await dataService.deleteUser(userId)
+      const result = await dataService.deleteUser(userId)
+      if (result.error) {
+        console.error('사용자 삭제 실패:', result.error)
+        alert('사용자 삭제에 실패했습니다: ' + result.error)
+        return
+      }
       alert('사용자가 삭제되었습니다.')
       loadData()
     } catch (error) {
