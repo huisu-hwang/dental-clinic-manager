@@ -499,6 +499,26 @@ export const dataService = {
         happyCallLogsResult = { data: [], error: err };
       }
 
+      // special_notes_history에서 해당 날짜의 최신 특이사항 조회
+      let latestSpecialNote: { content: string; author_name: string } | null = null;
+      try {
+        const { data: specialNotesData } = await supabase
+          .from('special_notes_history')
+          .select('content, author_name')
+          .eq('clinic_id', targetClinicId)
+          .eq('report_date', targetDate)
+          .order('edited_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (specialNotesData) {
+          latestSpecialNote = specialNotesData;
+          console.log('[DataService] special_notes_history fetched for date:', targetDate);
+        }
+      } catch (err) {
+        console.warn('[DataService] Error fetching special_notes_history:', err);
+      }
+
       const { normalized: normalizedDailyReport, missingIds: dailyIdsToBackfill } = ensureClinicIds(
         dailyReportResult?.data ? [dailyReportResult.data as DailyReport] : [],
         targetClinicId
@@ -529,17 +549,41 @@ export const dataService = {
         void backfillClinicIds(supabase, 'happy_call_logs', targetClinicId, happyCallIdsToBackfill)
       }
 
+      // special_notes_history에서 가져온 값이 있으면 dailyReport에 설정
+      const hasSpecialNotes = latestSpecialNote !== null
       const hasData =
         normalizedDailyReport.length > 0 ||
         normalizedConsultLogs.length > 0 ||
         normalizedGiftLogs.length > 0 ||
-        normalizedHappyCallLogs.length > 0
+        normalizedHappyCallLogs.length > 0 ||
+        hasSpecialNotes
       console.log('[DataService] Data fetch complete. Has data:', hasData)
+
+      // dailyReport 객체 생성 (special_notes는 special_notes_history에서 가져옴)
+      let dailyReport = normalizedDailyReport[0] ?? null
+      if (dailyReport && latestSpecialNote) {
+        dailyReport = {
+          ...dailyReport,
+          special_notes: latestSpecialNote.content
+        }
+      } else if (!dailyReport && latestSpecialNote) {
+        // dailyReport가 없지만 특이사항만 있는 경우
+        dailyReport = {
+          date: targetDate,
+          clinic_id: targetClinicId,
+          recall_count: 0,
+          recall_booking_count: 0,
+          consult_proceed: 0,
+          consult_hold: 0,
+          naver_review_count: 0,
+          special_notes: latestSpecialNote.content
+        } as DailyReport
+      }
 
       return {
         success: true,
         data: {
-          dailyReport: normalizedDailyReport[0] ?? null,
+          dailyReport,
           consultLogs: normalizedConsultLogs,
           giftLogs: normalizedGiftLogs,
           happyCallLogs: normalizedHappyCallLogs,
@@ -620,6 +664,7 @@ export const dataService = {
       }
 
       // --- 4. 신규 데이터 생성 ---
+      // 참고: special_notes는 special_notes_history 테이블에만 저장됨
       const dailyReport = {
         clinic_id: clinicId,
         date,
@@ -629,7 +674,6 @@ export const dataService = {
         consult_proceed: validConsults.filter(c => c.consult_status === 'O').length,
         consult_hold: validConsults.filter(c => c.consult_status === 'X').length,
         naver_review_count: validGifts.filter(g => g.naver_review === 'O').length,
-        special_notes: specialNotes.trim() || null,
       }
 
       const { error: dailyReportError } = await supabase.from('daily_reports').insert([dailyReport] as any)
@@ -671,6 +715,53 @@ export const dataService = {
         }))
         const { error } = await supabase.from('happy_call_logs').insert(happyCallData as any)
         if (error) throw new Error(`해피콜 기록 저장 실패: ${error.message}`)
+      }
+
+      // --- 5. 특이사항 히스토리 저장 ---
+      const trimmedSpecialNotes = specialNotes?.trim()
+      if (trimmedSpecialNotes) {
+        try {
+          // 현재 사용자 정보 가져오기
+          const { data: { user } } = await supabase.auth.getUser()
+          let authorName = '알 수 없음'
+
+          if (user) {
+            const { data: userProfile } = await supabase
+              .from('users')
+              .select('name')
+              .eq('id', user.id)
+              .single()
+
+            if (userProfile?.name) {
+              authorName = userProfile.name
+            }
+          }
+
+          // 오늘 날짜와 비교하여 과거 날짜 수정인지 확인
+          const today = new Date().toISOString().split('T')[0]
+          const isPastDateEdit = date < today
+
+          const { error: historyError } = await supabase
+            .from('special_notes_history')
+            .insert({
+              clinic_id: clinicId,
+              report_date: date,
+              content: trimmedSpecialNotes,
+              author_id: user?.id || null,
+              author_name: authorName,
+              is_past_date_edit: isPastDateEdit,
+              edited_at: new Date().toISOString()
+            })
+
+          if (historyError) {
+            // 히스토리 저장 실패는 로그만 남기고 전체 저장은 성공으로 처리
+            console.error('[DataService] Failed to save special notes history:', historyError)
+          } else {
+            console.log(`[DataService] Special notes history saved (isPastDateEdit: ${isPastDateEdit})`)
+          }
+        } catch (historyError) {
+          console.error('[DataService] Error saving special notes history:', historyError)
+        }
       }
 
       return { success: true }
@@ -2794,6 +2885,12 @@ export const dataService = {
     }
   },
 
+  // daily_reports에서 특이사항 목록 조회 (fallback용)
+  async getSpecialNotesFromDailyReports(params?: {
+    startDate?: string
+    endDate?: string
+    limit?: number
+  }): Promise<{ success?: boolean; data?: Array<{ date: string; content: string; clinic_id: string }>; error?: string }> {
   // ========================================
   // 상담 상태 변경 (진행보류 → 진행)
   // ========================================
@@ -2820,6 +2917,41 @@ export const dataService = {
         throw new Error('User clinic information not available')
       }
 
+      let query = supabase
+        .from('daily_reports')
+        .select('date, special_notes, clinic_id')
+        .eq('clinic_id', clinicId)
+        .not('special_notes', 'is', null)
+        .neq('special_notes', '')
+        .order('date', { ascending: false })
+
+      if (params?.startDate) {
+        query = query.gte('date', params.startDate)
+      }
+      if (params?.endDate) {
+        query = query.lte('date', params.endDate)
+      }
+      if (params?.limit) {
+        query = query.limit(params.limit)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      type DailyReportWithNotes = { date: string; special_notes: string | null; clinic_id: string }
+      const result = (data as DailyReportWithNotes[] || [])
+        .filter(item => item.special_notes && item.special_notes.trim())
+        .map(item => ({
+          date: item.date,
+          content: item.special_notes!.trim(),
+          clinic_id: item.clinic_id
+        }))
+
+      console.log(`[DataService] Fetched ${result.length} special notes from daily_reports`)
+      return { success: true, data: result }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching special notes from daily_reports:', error)
       console.log('[updateConsultStatusToCompleted] Starting update for consultId:', consultId)
 
       // 1. 원래 상담 기록 조회

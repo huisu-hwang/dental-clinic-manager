@@ -4,17 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { dataService } from '@/lib/dataService'
 import type { SpecialNotesHistory as SpecialNotesHistoryType } from '@/types'
 
-interface SpecialNotesHistoryProps {
-  clinicId?: string
-}
-
 interface GroupedNote {
   date: string
   latestNote: SpecialNotesHistoryType
   editCount: number
 }
 
-export default function SpecialNotesHistory({ clinicId }: SpecialNotesHistoryProps) {
+export default function SpecialNotesHistory() {
   const [notes, setNotes] = useState<GroupedNote[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -24,27 +20,35 @@ export default function SpecialNotesHistory({ clinicId }: SpecialNotesHistoryPro
   const [dateHistory, setDateHistory] = useState<SpecialNotesHistoryType[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
 
-  // 초기 데이터 로드
+  // 초기 데이터 로드 (special_notes_history 테이블에서만 조회)
   const loadNotes = useCallback(async () => {
     setLoading(true)
     try {
+      console.log('[SpecialNotesHistory] Loading notes from special_notes_history...')
       const result = await dataService.getLatestSpecialNotesByDate({
         limit: 100
       })
 
-      if (result.success && result.data) {
+      if (result.success && result.data && result.data.length > 0) {
+        console.log(`[SpecialNotesHistory] Loaded ${result.data.length} notes from history table`)
         setNotes(result.data)
+      } else {
+        console.log('[SpecialNotesHistory] No data found')
+        setNotes([])
       }
     } catch (error) {
       console.error('[SpecialNotesHistory] Error loading notes:', error)
+      setNotes([])
     } finally {
       setLoading(false)
     }
   }, [])
 
+  // 컴포넌트 마운트 시 항상 최신 데이터 로드
   useEffect(() => {
     loadNotes()
-  }, [loadNotes])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 의도적으로 빈 의존성 배열 사용 - 마운트 시에만 실행
 
   // 검색 처리
   const handleSearch = async () => {
@@ -159,7 +163,7 @@ export default function SpecialNotesHistory({ clinicId }: SpecialNotesHistoryPro
                   </span>
                 )}
                 <span className="text-xs text-gray-500">
-                  작성: {note.author_name}
+                  작성: {formatAuthorName(note.author_name)}
                 </span>
               </div>
             </div>
@@ -171,6 +175,17 @@ export default function SpecialNotesHistory({ clinicId }: SpecialNotesHistoryPro
         ))}
       </div>
     )
+  }
+
+  // 작성자 표시 헬퍼 함수
+  const formatAuthorName = (authorName: string | null | undefined) => {
+    if (!authorName || authorName === '-' || authorName === '알 수 없음') {
+      return '(작성자 정보 없음)'
+    }
+    if (authorName === '기존 데이터') {
+      return '(마이그레이션 데이터)'
+    }
+    return authorName
   }
 
   // 기본 목록 표시
@@ -216,7 +231,7 @@ export default function SpecialNotesHistory({ clinicId }: SpecialNotesHistoryPro
                     </span>
                   )}
                   <span className="text-xs text-gray-500">
-                    작성자: {latestNote.author_name}
+                    작성자: {formatAuthorName(latestNote.author_name)}
                   </span>
                 </div>
               </div>
@@ -259,7 +274,7 @@ export default function SpecialNotesHistory({ clinicId }: SpecialNotesHistoryPro
                             )}
                           </div>
                           <span className="text-xs text-gray-500">
-                            {history.author_name} | {formatDateTime(history.edited_at)}
+                            {formatAuthorName(history.author_name)} | {formatDateTime(history.edited_at)}
                           </span>
                         </div>
                         <p className="text-sm text-gray-600 whitespace-pre-wrap">
