@@ -1,7 +1,7 @@
 import { createClient } from './supabase/client'
 import { ensureConnection } from './supabase/connectionCheck'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
@@ -2537,6 +2537,259 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('[DataService] Error hard deleting branch:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // ========================================
+  // 기타 특이사항 히스토리 함수들
+  // Special Notes History Functions
+  // ========================================
+
+  // 특이사항 히스토리 저장
+  async saveSpecialNotesHistory(params: {
+    date: string
+    content: string
+    authorId: string
+    authorName: string
+    isPastDateEdit?: boolean
+  }): Promise<{ success?: boolean; data?: SpecialNotesHistory; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { date, content, authorId, authorName, isPastDateEdit } = params
+
+      // 내용이 비어있으면 저장하지 않음
+      if (!content || !content.trim()) {
+        console.log('[DataService] Empty special notes, skipping history save')
+        return { success: true }
+      }
+
+      const { data, error } = await (supabase
+        .from('special_notes_history') as any)
+        .insert([{
+          clinic_id: clinicId,
+          report_date: date,
+          content: content.trim(),
+          author_id: authorId,
+          author_name: authorName,
+          is_past_date_edit: isPastDateEdit || false,
+          edited_at: new Date().toISOString()
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      console.log('[DataService] Special notes history saved:', data.id)
+      return { success: true, data: data as SpecialNotesHistory }
+    } catch (error: unknown) {
+      console.error('[DataService] Error saving special notes history:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 특이사항 히스토리 조회 (날짜 범위)
+  async getSpecialNotesHistory(params?: {
+    startDate?: string
+    endDate?: string
+    limit?: number
+    offset?: number
+  }): Promise<{ success?: boolean; data?: SpecialNotesHistory[]; total?: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      let query = supabase
+        .from('special_notes_history')
+        .select('*', { count: 'exact' })
+        .eq('clinic_id', clinicId)
+        .order('report_date', { ascending: false })
+        .order('edited_at', { ascending: false })
+
+      // 날짜 범위 필터
+      if (params?.startDate) {
+        query = query.gte('report_date', params.startDate)
+      }
+      if (params?.endDate) {
+        query = query.lte('report_date', params.endDate)
+      }
+
+      // 페이지네이션
+      if (params?.limit) {
+        query = query.limit(params.limit)
+      }
+      if (params?.offset) {
+        query = query.range(params.offset, (params.offset + (params.limit || 50)) - 1)
+      }
+
+      const { data, error, count } = await query
+
+      if (error) throw error
+
+      return {
+        success: true,
+        data: data as SpecialNotesHistory[],
+        total: count || 0
+      }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching special notes history:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 특이사항 검색
+  async searchSpecialNotes(params: {
+    query: string
+    startDate?: string
+    endDate?: string
+    limit?: number
+  }): Promise<{ success?: boolean; data?: SpecialNotesHistory[]; total?: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const searchQuery = params.query.trim()
+      if (!searchQuery) {
+        return { success: true, data: [], total: 0 }
+      }
+
+      let query = supabase
+        .from('special_notes_history')
+        .select('*', { count: 'exact' })
+        .eq('clinic_id', clinicId)
+        .ilike('content', `%${searchQuery}%`)
+        .order('report_date', { ascending: false })
+        .order('edited_at', { ascending: false })
+
+      // 날짜 범위 필터
+      if (params.startDate) {
+        query = query.gte('report_date', params.startDate)
+      }
+      if (params.endDate) {
+        query = query.lte('report_date', params.endDate)
+      }
+
+      // 결과 제한
+      if (params.limit) {
+        query = query.limit(params.limit)
+      }
+
+      const { data, error, count } = await query
+
+      if (error) throw error
+
+      console.log(`[DataService] Special notes search found ${count} results for query: "${searchQuery}"`)
+      return {
+        success: true,
+        data: data as SpecialNotesHistory[],
+        total: count || 0
+      }
+    } catch (error: unknown) {
+      console.error('[DataService] Error searching special notes:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 특정 날짜의 특이사항 히스토리 조회 (수정 이력 확인용)
+  async getSpecialNotesHistoryByDate(date: string): Promise<{ success?: boolean; data?: SpecialNotesHistory[]; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('special_notes_history')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .eq('report_date', date)
+        .order('edited_at', { ascending: false })
+
+      if (error) throw error
+
+      return { success: true, data: data as SpecialNotesHistory[] }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching special notes history by date:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // 날짜별 최신 특이사항 조회 (그룹화된 결과)
+  async getLatestSpecialNotesByDate(params?: {
+    startDate?: string
+    endDate?: string
+    limit?: number
+  }): Promise<{ success?: boolean; data?: Array<{ date: string; latestNote: SpecialNotesHistory; editCount: number }>; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      // 먼저 모든 히스토리를 가져옴
+      let query = supabase
+        .from('special_notes_history')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('report_date', { ascending: false })
+        .order('edited_at', { ascending: false })
+
+      if (params?.startDate) {
+        query = query.gte('report_date', params.startDate)
+      }
+      if (params?.endDate) {
+        query = query.lte('report_date', params.endDate)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      // 클라이언트에서 날짜별로 그룹화
+      const groupedByDate = new Map<string, SpecialNotesHistory[]>()
+
+      for (const note of (data as SpecialNotesHistory[])) {
+        const existing = groupedByDate.get(note.report_date) || []
+        existing.push(note)
+        groupedByDate.set(note.report_date, existing)
+      }
+
+      // 각 날짜의 최신 노트와 수정 횟수 계산
+      const result = Array.from(groupedByDate.entries()).map(([date, notes]) => ({
+        date,
+        latestNote: notes[0], // 이미 edited_at 내림차순으로 정렬됨
+        editCount: notes.length
+      }))
+
+      // limit 적용
+      const limitedResult = params?.limit ? result.slice(0, params.limit) : result
+
+      return { success: true, data: limitedResult }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching latest special notes by date:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   }

@@ -58,6 +58,18 @@ export interface HappyCallLog {
   clinic_id?: string | null;
 }
 
+export interface SpecialNotesHistory {
+  id: string;
+  clinic_id: string;
+  report_date: string;
+  content: string;
+  author_id?: string | null;
+  author_name: string;
+  is_past_date_edit: boolean;
+  edited_at: string;
+  created_at: string;
+}
+
 export interface Stats {
   naver_review_count: number;
   consult_proceed: number;

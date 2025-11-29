@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { FileText, MessageSquare, Gift, Package } from 'lucide-react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog } from '@/types'
+import SpecialNotesHistory from './SpecialNotesHistory'
 
 interface LogsSectionProps {
   dailyReports: DailyReport[]
@@ -325,6 +326,9 @@ export default function LogsSection({
           </div>
         </div>
       </div>
+
+      {/* 기타 특이사항 기록 */}
+      <SpecialNotesHistory />
     </div>
   )
 }
