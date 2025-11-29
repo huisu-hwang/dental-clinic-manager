@@ -354,6 +354,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('dental_user')
       dataService.clearCachedClinicId()
 
+      // dental_logging_out 플래그는 새 페이지의 checkAuth에서 제거됨
+      // finally에서 제거하면 페이지 이동 전에 제거되어 세션 체크가 수행됨
       window.location.href = '/'
     } catch (error) {
       console.error('Logout error:', error)
@@ -362,10 +364,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('dental_auth')
       localStorage.removeItem('dental_user')
       window.location.href = '/'
-    } finally {
-      setIsLoggingOut(false)
-      localStorage.removeItem('dental_logging_out')
     }
+    // finally 블록 제거: window.location.href 후 페이지가 리로드되므로
+    // setIsLoggingOut(false)와 localStorage.removeItem은 불필요
+    // dental_logging_out은 새 페이지의 checkAuth에서 처리됨
   }
 
   const isAuthenticated = !!user
