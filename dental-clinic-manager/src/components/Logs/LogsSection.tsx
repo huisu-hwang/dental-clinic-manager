@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, MessageSquare, Gift, Package } from 'lucide-react'
+import { FileText, MessageSquare, Gift, Package, ArrowRight, Check } from 'lucide-react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog } from '@/types'
 import SpecialNotesHistory from './SpecialNotesHistory'
 
@@ -12,6 +12,7 @@ interface LogsSectionProps {
   inventoryLogs: InventoryLog[]
   onDeleteReport: (date: string) => void
   onRecalculateStats?: (date: string) => void
+  onUpdateConsultStatus?: (consultId: number) => Promise<{ success?: boolean; error?: string }>
   canDelete: boolean
 }
 
@@ -34,10 +35,39 @@ export default function LogsSection({
   inventoryLogs,
   onDeleteReport,
   onRecalculateStats,
+  onUpdateConsultStatus,
   canDelete
 }: LogsSectionProps) {
   const [consultFilter, setConsultFilter] = useState<'all' | 'completed' | 'incomplete'>('all')
   const [giftSort, setGiftSort] = useState<'default' | 'type' | 'date'>('default')
+  const [updatingId, setUpdatingId] = useState<number | null>(null)
+  const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<number>>(new Set())
+
+  const handleUpdateStatus = async (consultId: number) => {
+    if (!onUpdateConsultStatus || updatingId !== null) return
+
+    setUpdatingId(consultId)
+    try {
+      const result = await onUpdateConsultStatus(consultId)
+      if (result.success) {
+        setRecentlyUpdatedIds(prev => new Set(prev).add(consultId))
+        // 5초 후 체크 아이콘 제거
+        setTimeout(() => {
+          setRecentlyUpdatedIds(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(consultId)
+            return newSet
+          })
+        }, 5000)
+      } else if (result.error) {
+        alert(result.error)
+      }
+    } catch (error) {
+      alert('상태 변경 중 오류가 발생했습니다.')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
 
   const filteredConsultLogs = consultLogs.filter(log => {
     if (consultFilter === 'all') return true
@@ -188,6 +218,7 @@ export default function LogsSection({
                     <th className="p-3 font-medium">상담내용</th>
                     <th className="p-3 font-medium">진행여부</th>
                     <th className="p-3 font-medium">참고사항</th>
+                    {onUpdateConsultStatus && <th className="p-3 font-medium text-center">상태변경</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -198,14 +229,49 @@ export default function LogsSection({
                       <td className="p-3">{log.consult_content}</td>
                       <td className="p-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          log.consult_status === 'O'
+                          log.consult_status === 'O' || recentlyUpdatedIds.has(log.id!)
                             ? 'bg-green-100 text-green-800'
                             : 'bg-orange-100 text-orange-800'
                         }`}>
-                          {log.consult_status === 'O' ? '진행완료' : '진행보류'}
+                          {log.consult_status === 'O' || recentlyUpdatedIds.has(log.id!) ? '진행완료' : '진행보류'}
                         </span>
                       </td>
                       <td className="p-3">{log.remarks}</td>
+                      {onUpdateConsultStatus && (
+                        <td className="p-3 text-center">
+                          {log.consult_status === 'X' && !recentlyUpdatedIds.has(log.id!) ? (
+                            <button
+                              onClick={() => log.id && handleUpdateStatus(log.id)}
+                              disabled={updatingId !== null}
+                              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors
+                                ${updatingId === log.id
+                                  ? 'bg-gray-100 text-gray-400 cursor-wait'
+                                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
+                                }`}
+                              title="진행으로 변경"
+                            >
+                              {updatingId === log.id ? (
+                                <>
+                                  <span className="animate-spin w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full"></span>
+                                  변경중...
+                                </>
+                              ) : (
+                                <>
+                                  <ArrowRight className="w-3 h-3" />
+                                  진행으로 변경
+                                </>
+                              )}
+                            </button>
+                          ) : recentlyUpdatedIds.has(log.id!) ? (
+                            <span className="inline-flex items-center gap-1 text-green-600 text-xs">
+                              <Check className="w-4 h-4" />
+                              변경완료
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -325,10 +391,13 @@ export default function LogsSection({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 기타 특이사항 기록 */}
-      <SpecialNotesHistory />
+        {/* 기타 특이사항 기록 */}
+        <div>
+          <SectionHeader number={5} title="기타 특이사항 기록" icon={FileText} />
+          <SpecialNotesHistory />
+        </div>
+      </div>
     </div>
   )
 }

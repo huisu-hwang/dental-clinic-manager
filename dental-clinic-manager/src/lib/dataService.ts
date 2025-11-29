@@ -2891,6 +2891,23 @@ export const dataService = {
     endDate?: string
     limit?: number
   }): Promise<{ success?: boolean; data?: Array<{ date: string; content: string; clinic_id: string }>; error?: string }> {
+  // ========================================
+  // 상담 상태 변경 (진행보류 → 진행)
+  // ========================================
+
+  /**
+   * 진행보류 상담을 진행 완료로 변경
+   *
+   * 동작:
+   * 1. 원래 consult_logs의 상태를 'X' → 'O'로 변경
+   * 2. 원래 날짜의 daily_reports 통계 업데이트 (consult_hold -1, consult_proceed +1)
+   * 3. 오늘 날짜의 consult_logs에 새 기록 추가 (상태 변경 이력)
+   * 4. 오늘 날짜의 daily_reports 통계 업데이트 또는 생성
+   *
+   * @param consultId - 변경할 상담 로그의 ID
+   * @returns 성공 여부 및 업데이트된 데이터
+   */
+  async updateConsultStatusToCompleted(consultId: number) {
     const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
@@ -2935,6 +2952,145 @@ export const dataService = {
       return { success: true, data: result }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching special notes from daily_reports:', error)
+      console.log('[updateConsultStatusToCompleted] Starting update for consultId:', consultId)
+
+      // 1. 원래 상담 기록 조회
+      const { data: originalConsult, error: fetchError } = await supabase
+        .from('consult_logs')
+        .select('*')
+        .eq('id', consultId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (fetchError || !originalConsult) {
+        console.error('[updateConsultStatusToCompleted] Consult not found:', fetchError)
+        throw new Error('상담 기록을 찾을 수 없습니다.')
+      }
+
+      // 이미 진행 완료인 경우
+      if (originalConsult.consult_status === 'O') {
+        return { success: true, message: '이미 진행 완료된 상담입니다.' }
+      }
+
+      const originalDate = originalConsult.date
+      const today = new Date().toISOString().split('T')[0]
+
+      console.log('[updateConsultStatusToCompleted] Original date:', originalDate, 'Today:', today)
+
+      // 2. 원래 상담 기록의 상태를 'O'로 변경
+      const { error: updateError } = await supabase
+        .from('consult_logs')
+        .update({ consult_status: 'O' })
+        .eq('id', consultId)
+
+      if (updateError) {
+        console.error('[updateConsultStatusToCompleted] Failed to update consult status:', updateError)
+        throw new Error('상담 상태 변경에 실패했습니다.')
+      }
+
+      console.log('[updateConsultStatusToCompleted] Consult status updated to O')
+
+      // 3. 원래 날짜의 daily_reports 통계 업데이트
+      const { data: originalReport } = await supabase
+        .from('daily_reports')
+        .select('*')
+        .eq('date', originalDate)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (originalReport) {
+        const newConsultProceed = (originalReport.consult_proceed || 0) + 1
+        const newConsultHold = Math.max((originalReport.consult_hold || 0) - 1, 0)
+
+        const { error: reportUpdateError } = await supabase
+          .from('daily_reports')
+          .update({
+            consult_proceed: newConsultProceed,
+            consult_hold: newConsultHold
+          })
+          .eq('id', originalReport.id)
+
+        if (reportUpdateError) {
+          console.error('[updateConsultStatusToCompleted] Failed to update original report:', reportUpdateError)
+        } else {
+          console.log('[updateConsultStatusToCompleted] Original date report updated:', {
+            consult_proceed: newConsultProceed,
+            consult_hold: newConsultHold
+          })
+        }
+      }
+
+      // 4. 오늘 날짜의 daily_reports 확인/생성 및 상태 변경 기록 추가
+      const { data: todayReport } = await supabase
+        .from('daily_reports')
+        .select('*')
+        .eq('date', today)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (todayReport) {
+        // 기존 오늘 보고서가 있으면 consult_proceed +1 (원래 날짜와 다른 경우에만)
+        if (originalDate !== today) {
+          const { error: todayUpdateError } = await supabase
+            .from('daily_reports')
+            .update({
+              consult_proceed: (todayReport.consult_proceed || 0) + 1
+            })
+            .eq('id', todayReport.id)
+
+          if (todayUpdateError) {
+            console.error('[updateConsultStatusToCompleted] Failed to update today report:', todayUpdateError)
+          } else {
+            console.log('[updateConsultStatusToCompleted] Today report updated')
+          }
+        }
+      } else {
+        // 오늘 보고서가 없으면 새로 생성
+        const { error: insertReportError } = await supabase
+          .from('daily_reports')
+          .insert([{
+            clinic_id: clinicId,
+            date: today,
+            recall_count: 0,
+            recall_booking_count: 0,
+            consult_proceed: originalDate !== today ? 1 : 0,
+            consult_hold: 0,
+            naver_review_count: 0
+          }])
+
+        if (insertReportError) {
+          console.error('[updateConsultStatusToCompleted] Failed to create today report:', insertReportError)
+        } else {
+          console.log('[updateConsultStatusToCompleted] New today report created')
+        }
+      }
+
+      // 5. 오늘 날짜에 상담 기록 추가 (일일 보고서 환자 상담 결과에 직접 표시)
+      const { error: insertLogError } = await supabase
+        .from('consult_logs')
+        .insert([{
+          clinic_id: clinicId,
+          date: today,
+          patient_name: originalConsult.patient_name,
+          consult_content: originalConsult.consult_content,
+          consult_status: 'O' as const,
+          remarks: originalConsult.remarks || ''
+        }])
+
+      if (insertLogError) {
+        console.error('[updateConsultStatusToCompleted] Failed to insert today consult log:', insertLogError)
+      } else {
+        console.log('[updateConsultStatusToCompleted] Today consult log entry created')
+      }
+
+      return {
+        success: true,
+        originalDate,
+        patientName: originalConsult.patient_name,
+        consultContent: originalConsult.consult_content
+      }
+    } catch (error: unknown) {
+      console.error('[updateConsultStatusToCompleted] Error:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
   }

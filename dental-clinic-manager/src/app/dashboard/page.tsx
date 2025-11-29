@@ -10,7 +10,7 @@ import StatsContainer from '@/components/Stats/StatsContainer'
 import LogsSection from '@/components/Logs/LogsSection'
 import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
-import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode } from 'lucide-react'
+import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 } from 'lucide-react'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import Toast from '@/components/ui/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
@@ -206,6 +206,26 @@ export default function DashboardPage() {
     }
   }
 
+  const handleUpdateConsultStatus = async (consultId: number): Promise<{ success?: boolean; error?: string }> => {
+    try {
+      const result = await dataService.updateConsultStatusToCompleted(consultId)
+      if (result.error) {
+        showToast(`상태 변경 실패: ${result.error}`, 'error')
+        return { error: result.error }
+      } else {
+        const message = result.patientName
+          ? `${result.patientName} 환자의 상담이 진행 완료로 변경되었습니다.`
+          : '상담 상태가 변경되었습니다.'
+        showToast(message, 'success')
+        refetch() // 데이터 새로고침
+        return { success: true }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      showToast(`상태 변경 실패: ${errorMessage}`, 'error')
+      return { error: errorMessage }
+    }
+  }
 
   // 통계 계산
   const getStats = (periodType: 'weekly' | 'monthly' | 'annual', value: string) => {
@@ -370,55 +390,77 @@ export default function DashboardPage() {
 
           {/* 통계 */}
           {activeTab === 'stats' && (
-            <div className="space-y-4">
-              {/* Stats Sub-tab Navigation - 스크롤 시 고정 */}
-              <div className="sticky top-14 z-10 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                <nav className="flex space-x-4">
+            <div className="space-y-0">
+              {/* 통계 헤더 - 스크롤 시 고정 */}
+              <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">통계</h2>
+                    <p className="text-blue-100 text-sm">Statistics</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 통계 서브 탭 네비게이션 - 스크롤 시 고정 */}
+              <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
+                <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
                   <button
                     onClick={() => setStatsSubTab('weekly')}
-                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                       statsSubTab === 'weekly'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                     }`}
                   >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                     주간 통계
                   </button>
                   <button
                     onClick={() => setStatsSubTab('monthly')}
-                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                       statsSubTab === 'monthly'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                     }`}
                   >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
                     월간 통계
                   </button>
                   <button
                     onClick={() => setStatsSubTab('annual')}
-                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                       statsSubTab === 'annual'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                     }`}
                   >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                    </svg>
                     연간 통계
                   </button>
                 </nav>
               </div>
 
-              {/* Stats Content */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+              {/* 통계 콘텐츠 */}
+              <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
                 {statsSubTab === 'weekly' && (
                   <>
-                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                      <h2 className="text-xl font-bold">주간 통계</h2>
+                    <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="week-selector" className="mr-2">주 선택:</label>
+                        <label htmlFor="week-selector" className="mr-2 text-sm text-slate-600">주 선택:</label>
                         <input
                           type="week"
                           id="week-selector"
-                          className="p-2 border border-slate-300 rounded-md"
+                          className="p-2 border border-slate-300 rounded-md text-sm"
                           value={weekSelector}
                           onChange={(e) => setWeekSelector(e.target.value)}
                         />
@@ -445,14 +487,13 @@ export default function DashboardPage() {
 
                 {statsSubTab === 'monthly' && (
                   <>
-                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                      <h2 className="text-xl font-bold">월간 통계</h2>
+                    <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="month-selector" className="mr-2">월 선택:</label>
+                        <label htmlFor="month-selector" className="mr-2 text-sm text-slate-600">월 선택:</label>
                         <input
                           type="month"
                           id="month-selector"
-                          className="p-2 border border-slate-300 rounded-md"
+                          className="p-2 border border-slate-300 rounded-md text-sm"
                           value={monthSelector}
                           onChange={(e) => setMonthSelector(e.target.value)}
                         />
@@ -479,13 +520,12 @@ export default function DashboardPage() {
 
                 {statsSubTab === 'annual' && (
                   <>
-                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                      <h2 className="text-xl font-bold">연간 통계</h2>
+                    <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="year-selector" className="mr-2">연도 선택:</label>
+                        <label htmlFor="year-selector" className="mr-2 text-sm text-slate-600">연도 선택:</label>
                         <select
                           id="year-selector"
-                          className="p-2 border border-slate-300 rounded-md"
+                          className="p-2 border border-slate-300 rounded-md text-sm"
                           value={yearSelector}
                           onChange={(e) => setYearSelector(e.target.value)}
                         >
@@ -526,6 +566,7 @@ export default function DashboardPage() {
               inventoryLogs={inventoryLogs}
               onDeleteReport={handleDeleteReport}
               onRecalculateStats={handleRecalculateStats}
+              onUpdateConsultStatus={handleUpdateConsultStatus}
               canDelete={canDeleteReport}
             />
           )}
