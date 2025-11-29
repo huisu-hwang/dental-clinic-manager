@@ -71,41 +71,54 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="container mx-auto p-4 md:p-8">
-        <div className="sticky top-0 z-10 bg-slate-50 pt-4 md:pt-8">
+    <div className="min-h-screen bg-slate-100">
+      {/* Header - 상단 고정, 중앙 정렬 */}
+      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200">
+        <div className="max-w-[1400px] mx-auto h-full px-6 flex items-center">
           <Header
             user={user}
             onLogout={logout}
             onProfileClick={() => setShowProfile(true)}
           />
-          <TabNavigation activeTab={getActiveTab()} onTabChange={handleTabChange} />
         </div>
-
-        {/* Profile Modal */}
-        {showProfile && user && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowProfile(false)}
-          >
-            <div
-              className="max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <AccountProfile
-                currentUser={user}
-                onClose={() => setShowProfile(false)}
-                onUpdate={(updatedUserData) => {
-                  updateUser(updatedUserData)
-                  setShowProfile(false)
-                  showToast('프로필이 성공적으로 업데이트되었습니다.', 'success')
-                }}
-              />
-            </div>
-          </div>
-        )}
-        <main>{children}</main>
       </div>
+
+      {/* 좌측 사이드바 - 콘텐츠와 함께 중앙 정렬 */}
+      <aside className="fixed top-14 w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3 left-[calc(50%-700px)]">
+        <TabNavigation activeTab={getActiveTab()} onTabChange={handleTabChange} />
+      </aside>
+
+      {/* 메인 콘텐츠 */}
+      <div className="pt-14">
+        <main className="max-w-[1400px] mx-auto pl-60 pr-6 pt-4 pb-6">
+          <div className="max-w-6xl">
+            {children}
+          </div>
+        </main>
+      </div>
+
+      {/* Profile Modal */}
+      {showProfile && user && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowProfile(false)}
+        >
+          <div
+            className="max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <AccountProfile
+              currentUser={user}
+              onClose={() => setShowProfile(false)}
+              onUpdate={(updatedUserData) => {
+                updateUser(updatedUserData)
+                setShowProfile(false)
+                showToast('프로필이 성공적으로 업데이트되었습니다.', 'success')
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <Toast
         message={toast.message}

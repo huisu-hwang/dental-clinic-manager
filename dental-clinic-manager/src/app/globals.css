@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+/* 스크롤바 유무에 따른 레이아웃 이동 방지 */
+html {
+  overflow-y: scroll;
+}
+
+/* 메뉴 전환 시 부드러운 화면 효과 */
+.tab-content {
+  animation: fadeIn 0.15s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

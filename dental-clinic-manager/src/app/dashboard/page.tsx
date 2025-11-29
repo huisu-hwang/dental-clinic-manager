@@ -253,8 +253,8 @@ export default function DashboardPage() {
           {/* 출근 관리 */}
           {activeTab === 'attendance' && (
             <div className="space-y-4">
-              {/* 출근 관리 서브 탭 네비게이션 */}
-              <div className="bg-white border-b border-gray-200 rounded-t-lg">
+              {/* 출근 관리 서브 탭 네비게이션 - 스크롤 시 고정 */}
+              <div className="sticky top-14 z-10 bg-white border-b border-gray-200 rounded-t-lg">
                 <div className="px-4 sm:px-6 lg:px-8">
                   <nav className="flex space-x-8 overflow-x-auto" aria-label="Tabs">
                     {canCheckIn && (
@@ -371,8 +371,8 @@ export default function DashboardPage() {
           {/* 통계 */}
           {activeTab === 'stats' && (
             <div className="space-y-4">
-              {/* Stats Sub-tab Navigation */}
-              <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+              {/* Stats Sub-tab Navigation - 스크롤 시 고정 */}
+              <div className="sticky top-14 z-10 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
                 <nav className="flex space-x-4">
                   <button
                     onClick={() => setStatsSubTab('weekly')}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw } from 'lucide-react'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
@@ -71,9 +72,8 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
 
     console.log('[DailyInputForm] Setting loading to true')
     setLoading(true)
-    setHasExistingData(false) // 로딩 시작 시 초기화
+    setHasExistingData(false)
 
-    // 타임아웃 설정 (10초 - Connection Timeout 복구 시간 고려)
     const timeoutId = setTimeout(() => {
       console.log('[DailyInputForm] Load timeout - forcing loading to false')
       setLoading(false)
@@ -81,16 +81,14 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
 
     try {
       console.log('[DailyInputForm] Calling dataService.getReportByDate...')
-      // currentUser가 있으면 clinic_id를 전달, 없으면 내부에서 getCurrentClinicId() 호출
       const result = currentUser?.clinic_id
         ? await dataService.getReportByDate(currentUser.clinic_id, date)
         : await dataService.getReportByDate(date)
       console.log('[DailyInputForm] Result received:', result)
-      
+
       if (result.success && result.data.hasData) {
         const { dailyReport, consultLogs, giftLogs, happyCallLogs } = result.data
-        
-        // 기존 데이터로 폼 채우기
+
         if (dailyReport) {
           const normalizedRecallCount =
             typeof dailyReport.recall_count === 'number'
@@ -112,33 +110,30 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
             typeof dailyReport.special_notes === 'string' ? dailyReport.special_notes : ''
           )
         }
-        
-        // 상담 로그 데이터 로드 (최소 1개 빈 행 보장)
+
         if (consultLogs.length > 0) {
           setConsultRows(consultLogs.map(log => ({
             patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
             consult_content: typeof log.consult_content === 'string' ? log.consult_content : '',
             consult_status: (log.consult_status as 'O' | 'X') || 'O',
-            remarks: typeof log.remarks === 'string' ? log.remarks : '' // remarks 필드 데이터베이스에서 로드
+            remarks: typeof log.remarks === 'string' ? log.remarks : ''
           })))
         } else {
           setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
         }
 
-        // 선물 로그 데이터 로드 (최소 1개 빈 행 보장)
         if (giftLogs.length > 0) {
           setGiftRows(giftLogs.map(log => ({
             patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
             gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
-            quantity: 1, // 기존 데이터는 기본값 1로 설정
+            quantity: 1,
             naver_review: (log.naver_review as 'O' | 'X') || 'X',
-            notes: typeof log.notes === 'string' ? log.notes : '' // notes 필드 데이터베이스에서 로드
+            notes: typeof log.notes === 'string' ? log.notes : ''
           })))
         } else {
           setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
         }
 
-        // 해피콜 로그 데이터 로드 (최소 1개 빈 행 보장)
         if (happyCallLogs.length > 0) {
           setHappyCallRows(happyCallLogs.map(log => ({
             patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
@@ -148,10 +143,9 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
         } else {
           setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
         }
-        
+
         setHasExistingData(true)
       } else {
-        // 기존 데이터가 없으면 빈 폼으로 리셋
         resetFormData()
         setHasExistingData(false)
       }
@@ -160,23 +154,18 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
       resetFormData()
       setHasExistingData(false)
     } finally {
-      // 타임아웃 클리어
       clearTimeout(timeoutId)
-      // 로딩 상태를 항상 false로 설정
       console.log('[DailyInputForm] Setting loading to false')
       setLoading(false)
     }
   }, [currentUser?.clinic_id, resetFormData])
 
-  // 날짜 변경 핸들러
   const handleDateChange = (newDate: string) => {
     if (newDate !== reportDate) {
       setReportDate(newDate)
-      // loadDataForDate는 useEffect에서 처리
     }
   }
 
-  // 컴포넌트 마운트 시 또는 날짜 변경 시 데이터 로드
   useEffect(() => {
     if (!currentUser?.clinic_id) {
       console.log('[DailyInputForm] No user/clinic_id, skipping data load')
@@ -185,7 +174,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
     }
     console.log('[DailyInputForm] Loading data for date:', reportDate)
     loadDataForDate(reportDate)
-  }, [reportDate, loadDataForDate, currentUser?.clinic_id]) // reportDate가 변경될 때마다 실행
+  }, [reportDate, loadDataForDate, currentUser?.clinic_id])
 
   useEffect(() => {
     if (!currentUser?.clinic_id) {
@@ -197,7 +186,6 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
   }, [currentUser?.clinic_id, loadDataForDate, reportDate])
 
   const handleSave = async (e?: React.MouseEvent) => {
-    // 이벤트 버블링 방지
     if (e) {
       e.preventDefault()
       e.stopPropagation()
@@ -213,12 +201,8 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
 
     try {
       if (USE_NEW_ARCHITECTURE) {
-        // ============================================================
-        // 신규 아키텍처: Server Action 직접 호출
-        // ============================================================
         console.log('[DailyInputForm] Calling Server Action...')
 
-        // 빈 데이터 필터링
         const filteredConsultLogs = consultRows.filter(row => row.patient_name?.trim())
         const filteredGiftLogs = giftRows.filter(row => row.patient_name?.trim())
         const filteredHappyCallLogs = happyCallRows.filter(row => row.patient_name?.trim())
@@ -261,9 +245,6 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
         console.log('[DailyInputForm] Server Action succeeded:', result)
         alert('보고서가 성공적으로 저장되었습니다.')
       } else {
-        // ============================================================
-        // 기존 아키텍처: onSaveReport prop 사용
-        // ============================================================
         console.log('[DailyInputForm] Using legacy onSaveReport...')
 
         await onSaveReport({
@@ -278,7 +259,6 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
         })
       }
 
-      // 저장 성공 후 기존 데이터가 있다고 표시
       setHasExistingData(true)
     } catch (error) {
       console.error('[DailyInputForm] Save error:', error)
@@ -295,131 +275,177 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
     handleDateChange(today)
   }
 
+  // 섹션 헤더 컴포넌트
+  const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
+    <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
+      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+        <Icon className="w-4 h-4" />
+      </div>
+      <h3 className="text-base font-semibold text-slate-800">
+        <span className="text-blue-600 mr-1">{number}.</span>
+        {title}
+      </h3>
+    </div>
+  )
+
   return (
-    <div className="space-y-8">
-      {/* 기본 정보 */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <h2 className="text-xl font-bold mb-4 border-b pb-3">[기본 정보]</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="report-date" className="block text-sm font-medium text-slate-700 mb-1">
-              보고 일자
-              {loading && <span className="ml-2 text-blue-500 text-xs">(데이터 로딩 중...)</span>}
-              {hasExistingData && !loading && <span className="ml-2 text-green-600 text-xs">(기존 데이터 로드됨)</span>}
-            </label>
-            <input
-              type="date"
-              id="report-date"
-              className="w-full p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              value={reportDate}
-              onChange={(e) => handleDateChange(e.target.value)}
-              disabled={loading || !canCreate}
-            />
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* 보고서 헤더 */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">일일 업무 보고서</h2>
+              <p className="text-blue-100 text-sm">Daily Report</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {loading && (
+              <span className="px-3 py-1 bg-white/20 rounded-full text-white text-xs">
+                로딩 중...
+              </span>
+            )}
+            {hasExistingData && !loading && (
+              <span className="px-3 py-1 bg-green-500/80 rounded-full text-white text-xs">
+                기존 데이터
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* 상담 결과 */}
-      <ConsultTable 
-        consultRows={consultRows}
-        onConsultRowsChange={setConsultRows}
-        isReadOnly={isReadOnly}
-      />
-
-      {/* 리콜 결과 */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <h2 className="text-xl font-bold mb-4 border-b pb-3">[2] 환자 리콜 결과</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">리콜 건수</label>
-            <input
-              type="number"
-              min="0"
-              value={recallCount}
-              onChange={(e) => setRecallCount(parseInt(e.target.value) || 0)}
-              className="w-full p-2 border border-slate-300 rounded-md"
-              readOnly={isReadOnly}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">예약 수</label>
-            <input
-              type="number"
-              min="0"
-              value={recallBookingCount}
-              onChange={(e) => setRecallBookingCount(parseInt(e.target.value) || 0)}
-              className="w-full p-2 border border-slate-300 rounded-md"
-              readOnly={isReadOnly}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">예약 성공 환자 명</label>
-            <input
-              type="text"
-              value={recallBookingNames}
-              onChange={(e) => setRecallBookingNames(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded-md"
-              placeholder="예: 홍길동, 김철수, 이영희"
-              readOnly={isReadOnly}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 선물/리뷰 관리 */}
-      <GiftTable
-        giftRows={giftRows}
-        onGiftRowsChange={setGiftRows}
-        giftInventory={giftInventory}
-        isReadOnly={isReadOnly}
-      />
-
-      {/* 해피콜 결과 */}
-      <HappyCallTable
-        happyCallRows={happyCallRows}
-        onHappyCallRowsChange={setHappyCallRows}
-        isReadOnly={isReadOnly}
-      />
-
-      {/* 기타 특이사항 */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <h2 className="text-xl font-bold mb-4 border-b pb-3">[5] 기타 특이사항</h2>
+      {/* 보고서 본문 */}
+      <div className="p-6 space-y-6">
+        {/* 기본 정보 */}
         <div>
-          <label htmlFor="special-notes" className="block text-sm font-medium text-slate-700 mb-2">
-            특이사항 내용
-          </label>
-          <textarea
-            id="special-notes"
-            rows={4}
-            className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 resize-vertical"
-            placeholder="오늘 업무 중 특이사항이나 기록할 내용이 있다면 작성해주세요. (선택사항)"
-            value={specialNotes}
-            onChange={(e) => setSpecialNotes(e.target.value)}
-            readOnly={isReadOnly}
+          <SectionHeader number={1} title="기본 정보" icon={Calendar} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="report-date" className="block text-sm font-medium text-slate-600 mb-1.5">
+                보고 일자
+              </label>
+              <input
+                type="date"
+                id="report-date"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                value={reportDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+                disabled={loading || !canCreate}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 상담 결과 */}
+        <div>
+          <SectionHeader number={2} title="환자 상담 결과" icon={Users} />
+          <ConsultTable
+            consultRows={consultRows}
+            onConsultRowsChange={setConsultRows}
+            isReadOnly={isReadOnly}
           />
-          <p className="mt-1 text-sm text-slate-500">
-            예: 장비 점검, 직원 교육, 특별한 환자 케이스, 업무 변경사항 등
-          </p>
+        </div>
+
+        {/* 리콜 결과 */}
+        <div>
+          <SectionHeader number={3} title="환자 리콜 결과" icon={Phone} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1.5">리콜 건수</label>
+              <input
+                type="number"
+                min="0"
+                value={recallCount}
+                onChange={(e) => setRecallCount(parseInt(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                readOnly={isReadOnly}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1.5">예약 수</label>
+              <input
+                type="number"
+                min="0"
+                value={recallBookingCount}
+                onChange={(e) => setRecallBookingCount(parseInt(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                readOnly={isReadOnly}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1.5">예약 성공 환자</label>
+              <input
+                type="text"
+                value={recallBookingNames}
+                onChange={(e) => setRecallBookingNames(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="예: 홍길동, 김철수"
+                readOnly={isReadOnly}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 선물/리뷰 관리 */}
+        <div>
+          <SectionHeader number={4} title="선물 및 리뷰 관리" icon={Gift} />
+          <GiftTable
+            giftRows={giftRows}
+            onGiftRowsChange={setGiftRows}
+            giftInventory={giftInventory}
+            isReadOnly={isReadOnly}
+          />
+        </div>
+
+        {/* 해피콜 결과 */}
+        <div>
+          <SectionHeader number={5} title="해피콜 결과" icon={Phone} />
+          <HappyCallTable
+            happyCallRows={happyCallRows}
+            onHappyCallRowsChange={setHappyCallRows}
+            isReadOnly={isReadOnly}
+          />
+        </div>
+
+        {/* 기타 특이사항 */}
+        <div>
+          <SectionHeader number={6} title="기타 특이사항" icon={FileText} />
+          <div>
+            <textarea
+              id="special-notes"
+              rows={3}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              placeholder="오늘 업무 중 특이사항이나 기록할 내용을 작성해주세요."
+              value={specialNotes}
+              onChange={(e) => setSpecialNotes(e.target.value)}
+              readOnly={isReadOnly}
+            />
+          </div>
         </div>
       </div>
 
-      {/* 저장 버튼 */}
+      {/* 저장 버튼 영역 */}
       {(canCreate || canEdit) && (
-        <div className="flex justify-end space-x-4">
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end space-x-3">
           <button
             type="button"
             onClick={resetForm}
-            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
+            className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors disabled:opacity-50"
             disabled={isReadOnly}
           >
+            <RotateCcw className="w-4 h-4 mr-2" />
             초기화
           </button>
           <button
             type="button"
             onClick={(e) => handleSave(e)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading || isReadOnly}
           >
+            <Save className="w-4 h-4 mr-2" />
             {loading ? '저장 중...' : (hasExistingData ? '수정하기' : '저장하기')}
           </button>
         </div>

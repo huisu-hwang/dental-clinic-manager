@@ -4,19 +4,19 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { dataService } from '@/lib/dataService'
 import {
-  UserCircleIcon,
-  KeyIcon,
-  EnvelopeIcon,
-  PhoneIcon,
-  BuildingOfficeIcon,
-  ShieldCheckIcon,
-  CalendarIcon,
-  XMarkIcon,
-  HomeIcon,
-  IdentificationIcon,
-  ExclamationTriangleIcon,
-  LockClosedIcon
-} from '@heroicons/react/24/outline'
+  User,
+  Key,
+  Mail,
+  Phone,
+  Building2,
+  Shield,
+  Calendar,
+  X,
+  Home,
+  CreditCard,
+  AlertTriangle,
+  Lock
+} from 'lucide-react'
 import type { UserProfile } from '@/contexts/AuthContext'
 import {
   formatResidentNumber,
@@ -141,8 +141,8 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
   if (!isVerified) {
     return (
       <>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center">
-          <LockClosedIcon className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+          <Lock className="w-16 h-16 text-blue-600 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-slate-800 mb-2">본인 확인이 필요합니다</h2>
           <p className="text-slate-600">
             계정 정보는 민감한 개인정보입니다.
@@ -220,7 +220,6 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
           if (encrypted) {
             encryptedResidentNumber = encrypted
           } else {
-            // 암호화 실패 시 원본 저장 (안전장치)
             encryptedResidentNumber = decryptedResidentNumber
           }
         } catch (encryptError) {
@@ -230,7 +229,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
           return
         }
       } else {
-        encryptedResidentNumber = '' // Clear the number if input is empty
+        encryptedResidentNumber = ''
       }
 
       const result = await dataService.updateUserProfile(currentUser.id, {
@@ -369,36 +368,38 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-      {/* Header */}
-      <div className="p-6 border-b border-slate-200">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* 블루 그라데이션 헤더 */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <UserCircleIcon className="h-8 w-8 text-blue-600 mr-3" />
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <User className="w-5 h-5 text-white" />
+            </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-800">계정 정보</h2>
-              <p className="text-sm text-slate-500">프로필 정보를 확인하고 수정할 수 있습니다</p>
+              <h2 className="text-lg font-bold text-white">계정 정보</h2>
+              <p className="text-blue-100 text-sm">Account Profile</p>
             </div>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
             >
-              <XMarkIcon className="h-5 w-5 text-slate-500" />
+              <X className="w-5 h-5 text-white" />
             </button>
           )}
         </div>
       </div>
 
       {error && (
-        <div className="mx-6 mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+        <div className="mx-6 mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="mx-6 mt-4 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
+        <div className="mx-6 mt-4 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg text-sm">
           {success}
         </div>
       )}
@@ -414,13 +415,13 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                   이름
                 </label>
                 <div className="relative">
-                  <UserCircleIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                     required
                     disabled={saving}
                   />
@@ -432,12 +433,12 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                   이메일
                 </label>
                 <div className="relative">
-                  <EnvelopeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
-                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md bg-slate-50 cursor-not-allowed"
+                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg bg-slate-50 cursor-not-allowed"
                     disabled
                   />
                 </div>
@@ -450,13 +451,13 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                   {!formData.phone && <span className="text-red-500 ml-1">*</span>}
                 </label>
                 <div className="relative">
-                  <PhoneIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                     placeholder="010-1234-5678"
                     disabled={saving}
                   />
@@ -471,7 +472,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
               {/* Personal Information Section */}
               <div className="pt-4 border-t border-slate-200">
                 <div className="flex items-start mb-4">
-                  <LockClosedIcon className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+                  <Lock className="w-5 h-5 text-blue-600 mr-2 mt-0.5" />
                   <div className="flex-1">
                     <h3 className="text-base font-semibold text-slate-800 mb-1">
                       개인정보 (근로계약서용)
@@ -485,9 +486,9 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
 
                 {/* Show warning if personal info is incomplete */}
                 {!personalInfoStatus.isComplete && (
-                  <div className="mb-4 bg-amber-50 border-l-4 border-amber-400 p-3">
+                  <div className="mb-4 bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg">
                     <div className="flex">
-                      <ExclamationTriangleIcon className="h-5 w-5 text-amber-400 flex-shrink-0" />
+                      <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
                       <div className="ml-3">
                         <p className="text-sm text-amber-700">
                           <span className="font-medium">근로계약서 작성을 위해</span> 다음 정보를 입력해주세요:
@@ -508,13 +509,13 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                       {!formData.address && <span className="text-red-500 ml-1">*</span>}
                     </label>
                     <div className="relative">
-                      <HomeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input
                         type="text"
                         name="address"
                         value={formData.address}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                         placeholder="서울시 강남구 테헤란로 123"
                         disabled={saving}
                       />
@@ -533,20 +534,20 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                       {!formData.resident_registration_number && <span className="text-red-500 ml-1">*</span>}
                     </label>
                     <div className="relative">
-                      <IdentificationIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input
                         type="text"
                         name="resident_registration_number"
                         value={loadingDecryption ? '복호화 중...' : (decryptedResidentNumber || formData.resident_registration_number)}
                         onChange={handleResidentNumberChange}
-                        className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono"
+                        className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-mono"
                         placeholder="000000-0000000"
                         maxLength={14}
                         disabled={saving || loadingDecryption}
                       />
                     </div>
                     <div className="mt-1 flex items-start space-x-1">
-                      <LockClosedIcon className="h-3 w-3 text-green-600 flex-shrink-0 mt-0.5" />
+                      <Lock className="w-3 h-3 text-green-600 flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-slate-500">
                         AES-256 암호화되어 저장됩니다. 본인과 원장만 조회 가능합니다.
                       </p>
@@ -571,7 +572,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                 >
                   {saving ? '저장 중...' : '프로필 저장'}
                 </button>
@@ -588,13 +589,13 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                     현재 비밀번호
                   </label>
                   <div className="relative">
-                    <KeyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
                       type="password"
                       name="currentPassword"
                       value={passwordData.currentPassword}
                       onChange={handlePasswordChange}
-                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                       required
                       disabled={saving}
                     />
@@ -606,13 +607,13 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                     새 비밀번호
                   </label>
                   <div className="relative">
-                    <KeyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
                       type="password"
                       name="newPassword"
                       value={passwordData.newPassword}
                       onChange={handlePasswordChange}
-                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                       required
                       disabled={saving}
                     />
@@ -624,13 +625,13 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                     새 비밀번호 확인
                   </label>
                   <div className="relative">
-                    <KeyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
                       type="password"
                       name="confirmPassword"
                       value={passwordData.confirmPassword}
                       onChange={handlePasswordChange}
-                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                       required
                       disabled={saving}
                     />
@@ -655,7 +656,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                   <button
                     type="submit"
                     disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                   >
                     {saving ? '변경 중...' : '비밀번호 변경'}
                   </button>
@@ -667,9 +668,9 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
           {/* Right Column - Account Details */}
           <div className="space-y-4">
             {/* Account Status */}
-            <div className="bg-slate-50 p-4 rounded-lg">
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
               <div className="flex items-center mb-3">
-                <ShieldCheckIcon className="h-5 w-5 text-slate-600 mr-2" />
+                <Shield className="w-5 h-5 text-slate-600 mr-2" />
                 <h4 className="font-semibold text-slate-800">계정 상태</h4>
               </div>
               <div className="space-y-2 text-sm">
@@ -689,9 +690,9 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
             </div>
 
             {/* Clinic Info */}
-            <div className="bg-slate-50 p-4 rounded-lg">
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
               <div className="flex items-center mb-3">
-                <BuildingOfficeIcon className="h-5 w-5 text-slate-600 mr-2" />
+                <Building2 className="w-5 h-5 text-slate-600 mr-2" />
                 <h4 className="font-semibold text-slate-800">소속 병원</h4>
               </div>
               <div className="space-y-2 text-sm">
@@ -722,9 +723,9 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
             </div>
 
             {/* Activity Info */}
-            <div className="bg-slate-50 p-4 rounded-lg">
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
               <div className="flex items-center mb-3">
-                <CalendarIcon className="h-5 w-5 text-slate-600 mr-2" />
+                <Calendar className="w-5 h-5 text-slate-600 mr-2" />
                 <h4 className="font-semibold text-slate-800">활동 정보</h4>
               </div>
               <div className="space-y-2 text-sm">

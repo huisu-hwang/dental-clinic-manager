@@ -2,17 +2,27 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Settings, Users, Building2, Building, FileText, BarChart3, Cog } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
-import ManagementTabNavigation from '@/components/Layout/ManagementTabNavigation'
 import StaffManagement from '@/components/Management/StaffManagement'
 import BranchManagement from '@/components/Management/BranchManagement'
 import ClinicSettings from '@/components/Management/ClinicSettings'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/ui/Toast'
+
+// 서브 탭 설정
+const subTabs = [
+  { id: 'staff', label: '직원 관리', icon: Users, permissions: ['staff_view', 'staff_manage'] },
+  { id: 'branches', label: '지점 관리', icon: Building2, permissions: ['clinic_settings'] },
+  { id: 'clinic', label: '병원 설정', icon: Building, permissions: ['clinic_settings'] },
+  { id: 'protocols', label: '프로토콜 관리', icon: FileText, permissions: ['protocol_view', 'protocol_create', 'protocol_edit'] },
+  { id: 'analytics', label: '통계 분석', icon: BarChart3, permissions: ['stats_monthly_view', 'stats_annual_view'] },
+  { id: 'system', label: '시스템 설정', icon: Cog, permissions: ['clinic_settings'] },
+] as const
 
 export default function ManagementPage() {
   const router = useRouter()
@@ -121,90 +131,130 @@ export default function ManagementPage() {
   }
 
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
-      <div className="container mx-auto p-4 md:p-8">
-        <Header
-          dbStatus="connected"
-          user={user}
-          onLogout={logout}
-          onProfileClick={() => setShowProfile(true)}
-        />
-
-        {/* Main Tab Navigation */}
-        <TabNavigation activeTab="settings" onTabChange={handleMainTabChange} />
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">병원 관리</h1>
-          <p className="text-slate-600">
-            직원, 설정, 통계를 관리하고 병원 운영을 최적화하세요.
-          </p>
+    <div className="min-h-screen bg-slate-100">
+      {/* Header - 상단 고정, 중앙 정렬 */}
+      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200">
+        <div className="max-w-[1400px] mx-auto h-full px-6 flex items-center">
+          <Header
+            dbStatus="connected"
+            user={user}
+            onLogout={logout}
+            onProfileClick={() => setShowProfile(true)}
+          />
         </div>
+      </div>
 
-        {/* Profile Modal */}
-        {showProfile && user && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <AccountProfile
-                currentUser={user}
-                onClose={() => setShowProfile(false)}
-                onUpdate={(updatedUserData) => {
-                  updateUser(updatedUserData) // AuthContext와 localStorage 업데이트
-                  setShowProfile(false) // 모달 닫기
-                  showToast('프로필이 성공적으로 업데이트되었습니다.', 'success')
-                }}
-              />
+      {/* 좌측 사이드바 - 콘텐츠와 함께 중앙 정렬 */}
+      <aside className="fixed top-14 w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3 left-[calc(50%-700px)]">
+        <TabNavigation activeTab="settings" onTabChange={handleMainTabChange} />
+      </aside>
+
+      {/* 메인 콘텐츠 */}
+      <div className="pt-14">
+        <main className="max-w-[1400px] mx-auto pl-60 pr-6 pt-4 pb-6">
+          <div className="max-w-6xl">
+            {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
+            <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Settings className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">병원 관리</h2>
+                    <p className="text-blue-100 text-sm">Hospital Management</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
+            <div className="sticky top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
+              <nav className="flex space-x-1 p-2 overflow-x-auto" aria-label="Tabs">
+                {subTabs.map((tab) => {
+                  const hasTabPermission = tab.permissions.some(p => hasPermission(p as any))
+                  if (!hasTabPermission) return null
+                  if (tab.id === 'system' && user.role !== 'owner') return null
+
+                  const Icon = tab.icon
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? 'bg-white text-blue-600 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 mr-2" />
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </nav>
+            </div>
+
+            {/* 탭 콘텐츠 */}
+            <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
+              <div key={activeTab} className="tab-content">
+                {/* Staff Management Tab */}
+                {activeTab === 'staff' && (
+                  <StaffManagement currentUser={user} />
+                )}
+
+                {/* Branch Management Tab */}
+                {activeTab === 'branches' && (
+                  <BranchManagement currentUser={user} />
+                )}
+
+                {/* Clinic Settings Tab */}
+                {activeTab === 'clinic' && (
+                  <ClinicSettings currentUser={user} />
+                )}
+
+                {/* Protocol Management Tab */}
+                {activeTab === 'protocols' && (
+                  <ProtocolManagement currentUser={user} hideHeader />
+                )}
+
+                {/* Analytics Tab */}
+                {activeTab === 'analytics' && (
+                  <div className="text-center py-12">
+                    <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
+                  </div>
+                )}
+
+                {/* System Settings Tab */}
+                {activeTab === 'system' && user.role === 'owner' && (
+                  <div className="text-center py-12">
+                    <Cog className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-600">시스템 설정 기능은 곧 제공될 예정입니다.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        )}
-
-        <main>
-          <ManagementTabNavigation
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            userRole={user.role || ''}
-          />
-
-          {/* Staff Management Tab */}
-          {activeTab === 'staff' && (
-            <StaffManagement currentUser={user} />
-          )}
-
-          {/* Branch Management Tab */}
-          {activeTab === 'branches' && (
-            <BranchManagement currentUser={user} />
-          )}
-
-          {/* Clinic Settings Tab */}
-          {activeTab === 'clinic' && (
-            <ClinicSettings currentUser={user} />
-          )}
-
-          {/* Protocol Management Tab */}
-          {activeTab === 'protocols' && (
-            <ProtocolManagement currentUser={user} />
-          )}
-
-          {/* Analytics Tab */}
-          {activeTab === 'analytics' && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-              <h2 className="text-xl font-bold text-slate-800 mb-4">통계 분석</h2>
-              <div className="text-center py-12">
-                <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
-              </div>
-            </div>
-          )}
-
-          {/* System Settings Tab */}
-          {activeTab === 'system' && user.role === 'owner' && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-              <h2 className="text-xl font-bold text-slate-800 mb-4">시스템 설정</h2>
-              <div className="text-center py-12">
-                <p className="text-slate-600">시스템 설정 기능은 곧 제공될 예정입니다.</p>
-              </div>
-            </div>
-          )}
         </main>
       </div>
+
+      {/* Profile Modal */}
+      {showProfile && user && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <AccountProfile
+              currentUser={user}
+              onClose={() => setShowProfile(false)}
+              onUpdate={(updatedUserData) => {
+                updateUser(updatedUserData)
+                setShowProfile(false)
+                showToast('프로필이 성공적으로 업데이트되었습니다.', 'success')
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <Toast
         message={toast.message}

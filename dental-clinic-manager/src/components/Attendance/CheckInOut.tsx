@@ -1,11 +1,25 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Clock, MapPin, Camera, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
 import QRScanner from './QRScanner'
 import type { AttendanceRecord } from '@/types/attendance'
 import { ATTENDANCE_STATUS_NAMES, ATTENDANCE_STATUS_COLORS } from '@/types/attendance'
+
+// 섹션 헤더 컴포넌트
+const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
+  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
+    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+      <Icon className="w-4 h-4" />
+    </div>
+    <h3 className="text-base font-semibold text-slate-800">
+      <span className="text-blue-600 mr-1">{number}.</span>
+      {title}
+    </h3>
+  </div>
+)
 
 export default function CheckInOut() {
   const { user } = useAuth()
@@ -208,136 +222,135 @@ export default function CheckInOut() {
   const workingMinutes = calculateWorkingMinutes()
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      {/* 현재 시간 표시 */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-6 text-center">
-        <div className="text-sm opacity-90 mb-2">
-          {currentTime.toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            weekday: 'long'
-          })}
-        </div>
-        <div className="text-5xl font-bold mb-2">
-          {currentTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-        </div>
-        <div className="text-sm opacity-90">
-          {user?.name}님, 안녕하세요!
+    <div className="max-w-3xl mx-auto space-y-6">
+      {/* 섹션 1: 현재 시간 */}
+      <div>
+        <SectionHeader number={1} title="현재 시간" icon={Clock} />
+        <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-lg p-6 text-center">
+          <div className="text-sm opacity-90 mb-2">
+            {currentTime.toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              weekday: 'long'
+            })}
+          </div>
+          <div className="text-5xl font-bold mb-2 font-mono">
+            {currentTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+          <div className="text-sm opacity-90">
+            {user?.name}님, 안녕하세요!
+          </div>
         </div>
       </div>
 
-      {/* 오늘의 출퇴근 상태 */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">오늘의 출퇴근 현황</h2>
-
-        {todayRecord ? (
-          <div className="space-y-4">
-            {/* 상태 배지 */}
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">상태</span>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${ATTENDANCE_STATUS_COLORS[todayRecord.status]}`}>
-                {ATTENDANCE_STATUS_NAMES[todayRecord.status]}
-              </span>
+      {/* 섹션 2: 오늘의 출퇴근 현황 */}
+      <div>
+        <SectionHeader number={2} title="오늘의 출퇴근 현황" icon={Clock} />
+        <div className="overflow-x-auto border border-slate-200 rounded-lg">
+          {todayRecord ? (
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-slate-200">
+                <tr className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-600 w-1/3">상태</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${ATTENDANCE_STATUS_COLORS[todayRecord.status]}`}>
+                      {ATTENDANCE_STATUS_NAMES[todayRecord.status]}
+                    </span>
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-600">출근 시간</td>
+                  <td className="px-4 py-3 font-semibold text-slate-800">
+                    {formatTime(todayRecord.check_in_time)}
+                    {todayRecord.scheduled_start && (
+                      <span className="ml-2 text-xs text-slate-400">(예정: {todayRecord.scheduled_start.substring(0, 5)})</span>
+                    )}
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-600">퇴근 시간</td>
+                  <td className="px-4 py-3 font-semibold text-slate-800">
+                    {formatTime(todayRecord.check_out_time)}
+                    {todayRecord.scheduled_end && (
+                      <span className="ml-2 text-xs text-slate-400">(예정: {todayRecord.scheduled_end.substring(0, 5)})</span>
+                    )}
+                  </td>
+                </tr>
+                {isCheckedIn && (
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium text-slate-600">현재 근무 시간</td>
+                    <td className="px-4 py-3 font-semibold text-blue-600">{formatMinutes(workingMinutes)}</td>
+                  </tr>
+                )}
+                {isCheckedOut && todayRecord.total_work_minutes && (
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium text-slate-600">총 근무 시간</td>
+                    <td className="px-4 py-3 font-semibold text-blue-600">{formatMinutes(todayRecord.total_work_minutes)}</td>
+                  </tr>
+                )}
+                {(todayRecord.late_minutes > 0 || todayRecord.early_leave_minutes > 0 || todayRecord.overtime_minutes > 0) && (
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium text-slate-600">비고</td>
+                    <td className="px-4 py-3 space-x-2">
+                      {todayRecord.late_minutes > 0 && (
+                        <span className="text-yellow-600 font-medium">지각 {todayRecord.late_minutes}분</span>
+                      )}
+                      {todayRecord.early_leave_minutes > 0 && (
+                        <span className="text-orange-600 font-medium">조퇴 {todayRecord.early_leave_minutes}분</span>
+                      )}
+                      {todayRecord.overtime_minutes > 0 && (
+                        <span className="text-green-600 font-medium">초과근무 {todayRecord.overtime_minutes}분</span>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <div className="text-center text-slate-500 py-8">
+              아직 출근하지 않았습니다.
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* 출근 시간 */}
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">출근 시간</span>
-              <span className="font-semibold">{formatTime(todayRecord.check_in_time)}</span>
-            </div>
-
-            {/* 예정 출근 시간 */}
-            {todayRecord.scheduled_start && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">예정 출근</span>
-                <span className="text-gray-500">{todayRecord.scheduled_start.substring(0, 5)}</span>
-              </div>
-            )}
-
-            {/* 퇴근 시간 */}
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">퇴근 시간</span>
-              <span className="font-semibold">{formatTime(todayRecord.check_out_time)}</span>
-            </div>
-
-            {/* 예정 퇴근 시간 */}
-            {todayRecord.scheduled_end && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">예정 퇴근</span>
-                <span className="text-gray-500">{todayRecord.scheduled_end.substring(0, 5)}</span>
-              </div>
-            )}
-
-            {/* 근무 시간 */}
-            {isCheckedIn && (
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">현재 근무 시간</span>
-                <span className="font-semibold text-blue-600">{formatMinutes(workingMinutes)}</span>
-              </div>
-            )}
-
-            {isCheckedOut && todayRecord.total_work_minutes && (
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">총 근무 시간</span>
-                <span className="font-semibold text-blue-600">{formatMinutes(todayRecord.total_work_minutes)}</span>
-              </div>
-            )}
-
-            {/* 지각/조퇴/초과근무 */}
-            {todayRecord.late_minutes > 0 && (
-              <div className="flex items-center justify-between text-yellow-600">
-                <span>지각</span>
-                <span className="font-semibold">{todayRecord.late_minutes}분</span>
-              </div>
-            )}
-            {todayRecord.early_leave_minutes > 0 && (
-              <div className="flex items-center justify-between text-orange-600">
-                <span>조퇴</span>
-                <span className="font-semibold">{todayRecord.early_leave_minutes}분</span>
-              </div>
-            )}
-            {todayRecord.overtime_minutes > 0 && (
-              <div className="flex items-center justify-between text-green-600">
-                <span>초과근무</span>
-                <span className="font-semibold">{todayRecord.overtime_minutes}분</span>
-              </div>
-            )}
+      {/* 섹션 3: 위치 정보 */}
+      <div>
+        <SectionHeader number={3} title="위치 정보" icon={MapPin} />
+        {locationError && (
+          <div className="flex items-center space-x-2 bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span>{locationError}</span>
           </div>
-        ) : (
-          <div className="text-center text-gray-500 py-8">
-            아직 출근하지 않았습니다.
+        )}
+        {location && (
+          <div className="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+            <span>위치 정보가 활성화되었습니다.</span>
           </div>
         )}
       </div>
 
-      {/* 위치 정보 상태 */}
-      {locationError && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
-          ⚠️ {locationError}
-        </div>
-      )}
-
-      {location && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
-          ✓ 위치 정보가 활성화되었습니다.
-        </div>
-      )}
-
-      {/* QR 코드 입력 및 출퇴근 버튼 */}
-      <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
-        <h2 className="text-xl font-semibold mb-4">출퇴근 체크</h2>
+      {/* 섹션 4: 출퇴근 체크 */}
+      <div>
+        <SectionHeader number={4} title="출퇴근 체크" icon={Camera} />
 
         {/* 메시지 표시 */}
         {message && (
           <div
-            className={`p-4 rounded-lg ${
+            className={`mb-4 p-4 rounded-lg flex items-center space-x-2 ${
               message.type === 'success'
                 ? 'bg-green-50 text-green-800 border border-green-200'
                 : 'bg-red-50 text-red-800 border border-red-200'
             }`}
           >
-            {message.text}
+            {message.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            )}
+            <span>{message.text}</span>
           </div>
         )}
 
@@ -346,43 +359,39 @@ export default function CheckInOut() {
           <button
             onClick={openScannerForCheckIn}
             disabled={loading || isCheckedIn || isCheckedOut}
-            className={`py-6 rounded-lg font-semibold text-white transition-colors flex flex-col items-center justify-center space-y-2 ${
+            className={`py-6 rounded-lg font-semibold text-white transition-all flex flex-col items-center justify-center space-y-2 ${
               loading || isCheckedIn || isCheckedOut
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'
+                ? 'bg-slate-300 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 shadow-md hover:shadow-lg'
             }`}
           >
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <Camera className="w-10 h-10" />
             <span className="text-lg">QR 스캔 출근</span>
           </button>
 
           <button
             onClick={openScannerForCheckOut}
             disabled={loading || !isCheckedIn || isCheckedOut}
-            className={`py-6 rounded-lg font-semibold text-white transition-colors flex flex-col items-center justify-center space-y-2 ${
+            className={`py-6 rounded-lg font-semibold text-white transition-all flex flex-col items-center justify-center space-y-2 ${
               loading || !isCheckedIn || isCheckedOut
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-green-500 hover:bg-green-600 active:bg-green-700'
+                ? 'bg-slate-300 cursor-not-allowed'
+                : 'bg-green-500 hover:bg-green-600 active:bg-green-700 shadow-md hover:shadow-lg'
             }`}
           >
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <Camera className="w-10 h-10" />
             <span className="text-lg">QR 스캔 퇴근</span>
           </button>
         </div>
 
         {/* 안내 메시지 */}
-        <div className="text-sm text-gray-600 space-y-1 mt-6">
-          <p>• 출근/퇴근 버튼을 클릭하면 QR 코드 스캐너가 실행됩니다.</p>
-          <p>• QR 코드를 카메라에 비추면 자동으로 출퇴근 처리됩니다.</p>
-          <p>• 출근 시간은 근무 스케줄에 따라 자동으로 지각 여부가 판단됩니다.</p>
-          <p>• 퇴근 시간은 초과근무 또는 조퇴 여부가 자동으로 계산됩니다.</p>
-          <p>• 위치 정보는 출퇴근 인증에 사용되며 저장되지 않습니다.</p>
+        <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+          <p className="text-xs font-medium text-slate-600 mb-2">안내사항</p>
+          <ul className="text-xs text-slate-500 space-y-1 list-disc list-inside">
+            <li>출근/퇴근 버튼을 클릭하면 QR 코드 스캐너가 실행됩니다.</li>
+            <li>QR 코드를 카메라에 비추면 자동으로 출퇴근 처리됩니다.</li>
+            <li>출근 시간은 근무 스케줄에 따라 자동으로 지각 여부가 판단됩니다.</li>
+            <li>위치 정보는 출퇴근 인증에 사용되며 저장되지 않습니다.</li>
+          </ul>
         </div>
       </div>
 
