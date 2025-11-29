@@ -289,9 +289,9 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
   )
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      {/* 보고서 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+    <div className="space-y-0">
+      {/* 보고서 헤더 - 스크롤 시 고정 */}
+      <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -318,6 +318,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
       </div>
 
       {/* 보고서 본문 */}
+      <div className="bg-white rounded-b-xl shadow-sm border border-slate-200 border-t-0">
       <div className="p-6 space-y-6">
         {/* 기본 정보 */}
         <div>
@@ -450,6 +451,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
           </button>
         </div>
       )}
+      </div>
     </div>
   )
 }
