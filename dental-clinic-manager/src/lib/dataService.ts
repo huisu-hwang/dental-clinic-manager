@@ -2933,11 +2933,7 @@ export const dataService = {
         }
       }
 
-      // 5. 오늘 날짜에 상태 변경 기록 추가 (항상 추가하여 일일 보고서에 표시)
-      const changeRemark = originalDate === today
-        ? `[보류→진행 변경] ${originalConsult.remarks || ''}`
-        : `[${originalDate} 보류분 진행] ${originalConsult.remarks || ''}`
-
+      // 5. 오늘 날짜에 상담 기록 추가 (일일 보고서 환자 상담 결과에 직접 표시)
       const { error: insertLogError } = await supabase
         .from('consult_logs')
         .insert([{
@@ -2946,7 +2942,7 @@ export const dataService = {
           patient_name: originalConsult.patient_name,
           consult_content: originalConsult.consult_content,
           consult_status: 'O' as const,
-          remarks: changeRemark.trim()
+          remarks: originalConsult.remarks || ''
         }])
 
       if (insertLogError) {
