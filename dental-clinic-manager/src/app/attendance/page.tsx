@@ -138,12 +138,14 @@ export default function AttendancePage() {
 
             {/* 탭 콘텐츠 */}
             <div className="p-6">
-              {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
-              {activeTab === 'history' && canViewHistory && <AttendanceHistory />}
-              {activeTab === 'stats' && canViewStats && <AttendanceStats />}
-              {activeTab === 'schedule' && canManageSchedule && <ScheduleManagement />}
-              {activeTab === 'team' && canViewTeam && <TeamStatus />}
-              {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
+              <div key={activeTab} className="tab-content">
+                {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
+                {activeTab === 'history' && canViewHistory && <AttendanceHistory />}
+                {activeTab === 'stats' && canViewStats && <AttendanceStats />}
+                {activeTab === 'schedule' && canManageSchedule && <ScheduleManagement />}
+                {activeTab === 'team' && canViewTeam && <TeamStatus />}
+                {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
+              </div>
             </div>
           </div>
           </div>

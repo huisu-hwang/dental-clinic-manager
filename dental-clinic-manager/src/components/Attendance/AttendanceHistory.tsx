@@ -23,7 +23,7 @@ const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: s
 export default function AttendanceHistory() {
   const { user } = useAuth()
   const [records, setRecords] = useState<AttendanceRecord[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [startDate, setStartDate] = useState(() => {
     const date = new Date()
     date.setDate(1) // 이번 달 1일

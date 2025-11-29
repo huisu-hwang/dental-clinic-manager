@@ -198,41 +198,43 @@ export default function ManagementPage() {
             </div>
 
             <div className="p-6">
-              {/* Staff Management Tab */}
-              {activeTab === 'staff' && (
-                <StaffManagement currentUser={user} />
-              )}
+              <div key={activeTab} className="tab-content">
+                {/* Staff Management Tab */}
+                {activeTab === 'staff' && (
+                  <StaffManagement currentUser={user} />
+                )}
 
-              {/* Branch Management Tab */}
-              {activeTab === 'branches' && (
-                <BranchManagement currentUser={user} />
-              )}
+                {/* Branch Management Tab */}
+                {activeTab === 'branches' && (
+                  <BranchManagement currentUser={user} />
+                )}
 
-              {/* Clinic Settings Tab */}
-              {activeTab === 'clinic' && (
-                <ClinicSettings currentUser={user} />
-              )}
+                {/* Clinic Settings Tab */}
+                {activeTab === 'clinic' && (
+                  <ClinicSettings currentUser={user} />
+                )}
 
-              {/* Protocol Management Tab */}
-              {activeTab === 'protocols' && (
-                <ProtocolManagement currentUser={user} hideHeader />
-              )}
+                {/* Protocol Management Tab */}
+                {activeTab === 'protocols' && (
+                  <ProtocolManagement currentUser={user} hideHeader />
+                )}
 
-              {/* Analytics Tab */}
-              {activeTab === 'analytics' && (
-                <div className="text-center py-12">
-                  <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
-                </div>
-              )}
+                {/* Analytics Tab */}
+                {activeTab === 'analytics' && (
+                  <div className="text-center py-12">
+                    <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
+                  </div>
+                )}
 
-              {/* System Settings Tab */}
-              {activeTab === 'system' && user.role === 'owner' && (
-                <div className="text-center py-12">
-                  <Cog className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-600">시스템 설정 기능은 곧 제공될 예정입니다.</p>
-                </div>
-              )}
+                {/* System Settings Tab */}
+                {activeTab === 'system' && user.role === 'owner' && (
+                  <div className="text-center py-12">
+                    <Cog className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-600">시스템 설정 기능은 곧 제공될 예정입니다.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           </div>
