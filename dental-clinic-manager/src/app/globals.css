@@ -5,6 +5,45 @@ html {
   overflow-y: scroll;
 }
 
+/* 모바일 스크롤바 숨기기 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 모바일 터치 최적화 */
+@media (max-width: 1023px) {
+  /* 모바일에서 터치 영역 최적화 */
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 모바일에서 입력 필드 확대 방지 */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="week"],
+  input[type="month"],
+  input[type="time"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* 안전 영역 (노치, 홈 버튼 등) */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 /* 메뉴 전환 시 부드러운 화면 효과 */
 .tab-content {
   animation: fadeIn 0.15s ease-in-out;

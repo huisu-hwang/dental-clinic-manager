@@ -30,6 +30,7 @@ export default function ManagementPage() {
   const { hasPermission, permissions } = usePermissions()
   const [activeTab, setActiveTab] = useState('staff')
   const [showProfile, setShowProfile] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [permissionsLoaded, setPermissionsLoaded] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
@@ -40,6 +41,18 @@ export default function ManagementPage() {
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ show: true, message, type })
   }
+
+  // 모바일 메뉴가 열려 있을 때 스크롤 방지
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isMobileMenuOpen])
 
   // 메인 탭 네비게이션 핸들러
   const handleMainTabChange = (tab: string) => {
@@ -111,10 +124,10 @@ export default function ManagementPage() {
 
   if (!user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols)) {
     return (
-      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center">
+      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center px-4">
         <div className="text-center">
-          <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200">
-            <h1 className="text-2xl font-bold text-slate-800 mb-4">접근 권한이 없습니다</h1>
+          <div className="bg-white p-6 sm:p-8 rounded-lg shadow-sm border border-slate-200">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4">접근 권한이 없습니다</h1>
             <p className="text-slate-600 mb-6">
               관리 페이지에 접근할 권한이 없습니다.
             </p>
@@ -134,43 +147,64 @@ export default function ManagementPage() {
     <div className="min-h-screen bg-slate-100">
       {/* Header - 상단 고정, 중앙 정렬 */}
       <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200">
-        <div className="max-w-[1400px] mx-auto h-full px-6 flex items-center">
+        <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
           <Header
             dbStatus="connected"
             user={user}
             onLogout={logout}
             onProfileClick={() => setShowProfile(true)}
+            onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            isMenuOpen={isMobileMenuOpen}
           />
         </div>
       </div>
 
-      {/* 좌측 사이드바 - 콘텐츠와 함께 중앙 정렬 */}
-      <aside className="fixed top-14 w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3 left-[calc(50%-700px)]">
-        <TabNavigation activeTab="settings" onTabChange={handleMainTabChange} />
+      {/* 모바일 메뉴 오버레이 */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* 좌측 사이드바 - 모바일에서는 슬라이드 메뉴 */}
+      <aside
+        className={`
+          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3
+          transition-transform duration-300 ease-in-out
+          lg:left-[max(0px,calc(50%-700px))]
+          ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
+        `}
+      >
+        <TabNavigation
+          activeTab="settings"
+          onTabChange={handleMainTabChange}
+          onItemClick={() => setIsMobileMenuOpen(false)}
+        />
       </aside>
 
       {/* 메인 콘텐츠 */}
       <div className="pt-14">
-        <main className="max-w-[1400px] mx-auto pl-60 pr-6 pt-4 pb-6">
+        <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
           <div className="max-w-6xl">
             {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
-            <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
+            <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Settings className="w-5 h-5 text-white" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-white">병원 관리</h2>
-                    <p className="text-blue-100 text-sm">Hospital Management</p>
+                    <h2 className="text-base sm:text-lg font-bold text-white">병원 관리</h2>
+                    <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Hospital Management</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
-            <div className="sticky top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
-              <nav className="flex space-x-1 p-2 overflow-x-auto" aria-label="Tabs">
+            <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
+              <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
                 {subTabs.map((tab) => {
                   const hasTabPermission = tab.permissions.some(p => hasPermission(p as any))
                   if (!hasTabPermission) return null
@@ -181,13 +215,13 @@ export default function ManagementPage() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                      className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                         activeTab === tab.id
                           ? 'bg-white text-blue-600 shadow-sm'
                           : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                       }`}
                     >
-                      <Icon className="w-4 h-4 mr-2" />
+                      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                       {tab.label}
                     </button>
                   )
@@ -196,7 +230,7 @@ export default function ManagementPage() {
             </div>
 
             {/* 탭 콘텐츠 */}
-            <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
+            <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6">
               <div key={activeTab} className="tab-content">
                 {/* Staff Management Tab */}
                 {activeTab === 'staff' && (
@@ -241,8 +275,8 @@ export default function ManagementPage() {
 
       {/* Profile Modal */}
       {showProfile && user && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-lg">
             <AccountProfile
               currentUser={user}
               onClose={() => setShowProfile(false)}
