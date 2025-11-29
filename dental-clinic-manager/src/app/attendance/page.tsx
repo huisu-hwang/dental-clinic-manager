@@ -84,9 +84,10 @@ export default function AttendancePage() {
 
       {/* 메인 콘텐츠 - 헤더와 사이드바 공간 확보 */}
       <div className="ml-56 pt-14">
-        <main className="pt-1.5 px-4 pb-4">
-          {/* 통일된 카드 레이아웃 */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <main className="pt-4 px-6 pb-6">
+          <div className="max-w-6xl mx-auto">
+            {/* 통일된 카드 레이아웃 */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             {/* 블루 그라데이션 헤더 */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
               <div className="flex items-center justify-between">
@@ -144,6 +145,7 @@ export default function AttendancePage() {
               {activeTab === 'team' && canViewTeam && <TeamStatus />}
               {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
             </div>
+          </div>
           </div>
         </main>
       </div>
