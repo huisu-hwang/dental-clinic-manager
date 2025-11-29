@@ -2839,5 +2839,59 @@ export const dataService = {
       console.error('[DataService] Error fetching latest special notes by date:', error)
       return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
     }
+  },
+
+  // daily_reports에서 특이사항 목록 조회 (fallback용)
+  async getSpecialNotesFromDailyReports(params?: {
+    startDate?: string
+    endDate?: string
+    limit?: number
+  }): Promise<{ success?: boolean; data?: Array<{ date: string; content: string; clinic_id: string }>; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      let query = supabase
+        .from('daily_reports')
+        .select('date, special_notes, clinic_id')
+        .eq('clinic_id', clinicId)
+        .not('special_notes', 'is', null)
+        .neq('special_notes', '')
+        .order('date', { ascending: false })
+
+      if (params?.startDate) {
+        query = query.gte('date', params.startDate)
+      }
+      if (params?.endDate) {
+        query = query.lte('date', params.endDate)
+      }
+      if (params?.limit) {
+        query = query.limit(params.limit)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      type DailyReportWithNotes = { date: string; special_notes: string | null; clinic_id: string }
+      const result = (data as DailyReportWithNotes[] || [])
+        .filter(item => item.special_notes && item.special_notes.trim())
+        .map(item => ({
+          date: item.date,
+          content: item.special_notes!.trim(),
+          clinic_id: item.clinic_id
+        }))
+
+      console.log(`[DataService] Fetched ${result.length} special notes from daily_reports`)
+      return { success: true, data: result }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching special notes from daily_reports:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
   }
 }
