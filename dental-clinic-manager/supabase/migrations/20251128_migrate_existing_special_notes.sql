@@ -22,7 +22,7 @@ SELECT
   NULL as author_id,
   '기존 데이터' as author_name,
   false as is_past_date_edit,
-  COALESCE(dr.updated_at, dr.created_at, NOW()) as edited_at,
+  COALESCE(dr.created_at, NOW()) as edited_at,
   COALESCE(dr.created_at, NOW()) as created_at
 FROM daily_reports dr
 WHERE dr.special_notes IS NOT NULL
