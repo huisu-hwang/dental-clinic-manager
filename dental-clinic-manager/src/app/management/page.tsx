@@ -132,9 +132,9 @@ export default function ManagementPage() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      {/* Header - 상단 고정 */}
+      {/* Header - 상단 고정, 중앙 정렬 */}
       <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200">
-        <div className="h-full px-4 flex items-center">
+        <div className="max-w-[1400px] mx-auto h-full px-6 flex items-center">
           <Header
             dbStatus="connected"
             user={user}
@@ -144,15 +144,15 @@ export default function ManagementPage() {
         </div>
       </div>
 
-      {/* 좌측 사이드바 - 고정 */}
-      <aside className="fixed left-0 top-14 w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 pl-4 pr-2">
+      {/* 좌측 사이드바 - 콘텐츠와 함께 중앙 정렬 */}
+      <aside className="fixed top-14 w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3 left-[calc(50%-700px)]">
         <TabNavigation activeTab="settings" onTabChange={handleMainTabChange} />
       </aside>
 
-      {/* 메인 콘텐츠 - 헤더와 사이드바 공간 확보 */}
-      <div className="ml-56 pt-14">
-        <main className="pt-4 px-6 pb-6">
-          <div className="max-w-6xl mx-auto">
+      {/* 메인 콘텐츠 */}
+      <div className="pt-14">
+        <main className="max-w-[1400px] mx-auto pl-60 pr-6 pt-4 pb-6">
+          <div className="max-w-6xl">
             {/* 통일된 카드 레이아웃 */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             {/* 블루 그라데이션 헤더 */}
