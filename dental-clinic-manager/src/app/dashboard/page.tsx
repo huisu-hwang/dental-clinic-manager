@@ -423,8 +423,7 @@ export default function DashboardPage() {
               <div className="bg-white rounded-b-lg shadow-sm border border-slate-200 p-6">
                 {statsSubTab === 'weekly' && (
                   <>
-                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                      <h3 className="text-lg font-semibold text-slate-800">주간 통계</h3>
+                    <div className="flex justify-end mb-4">
                       <div>
                         <label htmlFor="week-selector" className="mr-2 text-sm text-slate-600">주 선택:</label>
                         <input
@@ -457,8 +456,7 @@ export default function DashboardPage() {
 
                 {statsSubTab === 'monthly' && (
                   <>
-                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                      <h3 className="text-lg font-semibold text-slate-800">월간 통계</h3>
+                    <div className="flex justify-end mb-4">
                       <div>
                         <label htmlFor="month-selector" className="mr-2 text-sm text-slate-600">월 선택:</label>
                         <input
@@ -491,8 +489,7 @@ export default function DashboardPage() {
 
                 {statsSubTab === 'annual' && (
                   <>
-                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                      <h3 className="text-lg font-semibold text-slate-800">연간 통계</h3>
+                    <div className="flex justify-end mb-4">
                       <div>
                         <label htmlFor="year-selector" className="mr-2 text-sm text-slate-600">연도 선택:</label>
                         <select
