@@ -499,6 +499,26 @@ export const dataService = {
         happyCallLogsResult = { data: [], error: err };
       }
 
+      // special_notes_history에서 해당 날짜의 최신 특이사항 조회
+      let latestSpecialNote: { content: string; author_name: string } | null = null;
+      try {
+        const { data: specialNotesData } = await supabase
+          .from('special_notes_history')
+          .select('content, author_name')
+          .eq('clinic_id', targetClinicId)
+          .eq('report_date', targetDate)
+          .order('edited_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (specialNotesData) {
+          latestSpecialNote = specialNotesData;
+          console.log('[DataService] special_notes_history fetched for date:', targetDate);
+        }
+      } catch (err) {
+        console.warn('[DataService] Error fetching special_notes_history:', err);
+      }
+
       const { normalized: normalizedDailyReport, missingIds: dailyIdsToBackfill } = ensureClinicIds(
         dailyReportResult?.data ? [dailyReportResult.data as DailyReport] : [],
         targetClinicId
@@ -529,17 +549,41 @@ export const dataService = {
         void backfillClinicIds(supabase, 'happy_call_logs', targetClinicId, happyCallIdsToBackfill)
       }
 
+      // special_notes_history에서 가져온 값이 있으면 dailyReport에 설정
+      const hasSpecialNotes = latestSpecialNote !== null
       const hasData =
         normalizedDailyReport.length > 0 ||
         normalizedConsultLogs.length > 0 ||
         normalizedGiftLogs.length > 0 ||
-        normalizedHappyCallLogs.length > 0
+        normalizedHappyCallLogs.length > 0 ||
+        hasSpecialNotes
       console.log('[DataService] Data fetch complete. Has data:', hasData)
+
+      // dailyReport 객체 생성 (special_notes는 special_notes_history에서 가져옴)
+      let dailyReport = normalizedDailyReport[0] ?? null
+      if (dailyReport && latestSpecialNote) {
+        dailyReport = {
+          ...dailyReport,
+          special_notes: latestSpecialNote.content
+        }
+      } else if (!dailyReport && latestSpecialNote) {
+        // dailyReport가 없지만 특이사항만 있는 경우
+        dailyReport = {
+          date: targetDate,
+          clinic_id: targetClinicId,
+          recall_count: 0,
+          recall_booking_count: 0,
+          consult_proceed: 0,
+          consult_hold: 0,
+          naver_review_count: 0,
+          special_notes: latestSpecialNote.content
+        } as DailyReport
+      }
 
       return {
         success: true,
         data: {
-          dailyReport: normalizedDailyReport[0] ?? null,
+          dailyReport,
           consultLogs: normalizedConsultLogs,
           giftLogs: normalizedGiftLogs,
           happyCallLogs: normalizedHappyCallLogs,
@@ -620,6 +664,7 @@ export const dataService = {
       }
 
       // --- 4. 신규 데이터 생성 ---
+      // 참고: special_notes는 special_notes_history 테이블에만 저장됨
       const dailyReport = {
         clinic_id: clinicId,
         date,
@@ -629,7 +674,6 @@ export const dataService = {
         consult_proceed: validConsults.filter(c => c.consult_status === 'O').length,
         consult_hold: validConsults.filter(c => c.consult_status === 'X').length,
         naver_review_count: validGifts.filter(g => g.naver_review === 'O').length,
-        special_notes: specialNotes.trim() || null,
       }
 
       const { error: dailyReportError } = await supabase.from('daily_reports').insert([dailyReport] as any)

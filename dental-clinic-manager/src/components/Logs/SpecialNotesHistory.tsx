@@ -10,13 +10,6 @@ interface GroupedNote {
   editCount: number
 }
 
-// daily_reports에서 가져온 데이터를 SpecialNotesHistory 형식으로 변환
-interface FallbackNote {
-  date: string
-  content: string
-  clinic_id: string
-}
-
 export default function SpecialNotesHistory() {
   const [notes, setNotes] = useState<GroupedNote[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,9 +19,8 @@ export default function SpecialNotesHistory() {
   const [expandedDate, setExpandedDate] = useState<string | null>(null)
   const [dateHistory, setDateHistory] = useState<SpecialNotesHistoryType[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
-  const [dataSource, setDataSource] = useState<'history' | 'fallback' | null>(null)
 
-  // 초기 데이터 로드
+  // 초기 데이터 로드 (special_notes_history 테이블에서만 조회)
   const loadNotes = useCallback(async () => {
     setLoading(true)
     try {
@@ -40,44 +32,13 @@ export default function SpecialNotesHistory() {
       if (result.success && result.data && result.data.length > 0) {
         console.log(`[SpecialNotesHistory] Loaded ${result.data.length} notes from history table`)
         setNotes(result.data)
-        setDataSource('history')
       } else {
-        // Fallback: daily_reports에서 특이사항 조회
-        console.log('[SpecialNotesHistory] No data in history table, trying fallback to daily_reports...')
-        const fallbackResult = await dataService.getSpecialNotesFromDailyReports({
-          limit: 100
-        })
-
-        if (fallbackResult.success && fallbackResult.data && fallbackResult.data.length > 0) {
-          console.log(`[SpecialNotesHistory] Loaded ${fallbackResult.data.length} notes from daily_reports (fallback)`)
-          // fallback 데이터를 GroupedNote 형식으로 변환
-          const convertedNotes: GroupedNote[] = fallbackResult.data.map((item: FallbackNote) => ({
-            date: item.date,
-            latestNote: {
-              id: `fallback-${item.date}`,
-              clinic_id: item.clinic_id,
-              report_date: item.date,
-              content: item.content,
-              author_id: null,
-              author_name: '-', // fallback 데이터는 작성자 정보 없음
-              is_past_date_edit: false,
-              edited_at: item.date,
-              created_at: item.date
-            },
-            editCount: 1
-          }))
-          setNotes(convertedNotes)
-          setDataSource('fallback')
-        } else {
-          console.log('[SpecialNotesHistory] No data found in both tables')
-          setNotes([])
-          setDataSource(null)
-        }
+        console.log('[SpecialNotesHistory] No data found')
+        setNotes([])
       }
     } catch (error) {
       console.error('[SpecialNotesHistory] Error loading notes:', error)
       setNotes([])
-      setDataSource(null)
     } finally {
       setLoading(false)
     }
@@ -239,12 +200,6 @@ export default function SpecialNotesHistory() {
 
     return (
       <div className="space-y-3">
-        {dataSource === 'fallback' && (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
-            <strong>참고:</strong> 히스토리 테이블에서 데이터를 찾지 못해 일일보고서에서 특이사항을 표시하고 있습니다.
-            새로 저장하면 히스토리에 기록됩니다.
-          </div>
-        )}
         {notes.map(({ date, latestNote, editCount }) => (
           <div key={date} className="border border-slate-200 rounded-lg bg-white overflow-hidden">
             {/* 메인 카드 */}
