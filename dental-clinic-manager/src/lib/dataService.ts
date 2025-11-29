@@ -2870,7 +2870,7 @@ export const dataService = {
         const newConsultProceed = (originalReport.consult_proceed || 0) + 1
         const newConsultHold = Math.max((originalReport.consult_hold || 0) - 1, 0)
 
-        await supabase
+        const { error: reportUpdateError } = await supabase
           .from('daily_reports')
           .update({
             consult_proceed: newConsultProceed,
@@ -2878,61 +2878,80 @@ export const dataService = {
           })
           .eq('id', originalReport.id)
 
-        console.log('[updateConsultStatusToCompleted] Original date report updated:', {
-          consult_proceed: newConsultProceed,
-          consult_hold: newConsultHold
-        })
+        if (reportUpdateError) {
+          console.error('[updateConsultStatusToCompleted] Failed to update original report:', reportUpdateError)
+        } else {
+          console.log('[updateConsultStatusToCompleted] Original date report updated:', {
+            consult_proceed: newConsultProceed,
+            consult_hold: newConsultHold
+          })
+        }
       }
 
-      // 4. 오늘 날짜에 상태 변경 기록 추가 (원래 날짜와 다른 경우에만)
-      if (originalDate !== today) {
-        // 오늘 날짜의 daily_reports 확인/생성
-        const { data: todayReport } = await supabase
-          .from('daily_reports')
-          .select('*')
-          .eq('date', today)
-          .eq('clinic_id', clinicId)
-          .single()
+      // 4. 오늘 날짜의 daily_reports 확인/생성 및 상태 변경 기록 추가
+      const { data: todayReport } = await supabase
+        .from('daily_reports')
+        .select('*')
+        .eq('date', today)
+        .eq('clinic_id', clinicId)
+        .single()
 
-        if (todayReport) {
-          // 기존 오늘 보고서가 있으면 consult_proceed +1
-          await supabase
+      if (todayReport) {
+        // 기존 오늘 보고서가 있으면 consult_proceed +1 (원래 날짜와 다른 경우에만)
+        if (originalDate !== today) {
+          const { error: todayUpdateError } = await supabase
             .from('daily_reports')
             .update({
               consult_proceed: (todayReport.consult_proceed || 0) + 1
             })
             .eq('id', todayReport.id)
 
-          console.log('[updateConsultStatusToCompleted] Today report updated')
-        } else {
-          // 오늘 보고서가 없으면 새로 생성
-          await supabase
-            .from('daily_reports')
-            .insert([{
-              clinic_id: clinicId,
-              date: today,
-              recall_count: 0,
-              recall_booking_count: 0,
-              consult_proceed: 1,
-              consult_hold: 0,
-              naver_review_count: 0
-            }])
-
-          console.log('[updateConsultStatusToCompleted] New today report created')
+          if (todayUpdateError) {
+            console.error('[updateConsultStatusToCompleted] Failed to update today report:', todayUpdateError)
+          } else {
+            console.log('[updateConsultStatusToCompleted] Today report updated')
+          }
         }
-
-        // 오늘 날짜에 상태 변경 기록 추가 (참고용)
-        await supabase
-          .from('consult_logs')
+      } else {
+        // 오늘 보고서가 없으면 새로 생성
+        const { error: insertReportError } = await supabase
+          .from('daily_reports')
           .insert([{
             clinic_id: clinicId,
             date: today,
-            patient_name: originalConsult.patient_name,
-            consult_content: originalConsult.consult_content,
-            consult_status: 'O' as const,
-            remarks: `[${originalDate} 보류분 진행] ${originalConsult.remarks || ''}`
+            recall_count: 0,
+            recall_booking_count: 0,
+            consult_proceed: originalDate !== today ? 1 : 0,
+            consult_hold: 0,
+            naver_review_count: 0
           }])
 
+        if (insertReportError) {
+          console.error('[updateConsultStatusToCompleted] Failed to create today report:', insertReportError)
+        } else {
+          console.log('[updateConsultStatusToCompleted] New today report created')
+        }
+      }
+
+      // 5. 오늘 날짜에 상태 변경 기록 추가 (항상 추가하여 일일 보고서에 표시)
+      const changeRemark = originalDate === today
+        ? `[보류→진행 변경] ${originalConsult.remarks || ''}`
+        : `[${originalDate} 보류분 진행] ${originalConsult.remarks || ''}`
+
+      const { error: insertLogError } = await supabase
+        .from('consult_logs')
+        .insert([{
+          clinic_id: clinicId,
+          date: today,
+          patient_name: originalConsult.patient_name,
+          consult_content: originalConsult.consult_content,
+          consult_status: 'O' as const,
+          remarks: changeRemark.trim()
+        }])
+
+      if (insertLogError) {
+        console.error('[updateConsultStatusToCompleted] Failed to insert today consult log:', insertLogError)
+      } else {
         console.log('[updateConsultStatusToCompleted] Today consult log entry created')
       }
 
