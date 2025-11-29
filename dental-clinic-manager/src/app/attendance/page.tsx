@@ -103,8 +103,8 @@ export default function AttendancePage() {
               </div>
             </div>
 
-            {/* 서브 탭 네비게이션 */}
-            <div className="border-b border-slate-200 bg-slate-50">
+            {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
+            <div className="sticky top-14 z-10 border-b border-slate-200 bg-slate-50">
               <nav className="flex space-x-1 p-2 overflow-x-auto" aria-label="Tabs">
                 {subTabs.map((tab) => {
                   const hasPermission =
