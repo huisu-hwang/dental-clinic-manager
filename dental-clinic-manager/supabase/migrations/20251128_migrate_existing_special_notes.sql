@@ -19,13 +19,12 @@ SELECT
   dr.clinic_id,
   dr.date as report_date,
   dr.special_notes as content,
-  COALESCE(dr.updated_by, dr.created_by) as author_id,
-  COALESCE(u.name, '기존 데이터') as author_name,
+  NULL as author_id,
+  '기존 데이터' as author_name,
   false as is_past_date_edit,
   COALESCE(dr.updated_at, dr.created_at, NOW()) as edited_at,
   COALESCE(dr.created_at, NOW()) as created_at
 FROM daily_reports dr
-LEFT JOIN users u ON u.id = COALESCE(dr.updated_by, dr.created_by)
 WHERE dr.special_notes IS NOT NULL
   AND dr.special_notes != ''
   AND TRIM(dr.special_notes) != ''
