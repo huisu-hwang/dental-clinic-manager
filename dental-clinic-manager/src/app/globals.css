@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* 스크롤바 유무에 따른 레이아웃 이동 방지 */
+html {
+  overflow-y: scroll;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
