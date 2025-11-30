@@ -2891,23 +2891,6 @@ export const dataService = {
     endDate?: string
     limit?: number
   }): Promise<{ success?: boolean; data?: Array<{ date: string; content: string; clinic_id: string }>; error?: string }> {
-  // ========================================
-  // 상담 상태 변경 (진행보류 → 진행)
-  // ========================================
-
-  /**
-   * 진행보류 상담을 진행 완료로 변경
-   *
-   * 동작:
-   * 1. 원래 consult_logs의 상태를 'X' → 'O'로 변경
-   * 2. 원래 날짜의 daily_reports 통계 업데이트 (consult_hold -1, consult_proceed +1)
-   * 3. 오늘 날짜의 consult_logs에 새 기록 추가 (상태 변경 이력)
-   * 4. 오늘 날짜의 daily_reports 통계 업데이트 또는 생성
-   *
-   * @param consultId - 변경할 상담 로그의 ID
-   * @returns 성공 여부 및 업데이트된 데이터
-   */
-  async updateConsultStatusToCompleted(consultId: number) {
     const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
@@ -2952,6 +2935,36 @@ export const dataService = {
       return { success: true, data: result }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching special notes from daily_reports:', error)
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    }
+  },
+
+  // ========================================
+  // 상담 상태 변경 (진행보류 → 진행)
+  // ========================================
+
+  /**
+   * 진행보류 상담을 진행 완료로 변경
+   *
+   * 동작:
+   * 1. 원래 consult_logs의 상태를 'X' → 'O'로 변경
+   * 2. 원래 날짜의 daily_reports 통계 업데이트 (consult_hold -1, consult_proceed +1)
+   * 3. 오늘 날짜의 consult_logs에 새 기록 추가 (상태 변경 이력)
+   * 4. 오늘 날짜의 daily_reports 통계 업데이트 또는 생성
+   *
+   * @param consultId - 변경할 상담 로그의 ID
+   * @returns 성공 여부 및 업데이트된 데이터
+   */
+  async updateConsultStatusToCompleted(consultId: number) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
       console.log('[updateConsultStatusToCompleted] Starting update for consultId:', consultId)
 
       // 1. 원래 상담 기록 조회
