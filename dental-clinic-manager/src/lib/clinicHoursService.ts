@@ -8,20 +8,33 @@ import type { ClinicHours, ClinicHoliday, ClinicHoursInput, ClinicHolidayInput }
 export const clinicHoursService = {
   /**
    * 병원의 진료시간 조회
+   * API 라우트를 통해 서버 측에서 처리 (RLS 우회)
    */
   async getClinicHours(clinicId: string) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') }
+    try {
+      console.log('[clinicHoursService] Fetching clinic hours via API for clinic:', clinicId)
+
+      const response = await fetch(`/api/clinic-hours?clinicId=${encodeURIComponent(clinicId)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('[clinicHoursService] API error:', result.error)
+        return { data: null, error: new Error(result.error || 'Failed to fetch clinic hours') }
+      }
+
+      console.log('[clinicHoursService] API success, fetched hours:', result.data?.length || 0)
+      return { data: result.data as ClinicHours[] | null, error: null }
+
+    } catch (error) {
+      console.error('[clinicHoursService] Error fetching clinic hours:', error)
+      return { data: null, error: error as Error }
     }
-
-    const { data, error } = await supabase
-      .from('clinic_hours')
-      .select('*')
-      .eq('clinic_id', clinicId)
-      .order('day_of_week')
-
-    return { data: data as ClinicHours[] | null, error }
   },
 
   /**
