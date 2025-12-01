@@ -26,46 +26,43 @@ export const clinicHoursService = {
 
   /**
    * 병원 진료시간 업데이트 (전체 요일)
-   * SECURITY DEFINER RPC 함수를 사용하여 RLS 정책 우회
+   * API 라우트를 통해 서버 측에서 처리 (RLS 우회)
    * @param clinicId 병원 ID
    * @param hoursData 진료시간 데이터
-   * @param userId 현재 로그인한 사용자 ID (자체 인증 시스템용)
+   * @param userId 현재 로그인한 사용자 ID
    */
   async updateClinicHours(clinicId: string, hoursData: ClinicHoursInput[], userId?: string) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') }
+    // userId가 없으면 에러
+    if (!userId) {
+      return { data: null, error: new Error('User ID is required') }
     }
 
     try {
-      // RPC 함수용 데이터 준비
-      const rpcData = hoursData.map(hours => ({
-        day_of_week: hours.day_of_week,
-        is_open: hours.is_open,
-        open_time: hours.is_open ? hours.open_time : '',
-        close_time: hours.is_open ? hours.close_time : '',
-        break_start: hours.is_open && hours.break_start ? hours.break_start : '',
-        break_end: hours.is_open && hours.break_end ? hours.break_end : '',
-      }))
+      // API 라우트를 통해 서버 측에서 처리 (service_role 사용)
+      console.log('[clinicHoursService] Calling API route with userId:', userId)
 
-      // RPC 함수 호출 시도 (user_id 포함)
-      const { data: rpcResult, error: rpcError } = await supabase.rpc('update_clinic_hours', {
-        p_clinic_id: clinicId,
-        p_hours_data: rpcData,
-        p_user_id: userId || null,
+      const response = await fetch('/api/clinic-hours', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clinicId,
+          hoursData,
+          userId,
+        }),
       })
 
-      // RPC 함수가 없으면 기존 방식으로 폴백
-      if (rpcError && (rpcError.message?.includes('function') || rpcError.code === '42883')) {
-        console.log('[clinicHoursService] RPC function not available, using fallback method')
-        return this.updateClinicHoursFallback(clinicId, hoursData)
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('[clinicHoursService] API error:', result.error)
+        return { data: null, error: new Error(result.error || 'Failed to update clinic hours') }
       }
 
-      if (rpcError) {
-        throw rpcError
-      }
+      console.log('[clinicHoursService] API success:', result)
+      return { data: result.data as ClinicHours[] | null, error: null }
 
-      return { data: rpcResult as ClinicHours[] | null, error: null }
     } catch (error) {
       console.error('[clinicHoursService] Error updating clinic hours:', error)
       return { data: null, error: error as Error }
