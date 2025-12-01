@@ -379,54 +379,86 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                     )}
                   </div>
 
-                  {/* 휴게시간 헤더 + 추가 버튼 */}
+                  {/* 휴게시간 섹션 */}
                   {day.is_open && (
-                    <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
-                      <span className="text-sm text-slate-500 whitespace-nowrap">휴게시간</span>
-                      <button
-                        type="button"
-                        onClick={() => handleAddBreak(day.day_of_week)}
-                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1.5 rounded-lg transition-colors"
-                      >
-                        <PlusCircleIcon className="w-4 h-4" />
-                        추가
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* 휴게시간 목록 - 아래에 세로로 배치 */}
-                {day.is_open && day.breaks.length > 0 && (
-                  <div className="flex flex-col gap-2 ml-[72px] sm:ml-[88px]">
-                    {day.breaks.map((breakTime, breakIndex) => (
-                      <div key={breakIndex} className="flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-lg w-fit">
-                        <input
-                          type="time"
-                          value={breakTime.start}
-                          onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'start', e.target.value)}
-                          step="1800"
-                          className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[130px]"
-                        />
-                        <span className="text-slate-400 text-sm">~</span>
-                        <input
-                          type="time"
-                          value={breakTime.end}
-                          onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'end', e.target.value)}
-                          step="1800"
-                          className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[130px]"
-                        />
+                    <div className="flex flex-col gap-2 border-l border-slate-200 pl-4">
+                      {/* 첫 번째 줄: 휴게시간 라벨 + 첫 번째 입력폼 + 추가 버튼 */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-slate-500 whitespace-nowrap">휴게시간</span>
+                        {day.breaks.length > 0 && (
+                          <div className="flex items-center gap-1.5 bg-white px-2 py-1.5 rounded-lg border border-slate-200">
+                            <input
+                              type="time"
+                              value={day.breaks[0].start}
+                              onChange={(e) => handleBreakChange(day.day_of_week, 0, 'start', e.target.value)}
+                              step="1800"
+                              className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[130px]"
+                            />
+                            <span className="text-slate-400 text-sm">~</span>
+                            <input
+                              type="time"
+                              value={day.breaks[0].end}
+                              onChange={(e) => handleBreakChange(day.day_of_week, 0, 'end', e.target.value)}
+                              step="1800"
+                              className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[130px]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBreak(day.day_of_week, 0)}
+                              className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                              title="삭제"
+                            >
+                              <XCircleIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                         <button
                           type="button"
-                          onClick={() => handleRemoveBreak(day.day_of_week, breakIndex)}
-                          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                          title="삭제"
+                          onClick={() => handleAddBreak(day.day_of_week)}
+                          className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1.5 rounded-lg transition-colors"
                         >
-                          <XCircleIcon className="w-4 h-4" />
+                          <PlusCircleIcon className="w-4 h-4" />
+                          추가
                         </button>
                       </div>
-                    ))}
-                  </div>
-                )}
+
+                      {/* 추가 휴게시간 목록 - 첫 번째 입력폼 아래에 정렬 */}
+                      {day.breaks.length > 1 && (
+                        <div className="flex flex-col gap-2 ml-[60px]">
+                          {day.breaks.slice(1).map((breakTime, idx) => {
+                            const breakIndex = idx + 1
+                            return (
+                              <div key={breakIndex} className="flex items-center gap-1.5 bg-white px-2 py-1.5 rounded-lg border border-slate-200 w-fit">
+                                <input
+                                  type="time"
+                                  value={breakTime.start}
+                                  onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'start', e.target.value)}
+                                  step="1800"
+                                  className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[130px]"
+                                />
+                                <span className="text-slate-400 text-sm">~</span>
+                                <input
+                                  type="time"
+                                  value={breakTime.end}
+                                  onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'end', e.target.value)}
+                                  step="1800"
+                                  className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[130px]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveBreak(day.day_of_week, breakIndex)}
+                                  className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                  title="삭제"
+                                >
+                                  <XCircleIcon className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
               </div>
 
               {/* 에러 메시지 */}
