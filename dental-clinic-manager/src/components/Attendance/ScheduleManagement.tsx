@@ -190,7 +190,7 @@ export default function ScheduleManagement() {
 
   // 병원 진료시간 불러오기
   const loadClinicHours = async () => {
-    if (!user?.clinic_id) {
+    if (!user?.clinic_id || !selectedUser) {
       setMessage({ type: 'error', text: '병원 정보를 찾을 수 없습니다.' })
       return
     }
@@ -214,29 +214,22 @@ export default function ScheduleManagement() {
       // clinic_hours를 WorkSchedule로 변환
       const convertedSchedule = convertClinicHoursToWorkSchedule(hours)
 
-      // 일괄 설정 필드에 반영
-      const firstWorkDay = Object.entries(convertedSchedule).find(
-        ([_, schedule]) => schedule.isWorking
-      )
+      // 요일별로 다른 시간을 직접 저장
+      const saveResult = await workScheduleService.updateUserWorkSchedule(selectedUser, convertedSchedule)
 
-      if (firstWorkDay) {
-        const [_, schedule] = firstWorkDay
-        setBulkStartTime(schedule.start || '09:00')
-        setBulkEndTime(schedule.end || '18:00')
-        setBulkBreakStart(schedule.breakStart || '12:00')
-        setBulkBreakEnd(schedule.breakEnd || '13:00')
+      if (saveResult.success) {
+        setMessage({
+          type: 'success',
+          text: '병원 진료시간을 직원 스케줄에 적용했습니다.',
+        })
+        await loadUserSchedule()
+        setBulkMode(false) // 개별 설정 모드로 전환하여 요일별 시간 확인 가능
+      } else {
+        setMessage({
+          type: 'error',
+          text: saveResult.error || '스케줄 저장 실패',
+        })
       }
-
-      // 영업하는 요일만 선택
-      const workDayNames = Object.entries(convertedSchedule)
-        .filter(([_, schedule]) => schedule.isWorking)
-        .map(([dayName]) => dayName as DayName)
-      setBulkWorkDays(workDayNames)
-
-      setMessage({
-        type: 'success',
-        text: '병원 진료시간을 불러왔습니다. 필요시 수정 후 저장하세요.',
-      })
     } catch (error) {
       console.error('[ScheduleManagement] Error loading clinic hours:', error)
       setMessage({
