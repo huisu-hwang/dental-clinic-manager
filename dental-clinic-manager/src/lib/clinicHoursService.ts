@@ -26,8 +26,52 @@ export const clinicHoursService = {
 
   /**
    * 병원 진료시간 업데이트 (전체 요일)
+   * SECURITY DEFINER RPC 함수를 사용하여 RLS 정책 우회
    */
   async updateClinicHours(clinicId: string, hoursData: ClinicHoursInput[]) {
+    const supabase = getSupabase()
+    if (!supabase) {
+      return { data: null, error: new Error('Supabase client not available') }
+    }
+
+    try {
+      // RPC 함수용 데이터 준비
+      const rpcData = hoursData.map(hours => ({
+        day_of_week: hours.day_of_week,
+        is_open: hours.is_open,
+        open_time: hours.is_open ? hours.open_time : '',
+        close_time: hours.is_open ? hours.close_time : '',
+        break_start: hours.is_open && hours.break_start ? hours.break_start : '',
+        break_end: hours.is_open && hours.break_end ? hours.break_end : '',
+      }))
+
+      // RPC 함수 호출 시도
+      const { data: rpcData2, error: rpcError } = await supabase.rpc('update_clinic_hours', {
+        p_clinic_id: clinicId,
+        p_hours_data: rpcData,
+      })
+
+      // RPC 함수가 없으면 기존 방식으로 폴백
+      if (rpcError && (rpcError.message?.includes('function') || rpcError.code === '42883')) {
+        console.log('[clinicHoursService] RPC function not available, using fallback method')
+        return this.updateClinicHoursFallback(clinicId, hoursData)
+      }
+
+      if (rpcError) {
+        throw rpcError
+      }
+
+      return { data: rpcData2 as ClinicHours[] | null, error: null }
+    } catch (error) {
+      console.error('[clinicHoursService] Error updating clinic hours:', error)
+      return { data: null, error: error as Error }
+    }
+  },
+
+  /**
+   * 기존 방식으로 진료시간 업데이트 (RPC 함수 없을 때 폴백)
+   */
+  async updateClinicHoursFallback(clinicId: string, hoursData: ClinicHoursInput[]) {
     const supabase = getSupabase()
     if (!supabase) {
       return { data: null, error: new Error('Supabase client not available') }
