@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
+interface BreakTime {
+  start: string
+  end: string
+}
+
 interface ClinicHoursInput {
   day_of_week: number
   is_open: boolean
@@ -8,6 +13,7 @@ interface ClinicHoursInput {
   close_time: string
   break_start: string
   break_end: string
+  breaks: BreakTime[] // UI에서 사용하는 휴게시간 배열
 }
 
 /**
@@ -97,15 +103,22 @@ export async function PUT(request: NextRequest) {
     }
 
     // 6. 새 데이터 삽입
-    const insertData = hoursData.map(hours => ({
-      clinic_id: clinicId,
-      day_of_week: hours.day_of_week,
-      is_open: hours.is_open,
-      open_time: hours.is_open && hours.open_time ? hours.open_time : null,
-      close_time: hours.is_open && hours.close_time ? hours.close_time : null,
-      break_start: hours.is_open && hours.break_start ? hours.break_start : null,
-      break_end: hours.is_open && hours.break_end ? hours.break_end : null,
-    }))
+    const insertData = hoursData.map(hours => {
+      // breaks 배열에서 첫 번째 휴게시간은 break_start/break_end로, 나머지는 additional_breaks로 저장
+      const firstBreak = hours.breaks && hours.breaks.length > 0 ? hours.breaks[0] : null
+      const additionalBreaks = hours.breaks && hours.breaks.length > 1 ? hours.breaks.slice(1) : []
+
+      return {
+        clinic_id: clinicId,
+        day_of_week: hours.day_of_week,
+        is_open: hours.is_open,
+        open_time: hours.is_open && hours.open_time ? hours.open_time : null,
+        close_time: hours.is_open && hours.close_time ? hours.close_time : null,
+        break_start: hours.is_open && firstBreak && firstBreak.start ? firstBreak.start : null,
+        break_end: hours.is_open && firstBreak && firstBreak.end ? firstBreak.end : null,
+        additional_breaks: hours.is_open && additionalBreaks.length > 0 ? additionalBreaks : [],
+      }
+    })
 
     const { data, error: insertError } = await supabaseAdmin
       .from('clinic_hours')
