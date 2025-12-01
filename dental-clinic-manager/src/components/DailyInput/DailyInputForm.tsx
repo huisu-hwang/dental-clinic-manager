@@ -26,12 +26,13 @@ interface DailyInputFormProps {
     recallBookingNames: string
     specialNotes: string
   }) => void
+  onSaveSuccess?: () => void  // 저장 성공 후 콜백 (데이터 새로고침용)
   canCreate: boolean
   canEdit: boolean
   currentUser?: UserProfile
 }
 
-export default function DailyInputForm({ giftInventory, onSaveReport, canCreate, canEdit, currentUser }: DailyInputFormProps) {
+export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSuccess, canCreate, canEdit, currentUser }: DailyInputFormProps) {
   const [reportDate, setReportDate] = useState(getTodayString())
   const [consultRows, setConsultRows] = useState<ConsultRowData[]>([
     { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
@@ -244,6 +245,8 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
 
         console.log('[DailyInputForm] Server Action succeeded:', result)
         alert('보고서가 성공적으로 저장되었습니다.')
+        // 저장 성공 후 부모에게 알려서 데이터 새로고침
+        onSaveSuccess?.()
       } else {
         console.log('[DailyInputForm] Using legacy onSaveReport...')
 
@@ -257,6 +260,8 @@ export default function DailyInputForm({ giftInventory, onSaveReport, canCreate,
           recallBookingNames,
           specialNotes
         })
+        // 레거시 아키텍처에서도 저장 성공 후 부모에게 알려서 데이터 새로고침
+        onSaveSuccess?.()
       }
 
       setHasExistingData(true)

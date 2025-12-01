@@ -264,6 +264,7 @@ export default function DashboardPage() {
             <DailyInputForm
               giftInventory={giftInventory}
               onSaveReport={handleSaveReport}
+              onSaveSuccess={refetch}
               canCreate={canCreateReport}
               canEdit={canEditReport}
               currentUser={user ?? undefined}
