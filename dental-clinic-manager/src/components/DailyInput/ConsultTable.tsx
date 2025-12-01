@@ -76,8 +76,8 @@ export default function ConsultTable({ consultRows, onConsultRowsChange, isReadO
                     onChange={(e) => updateRow(index, 'consult_status', e.target.value as 'O' | 'X')}
                     disabled={isReadOnly}
                   >
-                    <option value="O">진행</option>
-                    <option value="X">보류</option>
+                    <option value="O">O</option>
+                    <option value="X">X</option>
                   </select>
                 </td>
                 <td className="px-4 py-2">
@@ -154,8 +154,8 @@ export default function ConsultTable({ consultRows, onConsultRowsChange, isReadO
                     onChange={(e) => updateRow(index, 'consult_status', e.target.value as 'O' | 'X')}
                     disabled={isReadOnly}
                   >
-                    <option value="O">진행</option>
-                    <option value="X">보류</option>
+                    <option value="O">O</option>
+                    <option value="X">X</option>
                   </select>
                 </div>
                 <div>

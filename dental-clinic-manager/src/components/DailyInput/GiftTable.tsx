@@ -146,8 +146,8 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                     onChange={(e) => updateRow(index, 'naver_review', e.target.value as 'O' | 'X')}
                     disabled={isReadOnly}
                   >
-                    <option value="X">미작성</option>
-                    <option value="O">작성</option>
+                    <option value="X">X</option>
+                    <option value="O">O</option>
                   </select>
                 </td>
                 <td className="px-4 py-2">
@@ -258,8 +258,8 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                     onChange={(e) => updateRow(index, 'naver_review', e.target.value as 'O' | 'X')}
                     disabled={isReadOnly}
                   >
-                    <option value="X">미작성</option>
-                    <option value="O">작성</option>
+                    <option value="X">X</option>
+                    <option value="O">O</option>
                   </select>
                 </div>
                 <div>
