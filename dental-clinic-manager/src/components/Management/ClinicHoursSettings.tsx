@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { clinicHoursService } from '@/lib/clinicHoursService'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   DAY_NAMES,
   DEFAULT_CLINIC_HOURS,
@@ -19,6 +20,7 @@ interface ClinicHoursSettingsProps {
 }
 
 export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsProps) {
+  const { user } = useAuth()
   const [hoursData, setHoursData] = useState<ClinicHoursInput[]>(DEFAULT_CLINIC_HOURS)
   const [holidays, setHolidays] = useState<ClinicHoliday[]>([])
   const [loading, setLoading] = useState(true)
@@ -147,9 +149,10 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
     setSaving(true)
     console.log('[ClinicHoursSettings] Saving hours for clinic:', clinicId)
     console.log('[ClinicHoursSettings] Hours data:', hoursData)
+    console.log('[ClinicHoursSettings] User ID:', user?.id)
 
     try {
-      const result = await clinicHoursService.updateClinicHours(clinicId, hoursData)
+      const result = await clinicHoursService.updateClinicHours(clinicId, hoursData, user?.id)
       console.log('[ClinicHoursSettings] Save result:', result)
 
       if (result.error) {
@@ -274,6 +277,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                         type="time"
                         value={day.open_time}
                         onChange={(e) => handleDayChange(day.day_of_week, 'open_time', e.target.value)}
+                        step="1800"
                         className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
                       />
                       <span className="text-slate-600">~</span>
@@ -281,6 +285,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                         type="time"
                         value={day.close_time}
                         onChange={(e) => handleDayChange(day.day_of_week, 'close_time', e.target.value)}
+                        step="1800"
                         className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
@@ -292,6 +297,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                         type="time"
                         value={day.break_start}
                         onChange={(e) => handleDayChange(day.day_of_week, 'break_start', e.target.value)}
+                        step="1800"
                         placeholder="시작"
                         className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
                       />
@@ -300,6 +306,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                         type="time"
                         value={day.break_end}
                         onChange={(e) => handleDayChange(day.day_of_week, 'break_end', e.target.value)}
+                        step="1800"
                         placeholder="종료"
                         className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
                       />
