@@ -146,8 +146,8 @@ export function shouldShowNotificationToday(notification: ClinicNotification): b
   // 반복 타입에 따라 확인
   switch (notification.recurrence_type) {
     case 'none':
-      // 시작일과 오늘이 같은 날인지
-      return today.getTime() === startDate.getTime()
+      // 반복 없음: 시작일부터 종료일까지 매일 표시 (종료일 없으면 무기한)
+      return true
 
     case 'daily':
       // 매일 표시
@@ -156,24 +156,36 @@ export function shouldShowNotificationToday(notification: ClinicNotification): b
     case 'weekly':
       // 매주 특정 요일
       const dayOfWeek = today.getDay() as DayOfWeek
-      return notification.recurrence_config?.days_of_week?.includes(dayOfWeek) ?? false
+      // 요일이 설정되지 않았으면 모든 요일에 표시
+      if (!notification.recurrence_config?.days_of_week || notification.recurrence_config.days_of_week.length === 0) {
+        return true
+      }
+      return notification.recurrence_config.days_of_week.includes(dayOfWeek)
 
     case 'monthly':
       // 매월 특정 일
       const dayOfMonth = today.getDate()
-      return notification.recurrence_config?.day_of_month === dayOfMonth
+      // 날짜가 설정되지 않았으면 매일 표시
+      if (!notification.recurrence_config?.day_of_month) {
+        return true
+      }
+      return notification.recurrence_config.day_of_month === dayOfMonth
 
     case 'yearly':
       // 매년 특정 월/일
       const month = today.getMonth() + 1  // 0-indexed to 1-indexed
       const day = today.getDate()
+      // 월/일이 설정되지 않았으면 매일 표시
+      if (!notification.recurrence_config?.month || !notification.recurrence_config?.day) {
+        return true
+      }
       return (
-        notification.recurrence_config?.month === month &&
-        notification.recurrence_config?.day === day
+        notification.recurrence_config.month === month &&
+        notification.recurrence_config.day === day
       )
 
     default:
-      return false
+      return true
   }
 }
 
