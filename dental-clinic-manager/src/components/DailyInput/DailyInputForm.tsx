@@ -291,7 +291,38 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
           }
         }
       )
-      .subscribe()
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'special_notes_history',
+          filter: `clinic_id=eq.${currentUser.clinic_id}`
+        },
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (isSavingRef.current) return
+
+          const newRecord = payload.new as { report_date?: string } | null
+          const oldRecord = payload.old as { report_date?: string } | null
+          const changedDate = newRecord?.report_date || oldRecord?.report_date
+
+          if (changedDate === reportDate) {
+            console.log('[DailyInputForm] External update detected for special_notes_history')
+            setHasExternalUpdate(true)
+          }
+        }
+      )
+      .subscribe((status: string, err?: Error) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[DailyInputForm] Realtime subscription active')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[DailyInputForm] Realtime subscription error:', err)
+        } else if (status === 'TIMED_OUT') {
+          console.error('[DailyInputForm] Realtime subscription timed out')
+        } else {
+          console.log('[DailyInputForm] Realtime subscription status:', status)
+        }
+      })
 
     return () => {
       console.log('[DailyInputForm] Cleaning up Realtime subscription')
