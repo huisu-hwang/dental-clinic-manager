@@ -125,23 +125,25 @@ export default function NotificationDetailModal({
                   )}
                 </div>
 
-                {/* 액션 버튼 */}
-                <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3 justify-end">
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                    onClick={onClose}
-                  >
-                    닫기
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-                    onClick={handleDismiss}
-                  >
-                    <CheckCircleIcon className="w-4 h-4" />
-                    확인 완료
-                  </button>
+                {/* 액션 버튼 - 우측 하단 배치 */}
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      onClick={onClose}
+                    >
+                      닫기
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+                      onClick={handleDismiss}
+                    >
+                      <CheckCircleIcon className="w-4 h-4" />
+                      해제
+                    </button>
+                  </div>
                 </div>
               </Dialog.Panel>
             </Transition.Child>
