@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw } from 'lucide-react'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
 import { saveDailyReport } from '@/app/actions/dailyReport'
+import { createClient } from '@/lib/supabase/client'
 import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
 
@@ -49,6 +50,8 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
   const [specialNotes, setSpecialNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
+  const [hasExternalUpdate, setHasExternalUpdate] = useState(false)  // 다른 사용자의 변경 감지
+  const isSavingRef = useRef(false)  // 현재 저장 중인지 확인 (자신의 저장은 무시)
   const isReadOnly = hasExistingData ? !canEdit : !canCreate
 
   // 폼 데이터 리셋
@@ -186,6 +189,153 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
     loadDataForDate(reportDate)
   }, [currentUser?.clinic_id, loadDataForDate, reportDate])
 
+  // Realtime 구독: 다른 사용자의 변경사항 감지
+  useEffect(() => {
+    if (!currentUser?.clinic_id || !reportDate) {
+      return
+    }
+
+    const supabase = createClient()
+    if (!supabase) {
+      return
+    }
+
+    console.log('[DailyInputForm] Setting up Realtime subscription for date:', reportDate)
+
+    // 해당 날짜의 데이터 변경 감지
+    const channel = supabase
+      .channel(`daily-report-${currentUser.clinic_id}-${reportDate}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_reports',
+          filter: `clinic_id=eq.${currentUser.clinic_id}`
+        },
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          // 자신이 저장 중인 경우는 무시
+          if (isSavingRef.current) return
+
+          // 해당 날짜의 변경인지 확인
+          const newRecord = payload.new as { date?: string } | null
+          const oldRecord = payload.old as { date?: string } | null
+          const changedDate = newRecord?.date || oldRecord?.date
+
+          if (changedDate === reportDate) {
+            console.log('[DailyInputForm] External update detected for daily_reports')
+            setHasExternalUpdate(true)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'consult_logs',
+          filter: `clinic_id=eq.${currentUser.clinic_id}`
+        },
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (isSavingRef.current) return
+
+          const newRecord = payload.new as { date?: string } | null
+          const oldRecord = payload.old as { date?: string } | null
+          const changedDate = newRecord?.date || oldRecord?.date
+
+          if (changedDate === reportDate) {
+            console.log('[DailyInputForm] External update detected for consult_logs')
+            setHasExternalUpdate(true)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'gift_logs',
+          filter: `clinic_id=eq.${currentUser.clinic_id}`
+        },
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (isSavingRef.current) return
+
+          const newRecord = payload.new as { date?: string } | null
+          const oldRecord = payload.old as { date?: string } | null
+          const changedDate = newRecord?.date || oldRecord?.date
+
+          if (changedDate === reportDate) {
+            console.log('[DailyInputForm] External update detected for gift_logs')
+            setHasExternalUpdate(true)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'happy_call_logs',
+          filter: `clinic_id=eq.${currentUser.clinic_id}`
+        },
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (isSavingRef.current) return
+
+          const newRecord = payload.new as { date?: string } | null
+          const oldRecord = payload.old as { date?: string } | null
+          const changedDate = newRecord?.date || oldRecord?.date
+
+          if (changedDate === reportDate) {
+            console.log('[DailyInputForm] External update detected for happy_call_logs')
+            setHasExternalUpdate(true)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'special_notes_history',
+          filter: `clinic_id=eq.${currentUser.clinic_id}`
+        },
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (isSavingRef.current) return
+
+          const newRecord = payload.new as { report_date?: string } | null
+          const oldRecord = payload.old as { report_date?: string } | null
+          const changedDate = newRecord?.report_date || oldRecord?.report_date
+
+          if (changedDate === reportDate) {
+            console.log('[DailyInputForm] External update detected for special_notes_history')
+            setHasExternalUpdate(true)
+          }
+        }
+      )
+      .subscribe((status: string, err?: Error) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[DailyInputForm] Realtime subscription active')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[DailyInputForm] Realtime subscription error:', err)
+        } else if (status === 'TIMED_OUT') {
+          console.error('[DailyInputForm] Realtime subscription timed out')
+        } else {
+          console.log('[DailyInputForm] Realtime subscription status:', status)
+        }
+      })
+
+    return () => {
+      console.log('[DailyInputForm] Cleaning up Realtime subscription')
+      supabase.removeChannel(channel)
+    }
+  }, [currentUser?.clinic_id, reportDate])
+
+  // 외부 변경 감지 시 자동 새로고침
+  const handleRefreshData = useCallback(() => {
+    setHasExternalUpdate(false)
+    loadDataForDate(reportDate)
+  }, [loadDataForDate, reportDate])
+
   const handleSave = async (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault()
@@ -198,6 +348,8 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
     }
 
     setLoading(true)
+    isSavingRef.current = true  // 자신의 저장 중에는 외부 변경 감지 무시
+    setHasExternalUpdate(false)  // 저장 시 외부 변경 알림 초기화
     console.log(`[DailyInputForm] handleSave - Using ${USE_NEW_ARCHITECTURE ? 'NEW' : 'OLD'} architecture`)
 
     try {
@@ -271,6 +423,10 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
       alert(errorMessage + ' 다시 시도해주세요.')
     } finally {
       setLoading(false)
+      // 저장 완료 후 약간의 지연을 두고 플래그 해제 (Realtime 이벤트 무시 기간)
+      setTimeout(() => {
+        isSavingRef.current = false
+      }, 2000)
     }
   }
 
@@ -321,6 +477,27 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
           </div>
         </div>
       </div>
+
+      {/* 외부 변경 알림 배너 */}
+      {hasExternalUpdate && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <RefreshCw className="w-4 h-4 text-amber-600" />
+              <span className="text-sm text-amber-800">
+                다른 사용자가 이 보고서를 수정했습니다.
+              </span>
+            </div>
+            <button
+              onClick={handleRefreshData}
+              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-md transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              새로고침
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 보고서 본문 */}
       <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
