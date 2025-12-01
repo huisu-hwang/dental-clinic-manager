@@ -960,6 +960,8 @@ export async function getTeamAttendanceStatus(
           not_checked_in: 0,
           on_leave: 0,
           late_count: 0,
+          early_leave_count: 0,
+          overtime_count: 0,
           employees: [],
         },
       }
@@ -992,6 +994,8 @@ export async function getTeamAttendanceStatus(
       scheduled_end?: string | null
       late_minutes: number
       early_leave_minutes: number
+      overtime_minutes: number
+      total_work_minutes?: number | null
     }
 
     const employees: EmployeeStatusItem[] = (users || []).map((user: { id: string; name: string; role: string }) => {
@@ -1007,13 +1011,17 @@ export async function getTeamAttendanceStatus(
         scheduled_end: record?.scheduled_end,
         late_minutes: record?.late_minutes || 0,
         early_leave_minutes: record?.early_leave_minutes || 0,
+        overtime_minutes: record?.overtime_minutes || 0,
+        total_work_minutes: record?.total_work_minutes,
       }
     })
 
     const checkedIn = employees.filter((e) => e.check_in_time).length
     const checkedOut = employees.filter((e) => e.check_out_time).length
     const onLeave = employees.filter((e) => e.status === 'leave').length
-    const lateCount = employees.filter((e) => e.status === 'late').length
+    const lateCount = employees.filter((e) => e.late_minutes > 0).length
+    const earlyLeaveCount = employees.filter((e) => e.early_leave_minutes > 0).length
+    const overtimeCount = employees.filter((e) => e.overtime_minutes > 0).length
 
     return {
       success: true,
@@ -1025,6 +1033,8 @@ export async function getTeamAttendanceStatus(
         not_checked_in: employees.length - checkedIn - onLeave,
         on_leave: onLeave,
         late_count: lateCount,
+        early_leave_count: earlyLeaveCount,
+        overtime_count: overtimeCount,
         employees,
       },
     }
@@ -1078,6 +1088,204 @@ export async function editAttendanceRecord(
   }
 }
 
+/**
+ * 모든 직원의 월별 통계 조회 (관리자용)
+ */
+export async function getAllUsersMonthlyStatistics(
+  clinicId: string,
+  year: number,
+  month: number,
+  branchId?: string
+): Promise<{
+  success: boolean
+  statistics?: (AttendanceStatistics & { user_name: string })[]
+  error?: string
+}> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    // 해당 클리닉의 활성 직원 목록 조회
+    let usersQuery = supabase
+      .from('users')
+      .select('id, name')
+      .eq('clinic_id', clinicId)
+      .eq('status', 'active')
+
+    if (branchId) {
+      usersQuery = usersQuery.or(`primary_branch_id.eq.${branchId},primary_branch_id.is.null`)
+    }
+
+    const { data: users, error: usersError } = await usersQuery
+
+    if (usersError) {
+      return { success: false, error: usersError.message }
+    }
+
+    if (!users || users.length === 0) {
+      return { success: true, statistics: [] }
+    }
+
+    const userIds = users.map((u: { id: string; name: string }) => u.id)
+    const userNameMap = new Map(users.map((u: { id: string; name: string }) => [u.id, u.name]))
+
+    // 해당 월의 통계 조회
+    const { data: stats, error: statsError } = await supabase
+      .from('attendance_statistics')
+      .select('*')
+      .eq('year', year)
+      .eq('month', month)
+      .in('user_id', userIds)
+
+    if (statsError) {
+      return { success: false, error: statsError.message }
+    }
+
+    const statsWithNames = (stats || []).map((stat: AttendanceStatistics) => ({
+      ...stat,
+      user_name: userNameMap.get(stat.user_id) || '알 수 없음',
+    }))
+
+    // 통계가 없는 사용자도 포함 (0으로 초기화)
+    const existingUserIds = new Set(stats?.map((s: AttendanceStatistics) => s.user_id) || [])
+    const missingStats = users
+      .filter((u: { id: string; name: string }) => !existingUserIds.has(u.id))
+      .map((u: { id: string; name: string }) => ({
+        id: '',
+        user_id: u.id,
+        clinic_id: clinicId,
+        year,
+        month,
+        total_work_days: 0,
+        present_days: 0,
+        absent_days: 0,
+        leave_days: 0,
+        holiday_days: 0,
+        late_count: 0,
+        total_late_minutes: 0,
+        avg_late_minutes: 0,
+        early_leave_count: 0,
+        total_early_leave_minutes: 0,
+        avg_early_leave_minutes: 0,
+        overtime_count: 0,
+        total_overtime_minutes: 0,
+        avg_overtime_minutes: 0,
+        total_work_minutes: 0,
+        avg_work_minutes_per_day: 0,
+        attendance_rate: 0,
+        last_calculated_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_name: u.name,
+      }))
+
+    return {
+      success: true,
+      statistics: [...statsWithNames, ...missingStats].sort((a, b) =>
+        a.user_name.localeCompare(b.user_name, 'ko')
+      ),
+    }
+  } catch (error: any) {
+    console.error('[getAllUsersMonthlyStatistics] Error:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 특정 직원의 월별 상세 기록 조회 (관리자용)
+ */
+export async function getUserMonthlyRecords(
+  userId: string,
+  year: number,
+  month: number
+): Promise<{
+  success: boolean
+  records?: AttendanceRecord[]
+  error?: string
+}> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
+
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('work_date', startDate)
+      .lte('work_date', endDate)
+      .order('work_date', { ascending: true })
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, records: data as AttendanceRecord[] }
+  } catch (error: any) {
+    console.error('[getUserMonthlyRecords] Error:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 모든 직원의 월별 통계 일괄 갱신 (관리자용)
+ */
+export async function refreshAllUsersMonthlyStatistics(
+  clinicId: string,
+  year: number,
+  month: number,
+  branchId?: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    // 해당 클리닉의 활성 직원 목록 조회
+    let usersQuery = supabase
+      .from('users')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('status', 'active')
+
+    if (branchId) {
+      usersQuery = usersQuery.or(`primary_branch_id.eq.${branchId},primary_branch_id.is.null`)
+    }
+
+    const { data: users, error: usersError } = await usersQuery
+
+    if (usersError) {
+      return { success: false, error: usersError.message }
+    }
+
+    if (!users || users.length === 0) {
+      return { success: true }
+    }
+
+    // 각 직원의 통계 갱신
+    for (const user of users) {
+      await supabase.rpc('update_monthly_statistics', {
+        p_user_id: user.id,
+        p_year: year,
+        p_month: month,
+      })
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('[refreshAllUsersMonthlyStatistics] Error:', error)
+    return { success: false, error: error.message }
+  }
+}
+
 export const attendanceService = {
   generateDailyQRCode,
   getQRCodeForToday,
@@ -1091,4 +1299,7 @@ export const attendanceService = {
   updateMonthlyStatistics,
   getTeamAttendanceStatus,
   editAttendanceRecord,
+  getAllUsersMonthlyStatistics,
+  getUserMonthlyRecords,
+  refreshAllUsersMonthlyStatistics,
 }

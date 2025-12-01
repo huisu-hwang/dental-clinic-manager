@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, BarChart3, Clock, TrendingUp, Info } from 'lucide-react'
+import { Calendar, BarChart3, Clock, TrendingUp, Info, User, Users } from 'lucide-react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePermissions } from '@/hooks/usePermissions'
 import type { AttendanceStatistics } from '@/types/attendance'
+import AdminAttendanceStats from './AdminAttendanceStats'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
@@ -19,8 +21,13 @@ const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: s
   </div>
 )
 
+type StatsView = 'personal' | 'team'
+
 export default function AttendanceStats() {
   const { user } = useAuth()
+  const { hasPermission } = usePermissions()
+  const canViewAllStats = hasPermission('attendance_view_all')
+  const [statsView, setStatsView] = useState<StatsView>('personal')
   const [statistics, setStatistics] = useState<AttendanceStatistics | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
@@ -86,6 +93,39 @@ export default function AttendanceStats() {
 
   return (
     <div className="space-y-6">
+      {/* 관리자용 뷰 선택 탭 */}
+      {canViewAllStats && (
+        <div className="bg-white rounded-lg shadow p-1 inline-flex">
+          <button
+            onClick={() => setStatsView('personal')}
+            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              statsView === 'personal'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <User className="w-4 h-4 mr-2" />
+            내 통계
+          </button>
+          <button
+            onClick={() => setStatsView('team')}
+            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              statsView === 'team'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            전체 직원 통계
+          </button>
+        </div>
+      )}
+
+      {/* 관리자용 전체 통계 */}
+      {statsView === 'team' && canViewAllStats ? (
+        <AdminAttendanceStats />
+      ) : (
+      <>
       {/* 섹션 1: 기간 선택 */}
       <div>
         <SectionHeader number={1} title="기간 선택" icon={Calendar} />
@@ -294,6 +334,8 @@ export default function AttendanceStats() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }
