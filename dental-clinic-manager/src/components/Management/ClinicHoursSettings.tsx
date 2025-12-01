@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { clinicHoursService } from '@/lib/clinicHoursService'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   DAY_NAMES,
   DEFAULT_CLINIC_HOURS,
@@ -19,6 +20,7 @@ interface ClinicHoursSettingsProps {
 }
 
 export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsProps) {
+  const { user } = useAuth()
   const [hoursData, setHoursData] = useState<ClinicHoursInput[]>(DEFAULT_CLINIC_HOURS)
   const [holidays, setHolidays] = useState<ClinicHoliday[]>([])
   const [loading, setLoading] = useState(true)
@@ -147,9 +149,10 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
     setSaving(true)
     console.log('[ClinicHoursSettings] Saving hours for clinic:', clinicId)
     console.log('[ClinicHoursSettings] Hours data:', hoursData)
+    console.log('[ClinicHoursSettings] User ID:', user?.id)
 
     try {
-      const result = await clinicHoursService.updateClinicHours(clinicId, hoursData)
+      const result = await clinicHoursService.updateClinicHours(clinicId, hoursData, user?.id)
       console.log('[ClinicHoursSettings] Save result:', result)
 
       if (result.error) {

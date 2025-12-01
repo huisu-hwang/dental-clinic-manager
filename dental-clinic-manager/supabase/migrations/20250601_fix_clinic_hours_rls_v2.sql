@@ -109,9 +109,11 @@ CREATE POLICY "Owners can delete clinic holidays"
 -- =====================================================
 
 -- 진료시간 업데이트 RPC 함수
+-- 참고: 이 앱은 자체 인증 시스템을 사용하므로 auth.uid() 대신 user_id 파라미터 사용
 CREATE OR REPLACE FUNCTION update_clinic_hours(
   p_clinic_id UUID,
-  p_hours_data JSONB
+  p_hours_data JSONB,
+  p_user_id UUID DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -121,20 +123,40 @@ AS $$
 DECLARE
   v_user_clinic_id UUID;
   v_user_role TEXT;
+  v_user_status TEXT;
   v_hour JSONB;
   v_result JSONB;
+  v_actual_user_id UUID;
 BEGIN
-  -- 사용자 권한 확인
-  SELECT clinic_id, role INTO v_user_clinic_id, v_user_role
-  FROM users
-  WHERE id = auth.uid();
+  -- user_id 결정: 파라미터가 있으면 사용, 없으면 auth.uid() 사용
+  v_actual_user_id := COALESCE(p_user_id, auth.uid());
 
-  -- 권한 검증
-  IF v_user_clinic_id IS NULL OR v_user_clinic_id != p_clinic_id THEN
+  IF v_actual_user_id IS NULL THEN
+    RAISE EXCEPTION 'Access denied: User not authenticated';
+  END IF;
+
+  -- 사용자 권한 확인
+  SELECT clinic_id, role, status INTO v_user_clinic_id, v_user_role, v_user_status
+  FROM users
+  WHERE id = v_actual_user_id;
+
+  -- 사용자 존재 여부 확인
+  IF v_user_clinic_id IS NULL THEN
+    RAISE EXCEPTION 'Access denied: User not found';
+  END IF;
+
+  -- 사용자 상태 확인
+  IF v_user_status != 'active' THEN
+    RAISE EXCEPTION 'Access denied: User account is not active';
+  END IF;
+
+  -- 소속 병원 확인
+  IF v_user_clinic_id != p_clinic_id THEN
     RAISE EXCEPTION 'Access denied: User does not belong to this clinic';
   END IF;
 
-  IF v_user_role NOT IN ('owner', 'manager') THEN
+  -- 권한 검증 (owner, vice_director, manager 허용)
+  IF v_user_role NOT IN ('owner', 'vice_director', 'manager') THEN
     RAISE EXCEPTION 'Access denied: Insufficient permissions';
   END IF;
 
