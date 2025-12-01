@@ -7,11 +7,13 @@ import {
   UserGroupIcon,
   CreditCardIcon,
   ShieldCheckIcon,
-  ClockIcon
+  ClockIcon,
+  BellIcon
 } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
 import type { UserProfile } from '@/contexts/AuthContext'
 import ClinicHoursSettings from './ClinicHoursSettings'
+import NotificationSettings from './NotificationSettings'
 
 // Clinic 타입을 이 파일에 직접 정의
 interface Clinic {
@@ -37,7 +39,7 @@ interface ClinicSettingsProps {
 }
 
 export default function ClinicSettings({ currentUser }: ClinicSettingsProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'hours'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'hours' | 'notifications'>('info')
   const [clinic, setClinic] = useState<Clinic | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -222,6 +224,17 @@ const [formData, setFormData] = useState<ClinicFormData>({
           >
             <ClockIcon className="h-5 w-5" />
             진료시간
+          </button>
+          <button
+            onClick={() => setActiveTab('notifications')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
+              activeTab === 'notifications'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <BellIcon className="h-5 w-5" />
+            알림 관리
           </button>
         </div>
       </div>
@@ -502,11 +515,21 @@ const [formData, setFormData] = useState<ClinicFormData>({
         </div>
       )}
         </>
-      ) : (
+      ) : activeTab === 'hours' ? (
         <>
           {/* 진료시간 설정 탭 */}
           {currentUser.clinic_id && (
             <ClinicHoursSettings clinicId={currentUser.clinic_id} />
+          )}
+        </>
+      ) : (
+        <>
+          {/* 알림 관리 탭 */}
+          {currentUser.clinic_id && (
+            <NotificationSettings
+              currentUser={currentUser}
+              clinicId={currentUser.clinic_id}
+            />
           )}
         </>
       )}

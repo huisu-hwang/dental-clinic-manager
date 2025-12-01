@@ -7,6 +7,7 @@ import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/ui/Toast'
+import { useClinicNotifications } from '@/hooks/useClinicNotifications'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, updateUser } = useAuth()
@@ -20,6 +21,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     message: string
     type: 'success' | 'error' | 'warning' | 'info'
   }>({ show: false, message: '', type: 'info' })
+
+  // 헤더 알림 가져오기
+  const { notifications } = useClinicNotifications({
+    clinicId: user?.clinic_id,
+    userRole: user?.role,
+    enabled: !!user?.clinic_id
+  })
 
   // 페이지 변경 시 모바일 메뉴 닫기
   useEffect(() => {
@@ -99,6 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onProfileClick={() => setShowProfile(true)}
             onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             isMenuOpen={isMobileMenuOpen}
+            notifications={notifications}
           />
         </div>
       </div>

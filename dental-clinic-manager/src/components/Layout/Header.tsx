@@ -4,6 +4,8 @@ import { Shield, LogOut, User, Cog, Crown, Menu, X } from 'lucide-react'
 import Link from 'next/link'
 
 import type { UserProfile } from '@/contexts/AuthContext'
+import type { TodayNotification } from '@/types/notification'
+import HeaderNotificationBanner from './HeaderNotificationBanner'
 
 interface HeaderProps {
   dbStatus?: 'connected' | 'connecting' | 'error'
@@ -13,6 +15,7 @@ interface HeaderProps {
   onProfileClick?: () => void
   onMenuToggle?: () => void
   isMenuOpen?: boolean
+  notifications?: TodayNotification[]
 }
 
 export default function Header({
@@ -22,7 +25,8 @@ export default function Header({
   showManagementLink = true,
   onProfileClick,
   onMenuToggle,
-  isMenuOpen = false
+  isMenuOpen = false,
+  notifications = []
 }: HeaderProps) {
 
   const getStatusColor = () => {
@@ -77,6 +81,11 @@ export default function Header({
             </div>
           </div>
         </Link>
+      </div>
+
+      {/* 중앙: 알림 배너 (데스크탑에서만 표시) */}
+      <div className="hidden md:flex flex-1 justify-center min-w-0">
+        <HeaderNotificationBanner notifications={notifications} />
       </div>
 
       {/* 오른쪽: 상태 및 버튼들 */}
