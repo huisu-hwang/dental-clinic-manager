@@ -93,27 +93,27 @@ export default function Header({
         </div>
 
         {user && onLogout && (
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* Master Admin Link - 데스크탑에서만 텍스트 표시 */}
+          <div className="flex items-center gap-1">
+            {/* Master Admin Link */}
             {user.role === 'master_admin' && (
               <Link
                 href="/master"
-                className="flex items-center space-x-3 py-3 sm:py-2.5 px-4 sm:px-3 text-sm font-medium text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all duration-200 ease-in-out"
+                className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
                 title="마스터 관리"
               >
-                <Crown className="w-5 h-5" />
+                <Crown className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
                 <span className="hidden sm:inline">마스터</span>
               </Link>
             )}
 
-            {/* Management Link - 데스크탑에서만 텍스트 표시 */}
+            {/* Management Link */}
             {showManagementLink && user.role === 'owner' && (
               <Link
                 href="/management"
-                className="flex items-center space-x-3 py-3 sm:py-2.5 px-4 sm:px-3 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 ease-in-out"
+                className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
                 title="병원 관리"
               >
-                <Cog className="w-5 h-5" />
+                <Cog className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
                 <span className="hidden sm:inline">관리</span>
               </Link>
             )}
@@ -121,21 +121,24 @@ export default function Header({
             {/* 프로필 버튼 */}
             <button
               onClick={onProfileClick || (() => console.log('Profile click - no handler'))}
-              className="flex items-center space-x-3 py-3 sm:py-2.5 px-4 sm:px-3 text-sm font-medium text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all duration-200 ease-in-out"
+              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all duration-200"
               title="계정 정보"
             >
-              <User className="w-5 h-5 text-slate-400" />
+              <User className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
               <span className="hidden sm:inline">{user.name || user.userId}</span>
             </button>
+
+            {/* 구분선 */}
+            <div className="hidden sm:block w-px h-5 bg-slate-200 mx-1" />
 
             {/* 로그아웃 버튼 */}
             <button
               type="button"
               onClick={onLogout}
-              className="flex items-center space-x-3 py-3 sm:py-2.5 px-4 sm:px-3 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-all duration-200 ease-in-out"
+              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
               title="로그아웃"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
               <span className="hidden sm:inline">로그아웃</span>
             </button>
           </div>
