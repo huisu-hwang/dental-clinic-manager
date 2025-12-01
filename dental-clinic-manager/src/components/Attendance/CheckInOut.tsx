@@ -32,6 +32,8 @@ export default function CheckInOut() {
   const [locationError, setLocationError] = useState<string | null>(null)
   const [showScanner, setShowScanner] = useState(false)
   const [scannerMode, setScannerMode] = useState<'check-in' | 'check-out' | null>(null)
+  const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false)
+  const [pendingCheckoutCode, setPendingCheckoutCode] = useState<string | null>(null)
 
   // 실시간 시계
   useEffect(() => {
@@ -178,14 +180,32 @@ export default function CheckInOut() {
 
   const handleQRScanSuccess = async (code: string) => {
     console.log('[CheckInOut] QR Code scanned:', code)
-    setScannerMode(null) // 모달 닫기
+    const currentMode = scannerMode
+    setScannerMode(null) // 스캐너 모달 닫기
 
-    // 스캔된 QR 코드로 자동으로 출근/퇴근 처리
-    if (scannerMode === 'check-in') {
+    // 스캔된 QR 코드로 출근/퇴근 처리
+    if (currentMode === 'check-in') {
       await handleCheckIn(code)
-    } else if (scannerMode === 'check-out') {
-      await handleCheckOut(code)
+    } else if (currentMode === 'check-out') {
+      // 퇴근은 확인 절차를 거침
+      setPendingCheckoutCode(code)
+      setShowCheckoutConfirm(true)
     }
+  }
+
+  // 퇴근 확인 후 처리
+  const handleConfirmCheckout = async () => {
+    if (pendingCheckoutCode) {
+      setShowCheckoutConfirm(false)
+      await handleCheckOut(pendingCheckoutCode)
+      setPendingCheckoutCode(null)
+    }
+  }
+
+  // 퇴근 취소
+  const handleCancelCheckout = () => {
+    setShowCheckoutConfirm(false)
+    setPendingCheckoutCode(null)
   }
 
   const openScannerForCheckIn = () => {
@@ -423,6 +443,60 @@ export default function CheckInOut() {
 
             <div className="mt-4 text-center text-sm text-gray-600">
               QR 코드를 카메라에 비춰주세요
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 퇴근 확인 모달 */}
+      {showCheckoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center">
+            {/* 아이콘 */}
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center">
+                <Clock className="w-12 h-12 text-orange-500" />
+              </div>
+            </div>
+
+            {/* 제목 */}
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">퇴근 하시겠습니까?</h3>
+            <p className="text-gray-600 mb-6">퇴근 처리 전 확인해주세요.</p>
+
+            {/* 근무 정보 */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+              <div className="flex justify-between py-2 border-b border-gray-200">
+                <span className="text-gray-600">출근 시간</span>
+                <span className="font-semibold text-gray-800">{formatTime(todayRecord?.check_in_time)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-gray-200">
+                <span className="text-gray-600">현재 시간</span>
+                <span className="font-semibold text-gray-800">
+                  {currentTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-gray-600">근무 시간</span>
+                <span className="font-semibold text-blue-600">{formatMinutes(workingMinutes)}</span>
+              </div>
+            </div>
+
+            {/* 버튼 */}
+            <div className="space-y-3">
+              <button
+                onClick={handleConfirmCheckout}
+                disabled={loading}
+                className="w-full py-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors text-lg"
+              >
+                {loading ? '처리 중...' : '퇴근하기'}
+              </button>
+              <button
+                onClick={handleCancelCheckout}
+                disabled={loading}
+                className="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors"
+              >
+                취소
+              </button>
             </div>
           </div>
         </div>
