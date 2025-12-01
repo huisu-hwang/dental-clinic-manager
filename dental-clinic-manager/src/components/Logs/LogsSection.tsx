@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, MessageSquare, Gift, Package, ArrowRight, Check } from 'lucide-react'
+import { FileText, MessageSquare, Gift, Package, ArrowRight, Check, Search, X } from 'lucide-react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog } from '@/types'
 import SpecialNotesHistory from './SpecialNotesHistory'
 
@@ -39,6 +39,7 @@ export default function LogsSection({
   canDelete
 }: LogsSectionProps) {
   const [consultFilter, setConsultFilter] = useState<'all' | 'completed' | 'incomplete'>('all')
+  const [consultSearch, setConsultSearch] = useState('')  // 환자명 검색
   const [giftSort, setGiftSort] = useState<'default' | 'type' | 'date'>('default')
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<number>>(new Set())
@@ -70,6 +71,12 @@ export default function LogsSection({
   }
 
   const filteredConsultLogs = consultLogs.filter(log => {
+    // 환자명 검색 필터
+    const searchTerm = consultSearch.trim().toLowerCase()
+    if (searchTerm && !log.patient_name.toLowerCase().includes(searchTerm)) {
+      return false
+    }
+    // 진행 상태 필터
     if (consultFilter === 'all') return true
     if (consultFilter === 'completed') return log.consult_status === 'O'
     if (consultFilter === 'incomplete') return log.consult_status === 'X'
@@ -165,47 +172,76 @@ export default function LogsSection({
 
         {/* 상담 상세 기록 */}
         <div>
-          <div className="flex justify-between items-center pb-3 mb-4 border-b border-slate-200">
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
-                <MessageSquare className="w-4 h-4" />
+          <div className="flex flex-col gap-3 pb-3 mb-4 border-b border-slate-200">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <h3 className="text-base font-semibold text-slate-800">
+                  <span className="text-blue-600 mr-1">2.</span>
+                  상담 상세 기록
+                </h3>
               </div>
-              <h3 className="text-base font-semibold text-slate-800">
-                <span className="text-blue-600 mr-1">2.</span>
-                상담 상세 기록
-              </h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConsultFilter('all')}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    consultFilter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  전체 ({consultLogs.length})
+                </button>
+                <button
+                  onClick={() => setConsultFilter('completed')}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    consultFilter === 'completed'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  진행완료 ({consultLogs.filter(log => log.consult_status === 'O').length})
+                </button>
+                <button
+                  onClick={() => setConsultFilter('incomplete')}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    consultFilter === 'incomplete'
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  진행보류 ({consultLogs.filter(log => log.consult_status === 'X').length})
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setConsultFilter('all')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                  consultFilter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                전체 ({consultLogs.length})
-              </button>
-              <button
-                onClick={() => setConsultFilter('completed')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                  consultFilter === 'completed'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                진행완료 ({consultLogs.filter(log => log.consult_status === 'O').length})
-              </button>
-              <button
-                onClick={() => setConsultFilter('incomplete')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                  consultFilter === 'incomplete'
-                    ? 'bg-orange-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                진행보류 ({consultLogs.filter(log => log.consult_status === 'X').length})
-              </button>
+            {/* 환자명 검색 */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="환자명 검색..."
+                  value={consultSearch}
+                  onChange={(e) => setConsultSearch(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+                {consultSearch && (
+                  <button
+                    onClick={() => setConsultSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+                    title="검색어 지우기"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {consultSearch && (
+                <span className="text-sm text-slate-500">
+                  {filteredConsultLogs.length}건 검색됨
+                </span>
+              )}
             </div>
           </div>
           <div className="border border-slate-200 rounded-lg overflow-hidden">
