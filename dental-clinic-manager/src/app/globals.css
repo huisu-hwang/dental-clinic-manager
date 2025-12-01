@@ -37,6 +37,31 @@ html {
   }
 }
 
+/* iOS Chrome 입력 필드 텍스트 색상 문제 해결 */
+/* 다크 모드에서도 입력 필드는 항상 검정 텍스트 유지 */
+input,
+textarea,
+select {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+/* placeholder 스타일 */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+  -webkit-text-fill-color: #9ca3af !important;
+  opacity: 1;
+}
+
+/* disabled 상태 스타일 */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+}
+
 /* 안전 영역 (노치, 홈 버튼 등) */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .pb-safe {
