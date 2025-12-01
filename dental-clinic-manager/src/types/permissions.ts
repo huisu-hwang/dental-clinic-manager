@@ -53,6 +53,9 @@ export type Permission =
   | 'leave_balance_manage'   // 연차 잔여 수동 조정 (관리자)
   | 'leave_workflow_manage'  // 승인 프로세스 관리 (관리자)
   | 'leave_type_manage'      // 연차 종류 관리 (관리자)
+  // 알림 관리 권한
+  | 'notification_view'      // 알림 조회
+  | 'notification_manage'    // 알림 생성/수정/삭제
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -75,7 +78,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_approve_step1', 'leave_approve_step2', 'leave_approve_final',
     'leave_policy_view', 'leave_policy_manage',
     'leave_balance_view_own', 'leave_balance_view_all', 'leave_balance_manage',
-    'leave_workflow_manage', 'leave_type_manage'
+    'leave_workflow_manage', 'leave_type_manage',
+    // 알림 관리 (모든 권한)
+    'notification_view', 'notification_manage'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -95,7 +100,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_request_create', 'leave_request_view_own', 'leave_request_view_all', 'leave_request_cancel',
     'leave_approve_step1', 'leave_approve_step2',
     'leave_policy_view',
-    'leave_balance_view_own', 'leave_balance_view_all'
+    'leave_balance_view_own', 'leave_balance_view_all',
+    // 알림 조회
+    'notification_view'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
@@ -221,6 +228,10 @@ export const PERMISSION_GROUPS = {
     { key: 'leave_workflow_manage', label: '승인 프로세스 관리' },
     { key: 'leave_type_manage', label: '연차 종류 관리' }
   ],
+  '알림 관리': [
+    { key: 'notification_view', label: '알림 조회' },
+    { key: 'notification_manage', label: '알림 관리' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -280,5 +291,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'leave_balance_view_all': '전체 직원의 연차 잔여 현황을 조회할 수 있습니다.',
   'leave_balance_manage': '직원의 연차 잔여를 수동으로 조정할 수 있습니다.',
   'leave_workflow_manage': '연차 승인 프로세스를 설정하고 관리할 수 있습니다.',
-  'leave_type_manage': '연차 종류를 추가하고 관리할 수 있습니다.'
+  'leave_type_manage': '연차 종류를 추가하고 관리할 수 있습니다.',
+  // 알림 관리 권한 설명
+  'notification_view': '병원 알림을 조회할 수 있습니다.',
+  'notification_manage': '병원 알림을 생성, 수정, 삭제할 수 있습니다.'
 }
