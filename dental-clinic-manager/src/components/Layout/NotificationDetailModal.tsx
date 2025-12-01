@@ -9,8 +9,7 @@ import {
   CalendarIcon,
   CakeIcon,
   BellIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 import type { TodayNotification, NotificationCategory } from '@/types/notification'
 import { NOTIFICATION_CATEGORY_LABELS } from '@/types/notification'
@@ -137,10 +136,9 @@ export default function NotificationDetailModal({
                     </button>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                       onClick={handleDismiss}
                     >
-                      <CheckCircleIcon className="w-4 h-4" />
                       해제
                     </button>
                   </div>
