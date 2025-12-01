@@ -301,41 +301,41 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     )
   }
+
+  // 섹션 헤더 컴포넌트
+  const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
+    <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
+      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+        <Icon className="w-4 h-4" />
+      </div>
+      <h3 className="text-base font-semibold text-slate-800">
+        <span className="text-blue-600 mr-1">{number}.</span>
+        {title}
+      </h3>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
       {/* 메시지 */}
       {message && (
-        <div className={`p-4 rounded-lg ${
-          message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
+        <div className={`p-4 rounded-lg text-sm ${
+          message.type === 'success' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'
         }`}>
           {message.text}
         </div>
       )}
 
       {/* 요일별 진료시간 설정 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {/* 헤더 */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <ClockIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-bold text-white">요일별 진료시간</h3>
-              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Weekly Schedule</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 본문 */}
-        <div className="p-4 sm:p-6 space-y-3">
+      <div>
+        <SectionHeader number={1} title="요일별 진료시간" icon={ClockIcon} />
+        <div className="space-y-2">
           {hoursData.map((day) => (
-            <div key={day.day_of_week} className="bg-slate-50 rounded-lg p-3 sm:p-4">
+            <div key={day.day_of_week} className="border border-slate-200 rounded-lg p-3 sm:p-4 hover:bg-slate-50 transition-colors">
               <div className="flex flex-col gap-3">
                 {/* 상단: 요일 + 근무시간 */}
                 <div className="flex items-center gap-3 flex-wrap">
@@ -361,7 +361,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                         value={day.open_time}
                         onChange={(e) => handleDayChange(day.day_of_week, 'open_time', e.target.value)}
                         step="1800"
-                        className="px-2 sm:px-3 py-1.5 sm:py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        className="px-2 sm:px-3 py-1.5 sm:py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                       <span className="text-slate-500">~</span>
                       <input
@@ -369,25 +369,25 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                         value={day.close_time}
                         onChange={(e) => handleDayChange(day.day_of_week, 'close_time', e.target.value)}
                         step="1800"
-                        className="px-2 sm:px-3 py-1.5 sm:py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        className="px-2 sm:px-3 py-1.5 sm:py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   )}
 
                   {/* 휴무 표시 */}
                   {!day.is_open && (
-                    <span className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm font-medium">휴무</span>
+                    <span className="px-2 py-1 bg-red-100 text-red-600 rounded-full text-xs font-semibold">휴무</span>
                   )}
                 </div>
 
                 {/* 하단: 휴게시간 섹션 */}
                 {day.is_open && (
                   <div className="flex items-center gap-2 flex-wrap pl-0 sm:pl-14">
-                    <span className="text-sm font-medium text-slate-500 w-16">휴게시간</span>
+                    <span className="text-sm text-slate-500 w-16">휴게시간</span>
 
                     {/* 휴게시간 목록 */}
                     {day.breaks.map((breakTime, breakIndex) => (
-                      <div key={breakIndex} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1.5 rounded-lg">
+                      <div key={breakIndex} className="flex items-center gap-1.5 bg-slate-100 px-2 py-1.5 rounded-lg">
                         <input
                           type="time"
                           value={breakTime.start}
@@ -418,7 +418,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                     <button
                       type="button"
                       onClick={() => handleAddBreak(day.day_of_week)}
-                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors border border-blue-200 bg-blue-50"
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1.5 rounded-lg transition-colors"
                     >
                       <PlusCircleIcon className="w-4 h-4" />
                       추가
@@ -436,65 +436,51 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
         </div>
 
         {/* 저장 버튼 */}
-        <div className="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200">
-          <div className="flex justify-end">
-            <button
-              onClick={handleSaveHours}
-              disabled={saving}
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 font-medium transition-colors shadow-sm"
-            >
-              {saving ? '저장 중...' : '진료시간 저장'}
-            </button>
-          </div>
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={handleSaveHours}
+            disabled={saving}
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 font-medium transition-colors"
+          >
+            {saving ? '저장 중...' : '진료시간 저장'}
+          </button>
         </div>
       </div>
 
       {/* 휴진일 설정 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {/* 헤더 */}
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <CalendarDaysIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-bold text-white">휴진일 설정</h3>
-              <p className="text-orange-100 text-xs sm:text-sm hidden sm:block">Holidays</p>
-            </div>
-          </div>
+      <div>
+        <SectionHeader number={2} title="휴진일 설정" icon={CalendarDaysIcon} />
+
+        {/* 휴진일 추가 */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <input
+            type="date"
+            value={newHoliday.holiday_date}
+            onChange={(e) => setNewHoliday((prev) => ({ ...prev, holiday_date: e.target.value }))}
+            className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <input
+            type="text"
+            value={newHoliday.description}
+            onChange={(e) => setNewHoliday((prev) => ({ ...prev, description: e.target.value }))}
+            placeholder="설명 (선택사항)"
+            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <button
+            onClick={handleAddHoliday}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+          >
+            <PlusIcon className="w-4 h-4" />
+            추가
+          </button>
         </div>
 
-        {/* 본문 */}
-        <div className="p-4 sm:p-6">
-          {/* 휴진일 추가 */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <input
-              type="date"
-              value={newHoliday.holiday_date}
-              onChange={(e) => setNewHoliday((prev) => ({ ...prev, holiday_date: e.target.value }))}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-            />
-            <input
-              type="text"
-              value={newHoliday.description}
-              onChange={(e) => setNewHoliday((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder="설명 (선택사항)"
-              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-            />
-            <button
-              onClick={handleAddHoliday}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors shadow-sm"
-            >
-              <PlusIcon className="w-5 h-5" />
-              추가
-            </button>
-          </div>
-
-          {/* 휴진일 목록 */}
-          {holidays.length > 0 ? (
-            <div className="space-y-2">
+        {/* 휴진일 목록 */}
+        {holidays.length > 0 ? (
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <div className="divide-y divide-slate-200">
               {holidays.map((holiday) => (
-                <div key={holiday.id} className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                <div key={holiday.id} className="flex items-center justify-between p-3 sm:p-4 hover:bg-slate-50 transition-colors">
                   <div>
                     <div className="font-medium text-slate-800">
                       {new Date(holiday.holiday_date).toLocaleDateString('ko-KR', {
@@ -505,7 +491,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                       })}
                     </div>
                     {holiday.description && (
-                      <div className="text-sm text-slate-600 mt-0.5">{holiday.description}</div>
+                      <div className="text-sm text-slate-500 mt-0.5">{holiday.description}</div>
                     )}
                   </div>
                   <button
@@ -518,13 +504,13 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-12 text-slate-400">
-              <CalendarDaysIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>등록된 휴진일이 없습니다.</p>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="text-center py-8 border border-slate-200 rounded-lg">
+            <CalendarDaysIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-500">등록된 휴진일이 없습니다.</p>
+          </div>
+        )}
       </div>
     </div>
   )
