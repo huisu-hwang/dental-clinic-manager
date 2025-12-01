@@ -327,99 +327,101 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
         <div className="space-y-4">
           {hoursData.map((day) => (
             <div key={day.day_of_week} className="border-b border-slate-200 pb-4 last:border-0">
-              <div className="flex items-center gap-4 flex-wrap">
-                {/* 요일 */}
-                <div className="w-16 font-semibold text-slate-700">{DAY_NAMES[day.day_of_week]}요일</div>
+              <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                {/* 좌측: 요일 + 근무시간 */}
+                <div className="flex items-center gap-4 flex-wrap lg:min-w-[380px]">
+                  {/* 요일 */}
+                  <div className="w-16 font-semibold text-slate-700">{DAY_NAMES[day.day_of_week]}요일</div>
 
-                {/* 영업/휴무 토글 */}
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={day.is_open}
-                    onChange={(e) => handleDayChange(day.day_of_week, 'is_open', e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-slate-600">근무</span>
-                </label>
-
-                {/* 진료시간 입력 */}
-                {day.is_open && (
-                  <div className="flex items-center gap-2">
+                  {/* 근무시간 토글 */}
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
-                      type="time"
-                      value={day.open_time}
-                      onChange={(e) => handleDayChange(day.day_of_week, 'open_time', e.target.value)}
-                      step="1800"
-                      className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                      type="checkbox"
+                      checked={day.is_open}
+                      onChange={(e) => handleDayChange(day.day_of_week, 'is_open', e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                     />
-                    <span className="text-slate-600">~</span>
-                    <input
-                      type="time"
-                      value={day.close_time}
-                      onChange={(e) => handleDayChange(day.day_of_week, 'close_time', e.target.value)}
-                      step="1800"
-                      className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                )}
+                    <span className="text-sm text-slate-600">근무시간</span>
+                  </label>
 
-                {/* 휴무 표시 */}
-                {!day.is_open && (
-                  <span className="text-red-600 font-medium">휴무</span>
-                )}
-              </div>
-
-              {/* 휴게시간 섹션 */}
-              {day.is_open && (
-                <div className="mt-3 ml-16 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-600">휴게시간</span>
-                    <button
-                      type="button"
-                      onClick={() => handleAddBreak(day.day_of_week)}
-                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded-md transition-colors"
-                    >
-                      <PlusCircleIcon className="w-4 h-4" />
-                      추가
-                    </button>
-                  </div>
-
-                  {day.breaks.length === 0 ? (
-                    <div className="text-sm text-slate-400">휴게시간 없음</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {day.breaks.map((breakTime, breakIndex) => (
-                        <div key={breakIndex} className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500 w-6">{breakIndex + 1}.</span>
-                          <input
-                            type="time"
-                            value={breakTime.start}
-                            onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'start', e.target.value)}
-                            step="1800"
-                            className="px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                          />
-                          <span className="text-slate-600">~</span>
-                          <input
-                            type="time"
-                            value={breakTime.end}
-                            onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'end', e.target.value)}
-                            step="1800"
-                            className="px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveBreak(day.day_of_week, breakIndex)}
-                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-                            title="휴게시간 삭제"
-                          >
-                            <XCircleIcon className="w-5 h-5" />
-                          </button>
-                        </div>
-                      ))}
+                  {/* 진료시간 입력 */}
+                  {day.is_open && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="time"
+                        value={day.open_time}
+                        onChange={(e) => handleDayChange(day.day_of_week, 'open_time', e.target.value)}
+                        step="1800"
+                        className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <span className="text-slate-600">~</span>
+                      <input
+                        type="time"
+                        value={day.close_time}
+                        onChange={(e) => handleDayChange(day.day_of_week, 'close_time', e.target.value)}
+                        step="1800"
+                        className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </div>
                   )}
+
+                  {/* 휴무 표시 */}
+                  {!day.is_open && (
+                    <span className="text-red-600 font-medium">휴무</span>
+                  )}
                 </div>
-              )}
+
+                {/* 우측: 휴게시간 섹션 */}
+                {day.is_open && (
+                  <div className="flex-1 lg:border-l lg:border-slate-200 lg:pl-6 ml-0 lg:ml-0 pl-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-slate-600">휴게시간</span>
+                      <button
+                        type="button"
+                        onClick={() => handleAddBreak(day.day_of_week)}
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded-md transition-colors"
+                      >
+                        <PlusCircleIcon className="w-4 h-4" />
+                        추가
+                      </button>
+                    </div>
+
+                    {day.breaks.length === 0 ? (
+                      <div className="text-sm text-slate-400">휴게시간 없음</div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {day.breaks.map((breakTime, breakIndex) => (
+                          <div key={breakIndex} className="flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-md">
+                            <input
+                              type="time"
+                              value={breakTime.start}
+                              onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'start', e.target.value)}
+                              step="1800"
+                              className="px-2 py-1 border border-slate-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500 w-24"
+                            />
+                            <span className="text-slate-500 text-sm">~</span>
+                            <input
+                              type="time"
+                              value={breakTime.end}
+                              onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'end', e.target.value)}
+                              step="1800"
+                              className="px-2 py-1 border border-slate-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500 w-24"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBreak(day.day_of_week, breakIndex)}
+                              className="p-0.5 text-red-400 hover:text-red-600 rounded transition-colors"
+                              title="휴게시간 삭제"
+                            >
+                              <XCircleIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* 에러 메시지 */}
               {errors[day.day_of_week] && (
