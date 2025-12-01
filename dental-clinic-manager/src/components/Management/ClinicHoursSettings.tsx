@@ -459,6 +459,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                       )}
                     </div>
                   )}
+                </div>
               </div>
 
               {/* 에러 메시지 */}
