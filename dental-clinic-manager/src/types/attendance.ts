@@ -338,6 +338,8 @@ export interface TeamAttendanceStatus {
   not_checked_in: number;
   on_leave: number;
   late_count: number;
+  early_leave_count: number;
+  overtime_count: number;
   employees: {
     user_id: string;
     user_name: string;
@@ -348,6 +350,8 @@ export interface TeamAttendanceStatus {
     scheduled_end?: string | null;
     late_minutes: number;
     early_leave_minutes: number;
+    overtime_minutes: number;
+    total_work_minutes?: number | null;
   }[];
 }
 
