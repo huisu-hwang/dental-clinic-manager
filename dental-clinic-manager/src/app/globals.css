@@ -111,6 +111,23 @@ body {
 /* Tiptap Editor Styles */
 .ProseMirror {
   min-height: 400px;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+/* 프로토콜 에디터 콘텐츠 영역 - iOS Chrome 다크모드 대응 */
+.protocol-editor-content,
+.protocol-editor-content *,
+.prose,
+.prose * {
+  color: inherit;
+  -webkit-text-fill-color: inherit;
+}
+
+.protocol-editor-content,
+.prose {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
 }
 
 .ProseMirror:focus {
