@@ -40,7 +40,7 @@ export default function ConsultTable({ consultRows, onConsultRowsChange, isReadO
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">환자명</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">상담내용</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">진행여부</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">진행여부</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">참고사항</th>
               <th className="px-4 py-3 w-12"></th>
             </tr>
@@ -70,13 +70,14 @@ export default function ConsultTable({ consultRows, onConsultRowsChange, isReadO
                 </td>
                 <td className="px-4 py-2">
                   <select
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
                     value={row.consult_status}
                     onChange={(e) => updateRow(index, 'consult_status', e.target.value as 'O' | 'X')}
                     disabled={isReadOnly}
                   >
-                    <option value="O">O (진행)</option>
-                    <option value="X">X (보류)</option>
+                    <option value="O">진행</option>
+                    <option value="X">보류</option>
                   </select>
                 </td>
                 <td className="px-4 py-2">
@@ -147,13 +148,14 @@ export default function ConsultTable({ consultRows, onConsultRowsChange, isReadO
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">진행여부</label>
                   <select
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
                     value={row.consult_status}
                     onChange={(e) => updateRow(index, 'consult_status', e.target.value as 'O' | 'X')}
                     disabled={isReadOnly}
                   >
-                    <option value="O">O (진행)</option>
-                    <option value="X">X (보류)</option>
+                    <option value="O">진행</option>
+                    <option value="X">보류</option>
                   </select>
                 </div>
                 <div>
