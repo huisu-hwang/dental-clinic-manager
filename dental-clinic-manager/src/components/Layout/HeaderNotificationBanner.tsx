@@ -46,38 +46,48 @@ export default function HeaderNotificationBanner({
   const [isAnimating, setIsAnimating] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
 
-  // 알림이 없으면 렌더링하지 않음
-  if (!notifications || notifications.length === 0) {
-    return null
-  }
+  // 알림 개수 (hooks에서 안전하게 사용하기 위해)
+  const notificationCount = notifications?.length || 0
 
   // 다음 알림으로 이동
   const goToNext = useCallback(() => {
-    if (notifications.length <= 1) return
+    if (notificationCount <= 1) return
     setIsAnimating(true)
     setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % notifications.length)
+      setCurrentIndex((prev) => (prev + 1) % notificationCount)
       setIsAnimating(false)
     }, 150)
-  }, [notifications.length])
+  }, [notificationCount])
 
   // 이전 알림으로 이동
   const goToPrev = useCallback(() => {
-    if (notifications.length <= 1) return
+    if (notificationCount <= 1) return
     setIsAnimating(true)
     setTimeout(() => {
-      setCurrentIndex((prev) => (prev - 1 + notifications.length) % notifications.length)
+      setCurrentIndex((prev) => (prev - 1 + notificationCount) % notificationCount)
       setIsAnimating(false)
     }, 150)
-  }, [notifications.length])
+  }, [notificationCount])
 
   // 자동 순환
   useEffect(() => {
-    if (notifications.length <= 1 || isPaused) return
+    if (notificationCount <= 1 || isPaused) return
 
     const interval = setInterval(goToNext, autoRotateInterval)
     return () => clearInterval(interval)
-  }, [notifications.length, isPaused, autoRotateInterval, goToNext])
+  }, [notificationCount, isPaused, autoRotateInterval, goToNext])
+
+  // currentIndex가 범위를 벗어나지 않도록 보정
+  useEffect(() => {
+    if (notificationCount > 0 && currentIndex >= notificationCount) {
+      setCurrentIndex(0)
+    }
+  }, [notificationCount, currentIndex])
+
+  // 알림이 없으면 렌더링하지 않음 (hooks 호출 후에 체크)
+  if (!notifications || notificationCount === 0) {
+    return null
+  }
 
   const currentNotification = notifications[currentIndex]
   const IconComponent = CategoryIcons[currentNotification.category]
