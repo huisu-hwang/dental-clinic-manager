@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Users, Clock, Settings, Info } from 'lucide-react'
+import { Calendar, Users, Info } from 'lucide-react'
 import { workScheduleService } from '@/lib/workScheduleService'
 import { clinicHoursService } from '@/lib/clinicHoursService'
 import { useAuth } from '@/contexts/AuthContext'
@@ -36,14 +36,6 @@ export default function ScheduleManagement() {
   const [workSchedule, setWorkSchedule] = useState<WorkSchedule | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-
-  // 일괄 설정 모드
-  const [bulkMode, setBulkMode] = useState(false)
-  const [bulkStartTime, setBulkStartTime] = useState('09:00')
-  const [bulkEndTime, setBulkEndTime] = useState('18:00')
-  const [bulkBreakStart, setBulkBreakStart] = useState('12:00')
-  const [bulkBreakEnd, setBulkBreakEnd] = useState('13:00')
-  const [bulkWorkDays, setBulkWorkDays] = useState<DayName[]>(['monday', 'tuesday', 'wednesday', 'thursday', 'friday'])
 
   const dayOrder: DayName[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
@@ -105,52 +97,6 @@ export default function ScheduleManagement() {
     }
   }
 
-  const handleBulkScheduleCreate = async () => {
-    if (!selectedUser) return
-
-    setLoading(true)
-    setMessage(null)
-
-    try {
-      // WorkSchedule 객체 생성
-      const newSchedule: WorkSchedule = {} as WorkSchedule
-
-      dayOrder.forEach(day => {
-        if (bulkWorkDays.includes(day)) {
-          newSchedule[day] = {
-            start: bulkStartTime,
-            end: bulkEndTime,
-            breakStart: bulkBreakStart,
-            breakEnd: bulkBreakEnd,
-            isWorking: true,
-          }
-        } else {
-          newSchedule[day] = {
-            start: null,
-            end: null,
-            breakStart: null,
-            breakEnd: null,
-            isWorking: false,
-          }
-        }
-      })
-
-      const result = await workScheduleService.updateUserWorkSchedule(selectedUser, newSchedule)
-
-      if (result.success) {
-        setMessage({ type: 'success', text: '주간 스케줄이 저장되었습니다!' })
-        await loadUserSchedule()
-        setBulkMode(false)
-      } else {
-        setMessage({ type: 'error', text: result.error || '스케줄 저장 실패' })
-      }
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || '스케줄 저장 중 오류가 발생했습니다.' })
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleUpdateDaySchedule = async (
     dayName: DayName,
     daySchedule: DaySchedule
@@ -179,13 +125,6 @@ export default function ScheduleManagement() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const toggleWorkDay = (dayName: DayName) => {
-    const newDays = bulkWorkDays.includes(dayName)
-      ? bulkWorkDays.filter((d) => d !== dayName)
-      : [...bulkWorkDays, dayName]
-    setBulkWorkDays(newDays)
   }
 
   // 병원 진료시간 불러오기
@@ -223,7 +162,6 @@ export default function ScheduleManagement() {
           text: '병원 진료시간을 직원 스케줄에 적용했습니다.',
         })
         await loadUserSchedule()
-        setBulkMode(false) // 개별 설정 모드로 전환하여 요일별 시간 확인 가능
       } else {
         setMessage({
           type: 'error',
@@ -269,14 +207,11 @@ export default function ScheduleManagement() {
           </div>
           <div className="flex items-end">
             <button
-              onClick={() => setBulkMode(!bulkMode)}
-              className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
-                bulkMode
-                  ? 'bg-slate-200 text-slate-700'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
+              onClick={loadClinicHours}
+              disabled={loading || !selectedUser}
+              className="w-full px-4 py-2 rounded-lg font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
-              {bulkMode ? '개별 설정' : '일괄 설정'}
+              병원 진료시간 가져오기
             </button>
           </div>
         </div>
@@ -294,110 +229,9 @@ export default function ScheduleManagement() {
         </div>
       )}
 
-      {/* 일괄 설정 모드 */}
-      {bulkMode ? (
-        <div>
-          <SectionHeader number={2} title="주간 스케줄 일괄 설정" icon={Settings} />
-          <div className="space-y-4">
-            {/* 병원 진료시간 가져오기 버튼 */}
-            <div className="flex justify-end">
-              <button
-                onClick={loadClinicHours}
-                disabled={loading}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
-              >
-                병원 진료시간 가져오기
-              </button>
-            </div>
-
-            {/* 시간 설정 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">출근 시간</label>
-                <input
-                  type="time"
-                  value={bulkStartTime}
-                  onChange={(e) => setBulkStartTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">퇴근 시간</label>
-                <input
-                  type="time"
-                  value={bulkEndTime}
-                  onChange={(e) => setBulkEndTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">점심 시작</label>
-                <input
-                  type="time"
-                  value={bulkBreakStart}
-                  onChange={(e) => setBulkBreakStart(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">점심 종료</label>
-                <input
-                  type="time"
-                  value={bulkBreakEnd}
-                  onChange={(e) => setBulkBreakEnd(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* 근무 요일 선택 */}
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">근무 요일</label>
-              <div className="grid grid-cols-7 gap-2">
-                {dayOrder.map((day) => (
-                  <button
-                    key={day}
-                    onClick={() => toggleWorkDay(day)}
-                    className={`py-3 rounded-lg font-medium transition-colors ${
-                      bulkWorkDays.includes(day)
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {DAY_NAMES_KO[day].substring(0, 1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 미리보기 */}
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-              <h4 className="font-medium text-slate-800 mb-2">설정 미리보기</h4>
-              <div className="text-sm text-slate-600 space-y-1">
-                <p>• 근무 시간: {bulkStartTime} ~ {bulkEndTime}</p>
-                <p>• 점심 시간: {bulkBreakStart} ~ {bulkBreakEnd}</p>
-                <p>
-                  • 근무 요일:{' '}
-                  {bulkWorkDays.length > 0
-                    ? bulkWorkDays.map((d) => DAY_NAMES_KO[d]).join(', ')
-                    : '없음'}
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={handleBulkScheduleCreate}
-              disabled={loading || bulkWorkDays.length === 0}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? '저장 중...' : '스케줄 저장'}
-            </button>
-          </div>
-        </div>
-      ) : (
-        /* 개별 설정 모드 */
-        <div>
-          <SectionHeader number={2} title="요일별 스케줄" icon={Calendar} />
+      {/* 요일별 스케줄 */}
+      <div>
+        <SectionHeader number={2} title="요일별 스케줄" icon={Calendar} />
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <div className="flex items-center space-x-2">
@@ -434,8 +268,7 @@ export default function ScheduleManagement() {
               </table>
             </div>
           )}
-        </div>
-      )}
+      </div>
 
       {/* 안내 */}
       <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
@@ -444,10 +277,9 @@ export default function ScheduleManagement() {
           <div>
             <p className="text-xs font-medium text-slate-600 mb-1">안내사항</p>
             <ul className="text-xs text-slate-500 space-y-0.5 list-disc list-inside">
-              <li>일괄 설정: 모든 요일에 동일한 시간을 한 번에 적용합니다.</li>
-              <li>개별 설정: 각 요일별로 다른 시간을 설정할 수 있습니다.</li>
+              <li>&quot;병원 진료시간 가져오기&quot;를 클릭하면 병원 설정의 진료시간을 직원 스케줄에 적용합니다.</li>
+              <li>각 요일별로 다른 시간을 설정할 수 있습니다. 요일별로 &quot;수정&quot; 버튼을 클릭하세요.</li>
               <li>스케줄은 출퇴근 기록 및 근로계약서 작성 시 자동으로 사용됩니다.</li>
-              <li>&quot;병원 진료시간 가져오기&quot;를 클릭하면 병원 진료시간을 기본값으로 불러옵니다.</li>
             </ul>
           </div>
         </div>
