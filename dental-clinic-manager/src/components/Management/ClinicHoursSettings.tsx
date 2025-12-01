@@ -359,7 +359,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                         value={day.open_time}
                         onChange={(e) => handleDayChange(day.day_of_week, 'open_time', e.target.value)}
                         step="1800"
-                        className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[100px]"
+                        className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[130px]"
                       />
                       <span className="text-slate-400 text-sm">~</span>
                       <input
@@ -367,7 +367,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                         value={day.close_time}
                         onChange={(e) => handleDayChange(day.day_of_week, 'close_time', e.target.value)}
                         step="1800"
-                        className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[100px]"
+                        className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[130px]"
                       />
                     </div>
                   )}
@@ -390,7 +390,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                           value={breakTime.start}
                           onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'start', e.target.value)}
                           step="1800"
-                          className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[100px]"
+                          className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[130px]"
                         />
                         <span className="text-slate-400 text-sm">~</span>
                         <input
@@ -398,7 +398,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                           value={breakTime.end}
                           onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'end', e.target.value)}
                           step="1800"
-                          className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[100px]"
+                          className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[130px]"
                         />
                         <button
                           type="button"
