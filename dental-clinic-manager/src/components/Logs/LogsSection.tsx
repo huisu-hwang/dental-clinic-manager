@@ -409,7 +409,7 @@ export default function LogsSection({
                 <tbody>
                   {inventoryLogs.map(log => (
                     <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="p-2 sm:p-3 text-xs">
+                      <td className="p-2 sm:p-3">
                         {new Date(log.timestamp).toLocaleString('ko-KR')}
                       </td>
                       <td className="p-2 sm:p-3">{log.name}</td>
