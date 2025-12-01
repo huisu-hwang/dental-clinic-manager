@@ -98,10 +98,10 @@ export default function Header({
             {user.role === 'master_admin' && (
               <Link
                 href="/master"
-                className="flex items-center space-x-1.5 p-2 sm:px-3 sm:py-2 text-sm font-medium text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all duration-200 ease-in-out"
+                className="flex items-center space-x-3 py-3 sm:py-2.5 px-4 sm:px-3 text-sm font-medium text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all duration-200 ease-in-out"
                 title="마스터 관리"
               >
-                <Crown className="w-4 h-4" />
+                <Crown className="w-5 h-5" />
                 <span className="hidden sm:inline">마스터</span>
               </Link>
             )}
@@ -110,10 +110,10 @@ export default function Header({
             {showManagementLink && user.role === 'owner' && (
               <Link
                 href="/management"
-                className="flex items-center space-x-1.5 p-2 sm:px-3 sm:py-2 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 ease-in-out"
+                className="flex items-center space-x-3 py-3 sm:py-2.5 px-4 sm:px-3 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 ease-in-out"
                 title="병원 관리"
               >
-                <Cog className="w-4 h-4" />
+                <Cog className="w-5 h-5" />
                 <span className="hidden sm:inline">관리</span>
               </Link>
             )}
@@ -121,12 +121,10 @@ export default function Header({
             {/* 프로필 버튼 */}
             <button
               onClick={onProfileClick || (() => console.log('Profile click - no handler'))}
-              className="flex items-center space-x-2 p-2 sm:px-3 sm:py-2 text-sm font-medium text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all duration-200 ease-in-out"
+              className="flex items-center space-x-3 py-3 sm:py-2.5 px-4 sm:px-3 text-sm font-medium text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all duration-200 ease-in-out"
               title="계정 정보"
             >
-              <div className="w-6 h-6 bg-gradient-to-br from-slate-400 to-slate-500 rounded-full flex items-center justify-center">
-                <User className="w-3.5 h-3.5 text-white" />
-              </div>
+              <User className="w-5 h-5 text-slate-400" />
               <span className="hidden sm:inline">{user.name || user.userId}</span>
             </button>
 
@@ -134,10 +132,10 @@ export default function Header({
             <button
               type="button"
               onClick={onLogout}
-              className="flex items-center space-x-1.5 p-2 sm:px-3 sm:py-2 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-all duration-200 ease-in-out"
+              className="flex items-center space-x-3 py-3 sm:py-2.5 px-4 sm:px-3 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-all duration-200 ease-in-out"
               title="로그아웃"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-5 h-5" />
               <span className="hidden sm:inline">로그아웃</span>
             </button>
           </div>
