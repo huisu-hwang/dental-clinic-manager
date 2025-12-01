@@ -249,21 +249,21 @@ export default function LogsSection({
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
                   <tr>
-                    <th className="p-3 font-medium">날짜</th>
+                    <th className="p-3 font-medium whitespace-nowrap">날짜</th>
                     <th className="p-3 font-medium">환자명</th>
                     <th className="p-3 font-medium">상담내용</th>
-                    <th className="p-3 font-medium">진행여부</th>
+                    <th className="p-3 font-medium whitespace-nowrap">진행여부</th>
                     <th className="p-3 font-medium">참고사항</th>
-                    {onUpdateConsultStatus && <th className="p-3 font-medium text-center">상태변경</th>}
+                    {onUpdateConsultStatus && <th className="p-3 font-medium text-center whitespace-nowrap">상태변경</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredConsultLogs.map(log => (
                     <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="p-3">{log.date}</td>
+                      <td className="p-3 whitespace-nowrap">{log.date}</td>
                       <td className="p-3">{log.patient_name}</td>
                       <td className="p-3">{log.consult_content}</td>
-                      <td className="p-3">
+                      <td className="p-3 whitespace-nowrap">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           log.consult_status === 'O' || recentlyUpdatedIds.has(log.id!)
                             ? 'bg-green-100 text-green-800'
@@ -366,22 +366,22 @@ export default function LogsSection({
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
                   <tr>
-                    <th className="p-3 font-medium">날짜</th>
+                    <th className="p-3 font-medium whitespace-nowrap">날짜</th>
                     <th className="p-3 font-medium">환자명</th>
-                    <th className="p-3 font-medium">선물 종류</th>
-                    <th className="p-3 font-medium">수량</th>
-                    <th className="p-3 font-medium">네이버 리뷰 여부</th>
+                    <th className="p-3 font-medium whitespace-nowrap">선물 종류</th>
+                    <th className="p-3 font-medium whitespace-nowrap">수량</th>
+                    <th className="p-3 font-medium whitespace-nowrap">네이버 리뷰</th>
                     <th className="p-3 font-medium">비고</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedGiftLogs.map(log => (
                     <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="p-3">{log.date}</td>
+                      <td className="p-3 whitespace-nowrap">{log.date}</td>
                       <td className="p-3">{log.patient_name}</td>
-                      <td className="p-3">{log.gift_type}</td>
-                      <td className="p-3 text-center">1개</td>
-                      <td className="p-3">{log.naver_review}</td>
+                      <td className="p-3 whitespace-nowrap">{log.gift_type}</td>
+                      <td className="p-3 text-center whitespace-nowrap">1개</td>
+                      <td className="p-3 whitespace-nowrap">{log.naver_review}</td>
                       <td className="p-3">{log.notes}</td>
                     </tr>
                   ))}
