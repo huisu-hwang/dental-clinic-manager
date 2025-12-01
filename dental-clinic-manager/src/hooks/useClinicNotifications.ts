@@ -43,37 +43,28 @@ export function useClinicNotifications({
     setLoading(true)
     setError(null)
 
-    const supabase = getSupabase()
-    if (!supabase) {
-      setError('데이터베이스 연결 실패')
-      setLoading(false)
-      return
-    }
-
     try {
-      const { data, error: fetchError } = await supabase
-        .from('clinic_notifications')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .eq('is_active', true)
-        .order('priority', { ascending: true })
+      // API 라우트를 통해 알림 조회 (activeOnly=true로 활성화된 알림만)
+      const response = await fetch(
+        `/api/notifications?clinicId=${encodeURIComponent(clinicId)}&activeOnly=true`
+      )
+      const result = await response.json()
 
-      if (fetchError) {
-        // 테이블이 없을 수도 있음 - 에러를 조용히 처리
-        console.log('Notifications fetch info:', fetchError.message)
+      if (!response.ok) {
+        console.log('Notifications fetch info:', result.error)
         setNotifications([])
         setLoading(false)
         return
       }
 
-      if (!data || data.length === 0) {
+      if (!result.data || result.data.length === 0) {
         setNotifications([])
         setLoading(false)
         return
       }
 
       // 오늘 표시할 알림 필터링
-      const todayNotifications = (data as ClinicNotification[])
+      const todayNotifications = (result.data as ClinicNotification[])
         .filter(notification => {
           // 오늘 표시할 알림인지 확인
           if (!shouldShowNotificationToday(notification)) return false
@@ -106,7 +97,7 @@ export function useClinicNotifications({
     fetchNotifications()
   }, [fetchNotifications])
 
-  // 실시간 구독 (선택적)
+  // 실시간 구독 (선택적) - Supabase Realtime 사용
   useEffect(() => {
     if (!clinicId || !enabled) return
 

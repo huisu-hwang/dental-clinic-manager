@@ -14,7 +14,6 @@ import {
   BellIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
-import { getSupabase } from '@/lib/supabase'
 import type { UserProfile } from '@/contexts/AuthContext'
 import type {
   ClinicNotification,
@@ -23,10 +22,6 @@ import type {
   TargetRole,
   RecurrenceType,
   DayOfWeek,
-  NOTIFICATION_CATEGORY_LABELS,
-  TARGET_ROLE_LABELS,
-  RECURRENCE_TYPE_LABELS,
-  DAY_OF_WEEK_LABELS
 } from '@/types/notification'
 import {
   getDefaultNotificationFormData
@@ -108,27 +103,15 @@ export default function NotificationSettings({ currentUser, clinicId }: Notifica
 
   const fetchNotifications = async () => {
     setLoading(true)
-    const supabase = getSupabase()
-    if (!supabase) {
-      setError('데이터베이스 연결에 실패했습니다.')
-      setLoading(false)
-      return
-    }
-
     try {
-      const { data, error } = await supabase
-        .from('clinic_notifications')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .order('priority', { ascending: true })
-        .order('created_at', { ascending: false })
+      const response = await fetch(`/api/notifications?clinicId=${encodeURIComponent(clinicId)}`)
+      const result = await response.json()
 
-      if (error) {
-        console.error('Error fetching notifications:', error)
-        // 테이블이 없을 수도 있으니 빈 배열로 설정
+      if (!response.ok) {
+        console.error('Error fetching notifications:', result.error)
         setNotifications([])
       } else {
-        setNotifications((data as ClinicNotification[]) || [])
+        setNotifications((result.data as ClinicNotification[]) || [])
       }
     } catch (err) {
       console.error('Error:', err)
@@ -252,16 +235,8 @@ export default function NotificationSettings({ currentUser, clinicId }: Notifica
     setError('')
     setSuccess('')
 
-    const supabase = getSupabase()
-    if (!supabase) {
-      setError('데이터베이스 연결에 실패했습니다.')
-      setSaving(false)
-      return
-    }
-
     try {
       const notificationData = {
-        clinic_id: clinicId,
         title: formData.title.trim(),
         content: formData.content.trim() || null,
         category: formData.category,
@@ -274,29 +249,38 @@ export default function NotificationSettings({ currentUser, clinicId }: Notifica
         end_date: formData.end_date || null,
         is_active: formData.is_active,
         priority: formData.priority,
-        updated_at: new Date().toISOString()
       }
 
       if (editingNotification) {
-        // 수정
-        const { error } = await supabase
-          .from('clinic_notifications')
-          .update(notificationData)
-          .eq('id', editingNotification.id)
+        // 수정 - PUT 요청
+        const response = await fetch('/api/notifications', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clinicId,
+            userId: currentUser.id,
+            notificationId: editingNotification.id,
+            notification: notificationData
+          })
+        })
 
-        if (error) throw error
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || '알림 수정에 실패했습니다.')
         setSuccess('알림이 수정되었습니다.')
       } else {
-        // 생성
-        const { error } = await supabase
-          .from('clinic_notifications')
-          .insert({
-            ...notificationData,
-            created_by: currentUser.id,
-            created_at: new Date().toISOString()
+        // 생성 - POST 요청
+        const response = await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clinicId,
+            userId: currentUser.id,
+            notification: notificationData
           })
+        })
 
-        if (error) throw error
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || '알림 생성에 실패했습니다.')
         setSuccess('알림이 생성되었습니다.')
       }
 
@@ -311,16 +295,15 @@ export default function NotificationSettings({ currentUser, clinicId }: Notifica
   }
 
   const handleDelete = async (id: string) => {
-    const supabase = getSupabase()
-    if (!supabase) return
-
     try {
-      const { error } = await supabase
-        .from('clinic_notifications')
-        .delete()
-        .eq('id', id)
+      const response = await fetch(
+        `/api/notifications?clinicId=${encodeURIComponent(clinicId)}&userId=${encodeURIComponent(currentUser.id)}&notificationId=${encodeURIComponent(id)}`,
+        { method: 'DELETE' }
+      )
 
-      if (error) throw error
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || '알림 삭제에 실패했습니다.')
+
       setSuccess('알림이 삭제되었습니다.')
       fetchNotifications()
     } catch (err: any) {
@@ -331,19 +314,23 @@ export default function NotificationSettings({ currentUser, clinicId }: Notifica
   }
 
   const toggleActive = async (notification: ClinicNotification) => {
-    const supabase = getSupabase()
-    if (!supabase) return
-
     try {
-      const { error } = await supabase
-        .from('clinic_notifications')
-        .update({
-          is_active: !notification.is_active,
-          updated_at: new Date().toISOString()
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinicId,
+          userId: currentUser.id,
+          notificationId: notification.id,
+          isActive: !notification.is_active
         })
-        .eq('id', notification.id)
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error)
+      }
+
       fetchNotifications()
     } catch (err) {
       console.error('Error toggling notification:', err)
