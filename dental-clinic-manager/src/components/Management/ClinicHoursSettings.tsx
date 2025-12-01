@@ -307,31 +307,40 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* 메시지 */}
       {message && (
-        <div className={`p-4 rounded-md ${
-          message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+        <div className={`p-4 rounded-lg ${
+          message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
         }`}>
           {message.text}
         </div>
       )}
 
       {/* 요일별 진료시간 설정 */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <div className="flex items-center mb-6">
-          <ClockIcon className="w-6 h-6 text-blue-600 mr-2" />
-          <h3 className="text-xl font-bold text-slate-800">요일별 진료시간</h3>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* 헤더 */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <ClockIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-white">요일별 진료시간</h3>
+              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Weekly Schedule</p>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-4">
+        {/* 본문 */}
+        <div className="p-4 sm:p-6 space-y-3">
           {hoursData.map((day) => (
-            <div key={day.day_of_week} className="border-b border-slate-200 pb-4 last:border-0">
-              <div className="flex flex-col lg:flex-row lg:items-start gap-4">
-                {/* 좌측: 요일 + 근무시간 */}
-                <div className="flex items-center gap-4 flex-wrap lg:min-w-[380px]">
+            <div key={day.day_of_week} className="bg-slate-50 rounded-lg p-3 sm:p-4">
+              <div className="flex flex-col gap-3">
+                {/* 상단: 요일 + 근무시간 */}
+                <div className="flex items-center gap-3 flex-wrap">
                   {/* 요일 */}
-                  <div className="w-16 font-semibold text-slate-700">{DAY_NAMES[day.day_of_week]}요일</div>
+                  <div className="w-14 font-semibold text-slate-700">{DAY_NAMES[day.day_of_week]}요일</div>
 
                   {/* 근무시간 토글 */}
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -341,7 +350,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                       onChange={(e) => handleDayChange(day.day_of_week, 'is_open', e.target.checked)}
                       className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                     />
-                    <span className="text-sm text-slate-600">근무시간</span>
+                    <span className="text-sm text-slate-600">근무</span>
                   </label>
 
                   {/* 진료시간 입력 */}
@@ -352,73 +361,68 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                         value={day.open_time}
                         onChange={(e) => handleDayChange(day.day_of_week, 'open_time', e.target.value)}
                         step="1800"
-                        className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                        className="px-2 sm:px-3 py-1.5 sm:py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                       />
-                      <span className="text-slate-600">~</span>
+                      <span className="text-slate-500">~</span>
                       <input
                         type="time"
                         value={day.close_time}
                         onChange={(e) => handleDayChange(day.day_of_week, 'close_time', e.target.value)}
                         step="1800"
-                        className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                        className="px-2 sm:px-3 py-1.5 sm:py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                       />
                     </div>
                   )}
 
                   {/* 휴무 표시 */}
                   {!day.is_open && (
-                    <span className="text-red-600 font-medium">휴무</span>
+                    <span className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm font-medium">휴무</span>
                   )}
                 </div>
 
-                {/* 우측: 휴게시간 섹션 */}
+                {/* 하단: 휴게시간 섹션 */}
                 {day.is_open && (
-                  <div className="flex-1 lg:border-l lg:border-slate-200 lg:pl-6 ml-0 lg:ml-0 pl-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-medium text-slate-600">휴게시간</span>
-                      <button
-                        type="button"
-                        onClick={() => handleAddBreak(day.day_of_week)}
-                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded-md transition-colors"
-                      >
-                        <PlusCircleIcon className="w-4 h-4" />
-                        추가
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-2 flex-wrap pl-0 sm:pl-14">
+                    <span className="text-sm font-medium text-slate-500 w-16">휴게시간</span>
 
-                    {day.breaks.length === 0 ? (
-                      <div className="text-sm text-slate-400">휴게시간 없음</div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {day.breaks.map((breakTime, breakIndex) => (
-                          <div key={breakIndex} className="flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-md">
-                            <input
-                              type="time"
-                              value={breakTime.start}
-                              onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'start', e.target.value)}
-                              step="1800"
-                              className="px-2 py-1 border border-slate-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500 w-24"
-                            />
-                            <span className="text-slate-500 text-sm">~</span>
-                            <input
-                              type="time"
-                              value={breakTime.end}
-                              onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'end', e.target.value)}
-                              step="1800"
-                              className="px-2 py-1 border border-slate-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500 w-24"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveBreak(day.day_of_week, breakIndex)}
-                              className="p-0.5 text-red-400 hover:text-red-600 rounded transition-colors"
-                              title="휴게시간 삭제"
-                            >
-                              <XCircleIcon className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
+                    {/* 휴게시간 목록 */}
+                    {day.breaks.map((breakTime, breakIndex) => (
+                      <div key={breakIndex} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1.5 rounded-lg">
+                        <input
+                          type="time"
+                          value={breakTime.start}
+                          onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'start', e.target.value)}
+                          step="1800"
+                          className="px-1.5 py-0.5 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[90px]"
+                        />
+                        <span className="text-slate-400 text-sm">~</span>
+                        <input
+                          type="time"
+                          value={breakTime.end}
+                          onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'end', e.target.value)}
+                          step="1800"
+                          className="px-1.5 py-0.5 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-[90px]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBreak(day.day_of_week, breakIndex)}
+                          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                          title="삭제"
+                        >
+                          <XCircleIcon className="w-4 h-4" />
+                        </button>
                       </div>
-                    )}
+                    ))}
+
+                    {/* 추가 버튼 */}
+                    <button
+                      type="button"
+                      onClick={() => handleAddBreak(day.day_of_week)}
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors border border-blue-200 bg-blue-50"
+                    >
+                      <PlusCircleIcon className="w-4 h-4" />
+                      추가
+                    </button>
                   </div>
                 )}
               </div>
@@ -431,81 +435,96 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
           ))}
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={handleSaveHours}
-            disabled={saving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 font-medium"
-          >
-            {saving ? '저장 중...' : '진료시간 저장'}
-          </button>
+        {/* 저장 버튼 */}
+        <div className="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200">
+          <div className="flex justify-end">
+            <button
+              onClick={handleSaveHours}
+              disabled={saving}
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 font-medium transition-colors shadow-sm"
+            >
+              {saving ? '저장 중...' : '진료시간 저장'}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* 휴진일 설정 */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <div className="flex items-center mb-6">
-          <CalendarDaysIcon className="w-6 h-6 text-blue-600 mr-2" />
-          <h3 className="text-xl font-bold text-slate-800">휴진일 설정</h3>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* 헤더 */}
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <CalendarDaysIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-white">휴진일 설정</h3>
+              <p className="text-orange-100 text-xs sm:text-sm hidden sm:block">Holidays</p>
+            </div>
+          </div>
         </div>
 
-        {/* 휴진일 추가 */}
-        <div className="flex gap-4 mb-6">
-          <input
-            type="date"
-            value={newHoliday.holiday_date}
-            onChange={(e) => setNewHoliday((prev) => ({ ...prev, holiday_date: e.target.value }))}
-            className="px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          />
-          <input
-            type="text"
-            value={newHoliday.description}
-            onChange={(e) => setNewHoliday((prev) => ({ ...prev, description: e.target.value }))}
-            placeholder="설명 (선택사항)"
-            className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          />
-          <button
-            onClick={handleAddHoliday}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
-          >
-            <PlusIcon className="w-5 h-5" />
-            추가
-          </button>
-        </div>
+        {/* 본문 */}
+        <div className="p-4 sm:p-6">
+          {/* 휴진일 추가 */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <input
+              type="date"
+              value={newHoliday.holiday_date}
+              onChange={(e) => setNewHoliday((prev) => ({ ...prev, holiday_date: e.target.value }))}
+              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            />
+            <input
+              type="text"
+              value={newHoliday.description}
+              onChange={(e) => setNewHoliday((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="설명 (선택사항)"
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            />
+            <button
+              onClick={handleAddHoliday}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors shadow-sm"
+            >
+              <PlusIcon className="w-5 h-5" />
+              추가
+            </button>
+          </div>
 
-        {/* 휴진일 목록 */}
-        {holidays.length > 0 ? (
-          <div className="space-y-2">
-            {holidays.map((holiday) => (
-              <div key={holiday.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-md">
-                <div>
-                  <div className="font-medium text-slate-800">
-                    {new Date(holiday.holiday_date).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      weekday: 'short',
-                    })}
+          {/* 휴진일 목록 */}
+          {holidays.length > 0 ? (
+            <div className="space-y-2">
+              {holidays.map((holiday) => (
+                <div key={holiday.id} className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <div>
+                    <div className="font-medium text-slate-800">
+                      {new Date(holiday.holiday_date).toLocaleDateString('ko-KR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'short',
+                      })}
+                    </div>
+                    {holiday.description && (
+                      <div className="text-sm text-slate-600 mt-0.5">{holiday.description}</div>
+                    )}
                   </div>
-                  {holiday.description && (
-                    <div className="text-sm text-slate-600">{holiday.description}</div>
-                  )}
+                  <button
+                    onClick={() => handleDeleteHoliday(holiday.id)}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="삭제"
+                  >
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleDeleteHoliday(holiday.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-md"
-                  title="삭제"
-                >
-                  <TrashIcon className="w-5 h-5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-slate-500">
-            등록된 휴진일이 없습니다.
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-400">
+              <CalendarDaysIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>등록된 휴진일이 없습니다.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
