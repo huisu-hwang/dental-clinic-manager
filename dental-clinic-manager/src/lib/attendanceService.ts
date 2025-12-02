@@ -437,9 +437,26 @@ async function getUserScheduleForDate(
       return null
     }
 
-    // HH:MM 형식을 HH:MM:SS로 변환
-    const start_time = daySchedule.start ? `${daySchedule.start}:00` : undefined
-    const end_time = daySchedule.end ? `${daySchedule.end}:00` : undefined
+    // 시간 형식을 HH:MM:SS로 정규화하는 함수
+    const normalizeTimeFormat = (time: string | undefined): string | undefined => {
+      if (!time) return undefined
+
+      // 이미 HH:MM:SS 형식인지 확인 (콜론이 2개면 이미 초까지 포함)
+      const colonCount = (time.match(/:/g) || []).length
+      if (colonCount === 2) {
+        // 이미 HH:MM:SS 형식이면 그대로 반환
+        return time
+      } else if (colonCount === 1) {
+        // HH:MM 형식이면 :00 추가
+        return `${time}:00`
+      }
+
+      // 예상치 못한 형식이면 그대로 반환 (에러 방지)
+      return time
+    }
+
+    const start_time = normalizeTimeFormat(daySchedule.start)
+    const end_time = normalizeTimeFormat(daySchedule.end)
 
     return {
       start_time,
