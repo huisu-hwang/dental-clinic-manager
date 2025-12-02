@@ -116,10 +116,10 @@ body {
 }
 
 /* 인라인 스타일로 색상이 지정된 요소는 해당 색상 사용 */
+/* currentColor는 요소 자체의 color 속성 값을 참조 */
 .ProseMirror [style*="color"],
 .ProseMirror span[style] {
-  color: inherit !important;
-  -webkit-text-fill-color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
 }
 
 /* 프로토콜 에디터 콘텐츠 영역 - iOS Chrome 다크모드 대응 */
@@ -134,8 +134,7 @@ body {
 .protocol-editor-content span[style],
 .prose [style*="color"],
 .prose span[style] {
-  color: inherit !important;
-  -webkit-text-fill-color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
 }
 
 .ProseMirror:focus {
