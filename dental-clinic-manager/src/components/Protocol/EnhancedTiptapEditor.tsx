@@ -732,7 +732,8 @@ export default function EnhancedTiptapEditor({
                   <button
                     key={color}
                     type="button"
-                    onClick={() => {
+                    onMouseDown={(e) => {
+                      e.preventDefault() // 에디터 focus 유지
                       editor.chain().focus().setColor(color).run()
                       setShowColorPicker(false)
                     }}
@@ -744,7 +745,10 @@ export default function EnhancedTiptapEditor({
               </div>
 
               <div className="border-t border-slate-200 pt-3 mt-3">
-                <label className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors">
+                <label
+                  className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors"
+                  onMouseDown={(e) => e.preventDefault()} // 에디터 focus 유지
+                >
                   <input
                     type="color"
                     onChange={(e) => {
@@ -759,7 +763,8 @@ export default function EnhancedTiptapEditor({
 
               <button
                 type="button"
-                onClick={() => {
+                onMouseDown={(e) => {
+                  e.preventDefault() // 에디터 focus 유지
                   editor.chain().focus().unsetColor().run()
                   setShowColorPicker(false)
                 }}

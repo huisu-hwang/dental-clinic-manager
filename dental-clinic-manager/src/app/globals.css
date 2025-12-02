@@ -111,23 +111,30 @@ body {
 /* Tiptap Editor Styles */
 .ProseMirror {
   min-height: 400px;
-  color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important;
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+}
+
+/* 인라인 스타일로 색상이 지정된 요소는 해당 색상 사용 */
+/* currentColor는 요소 자체의 color 속성 값을 참조 */
+.ProseMirror [style*="color"],
+.ProseMirror span[style] {
+  -webkit-text-fill-color: currentColor !important;
 }
 
 /* 프로토콜 에디터 콘텐츠 영역 - iOS Chrome 다크모드 대응 */
-.protocol-editor-content,
-.protocol-editor-content *,
-.prose,
-.prose * {
-  color: inherit;
-  -webkit-text-fill-color: inherit;
-}
-
+/* 기본 텍스트는 검정색, 인라인 스타일 색상은 유지 */
 .protocol-editor-content,
 .prose {
-  color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important;
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+}
+
+.protocol-editor-content [style*="color"],
+.protocol-editor-content span[style],
+.prose [style*="color"],
+.prose span[style] {
+  -webkit-text-fill-color: currentColor !important;
 }
 
 .ProseMirror:focus {
