@@ -2101,7 +2101,10 @@ export const dataService = {
       }
 
       if (formData.title) updateData.title = formData.title
-      if (formData.category_id !== undefined) updateData.category_id = formData.category_id
+      if (formData.category_id !== undefined) {
+        // 빈 문자열은 null로 변환 (UUID 타입에 빈 문자열 전달 시 오류 방지)
+        updateData.category_id = formData.category_id || null
+      }
       if (formData.status) updateData.status = formData.status
       if (formData.tags) updateData.tags = formData.tags
 
