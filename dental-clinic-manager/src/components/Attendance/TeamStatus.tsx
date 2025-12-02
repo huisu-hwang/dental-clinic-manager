@@ -339,9 +339,6 @@ export default function TeamStatus() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       초과근무
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      총 근무
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -404,15 +401,6 @@ export default function TeamStatus() {
                         {employee.overtime_minutes > 0 ? (
                           <span className="text-purple-600 font-medium">
                             {employee.overtime_minutes}분
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        {employee.total_work_minutes && employee.total_work_minutes > 0 ? (
-                          <span className="text-blue-600 font-medium">
-                            {Math.floor(employee.total_work_minutes / 60)}시간 {employee.total_work_minutes % 60}분
                           </span>
                         ) : (
                           <span className="text-gray-400">-</span>
