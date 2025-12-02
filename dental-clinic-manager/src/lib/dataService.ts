@@ -9,6 +9,24 @@ const CLINIC_CACHE_KEY = 'dental_clinic_id'
 let cachedClinicId: string | null = null
 // Force recompile
 
+// Helper function to extract error message from various error types (including Supabase PostgrestError)
+const extractErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message
+  }
+  if (error && typeof error === 'object') {
+    // Handle Supabase PostgrestError which has message property
+    if ('message' in error && typeof (error as any).message === 'string') {
+      return (error as any).message
+    }
+    // Handle error object with error property
+    if ('error' in error && typeof (error as any).error === 'string') {
+      return (error as any).error
+    }
+  }
+  return 'Unknown error occurred'
+}
+
 const persistClinicId = (clinicId: string) => {
   cachedClinicId = clinicId
   if (typeof window !== 'undefined') {
@@ -371,7 +389,7 @@ export const dataService = {
       return { success: true, data: userProfile }
     } catch (error: unknown) {
       console.error('Error fetching user profile by ID:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -869,7 +887,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error(`Error deleting report for date ${date}:`, error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1006,7 +1024,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error updating stock:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1047,7 +1065,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error adding gift item:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1074,7 +1092,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting gift item:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1192,7 +1210,7 @@ export const dataService = {
       }
     } catch (error: unknown) {
       console.error('Error fixing inventory data:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1217,7 +1235,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('Error updating user profile:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1242,7 +1260,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching user profile:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1264,7 +1282,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching all clinics:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1286,7 +1304,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching all users:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1326,7 +1344,7 @@ export const dataService = {
       }
     } catch (error: unknown) {
       console.error('Error fetching system statistics:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1352,7 +1370,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting clinic:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1378,7 +1396,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting user:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1414,7 +1432,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('[updateUserPermissions] Error updating user permissions:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1453,7 +1471,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('[updateStaffInfo] Error updating staff info:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1521,7 +1539,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error rejecting user:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1542,7 +1560,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error updating clinic status:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1562,7 +1580,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching users by clinic:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1644,7 +1662,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching protocol categories:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1723,7 +1741,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('Error updating protocol category:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1748,7 +1766,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting protocol category:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1804,7 +1822,7 @@ export const dataService = {
       return { data: protocols || [] }
     } catch (error: unknown) {
       console.error('[getProtocols] Error fetching protocols:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1908,7 +1926,7 @@ export const dataService = {
       return { data: { ...typedProtocol, created_by_user: createdByUser } }
     } catch (error: unknown) {
       console.error('[getProtocolById] Error fetching protocol by ID:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2024,7 +2042,7 @@ export const dataService = {
       if (error && typeof error === 'object') {
         console.error('[createProtocol] Error details:', JSON.stringify(error, null, 2))
       }
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2100,7 +2118,7 @@ export const dataService = {
       return { success: true, data: protocol }
     } catch (error: unknown) {
       console.error('Error updating protocol:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2125,7 +2143,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting protocol:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2165,7 +2183,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching protocol versions:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2264,7 +2282,7 @@ export const dataService = {
       return { success: true, data: newVersion }
     } catch (error: unknown) {
       console.error('Error restoring protocol version:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2295,7 +2313,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('[DataService] Error verifying password:', error)
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { success: false, error: extractErrorMessage(error) }
     }
   },
 
@@ -2320,7 +2338,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('[DataService] Error updating password:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2413,7 +2431,7 @@ export const dataService = {
       return { data: null, error: 'No authenticated user' }
     } catch (error: unknown) {
       console.error('[DataService] Error getting session:', error)
-      return { data: null, error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { data: null, error: extractErrorMessage(error) }
     }
   },
 
@@ -2465,7 +2483,7 @@ export const dataService = {
       return { data: data as ClinicBranch[], total_count: data?.length || 0 }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching branches:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2491,7 +2509,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching branch:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2535,7 +2553,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('[DataService] Error creating branch:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2574,7 +2592,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('[DataService] Error updating branch:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2601,7 +2619,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('[DataService] Error deleting branch:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2628,7 +2646,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('[DataService] Error hard deleting branch:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2682,7 +2700,7 @@ export const dataService = {
       return { success: true, data: data as SpecialNotesHistory }
     } catch (error: unknown) {
       console.error('[DataService] Error saving special notes history:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2736,7 +2754,7 @@ export const dataService = {
       }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching special notes history:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2794,7 +2812,7 @@ export const dataService = {
       }
     } catch (error: unknown) {
       console.error('[DataService] Error searching special notes:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2821,7 +2839,7 @@ export const dataService = {
       return { success: true, data: data as SpecialNotesHistory[] }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching special notes history by date:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2881,7 +2899,7 @@ export const dataService = {
       return { success: true, data: limitedResult }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching latest special notes by date:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2935,7 +2953,7 @@ export const dataService = {
       return { success: true, data: result }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching special notes from daily_reports:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -3104,7 +3122,7 @@ export const dataService = {
       }
     } catch (error: unknown) {
       console.error('[updateConsultStatusToCompleted] Error:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   }
 }
