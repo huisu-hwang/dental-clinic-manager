@@ -61,7 +61,8 @@ export async function generateDailyQRCode(
       longitude,
       radius_meters = 100,
       validity_type = 'daily',
-      validity_days: customValidityDays
+      validity_days: customValidityDays,
+      force_regenerate = false
     } = input
 
     // 오늘 날짜
@@ -103,6 +104,15 @@ export async function generateDailyQRCode(
       for (const existingQR of existingQRList) {
         const qrValidUntil = existingQR.valid_until || existingQR.valid_date
         if (qrValidUntil >= today) {
+          // 강제 재생성 옵션인 경우 기존 QR 코드를 비활성화
+          if (force_regenerate) {
+            await supabase
+              .from('attendance_qr_codes')
+              .update({ is_active: false })
+              .eq('id', existingQR.id)
+            // 기존 코드 비활성화 후 새 코드 생성으로 진행
+            break
+          }
           // 유효한 QR 코드가 있으면 반환
           const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
           if (!existingQR.qr_code.startsWith('http')) {
