@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, BarChart3, Clock, TrendingUp, Info, User, Users } from 'lucide-react'
+import { Calendar, BarChart3, Clock, Info, User, Users } from 'lucide-react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -65,43 +65,6 @@ export default function AttendanceStats() {
     }
   }
 
-  const loadStatistics = async () => {
-    if (!user?.id) return
-
-    setLoading(true)
-    try {
-      const result = await attendanceService.getMonthlyStatistics(
-        user.id,
-        selectedYear,
-        selectedMonth
-      )
-
-      if (result.success && result.statistics) {
-        setStatistics(result.statistics)
-      } else {
-        setStatistics(null)
-      }
-    } catch (error) {
-      console.error('[AttendanceStats] Error loading statistics:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const refreshStatistics = async () => {
-    if (!user?.id) return
-
-    setLoading(true)
-    try {
-      await attendanceService.updateMonthlyStatistics(user.id, selectedYear, selectedMonth)
-      await loadStatistics()
-    } catch (error) {
-      console.error('[AttendanceStats] Error refreshing statistics:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const formatMinutesToHours = (minutes: number) => {
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
@@ -155,7 +118,7 @@ export default function AttendanceStats() {
       {/* 섹션 1: 기간 선택 */}
       <div>
         <SectionHeader number={1} title="기간 선택" icon={Calendar} />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-1.5">년도</label>
             <select
@@ -183,16 +146,6 @@ export default function AttendanceStats() {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="md:col-span-2 flex items-end">
-            <button
-              onClick={refreshStatistics}
-              disabled={loading}
-              className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 transition-colors font-medium"
-            >
-              <TrendingUp className="w-4 h-4 mr-2" />
-              {loading ? '통계 조회 중...' : '통계 새로고침'}
-            </button>
           </div>
         </div>
       </div>
