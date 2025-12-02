@@ -36,9 +36,41 @@ export default function AdminAttendanceStats() {
 
   useEffect(() => {
     if (user?.clinic_id) {
-      loadStatistics()
+      // 페이지 로드 시 최신 통계로 자동 갱신
+      refreshStatisticsOnLoad()
     }
   }, [user, selectedYear, selectedMonth, selectedBranchId])
+
+  // 페이지 로드 시 최신 통계로 자동 갱신하는 함수
+  const refreshStatisticsOnLoad = async () => {
+    if (!user?.clinic_id) return
+
+    setLoading(true)
+    try {
+      await attendanceService.refreshAllUsersMonthlyStatistics(
+        user.clinic_id,
+        selectedYear,
+        selectedMonth,
+        selectedBranchId || undefined
+      )
+      const result = await attendanceService.getAllUsersMonthlyStatistics(
+        user.clinic_id,
+        selectedYear,
+        selectedMonth,
+        selectedBranchId || undefined
+      )
+
+      if (result.success && result.statistics) {
+        setStatistics(result.statistics)
+      } else {
+        setStatistics([])
+      }
+    } catch (error) {
+      console.error('[AdminAttendanceStats] Error refreshing statistics on load:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const loadStatistics = async () => {
     if (!user?.clinic_id) return

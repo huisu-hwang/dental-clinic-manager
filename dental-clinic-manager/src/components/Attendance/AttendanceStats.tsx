@@ -35,9 +35,35 @@ export default function AttendanceStats() {
 
   useEffect(() => {
     if (user?.id) {
-      loadStatistics()
+      // 페이지 로드 시 최신 통계로 자동 갱신
+      refreshStatisticsOnLoad()
     }
   }, [user, selectedYear, selectedMonth])
+
+  // 페이지 로드 시 최신 통계로 자동 갱신하는 함수
+  const refreshStatisticsOnLoad = async () => {
+    if (!user?.id) return
+
+    setLoading(true)
+    try {
+      await attendanceService.updateMonthlyStatistics(user.id, selectedYear, selectedMonth)
+      const result = await attendanceService.getMonthlyStatistics(
+        user.id,
+        selectedYear,
+        selectedMonth
+      )
+
+      if (result.success && result.statistics) {
+        setStatistics(result.statistics)
+      } else {
+        setStatistics(null)
+      }
+    } catch (error) {
+      console.error('[AttendanceStats] Error refreshing statistics on load:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const loadStatistics = async () => {
     if (!user?.id) return
