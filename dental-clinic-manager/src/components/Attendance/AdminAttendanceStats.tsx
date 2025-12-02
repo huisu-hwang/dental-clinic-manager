@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, BarChart3, Clock, TrendingUp, ChevronDown, ChevronUp, RefreshCw, Users, X } from 'lucide-react'
+import { Calendar, BarChart3, Clock, TrendingUp, ChevronDown, ChevronUp, Users, X } from 'lucide-react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
 import type { AttendanceStatistics, AttendanceRecord } from '@/types/attendance'
@@ -15,7 +15,6 @@ export default function AdminAttendanceStats() {
   const { user } = useAuth()
   const [statistics, setStatistics] = useState<StatisticsWithName[]>([])
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
 
@@ -36,15 +35,23 @@ export default function AdminAttendanceStats() {
 
   useEffect(() => {
     if (user?.clinic_id) {
-      loadStatistics()
+      // 페이지 로드 시 최신 통계로 자동 갱신
+      refreshStatisticsOnLoad()
     }
   }, [user, selectedYear, selectedMonth, selectedBranchId])
 
-  const loadStatistics = async () => {
+  // 페이지 로드 시 최신 통계로 자동 갱신하는 함수
+  const refreshStatisticsOnLoad = async () => {
     if (!user?.clinic_id) return
 
     setLoading(true)
     try {
+      await attendanceService.refreshAllUsersMonthlyStatistics(
+        user.clinic_id,
+        selectedYear,
+        selectedMonth,
+        selectedBranchId || undefined
+      )
       const result = await attendanceService.getAllUsersMonthlyStatistics(
         user.clinic_id,
         selectedYear,
@@ -58,28 +65,9 @@ export default function AdminAttendanceStats() {
         setStatistics([])
       }
     } catch (error) {
-      console.error('[AdminAttendanceStats] Error loading statistics:', error)
+      console.error('[AdminAttendanceStats] Error refreshing statistics on load:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const refreshStatistics = async () => {
-    if (!user?.clinic_id) return
-
-    setRefreshing(true)
-    try {
-      await attendanceService.refreshAllUsersMonthlyStatistics(
-        user.clinic_id,
-        selectedYear,
-        selectedMonth,
-        selectedBranchId || undefined
-      )
-      await loadStatistics()
-    } catch (error) {
-      console.error('[AdminAttendanceStats] Error refreshing statistics:', error)
-    } finally {
-      setRefreshing(false)
     }
   }
 
@@ -163,7 +151,7 @@ export default function AdminAttendanceStats() {
           </div>
           <h3 className="text-base font-semibold text-slate-800">기간 선택</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-1.5">년도</label>
             <select
@@ -191,16 +179,6 @@ export default function AdminAttendanceStats() {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="md:col-span-2 flex items-end">
-            <button
-              onClick={refreshStatistics}
-              disabled={loading || refreshing}
-              className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 transition-colors font-medium"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? '통계 갱신 중...' : '전체 통계 새로고침'}
-            </button>
           </div>
         </div>
       </div>
