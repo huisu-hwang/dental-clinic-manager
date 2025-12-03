@@ -12,6 +12,7 @@ import {
   FileText,
   AlertCircle,
   ChevronRight,
+  Building2,
 } from 'lucide-react'
 import { UserProfile } from '@/contexts/AuthContext'
 import { leaveService, calculateAnnualLeaveDays, calculateYearsOfService } from '@/lib/leaveService'
@@ -22,6 +23,7 @@ import LeaveRequestForm from './LeaveRequestForm'
 import LeaveApprovalList from './LeaveApprovalList'
 import LeaveAdminInput from './LeaveAdminInput'
 import LeavePolicySettings from './LeavePolicySettings'
+import ClinicHolidayManager from './ClinicHolidayManager'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
@@ -89,7 +91,7 @@ interface LeaveManagementProps {
 
 export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
   const { hasPermission } = usePermissions()
-  const [activeTab, setActiveTab] = useState<'my' | 'request' | 'approval' | 'all' | 'admin' | 'policy'>('my')
+  const [activeTab, setActiveTab] = useState<'my' | 'request' | 'approval' | 'all' | 'admin' | 'holiday' | 'policy'>('my')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -192,6 +194,7 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
     { id: 'approval', label: '승인 대기', icon: Clock, badge: pendingCount, show: canApprove },
     { id: 'all', label: '전체 현황', icon: Users, show: canViewAll },
     { id: 'admin', label: '연차 관리', icon: FileText, show: canManageBalance },
+    { id: 'holiday', label: '휴무일 관리', icon: Building2, show: currentUser.role === 'owner' },
     { id: 'policy', label: '정책 설정', icon: Settings, show: canManagePolicy },
   ].filter(tab => tab.show)
 
@@ -378,6 +381,15 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
           year={selectedYear}
           leaveTypes={leaveTypes}
           onSuccess={handleApprovalSuccess}
+        />
+      )}
+
+      {/* 병원 휴무일 관리 탭 */}
+      {activeTab === 'holiday' && currentUser.role === 'owner' && (
+        <ClinicHolidayManager
+          currentUser={currentUser}
+          year={selectedYear}
+          onSuccess={fetchInitialData}
         />
       )}
 

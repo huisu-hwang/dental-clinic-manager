@@ -939,6 +939,297 @@ export const leaveService = {
       return { data: [], error: extractErrorMessage(error) }
     }
   },
+
+  // ============================================
+  // 병원 휴무일 관리 (여름휴가, 겨울휴가 등)
+  // ============================================
+
+  /**
+   * 병원 휴무일 목록 조회
+   */
+  async getClinicHolidays(year?: number): Promise<{ data: any[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      let query = (supabase as any)
+        .from('clinic_holidays')
+        .select(`
+          *,
+          created_by_user:created_by (name),
+          applied_by_user:applied_by (name)
+        `)
+        .eq('clinic_id', clinicId)
+        .order('start_date', { ascending: false })
+
+      if (year) {
+        query = query.gte('start_date', `${year}-01-01`).lte('start_date', `${year}-12-31`)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[leaveService.getClinicHolidays] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 병원 휴무일 생성
+   */
+  async createClinicHoliday(input: {
+    holiday_name: string
+    holiday_type: 'company' | 'public' | 'special'
+    start_date: string
+    end_date: string
+    deduct_from_annual: boolean
+    deduct_days?: number
+    apply_to_all: boolean
+    excluded_roles?: string[]
+    description?: string
+  }): Promise<{ data: any; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      // 원장만 휴무일 생성 가능
+      if (user.role !== 'owner') {
+        throw new Error('원장만 휴무일을 등록할 수 있습니다.')
+      }
+
+      // 총 휴무일 계산 (주말 제외)
+      const totalDays = calculateWorkingDays(new Date(input.start_date), new Date(input.end_date))
+
+      const { data, error } = await (supabase as any)
+        .from('clinic_holidays')
+        .insert({
+          clinic_id: user.clinic_id,
+          holiday_name: input.holiday_name,
+          holiday_type: input.holiday_type,
+          start_date: input.start_date,
+          end_date: input.end_date,
+          total_days: totalDays,
+          deduct_from_annual: input.deduct_from_annual,
+          deduct_days: input.deduct_days ?? totalDays,
+          apply_to_all: input.apply_to_all,
+          excluded_roles: input.excluded_roles || [],
+          description: input.description || null,
+          created_by: user.id,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[leaveService.createClinicHoliday] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 병원 휴무일 삭제
+   */
+  async deleteClinicHoliday(holidayId: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      if (user.role !== 'owner') {
+        throw new Error('원장만 휴무일을 삭제할 수 있습니다.')
+      }
+
+      // 이미 적용된 휴무일인지 확인
+      const { data: holiday } = await (supabase as any)
+        .from('clinic_holidays')
+        .select('is_applied')
+        .eq('id', holidayId)
+        .single()
+
+      if (holiday?.is_applied) {
+        throw new Error('이미 연차에 적용된 휴무일은 삭제할 수 없습니다.')
+      }
+
+      const { error } = await (supabase as any)
+        .from('clinic_holidays')
+        .delete()
+        .eq('id', holidayId)
+        .eq('clinic_id', user.clinic_id)
+
+      if (error) throw error
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.deleteClinicHoliday] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 병원 휴무일을 직원 연차에 일괄 적용
+   */
+  async applyHolidayToLeave(holidayId: string): Promise<{ success: boolean; appliedCount: number; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      if (user.role !== 'owner') {
+        throw new Error('원장만 휴무일을 적용할 수 있습니다.')
+      }
+
+      // 휴무일 정보 조회
+      const { data: holiday, error: holidayError } = await (supabase as any)
+        .from('clinic_holidays')
+        .select('*')
+        .eq('id', holidayId)
+        .single()
+
+      if (holidayError) throw holidayError
+
+      if (holiday.is_applied) {
+        throw new Error('이미 적용된 휴무일입니다.')
+      }
+
+      if (!holiday.deduct_from_annual) {
+        throw new Error('연차 차감 대상이 아닌 휴무일입니다.')
+      }
+
+      // 적용 대상 직원 조회
+      let staffQuery = (supabase as any)
+        .from('users')
+        .select('id, name, role')
+        .eq('clinic_id', user.clinic_id)
+        .eq('status', 'active')
+
+      const { data: staffList, error: staffError } = await staffQuery
+
+      if (staffError) throw staffError
+
+      // 제외 역할 필터링
+      const excludedRoles = holiday.excluded_roles || []
+      const targetStaff = (staffList || []).filter(
+        (s: any) => !excludedRoles.includes(s.role) && !(holiday.excluded_user_ids || []).includes(s.id)
+      )
+
+      const deductDays = holiday.deduct_days ?? holiday.total_days
+      const year = new Date(holiday.start_date).getFullYear()
+      let appliedCount = 0
+
+      // 각 직원에게 연차 차감 적용
+      for (const staff of targetStaff) {
+        // 연차 조정 추가
+        const { data: adjustment, error: adjError } = await (supabase as any)
+          .from('leave_adjustments')
+          .insert({
+            user_id: staff.id,
+            clinic_id: user.clinic_id,
+            adjustment_type: 'deduct',
+            days: deductDays,
+            year,
+            reason: `[병원휴무] ${holiday.holiday_name} (${holiday.start_date} ~ ${holiday.end_date})`,
+            use_date: holiday.start_date,
+            adjusted_by: user.id,
+          })
+          .select()
+          .single()
+
+        if (adjError) {
+          console.error(`Error applying to ${staff.name}:`, adjError)
+          continue
+        }
+
+        // 적용 기록 저장
+        await (supabase as any)
+          .from('holiday_leave_applications')
+          .insert({
+            clinic_holiday_id: holidayId,
+            user_id: staff.id,
+            clinic_id: user.clinic_id,
+            deducted_days: deductDays,
+            year,
+            leave_adjustment_id: adjustment.id,
+            applied_by: user.id,
+          })
+
+        appliedCount++
+      }
+
+      // 휴무일 적용 완료 표시
+      await (supabase as any)
+        .from('clinic_holidays')
+        .update({
+          is_applied: true,
+          applied_at: new Date().toISOString(),
+          applied_by: user.id,
+        })
+        .eq('id', holidayId)
+
+      return { success: true, appliedCount, error: null }
+    } catch (error) {
+      console.error('[leaveService.applyHolidayToLeave] Error:', error)
+      return { success: false, appliedCount: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 휴무일 적용 기록 조회
+   */
+  async getHolidayApplications(holidayId: string): Promise<{ data: any[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .from('holiday_leave_applications')
+        .select(`
+          *,
+          users:user_id (name, role)
+        `)
+        .eq('clinic_holiday_id', holidayId)
+        .order('applied_at', { ascending: false })
+
+      if (error) throw error
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[leaveService.getHolidayApplications] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+}
+
+/**
+ * 주말 제외 근무일 계산
+ */
+function calculateWorkingDays(startDate: Date, endDate: Date): number {
+  let days = 0
+  const current = new Date(startDate)
+
+  while (current <= endDate) {
+    const dayOfWeek = current.getDay()
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      days++
+    }
+    current.setDate(current.getDate() + 1)
+  }
+
+  return days
 }
 
 export default leaveService
