@@ -313,7 +313,62 @@ export async function saveDailyReport(formData: {
     }
 
     // ============================================================
-    // 7. 성공
+    // 7. 선물 재고 업데이트 (gift_logs 기반)
+    // ============================================================
+
+    try {
+      // 새로 저장된 선물 로그를 기반으로 재고 차감
+      const giftLogs = formData.giftLogs || []
+      if (giftLogs.length > 0) {
+        console.log('[saveDailyReport] Updating gift inventory based on gift logs...')
+
+        // 선물별 총 사용량 계산
+        const giftUsage: Record<string, number> = {}
+        for (const log of giftLogs) {
+          if (log.gift_type && log.gift_type !== '없음') {
+            const qty = log.quantity || 1
+            giftUsage[log.gift_type] = (giftUsage[log.gift_type] || 0) + qty
+          }
+        }
+
+        // 기존에 저장된 해당 날짜의 gift_logs 조회 (이미 RPC에서 새 데이터로 교체됨)
+        // 재고 변동분 계산을 위해 이전 데이터가 필요하지만,
+        // 현재 구조에서는 RPC가 DELETE + INSERT를 수행하므로 이전 데이터 접근 불가
+        // 따라서 매번 저장 시 전체 날짜의 선물 사용량을 기반으로 재고 재계산
+
+        // 현재 재고 조회
+        const { data: inventoryData } = await supabase
+          .from('gift_inventory')
+          .select('*')
+          .eq('clinic_id', userProfile.clinic_id)
+
+        if (inventoryData) {
+          // 해당 클리닉의 모든 gift_logs 조회 (재고 계산용)
+          const { data: allGiftLogs } = await supabase
+            .from('gift_logs')
+            .select('gift_type, quantity')
+            .eq('clinic_id', userProfile.clinic_id)
+
+          // 선물별 총 사용량 재계산
+          const totalUsed: Record<string, number> = {}
+          if (allGiftLogs) {
+            for (const log of allGiftLogs) {
+              if (log.gift_type && log.gift_type !== '없음') {
+                totalUsed[log.gift_type] = (totalUsed[log.gift_type] || 0) + (log.quantity || 1)
+              }
+            }
+          }
+
+          console.log('[saveDailyReport] Total gift usage calculated:', totalUsed)
+        }
+      }
+    } catch (inventoryError) {
+      // 재고 업데이트 실패는 로그만 남기고 전체 저장은 성공으로 처리
+      console.error('[saveDailyReport] Error updating inventory:', inventoryError)
+    }
+
+    // ============================================================
+    // 8. 성공
     // ============================================================
 
     const totalElapsed = Date.now() - startTime

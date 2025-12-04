@@ -87,7 +87,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">환자명</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">선물 종류</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">수량</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">수량</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">리뷰</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">비고</th>
               <th className="px-4 py-3 w-12"></th>
@@ -145,13 +145,23 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                         ))
                       }
                       // 선물이 선택된 경우: 재고 + 현재 수량으로 최대값 계산
-                      const availableStock = getAvailableInventory(row.gift_type, index)
-                      const currentQty = row.quantity || 1
-                      // 최소 현재 수량까지는 선택 가능하도록, 최대 10개
-                      const maxQuantity = Math.min(Math.max(availableStock + currentQty, currentQty), 10)
-                      return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => (
-                        <option key={num} value={num}>{num}</option>
-                      ))
+                      const gift = giftInventory.find(item => item.name === row.gift_type)
+                      const totalStock = gift?.stock || 0
+                      const usedByOthers = giftRows.reduce((total, r, idx) => {
+                        if (idx === index || r.gift_type !== row.gift_type) return total
+                        return total + (r.quantity || 1)
+                      }, 0)
+                      const availableForThis = totalStock - usedByOthers
+                      const maxQuantity = Math.min(Math.max(availableForThis, 1), 10)
+
+                      return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => {
+                        const remaining = totalStock - usedByOthers - num
+                        return (
+                          <option key={num} value={num}>
+                            {num}개 (남음:{remaining >= 0 ? remaining : 0})
+                          </option>
+                        )
+                      })
                     })()}
                   </select>
                 </td>
@@ -262,13 +272,23 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                         ))
                       }
                       // 선물이 선택된 경우: 재고 + 현재 수량으로 최대값 계산
-                      const availableStock = getAvailableInventory(row.gift_type, index)
-                      const currentQty = row.quantity || 1
-                      // 최소 현재 수량까지는 선택 가능하도록, 최대 10개
-                      const maxQuantity = Math.min(Math.max(availableStock + currentQty, currentQty), 10)
-                      return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => (
-                        <option key={num} value={num}>{num}</option>
-                      ))
+                      const gift = giftInventory.find(item => item.name === row.gift_type)
+                      const totalStock = gift?.stock || 0
+                      const usedByOthers = giftRows.reduce((total, r, idx) => {
+                        if (idx === index || r.gift_type !== row.gift_type) return total
+                        return total + (r.quantity || 1)
+                      }, 0)
+                      const availableForThis = totalStock - usedByOthers
+                      const maxQuantity = Math.min(Math.max(availableForThis, 1), 10)
+
+                      return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => {
+                        const remaining = totalStock - usedByOthers - num
+                        return (
+                          <option key={num} value={num}>
+                            {num}개 (남음:{remaining >= 0 ? remaining : 0})
+                          </option>
+                        )
+                      })
                     })()}
                   </select>
                 </div>
