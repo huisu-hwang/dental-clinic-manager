@@ -130,7 +130,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
           setGiftRows(giftLogs.map(log => ({
             patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
             gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
-            quantity: 1,
+            quantity: typeof log.quantity === 'number' ? log.quantity : 1,
             naver_review: (log.naver_review as 'O' | 'X') || 'X',
             notes: typeof log.notes === 'string' ? log.notes : ''
           })))
@@ -379,6 +379,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
             date: reportDate,
             patient_name: row.patient_name,
             gift_type: row.gift_type || '',
+            quantity: row.quantity || 1,
             naver_review: row.naver_review,
             notes: row.notes || ''
           })),
