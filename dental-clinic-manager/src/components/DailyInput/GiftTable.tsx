@@ -129,9 +129,17 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                     disabled={row.gift_type === '없음' || isReadOnly}
                   >
                     {(() => {
-                      const maxQuantity = row.gift_type === '없음'
-                        ? 10
-                        : Math.min(getAvailableInventory(row.gift_type, index) + (row.quantity || 1), 10)
+                      // 선물 종류가 '없음'이면 기본 10개 옵션
+                      if (row.gift_type === '없음') {
+                        return Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                          <option key={num} value={num}>{num}</option>
+                        ))
+                      }
+                      // 선물이 선택된 경우: 재고 + 현재 수량으로 최대값 계산
+                      const availableStock = getAvailableInventory(row.gift_type, index)
+                      const currentQty = row.quantity || 1
+                      // 최소 현재 수량까지는 선택 가능하도록, 최대 10개
+                      const maxQuantity = Math.min(Math.max(availableStock + currentQty, currentQty), 10)
                       return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => (
                         <option key={num} value={num}>{num}</option>
                       ))
@@ -238,9 +246,17 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                     disabled={row.gift_type === '없음' || isReadOnly}
                   >
                     {(() => {
-                      const maxQuantity = row.gift_type === '없음'
-                        ? 10
-                        : Math.min(getAvailableInventory(row.gift_type, index) + (row.quantity || 1), 10)
+                      // 선물 종류가 '없음'이면 기본 10개 옵션
+                      if (row.gift_type === '없음') {
+                        return Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                          <option key={num} value={num}>{num}</option>
+                        ))
+                      }
+                      // 선물이 선택된 경우: 재고 + 현재 수량으로 최대값 계산
+                      const availableStock = getAvailableInventory(row.gift_type, index)
+                      const currentQty = row.quantity || 1
+                      // 최소 현재 수량까지는 선택 가능하도록, 최대 10개
+                      const maxQuantity = Math.min(Math.max(availableStock + currentQty, currentQty), 10)
                       return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => (
                         <option key={num} value={num}>{num}</option>
                       ))
