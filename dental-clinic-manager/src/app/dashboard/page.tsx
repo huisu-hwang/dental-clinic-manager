@@ -587,6 +587,7 @@ export default function DashboardPage() {
           {activeTab === 'settings' && (
             <InventoryManagement
               giftInventory={giftInventory}
+              giftLogs={giftLogs}
               onAddGiftItem={handleAddGiftItem}
               onUpdateStock={handleUpdateStock}
               onDeleteGiftItem={handleDeleteGiftItem}
