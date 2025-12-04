@@ -12,6 +12,7 @@ import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
 import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 } from 'lucide-react'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
+import LeaveManagement from '@/components/Leave/LeaveManagement'
 import Toast from '@/components/ui/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
 import DatabaseVerifier from '@/components/Debug/DatabaseVerifier'
@@ -386,6 +387,13 @@ export default function DashboardPage() {
                 {attendanceSubTab === 'team' && canViewTeam && <TeamStatus />}
                 {attendanceSubTab === 'qr' && canManageQR && <QRCodeDisplay />}
               </div>
+            </div>
+          )}
+
+          {/* 연차 관리 */}
+          {activeTab === 'leave' && user && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              <LeaveManagement currentUser={user} />
             </div>
           )}
 
