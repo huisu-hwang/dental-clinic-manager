@@ -50,20 +50,29 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
     const newRows = [...giftRows]
     newRows[index] = { ...newRows[index], [field]: value }
 
+    // 선물 종류 변경 시: 재고가 부족하면 수량 조정
     if (field === 'gift_type' && value !== '없음') {
-      const availableStock = getAvailableInventory(value as string, index)
-      if (availableStock < newRows[index].quantity) {
-        newRows[index].quantity = Math.max(1, availableStock)
+      const gift = giftInventory.find(item => item.name === value)
+      if (gift) {
+        const availableStock = getAvailableInventory(value as string, index)
+        if (availableStock < newRows[index].quantity) {
+          newRows[index].quantity = Math.max(1, availableStock)
+        }
       }
+      // giftInventory에 없는 선물이면 수량 체크 건너뜀 (이미 저장된 데이터)
     }
 
+    // 수량 변경 시: 재고 체크 (giftInventory에 있는 선물만)
     if (field === 'quantity') {
-      const availableStock = getAvailableInventory(newRows[index].gift_type, index)
-      if ((value as number) > availableStock) {
-        newRows[index].quantity = availableStock
-        alert(`재고가 부족합니다. 사용 가능한 수량: ${availableStock}개`)
-        return
+      const gift = giftInventory.find(item => item.name === newRows[index].gift_type)
+      if (gift) {
+        const availableStock = getAvailableInventory(newRows[index].gift_type, index)
+        if ((value as number) > availableStock && availableStock > 0) {
+          newRows[index].quantity = Math.max(1, availableStock)
+          alert(`재고가 부족합니다. 사용 가능한 수량: ${availableStock}개`)
+        }
       }
+      // giftInventory에 없는 선물이면 재고 체크 없이 수량 변경 허용
     }
 
     onGiftRowsChange(newRows)
