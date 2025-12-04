@@ -95,7 +95,7 @@ export default function AttendancePage() {
       {/* 모바일 메뉴 오버레이 */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[25] lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -103,7 +103,7 @@ export default function AttendancePage() {
       {/* 좌측 사이드바 - 모바일에서는 슬라이드 메뉴 */}
       <aside
         className={`
-          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3
+          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-[25] overflow-y-auto py-3 px-3
           transition-transform duration-300 ease-in-out
           lg:left-[max(0px,calc(50%-700px))]
           ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
