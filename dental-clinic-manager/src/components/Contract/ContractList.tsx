@@ -295,7 +295,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
   return (
     <div>
       {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
-      <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
+      <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
