@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { dataService } from '@/lib/dataService'
-import { UserIcon, BuildingOffice2Icon, ChartBarIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { UserIcon, BuildingOffice2Icon, ChartBarIcon, UsersIcon, ClockIcon } from '@heroicons/react/24/outline'
+import type { UserActivityLog } from '@/types/auth'
 import Header from '@/components/Layout/Header'
 
 type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics'
@@ -28,6 +29,13 @@ export default function MasterAdminPage() {
   const [showUsersModal, setShowUsersModal] = useState(false)
   const [clinicUsers, setClinicUsers] = useState<any[]>([])
   const [loadingClinicUsers, setLoadingClinicUsers] = useState(false)
+
+  // 활동 기록 관련 상태
+  const [showActivityModal, setShowActivityModal] = useState(false)
+  const [selectedUserForActivity, setSelectedUserForActivity] = useState<any>(null)
+  const [activityLogs, setActivityLogs] = useState<UserActivityLog[]>([])
+  const [loadingActivity, setLoadingActivity] = useState(false)
+  const [activityTotal, setActivityTotal] = useState(0)
 
   // 권한 체크
   useEffect(() => {
@@ -346,6 +354,71 @@ export default function MasterAdminPage() {
     }
   }
 
+  // 사용자 활동 기록 조회
+  const handleViewActivity = async (user: any) => {
+    setSelectedUserForActivity(user)
+    setShowActivityModal(true)
+    setLoadingActivity(true)
+    setActivityLogs([])
+    setActivityTotal(0)
+
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/activity?limit=50`)
+      const result = await response.json()
+
+      if (result.data) {
+        setActivityLogs(result.data.activities || [])
+        setActivityTotal(result.data.total || 0)
+      } else {
+        console.error('활동 기록 조회 실패:', result.error)
+      }
+    } catch (error) {
+      console.error('활동 기록 조회 실패:', error)
+    } finally {
+      setLoadingActivity(false)
+    }
+  }
+
+  // 상대적 시간 포맷팅
+  const formatRelativeTime = (dateString: string | null) => {
+    if (!dateString) return '-'
+
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return '방금 전'
+    if (diffMins < 60) return `${diffMins}분 전`
+    if (diffHours < 24) return `${diffHours}시간 전`
+    if (diffDays < 7) return `${diffDays}일 전`
+    return date.toLocaleDateString('ko-KR')
+  }
+
+  // 활동 타입 라벨
+  const getActivityTypeLabel = (type: string) => {
+    switch (type) {
+      case 'login': return '로그인'
+      case 'logout': return '로그아웃'
+      case 'page_view': return '페이지 조회'
+      case 'action': return '작업'
+      default: return type
+    }
+  }
+
+  // 활동 타입 색상
+  const getActivityTypeColor = (type: string) => {
+    switch (type) {
+      case 'login': return 'bg-green-100 text-green-800'
+      case 'logout': return 'bg-gray-100 text-gray-800'
+      case 'page_view': return 'bg-blue-100 text-blue-800'
+      case 'action': return 'bg-purple-100 text-purple-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
   if (loading || loadingData) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -657,6 +730,7 @@ export default function MasterAdminPage() {
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b">
               <h2 className="text-xl font-semibold">사용자 목록</h2>
+              <p className="text-sm text-gray-500 mt-1">각 사용자의 최근 로그인 및 활동 기록을 확인할 수 있습니다.</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -667,6 +741,7 @@ export default function MasterAdminPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">역할</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">소속 병원</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">최근 로그인</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">생성일</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
                   </tr>
@@ -702,17 +777,34 @@ export default function MasterAdminPage() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">{user.clinic?.name || '-'}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="flex items-center">
+                          <ClockIcon className="w-4 h-4 mr-1 text-gray-400" />
+                          <span title={user.last_login_at ? new Date(user.last_login_at).toLocaleString('ko-KR') : '기록 없음'}>
+                            {formatRelativeTime(user.last_login_at)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
                         {new Date(user.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        {user.role !== 'master_admin' && (
+                        <div className="flex space-x-2">
                           <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-600 hover:text-red-900 text-sm font-medium"
+                            onClick={() => handleViewActivity(user)}
+                            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                            title="활동 기록 보기"
                           >
-                            삭제
+                            활동 기록
                           </button>
-                        )}
+                          {user.role !== 'master_admin' && (
+                            <button
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-red-600 hover:text-red-900 text-sm font-medium"
+                            >
+                              삭제
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -854,6 +946,115 @@ export default function MasterAdminPage() {
             <div className="p-4 border-t bg-gray-50 flex justify-end">
               <button
                 onClick={() => setShowUsersModal(false)}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 사용자 활동 기록 모달 */}
+      {showActivityModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold">사용자 활동 기록</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {selectedUserForActivity?.name} ({selectedUserForActivity?.email}) | 총 {activityTotal}건의 활동 기록
+                </p>
+              </div>
+              <button
+                onClick={() => setShowActivityModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                title="닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* 사용자 요약 정보 */}
+            <div className="p-4 bg-gray-50 border-b">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">역할:</span>{' '}
+                  <span className="font-medium">
+                    {selectedUserForActivity?.role === 'master_admin' ? '마스터' :
+                     selectedUserForActivity?.role === 'owner' ? '대표원장' :
+                     selectedUserForActivity?.role}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">소속 병원:</span>{' '}
+                  <span className="font-medium">{selectedUserForActivity?.clinic?.name || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">최근 로그인:</span>{' '}
+                  <span className="font-medium">{formatRelativeTime(selectedUserForActivity?.last_login_at)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">가입일:</span>{' '}
+                  <span className="font-medium">
+                    {selectedUserForActivity?.created_at ? new Date(selectedUserForActivity.created_at).toLocaleDateString('ko-KR') : '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 280px)' }}>
+              {loadingActivity ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+              ) : activityLogs.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <ClockIcon className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                  <p>활동 기록이 없습니다.</p>
+                  <p className="text-sm mt-2">사용자가 로그인하면 활동 기록이 표시됩니다.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {activityLogs.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-start p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex-shrink-0 mr-4">
+                        <span className={`px-2 py-1 text-xs rounded-full ${getActivityTypeColor(activity.activity_type)}`}>
+                          {getActivityTypeLabel(activity.activity_type)}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">
+                          {activity.activity_description}
+                        </p>
+                        <div className="mt-1 flex items-center gap-4 text-xs text-gray-500">
+                          <span title={new Date(activity.created_at).toLocaleString('ko-KR')}>
+                            {new Date(activity.created_at).toLocaleString('ko-KR')}
+                          </span>
+                          {activity.ip_address && activity.ip_address !== 'unknown' && (
+                            <span>IP: {activity.ip_address}</span>
+                          )}
+                        </div>
+                        {activity.metadata && Object.keys(activity.metadata).length > 0 && (
+                          <div className="mt-2 text-xs text-gray-500">
+                            {activity.metadata.clinic_name && (
+                              <span className="mr-3">병원: {activity.metadata.clinic_name}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setShowActivityModal(false)}
                 className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
               >
                 닫기

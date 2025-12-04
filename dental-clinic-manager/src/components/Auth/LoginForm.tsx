@@ -171,6 +171,29 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
       console.log('[LoginForm] Logging in with profile:', result.data)
       login(formData.email, result.data) // email로 변경
 
+      // 7. 로그인 활동 기록 저장
+      try {
+        await fetch('/api/activity-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: result.data.id,
+            clinic_id: result.data.clinic_id || null,
+            activity_type: 'login',
+            activity_description: '로그인',
+            metadata: {
+              email: formData.email,
+              role: result.data.role,
+              clinic_name: result.data.clinic?.name || null
+            }
+          })
+        })
+        console.log('[LoginForm] Activity log saved successfully')
+      } catch (activityError) {
+        // 활동 기록 저장 실패해도 로그인은 진행
+        console.warn('[LoginForm] Failed to save activity log:', activityError)
+      }
+
       console.log('[LoginForm] Login successful - Cookie-based session')
       console.log('[LoginForm] Session managed by Middleware (automatic refresh)')
       console.log('[LoginForm] Calling onLoginSuccess...')
