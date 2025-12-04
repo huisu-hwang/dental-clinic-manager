@@ -118,6 +118,7 @@ export default function QRCodeDisplay() {
         radius_meters: Number.isFinite(parsedRadius) ? parsedRadius : undefined,
         validity_type: validityType,
         validity_days: validityType === 'custom' && Number.isFinite(parsedCustomDays) ? parsedCustomDays : undefined,
+        force_regenerate: !!qrCode, // 기존 QR 코드가 있으면 강제 재생성
       }
 
       if (hasLocation) {
@@ -518,7 +519,7 @@ export default function QRCodeDisplay() {
           <li>• 위치 정보는 출퇴근 인증 시 거리 검증에 사용됩니다.</li>
           <li>• QR 코드를 출력하여 출입구에 부착하거나 태블릿으로 표시하세요.</li>
           <li>• 인증 반경은 병원 규모에 맞게 조정하세요 (기본 100m).</li>
-          <li>• 유효한 QR 코드가 있으면 기존 코드가 유지되고, 만료 후 새 코드를 생성해야 합니다.</li>
+          <li>• 유효한 QR 코드가 있어도 필요 시 새 QR 코드로 재생성할 수 있습니다.</li>
         </ul>
       </div>
     </div>

@@ -91,6 +91,7 @@ export interface QRCodeGenerateInput {
   radius_meters?: number;
   validity_type?: QRCodeValidityType;  // 유효 기간 타입
   validity_days?: number;   // 사용자 지정 유효 기간 (일)
+  force_regenerate?: boolean;  // 기존 QR 코드 만료 전에도 강제로 재생성
 }
 
 /**
