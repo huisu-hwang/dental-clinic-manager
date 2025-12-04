@@ -75,6 +75,21 @@ export interface AuditLog {
   createdAt: Date
 }
 
+// 사용자 활동 기록 타입
+export type ActivityType = 'login' | 'logout' | 'page_view' | 'action'
+
+export interface UserActivityLog {
+  id: string
+  user_id: string
+  clinic_id?: string
+  activity_type: ActivityType
+  activity_description: string
+  ip_address?: string
+  user_agent?: string
+  metadata?: Record<string, any>
+  created_at: string
+}
+
 export interface Permission {
   resource: string
   canCreate: boolean
