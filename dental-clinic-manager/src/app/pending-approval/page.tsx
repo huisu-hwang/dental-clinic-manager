@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 export default function PendingApprovalPage() {
   const router = useRouter()
-  const { user, loading } = useAuth()
+  const { user, loading, logout } = useAuth()
   const [clinicInfo, setClinicInfo] = useState<any>(null)
   const [checkingStatus, setCheckingStatus] = useState(false)
 
@@ -120,12 +120,8 @@ export default function PendingApprovalPage() {
     }
   }
 
-  const handleLogout = async () => {
-    const supabase = getSupabase()
-    if (supabase) {
-      await supabase.auth.signOut()
-    }
-    router.push('/')
+  const handleLogout = () => {
+    logout()
   }
 
   // AuthContext의 loading 중이거나 user가 없으면 로딩 표시
