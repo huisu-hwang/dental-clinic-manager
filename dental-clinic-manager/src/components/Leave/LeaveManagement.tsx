@@ -125,14 +125,8 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
         leaveService.getLeaveTypes(),
       ])
 
-      if (balanceResult.error && !balanceResult.data) {
-        // 잔여가 없으면 초기화
-        await leaveService.initializeBalance(currentUser.id, selectedYear)
-        const newBalance = await leaveService.getMyBalance(selectedYear)
-        setMyBalance(newBalance.data)
-      } else {
-        setMyBalance(balanceResult.data)
-      }
+      // getMyBalance가 자동으로 입사일 기준 연차를 계산/갱신함
+      setMyBalance(balanceResult.data)
 
       setMyRequests(requestsResult.data || [])
 

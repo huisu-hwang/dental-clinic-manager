@@ -143,22 +143,6 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
     }, 3000)
   }
 
-  const handleInitializeBalance = async (userId: string) => {
-    setLoading(true)
-    const result = await leaveService.initializeBalance(userId, year)
-    if (result.error) {
-      setError(result.error)
-    } else {
-      setSuccess('연차가 초기화되었습니다.')
-      loadData()
-    }
-    setLoading(false)
-    setTimeout(() => {
-      setError('')
-      setSuccess('')
-    }, 3000)
-  }
-
   // 선택된 직원의 잔여 연차
   const selectedBalance = balances.find(b => b.user_id === selectedUser)
   const selectedStaff = staff.find(s => s.id === selectedUser)
@@ -246,21 +230,13 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
             <div className="space-y-4">
               {/* 선택된 직원 정보 */}
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="font-semibold text-slate-800">{selectedStaff?.name}</p>
-                    <p className="text-xs text-slate-500">
-                      {selectedStaff?.hire_date
-                        ? `입사일: ${new Date(selectedStaff.hire_date).toLocaleDateString('ko-KR')}`
-                        : '입사일 미등록'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleInitializeBalance(selectedUser)}
-                    className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-white border border-blue-200 rounded-lg hover:bg-blue-50"
-                  >
-                    연차 재계산
-                  </button>
+                <div className="mb-2">
+                  <p className="font-semibold text-slate-800">{selectedStaff?.name}</p>
+                  <p className="text-xs text-slate-500">
+                    {selectedStaff?.hire_date
+                      ? `입사일: ${new Date(selectedStaff.hire_date).toLocaleDateString('ko-KR')}`
+                      : '입사일 미등록'}
+                  </p>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="bg-white rounded-lg p-2">
