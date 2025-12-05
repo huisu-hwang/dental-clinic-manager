@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, Clock, FileText, AlertCircle, X } from 'lucide-react'
+import { Calendar, AlertCircle, X, AlertTriangle } from 'lucide-react'
 import { leaveService } from '@/lib/leaveService'
 import type { LeaveType, EmployeeLeaveBalance, HalfDayType } from '@/types/leave'
 
@@ -22,6 +22,8 @@ export default function LeaveRequestForm({
 }: LeaveRequestFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false)
+  const [unpaidDays, setUnpaidDays] = useState(0)
 
   const [formData, setFormData] = useState({
     leave_type_id: '',
@@ -35,8 +37,11 @@ export default function LeaveRequestForm({
   // 선택된 연차 종류
   const selectedType = leaveTypes.find(t => t.id === formData.leave_type_id)
 
-  // 총 신청 일수 계산
-  const calculateTotalDays = (): number => {
+  // 무급휴가 종류 찾기
+  const unpaidLeaveType = leaveTypes.find(t => t.code === 'unpaid')
+
+  // 총 신청 일수 계산 (주말 포함 옵션 추가)
+  const calculateTotalDays = (includeWeekends = false): number => {
     if (!formData.start_date || !formData.end_date) return 0
 
     const start = new Date(formData.start_date)
@@ -45,27 +50,31 @@ export default function LeaveRequestForm({
     // 날짜 유효성 검사
     if (end < start) return 0
 
+    // 반차인 경우 0.5일
+    if (selectedType?.code === 'half_day' || formData.half_day_type) {
+      return 0.5
+    }
+
     // 주말 제외 계산
     let days = 0
     const current = new Date(start)
 
     while (current <= end) {
       const dayOfWeek = current.getDay()
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      if (includeWeekends || (dayOfWeek !== 0 && dayOfWeek !== 6)) {
         days++
       }
       current.setDate(current.getDate() + 1)
-    }
-
-    // 반차인 경우 0.5일
-    if (selectedType?.code === 'half_day' || formData.half_day_type) {
-      return 0.5
     }
 
     return days * (selectedType?.deduct_days || 1)
   }
 
   const totalDays = calculateTotalDays()
+  const totalDaysIncludingWeekends = calculateTotalDays(true)
+
+  // 폼이 제출 가능한 상태인지 확인
+  const canSubmit = formData.leave_type_id && formData.start_date && formData.end_date
 
   // 기존 연차 신청과 날짜 중복 체크
   const checkDateOverlap = (): { isOverlapping: boolean; overlappingRequest: any | null } => {
@@ -86,9 +95,7 @@ export default function LeaveRequestForm({
       const existingEnd = new Date(req.end_date)
 
       // 날짜 범위가 겹치는지 확인
-      const isOverlapping = (
-        (newStart <= existingEnd && newEnd >= existingStart)
-      )
+      const isOverlapping = (newStart <= existingEnd && newEnd >= existingStart)
 
       if (isOverlapping) {
         return { isOverlapping: true, overlappingRequest: req }
@@ -96,6 +103,82 @@ export default function LeaveRequestForm({
     }
 
     return { isOverlapping: false, overlappingRequest: null }
+  }
+
+  // 실제 연차 신청 처리
+  const submitRequest = async (useUnpaidForExcess = false) => {
+    setLoading(true)
+    setShowUnpaidConfirm(false)
+
+    try {
+      const remainingDays = balance?.remaining_days ?? 0
+
+      if (useUnpaidForExcess && unpaidDays > 0 && unpaidLeaveType) {
+        // 잔여 연차만큼 연차로 신청
+        if (remainingDays > 0) {
+          const annualResult = await leaveService.createRequest({
+            leave_type_id: formData.leave_type_id,
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+            half_day_type: formData.half_day_type || undefined,
+            total_days: remainingDays,
+            reason: formData.reason || undefined,
+            emergency: formData.emergency,
+            user_id: '',
+            clinic_id: '',
+          })
+
+          if (annualResult.error) {
+            setError(annualResult.error)
+            setLoading(false)
+            return
+          }
+        }
+
+        // 초과분은 무급휴가로 신청
+        const unpaidResult = await leaveService.createRequest({
+          leave_type_id: unpaidLeaveType.id,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          half_day_type: formData.half_day_type || undefined,
+          total_days: unpaidDays,
+          reason: `[무급휴가] ${formData.reason || '연차 초과분'}`,
+          emergency: formData.emergency,
+          user_id: '',
+          clinic_id: '',
+        })
+
+        if (unpaidResult.error) {
+          setError(unpaidResult.error)
+        } else {
+          onSuccess()
+        }
+      } else {
+        // 일반 연차 신청
+        const result = await leaveService.createRequest({
+          leave_type_id: formData.leave_type_id,
+          start_date: formData.start_date,
+          end_date: selectedType?.code === 'half_day' ? formData.start_date : formData.end_date,
+          half_day_type: formData.half_day_type || undefined,
+          total_days: totalDays,
+          reason: formData.reason || undefined,
+          emergency: formData.emergency,
+          user_id: '',
+          clinic_id: '',
+        })
+
+        if (result.error) {
+          setError(result.error)
+        } else {
+          onSuccess()
+        }
+      }
+    } catch (err) {
+      console.error('Error creating leave request:', err)
+      setError('연차 신청 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -120,6 +203,17 @@ export default function LeaveRequestForm({
       return
     }
 
+    // 주말만 선택된 경우 경고
+    if (totalDays === 0 && totalDaysIncludingWeekends > 0) {
+      setError('선택한 날짜가 모두 주말입니다. 평일을 포함한 날짜를 선택해주세요.')
+      return
+    }
+
+    if (totalDays === 0) {
+      setError('신청 일수를 확인해주세요.')
+      return
+    }
+
     // 반차인 경우 오전/오후 선택 확인
     if (selectedType?.code === 'half_day' && !formData.half_day_type) {
       setError('오전/오후를 선택해주세요.')
@@ -136,40 +230,27 @@ export default function LeaveRequestForm({
       return
     }
 
-    // 잔여 연차 확인
+    // 잔여 연차 확인 (연차 차감 대상인 경우만)
     if (selectedType?.deduct_from_annual && balance) {
-      if (totalDays > balance.remaining_days) {
-        setError(`잔여 연차가 부족합니다. (잔여: ${balance.remaining_days}일)`)
-        return
+      const remainingDays = balance.remaining_days
+
+      if (totalDays > remainingDays) {
+        const excess = totalDays - remainingDays
+        setUnpaidDays(excess)
+
+        if (unpaidLeaveType) {
+          // 무급휴가 옵션 있으면 확인 모달 표시
+          setShowUnpaidConfirm(true)
+          return
+        } else {
+          setError(`잔여 연차가 부족합니다. (잔여: ${remainingDays}일, 신청: ${totalDays}일)`)
+          return
+        }
       }
     }
 
-    setLoading(true)
-
-    try {
-      const result = await leaveService.createRequest({
-        leave_type_id: formData.leave_type_id,
-        start_date: formData.start_date,
-        end_date: selectedType?.code === 'half_day' ? formData.start_date : formData.end_date,
-        half_day_type: formData.half_day_type || undefined,
-        total_days: totalDays,
-        reason: formData.reason || undefined,
-        emergency: formData.emergency,
-        user_id: '', // Service에서 자동 설정
-        clinic_id: '', // Service에서 자동 설정
-      })
-
-      if (result.error) {
-        setError(result.error)
-      } else {
-        onSuccess()
-      }
-    } catch (err) {
-      console.error('Error creating leave request:', err)
-      setError('연차 신청 중 오류가 발생했습니다.')
-    } finally {
-      setLoading(false)
-    }
+    // 신청 진행
+    await submitRequest(false)
   }
 
   return (
@@ -201,8 +282,46 @@ export default function LeaveRequestForm({
 
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center">
-          <AlertCircle className="w-4 h-4 mr-2" />
+          <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
           {error}
+        </div>
+      )}
+
+      {/* 무급휴가 확인 모달 */}
+      {showUnpaidConfirm && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 p-4 rounded-lg">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-medium text-amber-800">잔여 연차가 부족합니다</p>
+              <p className="text-sm text-amber-700 mt-1">
+                신청 일수: {totalDays}일 / 잔여 연차: {balance?.remaining_days ?? 0}일
+              </p>
+              <p className="text-sm text-amber-700">
+                부족한 {unpaidDays}일을 무급휴가로 신청하시겠습니까?
+              </p>
+              <div className="mt-3 flex space-x-2">
+                <button
+                  type="button"
+                  onClick={() => submitRequest(true)}
+                  disabled={loading}
+                  className="px-3 py-1.5 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                >
+                  {loading ? '처리 중...' : '무급휴가로 신청'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUnpaidConfirm(false)
+                    setUnpaidDays(0)
+                  }}
+                  className="px-3 py-1.5 text-sm font-medium text-amber-700 bg-white border border-amber-300 rounded-lg hover:bg-amber-50"
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -307,15 +426,22 @@ export default function LeaveRequestForm({
         )}
 
         {/* 신청 일수 표시 */}
-        {totalDays > 0 && (
+        {formData.start_date && formData.end_date && (
           <div className="p-4 bg-slate-50 rounded-lg">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">신청 일수</span>
-              <span className="text-lg font-semibold text-slate-800">{totalDays}일</span>
+              <span className="text-lg font-semibold text-slate-800">
+                {totalDays > 0 ? `${totalDays}일` : '0일 (주말 제외)'}
+              </span>
             </div>
-            {selectedType?.deduct_from_annual && (
+            {selectedType?.deduct_from_annual && totalDays > 0 && (
               <p className="text-xs text-slate-500 mt-1">
                 * 연차에서 차감됩니다
+              </p>
+            )}
+            {totalDays === 0 && totalDaysIncludingWeekends > 0 && (
+              <p className="text-xs text-amber-600 mt-1">
+                * 선택한 날짜가 모두 주말입니다
               </p>
             )}
           </div>
@@ -369,7 +495,7 @@ export default function LeaveRequestForm({
           </button>
           <button
             type="submit"
-            disabled={loading || totalDays === 0}
+            disabled={loading || !canSubmit}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '신청 중...' : '연차 신청'}
