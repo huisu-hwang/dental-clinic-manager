@@ -1,33 +1,56 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Plus, X } from 'lucide-react'
-import type { GiftRowData, GiftInventory } from '@/types'
+import type { GiftRowData, GiftInventory, GiftLog } from '@/types'
 
 interface GiftTableProps {
   giftRows: GiftRowData[]
   onGiftRowsChange: (rows: GiftRowData[]) => void
   giftInventory: GiftInventory[]
+  giftLogs?: GiftLog[]      // 저장된 선물 사용 기록
+  currentDate?: string      // 현재 입력 중인 보고서 날짜
   isReadOnly: boolean
 }
 
-export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, isReadOnly }: GiftTableProps) {
+export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, giftLogs = [], currentDate = '', isReadOnly }: GiftTableProps) {
+  // 저장된 giftLogs 기반 선물별 총 사용량 계산 (현재 날짜 제외)
+  const savedUsageByGift = useMemo(() => {
+    const usage: Record<string, number> = {}
+    for (const log of giftLogs) {
+      if (log.gift_type && log.gift_type !== '없음') {
+        // 현재 입력 중인 날짜의 저장된 데이터는 제외 (현재 입력 데이터로 대체됨)
+        if (currentDate && log.date === currentDate) {
+          continue
+        }
+        usage[log.gift_type] = (usage[log.gift_type] || 0) + (log.quantity || 1)
+      }
+    }
+    return usage
+  }, [giftLogs, currentDate])
+
   const getAvailableInventory = (giftType: string, currentRowIndex?: number) => {
     if (!giftType || giftType === '없음') return 0
 
     const gift = giftInventory.find(item => item.name === giftType)
     if (!gift) return 0
 
-    const usedQuantity = giftRows.reduce((total, row, index) => {
+    // 저장된 사용량 (현재 날짜 제외)
+    const savedUsed = savedUsageByGift[giftType] || 0
+
+    // 현재 입력 중인 giftRows에서의 사용량 (자기 자신 제외)
+    const currentUsed = giftRows.reduce((total, row, index) => {
       if (currentRowIndex !== undefined && index === currentRowIndex) {
         return total
       }
-      if (row.gift_type === giftType) {
+      if (row.gift_type === giftType && row.patient_name?.trim()) {
         return total + (row.quantity || 1)
       }
       return total
     }, 0)
 
-    return Math.max(0, gift.stock - usedQuantity)
+    // 실제 남은 재고 = 입고 재고 - 저장된 사용량 - 현재 입력 중인 사용량
+    return Math.max(0, gift.stock - savedUsed - currentUsed)
   }
 
   const addRow = () => {

@@ -273,6 +273,7 @@ export default function DashboardPage() {
           {activeTab === 'daily-input' && (
             <DailyInputForm
               giftInventory={giftInventory}
+              giftLogs={giftLogs}
               onSaveReport={handleSaveReport}
               onSaveSuccess={refetch}
               onGiftRowsChange={handleGiftRowsChange}
