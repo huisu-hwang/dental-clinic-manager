@@ -117,13 +117,14 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                     <option value="없음">없음</option>
                     {giftInventory.map(item => {
                       const availableQty = getAvailableInventory(item.name, index)
+                      const isSelected = row.gift_type === item.name
                       return (
                         <option
                           key={item.id}
                           value={item.name}
-                          disabled={availableQty <= 0}
+                          disabled={availableQty <= 0 && !isSelected}
                         >
-                          {item.name} ({availableQty}개)
+                          {isSelected ? item.name : `${item.name} (${availableQty}개)`}
                         </option>
                       )
                     })}
@@ -243,13 +244,14 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                     <option value="없음">없음</option>
                     {giftInventory.map(item => {
                       const availableQty = getAvailableInventory(item.name, index)
+                      const isSelected = row.gift_type === item.name
                       return (
                         <option
                           key={item.id}
                           value={item.name}
-                          disabled={availableQty <= 0}
+                          disabled={availableQty <= 0 && !isSelected}
                         >
-                          {item.name} ({availableQty}개)
+                          {isSelected ? item.name : `${item.name} (${availableQty}개)`}
                         </option>
                       )
                     })}
