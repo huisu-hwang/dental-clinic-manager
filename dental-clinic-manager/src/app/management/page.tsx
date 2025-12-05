@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Settings, Users, Building2, Building, FileText, BarChart3, Cog } from 'lucide-react'
+import { Settings, Users, Building2, Building, FileText, BarChart3, Cog, Calendar } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import Header from '@/components/Layout/Header'
@@ -12,11 +12,13 @@ import BranchManagement from '@/components/Management/BranchManagement'
 import ClinicSettings from '@/components/Management/ClinicSettings'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import AccountProfile from '@/components/Management/AccountProfile'
+import LeaveManagement from '@/components/Leave/LeaveManagement'
 import Toast from '@/components/ui/Toast'
 
 // 서브 탭 설정
 const subTabs = [
   { id: 'staff', label: '직원 관리', icon: Users, permissions: ['staff_view', 'staff_manage'] },
+  { id: 'leave', label: '연차 관리', icon: Calendar, permissions: ['leave_request_view_own', 'leave_request_view_all', 'leave_balance_view_own'] },
   { id: 'branches', label: '지점 관리', icon: Building2, permissions: ['clinic_settings'] },
   { id: 'clinic', label: '병원 설정', icon: Building, permissions: ['clinic_settings'] },
   { id: 'protocols', label: '프로토콜 관리', icon: FileText, permissions: ['protocol_view', 'protocol_create', 'protocol_edit'] },
@@ -250,6 +252,11 @@ export default function ManagementPage() {
                 {/* Protocol Management Tab */}
                 {activeTab === 'protocols' && (
                   <ProtocolManagement currentUser={user} hideHeader />
+                )}
+
+                {/* Leave Management Tab */}
+                {activeTab === 'leave' && (
+                  <LeaveManagement currentUser={user} />
                 )}
 
                 {/* Analytics Tab */}

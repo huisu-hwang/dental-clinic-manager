@@ -1,0 +1,1313 @@
+/**
+ * 연차 관리 서비스
+ * Leave Management Service
+ */
+
+import { ensureConnection } from './supabase/connectionCheck'
+import type {
+  LeavePolicy,
+  LeaveType,
+  LeaveRequest,
+  LeaveRequestInput,
+  LeaveApproval,
+  LeaveApprovalInput,
+  EmployeeLeaveBalance,
+  LeaveApprovalWorkflow,
+  LeaveRequestStatus,
+  YearlyLeaveRule,
+} from '@/types/leave'
+
+// Helper function to extract error message
+const extractErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message
+  }
+  if (error && typeof error === 'object') {
+    if ('message' in error && typeof (error as any).message === 'string') {
+      return (error as any).message
+    }
+    if ('error' in error && typeof (error as any).error === 'string') {
+      return (error as any).error
+    }
+  }
+  return 'Unknown error occurred'
+}
+
+// 현재 클리닉 ID 가져오기
+const getCurrentClinicId = (): string | null => {
+  if (typeof window === 'undefined') return null
+  return sessionStorage.getItem('dental_clinic_id') || localStorage.getItem('dental_clinic_id')
+}
+
+// 현재 사용자 ID 가져오기
+const getCurrentUserId = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
+  if (!userStr) return null
+  try {
+    const user = JSON.parse(userStr)
+    return user.id
+  } catch {
+    return null
+  }
+}
+
+// 현재 사용자 정보 가져오기
+const getCurrentUser = (): { id: string; role: string; clinic_id: string } | null => {
+  if (typeof window === 'undefined') return null
+  const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
+  if (!userStr) return null
+  try {
+    return JSON.parse(userStr)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 대한민국 근로기준법 기반 연차 계산
+ * @param hireDate 입사일
+ * @param referenceDate 기준일 (기본값: 오늘)
+ */
+export function calculateAnnualLeaveDays(hireDate: Date, referenceDate: Date = new Date()): number {
+  const diffTime = referenceDate.getTime() - hireDate.getTime()
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  const yearsOfService = diffDays / 365
+
+  // 1년 미만: 월 1일 (최대 11일)
+  if (yearsOfService < 1) {
+    const monthsWorked = Math.floor(diffDays / 30)
+    return Math.min(monthsWorked, 11)
+  }
+
+  // 1년 이상: 15일 기본 + 2년마다 1일 추가 (최대 25일)
+  // 3년 이상부터 1일 추가 시작
+  const extraDays = Math.floor((yearsOfService - 1) / 2)
+  return Math.min(15 + extraDays, 25)
+}
+
+/**
+ * 근속 연수 계산
+ */
+export function calculateYearsOfService(hireDate: Date, referenceDate: Date = new Date()): number {
+  const diffTime = referenceDate.getTime() - hireDate.getTime()
+  const years = diffTime / (1000 * 60 * 60 * 24 * 365)
+  return Math.round(years * 10) / 10 // 소수점 첫째 자리까지
+}
+
+/**
+ * 직급에 따른 승인 프로세스 결정
+ * - 부원장: 원장에게 직접 승인
+ * - 팀장 이하: 실장 승인 -> 원장 최종 승인
+ */
+export function getApprovalStepsForRole(role: string): { step: number; role: string; description: string }[] {
+  if (role === 'vice_director') {
+    // 부원장은 원장에게 직접 승인
+    return [
+      { step: 1, role: 'owner', description: '원장 승인' }
+    ]
+  }
+
+  // 팀장 이하 (team_leader, staff)는 실장 -> 원장 2단계
+  return [
+    { step: 1, role: 'manager', description: '실장 1차 승인' },
+    { step: 2, role: 'owner', description: '원장 최종 승인' }
+  ]
+}
+
+/**
+ * 병원 근무일 정보 조회
+ */
+export async function getClinicWorkingDays(): Promise<{ data: number[]; error: string | null }> {
+  try {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Database connection failed')
+
+    const clinicId = getCurrentClinicId()
+    if (!clinicId) throw new Error('Clinic not found')
+
+    const { data, error } = await (supabase as any)
+      .from('clinic_hours')
+      .select('day_of_week, is_open')
+      .eq('clinic_id', clinicId)
+
+    if (error) throw error
+
+    // is_open이 true인 요일만 반환 (0=일요일, 1=월요일, ..., 6=토요일)
+    const workingDays = (data || [])
+      .filter((d: any) => d.is_open)
+      .map((d: any) => d.day_of_week)
+
+    return { data: workingDays, error: null }
+  } catch (error) {
+    console.error('[leaveService.getClinicWorkingDays] Error:', error)
+    return { data: [], error: extractErrorMessage(error) }
+  }
+}
+
+/**
+ * 병원 근무일 기준 연차 일수 계산
+ * @param startDate 시작일
+ * @param endDate 종료일
+ * @param workingDays 병원 근무 요일 배열 (0=일요일, 1=월요일, ..., 6=토요일)
+ */
+export function calculateWorkingDaysBetween(
+  startDate: Date,
+  endDate: Date,
+  workingDays: number[]
+): number {
+  if (endDate < startDate) return 0
+
+  let days = 0
+  const current = new Date(startDate)
+
+  while (current <= endDate) {
+    const dayOfWeek = current.getDay()
+    if (workingDays.includes(dayOfWeek)) {
+      days++
+    }
+    current.setDate(current.getDate() + 1)
+  }
+
+  return days
+}
+
+export const leaveService = {
+  // ============================================
+  // 연차 정책 관련
+  // ============================================
+
+  /**
+   * 클리닉의 기본 연차 정책 조회
+   */
+  async getDefaultPolicy(): Promise<{ data: LeavePolicy | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { data, error } = await (supabase as any)
+        .from('leave_policies')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .eq('is_default', true)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[leaveService.getDefaultPolicy] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 연차 정책 생성/업데이트
+   */
+  async upsertPolicy(policy: Partial<LeavePolicy>): Promise<{ data: LeavePolicy | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      const userId = getCurrentUserId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const policyData = {
+        ...policy,
+        clinic_id: clinicId,
+        created_by: policy.id ? undefined : userId,
+        updated_at: new Date().toISOString(),
+      }
+
+      let result
+      if (policy.id) {
+        result = await (supabase as any)
+          .from('leave_policies')
+          .update(policyData)
+          .eq('id', policy.id)
+          .select()
+          .single()
+      } else {
+        result = await (supabase as any)
+          .from('leave_policies')
+          .insert(policyData)
+          .select()
+          .single()
+      }
+
+      if (result.error) throw result.error
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[leaveService.upsertPolicy] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // ============================================
+  // 연차 종류 관련
+  // ============================================
+
+  /**
+   * 연차 종류 목록 조회
+   */
+  async getLeaveTypes(): Promise<{ data: LeaveType[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { data, error } = await (supabase as any)
+        .from('leave_types')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+
+      if (error) throw error
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[leaveService.getLeaveTypes] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 기본 연차 종류 생성 (클리닉 초기 설정용)
+   */
+  async createDefaultLeaveTypes(): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      // 이미 존재하는지 확인
+      const { data: existing } = await (supabase as any)
+        .from('leave_types')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .limit(1)
+
+      if (existing && existing.length > 0) {
+        return { success: true, error: null } // 이미 존재함
+      }
+
+      const defaultTypes = [
+        { name: '연차', code: 'annual', description: '일반 연차 휴가', is_paid: true, deduct_from_annual: true, deduct_days: 1.0, color: '#3B82F6', display_order: 1 },
+        { name: '반차', code: 'half_day', description: '반일 연차 (오전/오후)', is_paid: true, deduct_from_annual: true, deduct_days: 0.5, color: '#10B981', display_order: 2 },
+        { name: '병가', code: 'sick', description: '질병으로 인한 휴가', is_paid: true, deduct_from_annual: true, deduct_days: 1.0, requires_proof: true, proof_description: '진단서 또는 소견서', color: '#F59E0B', display_order: 3 },
+        { name: '경조사', code: 'family_event', description: '경조사 휴가 (결혼, 상 등)', is_paid: true, deduct_from_annual: false, deduct_days: 1.0, requires_proof: true, proof_description: '청첩장, 부고 등', color: '#8B5CF6', display_order: 4 },
+        { name: '대체휴가', code: 'compensatory', description: '휴일 근무 대체 휴가', is_paid: true, deduct_from_annual: false, deduct_days: 1.0, color: '#06B6D4', display_order: 5 },
+        { name: '무급휴가', code: 'unpaid', description: '무급 개인 사유 휴가', is_paid: false, deduct_from_annual: false, deduct_days: 1.0, color: '#6B7280', display_order: 6 },
+      ]
+
+      const typesWithClinic = defaultTypes.map(t => ({ ...t, clinic_id: clinicId }))
+
+      const { error } = await (supabase as any)
+        .from('leave_types')
+        .insert(typesWithClinic)
+
+      if (error) throw error
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.createDefaultLeaveTypes] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // ============================================
+  // 연차 잔여 조회
+  // ============================================
+
+  /**
+   * 특정 직원의 연차 잔여 조회
+   * - 항상 최신 데이터로 재계산하여 반환
+   */
+  async getEmployeeBalance(userId: string, year: number = new Date().getFullYear()): Promise<{ data: EmployeeLeaveBalance | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      // 항상 최신 상태로 재계산
+      await this.initializeBalance(userId, year)
+
+      // 재계산된 결과 조회
+      const { data: balance, error } = await (supabase as any)
+        .from('employee_leave_balances')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('clinic_id', clinicId)
+        .eq('year', year)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+
+      return { data: balance, error: null }
+    } catch (error) {
+      console.error('[leaveService.getEmployeeBalance] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 본인의 연차 잔여 조회
+   */
+  async getMyBalance(year: number = new Date().getFullYear()): Promise<{ data: EmployeeLeaveBalance | null; error: string | null }> {
+    const userId = getCurrentUserId()
+    if (!userId) return { data: null, error: 'User not found' }
+    return this.getEmployeeBalance(userId, year)
+  },
+
+  /**
+   * 전체 직원의 연차 현황 조회
+   * - 모든 직원의 연차를 최신 상태로 재계산하여 반환
+   */
+  async getAllEmployeeBalances(year: number = new Date().getFullYear()): Promise<{ data: (EmployeeLeaveBalance & { user_name?: string; user_role?: string })[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      // 모든 활성 직원 조회
+      const { data: allUsers, error: usersError } = await (supabase as any)
+        .from('users')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('status', 'active')
+
+      if (usersError) throw usersError
+
+      // 모든 직원의 연차 재계산
+      if (allUsers && allUsers.length > 0) {
+        await Promise.all(allUsers.map((user: any) => this.initializeBalance(user.id, year)))
+      }
+
+      // 최신 데이터 조회
+      const { data: balances, error } = await (supabase as any)
+        .from('employee_leave_balances')
+        .select(`
+          *,
+          users:user_id (name, role)
+        `)
+        .eq('clinic_id', clinicId)
+        .eq('year', year)
+        .order('remaining_days', { ascending: false })
+
+      if (error) throw error
+
+      // 사용자 정보 병합
+      const result = (balances || []).map((item: any) => ({
+        ...item,
+        user_name: item.users?.name,
+        user_role: item.users?.role,
+        users: undefined,
+      }))
+
+      return { data: result, error: null }
+    } catch (error) {
+      console.error('[leaveService.getAllEmployeeBalances] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 연차 잔여 수동 초기화/계산
+   */
+  async initializeBalance(userId: string, year: number = new Date().getFullYear()): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      // 사용자 입사일 조회
+      const { data: user, error: userError } = await (supabase as any)
+        .from('users')
+        .select('id, hire_date, created_at')
+        .eq('id', userId)
+        .single()
+
+      if (userError) throw userError
+
+      const hireDate = user.hire_date ? new Date(user.hire_date) : new Date(user.created_at)
+      const yearsOfService = calculateYearsOfService(hireDate)
+      const totalDays = calculateAnnualLeaveDays(hireDate)
+
+      // 이미 승인된 연차 조회
+      const { data: approved } = await (supabase as any)
+        .from('leave_requests')
+        .select('total_days, leave_types!inner(deduct_from_annual)')
+        .eq('user_id', userId)
+        .eq('status', 'approved')
+        .gte('start_date', `${year}-01-01`)
+        .lte('start_date', `${year}-12-31`)
+
+      const usedDays = (approved || [])
+        .filter((r: any) => r.leave_types?.deduct_from_annual)
+        .reduce((sum: number, r: any) => sum + r.total_days, 0)
+
+      // 수동 조정 연차 조회
+      const { data: adjustments } = await (supabase as any)
+        .from('leave_adjustments')
+        .select('adjustment_type, days')
+        .eq('user_id', userId)
+        .eq('year', year)
+
+      const adjustmentDays = (adjustments || []).reduce((sum: number, adj: any) => {
+        if (adj.adjustment_type === 'deduct') return sum + adj.days
+        if (adj.adjustment_type === 'add') return sum - adj.days
+        return sum
+      }, 0)
+
+      // 대기 중인 연차
+      const { data: pending } = await (supabase as any)
+        .from('leave_requests')
+        .select('total_days, leave_types!inner(deduct_from_annual)')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .gte('start_date', `${year}-01-01`)
+        .lte('start_date', `${year}-12-31`)
+
+      const pendingDays = (pending || [])
+        .filter((r: any) => r.leave_types?.deduct_from_annual)
+        .reduce((sum: number, r: any) => sum + r.total_days, 0)
+
+      const remainingDays = totalDays - usedDays - adjustmentDays - pendingDays
+
+      // Upsert
+      const { error } = await (supabase as any)
+        .from('employee_leave_balances')
+        .upsert({
+          user_id: userId,
+          clinic_id: clinicId,
+          year,
+          total_days: totalDays,
+          used_days: usedDays + adjustmentDays,
+          pending_days: pendingDays,
+          remaining_days: remainingDays,
+          years_of_service: yearsOfService,
+          hire_date: hireDate.toISOString().split('T')[0],
+          last_calculated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,year'
+        })
+
+      if (error) throw error
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.initializeBalance] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // ============================================
+  // 연차 신청
+  // ============================================
+
+  /**
+   * 연차 신청
+   */
+  async createRequest(input: LeaveRequestInput): Promise<{ data: LeaveRequest | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      // 직급에 따른 승인 단계 결정
+      const approvalSteps = getApprovalStepsForRole(user.role)
+
+      const requestData = {
+        user_id: user.id,
+        clinic_id: user.clinic_id,
+        leave_type_id: input.leave_type_id,
+        start_date: input.start_date,
+        end_date: input.end_date,
+        half_day_type: input.half_day_type || null,
+        total_days: input.total_days,
+        reason: input.reason || null,
+        proof_file_url: input.proof_file_url || null,
+        emergency: input.emergency || false,
+        status: 'pending',
+        current_step: 1,
+        total_steps: approvalSteps.length,
+        submitted_at: new Date().toISOString(),
+      }
+
+      const { data, error } = await (supabase as any)
+        .from('leave_requests')
+        .insert(requestData)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[leaveService.createRequest] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 연차 신청 취소
+   */
+  async cancelRequest(requestId: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const { error } = await (supabase as any)
+        .from('leave_requests')
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', requestId)
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+
+      if (error) throw error
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.cancelRequest] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 본인 연차 신청 목록 조회
+   */
+  async getMyRequests(year?: number): Promise<{ data: any[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      let query = (supabase as any)
+        .from('leave_requests')
+        .select(`
+          *,
+          leave_types (name, code, color),
+          leave_approvals (*)
+        `)
+        .eq('user_id', userId)
+        .order('submitted_at', { ascending: false })
+
+      if (year) {
+        query = query
+          .gte('start_date', `${year}-01-01`)
+          .lte('start_date', `${year}-12-31`)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[leaveService.getMyRequests] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  // ============================================
+  // 연차 승인
+  // ============================================
+
+  /**
+   * 승인 대기 목록 조회 (승인자 기준)
+   */
+  async getPendingApprovals(): Promise<{ data: any[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      // 내 역할에 따라 승인해야 할 요청 조회
+      // owner: 모든 pending 요청 (current_step이 자신의 단계일 때)
+      // manager: 1단계 승인 대기인 요청 중 신청자가 team_leader 또는 staff인 것
+
+      let query = (supabase as any)
+        .from('leave_requests')
+        .select(`
+          *,
+          users:user_id (id, name, role, email),
+          leave_types (name, code, color)
+        `)
+        .eq('clinic_id', user.clinic_id)
+        .eq('status', 'pending')
+        .order('submitted_at', { ascending: true })
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      // 현재 사용자 역할에 따라 필터링
+      const filtered = (data || []).filter((req: any) => {
+        const applicantRole = req.users?.role
+        const steps = getApprovalStepsForRole(applicantRole)
+        const currentStepInfo = steps[req.current_step - 1]
+
+        // 현재 단계의 승인자 역할이 내 역할과 일치하는지 확인
+        if (user.role === 'owner') {
+          // 원장은 마지막 단계 또는 부원장 요청 승인
+          return currentStepInfo?.role === 'owner'
+        }
+        if (user.role === 'manager') {
+          // 실장은 1단계 승인 (팀장, 직원 요청)
+          return currentStepInfo?.role === 'manager'
+        }
+        return false
+      })
+
+      return { data: filtered, error: null }
+    } catch (error) {
+      console.error('[leaveService.getPendingApprovals] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 연차 승인
+   */
+  async approveRequest(requestId: string, comment?: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      // 현재 요청 정보 조회
+      const { data: request, error: reqError } = await (supabase as any)
+        .from('leave_requests')
+        .select('*, users:user_id (role)')
+        .eq('id', requestId)
+        .single()
+
+      if (reqError) throw reqError
+
+      const applicantRole = request.users?.role
+      const steps = getApprovalStepsForRole(applicantRole)
+      const currentStep = request.current_step
+      const isLastStep = currentStep >= steps.length
+
+      // 승인 기록 추가
+      const { error: approvalError } = await (supabase as any)
+        .from('leave_approvals')
+        .insert({
+          leave_request_id: requestId,
+          step_number: currentStep,
+          step_name: steps[currentStep - 1]?.description,
+          approver_id: user.id,
+          approver_role: user.role,
+          approver_name: '', // 별도 조회 필요시 추가
+          action: isLastStep ? 'approved' : 'forwarded',
+          comment: comment || null,
+          acted_at: new Date().toISOString(),
+        })
+
+      if (approvalError) throw approvalError
+
+      // 요청 상태 업데이트
+      const updateData = isLastStep
+        ? {
+          status: 'approved' as LeaveRequestStatus,
+          current_step: currentStep,
+          final_approver_id: user.id,
+          final_decision_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        : {
+          current_step: currentStep + 1,
+          updated_at: new Date().toISOString(),
+        }
+
+      const { error: updateError } = await (supabase as any)
+        .from('leave_requests')
+        .update(updateData)
+        .eq('id', requestId)
+
+      if (updateError) throw updateError
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.approveRequest] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 연차 반려
+   */
+  async rejectRequest(requestId: string, reason: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      // 현재 요청 정보 조회
+      const { data: request, error: reqError } = await (supabase as any)
+        .from('leave_requests')
+        .select('*, users:user_id (role)')
+        .eq('id', requestId)
+        .single()
+
+      if (reqError) throw reqError
+
+      const applicantRole = request.users?.role
+      const steps = getApprovalStepsForRole(applicantRole)
+
+      // 반려 기록 추가
+      const { error: approvalError } = await (supabase as any)
+        .from('leave_approvals')
+        .insert({
+          leave_request_id: requestId,
+          step_number: request.current_step,
+          step_name: steps[request.current_step - 1]?.description,
+          approver_id: user.id,
+          approver_role: user.role,
+          approver_name: '',
+          action: 'rejected',
+          comment: reason,
+          acted_at: new Date().toISOString(),
+        })
+
+      if (approvalError) throw approvalError
+
+      // 요청 상태 업데이트
+      const { error: updateError } = await (supabase as any)
+        .from('leave_requests')
+        .update({
+          status: 'rejected' as LeaveRequestStatus,
+          rejection_reason: reason,
+          final_approver_id: user.id,
+          final_decision_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', requestId)
+
+      if (updateError) throw updateError
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.rejectRequest] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // ============================================
+  // 연차 수동 조정 (이미 소진한 연차 입력)
+  // ============================================
+
+  /**
+   * 연차 수동 조정 (원장/실장용)
+   */
+  async addAdjustment(input: {
+    user_id: string
+    adjustment_type: 'deduct' | 'add' | 'set'
+    days: number
+    year: number
+    reason: string
+    leave_type_id?: string
+    use_date?: string
+  }): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      // 권한 확인 (원장/실장만)
+      if (user.role !== 'owner' && user.role !== 'manager') {
+        throw new Error('권한이 없습니다.')
+      }
+
+      const { error } = await (supabase as any)
+        .from('leave_adjustments')
+        .insert({
+          user_id: input.user_id,
+          clinic_id: user.clinic_id,
+          adjustment_type: input.adjustment_type,
+          days: input.days,
+          year: input.year,
+          reason: input.reason,
+          leave_type_id: input.leave_type_id || null,
+          use_date: input.use_date || null,
+          adjusted_by: user.id,
+          adjusted_at: new Date().toISOString(),
+        })
+
+      if (error) throw error
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.addAdjustment] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 연차 조정 내역 조회
+   */
+  async getAdjustments(userId: string, year: number): Promise<{ data: any[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { data, error } = await (supabase as any)
+        .from('leave_adjustments')
+        .select(`
+          *,
+          leave_types (name, code),
+          adjusted_by_user:adjusted_by (name)
+        `)
+        .eq('user_id', userId)
+        .eq('clinic_id', clinicId)
+        .eq('year', year)
+        .order('adjusted_at', { ascending: false })
+
+      if (error) throw error
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[leaveService.getAdjustments] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 조정 삭제
+   */
+  async deleteAdjustment(adjustmentId: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      const { error } = await (supabase as any)
+        .from('leave_adjustments')
+        .delete()
+        .eq('id', adjustmentId)
+        .eq('adjusted_by', user.id)
+
+      if (error) throw error
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.deleteAdjustment] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // ============================================
+  // 전체 연차 현황 조회
+  // ============================================
+
+  /**
+   * 전체 연차 신청 목록 조회 (관리자용)
+   */
+  async getAllRequests(filters?: {
+    year?: number
+    status?: LeaveRequestStatus
+    userId?: string
+  }): Promise<{ data: any[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      let query = (supabase as any)
+        .from('leave_requests')
+        .select(`
+          *,
+          users:user_id (id, name, role, email),
+          leave_types (name, code, color),
+          leave_approvals (*)
+        `)
+        .eq('clinic_id', clinicId)
+        .order('submitted_at', { ascending: false })
+
+      if (filters?.year) {
+        query = query
+          .gte('start_date', `${filters.year}-01-01`)
+          .lte('start_date', `${filters.year}-12-31`)
+      }
+
+      if (filters?.status) {
+        query = query.eq('status', filters.status)
+      }
+
+      if (filters?.userId) {
+        query = query.eq('user_id', filters.userId)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[leaveService.getAllRequests] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 직원 목록 조회 (연차 관리용)
+   */
+  async getStaffList(): Promise<{ data: any[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { data, error } = await (supabase as any)
+        .from('users')
+        .select('id, name, role, hire_date, status')
+        .eq('clinic_id', clinicId)
+        .eq('status', 'active')
+        .order('name', { ascending: true })
+
+      if (error) throw error
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[leaveService.getStaffList] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  // ============================================
+  // 병원 휴무일 관리 (여름휴가, 겨울휴가 등)
+  // ============================================
+
+  /**
+   * 병원 휴무일 목록 조회
+   */
+  async getClinicHolidays(year?: number): Promise<{ data: any[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      let query = (supabase as any)
+        .from('clinic_holidays')
+        .select(`
+          *,
+          created_by_user:created_by (name),
+          applied_by_user:applied_by (name)
+        `)
+        .eq('clinic_id', clinicId)
+        .order('start_date', { ascending: false })
+
+      if (year) {
+        query = query.gte('start_date', `${year}-01-01`).lte('start_date', `${year}-12-31`)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[leaveService.getClinicHolidays] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 병원 휴무일 생성
+   */
+  async createClinicHoliday(input: {
+    holiday_name: string
+    holiday_type: 'company' | 'public' | 'special'
+    start_date: string
+    end_date: string
+    deduct_from_annual: boolean
+    deduct_days?: number
+    apply_to_all: boolean
+    excluded_roles?: string[]
+    description?: string
+  }): Promise<{ data: any; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      // 원장만 휴무일 생성 가능
+      if (user.role !== 'owner') {
+        throw new Error('원장만 휴무일을 등록할 수 있습니다.')
+      }
+
+      // 총 휴무일 계산 (주말 제외)
+      const totalDays = calculateWorkingDays(new Date(input.start_date), new Date(input.end_date))
+
+      const { data, error } = await (supabase as any)
+        .from('clinic_holidays')
+        .insert({
+          clinic_id: user.clinic_id,
+          holiday_name: input.holiday_name,
+          holiday_type: input.holiday_type,
+          start_date: input.start_date,
+          end_date: input.end_date,
+          total_days: totalDays,
+          deduct_from_annual: input.deduct_from_annual,
+          deduct_days: input.deduct_days ?? totalDays,
+          apply_to_all: input.apply_to_all,
+          excluded_roles: input.excluded_roles || [],
+          description: input.description || null,
+          created_by: user.id,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[leaveService.createClinicHoliday] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 병원 휴무일 삭제
+   */
+  async deleteClinicHoliday(holidayId: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      if (user.role !== 'owner') {
+        throw new Error('원장만 휴무일을 삭제할 수 있습니다.')
+      }
+
+      // 이미 적용된 휴무일인지 확인
+      const { data: holiday } = await (supabase as any)
+        .from('clinic_holidays')
+        .select('is_applied')
+        .eq('id', holidayId)
+        .single()
+
+      if (holiday?.is_applied) {
+        throw new Error('이미 연차에 적용된 휴무일은 삭제할 수 없습니다.')
+      }
+
+      const { error } = await (supabase as any)
+        .from('clinic_holidays')
+        .delete()
+        .eq('id', holidayId)
+        .eq('clinic_id', user.clinic_id)
+
+      if (error) throw error
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.deleteClinicHoliday] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 병원 휴무일을 직원 연차에 일괄 적용
+   */
+  async applyHolidayToLeave(holidayId: string): Promise<{ success: boolean; appliedCount: number; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      if (user.role !== 'owner') {
+        throw new Error('원장만 휴무일을 적용할 수 있습니다.')
+      }
+
+      // 휴무일 정보 조회
+      const { data: holiday, error: holidayError } = await (supabase as any)
+        .from('clinic_holidays')
+        .select('*')
+        .eq('id', holidayId)
+        .single()
+
+      if (holidayError) throw holidayError
+
+      if (holiday.is_applied) {
+        throw new Error('이미 적용된 휴무일입니다.')
+      }
+
+      if (!holiday.deduct_from_annual) {
+        throw new Error('연차 차감 대상이 아닌 휴무일입니다.')
+      }
+
+      // 적용 대상 직원 조회
+      let staffQuery = (supabase as any)
+        .from('users')
+        .select('id, name, role')
+        .eq('clinic_id', user.clinic_id)
+        .eq('status', 'active')
+
+      const { data: staffList, error: staffError } = await staffQuery
+
+      if (staffError) throw staffError
+
+      // 제외 역할 필터링
+      const excludedRoles = holiday.excluded_roles || []
+      const targetStaff = (staffList || []).filter(
+        (s: any) => !excludedRoles.includes(s.role) && !(holiday.excluded_user_ids || []).includes(s.id)
+      )
+
+      const deductDays = holiday.deduct_days ?? holiday.total_days
+      const year = new Date(holiday.start_date).getFullYear()
+      let appliedCount = 0
+
+      // 각 직원에게 연차 차감 적용
+      for (const staff of targetStaff) {
+        // 연차 조정 추가
+        const { data: adjustment, error: adjError } = await (supabase as any)
+          .from('leave_adjustments')
+          .insert({
+            user_id: staff.id,
+            clinic_id: user.clinic_id,
+            adjustment_type: 'deduct',
+            days: deductDays,
+            year,
+            reason: `[병원휴무] ${holiday.holiday_name} (${holiday.start_date} ~ ${holiday.end_date})`,
+            use_date: holiday.start_date,
+            adjusted_by: user.id,
+          })
+          .select()
+          .single()
+
+        if (adjError) {
+          console.error(`Error applying to ${staff.name}:`, adjError)
+          continue
+        }
+
+        // 적용 기록 저장
+        await (supabase as any)
+          .from('holiday_leave_applications')
+          .insert({
+            clinic_holiday_id: holidayId,
+            user_id: staff.id,
+            clinic_id: user.clinic_id,
+            deducted_days: deductDays,
+            year,
+            leave_adjustment_id: adjustment.id,
+            applied_by: user.id,
+          })
+
+        appliedCount++
+      }
+
+      // 휴무일 적용 완료 표시
+      await (supabase as any)
+        .from('clinic_holidays')
+        .update({
+          is_applied: true,
+          applied_at: new Date().toISOString(),
+          applied_by: user.id,
+        })
+        .eq('id', holidayId)
+
+      return { success: true, appliedCount, error: null }
+    } catch (error) {
+      console.error('[leaveService.applyHolidayToLeave] Error:', error)
+      return { success: false, appliedCount: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 휴무일 적용 기록 조회
+   */
+  async getHolidayApplications(holidayId: string): Promise<{ data: any[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .from('holiday_leave_applications')
+        .select(`
+          *,
+          users:user_id (name, role)
+        `)
+        .eq('clinic_holiday_id', holidayId)
+        .order('applied_at', { ascending: false })
+
+      if (error) throw error
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[leaveService.getHolidayApplications] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+}
+
+/**
+ * 주말 제외 근무일 계산
+ */
+function calculateWorkingDays(startDate: Date, endDate: Date): number {
+  let days = 0
+  const current = new Date(startDate)
+
+  while (current <= endDate) {
+    const dayOfWeek = current.getDay()
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      days++
+    }
+    current.setDate(current.getDate() + 1)
+  }
+
+  return days
+}
+
+export default leaveService

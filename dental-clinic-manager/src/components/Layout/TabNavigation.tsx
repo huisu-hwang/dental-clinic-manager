@@ -10,7 +10,8 @@ import {
   BookOpen,
   FileSignature,
   Package,
-  HelpCircle
+  HelpCircle,
+  CalendarDays
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -29,6 +30,7 @@ interface Tab {
 const tabs: Tab[] = [
   { id: 'daily-input', label: '일일보고서', icon: ClipboardList, requiredPermissions: ['daily_report_view'] },
   { id: 'attendance', label: '출근 관리', icon: Clock, requiredPermissions: ['attendance_check_in', 'attendance_view_own'] },
+  { id: 'leave', label: '연차 관리', icon: CalendarDays, requiredPermissions: ['leave_request_view_own', 'leave_balance_view_own'] },
   { id: 'stats', label: '통계', icon: BarChart3, requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'] },
   { id: 'logs', label: '상세 기록', icon: History, requiredPermissions: ['logs_view'] },
   { id: 'protocols', label: '진료 프로토콜', icon: BookOpen, requiredPermissions: ['protocol_view'] },

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, UserPlus, Clock, Mail, Phone, MapPin, IdCard, Pencil, Settings, X, Check } from 'lucide-react'
+import { Users, UserPlus, Clock, Mail, Phone, MapPin, IdCard, Pencil, Settings, X, Check, Calendar } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 import { authService } from '@/lib/authService'
 import { dataService } from '@/lib/dataService'
@@ -57,7 +57,8 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
     name: '',
     phone: '',
     address: '',
-    resident_registration_number: ''
+    resident_registration_number: '',
+    hire_date: ''
   })
 
   // 복호화된 주민번호 저장 (userId -> 복호화된 주민번호)
@@ -281,7 +282,8 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
         name: editForm.name,
         phone: editForm.phone || '',
         address: editForm.address || '',
-        resident_registration_number: encryptedResidentNumber
+        resident_registration_number: encryptedResidentNumber,
+        hire_date: editForm.hire_date || undefined
       })
 
       if (result.error) {
@@ -289,7 +291,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       } else {
         setSuccess('직원 정보가 수정되었습니다.')
         setEditingStaffInfo(null)
-        setEditForm({ name: '', phone: '', address: '', resident_registration_number: '' })
+        setEditForm({ name: '', phone: '', address: '', resident_registration_number: '', hire_date: '' })
         fetchStaff()
       }
     } catch (err) {
@@ -436,7 +438,8 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                                 name: member.name || '',
                                 phone: member.phone || '',
                                 address: member.address || '',
-                                resident_registration_number: decryptedRrn
+                                resident_registration_number: decryptedRrn,
+                                hire_date: member.hire_date || ''
                               })
                             }}
                             className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -731,12 +734,28 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                 </p>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <Calendar className="w-4 h-4 inline-block mr-1" />
+                  입사일
+                </label>
+                <input
+                  type="date"
+                  value={editForm.hire_date}
+                  onChange={(e) => setEditForm({ ...editForm, hire_date: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  연차 계산의 기준일로 사용됩니다
+                </p>
+              </div>
+
               <div className="flex justify-end space-x-2 mt-6">
                 <button
                   type="button"
                   onClick={() => {
                     setEditingStaffInfo(null)
-                    setEditForm({ name: '', phone: '', address: '', resident_registration_number: '' })
+                    setEditForm({ name: '', phone: '', address: '', resident_registration_number: '', hire_date: '' })
                   }}
                   className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
                 >

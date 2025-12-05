@@ -9,6 +9,7 @@ export interface User {
   phone?: string
   address?: string  // 근로계약서 작성용
   resident_registration_number?: string  // 근로계약서 작성용 (주민등록번호)
+  hire_date?: string  // 입사일 (연차 계산 기준일) YYYY-MM-DD
   role: string
   status: string
   clinic_id?: string

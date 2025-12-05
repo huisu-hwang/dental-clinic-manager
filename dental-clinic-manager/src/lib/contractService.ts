@@ -568,6 +568,16 @@ class ContractService {
 
       if (hasEmployerSignature && hasEmployeeSignature) {
         newStatus = 'completed'
+
+        // 계약 완료 시 직원의 입사일을 계약 시작일로 자동 설정
+        const contractData = contract.contract_data as ContractData
+        if (contractData.employment_period_start && contract.employee_user_id) {
+          await supabase
+            .from('users')
+            .update({ hire_date: contractData.employment_period_start })
+            .eq('id', contract.employee_user_id)
+          console.log(`[contractService] Updated hire_date for user ${contract.employee_user_id} to ${contractData.employment_period_start}`)
+        }
       } else if (data.signer_type === 'employer') {
         newStatus = 'pending_employee_signature'
       } else if (data.signer_type === 'employee') {

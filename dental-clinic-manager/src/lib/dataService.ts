@@ -1436,8 +1436,8 @@ export const dataService = {
     }
   },
 
-  // 직원 정보 업데이트 (주소, 주민번호 등)
-  async updateStaffInfo(userId: string, updates: { name?: string; phone?: string; address?: string; resident_registration_number?: string }) {
+  // 직원 정보 업데이트 (주소, 주민번호, 입사일 등)
+  async updateStaffInfo(userId: string, updates: { name?: string; phone?: string; address?: string; resident_registration_number?: string; hire_date?: string }) {
     const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
