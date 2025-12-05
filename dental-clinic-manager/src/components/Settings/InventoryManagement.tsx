@@ -6,7 +6,8 @@ import type { GiftInventory, GiftLog, GiftRowData } from '@/types'
 
 interface InventoryManagementProps {
   giftInventory: GiftInventory[]
-  giftLogs: GiftLog[]
+  giftLogs?: GiftLog[]  // 저장된 선물 사용 기록 (현재 날짜 사용량 계산용)
+  baseUsageByGift?: Record<string, number>  // 전체 giftLogs 기반 사용량 (dashboard에서 계산)
   currentGiftRows?: GiftRowData[]  // 일일보고서에서 현재 입력 중인 선물 데이터
   currentReportDate?: string       // 현재 입력 중인 보고서 날짜
   onAddGiftItem: (name: string, stock: number) => void
@@ -28,7 +29,8 @@ const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: s
 
 export default function InventoryManagement({
   giftInventory,
-  giftLogs,
+  giftLogs = [],
+  baseUsageByGift = {},
   currentGiftRows = [],
   currentReportDate = '',
   onAddGiftItem,
@@ -39,36 +41,55 @@ export default function InventoryManagement({
   const [newGiftStock, setNewGiftStock] = useState(0)
   const [stockUpdates, setStockUpdates] = useState<Record<number, number>>({})
 
-  // gift_logs 기반 선물별 총 사용량 계산 (현재 입력 중인 날짜는 제외)
-  const usedQuantityByGift = useMemo(() => {
+  // 현재 날짜의 저장된 사용량 계산 (baseUsageByGift에서 제외할 양)
+  const currentDateSavedUsage = useMemo(() => {
     const usage: Record<string, number> = {}
-
-    // 저장된 gift_logs에서 현재 입력 중인 날짜의 데이터는 제외
     for (const log of giftLogs) {
-      if (log.gift_type && log.gift_type !== '없음') {
-        // 현재 입력 중인 날짜의 저장된 데이터는 제외 (현재 입력 데이터로 대체)
-        if (currentReportDate && log.date === currentReportDate) {
-          continue
-        }
+      if (log.gift_type && log.gift_type !== '없음' && log.date === currentReportDate) {
         usage[log.gift_type] = (usage[log.gift_type] || 0) + (log.quantity || 1)
       }
     }
+    return usage
+  }, [giftLogs, currentReportDate])
 
-    // 현재 입력 중인 giftRows 사용량 추가
+  // 현재 입력 중인 giftRows 사용량 계산
+  const currentInputUsage = useMemo(() => {
+    const usage: Record<string, number> = {}
     for (const row of currentGiftRows) {
       if (row.gift_type && row.gift_type !== '없음' && row.patient_name?.trim()) {
         usage[row.gift_type] = (usage[row.gift_type] || 0) + (row.quantity || 1)
       }
     }
-
     return usage
-  }, [giftLogs, currentGiftRows, currentReportDate])
+  }, [currentGiftRows])
 
   // 실제 남은 재고 계산 함수
+  // 공식: 실제 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 저장 사용량 - 현재 입력 사용량
+  // (현재 날짜 저장 사용량은 현재 입력으로 대체되므로 더해줌)
   const getActualStock = (item: GiftInventory) => {
-    const used = usedQuantityByGift[item.name] || 0
-    return item.stock - used
+    const totalSavedUsage = baseUsageByGift[item.name] || 0      // 전체 저장 사용량
+    const currentDateUsage = currentDateSavedUsage[item.name] || 0  // 현재 날짜 저장 사용량
+    const currentUsage = currentInputUsage[item.name] || 0       // 현재 입력 사용량
+    return item.stock - totalSavedUsage + currentDateUsage - currentUsage
   }
+
+  // UI 표시용 사용량 계산 (전체 사용량 - 현재 날짜 저장 + 현재 입력)
+  const usedQuantityByGift = useMemo(() => {
+    const usage: Record<string, number> = {}
+    // baseUsageByGift 복사
+    for (const [name, qty] of Object.entries(baseUsageByGift)) {
+      usage[name] = qty
+    }
+    // 현재 날짜 저장 사용량 제외 (현재 입력으로 대체됨)
+    for (const [name, qty] of Object.entries(currentDateSavedUsage)) {
+      usage[name] = (usage[name] || 0) - qty
+    }
+    // 현재 입력 추가
+    for (const [name, qty] of Object.entries(currentInputUsage)) {
+      usage[name] = (usage[name] || 0) + qty
+    }
+    return usage
+  }, [baseUsageByGift, currentDateSavedUsage, currentInputUsage])
 
   const handleAddGift = () => {
     if (!newGiftName.trim()) {

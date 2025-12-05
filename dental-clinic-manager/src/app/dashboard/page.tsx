@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -79,6 +79,17 @@ export default function DashboardPage() {
     refetch,
     refetchInventory
   } = useSupabaseData(user?.clinic_id ?? null)
+
+  // giftLogs 기반 선물별 총 사용량 계산 (모든 날짜 포함)
+  const baseUsageByGift = useMemo(() => {
+    const usage: Record<string, number> = {}
+    for (const log of giftLogs) {
+      if (log.gift_type && log.gift_type !== '없음') {
+        usage[log.gift_type] = (usage[log.gift_type] || 0) + (log.quantity || 1)
+      }
+    }
+    return usage
+  }, [giftLogs])
 
   useEffect(() => {
     if (loading) {
@@ -274,6 +285,7 @@ export default function DashboardPage() {
             <DailyInputForm
               giftInventory={giftInventory}
               giftLogs={giftLogs}
+              baseUsageByGift={baseUsageByGift}
               onSaveReport={handleSaveReport}
               onSaveSuccess={refetch}
               onGiftRowsChange={handleGiftRowsChange}
@@ -600,6 +612,7 @@ export default function DashboardPage() {
             <InventoryManagement
               giftInventory={giftInventory}
               giftLogs={giftLogs}
+              baseUsageByGift={baseUsageByGift}
               currentGiftRows={currentGiftRows}
               currentReportDate={currentReportDate}
               onAddGiftItem={handleAddGiftItem}

@@ -9,37 +9,40 @@ interface GiftTableProps {
   onGiftRowsChange: (rows: GiftRowData[]) => void
   giftInventory: GiftInventory[]
   giftLogs?: GiftLog[]      // 저장된 선물 사용 기록
+  baseUsageByGift?: Record<string, number>  // 전체 giftLogs 기반 사용량 (dashboard에서 계산)
   currentDate?: string      // 현재 입력 중인 보고서 날짜
   isReadOnly: boolean
 }
 
-export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, giftLogs = [], currentDate = '', isReadOnly }: GiftTableProps) {
-  // 저장된 giftLogs 기반 선물별 총 사용량 계산 (현재 날짜 제외)
-  const savedUsageByGift = useMemo(() => {
+export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, giftLogs = [], baseUsageByGift = {}, currentDate = '', isReadOnly }: GiftTableProps) {
+  // 현재 날짜의 저장된 사용량 계산 (baseUsageByGift에서 제외할 양)
+  const currentDateSavedUsage = useMemo(() => {
     const usage: Record<string, number> = {}
     for (const log of giftLogs) {
-      if (log.gift_type && log.gift_type !== '없음') {
-        // 현재 입력 중인 날짜의 저장된 데이터는 제외 (현재 입력 데이터로 대체됨)
-        if (currentDate && log.date === currentDate) {
-          continue
-        }
+      if (log.gift_type && log.gift_type !== '없음' && log.date === currentDate) {
         usage[log.gift_type] = (usage[log.gift_type] || 0) + (log.quantity || 1)
       }
     }
     return usage
   }, [giftLogs, currentDate])
 
+  // 실제 재고 계산 함수
+  // 공식: 실제 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 저장 사용량 - 현재 입력 사용량
+  // (현재 날짜 저장 사용량은 현재 입력으로 대체되므로 더해줌)
   const getAvailableInventory = (giftType: string, currentRowIndex?: number) => {
     if (!giftType || giftType === '없음') return 0
 
     const gift = giftInventory.find(item => item.name === giftType)
     if (!gift) return 0
 
-    // 저장된 사용량 (현재 날짜 제외)
-    const savedUsed = savedUsageByGift[giftType] || 0
+    // 전체 저장된 사용량 (dashboard에서 계산된 값)
+    const totalSavedUsage = baseUsageByGift[giftType] || 0
+
+    // 현재 날짜의 저장된 사용량 (이 값은 현재 입력으로 대체됨)
+    const currentDateUsage = currentDateSavedUsage[giftType] || 0
 
     // 현재 입력 중인 giftRows에서의 사용량 (자기 자신 제외)
-    const currentUsed = giftRows.reduce((total, row, index) => {
+    const currentInputUsage = giftRows.reduce((total, row, index) => {
       if (currentRowIndex !== undefined && index === currentRowIndex) {
         return total
       }
@@ -49,8 +52,8 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
       return total
     }, 0)
 
-    // 실제 남은 재고 = 입고 재고 - 저장된 사용량 - 현재 입력 중인 사용량
-    return Math.max(0, gift.stock - savedUsed - currentUsed)
+    // 실제 남은 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 저장 사용량 - 현재 입력 사용량
+    return Math.max(0, gift.stock - totalSavedUsage + currentDateUsage - currentInputUsage)
   }
 
   const addRow = () => {
@@ -171,8 +174,10 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                       // 선물이 선택된 경우: 실제 재고 기준으로 최대값 계산
                       const gift = giftInventory.find(item => item.name === row.gift_type)
                       const totalStock = gift?.stock || 0
-                      const savedUsed = savedUsageByGift[row.gift_type] || 0  // 저장된 사용량
-                      const actualStock = totalStock - savedUsed  // 실제 남은 재고
+                      const totalSavedUsage = baseUsageByGift[row.gift_type] || 0  // 전체 저장 사용량
+                      const currentDateUsage = currentDateSavedUsage[row.gift_type] || 0  // 현재 날짜 저장 사용량
+                      // 실제 남은 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 사용량 (현재 입력으로 대체됨)
+                      const actualStock = totalStock - totalSavedUsage + currentDateUsage
                       const usedByOthers = giftRows.reduce((total, r, idx) => {
                         if (idx === index || r.gift_type !== row.gift_type) return total
                         if (!r.patient_name?.trim()) return total  // 환자명이 없으면 제외
@@ -302,8 +307,10 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                       // 선물이 선택된 경우: 실제 재고 기준으로 최대값 계산
                       const gift = giftInventory.find(item => item.name === row.gift_type)
                       const totalStock = gift?.stock || 0
-                      const savedUsed = savedUsageByGift[row.gift_type] || 0  // 저장된 사용량
-                      const actualStock = totalStock - savedUsed  // 실제 남은 재고
+                      const totalSavedUsage = baseUsageByGift[row.gift_type] || 0  // 전체 저장 사용량
+                      const currentDateUsage = currentDateSavedUsage[row.gift_type] || 0  // 현재 날짜 저장 사용량
+                      // 실제 남은 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 사용량 (현재 입력으로 대체됨)
+                      const actualStock = totalStock - totalSavedUsage + currentDateUsage
                       const usedByOthers = giftRows.reduce((total, r, idx) => {
                         if (idx === index || r.gift_type !== row.gift_type) return total
                         if (!r.patient_name?.trim()) return total  // 환자명이 없으면 제외
