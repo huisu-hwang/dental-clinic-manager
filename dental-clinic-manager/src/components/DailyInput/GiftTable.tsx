@@ -168,18 +168,21 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                           <option key={num} value={num}>{num}</option>
                         ))
                       }
-                      // 선물이 선택된 경우: 재고 + 현재 수량으로 최대값 계산
+                      // 선물이 선택된 경우: 실제 재고 기준으로 최대값 계산
                       const gift = giftInventory.find(item => item.name === row.gift_type)
                       const totalStock = gift?.stock || 0
+                      const savedUsed = savedUsageByGift[row.gift_type] || 0  // 저장된 사용량
+                      const actualStock = totalStock - savedUsed  // 실제 남은 재고
                       const usedByOthers = giftRows.reduce((total, r, idx) => {
                         if (idx === index || r.gift_type !== row.gift_type) return total
+                        if (!r.patient_name?.trim()) return total  // 환자명이 없으면 제외
                         return total + (r.quantity || 1)
                       }, 0)
-                      const availableForThis = totalStock - usedByOthers
+                      const availableForThis = actualStock - usedByOthers
                       const maxQuantity = Math.min(Math.max(availableForThis, 1), 10)
 
                       return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => {
-                        const remaining = totalStock - usedByOthers - num
+                        const remaining = actualStock - usedByOthers - num
                         return (
                           <option key={num} value={num}>
                             {num}개 (남음:{remaining >= 0 ? remaining : 0})
@@ -296,18 +299,21 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                           <option key={num} value={num}>{num}</option>
                         ))
                       }
-                      // 선물이 선택된 경우: 재고 + 현재 수량으로 최대값 계산
+                      // 선물이 선택된 경우: 실제 재고 기준으로 최대값 계산
                       const gift = giftInventory.find(item => item.name === row.gift_type)
                       const totalStock = gift?.stock || 0
+                      const savedUsed = savedUsageByGift[row.gift_type] || 0  // 저장된 사용량
+                      const actualStock = totalStock - savedUsed  // 실제 남은 재고
                       const usedByOthers = giftRows.reduce((total, r, idx) => {
                         if (idx === index || r.gift_type !== row.gift_type) return total
+                        if (!r.patient_name?.trim()) return total  // 환자명이 없으면 제외
                         return total + (r.quantity || 1)
                       }, 0)
-                      const availableForThis = totalStock - usedByOthers
+                      const availableForThis = actualStock - usedByOthers
                       const maxQuantity = Math.min(Math.max(availableForThis, 1), 10)
 
                       return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => {
-                        const remaining = totalStock - usedByOthers - num
+                        const remaining = actualStock - usedByOthers - num
                         return (
                           <option key={num} value={num}>
                             {num}개 (남음:{remaining >= 0 ? remaining : 0})
