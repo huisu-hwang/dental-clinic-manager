@@ -136,9 +136,8 @@ class ContractService {
         }
       }
 
-      // Get clinic hours for weekly work schedule
-      const { data: clinicHoursData } = await clinicHoursService.getClinicHours(employee.clinic_id)
-      const weeklyWorkHours: Record<number, {
+      // Get clinic hours for weekly work schedule (fallback if no custom schedule provided)
+      let weeklyWorkHours: Record<number, {
         is_open: boolean
         open_time: string | null
         close_time: string | null
@@ -146,16 +145,54 @@ class ContractService {
         break_end: string | null
       }> = {}
 
-      if (clinicHoursData) {
-        clinicHoursData.forEach(hours => {
-          weeklyWorkHours[hours.day_of_week] = {
-            is_open: hours.is_open,
-            open_time: hours.open_time,
-            close_time: hours.close_time,
-            break_start: hours.break_start,
-            break_end: hours.break_end
+      // Check if form has custom work_hours_detail (edited by user)
+      const customWorkHoursDetail = data.contract_data.work_hours_detail as Record<string, {
+        start: string | null
+        end: string | null
+        breakStart: string | null
+        breakEnd: string | null
+        isWorking: boolean
+      }> | undefined
+
+      if (customWorkHoursDetail) {
+        // Convert work_hours_detail format to weekly_work_hours format
+        const dayNameToNumber: Record<string, number> = {
+          sunday: 0,
+          monday: 1,
+          tuesday: 2,
+          wednesday: 3,
+          thursday: 4,
+          friday: 5,
+          saturday: 6
+        }
+
+        Object.entries(customWorkHoursDetail).forEach(([dayName, schedule]) => {
+          const dayNumber = dayNameToNumber[dayName]
+          if (dayNumber !== undefined && schedule) {
+            weeklyWorkHours[dayNumber] = {
+              is_open: schedule.isWorking,
+              open_time: schedule.start,
+              close_time: schedule.end,
+              break_start: schedule.breakStart,
+              break_end: schedule.breakEnd
+            }
           }
         })
+      } else {
+        // Fallback to clinic hours if no custom schedule
+        const { data: clinicHoursData } = await clinicHoursService.getClinicHours(employee.clinic_id)
+
+        if (clinicHoursData) {
+          clinicHoursData.forEach(hours => {
+            weeklyWorkHours[hours.day_of_week] = {
+              is_open: hours.is_open,
+              open_time: hours.open_time,
+              close_time: hours.close_time,
+              break_start: hours.break_start,
+              break_end: hours.break_end
+            }
+          })
+        }
       }
 
       // Prepare contract data with auto-filled employee info
