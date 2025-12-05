@@ -40,8 +40,8 @@ export default function LeaveRequestForm({
   // 무급휴가 종류 찾기
   const unpaidLeaveType = leaveTypes.find(t => t.code === 'unpaid')
 
-  // 총 신청 일수 계산 (주말 포함 옵션 추가)
-  const calculateTotalDays = (includeWeekends = false): number => {
+  // 총 신청 일수 계산
+  const calculateTotalDays = (): number => {
     if (!formData.start_date || !formData.end_date) return 0
 
     const start = new Date(formData.start_date)
@@ -55,23 +55,14 @@ export default function LeaveRequestForm({
       return 0.5
     }
 
-    // 주말 제외 계산
-    let days = 0
-    const current = new Date(start)
-
-    while (current <= end) {
-      const dayOfWeek = current.getDay()
-      if (includeWeekends || (dayOfWeek !== 0 && dayOfWeek !== 6)) {
-        days++
-      }
-      current.setDate(current.getDate() + 1)
-    }
+    // 시작일부터 종료일까지 일수 계산 (주말 포함)
+    const diffTime = end.getTime() - start.getTime()
+    const days = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
 
     return days * (selectedType?.deduct_days || 1)
   }
 
   const totalDays = calculateTotalDays()
-  const totalDaysIncludingWeekends = calculateTotalDays(true)
 
   // 폼이 제출 가능한 상태인지 확인
   const canSubmit = formData.leave_type_id && formData.start_date && formData.end_date
@@ -200,12 +191,6 @@ export default function LeaveRequestForm({
     }
     if (new Date(formData.end_date) < new Date(formData.start_date)) {
       setError('종료일은 시작일 이후여야 합니다.')
-      return
-    }
-
-    // 주말만 선택된 경우 경고
-    if (totalDays === 0 && totalDaysIncludingWeekends > 0) {
-      setError('선택한 날짜가 모두 주말입니다. 평일을 포함한 날짜를 선택해주세요.')
       return
     }
 
@@ -426,22 +411,15 @@ export default function LeaveRequestForm({
         )}
 
         {/* 신청 일수 표시 */}
-        {formData.start_date && formData.end_date && (
+        {formData.start_date && formData.end_date && totalDays > 0 && (
           <div className="p-4 bg-slate-50 rounded-lg">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">신청 일수</span>
-              <span className="text-lg font-semibold text-slate-800">
-                {totalDays > 0 ? `${totalDays}일` : '0일 (주말 제외)'}
-              </span>
+              <span className="text-lg font-semibold text-slate-800">{totalDays}일</span>
             </div>
-            {selectedType?.deduct_from_annual && totalDays > 0 && (
+            {selectedType?.deduct_from_annual && (
               <p className="text-xs text-slate-500 mt-1">
                 * 연차에서 차감됩니다
-              </p>
-            )}
-            {totalDays === 0 && totalDaysIncludingWeekends > 0 && (
-              <p className="text-xs text-amber-600 mt-1">
-                * 선택한 날짜가 모두 주말입니다
               </p>
             )}
           </div>
