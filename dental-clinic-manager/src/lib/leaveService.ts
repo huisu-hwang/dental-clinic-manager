@@ -332,7 +332,7 @@ export const leaveService = {
 
   /**
    * 특정 직원의 연차 잔여 조회
-   * - 입사일이 변경되었거나 연차 정보가 없으면 자동으로 재계산
+   * - 항상 최신 데이터로 재계산하여 반환
    */
   async getEmployeeBalance(userId: string, year: number = new Date().getFullYear()): Promise<{ data: EmployeeLeaveBalance | null; error: string | null }> {
     try {
@@ -342,19 +342,11 @@ export const leaveService = {
       const clinicId = getCurrentClinicId()
       if (!clinicId) throw new Error('Clinic not found')
 
-      // 사용자의 현재 입사일 조회
-      const { data: user, error: userError } = await (supabase as any)
-        .from('users')
-        .select('id, hire_date, created_at')
-        .eq('id', userId)
-        .single()
+      // 항상 최신 상태로 재계산
+      await this.initializeBalance(userId, year)
 
-      if (userError) throw userError
-
-      const currentHireDate = user.hire_date || user.created_at?.split('T')[0]
-
-      // 기존 잔여 정보 조회
-      const { data: existingBalance, error } = await (supabase as any)
+      // 재계산된 결과 조회
+      const { data: balance, error } = await (supabase as any)
         .from('employee_leave_balances')
         .select('*')
         .eq('user_id', userId)
@@ -364,30 +356,7 @@ export const leaveService = {
 
       if (error && error.code !== 'PGRST116') throw error
 
-      // 잔여 정보가 없거나 입사일이 변경된 경우 재계산
-      const storedHireDate = existingBalance?.hire_date
-      const needsRecalculation = !existingBalance ||
-        (currentHireDate && storedHireDate !== currentHireDate)
-
-      if (needsRecalculation) {
-        console.log(`[leaveService.getEmployeeBalance] Recalculating balance for user ${userId} (hire_date changed: ${storedHireDate} -> ${currentHireDate})`)
-        await this.initializeBalance(userId, year)
-
-        // 재계산된 결과 조회
-        const { data: newBalance, error: newError } = await (supabase as any)
-          .from('employee_leave_balances')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('clinic_id', clinicId)
-          .eq('year', year)
-          .single()
-
-        if (newError && newError.code !== 'PGRST116') throw newError
-
-        return { data: newBalance, error: null }
-      }
-
-      return { data: existingBalance, error: null }
+      return { data: balance, error: null }
     } catch (error) {
       console.error('[leaveService.getEmployeeBalance] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
@@ -405,7 +374,7 @@ export const leaveService = {
 
   /**
    * 전체 직원의 연차 현황 조회
-   * - 입사일이 변경된 직원은 자동으로 재계산
+   * - 모든 직원의 연차를 최신 상태로 재계산하여 반환
    */
   async getAllEmployeeBalances(year: number = new Date().getFullYear()): Promise<{ data: (EmployeeLeaveBalance & { user_name?: string; user_role?: string })[]; error: string | null }> {
     try {
@@ -415,45 +384,22 @@ export const leaveService = {
       const clinicId = getCurrentClinicId()
       if (!clinicId) throw new Error('Clinic not found')
 
-      // 모든 직원과 그들의 현재 입사일 조회
+      // 모든 활성 직원 조회
       const { data: allUsers, error: usersError } = await (supabase as any)
         .from('users')
-        .select('id, name, role, hire_date, created_at')
+        .select('id')
         .eq('clinic_id', clinicId)
         .eq('status', 'active')
 
       if (usersError) throw usersError
 
-      // 기존 잔여 정보 조회
-      const { data: existingBalances, error } = await (supabase as any)
-        .from('employee_leave_balances')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .eq('year', year)
-
-      if (error) throw error
-
-      const balanceMap = new Map<string, any>((existingBalances || []).map((b: any) => [b.user_id, b]))
-
-      // 입사일이 변경되었거나 잔여 정보가 없는 직원 재계산
-      const usersToRecalculate: string[] = []
-      for (const user of (allUsers || [])) {
-        const currentHireDate = user.hire_date || user.created_at?.split('T')[0]
-        const existingBalance = balanceMap.get(user.id)
-
-        if (!existingBalance || existingBalance.hire_date !== currentHireDate) {
-          usersToRecalculate.push(user.id)
-        }
+      // 모든 직원의 연차 재계산
+      if (allUsers && allUsers.length > 0) {
+        await Promise.all(allUsers.map((user: any) => this.initializeBalance(user.id, year)))
       }
 
-      // 재계산 필요한 직원들 처리
-      if (usersToRecalculate.length > 0) {
-        console.log(`[leaveService.getAllEmployeeBalances] Recalculating balances for ${usersToRecalculate.length} users`)
-        await Promise.all(usersToRecalculate.map(userId => this.initializeBalance(userId, year)))
-      }
-
-      // 최신 데이터 다시 조회
-      const { data: updatedData, error: updatedError } = await (supabase as any)
+      // 최신 데이터 조회
+      const { data: balances, error } = await (supabase as any)
         .from('employee_leave_balances')
         .select(`
           *,
@@ -463,10 +409,10 @@ export const leaveService = {
         .eq('year', year)
         .order('remaining_days', { ascending: false })
 
-      if (updatedError) throw updatedError
+      if (error) throw error
 
       // 사용자 정보 병합
-      const result = (updatedData || []).map((item: any) => ({
+      const result = (balances || []).map((item: any) => ({
         ...item,
         user_name: item.users?.name,
         user_role: item.users?.role,
