@@ -26,6 +26,7 @@ export interface GiftLog {
   date: string;
   patient_name: string;
   gift_type: string;
+  quantity: number;
   naver_review: 'O' | 'X';
   notes: string;
   clinic_id?: string | null;

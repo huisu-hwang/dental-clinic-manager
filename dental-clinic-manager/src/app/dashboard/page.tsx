@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -27,7 +27,7 @@ import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
 import { getStatsForDateRange } from '@/utils/statsUtils'
 import { inspectDatabase } from '@/utils/dbInspector'
-import type { ConsultRowData, GiftRowData, HappyCallRowData } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog } from '@/types'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
@@ -63,6 +63,10 @@ export default function DashboardPage() {
   const [monthSelector, setMonthSelector] = useState(() => getCurrentMonthString())
   const [yearSelector, setYearSelector] = useState(() => new Date().getFullYear().toString())
 
+  // 일일보고서에서 현재 입력 중인 선물 데이터 (재고 관리 실시간 반영용)
+  const [currentGiftRows, setCurrentGiftRows] = useState<GiftRowData[]>([])
+  const [currentReportDate, setCurrentReportDate] = useState<string>('')
+
   console.log('Current selectors:', { weekSelector, monthSelector, yearSelector })
 
   const {
@@ -76,6 +80,17 @@ export default function DashboardPage() {
     refetch,
     refetchInventory
   } = useSupabaseData(user?.clinic_id ?? null)
+
+  // giftLogs 기반 선물별 총 사용량 계산 (모든 날짜 포함)
+  const baseUsageByGift = useMemo(() => {
+    const usage: Record<string, number> = {}
+    for (const log of giftLogs) {
+      if (log.gift_type && log.gift_type !== '없음') {
+        usage[log.gift_type] = (usage[log.gift_type] || 0) + (log.quantity || 1)
+      }
+    }
+    return usage
+  }, [giftLogs])
 
   useEffect(() => {
     if (loading) {
@@ -207,6 +222,12 @@ export default function DashboardPage() {
     }
   }
 
+  // 일일보고서에서 선물 데이터 변경 시 호출
+  const handleGiftRowsChange = (date: string, giftRows: GiftRowData[]) => {
+    setCurrentReportDate(date)
+    setCurrentGiftRows(giftRows)
+  }
+
   const handleUpdateConsultStatus = async (consultId: number): Promise<{ success?: boolean; error?: string }> => {
     try {
       const result = await dataService.updateConsultStatusToCompleted(consultId)
@@ -264,8 +285,11 @@ export default function DashboardPage() {
           {activeTab === 'daily-input' && (
             <DailyInputForm
               giftInventory={giftInventory}
+              giftLogs={giftLogs}
+              baseUsageByGift={baseUsageByGift}
               onSaveReport={handleSaveReport}
               onSaveSuccess={refetch}
+              onGiftRowsChange={handleGiftRowsChange}
               canCreate={canCreateReport}
               canEdit={canEditReport}
               currentUser={user ?? undefined}
@@ -595,6 +619,10 @@ export default function DashboardPage() {
           {activeTab === 'settings' && (
             <InventoryManagement
               giftInventory={giftInventory}
+              giftLogs={giftLogs}
+              baseUsageByGift={baseUsageByGift}
+              currentGiftRows={currentGiftRows}
+              currentReportDate={currentReportDate}
               onAddGiftItem={handleAddGiftItem}
               onUpdateStock={handleUpdateStock}
               onDeleteGiftItem={handleDeleteGiftItem}
