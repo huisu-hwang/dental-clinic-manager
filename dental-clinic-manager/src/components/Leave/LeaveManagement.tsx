@@ -354,6 +354,7 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
         <LeaveRequestForm
           leaveTypes={leaveTypes}
           balance={myBalance}
+          existingRequests={myRequests}
           onSuccess={handleRequestSuccess}
           onCancel={() => setActiveTab('my')}
         />

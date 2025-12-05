@@ -8,6 +8,7 @@ import type { LeaveType, EmployeeLeaveBalance, HalfDayType } from '@/types/leave
 interface LeaveRequestFormProps {
   leaveTypes: LeaveType[]
   balance: EmployeeLeaveBalance | null
+  existingRequests: any[] // 기존 연차 신청 목록 (중복 체크용)
   onSuccess: () => void
   onCancel: () => void
 }
@@ -15,6 +16,7 @@ interface LeaveRequestFormProps {
 export default function LeaveRequestForm({
   leaveTypes,
   balance,
+  existingRequests,
   onSuccess,
   onCancel,
 }: LeaveRequestFormProps) {
@@ -65,6 +67,37 @@ export default function LeaveRequestForm({
 
   const totalDays = calculateTotalDays()
 
+  // 기존 연차 신청과 날짜 중복 체크
+  const checkDateOverlap = (): { isOverlapping: boolean; overlappingRequest: any | null } => {
+    if (!formData.start_date || !formData.end_date) {
+      return { isOverlapping: false, overlappingRequest: null }
+    }
+
+    const newStart = new Date(formData.start_date)
+    const newEnd = new Date(selectedType?.code === 'half_day' ? formData.start_date : formData.end_date)
+
+    // 승인 대기 중이거나 승인된 신청만 체크 (취소/반려된 건은 제외)
+    const activeRequests = existingRequests.filter(
+      req => req.status === 'pending' || req.status === 'approved'
+    )
+
+    for (const req of activeRequests) {
+      const existingStart = new Date(req.start_date)
+      const existingEnd = new Date(req.end_date)
+
+      // 날짜 범위가 겹치는지 확인
+      const isOverlapping = (
+        (newStart <= existingEnd && newEnd >= existingStart)
+      )
+
+      if (isOverlapping) {
+        return { isOverlapping: true, overlappingRequest: req }
+      }
+    }
+
+    return { isOverlapping: false, overlappingRequest: null }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -90,6 +123,16 @@ export default function LeaveRequestForm({
     // 반차인 경우 오전/오후 선택 확인
     if (selectedType?.code === 'half_day' && !formData.half_day_type) {
       setError('오전/오후를 선택해주세요.')
+      return
+    }
+
+    // 날짜 중복 체크
+    const { isOverlapping, overlappingRequest } = checkDateOverlap()
+    if (isOverlapping && overlappingRequest) {
+      const existingStart = new Date(overlappingRequest.start_date).toLocaleDateString('ko-KR')
+      const existingEnd = new Date(overlappingRequest.end_date).toLocaleDateString('ko-KR')
+      const typeName = overlappingRequest.leave_types?.name || '연차'
+      setError(`이미 신청된 ${typeName}(${existingStart} ~ ${existingEnd})와 날짜가 겹칩니다. 날짜를 조정해주세요.`)
       return
     }
 
