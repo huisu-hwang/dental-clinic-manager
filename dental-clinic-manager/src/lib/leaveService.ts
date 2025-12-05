@@ -115,6 +115,63 @@ export function getApprovalStepsForRole(role: string): { step: number; role: str
   ]
 }
 
+/**
+ * 병원 근무일 정보 조회
+ */
+export async function getClinicWorkingDays(): Promise<{ data: number[]; error: string | null }> {
+  try {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Database connection failed')
+
+    const clinicId = getCurrentClinicId()
+    if (!clinicId) throw new Error('Clinic not found')
+
+    const { data, error } = await (supabase as any)
+      .from('clinic_hours')
+      .select('day_of_week, is_open')
+      .eq('clinic_id', clinicId)
+
+    if (error) throw error
+
+    // is_open이 true인 요일만 반환 (0=일요일, 1=월요일, ..., 6=토요일)
+    const workingDays = (data || [])
+      .filter((d: any) => d.is_open)
+      .map((d: any) => d.day_of_week)
+
+    return { data: workingDays, error: null }
+  } catch (error) {
+    console.error('[leaveService.getClinicWorkingDays] Error:', error)
+    return { data: [], error: extractErrorMessage(error) }
+  }
+}
+
+/**
+ * 병원 근무일 기준 연차 일수 계산
+ * @param startDate 시작일
+ * @param endDate 종료일
+ * @param workingDays 병원 근무 요일 배열 (0=일요일, 1=월요일, ..., 6=토요일)
+ */
+export function calculateWorkingDaysBetween(
+  startDate: Date,
+  endDate: Date,
+  workingDays: number[]
+): number {
+  if (endDate < startDate) return 0
+
+  let days = 0
+  const current = new Date(startDate)
+
+  while (current <= endDate) {
+    const dayOfWeek = current.getDay()
+    if (workingDays.includes(dayOfWeek)) {
+      days++
+    }
+    current.setDate(current.getDate() + 1)
+  }
+
+  return days
+}
+
 export const leaveService = {
   // ============================================
   // 연차 정책 관련

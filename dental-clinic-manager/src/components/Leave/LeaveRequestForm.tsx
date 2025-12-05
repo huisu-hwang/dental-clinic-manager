@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Calendar, AlertCircle, X, AlertTriangle } from 'lucide-react'
-import { leaveService } from '@/lib/leaveService'
+import { leaveService, getClinicWorkingDays, calculateWorkingDaysBetween } from '@/lib/leaveService'
 import type { LeaveType, EmployeeLeaveBalance, HalfDayType } from '@/types/leave'
 
 interface LeaveRequestFormProps {
@@ -24,6 +24,7 @@ export default function LeaveRequestForm({
   const [error, setError] = useState('')
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false)
   const [unpaidDays, setUnpaidDays] = useState(0)
+  const [clinicWorkingDays, setClinicWorkingDays] = useState<number[]>([1, 2, 3, 4, 5]) // 기본값: 월~금
 
   const [formData, setFormData] = useState({
     leave_type_id: '',
@@ -34,13 +35,24 @@ export default function LeaveRequestForm({
     emergency: false,
   })
 
+  // 병원 근무일 정보 로드
+  useEffect(() => {
+    const loadClinicWorkingDays = async () => {
+      const result = await getClinicWorkingDays()
+      if (result.data && result.data.length > 0) {
+        setClinicWorkingDays(result.data)
+      }
+    }
+    loadClinicWorkingDays()
+  }, [])
+
   // 선택된 연차 종류
   const selectedType = leaveTypes.find(t => t.id === formData.leave_type_id)
 
   // 무급휴가 종류 찾기
   const unpaidLeaveType = leaveTypes.find(t => t.code === 'unpaid')
 
-  // 총 신청 일수 계산
+  // 총 신청 일수 계산 (병원 근무일 기준)
   const calculateTotalDays = (): number => {
     if (!formData.start_date || !formData.end_date) return 0
 
@@ -55,9 +67,8 @@ export default function LeaveRequestForm({
       return 0.5
     }
 
-    // 시작일부터 종료일까지 일수 계산 (주말 포함)
-    const diffTime = end.getTime() - start.getTime()
-    const days = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
+    // 병원 근무일 기준 일수 계산
+    const days = calculateWorkingDaysBetween(start, end, clinicWorkingDays)
 
     return days * (selectedType?.deduct_days || 1)
   }
@@ -195,7 +206,7 @@ export default function LeaveRequestForm({
     }
 
     if (totalDays === 0) {
-      setError('신청 일수를 확인해주세요.')
+      setError('선택한 기간에 병원 근무일이 없습니다. 날짜를 다시 확인해주세요.')
       return
     }
 
@@ -411,15 +422,22 @@ export default function LeaveRequestForm({
         )}
 
         {/* 신청 일수 표시 */}
-        {formData.start_date && formData.end_date && totalDays > 0 && (
+        {formData.start_date && formData.end_date && (
           <div className="p-4 bg-slate-50 rounded-lg">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">신청 일수</span>
-              <span className="text-lg font-semibold text-slate-800">{totalDays}일</span>
+              <span className="text-lg font-semibold text-slate-800">
+                {totalDays > 0 ? `${totalDays}일` : '0일'}
+              </span>
             </div>
-            {selectedType?.deduct_from_annual && (
+            {totalDays > 0 && selectedType?.deduct_from_annual && (
               <p className="text-xs text-slate-500 mt-1">
                 * 연차에서 차감됩니다
+              </p>
+            )}
+            {totalDays === 0 && selectedType?.code !== 'half_day' && (
+              <p className="text-xs text-amber-600 mt-1">
+                * 선택한 기간에 병원 근무일이 없습니다
               </p>
             )}
           </div>
