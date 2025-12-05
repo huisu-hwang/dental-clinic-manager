@@ -28,12 +28,13 @@ interface DailyInputFormProps {
     specialNotes: string
   }) => void
   onSaveSuccess?: () => void  // 저장 성공 후 콜백 (데이터 새로고침용)
+  onGiftRowsChange?: (date: string, giftRows: GiftRowData[]) => void  // 선물 데이터 변경 시 콜백
   canCreate: boolean
   canEdit: boolean
   currentUser?: UserProfile
 }
 
-export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSuccess, canCreate, canEdit, currentUser }: DailyInputFormProps) {
+export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSuccess, onGiftRowsChange, canCreate, canEdit, currentUser }: DailyInputFormProps) {
   const [reportDate, setReportDate] = useState(getTodayString())
   const [consultRows, setConsultRows] = useState<ConsultRowData[]>([
     { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
@@ -179,6 +180,13 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
     console.log('[DailyInputForm] Loading data for date:', reportDate)
     loadDataForDate(reportDate)
   }, [reportDate, loadDataForDate, currentUser?.clinic_id])
+
+  // giftRows 변경 시 상위 컴포넌트에 알림 (재고 관리 실시간 반영용)
+  useEffect(() => {
+    if (onGiftRowsChange && reportDate) {
+      onGiftRowsChange(reportDate, giftRows)
+    }
+  }, [giftRows, reportDate, onGiftRowsChange])
 
   useEffect(() => {
     if (!currentUser?.clinic_id) {

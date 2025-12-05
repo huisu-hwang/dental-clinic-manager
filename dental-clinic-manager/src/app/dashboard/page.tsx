@@ -26,7 +26,7 @@ import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
 import { getStatsForDateRange } from '@/utils/statsUtils'
 import { inspectDatabase } from '@/utils/dbInspector'
-import type { ConsultRowData, GiftRowData, HappyCallRowData } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog } from '@/types'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
@@ -61,6 +61,10 @@ export default function DashboardPage() {
   const [weekSelector, setWeekSelector] = useState(() => getCurrentWeekString(new Date()))
   const [monthSelector, setMonthSelector] = useState(() => getCurrentMonthString())
   const [yearSelector, setYearSelector] = useState(() => new Date().getFullYear().toString())
+
+  // 일일보고서에서 현재 입력 중인 선물 데이터 (재고 관리 실시간 반영용)
+  const [currentGiftRows, setCurrentGiftRows] = useState<GiftRowData[]>([])
+  const [currentReportDate, setCurrentReportDate] = useState<string>('')
 
   console.log('Current selectors:', { weekSelector, monthSelector, yearSelector })
 
@@ -206,6 +210,12 @@ export default function DashboardPage() {
     }
   }
 
+  // 일일보고서에서 선물 데이터 변경 시 호출
+  const handleGiftRowsChange = (date: string, giftRows: GiftRowData[]) => {
+    setCurrentReportDate(date)
+    setCurrentGiftRows(giftRows)
+  }
+
   const handleUpdateConsultStatus = async (consultId: number): Promise<{ success?: boolean; error?: string }> => {
     try {
       const result = await dataService.updateConsultStatusToCompleted(consultId)
@@ -265,6 +275,7 @@ export default function DashboardPage() {
               giftInventory={giftInventory}
               onSaveReport={handleSaveReport}
               onSaveSuccess={refetch}
+              onGiftRowsChange={handleGiftRowsChange}
               canCreate={canCreateReport}
               canEdit={canEditReport}
               currentUser={user ?? undefined}
@@ -588,6 +599,8 @@ export default function DashboardPage() {
             <InventoryManagement
               giftInventory={giftInventory}
               giftLogs={giftLogs}
+              currentGiftRows={currentGiftRows}
+              currentReportDate={currentReportDate}
               onAddGiftItem={handleAddGiftItem}
               onUpdateStock={handleUpdateStock}
               onDeleteGiftItem={handleDeleteGiftItem}

@@ -2,11 +2,13 @@
 
 import { useState, useMemo } from 'react'
 import { Settings, Package, Plus, Edit3, Trash2, AlertTriangle } from 'lucide-react'
-import type { GiftInventory, GiftLog } from '@/types'
+import type { GiftInventory, GiftLog, GiftRowData } from '@/types'
 
 interface InventoryManagementProps {
   giftInventory: GiftInventory[]
   giftLogs: GiftLog[]
+  currentGiftRows?: GiftRowData[]  // 일일보고서에서 현재 입력 중인 선물 데이터
+  currentReportDate?: string       // 현재 입력 중인 보고서 날짜
   onAddGiftItem: (name: string, stock: number) => void
   onUpdateStock: (id: number, quantity: number) => void
   onDeleteGiftItem: (id: number, name: string) => void
@@ -27,6 +29,8 @@ const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: s
 export default function InventoryManagement({
   giftInventory,
   giftLogs,
+  currentGiftRows = [],
+  currentReportDate = '',
   onAddGiftItem,
   onUpdateStock,
   onDeleteGiftItem
@@ -35,16 +39,30 @@ export default function InventoryManagement({
   const [newGiftStock, setNewGiftStock] = useState(0)
   const [stockUpdates, setStockUpdates] = useState<Record<number, number>>({})
 
-  // gift_logs 기반 선물별 총 사용량 계산
+  // gift_logs 기반 선물별 총 사용량 계산 (현재 입력 중인 날짜는 제외)
   const usedQuantityByGift = useMemo(() => {
     const usage: Record<string, number> = {}
+
+    // 저장된 gift_logs에서 현재 입력 중인 날짜의 데이터는 제외
     for (const log of giftLogs) {
       if (log.gift_type && log.gift_type !== '없음') {
+        // 현재 입력 중인 날짜의 저장된 데이터는 제외 (현재 입력 데이터로 대체)
+        if (currentReportDate && log.date === currentReportDate) {
+          continue
+        }
         usage[log.gift_type] = (usage[log.gift_type] || 0) + (log.quantity || 1)
       }
     }
+
+    // 현재 입력 중인 giftRows 사용량 추가
+    for (const row of currentGiftRows) {
+      if (row.gift_type && row.gift_type !== '없음' && row.patient_name?.trim()) {
+        usage[row.gift_type] = (usage[row.gift_type] || 0) + (row.quantity || 1)
+      }
+    }
+
     return usage
-  }, [giftLogs])
+  }, [giftLogs, currentGiftRows, currentReportDate])
 
   // 실제 남은 재고 계산 함수
   const getActualStock = (item: GiftInventory) => {
