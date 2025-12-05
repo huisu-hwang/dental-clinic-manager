@@ -60,12 +60,13 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
 
   useEffect(() => {
     loadHolidays()
-  }, [year])
+  }, [])
 
   const loadHolidays = async () => {
     setLoading(true)
     try {
-      const result = await leaveService.getClinicHolidays(year)
+      // 연도에 상관없이 모든 휴무일 조회
+      const result = await leaveService.getClinicHolidays()
       setHolidays(result.data || [])
     } catch (err) {
       console.error('Error loading holidays:', err)
@@ -413,7 +414,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
         {holidays.length === 0 ? (
           <div className="text-center py-12 border border-slate-200 rounded-lg bg-slate-50">
             <Calendar className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-            <p className="text-slate-500">{year}년에 등록된 휴무일이 없습니다.</p>
+            <p className="text-slate-500">등록된 휴무일이 없습니다.</p>
             {isOwner && (
               <button
                 onClick={() => setShowForm(true)}
