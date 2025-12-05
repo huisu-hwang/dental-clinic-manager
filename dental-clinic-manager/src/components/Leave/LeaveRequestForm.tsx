@@ -248,11 +248,17 @@ export default function LeaveRequestForm({
             <input
               type="date"
               value={formData.start_date}
-              onChange={(e) => setFormData({
-                ...formData,
-                start_date: e.target.value,
-                end_date: selectedType?.code === 'half_day' ? e.target.value : formData.end_date,
-              })}
+              onChange={(e) => {
+                const newStartDate = e.target.value
+                setFormData({
+                  ...formData,
+                  start_date: newStartDate,
+                  // 반차이거나 종료일이 비어있거나 시작일보다 이전이면 시작일로 자동 설정
+                  end_date: selectedType?.code === 'half_day' || !formData.end_date || formData.end_date < newStartDate
+                    ? newStartDate
+                    : formData.end_date,
+                })
+              }}
               min={new Date().toISOString().split('T')[0]}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
