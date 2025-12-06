@@ -87,22 +87,25 @@ export const useSupabaseData = (clinicId?: string | null) => {
   )
 
   const fetchAllData = useCallback(
-    async (clinicIdOverride?: string | null) => {
+    async (clinicIdOverride?: string | null, options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false
       try {
         const targetClinicId = clinicIdOverride ?? activeClinicId
         if (!targetClinicId) {
           console.warn('[useSupabaseData] No clinic_id available for data fetch')
-          setLoading(false)
+          if (!silent) setLoading(false)
           return
         }
 
-        setLoading(true)
+        if (!silent) {
+          setLoading(true)
+        }
         setError(null)
 
         const supabase = createClient()
         if (!supabase) {
           setError('Supabase client not available')
-          setLoading(false)
+          if (!silent) setLoading(false)
           return
         }
 
@@ -117,7 +120,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
           if (refreshError || !refreshedSession) {
             console.error('[useSupabaseData] 세션 갱신 실패:', refreshError)
             handleSessionExpired('session_expired')
-            setLoading(false)
+            if (!silent) setLoading(false)
             return
           }
           console.log('[useSupabaseData] 세션 갱신 성공')
@@ -261,7 +264,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
           setGiftLogs([])
           setGiftInventory([])
           setInventoryLogs([])
-          setLoading(false)
+          if (!silent) setLoading(false)
           return // 추가 데이터 처리 중단
         }
 
@@ -371,7 +374,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
         setGiftInventory([])
         setInventoryLogs([])
       } finally {
-        setLoading(false)
+        if (!silent) setLoading(false)
       }
     },
     [activeClinicId]
@@ -405,8 +408,8 @@ export const useSupabaseData = (clinicId?: string | null) => {
     const channel = supabase
       .channel(`public-db-changes-${activeClinicId}`)
       .on('postgres_changes', { event: '*', schema: 'public', filter: `clinic_id=eq.${activeClinicId}` }, () => {
-        console.log('[useSupabaseData] Database change detected, reloading data')
-        fetchAllData(activeClinicId)
+        console.log('[useSupabaseData] Database change detected, reloading data silently')
+        fetchAllData(activeClinicId, { silent: true })
       })
       .subscribe()
 
@@ -425,6 +428,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
     loading,
     error,
     refetch: () => fetchAllData(activeClinicId),
+    silentRefetch: () => fetchAllData(activeClinicId, { silent: true }),
     refetchInventory: () => fetchInventoryOnly(activeClinicId)
   }
 }
