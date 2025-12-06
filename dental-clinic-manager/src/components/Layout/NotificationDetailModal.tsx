@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import {
   XMarkIcon,
@@ -18,7 +18,7 @@ interface NotificationDetailModalProps {
   notification: TodayNotification | null
   isOpen: boolean
   onClose: () => void
-  onDismiss: (notificationId: string) => void
+  onDismiss: (notificationId: string) => void | Promise<void>
 }
 
 // 카테고리별 아이콘 컴포넌트 매핑
@@ -47,14 +47,21 @@ export default function NotificationDetailModal({
   onClose,
   onDismiss
 }: NotificationDetailModalProps) {
+  const [isDismissing, setIsDismissing] = useState(false)
+
   if (!notification) return null
 
   const IconComponent = CategoryIcons[notification.category]
   const colors = CategoryColors[notification.category]
 
-  const handleDismiss = () => {
-    onDismiss(notification.id)
-    onClose()
+  const handleDismiss = async () => {
+    setIsDismissing(true)
+    try {
+      await onDismiss(notification.id)
+      onClose()
+    } finally {
+      setIsDismissing(false)
+    }
   }
 
   return (
@@ -136,10 +143,11 @@ export default function NotificationDetailModal({
                     </button>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={handleDismiss}
+                      disabled={isDismissing}
                     >
-                      해제
+                      {isDismissing ? '해제 중...' : '해제'}
                     </button>
                   </div>
                 </div>

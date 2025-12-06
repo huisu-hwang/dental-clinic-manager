@@ -16,6 +16,7 @@ interface HeaderProps {
   onMenuToggle?: () => void
   isMenuOpen?: boolean
   notifications?: TodayNotification[]
+  onDismissNotification?: (notificationId: string) => Promise<boolean>
 }
 
 export default function Header({
@@ -26,7 +27,8 @@ export default function Header({
   onProfileClick,
   onMenuToggle,
   isMenuOpen = false,
-  notifications = []
+  notifications = [],
+  onDismissNotification
 }: HeaderProps) {
 
   const getStatusColor = () => {
@@ -85,7 +87,10 @@ export default function Header({
 
       {/* 중앙: 알림 배너 (데스크탑에서만 표시) */}
       <div className="hidden md:flex flex-1 justify-center min-w-0">
-        <HeaderNotificationBanner notifications={notifications} />
+        <HeaderNotificationBanner
+          notifications={notifications}
+          onDismissNotification={onDismissNotification}
+        />
       </div>
 
       {/* 오른쪽: 상태 및 버튼들 */}

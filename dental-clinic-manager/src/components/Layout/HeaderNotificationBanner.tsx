@@ -17,6 +17,7 @@ import NotificationDetailModal from './NotificationDetailModal'
 interface HeaderNotificationBannerProps {
   notifications: TodayNotification[]
   autoRotateInterval?: number  // 자동 순환 간격 (ms), 기본 5초
+  onDismissNotification?: (notificationId: string) => Promise<boolean>
 }
 
 // 카테고리별 아이콘 컴포넌트 매핑
@@ -39,82 +40,20 @@ const CategoryColors: Record<NotificationCategory, { icon: string; bg: string; t
   important: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' }
 }
 
-// localStorage 키 생성 (오늘 날짜 기준)
-function getDismissedKey(): string {
-  const today = new Date().toISOString().split('T')[0]
-  return `dismissed_notifications_${today}`
-}
-
-// 해제된 알림 ID 목록 가져오기
-function getDismissedNotifications(): string[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const stored = localStorage.getItem(getDismissedKey())
-    return stored ? JSON.parse(stored) : []
-  } catch {
-    return []
-  }
-}
-
-// 알림 해제 저장
-function saveDismissedNotification(notificationId: string): void {
-  if (typeof window === 'undefined') return
-  try {
-    const dismissed = getDismissedNotifications()
-    if (!dismissed.includes(notificationId)) {
-      dismissed.push(notificationId)
-      localStorage.setItem(getDismissedKey(), JSON.stringify(dismissed))
-    }
-    // 오래된 키 정리 (3일 이상 된 것)
-    cleanupOldDismissedKeys()
-  } catch {
-    // localStorage 오류 무시
-  }
-}
-
-// 오래된 해제 기록 정리
-function cleanupOldDismissedKeys(): void {
-  if (typeof window === 'undefined') return
-  try {
-    const today = new Date()
-    const keysToRemove: string[] = []
-
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key?.startsWith('dismissed_notifications_')) {
-        const dateStr = key.replace('dismissed_notifications_', '')
-        const keyDate = new Date(dateStr)
-        const diffDays = Math.floor((today.getTime() - keyDate.getTime()) / (1000 * 60 * 60 * 24))
-        if (diffDays > 3) {
-          keysToRemove.push(key)
-        }
-      }
-    }
-
-    keysToRemove.forEach(key => localStorage.removeItem(key))
-  } catch {
-    // 정리 실패 무시
-  }
-}
-
 export default function HeaderNotificationBanner({
   notifications,
-  autoRotateInterval = 5000
+  autoRotateInterval = 5000,
+  onDismissNotification
 }: HeaderNotificationBannerProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
-  const [dismissedIds, setDismissedIds] = useState<string[]>([])
   const [selectedNotification, setSelectedNotification] = useState<TodayNotification | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDismissing, setIsDismissing] = useState(false)
 
-  // 컴포넌트 마운트 시 해제된 알림 목록 로드
-  useEffect(() => {
-    setDismissedIds(getDismissedNotifications())
-  }, [])
-
-  // 해제되지 않은 알림만 필터링
-  const activeNotifications = notifications?.filter(n => !dismissedIds.includes(n.id)) || []
+  // 알림 배열 직접 사용 (서버에서 이미 필터링됨)
+  const activeNotifications = notifications || []
   const notificationCount = activeNotifications.length
 
   // 다음 알림으로 이동
@@ -159,13 +98,21 @@ export default function HeaderNotificationBanner({
     setIsModalOpen(true)
   }
 
-  // 알림 해제 핸들러
-  const handleDismiss = (notificationId: string) => {
-    saveDismissedNotification(notificationId)
-    setDismissedIds(prev => [...prev, notificationId])
-    // 현재 인덱스 조정
-    if (currentIndex >= notificationCount - 1) {
-      setCurrentIndex(Math.max(0, notificationCount - 2))
+  // 알림 해제 핸들러 (서버에 저장하여 모든 사용자에게 적용)
+  const handleDismiss = async (notificationId: string) => {
+    if (!onDismissNotification || isDismissing) return
+
+    setIsDismissing(true)
+    try {
+      const success = await onDismissNotification(notificationId)
+      if (success) {
+        // 성공 시 현재 인덱스 조정 (훅에서 알림 목록이 업데이트됨)
+        if (currentIndex >= notificationCount - 1) {
+          setCurrentIndex(Math.max(0, notificationCount - 2))
+        }
+      }
+    } finally {
+      setIsDismissing(false)
     }
   }
 

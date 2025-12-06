@@ -305,12 +305,70 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-// PATCH: 알림 활성화/비활성화 토글
+// PATCH: 알림 활성화/비활성화 토글 또는 알림 해제
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { clinicId, userId, notificationId, isActive } = body
+    const { clinicId, userId, notificationId, isActive, action } = body
 
+    // action이 'dismiss'인 경우 알림 해제 처리
+    if (action === 'dismiss') {
+      if (!clinicId || !userId || !notificationId) {
+        return NextResponse.json(
+          { error: 'Missing required parameters for dismiss' },
+          { status: 400 }
+        )
+      }
+
+      const supabaseAdmin = getSupabaseAdmin()
+      if (!supabaseAdmin) {
+        return NextResponse.json(
+          { error: 'Database connection not available' },
+          { status: 500 }
+        )
+      }
+
+      // 사용자 권한 검증 (해제는 모든 활성 사용자가 가능)
+      const { data: user, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('id, clinic_id, status')
+        .eq('id', userId)
+        .single()
+
+      if (userError || !user || user.status !== 'active' || user.clinic_id !== clinicId) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 403 }
+        )
+      }
+
+      // 알림 해제 (오늘 날짜로 dismissed_at 설정)
+      const today = new Date().toISOString().split('T')[0]
+      const { data, error: updateError } = await supabaseAdmin
+        .from('clinic_notifications')
+        .update({
+          dismissed_at: today,
+          dismissed_by: userId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', notificationId)
+        .eq('clinic_id', clinicId)
+        .select()
+        .single()
+
+      if (updateError) {
+        console.error('[API notifications] Dismiss error:', updateError)
+        return NextResponse.json(
+          { error: `Failed to dismiss notification: ${updateError.message}` },
+          { status: 500 }
+        )
+      }
+
+      console.log('[API notifications] Successfully dismissed notification:', notificationId)
+      return NextResponse.json({ data, success: true })
+    }
+
+    // 기존 활성화/비활성화 토글 로직
     if (!clinicId || !userId || !notificationId || typeof isActive !== 'boolean') {
       return NextResponse.json(
         { error: 'Missing required parameters' },
