@@ -1,11 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { Settings, Package, Plus, Edit3, Trash2 } from 'lucide-react'
-import type { GiftInventory } from '@/types'
+import { useState, useMemo } from 'react'
+import { Settings, Package, Plus, Edit3, Trash2, AlertTriangle } from 'lucide-react'
+import type { GiftInventory, GiftLog, GiftRowData } from '@/types'
 
 interface InventoryManagementProps {
   giftInventory: GiftInventory[]
+  giftLogs?: GiftLog[]  // 저장된 선물 사용 기록 (현재 날짜 사용량 계산용)
+  baseUsageByGift?: Record<string, number>  // 전체 giftLogs 기반 사용량 (dashboard에서 계산)
+  currentGiftRows?: GiftRowData[]  // 일일보고서에서 현재 입력 중인 선물 데이터
+  currentReportDate?: string       // 현재 입력 중인 보고서 날짜
   onAddGiftItem: (name: string, stock: number) => void
   onUpdateStock: (id: number, quantity: number) => void
   onDeleteGiftItem: (id: number, name: string) => void
@@ -25,6 +29,10 @@ const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: s
 
 export default function InventoryManagement({
   giftInventory,
+  giftLogs = [],
+  baseUsageByGift = {},
+  currentGiftRows = [],
+  currentReportDate = '',
   onAddGiftItem,
   onUpdateStock,
   onDeleteGiftItem
@@ -32,6 +40,56 @@ export default function InventoryManagement({
   const [newGiftName, setNewGiftName] = useState('')
   const [newGiftStock, setNewGiftStock] = useState(0)
   const [stockUpdates, setStockUpdates] = useState<Record<number, number>>({})
+
+  // 현재 날짜의 저장된 사용량 계산 (baseUsageByGift에서 제외할 양)
+  const currentDateSavedUsage = useMemo(() => {
+    const usage: Record<string, number> = {}
+    for (const log of giftLogs) {
+      if (log.gift_type && log.gift_type !== '없음' && log.date === currentReportDate) {
+        usage[log.gift_type] = (usage[log.gift_type] || 0) + (log.quantity || 1)
+      }
+    }
+    return usage
+  }, [giftLogs, currentReportDate])
+
+  // 현재 입력 중인 giftRows 사용량 계산
+  const currentInputUsage = useMemo(() => {
+    const usage: Record<string, number> = {}
+    for (const row of currentGiftRows) {
+      if (row.gift_type && row.gift_type !== '없음' && row.patient_name?.trim()) {
+        usage[row.gift_type] = (usage[row.gift_type] || 0) + (row.quantity || 1)
+      }
+    }
+    return usage
+  }, [currentGiftRows])
+
+  // 실제 남은 재고 계산 함수
+  // 공식: 실제 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 저장 사용량 - 현재 입력 사용량
+  // (현재 날짜 저장 사용량은 현재 입력으로 대체되므로 더해줌)
+  const getActualStock = (item: GiftInventory) => {
+    const totalSavedUsage = baseUsageByGift[item.name] || 0      // 전체 저장 사용량
+    const currentDateUsage = currentDateSavedUsage[item.name] || 0  // 현재 날짜 저장 사용량
+    const currentUsage = currentInputUsage[item.name] || 0       // 현재 입력 사용량
+    return item.stock - totalSavedUsage + currentDateUsage - currentUsage
+  }
+
+  // UI 표시용 사용량 계산 (전체 사용량 - 현재 날짜 저장 + 현재 입력)
+  const usedQuantityByGift = useMemo(() => {
+    const usage: Record<string, number> = {}
+    // baseUsageByGift 복사
+    for (const [name, qty] of Object.entries(baseUsageByGift)) {
+      usage[name] = qty
+    }
+    // 현재 날짜 저장 사용량 제외 (현재 입력으로 대체됨)
+    for (const [name, qty] of Object.entries(currentDateSavedUsage)) {
+      usage[name] = (usage[name] || 0) - qty
+    }
+    // 현재 입력 추가
+    for (const [name, qty] of Object.entries(currentInputUsage)) {
+      usage[name] = (usage[name] || 0) + qty
+    }
+    return usage
+  }, [baseUsageByGift, currentDateSavedUsage, currentInputUsage])
 
   const handleAddGift = () => {
     if (!newGiftName.trim()) {
@@ -116,42 +174,71 @@ export default function InventoryManagement({
             </div>
           ) : (
             <div className="space-y-3">
-              {giftInventory.map(item => (
-                <div key={item.id} className="grid grid-cols-1 md:grid-cols-6 gap-3 items-center bg-slate-50 p-4 rounded-lg border border-slate-200">
-                  <span className="md:col-span-2 font-semibold text-slate-800">{item.name}</span>
-                  <span className="text-sm text-slate-600">
-                    현재 재고: <span className="font-bold text-blue-600">{item.stock}</span> 개
-                  </span>
-                  <input
-                    type="number"
-                    placeholder="추가/차감 수량"
-                    className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    value={stockUpdates[item.id] || ''}
-                    onChange={(e) => setStockUpdates(prev => ({
-                      ...prev,
-                      [item.id]: parseInt(e.target.value) || 0
-                    }))}
-                  />
-                  <button
-                    onClick={() => handleStockUpdate(item.id)}
-                    className="flex items-center justify-center bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 text-sm transition-colors"
-                  >
-                    <Edit3 className="w-4 h-4 mr-1" />
-                    재고 수정
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`'${item.name}' 선물을 삭제하시겠습니까? 관련 재고 기록도 모두 사라집니다.`)) {
-                        onDeleteGiftItem(item.id, item.name)
-                      }
-                    }}
-                    className="flex items-center justify-center bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 text-sm transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    삭제
-                  </button>
-                </div>
-              ))}
+              {giftInventory.map(item => {
+                const actualStock = getActualStock(item)
+                const usedQty = usedQuantityByGift[item.name] || 0
+                const isLowStock = actualStock <= 3 && actualStock > 0
+                const isOutOfStock = actualStock <= 0
+
+                return (
+                  <div key={item.id} className={`grid grid-cols-1 md:grid-cols-6 gap-3 items-center p-4 rounded-lg border ${isOutOfStock ? 'bg-red-50 border-red-200' : isLowStock ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className="md:col-span-2">
+                      <span className="font-semibold text-slate-800">{item.name}</span>
+                      {isOutOfStock && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          재고 없음
+                        </span>
+                      )}
+                      {isLowStock && !isOutOfStock && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          재고 부족
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm">
+                      <div className="text-slate-600">
+                        입고 재고: <span className="font-medium">{item.stock}</span>개
+                      </div>
+                      <div className="text-slate-600">
+                        사용량: <span className="font-medium text-orange-600">-{usedQty}</span>개
+                      </div>
+                      <div className={`font-bold ${isOutOfStock ? 'text-red-600' : isLowStock ? 'text-amber-600' : 'text-blue-600'}`}>
+                        실제 남은 재고: {actualStock}개
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      placeholder="추가/차감 수량"
+                      className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      value={stockUpdates[item.id] || ''}
+                      onChange={(e) => setStockUpdates(prev => ({
+                        ...prev,
+                        [item.id]: parseInt(e.target.value) || 0
+                      }))}
+                    />
+                    <button
+                      onClick={() => handleStockUpdate(item.id)}
+                      className="flex items-center justify-center bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 text-sm transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4 mr-1" />
+                      재고 수정
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`'${item.name}' 선물을 삭제하시겠습니까? 관련 재고 기록도 모두 사라집니다.`)) {
+                          onDeleteGiftItem(item.id, item.name)
+                        }
+                      }}
+                      className="flex items-center justify-center bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 text-sm transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      삭제
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

@@ -3,6 +3,7 @@
  * Handles Supabase session refresh with timeout and error handling
  *
  * Based on Supabase official documentation and best practices
+ * iOS compatibility: Safe localStorage access with fallback
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -12,6 +13,125 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  */
 export const SESSION_REFRESH_TIMEOUT = 5000  // 5초 (10초에서 감소 - 공격적 최적화)
 export const SESSION_CHECK_TIMEOUT = 3000    // 3초 (10초에서 감소 - 공격적 최적화)
+
+/**
+ * iOS 디바이스 감지
+ */
+export function isIOSDevice(): boolean {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
+
+  const userAgent = navigator.userAgent || ''
+  const platform = navigator.platform || ''
+
+  const isIOS = /iPad|iPhone|iPod/.test(userAgent)
+  const isIPadOS = platform === 'MacIntel' && navigator.maxTouchPoints > 1
+
+  return isIOS || isIPadOS
+}
+
+/**
+ * Storage 사용 가능 여부 체크
+ */
+function isStorageAvailable(storage: Storage): boolean {
+  try {
+    const testKey = '__session_storage_test__'
+    storage.setItem(testKey, 'test')
+    storage.removeItem(testKey)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * localStorage 사용 가능 여부 (iOS Private Browsing 대응)
+ */
+let localStorageAvailable: boolean | null = null
+export function isLocalStorageAvailable(): boolean {
+  if (typeof window === 'undefined') return false
+  if (localStorageAvailable !== null) return localStorageAvailable
+
+  localStorageAvailable = typeof localStorage !== 'undefined' && isStorageAvailable(localStorage)
+  return localStorageAvailable
+}
+
+/**
+ * 안전한 localStorage 접근 - iOS Private Browsing 대응
+ */
+export const safeLocalStorage = {
+  getItem(key: string): string | null {
+    try {
+      if (!isLocalStorageAvailable()) {
+        // sessionStorage 폴백 시도
+        if (typeof sessionStorage !== 'undefined' && isStorageAvailable(sessionStorage)) {
+          return sessionStorage.getItem(key)
+        }
+        return null
+      }
+      return localStorage.getItem(key)
+    } catch (error) {
+      console.warn('[safeLocalStorage] getItem error:', error)
+      return null
+    }
+  },
+
+  setItem(key: string, value: string): boolean {
+    try {
+      if (!isLocalStorageAvailable()) {
+        // sessionStorage 폴백 시도
+        if (typeof sessionStorage !== 'undefined' && isStorageAvailable(sessionStorage)) {
+          sessionStorage.setItem(key, value)
+          return true
+        }
+        return false
+      }
+      localStorage.setItem(key, value)
+      return true
+    } catch (error) {
+      console.warn('[safeLocalStorage] setItem error:', error)
+      return false
+    }
+  },
+
+  removeItem(key: string): boolean {
+    try {
+      if (!isLocalStorageAvailable()) {
+        // sessionStorage 폴백 시도
+        if (typeof sessionStorage !== 'undefined' && isStorageAvailable(sessionStorage)) {
+          sessionStorage.removeItem(key)
+        }
+        return true
+      }
+      localStorage.removeItem(key)
+      return true
+    } catch (error) {
+      console.warn('[safeLocalStorage] removeItem error:', error)
+      return false
+    }
+  },
+
+  /**
+   * Supabase 관련 키 모두 제거 (sb- prefix)
+   */
+  clearSupabaseData(): void {
+    try {
+      const storages = [localStorage, sessionStorage].filter(
+        s => typeof s !== 'undefined' && isStorageAvailable(s)
+      )
+
+      storages.forEach(storage => {
+        const keys = Object.keys(storage)
+        keys.forEach(key => {
+          if (key.startsWith('sb-') || key.startsWith('dental-clinic-supabase')) {
+            storage.removeItem(key)
+          }
+        })
+      })
+    } catch (error) {
+      console.warn('[safeLocalStorage] clearSupabaseData error:', error)
+    }
+  }
+}
 
 /**
  * Result type for session refresh operations
@@ -163,23 +283,17 @@ export async function refreshSessionWithTimeout(
 }
 
 /**
- * Clear all session data from storage
+ * Clear all session data from storage (iOS 호환)
  */
 export function clearSessionData(): void {
   try {
-    // Clear dental app data
-    localStorage.removeItem('dental_auth')
-    localStorage.removeItem('dental_user')
-    sessionStorage.removeItem('dental_auth')
-    sessionStorage.removeItem('dental_user')
+    // Clear dental app data using safe storage
+    safeLocalStorage.removeItem('dental_auth')
+    safeLocalStorage.removeItem('dental_user')
+    safeLocalStorage.removeItem('dental_logging_out')
 
     // Clear Supabase data
-    const keys = Object.keys(localStorage)
-    keys.forEach(key => {
-      if (key.startsWith('sb-')) {
-        localStorage.removeItem(key)
-      }
-    })
+    safeLocalStorage.clearSupabaseData()
 
     console.log('[sessionUtils] Session data cleared')
   } catch (error) {

@@ -9,7 +9,7 @@ import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
 import { saveDailyReport } from '@/app/actions/dailyReport'
 import { createClient } from '@/lib/supabase/client'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftLog } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
 
 // Feature Flag: 신규 아키텍처 사용 여부
@@ -17,6 +17,8 @@ const USE_NEW_ARCHITECTURE = process.env.NEXT_PUBLIC_USE_NEW_DAILY_REPORT === 't
 
 interface DailyInputFormProps {
   giftInventory: GiftInventory[]
+  giftLogs?: GiftLog[]  // 저장된 선물 사용 기록 (실제 재고 계산용)
+  baseUsageByGift?: Record<string, number>  // 전체 giftLogs 기반 사용량 (dashboard에서 계산)
   onSaveReport: (data: {
     date: string
     consultRows: ConsultRowData[]
@@ -28,12 +30,13 @@ interface DailyInputFormProps {
     specialNotes: string
   }) => void
   onSaveSuccess?: () => void  // 저장 성공 후 콜백 (데이터 새로고침용)
+  onGiftRowsChange?: (date: string, giftRows: GiftRowData[]) => void  // 선물 데이터 변경 시 콜백
   canCreate: boolean
   canEdit: boolean
   currentUser?: UserProfile
 }
 
-export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSuccess, canCreate, canEdit, currentUser }: DailyInputFormProps) {
+export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsageByGift = {}, onSaveReport, onSaveSuccess, onGiftRowsChange, canCreate, canEdit, currentUser }: DailyInputFormProps) {
   const [reportDate, setReportDate] = useState(getTodayString())
   const [consultRows, setConsultRows] = useState<ConsultRowData[]>([
     { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
@@ -130,7 +133,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
           setGiftRows(giftLogs.map(log => ({
             patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
             gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
-            quantity: 1,
+            quantity: typeof log.quantity === 'number' ? log.quantity : 1,
             naver_review: (log.naver_review as 'O' | 'X') || 'X',
             notes: typeof log.notes === 'string' ? log.notes : ''
           })))
@@ -179,6 +182,13 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
     console.log('[DailyInputForm] Loading data for date:', reportDate)
     loadDataForDate(reportDate)
   }, [reportDate, loadDataForDate, currentUser?.clinic_id])
+
+  // giftRows 변경 시 상위 컴포넌트에 알림 (재고 관리 실시간 반영용)
+  useEffect(() => {
+    if (onGiftRowsChange && reportDate) {
+      onGiftRowsChange(reportDate, giftRows)
+    }
+  }, [giftRows, reportDate, onGiftRowsChange])
 
   useEffect(() => {
     if (!currentUser?.clinic_id) {
@@ -379,6 +389,7 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
             date: reportDate,
             patient_name: row.patient_name,
             gift_type: row.gift_type || '',
+            quantity: row.quantity || 1,
             naver_review: row.naver_review,
             notes: row.notes || ''
           })),
@@ -578,6 +589,9 @@ export default function DailyInputForm({ giftInventory, onSaveReport, onSaveSucc
             giftRows={giftRows}
             onGiftRowsChange={setGiftRows}
             giftInventory={giftInventory}
+            giftLogs={giftLogs}
+            baseUsageByGift={baseUsageByGift}
+            currentDate={reportDate}
             isReadOnly={isReadOnly}
           />
         </div>

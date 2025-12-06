@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { dataService } from '@/lib/dataService'
 import type { Permission } from '@/types/permissions'
 import { useActivityTracker } from '@/hooks/useActivityTracker'
-import { SESSION_CHECK_TIMEOUT } from '@/lib/sessionUtils'
+import { SESSION_CHECK_TIMEOUT, safeLocalStorage, isIOSDevice } from '@/lib/sessionUtils'
 import { TIMEOUTS } from '@/lib/constants/timeouts'
 import { useRouter } from 'next/navigation'
 
@@ -62,11 +62,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // 로그아웃 중이면 세션 체크 스킵
-        const loggingOut = localStorage.getItem('dental_logging_out')
+        const loggingOut = safeLocalStorage.getItem('dental_logging_out')
         if (isLoggingOut || loggingOut === 'true') {
           console.log('AuthContext: 로그아웃 중이므로 세션 체크 스킵')
-          localStorage.removeItem('dental_logging_out')
+          safeLocalStorage.removeItem('dental_logging_out')
           return
+        }
+
+        // iOS 디바이스 감지 로깅
+        if (isIOSDevice()) {
+          console.log('[AuthContext] iOS device detected - using safe storage')
         }
 
         console.log('[AuthContext] Getting Supabase client...')
@@ -96,15 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // Refresh token 오류 시 로컬 스토리지 클리어
                 if (result.error.message?.includes('Refresh Token')) {
                   console.log('[AuthContext] Invalid refresh token detected, clearing storage')
-                  localStorage.removeItem('dental_auth')
-                  localStorage.removeItem('dental_user')
-                  // Supabase 로컬 스토리지도 클리어
-                  const keys = Object.keys(localStorage)
-                  keys.forEach(key => {
-                    if (key.startsWith('sb-')) {
-                      localStorage.removeItem(key)
-                    }
-                  })
+                  safeLocalStorage.removeItem('dental_auth')
+                  safeLocalStorage.removeItem('dental_user')
+                  // Supabase 스토리지도 클리어
+                  safeLocalStorage.clearSupabaseData()
                 }
                 session = null
               } else {
@@ -113,18 +113,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             } catch (timeoutError) {
               console.log('[AuthContext] Session check error:', timeoutError)
-              // 에러 발생 시 세션 없음으로 처리하고 로컬 스토리지 클리어
+              // 에러 발생 시 세션 없음으로 처리하고 스토리지 클리어
               if (timeoutError instanceof Error && timeoutError.message?.includes('Refresh Token')) {
                 console.log('[AuthContext] Invalid refresh token detected, clearing storage')
-                localStorage.removeItem('dental_auth')
-                localStorage.removeItem('dental_user')
-                // Supabase 로컬 스토리지도 클리어
-                const keys = Object.keys(localStorage)
-                keys.forEach(key => {
-                  if (key.startsWith('sb-')) {
-                    localStorage.removeItem(key)
-                  }
-                })
+                safeLocalStorage.removeItem('dental_auth')
+                safeLocalStorage.removeItem('dental_user')
+                // Supabase 스토리지도 클리어
+                safeLocalStorage.clearSupabaseData()
               }
               session = null
             }
@@ -172,17 +167,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 await supabase.auth.signOut()
               }
             } else {
-              // Supabase 세션이 없으면 localStorage 확인 (기존 방식 호환)
-              const authStatus = localStorage.getItem('dental_auth')
-              const userData = localStorage.getItem('dental_user')
+              // Supabase 세션이 없으면 storage 확인 (기존 방식 호환)
+              const authStatus = safeLocalStorage.getItem('dental_auth')
+              const userData = safeLocalStorage.getItem('dental_user')
 
               if (authStatus === 'true' && userData) {
                 try {
                   const parsedUser = JSON.parse(userData)
-                  console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
+                  console.log('AuthContext: storage에서 사용자 정보 복원', parsedUser)
                   setUser(parsedUser)
                 } catch (e) {
-                  console.error('Failed to parse localStorage user data:', e)
+                  console.error('Failed to parse storage user data:', e)
                 }
               }
             }
@@ -192,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.log('Auth state changed:', event)
 
               // 로그아웃 중이면 무시
-              const loggingOut = localStorage.getItem('dental_logging_out')
+              const loggingOut = safeLocalStorage.getItem('dental_logging_out')
               if (loggingOut === 'true') {
                 console.log('로그아웃 중이므로 auth state change 무시')
                 return
@@ -238,8 +233,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
               } else if (event === 'SIGNED_OUT') {
                 setUser(null)
-                localStorage.removeItem('dental_auth')
-                localStorage.removeItem('dental_user')
+                safeLocalStorage.removeItem('dental_auth')
+                safeLocalStorage.removeItem('dental_user')
                 dataService.clearCachedClinicId()
               } else if (event === 'TOKEN_REFRESHED') {
                 console.log('[AuthContext] Token refreshed successfully')
@@ -251,35 +246,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             subscription = authListener.subscription
           } catch (sessionError) {
             console.error('[AuthContext] Session check error:', sessionError)
-            // 세션 확인 실패 시 localStorage 확인
-            const authStatus = localStorage.getItem('dental_auth')
-            const userData = localStorage.getItem('dental_user')
+            // 세션 확인 실패 시 storage 확인
+            const authStatus = safeLocalStorage.getItem('dental_auth')
+            const userData = safeLocalStorage.getItem('dental_user')
 
             if (authStatus === 'true' && userData) {
               try {
                 const parsedUser = JSON.parse(userData)
-                console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
+                console.log('AuthContext: storage에서 사용자 정보 복원', parsedUser)
                 setUser(parsedUser)
               } catch (e) {
-                console.error('Failed to parse localStorage user data:', e)
+                console.error('Failed to parse storage user data:', e)
               }
             }
           }
         } else {
-          // Supabase 설정이 안 된 경우 localStorage만 확인
-          console.warn('[AuthContext] Supabase not configured, checking localStorage only')
-          const authStatus = localStorage.getItem('dental_auth')
-          const userData = localStorage.getItem('dental_user')
+          // Supabase 설정이 안 된 경우 storage만 확인
+          console.warn('[AuthContext] Supabase not configured, checking storage only')
+          const authStatus = safeLocalStorage.getItem('dental_auth')
+          const userData = safeLocalStorage.getItem('dental_user')
 
           if (authStatus === 'true' && userData) {
             try {
               const parsedUser = JSON.parse(userData)
-              console.log('AuthContext: localStorage에서 사용자 정보 복원', parsedUser)
+              console.log('AuthContext: storage에서 사용자 정보 복원', parsedUser)
               setUser(parsedUser)
             } catch (e) {
-              console.error('Failed to parse user data from localStorage:', e)
-              localStorage.removeItem('dental_auth')
-              localStorage.removeItem('dental_user')
+              console.error('Failed to parse user data from storage:', e)
+              safeLocalStorage.removeItem('dental_auth')
+              safeLocalStorage.removeItem('dental_user')
             }
           }
         }
@@ -326,8 +321,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     setUser(userData)
-    localStorage.setItem('dental_auth', 'true')
-    localStorage.setItem('dental_user', JSON.stringify(userData))
+    safeLocalStorage.setItem('dental_auth', 'true')
+    safeLocalStorage.setItem('dental_user', JSON.stringify(userData))
     if (userData.clinic_id) {
       dataService.setCachedClinicId(userData.clinic_id)
     } else {
@@ -338,20 +333,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUser = (updatedUserData: any) => {
     setUser(updatedUserData)
-    localStorage.setItem('dental_user', JSON.stringify(updatedUserData))
+    safeLocalStorage.setItem('dental_user', JSON.stringify(updatedUserData))
   }
 
   const logout = async () => {
     try {
       setIsLoggingOut(true)
-      localStorage.setItem('dental_logging_out', 'true')
+      safeLocalStorage.setItem('dental_logging_out', 'true')
 
       const supabase = createClient()
       await supabase.auth.signOut()
 
       setUser(null)
-      localStorage.removeItem('dental_auth')
-      localStorage.removeItem('dental_user')
+      safeLocalStorage.removeItem('dental_auth')
+      safeLocalStorage.removeItem('dental_user')
       dataService.clearCachedClinicId()
 
       // dental_logging_out 플래그는 새 페이지의 checkAuth에서 제거됨
@@ -361,12 +356,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Logout error:', error)
       // Force logout even if error
       setUser(null)
-      localStorage.removeItem('dental_auth')
-      localStorage.removeItem('dental_user')
+      safeLocalStorage.removeItem('dental_auth')
+      safeLocalStorage.removeItem('dental_user')
       window.location.href = '/'
     }
     // finally 블록 제거: window.location.href 후 페이지가 리로드되므로
-    // setIsLoggingOut(false)와 localStorage.removeItem은 불필요
+    // setIsLoggingOut(false)와 safeLocalStorage.removeItem은 불필요
     // dental_logging_out은 새 페이지의 checkAuth에서 처리됨
   }
 

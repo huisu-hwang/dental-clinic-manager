@@ -1,33 +1,59 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Plus, X } from 'lucide-react'
-import type { GiftRowData, GiftInventory } from '@/types'
+import type { GiftRowData, GiftInventory, GiftLog } from '@/types'
 
 interface GiftTableProps {
   giftRows: GiftRowData[]
   onGiftRowsChange: (rows: GiftRowData[]) => void
   giftInventory: GiftInventory[]
+  giftLogs?: GiftLog[]      // 저장된 선물 사용 기록
+  baseUsageByGift?: Record<string, number>  // 전체 giftLogs 기반 사용량 (dashboard에서 계산)
+  currentDate?: string      // 현재 입력 중인 보고서 날짜
   isReadOnly: boolean
 }
 
-export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, isReadOnly }: GiftTableProps) {
+export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, giftLogs = [], baseUsageByGift = {}, currentDate = '', isReadOnly }: GiftTableProps) {
+  // 현재 날짜의 저장된 사용량 계산 (baseUsageByGift에서 제외할 양)
+  const currentDateSavedUsage = useMemo(() => {
+    const usage: Record<string, number> = {}
+    for (const log of giftLogs) {
+      if (log.gift_type && log.gift_type !== '없음' && log.date === currentDate) {
+        usage[log.gift_type] = (usage[log.gift_type] || 0) + (log.quantity || 1)
+      }
+    }
+    return usage
+  }, [giftLogs, currentDate])
+
+  // 실제 재고 계산 함수
+  // 공식: 실제 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 저장 사용량 - 현재 입력 사용량
+  // (현재 날짜 저장 사용량은 현재 입력으로 대체되므로 더해줌)
   const getAvailableInventory = (giftType: string, currentRowIndex?: number) => {
     if (!giftType || giftType === '없음') return 0
 
     const gift = giftInventory.find(item => item.name === giftType)
     if (!gift) return 0
 
-    const usedQuantity = giftRows.reduce((total, row, index) => {
+    // 전체 저장된 사용량 (dashboard에서 계산된 값)
+    const totalSavedUsage = baseUsageByGift[giftType] || 0
+
+    // 현재 날짜의 저장된 사용량 (이 값은 현재 입력으로 대체됨)
+    const currentDateUsage = currentDateSavedUsage[giftType] || 0
+
+    // 현재 입력 중인 giftRows에서의 사용량 (자기 자신 제외)
+    const currentInputUsage = giftRows.reduce((total, row, index) => {
       if (currentRowIndex !== undefined && index === currentRowIndex) {
         return total
       }
-      if (row.gift_type === giftType) {
+      if (row.gift_type === giftType && row.patient_name?.trim()) {
         return total + (row.quantity || 1)
       }
       return total
     }, 0)
 
-    return Math.max(0, gift.stock - usedQuantity)
+    // 실제 남은 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 저장 사용량 - 현재 입력 사용량
+    return Math.max(0, gift.stock - totalSavedUsage + currentDateUsage - currentInputUsage)
   }
 
   const addRow = () => {
@@ -50,20 +76,29 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
     const newRows = [...giftRows]
     newRows[index] = { ...newRows[index], [field]: value }
 
+    // 선물 종류 변경 시: 재고가 부족하면 수량 조정
     if (field === 'gift_type' && value !== '없음') {
-      const availableStock = getAvailableInventory(value as string, index)
-      if (availableStock < newRows[index].quantity) {
-        newRows[index].quantity = Math.max(1, availableStock)
+      const gift = giftInventory.find(item => item.name === value)
+      if (gift) {
+        const availableStock = getAvailableInventory(value as string, index)
+        if (availableStock < newRows[index].quantity) {
+          newRows[index].quantity = Math.max(1, availableStock)
+        }
       }
+      // giftInventory에 없는 선물이면 수량 체크 건너뜀 (이미 저장된 데이터)
     }
 
+    // 수량 변경 시: 재고 체크 (giftInventory에 있는 선물만)
     if (field === 'quantity') {
-      const availableStock = getAvailableInventory(newRows[index].gift_type, index)
-      if ((value as number) > availableStock) {
-        newRows[index].quantity = availableStock
-        alert(`재고가 부족합니다. 사용 가능한 수량: ${availableStock}개`)
-        return
+      const gift = giftInventory.find(item => item.name === newRows[index].gift_type)
+      if (gift) {
+        const availableStock = getAvailableInventory(newRows[index].gift_type, index)
+        if ((value as number) > availableStock && availableStock > 0) {
+          newRows[index].quantity = Math.max(1, availableStock)
+          alert(`재고가 부족합니다. 사용 가능한 수량: ${availableStock}개`)
+        }
       }
+      // giftInventory에 없는 선물이면 재고 체크 없이 수량 변경 허용
     }
 
     onGiftRowsChange(newRows)
@@ -78,7 +113,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">환자명</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">선물 종류</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">수량</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">수량</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">리뷰</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">비고</th>
               <th className="px-4 py-3 w-12"></th>
@@ -108,33 +143,57 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                     <option value="없음">없음</option>
                     {giftInventory.map(item => {
                       const availableQty = getAvailableInventory(item.name, index)
+                      const isSelected = row.gift_type === item.name
                       return (
                         <option
                           key={item.id}
                           value={item.name}
-                          disabled={availableQty <= 0}
+                          disabled={availableQty <= 0 && !isSelected}
                         >
-                          {item.name} ({availableQty}개)
+                          {isSelected ? item.name : `${item.name} (${availableQty}개)`}
                         </option>
                       )
                     })}
                   </select>
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-2 py-2">
                   <select
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
-                    style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                    className="w-full px-2 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.25rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.25em 1.25em', paddingRight: '1.5rem' }}
                     value={row.quantity}
                     onChange={(e) => updateRow(index, 'quantity', parseInt(e.target.value))}
                     disabled={row.gift_type === '없음' || isReadOnly}
                   >
                     {(() => {
-                      const maxQuantity = row.gift_type === '없음'
-                        ? 10
-                        : Math.min(getAvailableInventory(row.gift_type, index) + (row.quantity || 1), 10)
-                      return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => (
-                        <option key={num} value={num}>{num}</option>
-                      ))
+                      // 선물 종류가 '없음'이면 기본 10개 옵션
+                      if (row.gift_type === '없음') {
+                        return Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                          <option key={num} value={num}>{num}</option>
+                        ))
+                      }
+                      // 선물이 선택된 경우: 실제 재고 기준으로 최대값 계산
+                      const gift = giftInventory.find(item => item.name === row.gift_type)
+                      const totalStock = gift?.stock || 0
+                      const totalSavedUsage = baseUsageByGift[row.gift_type] || 0  // 전체 저장 사용량
+                      const currentDateUsage = currentDateSavedUsage[row.gift_type] || 0  // 현재 날짜 저장 사용량
+                      // 실제 남은 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 사용량 (현재 입력으로 대체됨)
+                      const actualStock = totalStock - totalSavedUsage + currentDateUsage
+                      const usedByOthers = giftRows.reduce((total, r, idx) => {
+                        if (idx === index || r.gift_type !== row.gift_type) return total
+                        if (!r.patient_name?.trim()) return total  // 환자명이 없으면 제외
+                        return total + (r.quantity || 1)
+                      }, 0)
+                      const availableForThis = actualStock - usedByOthers
+                      const maxQuantity = Math.min(Math.max(availableForThis, 1), 10)
+
+                      return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => {
+                        const remaining = actualStock - usedByOthers - num
+                        return (
+                          <option key={num} value={num}>
+                            {num}개 (남음:{remaining >= 0 ? remaining : 0})
+                          </option>
+                        )
+                      })
                     })()}
                   </select>
                 </td>
@@ -216,13 +275,14 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                     <option value="없음">없음</option>
                     {giftInventory.map(item => {
                       const availableQty = getAvailableInventory(item.name, index)
+                      const isSelected = row.gift_type === item.name
                       return (
                         <option
                           key={item.id}
                           value={item.name}
-                          disabled={availableQty <= 0}
+                          disabled={availableQty <= 0 && !isSelected}
                         >
-                          {item.name} ({availableQty}개)
+                          {isSelected ? item.name : `${item.name} (${availableQty}개)`}
                         </option>
                       )
                     })}
@@ -231,19 +291,42 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">수량</label>
                   <select
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
-                    style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                    className="w-full px-2 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.25rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.25em 1.25em', paddingRight: '1.5rem' }}
                     value={row.quantity}
                     onChange={(e) => updateRow(index, 'quantity', parseInt(e.target.value))}
                     disabled={row.gift_type === '없음' || isReadOnly}
                   >
                     {(() => {
-                      const maxQuantity = row.gift_type === '없음'
-                        ? 10
-                        : Math.min(getAvailableInventory(row.gift_type, index) + (row.quantity || 1), 10)
-                      return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => (
-                        <option key={num} value={num}>{num}</option>
-                      ))
+                      // 선물 종류가 '없음'이면 기본 10개 옵션
+                      if (row.gift_type === '없음') {
+                        return Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                          <option key={num} value={num}>{num}</option>
+                        ))
+                      }
+                      // 선물이 선택된 경우: 실제 재고 기준으로 최대값 계산
+                      const gift = giftInventory.find(item => item.name === row.gift_type)
+                      const totalStock = gift?.stock || 0
+                      const totalSavedUsage = baseUsageByGift[row.gift_type] || 0  // 전체 저장 사용량
+                      const currentDateUsage = currentDateSavedUsage[row.gift_type] || 0  // 현재 날짜 저장 사용량
+                      // 실제 남은 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 사용량 (현재 입력으로 대체됨)
+                      const actualStock = totalStock - totalSavedUsage + currentDateUsage
+                      const usedByOthers = giftRows.reduce((total, r, idx) => {
+                        if (idx === index || r.gift_type !== row.gift_type) return total
+                        if (!r.patient_name?.trim()) return total  // 환자명이 없으면 제외
+                        return total + (r.quantity || 1)
+                      }, 0)
+                      const availableForThis = actualStock - usedByOthers
+                      const maxQuantity = Math.min(Math.max(availableForThis, 1), 10)
+
+                      return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => {
+                        const remaining = actualStock - usedByOthers - num
+                        return (
+                          <option key={num} value={num}>
+                            {num}개 (남음:{remaining >= 0 ? remaining : 0})
+                          </option>
+                        )
+                      })
                     })()}
                   </select>
                 </div>
@@ -252,8 +335,8 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, i
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">리뷰</label>
                   <select
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
-                    style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                    className="w-full px-2 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.25rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.25em 1.25em', paddingRight: '1.5rem' }}
                     value={row.naver_review}
                     onChange={(e) => updateRow(index, 'naver_review', e.target.value as 'O' | 'X')}
                     disabled={isReadOnly}
