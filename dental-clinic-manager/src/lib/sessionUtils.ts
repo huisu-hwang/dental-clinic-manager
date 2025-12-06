@@ -9,10 +9,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
- * Timeout constants (공격적 최적화: 빠른 사용자 경험 우선)
+ * Timeout constants (네트워크 지연 고려: 안정성 우선)
  */
-export const SESSION_REFRESH_TIMEOUT = 5000  // 5초 (10초에서 감소 - 공격적 최적화)
-export const SESSION_CHECK_TIMEOUT = 3000    // 3초 (10초에서 감소 - 공격적 최적화)
+export const SESSION_REFRESH_TIMEOUT = 10000  // 10초 (네트워크 지연 고려)
+export const SESSION_CHECK_TIMEOUT = 10000    // 10초 (네트워크 지연 고려)
 
 /**
  * iOS 디바이스 감지

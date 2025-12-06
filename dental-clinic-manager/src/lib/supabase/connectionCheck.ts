@@ -28,10 +28,10 @@ export async function ensureConnection() {
   }
 
   try {
-    // 1. 세션 확인 (타임아웃 3초 - 공격적 최적화)
+    // 1. 세션 확인 (타임아웃 10초 - 네트워크 지연 고려)
     const sessionPromise = supabase.auth.getSession()
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Session check timeout')), 3000)
+      setTimeout(() => reject(new Error('Session check timeout')), 10000)
     )
 
     const { data: { session }, error: sessionError } = await Promise.race([
@@ -63,7 +63,7 @@ export async function ensureConnection() {
       try {
         const refreshPromise = supabase.auth.refreshSession()
         const refreshTimeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Session refresh timeout')), 5000) // 5초로 감소
+          setTimeout(() => reject(new Error('Session refresh timeout')), 10000) // 10초로 증가
         )
 
         const result = await Promise.race([
