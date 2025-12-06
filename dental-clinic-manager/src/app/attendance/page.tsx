@@ -49,6 +49,7 @@ export default function AttendancePage() {
   const handleMainTabChange = (tab: string) => {
     if (tab === 'attendance') return // Already on attendance page
     if (tab === 'daily-input') router.push('/dashboard')
+    else if (tab === 'leave') router.push('/dashboard?tab=leave')
     else if (tab === 'contracts') router.push('/dashboard/contracts')
     else if (tab === 'stats') router.push('/dashboard?tab=stats')
     else if (tab === 'logs') router.push('/dashboard?tab=logs')
