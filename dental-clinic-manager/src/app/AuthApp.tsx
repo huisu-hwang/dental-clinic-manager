@@ -21,14 +21,17 @@ export default function AuthApp() {
     if (isAuthenticated) {
       // 승인 대기/거절 사용자는 /pending-approval로 리다이렉트
       if (user?.status === 'pending' || user?.status === 'rejected') {
-        router.push('/pending-approval')
+        console.log('[AuthApp] Redirecting to pending-approval, status:', user?.status)
+        window.location.href = '/pending-approval'
         return
       }
 
       const redirect = searchParams.get('redirect')
-      router.push(redirect || '/dashboard')
+      const targetUrl = redirect || '/dashboard'
+      console.log('[AuthApp] Redirecting to:', targetUrl)
+      window.location.href = targetUrl
     }
-  }, [isAuthenticated, user, router, searchParams])
+  }, [isAuthenticated, user, searchParams])
 
   // 인증 상태 확인 중 로딩
   if (loading) {
@@ -42,9 +45,16 @@ export default function AuthApp() {
     )
   }
 
-  // 인증되지 않은 경우만 계속 진행
+  // 인증된 경우 리디렉션 중 로딩 표시
   if (isAuthenticated) {
-    return null // 리디렉션 중
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-600">대시보드로 이동 중...</p>
+        </div>
+      </div>
+    )
   }
 
   // 인증되지 않은 경우 앱 상태에 따라 화면 표시
