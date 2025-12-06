@@ -87,16 +87,19 @@ export const useSupabaseData = (clinicId?: string | null) => {
   )
 
   const fetchAllData = useCallback(
-    async (clinicIdOverride?: string | null) => {
+    async (clinicIdOverride?: string | null, options?: { silent?: boolean }) => {
       try {
         const targetClinicId = clinicIdOverride ?? activeClinicId
         if (!targetClinicId) {
           console.warn('[useSupabaseData] No clinic_id available for data fetch')
-          setLoading(false)
+          if (!options?.silent) setLoading(false)
           return
         }
 
-        setLoading(true)
+        // silent 모드가 아닐 때만 로딩 상태 변경 (깜빡임 방지)
+        if (!options?.silent) {
+          setLoading(true)
+        }
         setError(null)
 
         const supabase = createClient()
@@ -371,7 +374,10 @@ export const useSupabaseData = (clinicId?: string | null) => {
         setGiftInventory([])
         setInventoryLogs([])
       } finally {
-        setLoading(false)
+        // silent 모드가 아닐 때만 로딩 상태 변경 (깜빡임 방지)
+        if (!options?.silent) {
+          setLoading(false)
+        }
       }
     },
     [activeClinicId]
@@ -405,8 +411,9 @@ export const useSupabaseData = (clinicId?: string | null) => {
     const channel = supabase
       .channel(`public-db-changes-${activeClinicId}`)
       .on('postgres_changes', { event: '*', schema: 'public', filter: `clinic_id=eq.${activeClinicId}` }, () => {
-        console.log('[useSupabaseData] Database change detected, reloading data')
-        fetchAllData(activeClinicId)
+        console.log('[useSupabaseData] Database change detected, reloading data (silent)')
+        // Realtime 변경 감지 시 silent 모드로 데이터 갱신 (깜빡임 방지)
+        fetchAllData(activeClinicId, { silent: true })
       })
       .subscribe()
 
@@ -425,6 +432,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
     loading,
     error,
     refetch: () => fetchAllData(activeClinicId),
+    silentRefetch: () => fetchAllData(activeClinicId, { silent: true }),
     refetchInventory: () => fetchInventoryOnly(activeClinicId)
   }
 }
