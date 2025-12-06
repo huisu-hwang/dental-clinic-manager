@@ -10,7 +10,7 @@ import Toast from '@/components/ui/Toast'
 import { useClinicNotifications } from '@/hooks/useClinicNotifications'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, updateUser } = useAuth()
+  const { user, logout, updateUser, loading: authLoading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -45,6 +45,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       document.body.style.overflow = ''
     }
   }, [isMobileMenuOpen])
+
+  // 인증되지 않은 경우 로그인 페이지로 리디렉션
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/')
+    }
+  }, [authLoading, user, router])
+
+  // 인증 로딩 중이거나 인증되지 않은 경우 로딩 UI 표시
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-600">로딩 중...</p>
+        </div>
+      </div>
+    )
+  }
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ show: true, message, type })
