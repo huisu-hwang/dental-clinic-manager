@@ -78,6 +78,7 @@ export default function DashboardPage() {
     loading,
     error,
     refetch,
+    silentRefetch,
     refetchInventory
   } = useSupabaseData(user?.clinic_id ?? null)
 
@@ -288,7 +289,7 @@ export default function DashboardPage() {
               giftLogs={giftLogs}
               baseUsageByGift={baseUsageByGift}
               onSaveReport={handleSaveReport}
-              onSaveSuccess={refetch}
+              onSaveSuccess={silentRefetch}
               onGiftRowsChange={handleGiftRowsChange}
               canCreate={canCreateReport}
               canEdit={canEditReport}
