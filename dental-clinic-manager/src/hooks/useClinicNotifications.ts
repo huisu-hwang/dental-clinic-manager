@@ -13,6 +13,7 @@ import {
 
 interface UseClinicNotificationsOptions {
   clinicId?: string
+  userId?: string
   userRole?: string
   enabled?: boolean
 }
@@ -22,10 +23,12 @@ interface UseClinicNotificationsResult {
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
+  dismissNotification: (notificationId: string) => Promise<boolean>
 }
 
 export function useClinicNotifications({
   clinicId,
+  userId,
   userRole,
   enabled = true
 }: UseClinicNotificationsOptions): UseClinicNotificationsResult {
@@ -63,9 +66,15 @@ export function useClinicNotifications({
         return
       }
 
+      // 오늘 날짜 (해제된 알림 필터링용)
+      const today = new Date().toISOString().split('T')[0]
+
       // 오늘 표시할 알림 필터링
-      const todayNotifications = (result.data as ClinicNotification[])
+      const todayNotifications = (result.data as (ClinicNotification & { dismissed_at?: string | null })[])
         .filter(notification => {
+          // 오늘 해제된 알림은 표시하지 않음
+          if (notification.dismissed_at === today) return false
+
           // 오늘 표시할 알림인지 확인
           if (!shouldShowNotificationToday(notification)) return false
 
@@ -91,6 +100,43 @@ export function useClinicNotifications({
       setLoading(false)
     }
   }, [clinicId, userRole, enabled])
+
+  // 알림 해제 함수
+  const dismissNotification = useCallback(async (notificationId: string): Promise<boolean> => {
+    if (!clinicId || !userId) {
+      console.error('Cannot dismiss notification: missing clinicId or userId')
+      return false
+    }
+
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clinicId,
+          userId,
+          notificationId,
+          action: 'dismiss'
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('Failed to dismiss notification:', result.error)
+        return false
+      }
+
+      // 성공 시 로컬 상태에서도 해당 알림 제거
+      setNotifications(prev => prev.filter(n => n.id !== notificationId))
+      return true
+    } catch (err) {
+      console.error('Error dismissing notification:', err)
+      return false
+    }
+  }, [clinicId, userId])
 
   // 초기 로드
   useEffect(() => {
@@ -130,6 +176,7 @@ export function useClinicNotifications({
     notifications,
     loading,
     error,
-    refetch: fetchNotifications
+    refetch: fetchNotifications,
+    dismissNotification
   }
 }

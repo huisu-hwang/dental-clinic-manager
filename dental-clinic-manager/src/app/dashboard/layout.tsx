@@ -23,8 +23,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }>({ show: false, message: '', type: 'info' })
 
   // 헤더 알림 가져오기
-  const { notifications } = useClinicNotifications({
+  const { notifications, dismissNotification } = useClinicNotifications({
     clinicId: user?.clinic_id,
+    userId: user?.id,
     userRole: user?.role,
     enabled: !!user?.clinic_id
   })
@@ -110,6 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             isMenuOpen={isMobileMenuOpen}
             notifications={notifications}
+            onDismissNotification={dismissNotification}
           />
         </div>
       </div>
