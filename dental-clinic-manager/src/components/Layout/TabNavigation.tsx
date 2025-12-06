@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useMemo } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import type { Permission } from '@/types/permissions'
 import {
@@ -42,18 +43,22 @@ const tabs: Tab[] = [
 export default function TabNavigation({ activeTab, onTabChange, onItemClick }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
 
-  // 권한이 있는 탭만 필터링
-  const visibleTabs = tabs.filter(tab => {
-    if (!tab.requiredPermissions || tab.requiredPermissions.length === 0) {
-      return true
-    }
-    return tab.requiredPermissions.some(perm => hasPermission(perm))
-  })
+  // 권한이 있는 탭만 필터링 (useMemo로 캐싱하여 불필요한 재계산 방지)
+  const visibleTabs = useMemo(() =>
+    tabs.filter(tab => {
+      if (!tab.requiredPermissions || tab.requiredPermissions.length === 0) {
+        return true
+      }
+      return tab.requiredPermissions.some(perm => hasPermission(perm))
+    }), [hasPermission])
 
   // 현재 선택된 탭이 권한이 없는 탭이면 첫 번째 탭으로 변경
-  if (visibleTabs.length > 0 && !visibleTabs.find(tab => tab.id === activeTab)) {
-    onTabChange(visibleTabs[0].id)
-  }
+  // useEffect를 사용하여 렌더링 이후에 비동기적으로 처리 (렌더링 중 상태 변경 방지)
+  useEffect(() => {
+    if (visibleTabs.length > 0 && !visibleTabs.find(tab => tab.id === activeTab)) {
+      onTabChange(visibleTabs[0].id)
+    }
+  }, [activeTab, visibleTabs, onTabChange])
 
   const handleTabClick = (tabId: string) => {
     onTabChange(tabId)
