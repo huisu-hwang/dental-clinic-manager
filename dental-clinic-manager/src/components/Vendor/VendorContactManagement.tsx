@@ -10,7 +10,6 @@ import {
   Plus,
   Phone,
   Star,
-  StarOff,
   Edit2,
   Trash2,
   Building2,
@@ -1113,14 +1112,18 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleToggleFavorite(contact)}
-                          className="p-2 hover:bg-white rounded-lg transition-colors"
+                          className={`p-2 rounded-lg transition-colors ${
+                            contact.is_favorite
+                              ? 'bg-yellow-50 hover:bg-yellow-100'
+                              : 'hover:bg-white'
+                          }`}
                           title={contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
                         >
-                          {contact.is_favorite ? (
-                            <StarOff className="w-4 h-4 text-slate-400" />
-                          ) : (
-                            <Star className="w-4 h-4 text-slate-400" />
-                          )}
+                          <Star className={`w-4 h-4 ${
+                            contact.is_favorite
+                              ? 'text-yellow-400 fill-yellow-400'
+                              : 'text-slate-400'
+                          }`} />
                         </button>
                         {canEdit && (
                           <button
