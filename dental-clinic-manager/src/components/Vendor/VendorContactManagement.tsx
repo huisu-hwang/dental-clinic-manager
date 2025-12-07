@@ -115,6 +115,10 @@ export default function VendorContactManagement() {
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+
+  // 선택 상태
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set())
 
   // 폼 상태
   const [editingContact, setEditingContact] = useState<VendorContact | null>(null)
@@ -235,8 +239,66 @@ export default function VendorContactManagement() {
       }
       showToast('업체가 삭제되었습니다.', 'success')
       setShowDeleteConfirm(null)
+      setSelectedContacts(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(contactId)
+        return newSet
+      })
       loadData()
     } catch (error) {
+      showToast('삭제에 실패했습니다.', 'error')
+    }
+  }
+
+  // 선택 토글
+  const toggleSelectContact = (contactId: string) => {
+    setSelectedContacts(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(contactId)) {
+        newSet.delete(contactId)
+      } else {
+        newSet.add(contactId)
+      }
+      return newSet
+    })
+  }
+
+  // 전체 선택/해제
+  const toggleSelectAll = () => {
+    if (selectedContacts.size === filteredContacts.length) {
+      setSelectedContacts(new Set())
+    } else {
+      setSelectedContacts(new Set(filteredContacts.map(c => c.id)))
+    }
+  }
+
+  // 선택 항목 일괄 삭제
+  const handleBulkDelete = async () => {
+    if (selectedContacts.size === 0) return
+
+    let successCount = 0
+    let failCount = 0
+
+    for (const contactId of selectedContacts) {
+      try {
+        const result = await dataService.deleteVendorContact(contactId)
+        if (result.error) {
+          failCount++
+        } else {
+          successCount++
+        }
+      } catch {
+        failCount++
+      }
+    }
+
+    setShowBulkDeleteConfirm(false)
+    setSelectedContacts(new Set())
+
+    if (successCount > 0) {
+      showToast(`${successCount}개 업체가 삭제되었습니다.${failCount > 0 ? ` (${failCount}개 실패)` : ''}`, 'success')
+      loadData()
+    } else {
       showToast('삭제에 실패했습니다.', 'error')
     }
   }
@@ -819,6 +881,37 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
         <div>
           <SectionHeader number={canCreate ? 3 : 2} title="업체 목록" icon={Building2} />
 
+          {/* 선택 툴바 */}
+          {canDelete && filteredContacts.length > 0 && (
+            <div className="flex items-center justify-between mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedContacts.size === filteredContacts.length && filteredContacts.length > 0}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-slate-600">전체 선택</span>
+                </label>
+                {selectedContacts.size > 0 && (
+                  <span className="text-sm text-blue-600 font-medium">
+                    {selectedContacts.size}개 선택됨
+                  </span>
+                )}
+              </div>
+              {selectedContacts.size > 0 && (
+                <button
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  선택 삭제 ({selectedContacts.size})
+                </button>
+              )}
+            </div>
+          )}
+
           {loading ? (
             <div className="py-12 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -849,9 +942,25 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               {filteredContacts.map(contact => (
                 <div
                   key={contact.id}
-                  className="p-4 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                  className={`p-4 rounded-lg border transition-colors ${
+                    selectedContacts.has(contact.id)
+                      ? 'bg-blue-50 border-blue-300'
+                      : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-4">
+                    {/* 체크박스 */}
+                    {canDelete && (
+                      <div className="flex-shrink-0 pt-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedContacts.has(contact.id)}
+                          onChange={() => toggleSelectContact(contact.id)}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                        />
+                      </div>
+                    )}
+
                     {/* 업체 정보 */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
@@ -1578,6 +1687,40 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
               >
                 삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 일괄 삭제 확인 모달 */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800">일괄 삭제</h3>
+            </div>
+            <p className="text-slate-600 mb-2">
+              선택한 <strong className="text-red-600">{selectedContacts.size}개</strong> 업체를 삭제하시겠습니까?
+            </p>
+            <p className="text-sm text-slate-500 mb-6">
+              이 작업은 되돌릴 수 없습니다.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                {selectedContacts.size}개 삭제
               </button>
             </div>
           </div>
