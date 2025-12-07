@@ -109,7 +109,7 @@ function createSafeStorage(): Storage {
  * iOS 호환성:
  * - localStorage 불가 시 sessionStorage/메모리 스토리지로 폴백
  * - PKCE flow로 보안 강화
- * - 커스텀 storageKey로 충돌 방지
+ * - 미들웨어와 동일한 기본 storageKey 사용 (일관성 유지)
  *
  * 주의: 브라우저 환경에서만 사용해야 합니다.
  *
@@ -144,6 +144,8 @@ export function createClient() {
   }
 
   // 싱글톤 인스턴스 생성 (iOS 호환 설정 포함)
+  // 주의: storageKey는 미들웨어와 일관성을 위해 기본값 사용
+  // 커스텀 storageKey 사용 시 미들웨어와 쿠키 이름이 불일치하여 iOS Chrome에서 세션 유지 문제 발생
   supabaseInstance = createBrowserClient<Database>(
     supabaseUrl,
     supabaseAnonKey,
@@ -154,7 +156,7 @@ export function createClient() {
         detectSessionInUrl: true, // URL에서 세션 감지
         flowType: 'pkce',        // PKCE flow 명시적 사용 (보안 강화)
         storage: createSafeStorage(), // iOS 호환 안전한 스토리지
-        storageKey: 'dental-clinic-supabase-auth', // 명시적 storage key
+        // storageKey 제거: 기본값 사용하여 미들웨어와 일관성 유지
       },
       global: {
         headers: {
