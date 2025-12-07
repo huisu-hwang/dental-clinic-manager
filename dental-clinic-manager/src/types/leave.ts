@@ -27,6 +27,9 @@ export interface LeavePolicy {
   // 출근율 요건
   min_attendance_rate: number; // 최소 출근율 (%)
 
+  // 결재 프로세스 설정
+  require_manager_approval: boolean; // 실장 결재 포함 여부 (기본값: true)
+
   // 활성화 상태
   is_active: boolean;
   is_default: boolean; // 기본 정책 여부
@@ -60,6 +63,7 @@ export interface LeavePolicyInput {
   carryover_max_days?: number;
   carryover_expiry_months: number;
   min_attendance_rate: number;
+  require_manager_approval?: boolean; // 실장 결재 포함 여부 (기본값: true)
   is_default?: boolean;
 }
 
