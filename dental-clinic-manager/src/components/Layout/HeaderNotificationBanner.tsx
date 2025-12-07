@@ -179,8 +179,11 @@ export default function HeaderNotificationBanner({
               ${isAnimating ? 'opacity-0' : 'opacity-100'}
             `}
           >
-            <p className={`text-xs sm:text-sm font-medium ${colors.text} truncate`}>
-              {currentNotification.title}
+            <p className={`text-xs sm:text-sm ${colors.text} truncate`}>
+              <span className="font-medium">{currentNotification.title}</span>
+              {currentNotification.content && (
+                <span className="text-slate-500 font-normal"> - {currentNotification.content}</span>
+              )}
             </p>
           </div>
 
