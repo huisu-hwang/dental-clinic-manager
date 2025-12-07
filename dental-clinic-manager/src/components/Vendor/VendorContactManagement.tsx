@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { dataService } from '@/lib/dataService'
 import Toast from '@/components/ui/Toast'
@@ -17,14 +17,30 @@ import {
   Mail,
   MapPin,
   FileText,
-  Tag,
   Upload,
   X,
   ChevronDown,
   Settings,
-  PhoneCall
+  PhoneCall,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertCircle,
+  Download
 } from 'lucide-react'
 import type { VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData } from '@/types'
+
+// 섹션 헤더 컴포넌트 (일일보고서 스타일)
+const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
+  <div className="flex items-center space-x-2 sm:space-x-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
+    <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-50 text-teal-600">
+      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+    </div>
+    <h3 className="text-sm sm:text-base font-semibold text-slate-800">
+      <span className="text-teal-600 mr-1">{number}.</span>
+      {title}
+    </h3>
+  </div>
+)
 
 export default function VendorContactManagement() {
   const { hasPermission } = usePermissions()
@@ -69,7 +85,14 @@ export default function VendorContactManagement() {
     description: '',
     color: '#3B82F6'
   })
-  const [importData, setImportData] = useState('')
+
+  // 파일 업로드 관련 상태
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [importPreview, setImportPreview] = useState<VendorContactImportData[]>([])
+  const [importStep, setImportStep] = useState<'upload' | 'preview' | 'result'>('upload')
+  const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: string[] } | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
 
   // 토스트
   const [toast, setToast] = useState<{
@@ -115,7 +138,7 @@ export default function VendorContactManagement() {
     loadData()
   }, [loadData])
 
-  // 검색 필터링된 연락처 (클라이언트 사이드 필터링)
+  // 검색 필터링된 연락처
   const filteredContacts = useMemo(() => {
     return contacts
   }, [contacts])
@@ -238,51 +261,147 @@ export default function VendorContactManagement() {
     }
   }
 
-  // 일괄 등록
-  const handleImport = async () => {
-    if (!importData.trim()) {
-      showToast('데이터를 입력해주세요.', 'warning')
+  // 파일 파싱
+  const parseFile = async (file: File): Promise<VendorContactImportData[]> => {
+    const text = await file.text()
+    const lines = text.trim().split('\n')
+    const contacts: VendorContactImportData[] = []
+
+    // 첫 줄이 헤더인지 확인 (업체명, 회사명, company 등이 포함되어 있으면 헤더로 간주)
+    const firstLine = lines[0]?.toLowerCase() || ''
+    const hasHeader = firstLine.includes('업체') || firstLine.includes('회사') ||
+                      firstLine.includes('company') || firstLine.includes('전화') ||
+                      firstLine.includes('phone') || firstLine.includes('이름')
+
+    const startIndex = hasHeader ? 1 : 0
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (!line) continue
+
+      // 탭, 쉼표, 또는 세미콜론으로 구분
+      let parts: string[]
+      if (line.includes('\t')) {
+        parts = line.split('\t')
+      } else if (line.includes(';')) {
+        parts = line.split(';')
+      } else {
+        parts = line.split(',')
+      }
+
+      // 최소 업체명과 전화번호가 있어야 함
+      if (parts.length >= 2 && parts[0]?.trim() && parts[1]?.trim()) {
+        contacts.push({
+          company_name: parts[0]?.trim() || '',
+          phone: parts[1]?.trim() || '',
+          category_name: parts[2]?.trim() || undefined,
+          contact_person: parts[3]?.trim() || undefined,
+          phone2: parts[4]?.trim() || undefined,
+          email: parts[5]?.trim() || undefined,
+          address: parts[6]?.trim() || undefined,
+          notes: parts[7]?.trim() || undefined
+        })
+      }
+    }
+
+    return contacts
+  }
+
+  // 파일 선택 처리
+  const handleFileSelect = async (file: File) => {
+    const validTypes = [
+      'text/csv',
+      'text/plain',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ]
+    const validExtensions = ['.csv', '.txt', '.xls', '.xlsx']
+    const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+
+    if (!validTypes.includes(file.type) && !validExtensions.includes(extension)) {
+      showToast('CSV, TXT, XLS, XLSX 파일만 업로드 가능합니다.', 'error')
+      return
+    }
+
+    // xlsx 파일은 현재 텍스트 파싱만 지원하므로 안내
+    if (extension === '.xlsx' || extension === '.xls') {
+      showToast('엑셀 파일은 CSV로 저장 후 업로드하거나, 복사하여 붙여넣기 해주세요.', 'warning')
       return
     }
 
     try {
-      // 탭 또는 쉼표로 구분된 데이터 파싱
-      const lines = importData.trim().split('\n')
-      const contacts: VendorContactImportData[] = []
-
-      for (const line of lines) {
-        const parts = line.includes('\t') ? line.split('\t') : line.split(',')
-        if (parts.length >= 2) {
-          contacts.push({
-            company_name: parts[0]?.trim() || '',
-            phone: parts[1]?.trim() || '',
-            category_name: parts[2]?.trim() || undefined,
-            contact_person: parts[3]?.trim() || undefined,
-            phone2: parts[4]?.trim() || undefined,
-            email: parts[5]?.trim() || undefined,
-            address: parts[6]?.trim() || undefined,
-            notes: parts[7]?.trim() || undefined
-          })
-        }
-      }
-
-      if (contacts.length === 0) {
-        showToast('유효한 데이터가 없습니다.', 'warning')
+      const parsed = await parseFile(file)
+      if (parsed.length === 0) {
+        showToast('유효한 데이터가 없습니다. 파일 형식을 확인해주세요.', 'warning')
         return
       }
+      setImportPreview(parsed)
+      setImportStep('preview')
+    } catch (error) {
+      showToast('파일을 읽는 중 오류가 발생했습니다.', 'error')
+    }
+  }
 
-      const result = await dataService.importVendorContacts(contacts)
+  // 드래그 앤 드롭 핸들러
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      await handleFileSelect(file)
+    }
+  }
+
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      await handleFileSelect(file)
+    }
+  }
+
+  // 미리보기에서 항목 제거
+  const removePreviewItem = (index: number) => {
+    setImportPreview(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // 미리보기에서 항목 수정
+  const updatePreviewItem = (index: number, field: keyof VendorContactImportData, value: string) => {
+    setImportPreview(prev => prev.map((item, i) =>
+      i === index ? { ...item, [field]: value } : item
+    ))
+  }
+
+  // 일괄 등록 실행
+  const handleImport = async () => {
+    if (importPreview.length === 0) {
+      showToast('등록할 데이터가 없습니다.', 'warning')
+      return
+    }
+
+    setIsImporting(true)
+    try {
+      const result = await dataService.importVendorContacts(importPreview)
+      setImportResult(result)
+      setImportStep('result')
 
       if (result.success > 0) {
-        showToast(`${result.success}개 업체가 등록되었습니다.${result.failed > 0 ? ` (${result.failed}개 실패)` : ''}`, 'success')
-        setShowImportModal(false)
-        setImportData('')
         loadData()
-      } else {
-        showToast(`등록 실패: ${result.errors.join(', ')}`, 'error')
       }
     } catch (error) {
-      showToast('일괄 등록에 실패했습니다.', 'error')
+      showToast('일괄 등록 중 오류가 발생했습니다.', 'error')
+    } finally {
+      setIsImporting(false)
     }
   }
 
@@ -309,6 +428,15 @@ export default function VendorContactManagement() {
       description: '',
       color: '#3B82F6'
     })
+  }
+
+  const resetImportModal = () => {
+    setImportStep('upload')
+    setImportPreview([])
+    setImportResult(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   // 연락처 수정 모달 열기
@@ -359,9 +487,25 @@ export default function VendorContactManagement() {
     return phone
   }
 
+  // 샘플 파일 다운로드
+  const downloadSampleFile = () => {
+    const sampleData = `업체명,전화번호,카테고리,담당자,전화번호2,이메일,주소,메모
+ABC의료기,02-1234-5678,의료장비,홍길동,010-1111-2222,abc@example.com,서울시 강남구,정기 점검 업체
+XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
+가나다치과재료,010-5555-6666,재료,,,,서울시 서초구,월요일 배송`
+
+    const blob = new Blob(['\ufeff' + sampleData], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = '업체연락처_샘플.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (!canView) {
     return (
-      <div className="p-8 text-center text-gray-500">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center text-gray-500">
         업체 연락처를 조회할 권한이 없습니다.
       </div>
     )
@@ -373,236 +517,272 @@ export default function VendorContactManagement() {
   ]
 
   return (
-    <div className="space-y-4">
-      {/* 헤더 */}
-      <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 rounded-t-xl shadow-sm">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* 헤더 - 일일보고서 스타일 */}
+      <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">업체 연락처</h2>
-              <p className="text-teal-100 text-sm">Vendor Contacts</p>
+              <h2 className="text-base sm:text-lg font-bold text-white">업체 연락처 관리</h2>
+              <p className="text-teal-100 text-xs sm:text-sm hidden sm:block">Vendor Contacts</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            {canCreate && (
-              <>
+            {loading && (
+              <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
+                로딩 중...
+              </span>
+            )}
+            <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
+              {contacts.length}개 업체
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 본문 */}
+      <div className="p-4 sm:p-6 space-y-6">
+        {/* 1. 검색 및 필터 섹션 */}
+        <div>
+          <SectionHeader number={1} title="검색 및 필터" icon={Search} />
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* 검색 */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="업체명, 담당자, 전화번호 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+              />
+            </div>
+
+            {/* 카테고리 필터 */}
+            <div className="relative">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="appearance-none w-full sm:w-auto pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-sm"
+              >
+                <option value="">전체 카테고리</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+
+            {/* 즐겨찾기 필터 */}
+            <button
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg border transition-colors text-sm ${
+                showFavoritesOnly
+                  ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
+                  : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-yellow-400' : ''}`} />
+              <span>즐겨찾기</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 2. 액션 버튼 섹션 */}
+        {canCreate && (
+          <div>
+            <SectionHeader number={2} title="업체 관리" icon={Settings} />
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  resetContactForm()
+                  setShowContactModal(true)
+                }}
+                className="flex items-center space-x-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>새 업체 등록</span>
+              </button>
+              <button
+                onClick={() => setShowCategoryModal(true)}
+                className="flex items-center space-x-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                <span>카테고리 관리</span>
+              </button>
+              {canImport && (
                 <button
-                  onClick={() => setShowCategoryModal(true)}
-                  className="flex items-center space-x-1 px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm transition-colors"
+                  onClick={() => {
+                    resetImportModal()
+                    setShowImportModal(true)
+                  }}
+                  className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
                 >
-                  <Settings className="w-4 h-4" />
-                  <span className="hidden sm:inline">카테고리</span>
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>파일로 일괄 등록</span>
                 </button>
-                {canImport && (
-                  <button
-                    onClick={() => setShowImportModal(true)}
-                    className="flex items-center space-x-1 px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm transition-colors"
-                  >
-                    <Upload className="w-4 h-4" />
-                    <span className="hidden sm:inline">일괄 등록</span>
-                  </button>
-                )}
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 3. 업체 목록 섹션 */}
+        <div>
+          <SectionHeader number={canCreate ? 3 : 2} title="업체 목록" icon={Building2} />
+
+          {loading ? (
+            <div className="py-12 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto"></div>
+              <p className="mt-3 text-slate-500 text-sm">데이터를 불러오는 중...</p>
+            </div>
+          ) : filteredContacts.length === 0 ? (
+            <div className="py-12 text-center bg-slate-50 rounded-lg border border-dashed border-slate-300">
+              <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500">
+                {searchQuery || selectedCategory || showFavoritesOnly
+                  ? '검색 결과가 없습니다.'
+                  : '등록된 업체가 없습니다.'}
+              </p>
+              {canCreate && !searchQuery && !selectedCategory && !showFavoritesOnly && (
                 <button
                   onClick={() => {
                     resetContactForm()
                     setShowContactModal(true)
                   }}
-                  className="flex items-center space-x-1 px-3 py-2 bg-white text-teal-700 hover:bg-teal-50 rounded-lg text-sm font-medium transition-colors"
+                  className="mt-4 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>새 업체</span>
+                  첫 번째 업체 등록하기
                 </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 필터 영역 */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* 검색 */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="업체명, 담당자, 전화번호 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            />
-          </div>
-
-          {/* 카테고리 필터 */}
-          <div className="relative">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="appearance-none pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
-            >
-              <option value="">전체 카테고리</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          </div>
-
-          {/* 즐겨찾기 필터 */}
-          <button
-            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-colors ${
-              showFavoritesOnly
-                ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
-                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-yellow-400' : ''}`} />
-            <span className="text-sm">즐겨찾기</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 연락처 목록 */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto"></div>
-            <p className="mt-2 text-gray-500">로딩 중...</p>
-          </div>
-        ) : filteredContacts.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            {searchQuery || selectedCategory || showFavoritesOnly
-              ? '검색 결과가 없습니다.'
-              : '등록된 업체가 없습니다.'}
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {filteredContacts.map(contact => (
-              <div
-                key={contact.id}
-                className="p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  {/* 업체 정보 */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {contact.is_favorite && (
-                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />
-                      )}
-                      <h3 className="font-semibold text-gray-900 truncate">
-                        {contact.company_name}
-                      </h3>
-                      {contact.category && (
-                        <span
-                          className="px-2 py-0.5 text-xs rounded-full text-white flex-shrink-0"
-                          style={{ backgroundColor: contact.category.color }}
-                        >
-                          {contact.category.name}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                      {contact.contact_person && (
-                        <span className="flex items-center gap-1">
-                          <User className="w-3.5 h-3.5" />
-                          {contact.contact_person}
-                        </span>
-                      )}
-                      {contact.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3.5 h-3.5" />
-                          {contact.email}
-                        </span>
-                      )}
-                      {contact.address && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5" />
-                          {contact.address}
-                        </span>
-                      )}
-                    </div>
-
-                    {contact.notes && (
-                      <p className="mt-1 text-sm text-gray-500 flex items-start gap-1">
-                        <FileText className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                        <span className="line-clamp-2">{contact.notes}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  {/* 전화번호 및 액션 */}
-                  <div className="flex flex-col items-end gap-2">
-                    {/* 전화번호 */}
-                    <div className="flex flex-col items-end gap-1">
-                      <button
-                        onClick={() => makePhoneCall(contact.phone)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-sm font-medium transition-colors"
-                      >
-                        <PhoneCall className="w-4 h-4" />
-                        {formatPhone(contact.phone)}
-                      </button>
-                      {contact.phone2 && (
-                        <button
-                          onClick={() => makePhoneCall(contact.phone2!)}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors"
-                        >
-                          <Phone className="w-4 h-4" />
-                          {formatPhone(contact.phone2)}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* 액션 버튼 */}
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleToggleFavorite(contact)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        title={contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
-                      >
-                        {contact.is_favorite ? (
-                          <StarOff className="w-4 h-4 text-gray-400" />
-                        ) : (
-                          <Star className="w-4 h-4 text-gray-400" />
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredContacts.map(contact => (
+                <div
+                  key={contact.id}
+                  className="p-4 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    {/* 업체 정보 */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        {contact.is_favorite && (
+                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />
                         )}
-                      </button>
-                      {canEdit && (
-                        <button
-                          onClick={() => openEditContact(contact)}
-                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                          title="수정"
-                        >
-                          <Edit2 className="w-4 h-4 text-gray-400" />
-                        </button>
+                        <h4 className="font-semibold text-slate-800 truncate">
+                          {contact.company_name}
+                        </h4>
+                        {contact.category && (
+                          <span
+                            className="px-2 py-0.5 text-xs rounded-full text-white flex-shrink-0"
+                            style={{ backgroundColor: contact.category.color }}
+                          >
+                            {contact.category.name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                        {contact.contact_person && (
+                          <span className="flex items-center gap-1">
+                            <User className="w-3.5 h-3.5 text-slate-400" />
+                            {contact.contact_person}
+                          </span>
+                        )}
+                        {contact.email && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="w-3.5 h-3.5 text-slate-400" />
+                            {contact.email}
+                          </span>
+                        )}
+                        {contact.address && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                            {contact.address}
+                          </span>
+                        )}
+                      </div>
+
+                      {contact.notes && (
+                        <p className="mt-2 text-sm text-slate-500 flex items-start gap-1">
+                          <FileText className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-slate-400" />
+                          <span className="line-clamp-2">{contact.notes}</span>
+                        </p>
                       )}
-                      {canDelete && (
+                    </div>
+
+                    {/* 전화번호 및 액션 */}
+                    <div className="flex flex-col items-end gap-2">
+                      {/* 전화번호 */}
+                      <div className="flex flex-col items-end gap-1">
                         <button
-                          onClick={() => setShowDeleteConfirm(contact.id)}
-                          className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                          title="삭제"
+                          onClick={() => makePhoneCall(contact.phone)}
+                          className="flex items-center gap-2 px-3 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
                         >
-                          <Trash2 className="w-4 h-4 text-red-400" />
+                          <PhoneCall className="w-4 h-4" />
+                          <span>{formatPhone(contact.phone)}</span>
                         </button>
-                      )}
+                        {contact.phone2 && (
+                          <button
+                            onClick={() => makePhoneCall(contact.phone2!)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm transition-colors"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>{formatPhone(contact.phone2)}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* 액션 버튼 */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleToggleFavorite(contact)}
+                          className="p-2 hover:bg-white rounded-lg transition-colors"
+                          title={contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                        >
+                          {contact.is_favorite ? (
+                            <StarOff className="w-4 h-4 text-slate-400" />
+                          ) : (
+                            <Star className="w-4 h-4 text-slate-400" />
+                          )}
+                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => openEditContact(contact)}
+                            className="p-2 hover:bg-white rounded-lg transition-colors"
+                            title="수정"
+                          >
+                            <Edit2 className="w-4 h-4 text-slate-400" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => setShowDeleteConfirm(contact.id)}
+                            className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-400" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 연락처 추가/수정 모달 */}
       {showContactModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">
+            <div className="sticky top-0 bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
+              <h3 className="text-lg font-semibold text-white">
                 {editingContact ? '업체 정보 수정' : '새 업체 등록'}
               </h3>
               <button
@@ -610,36 +790,36 @@ export default function VendorContactManagement() {
                   setShowContactModal(false)
                   resetContactForm()
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
 
             <div className="p-6 space-y-4">
               {/* 업체명 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   업체명 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={contactForm.company_name}
                   onChange={(e) => setContactForm({ ...contactForm, company_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                   placeholder="업체명을 입력하세요"
                 />
               </div>
 
               {/* 카테고리 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   카테고리
                 </label>
                 <select
                   value={contactForm.category_id}
                   onChange={(e) => setContactForm({ ...contactForm, category_id: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                 >
                   <option value="">카테고리 선택</option>
                   {categories.map(cat => (
@@ -650,14 +830,14 @@ export default function VendorContactManagement() {
 
               {/* 담당자 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   담당자
                 </label>
                 <input
                   type="text"
                   value={contactForm.contact_person}
                   onChange={(e) => setContactForm({ ...contactForm, contact_person: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                   placeholder="담당자명"
                 />
               </div>
@@ -665,26 +845,26 @@ export default function VendorContactManagement() {
               {/* 전화번호 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
                     전화번호 <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
                     value={contactForm.phone}
                     onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                     placeholder="010-0000-0000"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
                     전화번호 2
                   </label>
                   <input
                     type="tel"
                     value={contactForm.phone2}
                     onChange={(e) => setContactForm({ ...contactForm, phone2: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                     placeholder="추가 연락처"
                   />
                 </div>
@@ -692,41 +872,41 @@ export default function VendorContactManagement() {
 
               {/* 이메일 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   이메일
                 </label>
                 <input
                   type="email"
                   value={contactForm.email}
                   onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                   placeholder="email@example.com"
                 />
               </div>
 
               {/* 주소 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   주소
                 </label>
                 <input
                   type="text"
                   value={contactForm.address}
                   onChange={(e) => setContactForm({ ...contactForm, address: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                   placeholder="주소를 입력하세요"
                 />
               </div>
 
               {/* 메모 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   메모
                 </label>
                 <textarea
                   value={contactForm.notes}
                   onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                   rows={3}
                   placeholder="추가 메모"
                 />
@@ -741,23 +921,23 @@ export default function VendorContactManagement() {
                   className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
                 />
                 <Star className="w-4 h-4 text-yellow-400" />
-                <span className="text-sm text-gray-700">즐겨찾기에 추가</span>
+                <span className="text-sm text-slate-700">즐겨찾기에 추가</span>
               </label>
             </div>
 
-            <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end gap-3">
+            <div className="sticky bottom-0 bg-slate-50 border-t px-6 py-4 flex justify-end gap-3 rounded-b-xl">
               <button
                 onClick={() => {
                   setShowContactModal(false)
                   resetContactForm()
                 }}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium"
               >
                 취소
               </button>
               <button
                 onClick={handleSaveContact}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors text-sm font-medium"
               >
                 {editingContact ? '수정' : '등록'}
               </button>
@@ -770,49 +950,51 @@ export default function VendorContactManagement() {
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">카테고리 관리</h3>
+            <div className="sticky top-0 bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
+              <h3 className="text-lg font-semibold text-white">카테고리 관리</h3>
               <button
                 onClick={() => {
                   setShowCategoryModal(false)
                   resetCategoryForm()
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
 
             <div className="p-6 space-y-6">
               {/* 기존 카테고리 목록 */}
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">기존 카테고리</h4>
+                <h4 className="text-sm font-medium text-slate-700 mb-3">기존 카테고리</h4>
                 {categories.length === 0 ? (
-                  <p className="text-sm text-gray-500">등록된 카테고리가 없습니다.</p>
+                  <p className="text-sm text-slate-500 bg-slate-50 p-4 rounded-lg text-center">
+                    등록된 카테고리가 없습니다.
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {categories.map(cat => (
                       <div
                         key={cat.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
                       >
                         <div className="flex items-center gap-2">
                           <div
-                            className="w-4 h-4 rounded-full"
+                            className="w-4 h-4 rounded-full flex-shrink-0"
                             style={{ backgroundColor: cat.color }}
                           />
-                          <span className="font-medium">{cat.name}</span>
+                          <span className="font-medium text-sm">{cat.name}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => openEditCategory(cat)}
-                            className="p-1.5 hover:bg-white rounded"
+                            className="p-1.5 hover:bg-white rounded transition-colors"
                           >
-                            <Edit2 className="w-4 h-4 text-gray-400" />
+                            <Edit2 className="w-4 h-4 text-slate-400" />
                           </button>
                           <button
                             onClick={() => handleDeleteCategory(cat.id)}
-                            className="p-1.5 hover:bg-white rounded"
+                            className="p-1.5 hover:bg-white rounded transition-colors"
                           >
                             <Trash2 className="w-4 h-4 text-red-400" />
                           </button>
@@ -824,11 +1006,11 @@ export default function VendorContactManagement() {
               </div>
 
               {/* 구분선 */}
-              <hr />
+              <hr className="border-slate-200" />
 
               {/* 카테고리 추가/수정 폼 */}
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                <h4 className="text-sm font-medium text-slate-700 mb-3">
                   {editingCategory ? '카테고리 수정' : '새 카테고리 추가'}
                 </h4>
                 <div className="space-y-3">
@@ -836,43 +1018,43 @@ export default function VendorContactManagement() {
                     type="text"
                     value={categoryForm.name}
                     onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                     placeholder="카테고리명"
                   />
                   <input
                     type="text"
                     value={categoryForm.description}
                     onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                     placeholder="설명 (선택)"
                   />
                   <div>
-                    <label className="block text-sm text-gray-600 mb-2">색상 선택</label>
+                    <label className="block text-sm text-slate-600 mb-2">색상 선택</label>
                     <div className="flex flex-wrap gap-2">
                       {colorOptions.map(color => (
                         <button
                           key={color}
                           onClick={() => setCategoryForm({ ...categoryForm, color })}
-                          className={`w-8 h-8 rounded-full border-2 ${
-                            categoryForm.color === color ? 'border-gray-800' : 'border-transparent'
+                          className={`w-8 h-8 rounded-full border-2 transition-all ${
+                            categoryForm.color === color ? 'border-slate-800 scale-110' : 'border-transparent'
                           }`}
                           style={{ backgroundColor: color }}
                         />
                       ))}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-2">
                     {editingCategory && (
                       <button
                         onClick={resetCategoryForm}
-                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                        className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 text-sm font-medium transition-colors"
                       >
                         취소
                       </button>
                     )}
                     <button
                       onClick={handleSaveCategory}
-                      className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
+                      className="flex-1 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
                     >
                       {editingCategory ? '수정' : '추가'}
                     </button>
@@ -887,74 +1069,243 @@ export default function VendorContactManagement() {
       {/* 일괄 등록 모달 */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">업체 일괄 등록</h3>
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
+              <div className="flex items-center gap-3">
+                <FileSpreadsheet className="w-5 h-5 text-white" />
+                <h3 className="text-lg font-semibold text-white">파일로 업체 일괄 등록</h3>
+              </div>
               <button
                 onClick={() => {
                   setShowImportModal(false)
-                  setImportData('')
+                  resetImportModal()
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-800 mb-2">입력 형식 안내</h4>
-                <p className="text-sm text-blue-700 mb-2">
-                  엑셀이나 스프레드시트에서 복사하여 붙여넣기 하세요.
-                  각 줄에 하나의 업체 정보를 입력합니다.
-                </p>
-                <p className="text-sm text-blue-700 font-mono">
-                  업체명, 전화번호, 카테고리, 담당자, 전화번호2, 이메일, 주소, 메모
-                </p>
-                <p className="text-xs text-blue-600 mt-2">
-                  * 업체명과 전화번호는 필수입니다. 나머지는 비워둘 수 있습니다.
-                </p>
-              </div>
+            <div className="p-6">
+              {/* 단계 1: 파일 업로드 */}
+              {importStep === 'upload' && (
+                <div className="space-y-6">
+                  {/* 파일 업로드 영역 */}
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                      isDragging
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-slate-300 hover:border-slate-400'
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv,.txt,.xls,.xlsx"
+                      onChange={handleFileInputChange}
+                      className="hidden"
+                    />
+                    <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-blue-500' : 'text-slate-400'}`} />
+                    <p className="text-slate-700 font-medium mb-2">
+                      파일을 드래그하여 놓거나 클릭하여 선택하세요
+                    </p>
+                    <p className="text-sm text-slate-500 mb-4">
+                      CSV, TXT 파일 지원 (UTF-8 인코딩)
+                    </p>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      파일 선택
+                    </button>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  데이터 입력
-                </label>
-                <textarea
-                  value={importData}
-                  onChange={(e) => setImportData(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 font-mono text-sm"
-                  rows={10}
-                  placeholder="ABC의료기, 02-1234-5678, 의료장비, 홍길동&#10;XYZ기공소, 010-9876-5432, 기공, 김철수"
-                />
-              </div>
+                  {/* 파일 형식 안내 */}
+                  <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                    <h4 className="font-medium text-slate-800 mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-slate-600" />
+                      파일 형식 안내
+                    </h4>
+                    <p className="text-sm text-slate-600 mb-3">
+                      엑셀 또는 스프레드시트에서 CSV로 저장하여 업로드하세요.
+                      각 열은 쉼표(,) 또는 탭으로 구분합니다.
+                    </p>
+                    <div className="bg-white rounded-lg p-3 border border-slate-200 font-mono text-xs text-slate-600 overflow-x-auto">
+                      <div className="text-slate-400 mb-1"># 열 순서</div>
+                      업체명, 전화번호, 카테고리, 담당자, 전화번호2, 이메일, 주소, 메모
+                    </div>
+                    <p className="text-xs text-slate-500 mt-3">
+                      * 업체명과 전화번호는 필수입니다. 나머지 열은 비워둘 수 있습니다.
+                    </p>
+                    <button
+                      onClick={downloadSampleFile}
+                      className="mt-4 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      <Download className="w-4 h-4" />
+                      샘플 파일 다운로드
+                    </button>
+                  </div>
+                </div>
+              )}
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-medium text-gray-700 mb-2">예시</h4>
-                <pre className="text-xs text-gray-600 overflow-x-auto">
-                  {`ABC의료기	02-1234-5678	의료장비	홍길동
-XYZ기공소	010-9876-5432	기공	김철수	010-1111-2222
-가나다치과재료	031-555-6666			박영희	dental@test.com`}
-                </pre>
-              </div>
+              {/* 단계 2: 미리보기 */}
+              {importStep === 'preview' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-slate-800">
+                      등록할 업체 목록 ({importPreview.length}개)
+                    </h4>
+                    <button
+                      onClick={() => setImportStep('upload')}
+                      className="text-sm text-slate-600 hover:text-slate-800"
+                    >
+                      다시 선택
+                    </button>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="max-h-96 overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 sticky top-0">
+                          <tr>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600">업체명</th>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600">전화번호</th>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600">카테고리</th>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600">담당자</th>
+                            <th className="px-3 py-2 w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {importPreview.map((item, index) => (
+                            <tr key={index} className="hover:bg-slate-50">
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={item.company_name}
+                                  onChange={(e) => updatePreviewItem(index, 'company_name', e.target.value)}
+                                  className="w-full px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={item.phone}
+                                  onChange={(e) => updatePreviewItem(index, 'phone', e.target.value)}
+                                  className="w-full px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={item.category_name || ''}
+                                  onChange={(e) => updatePreviewItem(index, 'category_name', e.target.value)}
+                                  className="w-full px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  placeholder="-"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={item.contact_person || ''}
+                                  onChange={(e) => updatePreviewItem(index, 'contact_person', e.target.value)}
+                                  className="w-full px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  placeholder="-"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <button
+                                  onClick={() => removePreviewItem(index)}
+                                  className="p-1 hover:bg-red-50 rounded text-red-400 hover:text-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-700">
+                      <strong>팁:</strong> 표에서 직접 값을 수정할 수 있습니다. 등록하지 않을 항목은 X 버튼으로 제거하세요.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 단계 3: 결과 */}
+              {importStep === 'result' && importResult && (
+                <div className="space-y-4">
+                  <div className={`p-6 rounded-xl text-center ${
+                    importResult.success > 0 ? 'bg-green-50' : 'bg-red-50'
+                  }`}>
+                    {importResult.success > 0 ? (
+                      <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                    ) : (
+                      <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+                    )}
+                    <h4 className="text-lg font-semibold text-slate-800 mb-2">
+                      {importResult.success > 0 ? '등록 완료' : '등록 실패'}
+                    </h4>
+                    <p className="text-slate-600">
+                      {importResult.success}개 성공
+                      {importResult.failed > 0 && `, ${importResult.failed}개 실패`}
+                    </p>
+                  </div>
+
+                  {importResult.errors.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h5 className="font-medium text-red-800 mb-2">오류 내역</h5>
+                      <ul className="text-sm text-red-700 space-y-1">
+                        {importResult.errors.slice(0, 5).map((error, i) => (
+                          <li key={i}>• {error}</li>
+                        ))}
+                        {importResult.errors.length > 5 && (
+                          <li className="text-red-600">
+                            외 {importResult.errors.length - 5}개 오류
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end gap-3">
+            <div className="sticky bottom-0 bg-slate-50 border-t px-6 py-4 flex justify-end gap-3 rounded-b-xl">
               <button
                 onClick={() => {
                   setShowImportModal(false)
-                  setImportData('')
+                  resetImportModal()
                 }}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium"
               >
-                취소
+                {importStep === 'result' ? '닫기' : '취소'}
               </button>
-              <button
-                onClick={handleImport}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
-              >
-                일괄 등록
-              </button>
+              {importStep === 'preview' && (
+                <button
+                  onClick={handleImport}
+                  disabled={isImporting || importPreview.length === 0}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  {isImporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      등록 중...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      {importPreview.length}개 업체 등록
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -964,20 +1315,25 @@ XYZ기공소	010-9876-5432	기공	김철수	010-1111-2222
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-lg font-semibold mb-2">업체 삭제</h3>
-            <p className="text-gray-600 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800">업체 삭제</h3>
+            </div>
+            <p className="text-slate-600 mb-6">
               이 업체를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium"
               >
                 취소
               </button>
               <button
                 onClick={() => handleDeleteContact(showDeleteConfirm)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
               >
                 삭제
               </button>
