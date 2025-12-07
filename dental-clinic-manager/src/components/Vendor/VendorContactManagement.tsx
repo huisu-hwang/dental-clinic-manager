@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { dataService } from '@/lib/dataService'
 import Toast from '@/components/ui/Toast'
+import * as XLSX from 'xlsx'
 import {
   Search,
   Plus,
@@ -32,15 +33,64 @@ import type { VendorContact, VendorCategory, VendorContactFormData, VendorCatego
 // 섹션 헤더 컴포넌트 (일일보고서 스타일)
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
   <div className="flex items-center space-x-2 sm:space-x-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
-    <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-50 text-teal-600">
+    <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
       <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
     </div>
     <h3 className="text-sm sm:text-base font-semibold text-slate-800">
-      <span className="text-teal-600 mr-1">{number}.</span>
+      <span className="text-blue-600 mr-1">{number}.</span>
       {title}
     </h3>
   </div>
 )
+
+// 전화번호 패턴 감지 함수
+const isPhoneNumber = (value: string): boolean => {
+  if (!value || typeof value !== 'string') return false
+  const cleaned = value.replace(/[\s\-\.\(\)]/g, '')
+  // 한국 전화번호 패턴: 02, 031~064, 010~019, 070, 080, 1588 등
+  const phonePatterns = [
+    /^0\d{1,2}\d{7,8}$/, // 지역번호 + 번호
+    /^01[0-9]\d{7,8}$/, // 휴대폰
+    /^070\d{7,8}$/, // 인터넷전화
+    /^080\d{7,8}$/, // 수신자부담
+    /^1[5-9]\d{2}\d{4}$/, // 대표번호 (1588, 1544 등)
+    /^0\d{9,11}$/, // 일반 전화번호 패턴
+  ]
+  return phonePatterns.some(pattern => pattern.test(cleaned))
+}
+
+// 데이터에서 전화번호 컬럼 자동 감지
+const detectPhoneColumns = (data: string[][]): number[] => {
+  if (data.length < 2) return []
+
+  const phoneColumnIndices: number[] = []
+  const headerRow = data[0] || []
+  const sampleRows = data.slice(1, Math.min(6, data.length))
+
+  for (let colIdx = 0; colIdx < (data[0]?.length || 0); colIdx++) {
+    const header = (headerRow[colIdx] || '').toLowerCase()
+    // 헤더에 전화, phone, tel, 연락처 등이 있으면 전화번호 컬럼으로 간주
+    if (header.includes('전화') || header.includes('phone') || header.includes('tel') ||
+        header.includes('연락') || header.includes('핸드폰') || header.includes('휴대')) {
+      phoneColumnIndices.push(colIdx)
+      continue
+    }
+
+    // 샘플 데이터에서 전화번호 패턴 감지
+    let phoneCount = 0
+    for (const row of sampleRows) {
+      if (row[colIdx] && isPhoneNumber(String(row[colIdx]))) {
+        phoneCount++
+      }
+    }
+    // 50% 이상이 전화번호 패턴이면 전화번호 컬럼으로 간주
+    if (phoneCount >= sampleRows.length * 0.5) {
+      phoneColumnIndices.push(colIdx)
+    }
+  }
+
+  return phoneColumnIndices
+}
 
 export default function VendorContactManagement() {
   const { hasPermission } = usePermissions()
@@ -261,13 +311,117 @@ export default function VendorContactManagement() {
     }
   }
 
-  // 파일 파싱
+  // 파일 파싱 (CSV/TXT/Excel 지원)
   const parseFile = async (file: File): Promise<VendorContactImportData[]> => {
-    const text = await file.text()
-    const lines = text.trim().split('\n')
+    const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
     const contacts: VendorContactImportData[] = []
 
-    // 첫 줄이 헤더인지 확인 (업체명, 회사명, company 등이 포함되어 있으면 헤더로 간주)
+    // Excel 파일 처리 (.xlsx, .xls)
+    if (extension === '.xlsx' || extension === '.xls') {
+      const arrayBuffer = await file.arrayBuffer()
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+      const sheetName = workbook.SheetNames[0]
+      if (!sheetName) return contacts
+
+      const worksheet = workbook.Sheets[sheetName]
+      const rawData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 })
+      const data = rawData.map(row =>
+        (Array.isArray(row) ? row : []).map(cell => String(cell ?? '').trim())
+      )
+
+      if (data.length < 1) return contacts
+
+      // 헤더 분석 및 전화번호 컬럼 자동 감지
+      const headerRow = data[0] || []
+      const phoneColumns = detectPhoneColumns(data)
+
+      // 헤더 매핑 (유연하게)
+      const columnMap: Record<string, number> = {}
+      headerRow.forEach((header, idx) => {
+        const h = header.toLowerCase()
+        if (h.includes('업체') || h.includes('회사') || h.includes('company') || h.includes('상호')) {
+          if (!('company_name' in columnMap)) columnMap.company_name = idx
+        } else if (h.includes('담당') || h.includes('contact') || h.includes('이름') || h.includes('성명')) {
+          if (!('contact_person' in columnMap)) columnMap.contact_person = idx
+        } else if (h.includes('카테고리') || h.includes('분류') || h.includes('category') || h.includes('종류')) {
+          if (!('category_name' in columnMap)) columnMap.category_name = idx
+        } else if (h.includes('이메일') || h.includes('email') || h.includes('메일')) {
+          if (!('email' in columnMap)) columnMap.email = idx
+        } else if (h.includes('주소') || h.includes('address')) {
+          if (!('address' in columnMap)) columnMap.address = idx
+        } else if (h.includes('메모') || h.includes('비고') || h.includes('note') || h.includes('remarks')) {
+          if (!('notes' in columnMap)) columnMap.notes = idx
+        }
+      })
+
+      // 전화번호 컬럼 매핑 (자동 감지된 순서대로 phone, phone2에 할당)
+      phoneColumns.forEach((colIdx, i) => {
+        if (i === 0 && !('phone' in columnMap)) columnMap.phone = colIdx
+        else if (i === 1 && !('phone2' in columnMap)) columnMap.phone2 = colIdx
+      })
+
+      // 헤더가 없는 경우 기본 순서로 매핑
+      const hasHeader = Object.keys(columnMap).length > 0
+      if (!hasHeader) {
+        // 기본 순서: 업체명, 전화번호, 카테고리, 담당자, 전화번호2, 이메일, 주소, 메모
+        if (data[0]?.length) {
+          columnMap.company_name = 0
+          if ((data[0]?.length || 0) > 1) columnMap.phone = 1
+          if ((data[0]?.length || 0) > 2) columnMap.category_name = 2
+          if ((data[0]?.length || 0) > 3) columnMap.contact_person = 3
+          if ((data[0]?.length || 0) > 4) columnMap.phone2 = 4
+          if ((data[0]?.length || 0) > 5) columnMap.email = 5
+          if ((data[0]?.length || 0) > 6) columnMap.address = 6
+          if ((data[0]?.length || 0) > 7) columnMap.notes = 7
+        }
+      }
+
+      // 첫 줄이 헤더인지 확인
+      const firstRowLower = (data[0] || []).join(' ').toLowerCase()
+      const isFirstRowHeader = firstRowLower.includes('업체') || firstRowLower.includes('회사') ||
+                               firstRowLower.includes('전화') || firstRowLower.includes('phone')
+      const startIndex = isFirstRowHeader ? 1 : 0
+
+      for (let i = startIndex; i < data.length; i++) {
+        const row = data[i]
+        if (!row || row.every(cell => !cell)) continue
+
+        const companyName = row[columnMap.company_name] || ''
+        let phone = row[columnMap.phone] || ''
+
+        // 전화번호가 없으면 다른 컬럼에서 자동 탐색
+        if (!phone) {
+          for (let j = 0; j < row.length; j++) {
+            if (row[j] && isPhoneNumber(String(row[j]))) {
+              phone = String(row[j])
+              break
+            }
+          }
+        }
+
+        // 최소 업체명이 있어야 함
+        if (companyName) {
+          contacts.push({
+            company_name: companyName,
+            phone: phone,
+            category_name: row[columnMap.category_name] || undefined,
+            contact_person: row[columnMap.contact_person] || undefined,
+            phone2: row[columnMap.phone2] || undefined,
+            email: row[columnMap.email] || undefined,
+            address: row[columnMap.address] || undefined,
+            notes: row[columnMap.notes] || undefined
+          })
+        }
+      }
+
+      return contacts
+    }
+
+    // CSV/TXT 파일 처리
+    const text = await file.text()
+    const lines = text.trim().split('\n')
+
+    // 첫 줄이 헤더인지 확인
     const firstLine = lines[0]?.toLowerCase() || ''
     const hasHeader = firstLine.includes('업체') || firstLine.includes('회사') ||
                       firstLine.includes('company') || firstLine.includes('전화') ||
@@ -275,11 +429,12 @@ export default function VendorContactManagement() {
 
     const startIndex = hasHeader ? 1 : 0
 
-    for (let i = startIndex; i < lines.length; i++) {
+    // CSV 파싱하여 2D 배열로 변환
+    const data: string[][] = []
+    for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim()
       if (!line) continue
 
-      // 탭, 쉼표, 또는 세미콜론으로 구분
       let parts: string[]
       if (line.includes('\t')) {
         parts = line.split('\t')
@@ -288,12 +443,43 @@ export default function VendorContactManagement() {
       } else {
         parts = line.split(',')
       }
+      data.push(parts.map(p => p.trim()))
+    }
 
-      // 최소 업체명과 전화번호가 있어야 함
-      if (parts.length >= 2 && parts[0]?.trim() && parts[1]?.trim()) {
+    // 전화번호 컬럼 자동 감지
+    const phoneColumns = detectPhoneColumns(data)
+
+    for (let i = startIndex; i < data.length; i++) {
+      const parts = data[i]
+      if (!parts || parts.length < 1) continue
+
+      const companyName = parts[0]?.trim() || ''
+      let phone = parts[1]?.trim() || ''
+
+      // 두 번째 컬럼이 전화번호가 아니면 자동 탐색
+      if (!isPhoneNumber(phone)) {
+        for (const colIdx of phoneColumns) {
+          if (parts[colIdx] && isPhoneNumber(parts[colIdx])) {
+            phone = parts[colIdx]
+            break
+          }
+        }
+      }
+
+      // 전화번호를 찾지 못했으면 모든 컬럼에서 탐색
+      if (!phone) {
+        for (let j = 0; j < parts.length; j++) {
+          if (parts[j] && isPhoneNumber(parts[j])) {
+            phone = parts[j]
+            break
+          }
+        }
+      }
+
+      if (companyName) {
         contacts.push({
-          company_name: parts[0]?.trim() || '',
-          phone: parts[1]?.trim() || '',
+          company_name: companyName,
+          phone: phone,
           category_name: parts[2]?.trim() || undefined,
           contact_person: parts[3]?.trim() || undefined,
           phone2: parts[4]?.trim() || undefined,
@@ -309,23 +495,11 @@ export default function VendorContactManagement() {
 
   // 파일 선택 처리
   const handleFileSelect = async (file: File) => {
-    const validTypes = [
-      'text/csv',
-      'text/plain',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ]
     const validExtensions = ['.csv', '.txt', '.xls', '.xlsx']
     const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
 
-    if (!validTypes.includes(file.type) && !validExtensions.includes(extension)) {
+    if (!validExtensions.includes(extension)) {
       showToast('CSV, TXT, XLS, XLSX 파일만 업로드 가능합니다.', 'error')
-      return
-    }
-
-    // xlsx 파일은 현재 텍스트 파싱만 지원하므로 안내
-    if (extension === '.xlsx' || extension === '.xls') {
-      showToast('엑셀 파일은 CSV로 저장 후 업로드하거나, 복사하여 붙여넣기 해주세요.', 'warning')
       return
     }
 
@@ -338,6 +512,7 @@ export default function VendorContactManagement() {
       setImportPreview(parsed)
       setImportStep('preview')
     } catch (error) {
+      console.error('File parsing error:', error)
       showToast('파일을 읽는 중 오류가 발생했습니다.', 'error')
     }
   }
@@ -519,7 +694,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       {/* 헤더 - 일일보고서 스타일 */}
-      <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-4 sm:px-6 py-3 sm:py-4">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-3">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -527,7 +702,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-white">업체 연락처 관리</h2>
-              <p className="text-teal-100 text-xs sm:text-sm hidden sm:block">Vendor Contacts</p>
+              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Vendor Contacts</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -557,7 +732,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 placeholder="업체명, 담당자, 전화번호 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
 
@@ -566,7 +741,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="appearance-none w-full sm:w-auto pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-sm"
+                className="appearance-none w-full sm:w-auto pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
               >
                 <option value="">전체 카테고리</option>
                 {categories.map(cat => (
@@ -601,7 +776,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   resetContactForm()
                   setShowContactModal(true)
                 }}
-                className="flex items-center space-x-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+                className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>새 업체 등록</span>
@@ -635,7 +810,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
               <p className="mt-3 text-slate-500 text-sm">데이터를 불러오는 중...</p>
             </div>
           ) : filteredContacts.length === 0 ? (
@@ -652,7 +827,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     resetContactForm()
                     setShowContactModal(true)
                   }}
-                  className="mt-4 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
                 >
                   첫 번째 업체 등록하기
                 </button>
@@ -720,7 +895,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                       <div className="flex flex-col items-end gap-1">
                         <button
                           onClick={() => makePhoneCall(contact.phone)}
-                          className="flex items-center gap-2 px-3 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                          className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
                         >
                           <PhoneCall className="w-4 h-4" />
                           <span>{formatPhone(contact.phone)}</span>
@@ -781,7 +956,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
       {showContactModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
               <h3 className="text-lg font-semibold text-white">
                 {editingContact ? '업체 정보 수정' : '새 업체 등록'}
               </h3>
@@ -806,7 +981,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   type="text"
                   value={contactForm.company_name}
                   onChange={(e) => setContactForm({ ...contactForm, company_name: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   placeholder="업체명을 입력하세요"
                 />
               </div>
@@ -819,7 +994,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 <select
                   value={contactForm.category_id}
                   onChange={(e) => setContactForm({ ...contactForm, category_id: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
                   <option value="">카테고리 선택</option>
                   {categories.map(cat => (
@@ -837,7 +1012,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   type="text"
                   value={contactForm.contact_person}
                   onChange={(e) => setContactForm({ ...contactForm, contact_person: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   placeholder="담당자명"
                 />
               </div>
@@ -852,7 +1027,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     type="tel"
                     value={contactForm.phone}
                     onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     placeholder="010-0000-0000"
                   />
                 </div>
@@ -864,7 +1039,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     type="tel"
                     value={contactForm.phone2}
                     onChange={(e) => setContactForm({ ...contactForm, phone2: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     placeholder="추가 연락처"
                   />
                 </div>
@@ -879,7 +1054,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   type="email"
                   value={contactForm.email}
                   onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   placeholder="email@example.com"
                 />
               </div>
@@ -893,7 +1068,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   type="text"
                   value={contactForm.address}
                   onChange={(e) => setContactForm({ ...contactForm, address: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   placeholder="주소를 입력하세요"
                 />
               </div>
@@ -906,7 +1081,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 <textarea
                   value={contactForm.notes}
                   onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   rows={3}
                   placeholder="추가 메모"
                 />
@@ -918,7 +1093,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   type="checkbox"
                   checked={contactForm.is_favorite}
                   onChange={(e) => setContactForm({ ...contactForm, is_favorite: e.target.checked })}
-                  className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 />
                 <Star className="w-4 h-4 text-yellow-400" />
                 <span className="text-sm text-slate-700">즐겨찾기에 추가</span>
@@ -937,7 +1112,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               </button>
               <button
                 onClick={handleSaveContact}
-                className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors text-sm font-medium"
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
               >
                 {editingContact ? '수정' : '등록'}
               </button>
@@ -950,7 +1125,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
               <h3 className="text-lg font-semibold text-white">카테고리 관리</h3>
               <button
                 onClick={() => {
@@ -1018,14 +1193,14 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     type="text"
                     value={categoryForm.name}
                     onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     placeholder="카테고리명"
                   />
                   <input
                     type="text"
                     value={categoryForm.description}
                     onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     placeholder="설명 (선택)"
                   />
                   <div>
@@ -1054,7 +1229,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     )}
                     <button
                       onClick={handleSaveCategory}
-                      className="flex-1 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
                     >
                       {editingCategory ? '수정' : '추가'}
                     </button>
@@ -1113,7 +1288,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                       파일을 드래그하여 놓거나 클릭하여 선택하세요
                     </p>
                     <p className="text-sm text-slate-500 mb-4">
-                      CSV, TXT 파일 지원 (UTF-8 인코딩)
+                      Excel(.xlsx, .xls), CSV, TXT 파일 지원
                     </p>
                     <button
                       onClick={() => fileInputRef.current?.click()}
@@ -1130,15 +1305,24 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                       파일 형식 안내
                     </h4>
                     <p className="text-sm text-slate-600 mb-3">
-                      엑셀 또는 스프레드시트에서 CSV로 저장하여 업로드하세요.
-                      각 열은 쉼표(,) 또는 탭으로 구분합니다.
+                      엑셀 파일(.xlsx, .xls)을 직접 업로드하거나 CSV 파일을 사용하세요.
                     </p>
-                    <div className="bg-white rounded-lg p-3 border border-slate-200 font-mono text-xs text-slate-600 overflow-x-auto">
-                      <div className="text-slate-400 mb-1"># 열 순서</div>
-                      업체명, 전화번호, 카테고리, 담당자, 전화번호2, 이메일, 주소, 메모
+                    <div className="bg-white rounded-lg p-3 border border-slate-200 text-sm text-slate-600 space-y-2">
+                      <div className="flex items-start gap-2">
+                        <span className="text-blue-500 font-bold">✓</span>
+                        <span><strong>자동 컬럼 인식:</strong> 헤더명을 기반으로 컬럼을 자동 매핑합니다</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-blue-500 font-bold">✓</span>
+                        <span><strong>전화번호 자동 감지:</strong> 전화번호가 어느 열에 있든 자동으로 찾습니다</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-blue-500 font-bold">✓</span>
+                        <span><strong>유연한 형식:</strong> 열 순서가 달라도 자동 처리됩니다</span>
+                      </div>
                     </div>
                     <p className="text-xs text-slate-500 mt-3">
-                      * 업체명과 전화번호는 필수입니다. 나머지 열은 비워둘 수 있습니다.
+                      * 업체명은 필수입니다. 전화번호가 없어도 등록은 가능합니다.
                     </p>
                     <button
                       onClick={downloadSampleFile}
