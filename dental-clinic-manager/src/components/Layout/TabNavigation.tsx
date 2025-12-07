@@ -12,7 +12,8 @@ import {
   FileSignature,
   Package,
   HelpCircle,
-  CalendarDays
+  CalendarDays,
+  Building2
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -35,6 +36,7 @@ const tabs: Tab[] = [
   { id: 'stats', label: '통계', icon: BarChart3, requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'] },
   { id: 'logs', label: '상세 기록', icon: History, requiredPermissions: ['logs_view'] },
   { id: 'protocols', label: '진료 프로토콜', icon: BookOpen, requiredPermissions: ['protocol_view'] },
+  { id: 'vendors', label: '업체 연락처', icon: Building2, requiredPermissions: ['vendor_contacts_view'] },
   { id: 'contracts', label: '근로계약서', icon: FileSignature, requiredPermissions: ['contract_view'] },
   { id: 'settings', label: '재고 관리', icon: Package, requiredPermissions: ['inventory_view'] },
   { id: 'guide', label: '사용 안내', icon: HelpCircle, requiredPermissions: ['guide_view'] }

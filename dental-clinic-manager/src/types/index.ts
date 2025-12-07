@@ -228,3 +228,9 @@ export interface ProtocolListItem {
 // ========================================
 
 export * from './clinic'
+
+// ========================================
+// Vendor Contact Types
+// ========================================
+
+export * from './vendor'
