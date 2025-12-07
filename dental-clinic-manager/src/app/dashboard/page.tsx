@@ -13,6 +13,7 @@ import GuideSection from '@/components/Guide/GuideSection'
 import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 } from 'lucide-react'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import LeaveManagement from '@/components/Leave/LeaveManagement'
+import VendorContactManagement from '@/components/Vendor/VendorContactManagement'
 import Toast from '@/components/ui/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
 import DatabaseVerifier from '@/components/Debug/DatabaseVerifier'
@@ -614,6 +615,11 @@ export default function DashboardPage() {
                 사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.
               </div>
             )
+          )}
+
+          {/* 업체 연락처 */}
+          {activeTab === 'vendors' && (
+            <VendorContactManagement />
           )}
 
           {/* 설정 */}

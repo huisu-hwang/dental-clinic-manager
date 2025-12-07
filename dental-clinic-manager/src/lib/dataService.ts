@@ -1,7 +1,7 @@
 import { createClient } from './supabase/client'
 import { ensureConnection } from './supabase/connectionCheck'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
@@ -3126,6 +3126,492 @@ export const dataService = {
     } catch (error: unknown) {
       console.error('[updateConsultStatusToCompleted] Error:', error)
       return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // ========================================
+  // 업체 연락처 관리 (Vendor Contacts)
+  // ========================================
+
+  // 업체 연락처 카테고리 목록 조회
+  async getVendorCategories(): Promise<{ data: VendorCategory[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { data: null, error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('vendor_categories')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: true })
+
+      if (error) {
+        console.error('[getVendorCategories] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as VendorCategory[], error: null }
+    } catch (error: unknown) {
+      console.error('[getVendorCategories] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 카테고리 생성
+  async createVendorCategory(categoryData: VendorCategoryFormData): Promise<{ data: VendorCategory | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { data: null, error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      // 현재 최대 display_order 조회
+      const { data: maxOrderData } = await supabase
+        .from('vendor_categories')
+        .select('display_order')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: false })
+        .limit(1)
+        .single()
+
+      const nextOrder = (maxOrderData?.display_order || 0) + 1
+
+      const { data, error } = await supabase
+        .from('vendor_categories')
+        .insert({
+          clinic_id: clinicId,
+          name: categoryData.name,
+          description: categoryData.description,
+          color: categoryData.color,
+          display_order: nextOrder
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[createVendorCategory] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as VendorCategory, error: null }
+    } catch (error: unknown) {
+      console.error('[createVendorCategory] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 카테고리 수정
+  async updateVendorCategory(categoryId: string, categoryData: Partial<VendorCategoryFormData>): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('vendor_categories')
+        .update({
+          ...categoryData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', categoryId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[updateVendorCategory] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[updateVendorCategory] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 카테고리 삭제
+  async deleteVendorCategory(categoryId: string): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      // 해당 카테고리에 속한 연락처들의 category_id를 null로 변경
+      await supabase
+        .from('vendor_contacts')
+        .update({ category_id: null })
+        .eq('category_id', categoryId)
+        .eq('clinic_id', clinicId)
+
+      const { error } = await supabase
+        .from('vendor_categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[deleteVendorCategory] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[deleteVendorCategory] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 목록 조회
+  async getVendorContacts(options?: {
+    categoryId?: string;
+    searchQuery?: string;
+    isFavorite?: boolean;
+  }): Promise<{ data: VendorContact[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { data: null, error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      let query = supabase
+        .from('vendor_contacts')
+        .select(`
+          *,
+          category:vendor_categories(*)
+        `)
+        .eq('clinic_id', clinicId)
+
+      // 카테고리 필터
+      if (options?.categoryId) {
+        query = query.eq('category_id', options.categoryId)
+      }
+
+      // 즐겨찾기 필터
+      if (options?.isFavorite !== undefined) {
+        query = query.eq('is_favorite', options.isFavorite)
+      }
+
+      // 검색어 필터 (회사명, 담당자, 전화번호)
+      if (options?.searchQuery) {
+        const searchTerm = `%${options.searchQuery}%`
+        query = query.or(`company_name.ilike.${searchTerm},contact_person.ilike.${searchTerm},phone.ilike.${searchTerm},phone2.ilike.${searchTerm}`)
+      }
+
+      const { data, error } = await query.order('is_favorite', { ascending: false }).order('company_name', { ascending: true })
+
+      if (error) {
+        console.error('[getVendorContacts] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as VendorContact[], error: null }
+    } catch (error: unknown) {
+      console.error('[getVendorContacts] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 단건 조회
+  async getVendorContact(contactId: string): Promise<{ data: VendorContact | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { data: null, error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('vendor_contacts')
+        .select(`
+          *,
+          category:vendor_categories(*)
+        `)
+        .eq('id', contactId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (error) {
+        console.error('[getVendorContact] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as VendorContact, error: null }
+    } catch (error: unknown) {
+      console.error('[getVendorContact] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 생성
+  async createVendorContact(contactData: VendorContactFormData): Promise<{ data: VendorContact | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { data: null, error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('vendor_contacts')
+        .insert({
+          clinic_id: clinicId,
+          company_name: contactData.company_name,
+          category_id: contactData.category_id || null,
+          contact_person: contactData.contact_person || null,
+          phone: contactData.phone,
+          phone2: contactData.phone2 || null,
+          email: contactData.email || null,
+          address: contactData.address || null,
+          notes: contactData.notes || null,
+          is_favorite: contactData.is_favorite || false
+        })
+        .select(`
+          *,
+          category:vendor_categories(*)
+        `)
+        .single()
+
+      if (error) {
+        console.error('[createVendorContact] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as VendorContact, error: null }
+    } catch (error: unknown) {
+      console.error('[createVendorContact] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 수정
+  async updateVendorContact(contactId: string, contactData: Partial<VendorContactFormData>): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('vendor_contacts')
+        .update({
+          ...contactData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', contactId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[updateVendorContact] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[updateVendorContact] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 삭제
+  async deleteVendorContact(contactId: string): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('vendor_contacts')
+        .delete()
+        .eq('id', contactId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[deleteVendorContact] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[deleteVendorContact] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 즐겨찾기 토글
+  async toggleVendorContactFavorite(contactId: string, isFavorite: boolean): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('vendor_contacts')
+        .update({
+          is_favorite: isFavorite,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', contactId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[toggleVendorContactFavorite] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[toggleVendorContactFavorite] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 일괄 등록
+  async importVendorContacts(contacts: VendorContactImportData[]): Promise<{ success: number; failed: number; errors: string[] }> {
+    const result = { success: 0, failed: 0, errors: [] as string[] }
+
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { success: 0, failed: contacts.length, errors: ['Supabase client not available'] }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { success: 0, failed: contacts.length, errors: ['병원 정보를 찾을 수 없습니다.'] }
+      }
+
+      // 기존 카테고리 조회
+      const { data: existingCategories } = await supabase
+        .from('vendor_categories')
+        .select('*')
+        .eq('clinic_id', clinicId)
+
+      const categoryMap = new Map<string, string>()
+      existingCategories?.forEach((cat: VendorCategory) => {
+        categoryMap.set(cat.name.toLowerCase(), cat.id)
+      })
+
+      // 새로 생성해야 할 카테고리 목록
+      const newCategories = new Set<string>()
+      contacts.forEach(contact => {
+        if (contact.category_name && !categoryMap.has(contact.category_name.toLowerCase())) {
+          newCategories.add(contact.category_name)
+        }
+      })
+
+      // 새 카테고리 생성
+      const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16']
+      let colorIndex = 0
+      for (const categoryName of newCategories) {
+        const { data: newCategory } = await supabase
+          .from('vendor_categories')
+          .insert({
+            clinic_id: clinicId,
+            name: categoryName,
+            color: colors[colorIndex % colors.length],
+            display_order: categoryMap.size + 1
+          })
+          .select()
+          .single()
+
+        if (newCategory) {
+          categoryMap.set(categoryName.toLowerCase(), newCategory.id)
+        }
+        colorIndex++
+      }
+
+      // 연락처 일괄 등록
+      for (const contact of contacts) {
+        if (!contact.company_name || !contact.phone) {
+          result.failed++
+          result.errors.push(`필수 정보 누락: ${contact.company_name || '업체명 없음'}`)
+          continue
+        }
+
+        const categoryId = contact.category_name
+          ? categoryMap.get(contact.category_name.toLowerCase()) || null
+          : null
+
+        const { error } = await supabase
+          .from('vendor_contacts')
+          .insert({
+            clinic_id: clinicId,
+            company_name: contact.company_name,
+            category_id: categoryId,
+            contact_person: contact.contact_person || null,
+            phone: contact.phone,
+            phone2: contact.phone2 || null,
+            email: contact.email || null,
+            address: contact.address || null,
+            notes: contact.notes || null,
+            is_favorite: false
+          })
+
+        if (error) {
+          result.failed++
+          result.errors.push(`${contact.company_name}: ${error.message}`)
+        } else {
+          result.success++
+        }
+      }
+
+      return result
+    } catch (error: unknown) {
+      console.error('[importVendorContacts] Error:', error)
+      return { success: result.success, failed: contacts.length - result.success, errors: [extractErrorMessage(error)] }
     }
   }
 }
