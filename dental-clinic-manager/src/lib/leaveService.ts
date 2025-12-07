@@ -98,9 +98,14 @@ export function calculateYearsOfService(hireDate: Date, referenceDate: Date = ne
 /**
  * 직급에 따른 승인 프로세스 결정
  * - 부원장: 원장에게 직접 승인
- * - 팀장 이하: 실장 승인 -> 원장 최종 승인
+ * - 팀장 이하: 정책에 따라 실장 승인 포함 또는 원장 직접 승인
+ * @param role 신청자 직급
+ * @param requireManagerApproval 실장 결재 포함 여부 (기본값: true)
  */
-export function getApprovalStepsForRole(role: string): { step: number; role: string; description: string }[] {
+export function getApprovalStepsForRole(
+  role: string,
+  requireManagerApproval: boolean = true
+): { step: number; role: string; description: string }[] {
   if (role === 'vice_director') {
     // 부원장은 원장에게 직접 승인
     return [
@@ -108,11 +113,19 @@ export function getApprovalStepsForRole(role: string): { step: number; role: str
     ]
   }
 
-  // 팀장 이하 (team_leader, staff)는 실장 -> 원장 2단계
-  return [
-    { step: 1, role: 'manager', description: '실장 1차 승인' },
-    { step: 2, role: 'owner', description: '원장 최종 승인' }
-  ]
+  // 팀장 이하 (team_leader, staff)
+  if (requireManagerApproval) {
+    // 실장 결재 포함: 실장 -> 원장 2단계
+    return [
+      { step: 1, role: 'manager', description: '실장 1차 승인' },
+      { step: 2, role: 'owner', description: '원장 최종 승인' }
+    ]
+  } else {
+    // 실장 결재 미포함: 원장 직접 승인
+    return [
+      { step: 1, role: 'owner', description: '원장 승인' }
+    ]
+  }
 }
 
 /**
@@ -533,8 +546,12 @@ export const leaveService = {
       const user = getCurrentUser()
       if (!user) throw new Error('User not found')
 
+      // 정책 조회하여 실장 결재 포함 여부 확인
+      const policyResult = await this.getDefaultPolicy()
+      const requireManagerApproval = policyResult.data?.require_manager_approval ?? true
+
       // 직급에 따른 승인 단계 결정
-      const approvalSteps = getApprovalStepsForRole(user.role)
+      const approvalSteps = getApprovalStepsForRole(user.role, requireManagerApproval)
 
       const requestData = {
         user_id: user.id,
@@ -651,9 +668,13 @@ export const leaveService = {
       const user = getCurrentUser()
       if (!user) throw new Error('User not found')
 
+      // 정책 조회하여 실장 결재 포함 여부 확인
+      const policyResult = await this.getDefaultPolicy()
+      const requireManagerApproval = policyResult.data?.require_manager_approval ?? true
+
       // 내 역할에 따라 승인해야 할 요청 조회
       // owner: 모든 pending 요청 (current_step이 자신의 단계일 때)
-      // manager: 1단계 승인 대기인 요청 중 신청자가 team_leader 또는 staff인 것
+      // manager: 1단계 승인 대기인 요청 중 신청자가 team_leader 또는 staff인 것 (실장 결재 포함 시)
 
       let query = (supabase as any)
         .from('leave_requests')
@@ -673,7 +694,7 @@ export const leaveService = {
       // 현재 사용자 역할에 따라 필터링
       const filtered = (data || []).filter((req: any) => {
         const applicantRole = req.users?.role
-        const steps = getApprovalStepsForRole(applicantRole)
+        const steps = getApprovalStepsForRole(applicantRole, requireManagerApproval)
         const currentStepInfo = steps[req.current_step - 1]
 
         // 현재 단계의 승인자 역할이 내 역할과 일치하는지 확인
@@ -682,7 +703,7 @@ export const leaveService = {
           return currentStepInfo?.role === 'owner'
         }
         if (user.role === 'manager') {
-          // 실장은 1단계 승인 (팀장, 직원 요청)
+          // 실장은 1단계 승인 (팀장, 직원 요청) - 실장 결재 포함 시에만
           return currentStepInfo?.role === 'manager'
         }
         return false
@@ -706,6 +727,10 @@ export const leaveService = {
       const user = getCurrentUser()
       if (!user) throw new Error('User not found')
 
+      // 정책 조회하여 실장 결재 포함 여부 확인
+      const policyResult = await this.getDefaultPolicy()
+      const requireManagerApproval = policyResult.data?.require_manager_approval ?? true
+
       // 현재 요청 정보 조회
       const { data: request, error: reqError } = await (supabase as any)
         .from('leave_requests')
@@ -716,7 +741,7 @@ export const leaveService = {
       if (reqError) throw reqError
 
       const applicantRole = request.users?.role
-      const steps = getApprovalStepsForRole(applicantRole)
+      const steps = getApprovalStepsForRole(applicantRole, requireManagerApproval)
       const currentStep = request.current_step
       const isLastStep = currentStep >= steps.length
 
@@ -776,6 +801,10 @@ export const leaveService = {
       const user = getCurrentUser()
       if (!user) throw new Error('User not found')
 
+      // 정책 조회하여 실장 결재 포함 여부 확인
+      const policyResult = await this.getDefaultPolicy()
+      const requireManagerApproval = policyResult.data?.require_manager_approval ?? true
+
       // 현재 요청 정보 조회
       const { data: request, error: reqError } = await (supabase as any)
         .from('leave_requests')
@@ -786,7 +815,7 @@ export const leaveService = {
       if (reqError) throw reqError
 
       const applicantRole = request.users?.role
-      const steps = getApprovalStepsForRole(applicantRole)
+      const steps = getApprovalStepsForRole(applicantRole, requireManagerApproval)
 
       // 반려 기록 추가
       const { error: approvalError } = await (supabase as any)

@@ -37,6 +37,7 @@ export default function LeavePolicySettings() {
     carryover_max_days: 0,
     carryover_expiry_months: 12,
     min_attendance_rate: 80,
+    require_manager_approval: true, // 실장 결재 포함 여부
     use_custom_rules: false,
     days_per_year: DEFAULT_KOREA_LABOR_RULES,
   })
@@ -59,6 +60,7 @@ export default function LeavePolicySettings() {
           carryover_max_days: result.data.carryover_max_days || 0,
           carryover_expiry_months: result.data.carryover_expiry_months || 12,
           min_attendance_rate: result.data.min_attendance_rate || 80,
+          require_manager_approval: result.data.require_manager_approval ?? true, // 기본값 true
           use_custom_rules: false, // 커스텀 규칙 사용 여부
           days_per_year: result.data.days_per_year || DEFAULT_KOREA_LABOR_RULES,
         })
@@ -86,6 +88,7 @@ export default function LeavePolicySettings() {
         carryover_max_days: formData.carryover_enabled ? formData.carryover_max_days : null,
         carryover_expiry_months: formData.carryover_expiry_months,
         min_attendance_rate: formData.min_attendance_rate,
+        require_manager_approval: formData.require_manager_approval,
         days_per_year: formData.days_per_year,
         is_active: true,
         is_default: true,
@@ -323,6 +326,49 @@ export default function LeavePolicySettings() {
             <p className="text-xs text-slate-400 mt-1">
               * 근로기준법 기준 80% (연차 발생 조건)
             </p>
+          </div>
+        </div>
+
+        {/* 결재 프로세스 설정 */}
+        <div className="border border-slate-200 rounded-lg p-4 space-y-4">
+          <h4 className="font-medium text-slate-800">결재 프로세스 설정</h4>
+
+          <div className="space-y-3">
+            <label className="flex items-start space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.require_manager_approval}
+                onChange={(e) => setFormData({ ...formData, require_manager_approval: e.target.checked })}
+                className="w-4 h-4 mt-0.5 text-blue-600 rounded"
+              />
+              <div>
+                <span className="text-sm font-medium text-slate-700">실장 결재 포함</span>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  체크 시: 직원/팀장 → <span className="font-medium text-blue-600">실장 1차 승인</span> → 원장 최종 승인
+                </p>
+                <p className="text-xs text-slate-500">
+                  해제 시: 직원/팀장 → 원장 직접 승인
+                </p>
+              </div>
+            </label>
+          </div>
+
+          <div className="mt-3 p-3 bg-slate-50 rounded-lg">
+            <p className="text-xs font-medium text-slate-600 mb-2">현재 결재 흐름</p>
+            <div className="space-y-1.5">
+              <div className="flex items-center text-xs text-slate-600">
+                <span className="w-16 text-slate-500">직원/팀장:</span>
+                {formData.require_manager_approval ? (
+                  <span>신청 → <span className="text-blue-600 font-medium">실장 승인</span> → <span className="text-green-600 font-medium">원장 최종 승인</span></span>
+                ) : (
+                  <span>신청 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+                )}
+              </div>
+              <div className="flex items-center text-xs text-slate-600">
+                <span className="w-16 text-slate-500">부원장:</span>
+                <span>신청 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+              </div>
+            </div>
           </div>
         </div>
 
