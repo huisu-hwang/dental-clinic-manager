@@ -144,9 +144,23 @@ export default function VendorContactManagement() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [importPreview, setImportPreview] = useState<VendorContactImportData[]>([])
-  const [importStep, setImportStep] = useState<'upload' | 'preview' | 'result'>('upload')
+  const [importStep, setImportStep] = useState<'upload' | 'mapping' | 'preview' | 'result'>('upload')
   const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: string[] } | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+
+  // 컬럼 매핑 관련 상태
+  const [rawFileData, setRawFileData] = useState<string[][]>([])
+  const [fileHeaders, setFileHeaders] = useState<string[]>([])
+  const [columnMapping, setColumnMapping] = useState<Record<string, number | null>>({
+    company_name: null,
+    category_name: null,
+    contact_person: null,
+    phone: null,
+    phone2: null,
+    email: null,
+    address: null,
+    notes: null
+  })
 
   // 토스트
   const [toast, setToast] = useState<{
@@ -369,12 +383,9 @@ export default function VendorContactManagement() {
     }
   }
 
-  // 파일 파싱 (CSV/TXT/Excel 지원) - 모든 데이터 빠짐없이 캡처
-  const parseFile = async (file: File): Promise<VendorContactImportData[]> => {
+  // 파일에서 원본 데이터와 헤더 추출
+  const extractFileData = async (file: File): Promise<{ headers: string[], data: string[][] }> => {
     const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
-    const contacts: VendorContactImportData[] = []
-
-    // 2D 배열로 파일 데이터 읽기
     let data: string[][] = []
     let headers: string[] = []
 
@@ -383,7 +394,7 @@ export default function VendorContactManagement() {
       const arrayBuffer = await file.arrayBuffer()
       const workbook = XLSX.read(arrayBuffer, { type: 'array' })
       const sheetName = workbook.SheetNames[0]
-      if (!sheetName) return contacts
+      if (!sheetName) return { headers: [], data: [] }
 
       const worksheet = workbook.Sheets[sheetName]
       const rawData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 })
@@ -411,14 +422,16 @@ export default function VendorContactManagement() {
       }
     }
 
-    if (data.length < 1) return contacts
+    if (data.length < 1) return { headers: [], data: [] }
 
     // 첫 줄이 헤더인지 확인
     const firstRowLower = (data[0] || []).join(' ').toLowerCase()
     const hasHeaderRow = firstRowLower.includes('업체') || firstRowLower.includes('회사') ||
                          firstRowLower.includes('전화') || firstRowLower.includes('phone') ||
                          firstRowLower.includes('company') || firstRowLower.includes('상호') ||
-                         firstRowLower.includes('이름') || firstRowLower.includes('담당')
+                         firstRowLower.includes('이름') || firstRowLower.includes('담당') ||
+                         firstRowLower.includes('카테고리') || firstRowLower.includes('분류') ||
+                         firstRowLower.includes('구분') || firstRowLower.includes('종류')
 
     if (hasHeaderRow) {
       headers = data[0] || []
@@ -429,57 +442,74 @@ export default function VendorContactManagement() {
       headers = Array.from({ length: maxCols }, (_, i) => `컬럼${i + 1}`)
     }
 
-    // 컬럼 매핑 분석
-    const columnMap: Record<string, number> = {}
+    return { headers, data }
+  }
+
+  // 헤더 기반 컬럼 자동 매핑
+  const autoDetectColumnMapping = (headers: string[], data: string[][]): Record<string, number | null> => {
+    const mapping: Record<string, number | null> = {
+      company_name: null,
+      category_name: null,
+      contact_person: null,
+      phone: null,
+      phone2: null,
+      email: null,
+      address: null,
+      notes: null
+    }
     const mappedColumns = new Set<number>()
 
     headers.forEach((header, idx) => {
       const h = (header || '').toLowerCase()
 
-      // 업체명/회사명
-      if ((h.includes('업체') || h.includes('회사') || h.includes('company') || h.includes('상호') || h.includes('거래처'))
-          && !('company_name' in columnMap)) {
-        columnMap.company_name = idx
+      // 업체명/회사명 (더 확장된 키워드)
+      if ((h.includes('업체') || h.includes('회사') || h.includes('company') || h.includes('상호') ||
+           h.includes('거래처') || h.includes('업체명') || h.includes('회사명') || h.includes('상호명'))
+          && mapping.company_name === null) {
+        mapping.company_name = idx
         mappedColumns.add(idx)
       }
       // 담당자
       else if ((h.includes('담당') || h.includes('contact') || h.includes('성명') || h === '이름')
-          && !('contact_person' in columnMap)) {
-        columnMap.contact_person = idx
+          && mapping.contact_person === null) {
+        mapping.contact_person = idx
         mappedColumns.add(idx)
       }
-      // 카테고리
-      else if ((h.includes('카테고리') || h.includes('분류') || h.includes('category') || h.includes('종류') || h.includes('구분'))
-          && !('category_name' in columnMap)) {
-        columnMap.category_name = idx
+      // 카테고리 (확장된 키워드)
+      else if ((h.includes('카테고리') || h.includes('분류') || h.includes('category') ||
+                h.includes('종류') || h.includes('구분') || h.includes('업종') || h.includes('품목') ||
+                h.includes('유형') || h.includes('타입') || h.includes('type'))
+          && mapping.category_name === null) {
+        mapping.category_name = idx
         mappedColumns.add(idx)
       }
       // 이메일
       else if ((h.includes('이메일') || h.includes('email') || h.includes('메일') || h.includes('e-mail'))
-          && !('email' in columnMap)) {
-        columnMap.email = idx
+          && mapping.email === null) {
+        mapping.email = idx
         mappedColumns.add(idx)
       }
       // 주소
-      else if ((h.includes('주소') || h.includes('address') || h.includes('소재지'))
-          && !('address' in columnMap)) {
-        columnMap.address = idx
+      else if ((h.includes('주소') || h.includes('address') || h.includes('소재지') || h.includes('위치'))
+          && mapping.address === null) {
+        mapping.address = idx
         mappedColumns.add(idx)
       }
       // 메모/비고
-      else if ((h.includes('메모') || h.includes('비고') || h.includes('note') || h.includes('remarks') || h.includes('참고'))
-          && !('notes' in columnMap)) {
-        columnMap.notes = idx
+      else if ((h.includes('메모') || h.includes('비고') || h.includes('note') || h.includes('remarks') ||
+                h.includes('참고') || h.includes('설명') || h.includes('기타'))
+          && mapping.notes === null) {
+        mapping.notes = idx
         mappedColumns.add(idx)
       }
       // 전화번호
       else if ((h.includes('전화') || h.includes('phone') || h.includes('tel') || h.includes('연락') ||
                 h.includes('핸드폰') || h.includes('휴대') || h.includes('모바일') || h.includes('번호'))) {
-        if (!('phone' in columnMap)) {
-          columnMap.phone = idx
+        if (mapping.phone === null) {
+          mapping.phone = idx
           mappedColumns.add(idx)
-        } else if (!('phone2' in columnMap)) {
-          columnMap.phone2 = idx
+        } else if (mapping.phone2 === null) {
+          mapping.phone2 = idx
           mappedColumns.add(idx)
         }
       }
@@ -489,28 +519,36 @@ export default function VendorContactManagement() {
     const phoneColumns = detectPhoneColumns([headers, ...data.slice(0, 5)])
     phoneColumns.forEach((colIdx) => {
       if (!mappedColumns.has(colIdx)) {
-        if (!('phone' in columnMap)) {
-          columnMap.phone = colIdx
+        if (mapping.phone === null) {
+          mapping.phone = colIdx
           mappedColumns.add(colIdx)
-        } else if (!('phone2' in columnMap)) {
-          columnMap.phone2 = colIdx
+        } else if (mapping.phone2 === null) {
+          mapping.phone2 = colIdx
           mappedColumns.add(colIdx)
         }
       }
     })
 
     // 업체명 컬럼을 못 찾았으면 첫 번째 컬럼을 업체명으로
-    if (!('company_name' in columnMap) && headers.length > 0) {
-      columnMap.company_name = 0
-      mappedColumns.add(0)
+    if (mapping.company_name === null && headers.length > 0) {
+      mapping.company_name = 0
     }
 
-    // 데이터 파싱
+    return mapping
+  }
+
+  // 컬럼 매핑을 기반으로 데이터 변환
+  const applyColumnMapping = (data: string[][], headers: string[], mapping: Record<string, number | null>): VendorContactImportData[] => {
+    const contacts: VendorContactImportData[] = []
+    const mappedColumns = new Set<number>(
+      Object.values(mapping).filter((v): v is number => v !== null)
+    )
+
     for (const row of data) {
       if (!row || row.every(cell => !cell)) continue
 
       // 업체명 가져오기
-      let companyName = row[columnMap.company_name] || ''
+      let companyName = mapping.company_name !== null ? row[mapping.company_name] || '' : ''
 
       // 업체명이 없으면 첫 번째 비어있지 않은 셀을 업체명으로
       if (!companyName) {
@@ -525,8 +563,8 @@ export default function VendorContactManagement() {
       if (!companyName) continue // 업체명이 없으면 스킵
 
       // 전화번호 가져오기 - 매핑된 컬럼에서
-      let phone = columnMap.phone !== undefined ? row[columnMap.phone] || '' : ''
-      let phone2 = columnMap.phone2 !== undefined ? row[columnMap.phone2] || '' : ''
+      let phone = mapping.phone !== null ? row[mapping.phone] || '' : ''
+      let phone2 = mapping.phone2 !== null ? row[mapping.phone2] || '' : ''
 
       // 전화번호가 없으면 전체 row에서 탐색
       if (!phone || !isPhoneNumber(phone)) {
@@ -554,11 +592,11 @@ export default function VendorContactManagement() {
         company_name: companyName,
         phone: phone || undefined,
         phone2: phone2 || undefined,
-        category_name: columnMap.category_name !== undefined ? row[columnMap.category_name] || undefined : undefined,
-        contact_person: columnMap.contact_person !== undefined ? row[columnMap.contact_person] || undefined : undefined,
-        email: columnMap.email !== undefined ? row[columnMap.email] || undefined : undefined,
-        address: columnMap.address !== undefined ? row[columnMap.address] || undefined : undefined,
-        notes: columnMap.notes !== undefined ? row[columnMap.notes] || undefined : undefined,
+        category_name: mapping.category_name !== null ? row[mapping.category_name] || undefined : undefined,
+        contact_person: mapping.contact_person !== null ? row[mapping.contact_person] || undefined : undefined,
+        email: mapping.email !== null ? row[mapping.email] || undefined : undefined,
+        address: mapping.address !== null ? row[mapping.address] || undefined : undefined,
+        notes: mapping.notes !== null ? row[mapping.notes] || undefined : undefined,
         extra_data: Object.keys(extra_data).length > 0 ? extra_data : undefined
       })
     }
@@ -577,17 +615,45 @@ export default function VendorContactManagement() {
     }
 
     try {
-      const parsed = await parseFile(file)
-      if (parsed.length === 0) {
+      const { headers, data } = await extractFileData(file)
+      if (data.length === 0) {
         showToast('유효한 데이터가 없습니다. 파일 형식을 확인해주세요.', 'warning')
         return
       }
-      setImportPreview(parsed)
-      setImportStep('preview')
+
+      // 원본 데이터 저장
+      setRawFileData(data)
+      setFileHeaders(headers)
+
+      // 자동 컬럼 매핑 수행
+      const autoMapping = autoDetectColumnMapping(headers, data)
+      setColumnMapping(autoMapping)
+
+      // 매핑 단계로 이동
+      setImportStep('mapping')
     } catch (error) {
       console.error('File parsing error:', error)
       showToast('파일을 읽는 중 오류가 발생했습니다.', 'error')
     }
+  }
+
+  // 컬럼 매핑 확인 후 미리보기로 이동
+  const handleMappingConfirm = () => {
+    const parsed = applyColumnMapping(rawFileData, fileHeaders, columnMapping)
+    if (parsed.length === 0) {
+      showToast('유효한 데이터가 없습니다. 컬럼 매핑을 확인해주세요.', 'warning')
+      return
+    }
+    setImportPreview(parsed)
+    setImportStep('preview')
+  }
+
+  // 컬럼 매핑 업데이트
+  const updateColumnMapping = (field: string, colIndex: number | null) => {
+    setColumnMapping(prev => ({
+      ...prev,
+      [field]: colIndex
+    }))
   }
 
   // 드래그 앤 드롭 핸들러
@@ -682,6 +748,18 @@ export default function VendorContactManagement() {
     setImportStep('upload')
     setImportPreview([])
     setImportResult(null)
+    setRawFileData([])
+    setFileHeaders([])
+    setColumnMapping({
+      company_name: null,
+      category_name: null,
+      contact_person: null,
+      phone: null,
+      phone2: null,
+      email: null,
+      address: null,
+      notes: null
+    })
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -1455,7 +1533,262 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 </div>
               )}
 
-              {/* 단계 2: 미리보기 */}
+              {/* 단계 2: 컬럼 매핑 */}
+              {importStep === 'mapping' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-slate-800">
+                      컬럼 매핑 설정 (총 {rawFileData.length}개 데이터)
+                    </h4>
+                    <button
+                      onClick={() => setImportStep('upload')}
+                      className="text-sm text-slate-600 hover:text-slate-800"
+                    >
+                      다시 선택
+                    </button>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-700">
+                      <strong>컬럼 매핑:</strong> 파일의 각 컬럼이 어떤 필드에 해당하는지 확인하고 필요시 수정하세요.
+                      자동으로 감지된 매핑을 확인하거나, 드롭다운에서 직접 선택할 수 있습니다.
+                    </p>
+                  </div>
+
+                  {/* 컬럼 매핑 UI */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* 업체명 (필수) */}
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">
+                        업체명 <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={columnMapping.company_name ?? ''}
+                        onChange={(e) => updateColumnMapping('company_name', e.target.value === '' ? null : parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="">선택하세요</option>
+                        {fileHeaders.map((header, idx) => (
+                          <option key={idx} value={idx}>{header}</option>
+                        ))}
+                      </select>
+                      {columnMapping.company_name !== null && rawFileData[0] && (
+                        <p className="text-xs text-slate-500">
+                          예시: {rawFileData[0][columnMapping.company_name] || '-'}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 카테고리 */}
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">
+                        카테고리 / 분류
+                        {columnMapping.category_name !== null && (
+                          <span className="ml-2 text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">자동 감지됨</span>
+                        )}
+                      </label>
+                      <select
+                        value={columnMapping.category_name ?? ''}
+                        onChange={(e) => updateColumnMapping('category_name', e.target.value === '' ? null : parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="">선택 안함</option>
+                        {fileHeaders.map((header, idx) => (
+                          <option key={idx} value={idx}>{header}</option>
+                        ))}
+                      </select>
+                      {columnMapping.category_name !== null && rawFileData[0] && (
+                        <p className="text-xs text-slate-500">
+                          예시: {rawFileData[0][columnMapping.category_name] || '-'}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 담당자 */}
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">담당자</label>
+                      <select
+                        value={columnMapping.contact_person ?? ''}
+                        onChange={(e) => updateColumnMapping('contact_person', e.target.value === '' ? null : parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="">선택 안함</option>
+                        {fileHeaders.map((header, idx) => (
+                          <option key={idx} value={idx}>{header}</option>
+                        ))}
+                      </select>
+                      {columnMapping.contact_person !== null && rawFileData[0] && (
+                        <p className="text-xs text-slate-500">
+                          예시: {rawFileData[0][columnMapping.contact_person] || '-'}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 전화번호 1 */}
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">
+                        전화번호 1
+                        {columnMapping.phone !== null && (
+                          <span className="ml-2 text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">자동 감지됨</span>
+                        )}
+                      </label>
+                      <select
+                        value={columnMapping.phone ?? ''}
+                        onChange={(e) => updateColumnMapping('phone', e.target.value === '' ? null : parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="">선택 안함 (자동 탐색)</option>
+                        {fileHeaders.map((header, idx) => (
+                          <option key={idx} value={idx}>{header}</option>
+                        ))}
+                      </select>
+                      {columnMapping.phone !== null && rawFileData[0] && (
+                        <p className="text-xs text-slate-500">
+                          예시: {rawFileData[0][columnMapping.phone] || '-'}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 전화번호 2 */}
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">전화번호 2</label>
+                      <select
+                        value={columnMapping.phone2 ?? ''}
+                        onChange={(e) => updateColumnMapping('phone2', e.target.value === '' ? null : parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="">선택 안함</option>
+                        {fileHeaders.map((header, idx) => (
+                          <option key={idx} value={idx}>{header}</option>
+                        ))}
+                      </select>
+                      {columnMapping.phone2 !== null && rawFileData[0] && (
+                        <p className="text-xs text-slate-500">
+                          예시: {rawFileData[0][columnMapping.phone2] || '-'}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 이메일 */}
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">이메일</label>
+                      <select
+                        value={columnMapping.email ?? ''}
+                        onChange={(e) => updateColumnMapping('email', e.target.value === '' ? null : parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="">선택 안함</option>
+                        {fileHeaders.map((header, idx) => (
+                          <option key={idx} value={idx}>{header}</option>
+                        ))}
+                      </select>
+                      {columnMapping.email !== null && rawFileData[0] && (
+                        <p className="text-xs text-slate-500">
+                          예시: {rawFileData[0][columnMapping.email] || '-'}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 주소 */}
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">주소</label>
+                      <select
+                        value={columnMapping.address ?? ''}
+                        onChange={(e) => updateColumnMapping('address', e.target.value === '' ? null : parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="">선택 안함</option>
+                        {fileHeaders.map((header, idx) => (
+                          <option key={idx} value={idx}>{header}</option>
+                        ))}
+                      </select>
+                      {columnMapping.address !== null && rawFileData[0] && (
+                        <p className="text-xs text-slate-500">
+                          예시: {rawFileData[0][columnMapping.address] || '-'}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 메모 */}
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">메모 / 비고</label>
+                      <select
+                        value={columnMapping.notes ?? ''}
+                        onChange={(e) => updateColumnMapping('notes', e.target.value === '' ? null : parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="">선택 안함</option>
+                        {fileHeaders.map((header, idx) => (
+                          <option key={idx} value={idx}>{header}</option>
+                        ))}
+                      </select>
+                      {columnMapping.notes !== null && rawFileData[0] && (
+                        <p className="text-xs text-slate-500">
+                          예시: {rawFileData[0][columnMapping.notes] || '-'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 파일 헤더 미리보기 */}
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-slate-700 mb-2">파일 컬럼 목록</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {fileHeaders.map((header, idx) => {
+                        const isUsed = Object.values(columnMapping).includes(idx)
+                        return (
+                          <span
+                            key={idx}
+                            className={`px-2 py-1 rounded text-xs ${
+                              isUsed
+                                ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            }`}
+                          >
+                            {header}
+                          </span>
+                        )
+                      })}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">
+                      * 매핑되지 않은 컬럼은 메모에 추가정보로 저장됩니다.
+                    </p>
+                  </div>
+
+                  {/* 데이터 샘플 미리보기 */}
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-slate-700 mb-2">데이터 샘플 (처음 3개)</h5>
+                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-50">
+                            <tr>
+                              {fileHeaders.map((header, idx) => (
+                                <th key={idx} className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">
+                                  {header}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {rawFileData.slice(0, 3).map((row, rowIdx) => (
+                              <tr key={rowIdx} className="hover:bg-slate-50">
+                                {fileHeaders.map((_, colIdx) => (
+                                  <td key={colIdx} className="px-3 py-2 text-slate-700 whitespace-nowrap">
+                                    {row[colIdx] || '-'}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 단계 3: 미리보기 */}
               {importStep === 'preview' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -1463,10 +1796,10 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                       등록할 업체 목록 ({importPreview.length}개)
                     </h4>
                     <button
-                      onClick={() => setImportStep('upload')}
+                      onClick={() => setImportStep('mapping')}
                       className="text-sm text-slate-600 hover:text-slate-800"
                     >
-                      다시 선택
+                      컬럼 매핑 수정
                     </button>
                   </div>
 
@@ -1638,6 +1971,15 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               >
                 {importStep === 'result' ? '닫기' : '취소'}
               </button>
+              {importStep === 'mapping' && (
+                <button
+                  onClick={handleMappingConfirm}
+                  disabled={columnMapping.company_name === null}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  다음: 미리보기
+                </button>
+              )}
               {importStep === 'preview' && (
                 <button
                   onClick={handleImport}
