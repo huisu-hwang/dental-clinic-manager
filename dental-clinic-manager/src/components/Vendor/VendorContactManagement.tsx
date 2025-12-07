@@ -199,10 +199,6 @@ export default function VendorContactManagement() {
       showToast('업체명을 입력해주세요.', 'warning')
       return
     }
-    if (!contactForm.phone.trim()) {
-      showToast('전화번호를 입력해주세요.', 'warning')
-      return
-    }
 
     try {
       if (editingContact) {
@@ -311,13 +307,17 @@ export default function VendorContactManagement() {
     }
   }
 
-  // 파일 파싱 (CSV/TXT/Excel 지원)
+  // 파일 파싱 (CSV/TXT/Excel 지원) - 모든 데이터 빠짐없이 캡처
   const parseFile = async (file: File): Promise<VendorContactImportData[]> => {
     const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
     const contacts: VendorContactImportData[] = []
 
-    // Excel 파일 처리 (.xlsx, .xls)
+    // 2D 배열로 파일 데이터 읽기
+    let data: string[][] = []
+    let headers: string[] = []
+
     if (extension === '.xlsx' || extension === '.xls') {
+      // Excel 파일 처리
       const arrayBuffer = await file.arrayBuffer()
       const workbook = XLSX.read(arrayBuffer, { type: 'array' })
       const sheetName = workbook.SheetNames[0]
@@ -325,169 +325,180 @@ export default function VendorContactManagement() {
 
       const worksheet = workbook.Sheets[sheetName]
       const rawData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 })
-      const data = rawData.map(row =>
+      data = rawData.map(row =>
         (Array.isArray(row) ? row : []).map(cell => String(cell ?? '').trim())
       )
+    } else {
+      // CSV/TXT 파일 처리
+      const text = await file.text()
+      const lines = text.trim().split('\n')
 
-      if (data.length < 1) return contacts
+      for (const line of lines) {
+        const trimmedLine = line.trim()
+        if (!trimmedLine) continue
 
-      // 헤더 분석 및 전화번호 컬럼 자동 감지
-      const headerRow = data[0] || []
-      const phoneColumns = detectPhoneColumns(data)
-
-      // 헤더 매핑 (유연하게)
-      const columnMap: Record<string, number> = {}
-      headerRow.forEach((header, idx) => {
-        const h = header.toLowerCase()
-        if (h.includes('업체') || h.includes('회사') || h.includes('company') || h.includes('상호')) {
-          if (!('company_name' in columnMap)) columnMap.company_name = idx
-        } else if (h.includes('담당') || h.includes('contact') || h.includes('이름') || h.includes('성명')) {
-          if (!('contact_person' in columnMap)) columnMap.contact_person = idx
-        } else if (h.includes('카테고리') || h.includes('분류') || h.includes('category') || h.includes('종류')) {
-          if (!('category_name' in columnMap)) columnMap.category_name = idx
-        } else if (h.includes('이메일') || h.includes('email') || h.includes('메일')) {
-          if (!('email' in columnMap)) columnMap.email = idx
-        } else if (h.includes('주소') || h.includes('address')) {
-          if (!('address' in columnMap)) columnMap.address = idx
-        } else if (h.includes('메모') || h.includes('비고') || h.includes('note') || h.includes('remarks')) {
-          if (!('notes' in columnMap)) columnMap.notes = idx
+        let parts: string[]
+        if (trimmedLine.includes('\t')) {
+          parts = trimmedLine.split('\t')
+        } else if (trimmedLine.includes(';')) {
+          parts = trimmedLine.split(';')
+        } else {
+          parts = trimmedLine.split(',')
         }
-      })
+        data.push(parts.map(p => p.trim()))
+      }
+    }
 
-      // 전화번호 컬럼 매핑 (자동 감지된 순서대로 phone, phone2에 할당)
-      phoneColumns.forEach((colIdx, i) => {
-        if (i === 0 && !('phone' in columnMap)) columnMap.phone = colIdx
-        else if (i === 1 && !('phone2' in columnMap)) columnMap.phone2 = colIdx
-      })
+    if (data.length < 1) return contacts
 
-      // 헤더가 없는 경우 기본 순서로 매핑
-      const hasHeader = Object.keys(columnMap).length > 0
-      if (!hasHeader) {
-        // 기본 순서: 업체명, 전화번호, 카테고리, 담당자, 전화번호2, 이메일, 주소, 메모
-        if (data[0]?.length) {
-          columnMap.company_name = 0
-          if ((data[0]?.length || 0) > 1) columnMap.phone = 1
-          if ((data[0]?.length || 0) > 2) columnMap.category_name = 2
-          if ((data[0]?.length || 0) > 3) columnMap.contact_person = 3
-          if ((data[0]?.length || 0) > 4) columnMap.phone2 = 4
-          if ((data[0]?.length || 0) > 5) columnMap.email = 5
-          if ((data[0]?.length || 0) > 6) columnMap.address = 6
-          if ((data[0]?.length || 0) > 7) columnMap.notes = 7
+    // 첫 줄이 헤더인지 확인
+    const firstRowLower = (data[0] || []).join(' ').toLowerCase()
+    const hasHeaderRow = firstRowLower.includes('업체') || firstRowLower.includes('회사') ||
+                         firstRowLower.includes('전화') || firstRowLower.includes('phone') ||
+                         firstRowLower.includes('company') || firstRowLower.includes('상호') ||
+                         firstRowLower.includes('이름') || firstRowLower.includes('담당')
+
+    if (hasHeaderRow) {
+      headers = data[0] || []
+      data = data.slice(1)
+    } else {
+      // 헤더가 없으면 기본 헤더 생성
+      const maxCols = Math.max(...data.map(row => row.length))
+      headers = Array.from({ length: maxCols }, (_, i) => `컬럼${i + 1}`)
+    }
+
+    // 컬럼 매핑 분석
+    const columnMap: Record<string, number> = {}
+    const mappedColumns = new Set<number>()
+
+    headers.forEach((header, idx) => {
+      const h = (header || '').toLowerCase()
+
+      // 업체명/회사명
+      if ((h.includes('업체') || h.includes('회사') || h.includes('company') || h.includes('상호') || h.includes('거래처'))
+          && !('company_name' in columnMap)) {
+        columnMap.company_name = idx
+        mappedColumns.add(idx)
+      }
+      // 담당자
+      else if ((h.includes('담당') || h.includes('contact') || h.includes('성명') || h === '이름')
+          && !('contact_person' in columnMap)) {
+        columnMap.contact_person = idx
+        mappedColumns.add(idx)
+      }
+      // 카테고리
+      else if ((h.includes('카테고리') || h.includes('분류') || h.includes('category') || h.includes('종류') || h.includes('구분'))
+          && !('category_name' in columnMap)) {
+        columnMap.category_name = idx
+        mappedColumns.add(idx)
+      }
+      // 이메일
+      else if ((h.includes('이메일') || h.includes('email') || h.includes('메일') || h.includes('e-mail'))
+          && !('email' in columnMap)) {
+        columnMap.email = idx
+        mappedColumns.add(idx)
+      }
+      // 주소
+      else if ((h.includes('주소') || h.includes('address') || h.includes('소재지'))
+          && !('address' in columnMap)) {
+        columnMap.address = idx
+        mappedColumns.add(idx)
+      }
+      // 메모/비고
+      else if ((h.includes('메모') || h.includes('비고') || h.includes('note') || h.includes('remarks') || h.includes('참고'))
+          && !('notes' in columnMap)) {
+        columnMap.notes = idx
+        mappedColumns.add(idx)
+      }
+      // 전화번호
+      else if ((h.includes('전화') || h.includes('phone') || h.includes('tel') || h.includes('연락') ||
+                h.includes('핸드폰') || h.includes('휴대') || h.includes('모바일') || h.includes('번호'))) {
+        if (!('phone' in columnMap)) {
+          columnMap.phone = idx
+          mappedColumns.add(idx)
+        } else if (!('phone2' in columnMap)) {
+          columnMap.phone2 = idx
+          mappedColumns.add(idx)
+        }
+      }
+    })
+
+    // 전화번호 컬럼 자동 감지 (헤더로 못 찾은 경우)
+    const phoneColumns = detectPhoneColumns([headers, ...data.slice(0, 5)])
+    phoneColumns.forEach((colIdx) => {
+      if (!mappedColumns.has(colIdx)) {
+        if (!('phone' in columnMap)) {
+          columnMap.phone = colIdx
+          mappedColumns.add(colIdx)
+        } else if (!('phone2' in columnMap)) {
+          columnMap.phone2 = colIdx
+          mappedColumns.add(colIdx)
+        }
+      }
+    })
+
+    // 업체명 컬럼을 못 찾았으면 첫 번째 컬럼을 업체명으로
+    if (!('company_name' in columnMap) && headers.length > 0) {
+      columnMap.company_name = 0
+      mappedColumns.add(0)
+    }
+
+    // 데이터 파싱
+    for (const row of data) {
+      if (!row || row.every(cell => !cell)) continue
+
+      // 업체명 가져오기
+      let companyName = row[columnMap.company_name] || ''
+
+      // 업체명이 없으면 첫 번째 비어있지 않은 셀을 업체명으로
+      if (!companyName) {
+        for (let i = 0; i < row.length; i++) {
+          if (row[i] && row[i].trim()) {
+            companyName = row[i].trim()
+            break
+          }
         }
       }
 
-      // 첫 줄이 헤더인지 확인
-      const firstRowLower = (data[0] || []).join(' ').toLowerCase()
-      const isFirstRowHeader = firstRowLower.includes('업체') || firstRowLower.includes('회사') ||
-                               firstRowLower.includes('전화') || firstRowLower.includes('phone')
-      const startIndex = isFirstRowHeader ? 1 : 0
+      if (!companyName) continue // 업체명이 없으면 스킵
 
-      for (let i = startIndex; i < data.length; i++) {
-        const row = data[i]
-        if (!row || row.every(cell => !cell)) continue
+      // 전화번호 가져오기 - 매핑된 컬럼에서
+      let phone = columnMap.phone !== undefined ? row[columnMap.phone] || '' : ''
+      let phone2 = columnMap.phone2 !== undefined ? row[columnMap.phone2] || '' : ''
 
-        const companyName = row[columnMap.company_name] || ''
-        let phone = row[columnMap.phone] || ''
-
-        // 전화번호가 없으면 다른 컬럼에서 자동 탐색
-        if (!phone) {
-          for (let j = 0; j < row.length; j++) {
-            if (row[j] && isPhoneNumber(String(row[j]))) {
-              phone = String(row[j])
-              break
+      // 전화번호가 없으면 전체 row에서 탐색
+      if (!phone || !isPhoneNumber(phone)) {
+        for (let j = 0; j < row.length; j++) {
+          if (row[j] && isPhoneNumber(row[j])) {
+            if (!phone || !isPhoneNumber(phone)) {
+              phone = row[j]
+            } else if (!phone2) {
+              phone2 = row[j]
             }
           }
         }
+      }
 
-        // 최소 업체명이 있어야 함
-        if (companyName) {
-          contacts.push({
-            company_name: companyName,
-            phone: phone,
-            category_name: row[columnMap.category_name] || undefined,
-            contact_person: row[columnMap.contact_person] || undefined,
-            phone2: row[columnMap.phone2] || undefined,
-            email: row[columnMap.email] || undefined,
-            address: row[columnMap.address] || undefined,
-            notes: row[columnMap.notes] || undefined
-          })
+      // 매핑되지 않은 추가 데이터 수집
+      const extra_data: Record<string, string> = {}
+      headers.forEach((header, idx) => {
+        if (!mappedColumns.has(idx) && row[idx] && row[idx].trim()) {
+          const headerName = header || `컬럼${idx + 1}`
+          extra_data[headerName] = row[idx].trim()
         }
-      }
+      })
 
-      return contacts
-    }
-
-    // CSV/TXT 파일 처리
-    const text = await file.text()
-    const lines = text.trim().split('\n')
-
-    // 첫 줄이 헤더인지 확인
-    const firstLine = lines[0]?.toLowerCase() || ''
-    const hasHeader = firstLine.includes('업체') || firstLine.includes('회사') ||
-                      firstLine.includes('company') || firstLine.includes('전화') ||
-                      firstLine.includes('phone') || firstLine.includes('이름')
-
-    const startIndex = hasHeader ? 1 : 0
-
-    // CSV 파싱하여 2D 배열로 변환
-    const data: string[][] = []
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (!line) continue
-
-      let parts: string[]
-      if (line.includes('\t')) {
-        parts = line.split('\t')
-      } else if (line.includes(';')) {
-        parts = line.split(';')
-      } else {
-        parts = line.split(',')
-      }
-      data.push(parts.map(p => p.trim()))
-    }
-
-    // 전화번호 컬럼 자동 감지
-    const phoneColumns = detectPhoneColumns(data)
-
-    for (let i = startIndex; i < data.length; i++) {
-      const parts = data[i]
-      if (!parts || parts.length < 1) continue
-
-      const companyName = parts[0]?.trim() || ''
-      let phone = parts[1]?.trim() || ''
-
-      // 두 번째 컬럼이 전화번호가 아니면 자동 탐색
-      if (!isPhoneNumber(phone)) {
-        for (const colIdx of phoneColumns) {
-          if (parts[colIdx] && isPhoneNumber(parts[colIdx])) {
-            phone = parts[colIdx]
-            break
-          }
-        }
-      }
-
-      // 전화번호를 찾지 못했으면 모든 컬럼에서 탐색
-      if (!phone) {
-        for (let j = 0; j < parts.length; j++) {
-          if (parts[j] && isPhoneNumber(parts[j])) {
-            phone = parts[j]
-            break
-          }
-        }
-      }
-
-      if (companyName) {
-        contacts.push({
-          company_name: companyName,
-          phone: phone,
-          category_name: parts[2]?.trim() || undefined,
-          contact_person: parts[3]?.trim() || undefined,
-          phone2: parts[4]?.trim() || undefined,
-          email: parts[5]?.trim() || undefined,
-          address: parts[6]?.trim() || undefined,
-          notes: parts[7]?.trim() || undefined
-        })
-      }
+      contacts.push({
+        company_name: companyName,
+        phone: phone || undefined,
+        phone2: phone2 || undefined,
+        category_name: columnMap.category_name !== undefined ? row[columnMap.category_name] || undefined : undefined,
+        contact_person: columnMap.contact_person !== undefined ? row[columnMap.contact_person] || undefined : undefined,
+        email: columnMap.email !== undefined ? row[columnMap.email] || undefined : undefined,
+        address: columnMap.address !== undefined ? row[columnMap.address] || undefined : undefined,
+        notes: columnMap.notes !== undefined ? row[columnMap.notes] || undefined : undefined,
+        extra_data: Object.keys(extra_data).length > 0 ? extra_data : undefined
+      })
     }
 
     return contacts
@@ -1021,7 +1032,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    전화번호 <span className="text-red-500">*</span>
+                    전화번호
                   </label>
                   <input
                     type="tel"
@@ -1350,15 +1361,27 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     </button>
                   </div>
 
+                  {/* 카테고리 자동 생성 안내 */}
+                  {importPreview.some(item => item.category_name) && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-sm text-green-700">
+                        <strong>카테고리 자동 생성:</strong> 파일에 포함된 카테고리가 자동으로 생성됩니다.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="border border-slate-200 rounded-lg overflow-hidden">
-                    <div className="max-h-96 overflow-y-auto">
-                      <table className="w-full text-sm">
+                    <div className="max-h-96 overflow-x-auto overflow-y-auto">
+                      <table className="w-full text-sm min-w-[800px]">
                         <thead className="bg-slate-50 sticky top-0">
                           <tr>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600">업체명</th>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600">전화번호</th>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600">카테고리</th>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600">담당자</th>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">업체명</th>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">전화번호</th>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">카테고리</th>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">담당자</th>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">이메일</th>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">주소</th>
+                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">추가정보</th>
                             <th className="px-3 py-2 w-10"></th>
                           </tr>
                         </thead>
@@ -1370,15 +1393,16 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                                   type="text"
                                   value={item.company_name}
                                   onChange={(e) => updatePreviewItem(index, 'company_name', e.target.value)}
-                                  className="w-full px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  className="w-full min-w-[120px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
                                 />
                               </td>
                               <td className="px-3 py-2">
                                 <input
                                   type="text"
-                                  value={item.phone}
+                                  value={item.phone || ''}
                                   onChange={(e) => updatePreviewItem(index, 'phone', e.target.value)}
-                                  className="w-full px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  className="w-full min-w-[100px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  placeholder="-"
                                 />
                               </td>
                               <td className="px-3 py-2">
@@ -1386,7 +1410,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                                   type="text"
                                   value={item.category_name || ''}
                                   onChange={(e) => updatePreviewItem(index, 'category_name', e.target.value)}
-                                  className="w-full px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  className="w-full min-w-[80px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
                                   placeholder="-"
                                 />
                               </td>
@@ -1395,9 +1419,38 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                                   type="text"
                                   value={item.contact_person || ''}
                                   onChange={(e) => updatePreviewItem(index, 'contact_person', e.target.value)}
-                                  className="w-full px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  className="w-full min-w-[80px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
                                   placeholder="-"
                                 />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={item.email || ''}
+                                  onChange={(e) => updatePreviewItem(index, 'email', e.target.value)}
+                                  className="w-full min-w-[120px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  placeholder="-"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={item.address || ''}
+                                  onChange={(e) => updatePreviewItem(index, 'address', e.target.value)}
+                                  className="w-full min-w-[150px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  placeholder="-"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                {item.extra_data && Object.keys(item.extra_data).length > 0 ? (
+                                  <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded" title={
+                                    Object.entries(item.extra_data).map(([k, v]) => `${k}: ${v}`).join('\n')
+                                  }>
+                                    +{Object.keys(item.extra_data).length}개
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300">-</span>
+                                )}
                               </td>
                               <td className="px-3 py-2">
                                 <button
@@ -1414,10 +1467,15 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
                     <p className="text-sm text-blue-700">
                       <strong>팁:</strong> 표에서 직접 값을 수정할 수 있습니다. 등록하지 않을 항목은 X 버튼으로 제거하세요.
                     </p>
+                    {importPreview.some(item => item.extra_data) && (
+                      <p className="text-sm text-blue-600">
+                        <strong>추가정보:</strong> 매핑되지 않은 컬럼 데이터는 메모에 자동 저장됩니다.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

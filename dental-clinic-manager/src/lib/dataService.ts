@@ -3575,15 +3575,27 @@ export const dataService = {
 
       // 연락처 일괄 등록
       for (const contact of contacts) {
-        if (!contact.company_name || !contact.phone) {
+        if (!contact.company_name) {
           result.failed++
-          result.errors.push(`필수 정보 누락: ${contact.company_name || '업체명 없음'}`)
+          result.errors.push('업체명이 없는 데이터가 있습니다.')
           continue
         }
 
         const categoryId = contact.category_name
           ? categoryMap.get(contact.category_name.toLowerCase()) || null
           : null
+
+        // extra_data가 있으면 notes에 추가
+        let notes = contact.notes || ''
+        if (contact.extra_data && Object.keys(contact.extra_data).length > 0) {
+          const extraInfo = Object.entries(contact.extra_data)
+            .filter(([, value]) => value && value.trim())
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(' | ')
+          if (extraInfo) {
+            notes = notes ? `${notes}\n[추가정보] ${extraInfo}` : `[추가정보] ${extraInfo}`
+          }
+        }
 
         const { error } = await supabase
           .from('vendor_contacts')
@@ -3592,11 +3604,11 @@ export const dataService = {
             company_name: contact.company_name,
             category_id: categoryId,
             contact_person: contact.contact_person || null,
-            phone: contact.phone,
+            phone: contact.phone || '',
             phone2: contact.phone2 || null,
             email: contact.email || null,
             address: contact.address || null,
-            notes: contact.notes || null,
+            notes: notes || null,
             is_favorite: false
           })
 

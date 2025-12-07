@@ -53,9 +53,10 @@ export interface VendorContactImportData {
   company_name: string;
   category_name?: string;
   contact_person?: string;
-  phone: string;
+  phone?: string;  // 선택적 - 자동 감지됨
   phone2?: string;
   email?: string;
   address?: string;
   notes?: string;
+  extra_data?: Record<string, string>; // 매핑되지 않은 추가 컬럼 데이터
 }
