@@ -115,6 +115,8 @@ export default function VendorContactManagement() {
   const [showImportModal, setShowImportModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   // 선택 상태
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set())
@@ -244,6 +246,7 @@ export default function VendorContactManagement() {
 
   // 연락처 삭제
   const handleDeleteContact = async (contactId: string) => {
+    setIsDeleting(true)
     try {
       const result = await dataService.deleteVendorContact(contactId)
       if (result.error) {
@@ -260,6 +263,8 @@ export default function VendorContactManagement() {
       loadData()
     } catch (error) {
       showToast('삭제에 실패했습니다.', 'error')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -289,6 +294,7 @@ export default function VendorContactManagement() {
   const handleBulkDelete = async () => {
     if (selectedContacts.size === 0) return
 
+    setIsBulkDeleting(true)
     let successCount = 0
     let failCount = 0
 
@@ -305,6 +311,7 @@ export default function VendorContactManagement() {
       }
     }
 
+    setIsBulkDeleting(false)
     setShowBulkDeleteConfirm(false)
     setSelectedContacts(new Set())
 
@@ -2018,20 +2025,29 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               <h3 className="text-lg font-semibold text-slate-800">업체 삭제</h3>
             </div>
             <p className="text-slate-600 mb-6">
-              이 업체를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+              이 업체를 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium"
+                disabled={isDeleting}
+                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 disabled:opacity-50 rounded-lg transition-colors text-sm font-medium"
               >
                 취소
               </button>
               <button
                 onClick={() => handleDeleteContact(showDeleteConfirm)}
-                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
+                disabled={isDeleting}
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
               >
-                삭제
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    삭제 중...
+                  </>
+                ) : (
+                  '삭제'
+                )}
               </button>
             </div>
           </div>
@@ -2049,7 +2065,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               <h3 className="text-lg font-semibold text-slate-800">일괄 삭제</h3>
             </div>
             <p className="text-slate-600 mb-2">
-              선택한 <strong className="text-red-600">{selectedContacts.size}개</strong> 업체를 삭제하시겠습니까?
+              선택한 <strong className="text-red-600">{selectedContacts.size}개</strong> 업체를 정말 삭제하시겠습니까?
             </p>
             <p className="text-sm text-slate-500 mb-6">
               이 작업은 되돌릴 수 없습니다.
@@ -2057,15 +2073,24 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowBulkDeleteConfirm(false)}
-                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium"
+                disabled={isBulkDeleting}
+                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 disabled:opacity-50 rounded-lg transition-colors text-sm font-medium"
               >
                 취소
               </button>
               <button
                 onClick={handleBulkDelete}
-                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
+                disabled={isBulkDeleting}
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
               >
-                {selectedContacts.size}개 삭제
+                {isBulkDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    삭제 중...
+                  </>
+                ) : (
+                  `${selectedContacts.size}개 삭제`
+                )}
               </button>
             </div>
           </div>

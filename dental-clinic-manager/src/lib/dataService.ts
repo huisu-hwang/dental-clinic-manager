@@ -3325,7 +3325,7 @@ export const dataService = {
         query = query.or(`company_name.ilike.${searchTerm},contact_person.ilike.${searchTerm},phone.ilike.${searchTerm},phone2.ilike.${searchTerm}`)
       }
 
-      const { data, error } = await query.order('is_favorite', { ascending: false }).order('company_name', { ascending: true })
+      const { data, error } = await query.order('is_favorite', { ascending: false }).order('company_name', { ascending: true }).limit(1000)
 
       if (error) {
         console.error('[getVendorContacts] Error:', error)
