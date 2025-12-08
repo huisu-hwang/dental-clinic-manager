@@ -1,6 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '@/types/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createCookieStorageAdapter } from '../cookieStorageAdapter'
 
 /**
  * 싱글톤 Supabase 클라이언트 인스턴스
@@ -29,75 +30,6 @@ function isIOSDevice(): boolean {
 }
 
 /**
- * Storage 사용 가능 여부 체크
- */
-function isStorageAvailable(storage: Storage): boolean {
-  try {
-    const testKey = '__supabase_storage_test__'
-    storage.setItem(testKey, 'test')
-    storage.removeItem(testKey)
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
- * iOS 호환 안전한 Storage 생성
- * - localStorage 사용 가능 시 localStorage 사용
- * - localStorage 불가 시 sessionStorage로 폴백
- * - 둘 다 불가 시 메모리 스토리지 사용 (세션 유지는 안 되지만 앱 크래시 방지)
- */
-function createSafeStorage(): Storage {
-  // 메모리 기반 폴백 스토리지
-  let memoryStorage: Record<string, string> = {}
-  const memoryStorageImpl: Storage = {
-    get length() {
-      return Object.keys(memoryStorage).length
-    },
-    key(index: number) {
-      return Object.keys(memoryStorage)[index] ?? null
-    },
-    getItem(key: string) {
-      return memoryStorage[key] ?? null
-    },
-    setItem(key: string, value: string) {
-      memoryStorage[key] = value
-    },
-    removeItem(key: string) {
-      delete memoryStorage[key]
-    },
-    clear() {
-      memoryStorage = {}
-    }
-  }
-
-  // 1. localStorage 시도
-  if (typeof localStorage !== 'undefined' && isStorageAvailable(localStorage)) {
-    console.log('[Supabase Storage] Using localStorage')
-    return localStorage
-  }
-
-  // 2. sessionStorage 폴백 (iOS Private Browsing에서 유용)
-  if (typeof sessionStorage !== 'undefined' && isStorageAvailable(sessionStorage)) {
-    console.warn('[Supabase Storage] localStorage unavailable, falling back to sessionStorage')
-    console.warn('[Supabase Storage] Session will not persist after browser/tab close')
-    return sessionStorage
-  }
-
-  // 3. 메모리 스토리지 폴백 (최후의 수단)
-  console.error('[Supabase Storage] Both localStorage and sessionStorage unavailable')
-  console.error('[Supabase Storage] Using in-memory storage - session will not persist')
-
-  if (isIOSDevice()) {
-    console.warn('[Supabase Storage] iOS device detected with storage restrictions')
-    console.warn('[Supabase Storage] This may be Private Browsing mode')
-  }
-
-  return memoryStorageImpl
-}
-
-/**
  * 브라우저 환경 전용 Supabase 클라이언트 (싱글톤)
  *
  * @supabase/ssr 사용:
@@ -106,8 +38,9 @@ function createSafeStorage(): Storage {
  * - persistSession으로 세션 유지
  * - Client Component, useEffect, 이벤트 핸들러에서 사용
  *
- * iOS 호환성:
- * - localStorage 불가 시 sessionStorage/메모리 스토리지로 폴백
+ * iOS Safari 호환성 (핵심 변경):
+ * - 쿠키 기반 스토리지 어댑터 사용 (localStorage 대신)
+ * - iOS Safari에서 앱 종료 후에도 세션 유지
  * - PKCE flow로 보안 강화
  * - 미들웨어와 동일한 기본 storageKey 사용 (일관성 유지)
  *
@@ -140,8 +73,12 @@ export function createClient() {
 
   // iOS 디바이스 감지 및 로깅
   if (isIOSDevice()) {
-    console.log('[Supabase Browser Client] iOS device detected - using safe storage wrapper')
+    console.log('[Supabase Browser Client] iOS device detected - using cookie-based storage for session persistence')
   }
+
+  // 쿠키 기반 스토리지 어댑터 생성
+  // iOS Safari에서 앱 종료 후에도 세션 유지를 위해 쿠키 사용
+  const cookieStorage = createCookieStorageAdapter()
 
   // 싱글톤 인스턴스 생성 (iOS 호환 설정 포함)
   // 주의: storageKey는 미들웨어와 일관성을 위해 기본값 사용
@@ -155,7 +92,7 @@ export function createClient() {
         persistSession: true,    // 세션 유지
         detectSessionInUrl: true, // URL에서 세션 감지
         flowType: 'pkce',        // PKCE flow 명시적 사용 (보안 강화)
-        storage: createSafeStorage(), // iOS 호환 안전한 스토리지
+        storage: cookieStorage,  // 쿠키 기반 스토리지 (iOS Safari 호환)
         // storageKey 제거: 기본값 사용하여 미들웨어와 일관성 유지
       },
       global: {
