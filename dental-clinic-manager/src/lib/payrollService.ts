@@ -150,6 +150,59 @@ class PayrollService {
   }
 
   /**
+   * 세후 급여(실수령액)에서 세전 급여 역산
+   * 이진 탐색을 사용하여 목표 실수령액에 맞는 세전 급여 계산
+   */
+  calculateGrossFromNet(
+    targetNetPay: number,
+    options: {
+      nationalPension?: boolean
+      healthInsurance?: boolean
+      longTermCare?: boolean
+      employmentInsurance?: boolean
+      incomeTaxEnabled?: boolean
+      dependentsCount?: number
+    } = {}
+  ): { grossPay: number; deductions: DeductionCalculation; actualNetPay: number } {
+    // 이진 탐색으로 세전 급여 찾기
+    let low = targetNetPay  // 최소 세전 급여는 세후 급여 이상
+    let high = Math.round(targetNetPay * 1.5)  // 최대 세전 급여 (약 50% 높게 설정)
+    let bestGross = targetNetPay
+    let bestDeductions = this.calculateDeductions(targetNetPay, options)
+    let bestNetPay = targetNetPay - bestDeductions.totalDeductions
+
+    // 반복 탐색 (최대 50회)
+    for (let i = 0; i < 50; i++) {
+      const mid = Math.round((low + high) / 2)
+      const deductions = this.calculateDeductions(mid, options)
+      const calculatedNetPay = mid - deductions.totalDeductions
+
+      if (Math.abs(calculatedNetPay - targetNetPay) < Math.abs(bestNetPay - targetNetPay)) {
+        bestGross = mid
+        bestDeductions = deductions
+        bestNetPay = calculatedNetPay
+      }
+
+      // 목표 실수령액과 충분히 가까우면 종료 (1원 이내)
+      if (Math.abs(calculatedNetPay - targetNetPay) <= 1) {
+        break
+      }
+
+      if (calculatedNetPay < targetNetPay) {
+        low = mid + 1
+      } else {
+        high = mid - 1
+      }
+    }
+
+    return {
+      grossPay: bestGross,
+      deductions: bestDeductions,
+      actualNetPay: bestNetPay
+    }
+  }
+
+  /**
    * 급여 전체 계산 (지급액, 공제액, 실수령액)
    */
   calculatePayroll(
@@ -593,19 +646,60 @@ class PayrollService {
           continue // 이미 존재하면 건너뜀
         }
 
-        // 급여 계산
-        const calculation = this.calculatePayroll(
-          setting.base_salary,
-          setting.allowances || {},
-          {
-            nationalPension: setting.national_pension,
-            healthInsurance: setting.health_insurance,
-            longTermCare: setting.long_term_care,
-            employmentInsurance: setting.employment_insurance,
-            incomeTaxEnabled: setting.income_tax_enabled,
-            dependentsCount: setting.dependents_count
+        // 수당 총액 계산
+        const allowancesTotal = this.calculateAllowancesTotal(setting.allowances || {})
+        const inputSalary = setting.base_salary + allowancesTotal
+
+        // 공제 옵션
+        const deductionOptions = {
+          nationalPension: setting.national_pension,
+          healthInsurance: setting.health_insurance,
+          longTermCare: setting.long_term_care,
+          employmentInsurance: setting.employment_insurance,
+          incomeTaxEnabled: setting.income_tax_enabled,
+          dependentsCount: setting.dependents_count
+        }
+
+        let totalEarnings: number
+        let deductions: DeductionCalculation
+        let netPay: number
+        let calculatedBaseSalary: number
+        let calculatedAllowances: Allowances
+
+        if (setting.salary_type === 'net') {
+          // 세후 급여인 경우: 입력된 금액을 실수령액으로 보고 세전 급여 역산
+          const targetNetPay = inputSalary
+          const result = this.calculateGrossFromNet(targetNetPay, deductionOptions)
+
+          totalEarnings = result.grossPay
+          deductions = result.deductions
+          netPay = result.actualNetPay
+
+          // 역산된 세전 급여를 기본급과 수당 비율로 분배
+          if (inputSalary > 0) {
+            const ratio = result.grossPay / inputSalary
+            calculatedBaseSalary = Math.round(setting.base_salary * ratio)
+            calculatedAllowances = {}
+            for (const [key, value] of Object.entries(setting.allowances || {})) {
+              calculatedAllowances[key] = Math.round((Number(value) || 0) * ratio)
+            }
+          } else {
+            calculatedBaseSalary = result.grossPay
+            calculatedAllowances = {}
           }
-        )
+        } else {
+          // 세전 급여인 경우: 기존 로직 사용
+          const calculation = this.calculatePayroll(
+            setting.base_salary,
+            setting.allowances || {},
+            deductionOptions
+          )
+          totalEarnings = calculation.totalEarnings
+          deductions = calculation.deductions
+          netPay = calculation.netPay
+          calculatedBaseSalary = setting.base_salary
+          calculatedAllowances = setting.allowances || {}
+        }
 
         // 급여일 계산 (해당 월의 마지막 날을 초과하지 않도록)
         const lastDayOfMonth = new Date(year, month, 0).getDate()
@@ -622,17 +716,17 @@ class PayrollService {
             payment_year: year,
             payment_month: month,
             payment_date: paymentDate,
-            base_salary: setting.base_salary,
-            allowances: setting.allowances || {},
-            total_earnings: calculation.totalEarnings,
-            national_pension: calculation.deductions.nationalPension,
-            health_insurance: calculation.deductions.healthInsurance,
-            long_term_care: calculation.deductions.longTermCare,
-            employment_insurance: calculation.deductions.employmentInsurance,
-            income_tax: calculation.deductions.incomeTax,
-            local_income_tax: calculation.deductions.localIncomeTax,
-            total_deductions: calculation.deductions.totalDeductions,
-            net_pay: calculation.netPay,
+            base_salary: calculatedBaseSalary,
+            allowances: calculatedAllowances,
+            total_earnings: totalEarnings,
+            national_pension: deductions.nationalPension,
+            health_insurance: deductions.healthInsurance,
+            long_term_care: deductions.longTermCare,
+            employment_insurance: deductions.employmentInsurance,
+            income_tax: deductions.incomeTax,
+            local_income_tax: deductions.localIncomeTax,
+            total_deductions: deductions.totalDeductions,
+            net_pay: netPay,
             status: 'draft',
             created_by: currentUserId
           })

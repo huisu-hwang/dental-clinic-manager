@@ -17,17 +17,29 @@ const RATES = {
   employmentInsurance: 0.009,
 }
 
+interface DeductionOptions {
+  nationalPension?: boolean
+  healthInsurance?: boolean
+  longTermCare?: boolean
+  employmentInsurance?: boolean
+  incomeTaxEnabled?: boolean
+  dependentsCount?: number
+}
+
+interface DeductionResult {
+  nationalPension: number
+  healthInsurance: number
+  longTermCare: number
+  employmentInsurance: number
+  incomeTax: number
+  localIncomeTax: number
+  totalDeductions: number
+}
+
 function calculateDeductions(
   totalEarnings: number,
-  options: {
-    nationalPension?: boolean
-    healthInsurance?: boolean
-    longTermCare?: boolean
-    employmentInsurance?: boolean
-    incomeTaxEnabled?: boolean
-    dependentsCount?: number
-  } = {}
-) {
+  options: DeductionOptions = {}
+): DeductionResult {
   const {
     nationalPension = true,
     healthInsurance = true,
@@ -61,6 +73,49 @@ function calculateDeductions(
     incomeTax,
     localIncomeTax,
     totalDeductions
+  }
+}
+
+/**
+ * 세후 급여(실수령액)에서 세전 급여 역산
+ * 이진 탐색을 사용하여 목표 실수령액에 맞는 세전 급여 계산
+ */
+function calculateGrossFromNet(
+  targetNetPay: number,
+  options: DeductionOptions = {}
+): { grossPay: number; deductions: DeductionResult; actualNetPay: number } {
+  let low = targetNetPay
+  let high = Math.round(targetNetPay * 1.5)
+  let bestGross = targetNetPay
+  let bestDeductions = calculateDeductions(targetNetPay, options)
+  let bestNetPay = targetNetPay - bestDeductions.totalDeductions
+
+  for (let i = 0; i < 50; i++) {
+    const mid = Math.round((low + high) / 2)
+    const deductions = calculateDeductions(mid, options)
+    const calculatedNetPay = mid - deductions.totalDeductions
+
+    if (Math.abs(calculatedNetPay - targetNetPay) < Math.abs(bestNetPay - targetNetPay)) {
+      bestGross = mid
+      bestDeductions = deductions
+      bestNetPay = calculatedNetPay
+    }
+
+    if (Math.abs(calculatedNetPay - targetNetPay) <= 1) {
+      break
+    }
+
+    if (calculatedNetPay < targetNetPay) {
+      low = mid + 1
+    } else {
+      high = mid - 1
+    }
+  }
+
+  return {
+    grossPay: bestGross,
+    deductions: bestDeductions,
+    actualNetPay: bestNetPay
   }
 }
 
@@ -119,18 +174,54 @@ export async function POST(request: NextRequest) {
         (sum: number, val: any) => sum + (Number(val) || 0), 0
       )
 
-      // 총 지급액
-      const totalEarnings = setting.base_salary + allowancesTotal
+      // 입력된 급여 (기본급 + 수당)
+      const inputSalary = setting.base_salary + allowancesTotal
 
-      // 공제액 계산
-      const deductions = calculateDeductions(totalEarnings, {
+      // 공제 옵션
+      const deductionOptions: DeductionOptions = {
         nationalPension: setting.national_pension,
         healthInsurance: setting.health_insurance,
         longTermCare: setting.long_term_care,
         employmentInsurance: setting.employment_insurance,
         incomeTaxEnabled: setting.income_tax_enabled,
         dependentsCount: setting.dependents_count
-      })
+      }
+
+      let totalEarnings: number
+      let deductions: DeductionResult
+      let netPay: number
+      let calculatedBaseSalary: number
+      let calculatedAllowances: Record<string, number>
+
+      if (setting.salary_type === 'net') {
+        // 세후 급여인 경우: 입력된 금액을 실수령액으로 보고 세전 급여 역산
+        const targetNetPay = inputSalary
+        const result = calculateGrossFromNet(targetNetPay, deductionOptions)
+
+        totalEarnings = result.grossPay
+        deductions = result.deductions
+        netPay = result.actualNetPay
+
+        // 역산된 세전 급여를 기본급과 수당 비율로 분배
+        if (inputSalary > 0) {
+          const ratio = result.grossPay / inputSalary
+          calculatedBaseSalary = Math.round(setting.base_salary * ratio)
+          calculatedAllowances = {}
+          for (const [key, value] of Object.entries(setting.allowances || {})) {
+            calculatedAllowances[key] = Math.round((Number(value) || 0) * ratio)
+          }
+        } else {
+          calculatedBaseSalary = result.grossPay
+          calculatedAllowances = {}
+        }
+      } else {
+        // 세전 급여인 경우: 기존 로직 사용
+        totalEarnings = inputSalary
+        deductions = calculateDeductions(totalEarnings, deductionOptions)
+        netPay = totalEarnings - deductions.totalDeductions
+        calculatedBaseSalary = setting.base_salary
+        calculatedAllowances = setting.allowances || {}
+      }
 
       // 급여일 계산
       const lastDayOfMonth = new Date(year, month, 0).getDate()
@@ -147,8 +238,8 @@ export async function POST(request: NextRequest) {
           payment_year: year,
           payment_month: month,
           payment_date: paymentDate,
-          base_salary: setting.base_salary,
-          allowances: setting.allowances || {},
+          base_salary: calculatedBaseSalary,
+          allowances: calculatedAllowances,
           total_earnings: totalEarnings,
           national_pension: deductions.nationalPension,
           health_insurance: deductions.healthInsurance,
@@ -157,7 +248,7 @@ export async function POST(request: NextRequest) {
           income_tax: deductions.incomeTax,
           local_income_tax: deductions.localIncomeTax,
           total_deductions: deductions.totalDeductions,
-          net_pay: totalEarnings - deductions.totalDeductions,
+          net_pay: netPay,
           status: 'draft',
           created_by: current_user_id
         })
