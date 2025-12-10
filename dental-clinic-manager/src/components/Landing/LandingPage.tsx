@@ -13,7 +13,6 @@ import {
   CalendarDaysIcon,
   ClipboardDocumentListIcon,
   BuildingOffice2Icon,
-  TruckIcon,
   ShieldCheckIcon,
   CpuChipIcon,
   GlobeAltIcon,
@@ -116,8 +115,8 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
     {
       icon: BuildingOffice2Icon,
       title: "병원 설정",
-      description: "병원 정보, 진료 시간, 다중 지점까지 완벽하게 설정하세요.",
-      details: ["병원 기본 정보 관리", "진료 시간 설정", "다중 지점 운영", "병원 로고 업로드", "공개 설정 관리"],
+      description: "병원 정보, 진료 시간, 운영 설정을 완벽하게 관리하세요.",
+      details: ["병원 기본 정보 관리", "진료 시간 설정", "휴무일 설정", "병원 로고 업로드", "공개 설정 관리"],
       color: "from-teal-500 to-cyan-500"
     },
     {
@@ -128,20 +127,16 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
       color: "from-rose-500 to-pink-500"
     },
     {
-      icon: TruckIcon,
-      title: "거래처 관리",
-      description: "거래처 정보와 담당자 연락처를 한 곳에서 관리하세요.",
-      details: ["거래처 정보 등록", "담당자 연락처 관리", "거래 조건 설정", "거래 이력 추적", "빠른 검색"],
-      color: "from-slate-500 to-gray-600"
+      icon: DocumentTextIcon,
+      title: "급여 명세서 관리",
+      description: "직원별 급여 명세서를 손쉽게 생성하고 관리하세요.",
+      details: ["급여 명세서 생성", "근로계약서 연동", "급여 항목 설정", "명세서 발급 이력", "PDF 내보내기"],
+      color: "from-emerald-500 to-teal-500"
     }
   ]
 
   // FAQ 목록
   const faqs = [
-    {
-      question: "정말 평생 무료인가요?",
-      answer: "네, 덴탈매니저의 모든 기능을 평생 무료로 사용하실 수 있습니다. 숨겨진 비용이나 추후 유료 전환 없이, 지금 제공되는 모든 기능을 영구적으로 무료로 이용하실 수 있습니다."
-    },
     {
       question: "설치가 필요한가요?",
       answer: "아니요! 덴탈매니저는 웹 기반 서비스로, 별도의 설치 없이 인터넷 브라우저에서 바로 사용하실 수 있습니다. PC, 태블릿, 스마트폰 어디서든 접속 가능합니다."
@@ -151,8 +146,8 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
       answer: "덴탈매니저는 글로벌 클라우드 서비스를 통해 데이터를 암호화하여 안전하게 보관합니다. 자동 백업 기능으로 데이터 손실 걱정 없이 사용하실 수 있습니다."
     },
     {
-      question: "여러 지점 운영도 가능한가요?",
-      answer: "네, 덴탈매니저는 다중 지점 운영을 지원합니다. 각 지점별로 별도의 데이터와 설정을 관리할 수 있으며, 통합 통계도 확인하실 수 있습니다."
+      question: "급여 명세서 관리도 가능한가요?",
+      answer: "네, 덴탈매니저에서 직원별 급여 명세서를 생성하고 관리할 수 있습니다. 근로계약서 정보와 연동하여 간편하게 급여 정보를 관리하세요."
     },
     {
       question: "직원 권한 설정이 가능한가요?",
@@ -197,7 +192,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                 onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
                 className="text-slate-600 hover:text-blue-600 font-medium transition-colors"
               >
-                요금
+                시작하기
               </button>
               <button
                 onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })}
@@ -233,10 +228,10 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
-            {/* 무료 배지 */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full mb-8 animate-bounce" style={{ animationDuration: '2s' }}>
-              <SparklesIcon className="w-5 h-5 text-green-600" />
-              <span className="text-green-700 font-semibold">평생 무료로 모든 기능 사용</span>
+            {/* 배지 */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full mb-8 animate-bounce" style={{ animationDuration: '2s' }}>
+              <SparklesIcon className="w-5 h-5 text-blue-600" />
+              <span className="text-blue-700 font-semibold">치과 업무 관리의 새로운 표준</span>
             </div>
 
             {/* 메인 헤드라인 */}
@@ -515,32 +510,32 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
         </div>
       </section>
 
-      {/* 평생 무료 섹션 */}
+      {/* 시작하기 섹션 */}
       <section id="pricing" className="py-20 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 lg:p-12 overflow-hidden">
             {/* 배경 장식 */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full filter blur-3xl opacity-20" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full filter blur-3xl opacity-20" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full filter blur-3xl opacity-20" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full filter blur-3xl opacity-20" />
 
             <div className="relative text-center">
-              <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full text-white font-bold text-lg mb-8">
+              <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full text-white font-bold text-lg mb-8">
                 <SparklesIcon className="w-6 h-6" />
-                평생 무료
+                ALL-IN-ONE
               </div>
 
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
                 모든 기능을
                 <br />
-                <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                  영원히 무료로
+                <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                  하나의 플랫폼에서
                 </span>
               </h2>
 
               <p className="text-slate-300 text-lg mb-8 max-w-2xl mx-auto">
-                숨겨진 비용도, 유료 전환도 없습니다.
+                복잡한 설치 과정 없이 바로 시작하세요.
                 <br />
-                지금 제공되는 모든 기능을 평생 무료로 사용하세요.
+                웹 브라우저만 있으면 어디서든 사용할 수 있습니다.
               </p>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
@@ -552,11 +547,11 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                   "연차 관리",
                   "직원 권한 관리",
                   "프로토콜 문서화",
-                  "거래처 관리",
-                  "무제한 데이터 저장"
+                  "급여 명세서 관리",
+                  "클라우드 데이터 저장"
                 ].map((feature, i) => (
                   <div key={i} className="flex items-center gap-2 text-slate-300">
-                    <CheckCircleIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    <CheckCircleIcon className="w-5 h-5 text-blue-400 flex-shrink-0" />
                     <span>{feature}</span>
                   </div>
                 ))}
@@ -564,9 +559,9 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
 
               <button
                 onClick={onShowSignup}
-                className="group px-10 py-4 bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold text-xl rounded-2xl transition-all shadow-xl shadow-green-500/30 hover:shadow-green-500/50 hover:-translate-y-1 flex items-center gap-2 mx-auto"
+                className="group px-10 py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-xl rounded-2xl transition-all shadow-xl shadow-blue-500/30 hover:shadow-blue-500/50 hover:-translate-y-1 flex items-center gap-2 mx-auto"
               >
-                지금 바로 무료로 시작하기
+                지금 바로 시작하기
                 <ArrowRightIcon className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
