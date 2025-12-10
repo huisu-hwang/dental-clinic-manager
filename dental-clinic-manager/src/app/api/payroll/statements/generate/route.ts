@@ -1,6 +1,7 @@
 /**
  * 급여 명세서 자동 생성 API
  * POST: 특정 월의 급여 명세서 일괄 생성
+ * 비과세 수당을 고려한 계산
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -15,6 +16,20 @@ const RATES = {
   healthInsurance: 0.03545,
   longTermCare: 0.1295,
   employmentInsurance: 0.009,
+}
+
+// 비과세 수당 한도 (월 기준)
+const NON_TAXABLE_LIMITS: Record<string, number> = {
+  meal: 200000,           // 식대: 월 20만원 한도
+  vehicle: 200000,        // 자가운전보조금: 월 20만원 한도
+  childcare: 200000,      // 자녀보육수당: 월 20만원 한도
+}
+
+// 수당명과 비과세 타입 매핑
+const ALLOWANCE_TO_NON_TAXABLE_TYPE: Record<string, string> = {
+  '식대': 'meal',
+  '자가운전보조금': 'vehicle',
+  '자녀보육수당': 'childcare',
 }
 
 interface DeductionOptions {
@@ -36,9 +51,37 @@ interface DeductionResult {
   totalDeductions: number
 }
 
+interface Allowances {
+  [key: string]: number
+}
+
+/**
+ * 비과세 금액 계산
+ */
+function calculateNonTaxableAmount(allowances: Allowances): number {
+  let totalNonTaxable = 0
+
+  for (const [name, amount] of Object.entries(allowances)) {
+    const nonTaxableType = ALLOWANCE_TO_NON_TAXABLE_TYPE[name]
+    if (nonTaxableType && amount > 0) {
+      const limit = NON_TAXABLE_LIMITS[nonTaxableType] || 0
+      totalNonTaxable += Math.min(amount, limit)
+    }
+  }
+
+  return totalNonTaxable
+}
+
+/**
+ * 4대보험 및 세금 공제액 계산
+ * @param totalEarnings - 총 급여 (세전)
+ * @param options - 공제 옵션
+ * @param nonTaxableAmount - 비과세 금액 (공제 대상에서 제외)
+ */
 function calculateDeductions(
   totalEarnings: number,
-  options: DeductionOptions = {}
+  options: DeductionOptions = {},
+  nonTaxableAmount: number = 0
 ): DeductionResult {
   const {
     nationalPension = true,
@@ -49,15 +92,26 @@ function calculateDeductions(
     dependentsCount = 1
   } = options
 
-  const pensionBase = Math.min(totalEarnings, 5900000)
-  const nationalPensionAmount = nationalPension ? Math.round(pensionBase * RATES.nationalPension) : 0
-  const healthInsuranceAmount = healthInsurance ? Math.round(totalEarnings * RATES.healthInsurance) : 0
-  const longTermCareAmount = longTermCare ? Math.round(healthInsuranceAmount * RATES.longTermCare) : 0
-  const employmentInsuranceAmount = employmentInsurance ? Math.round(totalEarnings * RATES.employmentInsurance) : 0
+  // 과세 대상 금액 (비과세 금액 제외)
+  const taxableEarnings = Math.max(0, totalEarnings - nonTaxableAmount)
 
+  // 국민연금 (상한액 적용: 월 590만원) - 비과세 수당 제외
+  const pensionBase = Math.min(taxableEarnings, 5900000)
+  const nationalPensionAmount = nationalPension ? Math.round(pensionBase * RATES.nationalPension) : 0
+
+  // 건강보험 - 비과세 수당 제외
+  const healthInsuranceAmount = healthInsurance ? Math.round(taxableEarnings * RATES.healthInsurance) : 0
+
+  // 장기요양보험 (건강보험의 12.95%)
+  const longTermCareAmount = longTermCare ? Math.round(healthInsuranceAmount * RATES.longTermCare) : 0
+
+  // 고용보험 - 비과세 수당 제외
+  const employmentInsuranceAmount = employmentInsurance ? Math.round(taxableEarnings * RATES.employmentInsurance) : 0
+
+  // 소득세 (간이세액 기준)
   let incomeTax = 0
   if (incomeTaxEnabled) {
-    const taxableIncome = Math.max(0, totalEarnings - (dependentsCount * 125000))
+    const taxableIncome = Math.max(0, taxableEarnings - (dependentsCount * 125000))
     incomeTax = Math.round(taxableIncome * 0.033)
   }
   const localIncomeTax = Math.round(incomeTax * 0.1)
@@ -78,44 +132,64 @@ function calculateDeductions(
 
 /**
  * 세후 급여(실수령액)에서 세전 급여 역산
- * 이진 탐색을 사용하여 목표 실수령액에 맞는 세전 급여 계산
+ * 비과세 수당을 고려하여 계산
+ *
+ * 예시: 세후 400만원, 식대 20만원 설정 시
+ * - 비과세 금액 = min(식대 20만원, 한도 20만원) = 20만원
+ * - 과세 대상 실수령액 = 400만원 - 20만원 = 380만원
+ * - 과세 대상 세전급여를 역산하여 380만원이 되도록 계산
+ * - 총 세전급여 = 과세대상 세전급여 + 비과세 금액
  */
 function calculateGrossFromNet(
   targetNetPay: number,
-  options: DeductionOptions = {}
-): { grossPay: number; deductions: DeductionResult; actualNetPay: number } {
-  let low = targetNetPay
-  let high = Math.round(targetNetPay * 1.5)
-  let bestGross = targetNetPay
-  let bestDeductions = calculateDeductions(targetNetPay, options)
-  let bestNetPay = targetNetPay - bestDeductions.totalDeductions
+  options: DeductionOptions = {},
+  allowances: Allowances = {}
+): { grossPay: number; deductions: DeductionResult; actualNetPay: number; nonTaxableAmount: number } {
+  // 비과세 금액 계산
+  const nonTaxableAmount = calculateNonTaxableAmount(allowances)
+
+  // 과세 대상 목표 실수령액 (총 목표 실수령액에서 비과세 금액 제외)
+  const targetTaxableNetPay = targetNetPay - nonTaxableAmount
+
+  // 이진 탐색으로 과세 대상 세전 급여 찾기
+  let low = targetTaxableNetPay
+  let high = Math.round(targetTaxableNetPay * 1.5)
+  let bestTaxableGross = targetTaxableNetPay
+  let bestDeductions = calculateDeductions(targetTaxableNetPay, options, 0)
+  let bestTaxableNetPay = targetTaxableNetPay - bestDeductions.totalDeductions
 
   for (let i = 0; i < 50; i++) {
     const mid = Math.round((low + high) / 2)
-    const deductions = calculateDeductions(mid, options)
-    const calculatedNetPay = mid - deductions.totalDeductions
+    const deductions = calculateDeductions(mid, options, 0)
+    const calculatedTaxableNetPay = mid - deductions.totalDeductions
 
-    if (Math.abs(calculatedNetPay - targetNetPay) < Math.abs(bestNetPay - targetNetPay)) {
-      bestGross = mid
+    if (Math.abs(calculatedTaxableNetPay - targetTaxableNetPay) < Math.abs(bestTaxableNetPay - targetTaxableNetPay)) {
+      bestTaxableGross = mid
       bestDeductions = deductions
-      bestNetPay = calculatedNetPay
+      bestTaxableNetPay = calculatedTaxableNetPay
     }
 
-    if (Math.abs(calculatedNetPay - targetNetPay) <= 1) {
+    if (Math.abs(calculatedTaxableNetPay - targetTaxableNetPay) <= 1) {
       break
     }
 
-    if (calculatedNetPay < targetNetPay) {
+    if (calculatedTaxableNetPay < targetTaxableNetPay) {
       low = mid + 1
     } else {
       high = mid - 1
     }
   }
 
+  // 총 세전 급여 = 과세 대상 세전급여 + 비과세 금액
+  const totalGrossPay = bestTaxableGross + nonTaxableAmount
+  // 총 실수령액 = 과세 대상 실수령액 + 비과세 금액
+  const actualNetPay = bestTaxableNetPay + nonTaxableAmount
+
   return {
-    grossPay: bestGross,
+    grossPay: totalGrossPay,
     deductions: bestDeductions,
-    actualNetPay: bestNetPay
+    actualNetPay,
+    nonTaxableAmount
   }
 }
 
@@ -194,30 +268,52 @@ export async function POST(request: NextRequest) {
       let calculatedAllowances: Record<string, number>
 
       if (setting.salary_type === 'net') {
-        // 세후 급여인 경우: 입력된 금액을 실수령액으로 보고 세전 급여 역산
+        // 세후 급여인 경우: 비과세 수당을 고려하여 세전 급여 역산
         const targetNetPay = inputSalary
-        const result = calculateGrossFromNet(targetNetPay, deductionOptions)
+        const result = calculateGrossFromNet(targetNetPay, deductionOptions, setting.allowances || {})
 
         totalEarnings = result.grossPay
         deductions = result.deductions
         netPay = result.actualNetPay
 
-        // 역산된 세전 급여를 기본급과 수당 비율로 분배
-        if (inputSalary > 0) {
-          const ratio = result.grossPay / inputSalary
+        // 비과세 금액 계산
+        const nonTaxableAmount = result.nonTaxableAmount
+
+        // 역산된 세전 급여를 기본급과 수당에 분배
+        const inputAllowancesTotal = allowancesTotal
+        const taxableAllowancesTotal = inputAllowancesTotal - nonTaxableAmount
+        const taxableGrossPay = result.grossPay - nonTaxableAmount
+
+        if (inputSalary > 0 && (setting.base_salary + taxableAllowancesTotal) > 0) {
+          const taxableInput = setting.base_salary + taxableAllowancesTotal
+          const ratio = taxableGrossPay / taxableInput
           calculatedBaseSalary = Math.round(setting.base_salary * ratio)
+
+          // 수당은 비과세 부분은 유지, 과세 부분만 비율 적용
           calculatedAllowances = {}
           for (const [key, value] of Object.entries(setting.allowances || {})) {
-            calculatedAllowances[key] = Math.round((Number(value) || 0) * ratio)
+            const amount = Number(value) || 0
+            const nonTaxableType = ALLOWANCE_TO_NON_TAXABLE_TYPE[key]
+            if (nonTaxableType) {
+              // 비과세 수당은 원래 금액 유지 (한도 내)
+              const limit = NON_TAXABLE_LIMITS[nonTaxableType] || 0
+              const nonTaxable = Math.min(amount, limit)
+              const taxable = amount - nonTaxable
+              calculatedAllowances[key] = nonTaxable + Math.round(taxable * ratio)
+            } else {
+              // 과세 수당은 비율 적용
+              calculatedAllowances[key] = Math.round(amount * ratio)
+            }
           }
         } else {
-          calculatedBaseSalary = result.grossPay
-          calculatedAllowances = {}
+          calculatedBaseSalary = taxableGrossPay
+          calculatedAllowances = setting.allowances || {}
         }
       } else {
-        // 세전 급여인 경우: 기존 로직 사용
+        // 세전 급여인 경우: 비과세 금액 계산 후 공제액 계산
+        const nonTaxableAmount = calculateNonTaxableAmount(setting.allowances || {})
         totalEarnings = inputSalary
-        deductions = calculateDeductions(totalEarnings, deductionOptions)
+        deductions = calculateDeductions(totalEarnings, deductionOptions, nonTaxableAmount)
         netPay = totalEarnings - deductions.totalDeductions
         calculatedBaseSalary = setting.base_salary
         calculatedAllowances = setting.allowances || {}

@@ -303,6 +303,8 @@ export interface DeductionItem {
 export const COMMON_ALLOWANCES = [
   '식대',
   '교통비',
+  '자가운전보조금',
+  '자녀보육수당',
   '직책수당',
   '자격수당',
   '근속수당',
@@ -310,6 +312,59 @@ export const COMMON_ALLOWANCES = [
   '야간수당',
   '휴일수당'
 ] as const
+
+// =====================================================================
+// 비과세 수당 관련 타입 및 상수
+// =====================================================================
+
+// 비과세 수당 타입
+export type NonTaxableAllowanceType =
+  | 'meal'           // 식대
+  | 'vehicle'        // 자가운전보조금
+  | 'childcare'      // 자녀보육수당
+  | 'none'           // 과세 (비과세 아님)
+
+// 비과세 수당 한도 (월 기준, 원)
+export const NON_TAXABLE_LIMITS: Record<Exclude<NonTaxableAllowanceType, 'none'>, number> = {
+  meal: 200000,           // 식대: 월 20만원 한도
+  vehicle: 200000,        // 자가운전보조금: 월 20만원 한도
+  childcare: 200000,      // 자녀보육수당: 월 20만원 한도 (6세 이하 자녀)
+}
+
+// 수당명과 비과세 타입 매핑
+export const ALLOWANCE_TO_NON_TAXABLE_TYPE: Record<string, NonTaxableAllowanceType> = {
+  '식대': 'meal',
+  '자가운전보조금': 'vehicle',
+  '자녀보육수당': 'childcare',
+}
+
+// 비과세 타입 레이블
+export const NON_TAXABLE_TYPE_LABELS: Record<NonTaxableAllowanceType, string> = {
+  meal: '식대 (월 20만원 한도)',
+  vehicle: '자가운전보조금 (월 20만원 한도)',
+  childcare: '자녀보육수당 (월 20만원 한도)',
+  none: '과세',
+}
+
+// 수당 항목 타입 (비과세 정보 포함)
+export interface AllowanceWithTaxInfo {
+  name: string
+  amount: number
+  nonTaxableType: NonTaxableAllowanceType
+}
+
+// 비과세 금액 계산 결과
+export interface NonTaxableCalculation {
+  totalNonTaxable: number       // 총 비과세 금액
+  taxableEarnings: number       // 과세 대상 금액
+  nonTaxableDetails: {          // 비과세 상세 내역
+    type: NonTaxableAllowanceType
+    name: string
+    amount: number
+    nonTaxableAmount: number
+    taxableAmount: number
+  }[]
+}
 
 // 급여 상태 레이블
 export const STATUS_LABELS: Record<PayrollStatementStatus, string> = {
