@@ -116,7 +116,7 @@ export default function LogsSection({
           <div className="border border-slate-200 rounded-lg overflow-hidden overflow-x-auto">
             <div className="max-h-96 overflow-y-auto">
               <table className="w-full text-xs sm:text-sm text-left min-w-[600px]">
-                <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
+                <thead className="bg-slate-50 text-slate-800 sticky top-0 z-10">
                   <tr>
                     <th className="p-2 sm:p-3 font-medium">날짜</th>
                     <th className="p-2 sm:p-3 font-medium">네이버 리뷰 수</th>
@@ -247,7 +247,7 @@ export default function LogsSection({
           <div className="border border-slate-200 rounded-lg overflow-hidden overflow-x-auto">
             <div className="max-h-96 overflow-y-auto">
               <table className="w-full text-xs sm:text-sm text-left min-w-[700px]">
-                <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
+                <thead className="bg-slate-50 text-slate-800 sticky top-0 z-10">
                   <tr>
                     <th className="p-2 sm:p-3 font-medium whitespace-nowrap">날짜</th>
                     <th className="p-2 sm:p-3 font-medium">환자명</th>
@@ -364,7 +364,7 @@ export default function LogsSection({
           <div className="border border-slate-200 rounded-lg overflow-hidden overflow-x-auto">
             <div className="max-h-96 overflow-y-auto">
               <table className="w-full text-xs sm:text-sm text-left min-w-[500px]">
-                <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
+                <thead className="bg-slate-50 text-slate-800 sticky top-0 z-10">
                   <tr>
                     <th className="p-2 sm:p-3 font-medium whitespace-nowrap">날짜</th>
                     <th className="p-2 sm:p-3 font-medium">환자명</th>
@@ -397,7 +397,7 @@ export default function LogsSection({
           <div className="border border-slate-200 rounded-lg overflow-hidden overflow-x-auto">
             <div className="max-h-96 overflow-y-auto">
               <table className="w-full text-xs sm:text-sm text-left min-w-[500px]">
-                <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
+                <thead className="bg-slate-50 text-slate-800 sticky top-0 z-10">
                   <tr>
                     <th className="p-2 sm:p-3 font-medium">일시</th>
                     <th className="p-2 sm:p-3 font-medium">선물명</th>

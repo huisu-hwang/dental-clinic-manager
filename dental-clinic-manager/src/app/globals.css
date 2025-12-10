@@ -46,6 +46,17 @@ select {
   -webkit-text-fill-color: #000000 !important;
 }
 
+/* iOS Chrome 테이블 텍스트 색상 문제 해결 */
+/* 테이블 셀 텍스트가 회색으로 보이는 문제 방지 */
+table,
+table th,
+table td,
+table tbody,
+table thead {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
 /* placeholder 스타일 */
 input::placeholder,
 textarea::placeholder {
