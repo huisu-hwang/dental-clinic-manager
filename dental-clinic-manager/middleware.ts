@@ -35,15 +35,19 @@ export async function middleware(request: NextRequest) {
   }
 
   // iOS Safari/Chrome 호환을 위한 쿠키 기본 옵션
-  // iOS ITP 정책: JavaScript로 설정된 쿠키는 최대 7일 유지
+  // iOS ITP 정책: JavaScript로 설정된 쿠키는 최대 7일 유지되지만,
+  // 사용자가 사이트와 상호작용하면 쿠키 수명이 연장됨
+  // 서버에서 설정하는 쿠키는 ITP 제한이 덜 적용됨
   // sameSite: 'lax'는 크로스 사이트 요청에서도 쿠키 전송 허용 (네비게이션 시)
   const isSecure = request.url.startsWith('https')
   const defaultCookieOptions = {
     path: '/',
     sameSite: 'lax' as const,
     secure: isSecure,
-    // iOS에서 세션 유지를 위해 maxAge 명시적 설정 (7일 - iOS ITP 최대 허용치)
-    maxAge: 60 * 60 * 24 * 7,
+    // iOS Safari에서 세션 유지를 위해 maxAge 30일로 설정
+    // 미들웨어에서 설정하는 쿠키는 "서버에서 설정"으로 취급되어 ITP 영향이 적음
+    // 사용자가 주기적으로 사이트를 방문하면 쿠키가 갱신됨
+    maxAge: 60 * 60 * 24 * 30,
   }
 
   // 2. Supabase 클라이언트 생성

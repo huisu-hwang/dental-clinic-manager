@@ -9,6 +9,7 @@ import { useActivityTracker } from '@/hooks/useActivityTracker'
 import { SESSION_CHECK_TIMEOUT, safeLocalStorage, isIOSDevice } from '@/lib/sessionUtils'
 import { TIMEOUTS } from '@/lib/constants/timeouts'
 import { useRouter } from 'next/navigation'
+import { clearAllSupabaseCookies, refreshSessionCookies } from '@/lib/cookieStorageAdapter'
 
 export interface UserProfile {
   id: string
@@ -349,6 +350,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       safeLocalStorage.removeItem('dental_user')
       dataService.clearCachedClinicId()
 
+      // iOS Safari 호환: 쿠키 기반 스토리지 클리어
+      clearAllSupabaseCookies()
+
       // dental_logging_out 플래그는 새 페이지의 checkAuth에서 제거됨
       // finally에서 제거하면 페이지 이동 전에 제거되어 세션 체크가 수행됨
       window.location.href = '/'
@@ -358,6 +362,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       safeLocalStorage.removeItem('dental_auth')
       safeLocalStorage.removeItem('dental_user')
+      // iOS Safari 호환: 쿠키 기반 스토리지 클리어
+      clearAllSupabaseCookies()
       window.location.href = '/'
     }
     // finally 블록 제거: window.location.href 후 페이지가 리로드되므로
@@ -366,6 +372,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const isAuthenticated = !!user
+
+  // iOS Safari 호환: 사용자 활동 시 세션 쿠키 갱신
+  // 사용자가 사이트와 상호작용하면 쿠키 수명이 연장됨
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === 'undefined') return
+
+    // 사용자 활동 감지 시 쿠키 갱신
+    const handleUserActivity = () => {
+      // 너무 자주 갱신하지 않도록 debounce (5분에 한 번)
+      const lastRefresh = sessionStorage.getItem('lastCookieRefresh')
+      const now = Date.now()
+
+      if (!lastRefresh || now - parseInt(lastRefresh) > 5 * 60 * 1000) {
+        refreshSessionCookies()
+        sessionStorage.setItem('lastCookieRefresh', now.toString())
+      }
+    }
+
+    // 사용자 활동 이벤트 리스너 등록
+    const events = ['click', 'scroll', 'keypress', 'touchstart']
+    events.forEach(event => {
+      window.addEventListener(event, handleUserActivity, { passive: true })
+    })
+
+    // 초기 갱신 (페이지 로드 시)
+    handleUserActivity()
+
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, handleUserActivity)
+      })
+    }
+  }, [isAuthenticated])
 
   if (loading) {
     return (
