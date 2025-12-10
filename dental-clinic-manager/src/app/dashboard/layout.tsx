@@ -82,6 +82,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/attendance')
     } else if (tab === 'leave') {
       router.push('/dashboard?tab=leave')
+    } else if (tab === 'payroll') {
+      router.push('/dashboard?tab=payroll')
     } else if (tab === 'settings') {
       router.push('/dashboard?tab=settings')
     } else if (tab === 'daily-input') {

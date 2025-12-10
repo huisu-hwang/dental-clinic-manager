@@ -62,6 +62,10 @@ export type Permission =
   | 'vendor_contacts_edit'   // 업체 연락처 수정
   | 'vendor_contacts_delete' // 업체 연락처 삭제
   | 'vendor_contacts_import' // 업체 연락처 일괄 등록
+  // 급여 관리 권한
+  | 'payroll_view_own'       // 본인 급여 명세서 조회
+  | 'payroll_manage'         // 급여 설정 및 명세서 관리
+  | 'payroll_send_kakao'     // 카카오톡 발송
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -88,7 +92,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 알림 관리 (모든 권한)
     'notification_view', 'notification_manage',
     // 업체 연락처 관리 (모든 권한)
-    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit', 'vendor_contacts_delete', 'vendor_contacts_import'
+    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit', 'vendor_contacts_delete', 'vendor_contacts_import',
+    // 급여 관리 (모든 권한)
+    'payroll_view_own', 'payroll_manage', 'payroll_send_kakao'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -112,7 +118,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 알림 조회
     'notification_view',
     // 업체 연락처 관리 (삭제, 일괄 등록 제외)
-    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit'
+    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit',
+    // 급여 관리 (관리 권한)
+    'payroll_view_own', 'payroll_manage', 'payroll_send_kakao'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
@@ -133,7 +141,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_policy_view',
     'leave_balance_view_own', 'leave_balance_view_all',
     // 업체 연락처 관리 (조회, 생성, 수정)
-    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit'
+    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit',
+    // 급여 관리 (본인만 조회)
+    'payroll_view_own'
   ],
   team_leader: [
     // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
@@ -152,7 +162,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_policy_view',
     'leave_balance_view_own', 'leave_balance_view_all',
     // 업체 연락처 관리 (조회, 생성)
-    'vendor_contacts_view', 'vendor_contacts_create'
+    'vendor_contacts_view', 'vendor_contacts_create',
+    // 급여 관리 (본인만 조회)
+    'payroll_view_own'
   ],
   staff: [
     // 일반 직원은 프로토콜 조회, 본인 출퇴근, 본인 연차만 가능
@@ -171,7 +183,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_policy_view',
     'leave_balance_view_own',
     // 업체 연락처 관리 (조회만)
-    'vendor_contacts_view'
+    'vendor_contacts_view',
+    // 급여 관리 (본인만 조회)
+    'payroll_view_own'
   ]
 }
 
@@ -255,6 +269,11 @@ export const PERMISSION_GROUPS = {
     { key: 'vendor_contacts_delete', label: '연락처 삭제' },
     { key: 'vendor_contacts_import', label: '일괄 등록' }
   ],
+  '급여 관리': [
+    { key: 'payroll_view_own', label: '본인 급여 조회' },
+    { key: 'payroll_manage', label: '급여 관리' },
+    { key: 'payroll_send_kakao', label: '카카오톡 발송' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -323,5 +342,9 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'vendor_contacts_create': '새로운 업체 연락처를 등록할 수 있습니다.',
   'vendor_contacts_edit': '업체 연락처 정보를 수정할 수 있습니다.',
   'vendor_contacts_delete': '업체 연락처를 삭제할 수 있습니다.',
-  'vendor_contacts_import': '엑셀/CSV 파일로 업체 연락처를 일괄 등록할 수 있습니다.'
+  'vendor_contacts_import': '엑셀/CSV 파일로 업체 연락처를 일괄 등록할 수 있습니다.',
+  // 급여 관리 권한 설명
+  'payroll_view_own': '본인의 급여 명세서를 조회할 수 있습니다.',
+  'payroll_manage': '직원의 급여 설정 및 명세서를 관리할 수 있습니다.',
+  'payroll_send_kakao': '급여 명세서를 카카오톡으로 발송할 수 있습니다.'
 }

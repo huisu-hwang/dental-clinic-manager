@@ -14,6 +14,7 @@ import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import LeaveManagement from '@/components/Leave/LeaveManagement'
 import VendorContactManagement from '@/components/Vendor/VendorContactManagement'
+import PayrollManagement from '@/components/Payroll/PayrollManagement'
 import Toast from '@/components/ui/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
 import DatabaseVerifier from '@/components/Debug/DatabaseVerifier'
@@ -421,6 +422,11 @@ export default function DashboardPage() {
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
               <LeaveManagement currentUser={user} />
             </div>
+          )}
+
+          {/* 급여 관리 */}
+          {activeTab === 'payroll' && user && (
+            <PayrollManagement currentUser={user} />
           )}
 
           {/* 통계 */}
