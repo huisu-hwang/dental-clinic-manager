@@ -156,7 +156,7 @@ export default function PayrollSettingForm({
             value={formData.employee_user_id}
             onChange={e => setFormData(prev => ({ ...prev, employee_user_id: e.target.value }))}
             disabled={!!setting}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-slate-100"
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100"
           >
             <option value="">직원을 선택하세요</option>
             {availableEmployees.map(emp => (
@@ -180,7 +180,7 @@ export default function PayrollSettingForm({
                 value="gross"
                 checked={formData.salary_type === 'gross'}
                 onChange={e => setFormData(prev => ({ ...prev, salary_type: e.target.value as SalaryType }))}
-                className="mr-2 text-emerald-600 focus:ring-emerald-500"
+                className="mr-2 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-slate-600">세전 (총 급여 기준)</span>
             </label>
@@ -191,7 +191,7 @@ export default function PayrollSettingForm({
                 value="net"
                 checked={formData.salary_type === 'net'}
                 onChange={e => setFormData(prev => ({ ...prev, salary_type: e.target.value as SalaryType }))}
-                className="mr-2 text-emerald-600 focus:ring-emerald-500"
+                className="mr-2 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-slate-600">세후 (실수령액 기준)</span>
             </label>
@@ -209,7 +209,7 @@ export default function PayrollSettingForm({
               type="number"
               value={formData.base_salary || ''}
               onChange={e => setFormData(prev => ({ ...prev, base_salary: parseInt(e.target.value) || 0 }))}
-              className="w-full pl-10 pr-12 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full pl-10 pr-12 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="3000000"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">원</span>
@@ -284,17 +284,17 @@ export default function PayrollSettingForm({
             <button
               type="button"
               onClick={addAllowance}
-              className="p-2 bg-emerald-100 text-emerald-600 hover:bg-emerald-200 rounded-lg"
+              className="p-2 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-lg"
             >
               <Plus className="w-4 h-4" />
             </button>
           </div>
 
           {/* 총 급여 표시 */}
-          <div className="mt-4 p-4 bg-emerald-50 rounded-lg">
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-emerald-700">총 급여 (기본급 + 수당)</span>
-              <span className="text-lg font-bold text-emerald-700">
+              <span className="text-sm text-blue-700">총 급여 (기본급 + 수당)</span>
+              <span className="text-lg font-bold text-blue-700">
                 {totalSalary.toLocaleString()}원
               </span>
             </div>
@@ -331,7 +331,7 @@ export default function PayrollSettingForm({
                 type="checkbox"
                 checked={formData.national_pension}
                 onChange={e => setFormData(prev => ({ ...prev, national_pension: e.target.checked }))}
-                className="mr-3 text-emerald-600 focus:ring-emerald-500 rounded"
+                className="mr-3 text-blue-600 focus:ring-blue-500 rounded"
               />
               <div>
                 <span className="text-sm text-slate-700">국민연금</span>
@@ -343,7 +343,7 @@ export default function PayrollSettingForm({
                 type="checkbox"
                 checked={formData.health_insurance}
                 onChange={e => setFormData(prev => ({ ...prev, health_insurance: e.target.checked }))}
-                className="mr-3 text-emerald-600 focus:ring-emerald-500 rounded"
+                className="mr-3 text-blue-600 focus:ring-blue-500 rounded"
               />
               <div>
                 <span className="text-sm text-slate-700">건강보험</span>
@@ -355,7 +355,7 @@ export default function PayrollSettingForm({
                 type="checkbox"
                 checked={formData.long_term_care}
                 onChange={e => setFormData(prev => ({ ...prev, long_term_care: e.target.checked }))}
-                className="mr-3 text-emerald-600 focus:ring-emerald-500 rounded"
+                className="mr-3 text-blue-600 focus:ring-blue-500 rounded"
               />
               <div>
                 <span className="text-sm text-slate-700">장기요양보험</span>
@@ -367,7 +367,7 @@ export default function PayrollSettingForm({
                 type="checkbox"
                 checked={formData.employment_insurance}
                 onChange={e => setFormData(prev => ({ ...prev, employment_insurance: e.target.checked }))}
-                className="mr-3 text-emerald-600 focus:ring-emerald-500 rounded"
+                className="mr-3 text-blue-600 focus:ring-blue-500 rounded"
               />
               <div>
                 <span className="text-sm text-slate-700">고용보험</span>
@@ -388,7 +388,7 @@ export default function PayrollSettingForm({
                 type="checkbox"
                 checked={formData.income_tax_enabled}
                 onChange={e => setFormData(prev => ({ ...prev, income_tax_enabled: e.target.checked }))}
-                className="mr-3 text-emerald-600 focus:ring-emerald-500 rounded"
+                className="mr-3 text-blue-600 focus:ring-blue-500 rounded"
               />
               <span className="text-sm text-slate-700">소득세 공제 적용</span>
             </label>
@@ -420,7 +420,7 @@ export default function PayrollSettingForm({
                 type="checkbox"
                 checked={formData.kakao_notification_enabled}
                 onChange={e => setFormData(prev => ({ ...prev, kakao_notification_enabled: e.target.checked }))}
-                className="mr-3 text-emerald-600 focus:ring-emerald-500 rounded"
+                className="mr-3 text-blue-600 focus:ring-blue-500 rounded"
               />
               <span className="text-sm text-slate-700">급여 명세서 카카오톡 알림 발송</span>
             </label>
@@ -433,7 +433,7 @@ export default function PayrollSettingForm({
                   value={formData.kakao_phone_number}
                   onChange={e => setFormData(prev => ({ ...prev, kakao_phone_number: e.target.value }))}
                   placeholder="010-0000-0000"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             )}
@@ -449,7 +449,7 @@ export default function PayrollSettingForm({
             value={formData.notes}
             onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
             rows={3}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="급여 관련 메모를 입력하세요..."
           />
         </div>
@@ -466,7 +466,7 @@ export default function PayrollSettingForm({
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           저장
         </button>

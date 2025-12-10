@@ -114,9 +114,9 @@ export default function PayrollStatementDetail({
           .text-center { text-align: center; }
           .font-bold { font-weight: bold; }
           .text-lg { font-size: 1.125rem; }
-          .text-emerald { color: #059669; }
+          .text-blue { color: #2563eb; }
           .text-red { color: #dc2626; }
-          .bg-emerald { background-color: #d1fae5; }
+          .bg-blue { background-color: #dbeafe; }
           @media print {
             body { margin: 0; }
           }
@@ -236,7 +236,7 @@ export default function PayrollStatementDetail({
         {/* 지급 내역 */}
         <div>
           <h4 className="flex items-center text-sm font-medium text-slate-700 mb-3">
-            <DollarSign className="w-4 h-4 mr-2 text-emerald-500" />
+            <DollarSign className="w-4 h-4 mr-2 text-blue-500" />
             지급 내역
           </h4>
           <table className="w-full border border-slate-200 rounded-lg overflow-hidden">
@@ -275,9 +275,9 @@ export default function PayrollStatementDetail({
                   <td className="py-2 px-4 text-right text-slate-800">{statement.other_earnings.toLocaleString()}원</td>
                 </tr>
               )}
-              <tr className="bg-emerald-50">
-                <td className="py-3 px-4 font-medium text-emerald-700">지급 합계</td>
-                <td className="py-3 px-4 text-right font-bold text-emerald-700">{statement.total_earnings.toLocaleString()}원</td>
+              <tr className="bg-blue-50">
+                <td className="py-3 px-4 font-medium text-blue-700">지급 합계</td>
+                <td className="py-3 px-4 text-right font-bold text-blue-700">{statement.total_earnings.toLocaleString()}원</td>
               </tr>
             </tbody>
           </table>
@@ -348,7 +348,7 @@ export default function PayrollStatementDetail({
         </div>
 
         {/* 실수령액 */}
-        <div className="p-6 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl text-white">
+        <div className="p-6 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl text-white">
           <div className="text-center">
             <div className="text-sm opacity-80 mb-1">실수령액</div>
             <div className="text-3xl font-bold">{statement.net_pay.toLocaleString()}원</div>

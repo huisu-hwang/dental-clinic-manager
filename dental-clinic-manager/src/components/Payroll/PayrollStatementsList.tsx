@@ -134,7 +134,7 @@ export default function PayrollStatementsList({
             <select
               value={selectedYear}
               onChange={e => setSelectedYear(Number(e.target.value))}
-              className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               {yearOptions.map(year => (
                 <option key={year} value={year}>{year}년</option>
@@ -148,7 +148,7 @@ export default function PayrollStatementsList({
             <select
               value={selectedMonth}
               onChange={e => setSelectedMonth(Number(e.target.value))}
-              className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                 <option key={month} value={month}>{month}월</option>
@@ -164,7 +164,7 @@ export default function PayrollStatementsList({
               <select
                 value={filterStatus}
                 onChange={e => setFilterStatus(e.target.value as PayrollStatementStatus | 'all')}
-                className="appearance-none pl-9 pr-10 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="appearance-none pl-9 pr-10 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">전체 상태</option>
                 <option value="draft">작성중</option>
@@ -193,7 +193,7 @@ export default function PayrollStatementsList({
             {onGenerate && (
               <button
                 onClick={() => setShowGenerateConfirm(true)}
-                className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 명세서 생성
@@ -230,7 +230,7 @@ export default function PayrollStatementsList({
           {!isMyStatements && onGenerate && (
             <button
               onClick={() => setShowGenerateConfirm(true)}
-              className="mt-4 inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+              className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               명세서 생성
@@ -291,7 +291,7 @@ export default function PayrollStatementsList({
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <span className="font-medium text-emerald-600">
+                    <span className="font-medium text-blue-600">
                       {statement.net_pay.toLocaleString()}원
                     </span>
                   </td>
@@ -378,7 +378,7 @@ export default function PayrollStatementsList({
               </button>
               <button
                 onClick={handleGenerate}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 생성
               </button>

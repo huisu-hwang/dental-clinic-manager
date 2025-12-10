@@ -82,7 +82,7 @@ export default function PayrollSettingsList({
                   )}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <span className="font-medium text-emerald-600">
+                  <span className="font-medium text-blue-600">
                     {totalSalary.toLocaleString()}원
                   </span>
                   <span className="block text-xs text-slate-400">
@@ -139,7 +139,7 @@ export default function PayrollSettingsList({
             <div className="text-sm text-slate-500">총 기본급</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-emerald-600">
+            <div className="text-2xl font-bold text-blue-600">
               {settings.reduce((sum, s) => {
                 const allowancesTotal = Object.values(s.allowances || {}).reduce(
                   (a, v) => a + (Number(v) || 0), 0

@@ -32,7 +32,9 @@ type TabType = 'settings' | 'statements' | 'my-statements'
 
 export default function PayrollManagement({ currentUser }: PayrollManagementProps) {
   const { hasPermission } = usePermissions()
-  const [activeTab, setActiveTab] = useState<TabType>('statements')
+  const canManage = hasPermission('payroll_manage') || currentUser.role === 'owner' || currentUser.role === 'vice_director'
+  // 관리자가 아니면 기본 탭을 '내 급여 명세서'로 설정
+  const [activeTab, setActiveTab] = useState<TabType>(canManage ? 'statements' : 'my-statements')
   const [settings, setSettings] = useState<PayrollSetting[]>([])
   const [statements, setStatements] = useState<PayrollStatement[]>([])
   const [myStatements, setMyStatements] = useState<PayrollStatement[]>([])
@@ -56,18 +58,22 @@ export default function PayrollManagement({ currentUser }: PayrollManagementProp
 
   // 직원 목록 조회
   const fetchEmployees = useCallback(async () => {
-    if (!currentUser.clinic_id) return
+    if (!currentUser.clinic_id || !canManagePayroll) return
 
     try {
-      const response = await fetch(`/api/admin/users?clinic_id=${currentUser.clinic_id}`)
+      const response = await fetch(`/api/admin/users`)
       const result = await response.json()
-      if (result.success && result.users) {
-        setEmployees(result.users.filter((u: any) => u.status === 'active'))
+      if (result.data) {
+        // clinic_id로 필터링하고 active 상태인 직원만 선택
+        const filteredEmployees = result.data.filter((u: any) =>
+          u.clinic_id === currentUser.clinic_id && u.status === 'active'
+        )
+        setEmployees(filteredEmployees)
       }
     } catch (error) {
       console.error('Failed to fetch employees:', error)
     }
-  }, [currentUser.clinic_id])
+  }, [currentUser.clinic_id, canManagePayroll])
 
   // 급여 설정 조회
   const fetchSettings = useCallback(async () => {
@@ -317,7 +323,7 @@ export default function PayrollManagement({ currentUser }: PayrollManagementProp
   return (
     <div className="space-y-0">
       {/* 헤더 */}
-      <div className="sticky top-14 z-10 bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 rounded-t-xl shadow-sm">
+      <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -325,7 +331,7 @@ export default function PayrollManagement({ currentUser }: PayrollManagementProp
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">급여 관리</h2>
-              <p className="text-emerald-100 text-sm">Payroll Management</p>
+              <p className="text-blue-100 text-sm">Payroll Management</p>
             </div>
           </div>
         </div>
@@ -339,7 +345,7 @@ export default function PayrollManagement({ currentUser }: PayrollManagementProp
               onClick={() => setActiveTab('my-statements')}
               className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                 activeTab === 'my-statements'
-                  ? 'bg-white text-emerald-600 shadow-sm'
+                  ? 'bg-white text-blue-600 shadow-sm'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
               }`}
             >
@@ -354,7 +360,7 @@ export default function PayrollManagement({ currentUser }: PayrollManagementProp
                 onClick={() => setActiveTab('statements')}
                 className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                   activeTab === 'statements'
-                    ? 'bg-white text-emerald-600 shadow-sm'
+                    ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                 }`}
               >
@@ -366,7 +372,7 @@ export default function PayrollManagement({ currentUser }: PayrollManagementProp
                 onClick={() => setActiveTab('settings')}
                 className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                   activeTab === 'settings'
-                    ? 'bg-white text-emerald-600 shadow-sm'
+                    ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                 }`}
               >
@@ -415,7 +421,7 @@ export default function PayrollManagement({ currentUser }: PayrollManagementProp
                   setSelectedSetting(null)
                   setShowSettingForm(true)
                 }}
-                className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 급여 설정 추가
