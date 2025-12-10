@@ -248,9 +248,6 @@ export async function POST(request: NextRequest) {
         (sum: number, val: any) => sum + (Number(val) || 0), 0
       )
 
-      // 입력된 급여 (기본급 + 수당)
-      const inputSalary = setting.base_salary + allowancesTotal
-
       // 공제 옵션
       const deductionOptions: DeductionOptions = {
         nationalPension: setting.national_pension,
@@ -268,51 +265,26 @@ export async function POST(request: NextRequest) {
       let calculatedAllowances: Record<string, number>
 
       if (setting.salary_type === 'net') {
-        // 세후 급여인 경우: 비과세 수당을 고려하여 세전 급여 역산
-        const targetNetPay = inputSalary
+        // 세후 급여인 경우:
+        // base_salary가 총 목표 실수령액 (수당 포함)
+        // 수당은 그 금액의 구성 내역 (비과세 항목 지정용)
+        // 예: 세후 400만원, 식대 20만원 → 총 실수령액 400만원, 그 중 식대 20만원은 비과세
+        const targetNetPay = setting.base_salary  // 총 목표 실수령액
         const result = calculateGrossFromNet(targetNetPay, deductionOptions, setting.allowances || {})
 
         totalEarnings = result.grossPay
         deductions = result.deductions
         netPay = result.actualNetPay
 
-        // 비과세 금액 계산
-        const nonTaxableAmount = result.nonTaxableAmount
-
-        // 역산된 세전 급여를 기본급과 수당에 분배
-        const inputAllowancesTotal = allowancesTotal
-        const taxableAllowancesTotal = inputAllowancesTotal - nonTaxableAmount
-        const taxableGrossPay = result.grossPay - nonTaxableAmount
-
-        if (inputSalary > 0 && (setting.base_salary + taxableAllowancesTotal) > 0) {
-          const taxableInput = setting.base_salary + taxableAllowancesTotal
-          const ratio = taxableGrossPay / taxableInput
-          calculatedBaseSalary = Math.round(setting.base_salary * ratio)
-
-          // 수당은 비과세 부분은 유지, 과세 부분만 비율 적용
-          calculatedAllowances = {}
-          for (const [key, value] of Object.entries(setting.allowances || {})) {
-            const amount = Number(value) || 0
-            const nonTaxableType = ALLOWANCE_TO_NON_TAXABLE_TYPE[key]
-            if (nonTaxableType) {
-              // 비과세 수당은 원래 금액 유지 (한도 내)
-              const limit = NON_TAXABLE_LIMITS[nonTaxableType] || 0
-              const nonTaxable = Math.min(amount, limit)
-              const taxable = amount - nonTaxable
-              calculatedAllowances[key] = nonTaxable + Math.round(taxable * ratio)
-            } else {
-              // 과세 수당은 비율 적용
-              calculatedAllowances[key] = Math.round(amount * ratio)
-            }
-          }
-        } else {
-          calculatedBaseSalary = taxableGrossPay
-          calculatedAllowances = setting.allowances || {}
-        }
+        // 명세서에 표시할 기본급과 수당 계산
+        // 수당은 원래 입력한 금액 유지 (비과세 항목)
+        // 기본급 = 총 세전급여 - 수당 합계
+        calculatedAllowances = setting.allowances || {}
+        calculatedBaseSalary = totalEarnings - allowancesTotal
       } else {
         // 세전 급여인 경우: 비과세 금액 계산 후 공제액 계산
         const nonTaxableAmount = calculateNonTaxableAmount(setting.allowances || {})
-        totalEarnings = inputSalary
+        totalEarnings = setting.base_salary + allowancesTotal
         deductions = calculateDeductions(totalEarnings, deductionOptions, nonTaxableAmount)
         netPay = totalEarnings - deductions.totalDeductions
         calculatedBaseSalary = setting.base_salary
