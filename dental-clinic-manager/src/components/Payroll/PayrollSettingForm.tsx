@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { X, Plus, Trash2, DollarSign } from 'lucide-react'
+import { X, Plus, Trash2, DollarSign, Info } from 'lucide-react'
 import type { PayrollSetting, SalaryType, Allowances, COMMON_ALLOWANCES } from '@/types/payroll'
+import { ALLOWANCE_TO_NON_TAXABLE_TYPE } from '@/types/payroll'
 
 interface PayrollSettingFormProps {
   setting: PayrollSetting | null
@@ -15,6 +16,8 @@ interface PayrollSettingFormProps {
 const COMMON_ALLOWANCES_LIST = [
   '식대',
   '교통비',
+  '자가운전보조금',
+  '자녀보육수당',
   '직책수당',
   '자격수당',
   '근속수당',
@@ -23,6 +26,11 @@ const COMMON_ALLOWANCES_LIST = [
   '휴일수당'
 ]
 
+// 비과세 항목 확인
+const isNonTaxableAllowance = (name: string): boolean => {
+  return !!ALLOWANCE_TO_NON_TAXABLE_TYPE[name]
+}
+
 export default function PayrollSettingForm({
   setting,
   employees,
@@ -30,10 +38,15 @@ export default function PayrollSettingForm({
   onSave,
   onCancel
 }: PayrollSettingFormProps) {
+  // 기존 설정이 있으면 총급여 계산, 없으면 0
+  const initialTotalSalary = setting
+    ? setting.base_salary + Object.values(setting.allowances || {}).reduce((sum, val) => sum + (Number(val) || 0), 0)
+    : 0
+
   const [formData, setFormData] = useState({
     employee_user_id: setting?.employee_user_id || '',
     salary_type: (setting?.salary_type || 'gross') as SalaryType,
-    base_salary: setting?.base_salary || 0,
+    total_salary: initialTotalSalary, // 총급여 (새로 추가)
     allowances: setting?.allowances || {} as Allowances,
     payment_day: setting?.payment_day || 25,
     national_pension: setting?.national_pension ?? true,
@@ -76,8 +89,21 @@ export default function PayrollSettingForm({
     return Object.values(formData.allowances).reduce((sum, val) => sum + (Number(val) || 0), 0)
   }, [formData.allowances])
 
-  // 총 급여 계산
-  const totalSalary = formData.base_salary + allowancesTotal
+  // 기본급 자동 계산 (총급여 - 수당)
+  const calculatedBaseSalary = useMemo(() => {
+    return Math.max(0, formData.total_salary - allowancesTotal)
+  }, [formData.total_salary, allowancesTotal])
+
+  // 비과세 수당 총액 계산
+  const nonTaxableTotal = useMemo(() => {
+    let total = 0
+    for (const [name, amount] of Object.entries(formData.allowances)) {
+      if (isNonTaxableAllowance(name)) {
+        total += Math.min(Number(amount) || 0, 200000) // 한도 20만원
+      }
+    }
+    return total
+  }, [formData.allowances])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,17 +113,45 @@ export default function PayrollSettingForm({
       return
     }
 
-    if (formData.base_salary <= 0) {
-      alert('기본급을 입력해주세요.')
+    if (formData.total_salary <= 0) {
+      alert('총 급여를 입력해주세요.')
       return
     }
 
-    onSave(formData)
+    if (calculatedBaseSalary < 0) {
+      alert('수당 합계가 총 급여를 초과합니다.')
+      return
+    }
+
+    // 저장할 데이터 (base_salary는 계산된 값 사용)
+    const saveData = {
+      employee_user_id: formData.employee_user_id,
+      salary_type: formData.salary_type,
+      base_salary: formData.total_salary, // 세후 모드에서는 총급여가 base_salary
+      allowances: formData.allowances,
+      payment_day: formData.payment_day,
+      national_pension: formData.national_pension,
+      health_insurance: formData.health_insurance,
+      long_term_care: formData.long_term_care,
+      employment_insurance: formData.employment_insurance,
+      income_tax_enabled: formData.income_tax_enabled,
+      dependents_count: formData.dependents_count,
+      kakao_notification_enabled: formData.kakao_notification_enabled,
+      kakao_phone_number: formData.kakao_phone_number,
+      notes: formData.notes
+    }
+
+    onSave(saveData)
   }
 
   const addAllowance = () => {
-    if (!newAllowanceName.trim()) {
+    if (!newAllowanceName.trim() || newAllowanceName === '__custom__') {
       alert('수당 항목명을 입력해주세요.')
+      return
+    }
+
+    if (newAllowanceAmount > formData.total_salary - allowancesTotal) {
+      alert('수당 합계가 총 급여를 초과할 수 없습니다.')
       return
     }
 
@@ -121,11 +175,19 @@ export default function PayrollSettingForm({
   }
 
   const updateAllowanceAmount = (name: string, amount: number) => {
+    // 수당 합계가 총급여를 초과하지 않도록 제한
+    const otherAllowancesTotal = Object.entries(formData.allowances)
+      .filter(([key]) => key !== name)
+      .reduce((sum, [, val]) => sum + (Number(val) || 0), 0)
+
+    const maxAmount = formData.total_salary - otherAllowancesTotal
+    const adjustedAmount = Math.min(amount, maxAmount)
+
     setFormData(prev => ({
       ...prev,
       allowances: {
         ...prev.allowances,
-        [name]: amount
+        [name]: Math.max(0, adjustedAmount)
       }
     }))
   }
@@ -196,30 +258,39 @@ export default function PayrollSettingForm({
               <span className="text-sm text-slate-600">세후 (실수령액 기준)</span>
             </label>
           </div>
+          {formData.salary_type === 'net' && (
+            <p className="mt-2 text-xs text-blue-600 flex items-center">
+              <Info className="w-3 h-3 mr-1" />
+              세후 기준: 입력한 총 급여가 실수령액이 되도록 세전 급여를 역산합니다.
+            </p>
+          )}
         </div>
 
-        {/* 기본급 */}
+        {/* 총 급여 */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            기본급 (월) <span className="text-red-500">*</span>
+            {formData.salary_type === 'net' ? '목표 실수령액 (월)' : '총 급여 (월)'} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="number"
-              value={formData.base_salary || ''}
-              onChange={e => setFormData(prev => ({ ...prev, base_salary: parseInt(e.target.value) || 0 }))}
+              value={formData.total_salary || ''}
+              onChange={e => setFormData(prev => ({ ...prev, total_salary: parseInt(e.target.value) || 0 }))}
               className="w-full pl-10 pr-12 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="3000000"
+              placeholder="4000000"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">원</span>
           </div>
+          <p className="mt-1 text-xs text-slate-500">
+            수당을 포함한 총 급여를 입력하세요. 기본급은 자동 계산됩니다.
+          </p>
         </div>
 
         {/* 수당 항목 */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            수당 항목
+            수당 항목 (총 급여에서 분리)
           </label>
 
           {/* 기존 수당 목록 */}
@@ -227,7 +298,12 @@ export default function PayrollSettingForm({
             <div className="space-y-2 mb-4">
               {Object.entries(formData.allowances).map(([name, amount]) => (
                 <div key={name} className="flex items-center space-x-2">
-                  <span className="flex-1 px-3 py-2 bg-slate-100 rounded-lg text-sm">{name}</span>
+                  <span className="flex-1 px-3 py-2 bg-slate-100 rounded-lg text-sm">
+                    {name}
+                    {isNonTaxableAllowance(name) && (
+                      <span className="ml-2 text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded">비과세</span>
+                    )}
+                  </span>
                   <div className="relative">
                     <input
                       type="number"
@@ -258,7 +334,9 @@ export default function PayrollSettingForm({
             >
               <option value="">수당 항목 선택</option>
               {COMMON_ALLOWANCES_LIST.filter(a => !formData.allowances[a]).map(name => (
-                <option key={name} value={name}>{name}</option>
+                <option key={name} value={name}>
+                  {name} {isNonTaxableAllowance(name) ? '(비과세)' : ''}
+                </option>
               ))}
               <option value="__custom__">직접 입력</option>
             </select>
@@ -284,18 +362,36 @@ export default function PayrollSettingForm({
             <button
               type="button"
               onClick={addAllowance}
-              className="p-2 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-lg"
+              disabled={!newAllowanceName || newAllowanceName === '__custom__'}
+              className="p-2 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-4 h-4" />
             </button>
           </div>
 
-          {/* 총 급여 표시 */}
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-blue-700">총 급여 (기본급 + 수당)</span>
-              <span className="text-lg font-bold text-blue-700">
-                {totalSalary.toLocaleString()}원
+          {/* 급여 내역 표시 */}
+          <div className="mt-4 p-4 bg-slate-50 rounded-lg space-y-2">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-600">총 급여</span>
+              <span className="font-medium text-slate-800">
+                {formData.total_salary.toLocaleString()}원
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-600">- 수당 합계</span>
+              <span className="text-slate-600">
+                {allowancesTotal.toLocaleString()}원
+              </span>
+            </div>
+            {nonTaxableTotal > 0 && (
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-green-600 ml-4">(비과세 수당: {nonTaxableTotal.toLocaleString()}원)</span>
+              </div>
+            )}
+            <div className="border-t border-slate-200 pt-2 flex justify-between items-center">
+              <span className="text-sm font-medium text-slate-700">= 기본급</span>
+              <span className={`text-lg font-bold ${calculatedBaseSalary >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
+                {calculatedBaseSalary.toLocaleString()}원
               </span>
             </div>
           </div>
