@@ -321,6 +321,62 @@ async function findNearestBranch(
 }
 
 /**
+ * UUID 추출 및 정규화 함수
+ * URL이나 문자열에서 UUID만 추출합니다.
+ * 안드로이드/iOS 브라우저 간 차이로 인한 숨겨진 문자 문제 해결
+ */
+function extractUUID(input: string): { uuid: string | null; original: string; cleaned: string } {
+  const original = input
+  // 1. 기본 정리: 공백, 줄바꿈, 캐리지리턴 제거
+  let cleaned = input.trim().replace(/[\r\n\s]/g, '')
+
+  // 2. URL에서 경로 추출 (/qr/ 이후 부분)
+  if (cleaned.includes('/qr/')) {
+    const parts = cleaned.split('/qr/')
+    cleaned = parts[parts.length - 1]
+  }
+
+  // 3. 쿼리 파라미터 제거 (?이후 제거)
+  if (cleaned.includes('?')) {
+    cleaned = cleaned.split('?')[0]
+  }
+
+  // 4. 해시 제거 (#이후 제거)
+  if (cleaned.includes('#')) {
+    cleaned = cleaned.split('#')[0]
+  }
+
+  // 5. URL 디코딩 (인코딩된 문자 처리)
+  try {
+    cleaned = decodeURIComponent(cleaned)
+  } catch {
+    // 디코딩 실패 시 그대로 사용
+  }
+
+  // 6. UUID 형식 검증 (하이픈 포함 36자 또는 하이픈 없이 32자)
+  const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+  const uuidRegexNoHyphen = /^[0-9a-fA-F]{32}$/
+
+  if (uuidRegex.test(cleaned)) {
+    return { uuid: cleaned.toLowerCase(), original, cleaned }
+  }
+
+  if (uuidRegexNoHyphen.test(cleaned)) {
+    // 하이픈 없는 UUID를 하이픈 있는 형식으로 변환
+    const formatted = `${cleaned.slice(0, 8)}-${cleaned.slice(8, 12)}-${cleaned.slice(12, 16)}-${cleaned.slice(16, 20)}-${cleaned.slice(20)}`
+    return { uuid: formatted.toLowerCase(), original, cleaned }
+  }
+
+  // 7. 문자열 내에서 UUID 패턴 찾기 (마지막 시도)
+  const uuidMatch = cleaned.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/)
+  if (uuidMatch) {
+    return { uuid: uuidMatch[0].toLowerCase(), original, cleaned }
+  }
+
+  return { uuid: null, original, cleaned }
+}
+
+/**
  * QR 코드 검증 함수
  * QR 코드의 유효성과 위치를 검증합니다.
  */
@@ -333,13 +389,19 @@ export async function validateQRCode(
   }
 
   try {
-    let { qr_code } = request
+    const { qr_code: rawQrCode } = request
     const { latitude, longitude } = request
 
-    // URL에서 UUID 추출 (예: https://domain.com/qr/uuid → uuid)
-    if (qr_code.includes('/qr/')) {
-      const parts = qr_code.split('/qr/')
-      qr_code = parts[parts.length - 1]
+    // UUID 추출 (안드로이드/iOS 호환성 처리)
+    const { uuid: qr_code, original, cleaned } = extractUUID(rawQrCode)
+
+    // UUID 추출 실패 시 상세 오류 메시지
+    if (!qr_code) {
+      console.error('[validateQRCode] UUID extraction failed:', { original, cleaned })
+      return {
+        is_valid: false,
+        error_message: `QR 코드 형식이 올바르지 않습니다. (입력값: ${cleaned.substring(0, 50)}${cleaned.length > 50 ? '...' : ''})`
+      }
     }
 
     // QR 코드 조회
@@ -351,7 +413,11 @@ export async function validateQRCode(
       .single()
 
     if (qrError || !qrData) {
-      return { is_valid: false, error_message: 'Invalid or expired QR code' }
+      console.error('[validateQRCode] QR code not found:', { qr_code, error: qrError?.message })
+      return {
+        is_valid: false,
+        error_message: `QR 코드를 찾을 수 없습니다. 관리자에게 새 QR 코드를 요청하세요. (코드: ${qr_code.substring(0, 8)}...)`
+      }
     }
 
     const qrCode = qrData as AttendanceQRCode
@@ -496,12 +562,16 @@ export async function autoCheckInOut(request: {
 
   try {
     const { user_id, latitude, longitude, device_info } = request
-    let { qr_code } = request
 
-    // URL에서 UUID 추출 (예: https://domain.com/qr/uuid → uuid)
-    if (qr_code.includes('/qr/')) {
-      const parts = qr_code.split('/qr/')
-      qr_code = parts[parts.length - 1]
+    // UUID 추출 (안드로이드/iOS 호환성 처리)
+    const { uuid: qr_code, original, cleaned } = extractUUID(request.qr_code)
+
+    if (!qr_code) {
+      console.error('[autoCheckInOut] UUID extraction failed:', { original, cleaned })
+      return {
+        success: false,
+        message: `QR 코드 형식이 올바르지 않습니다. (입력값: ${cleaned.substring(0, 50)}${cleaned.length > 50 ? '...' : ''})`
+      }
     }
 
     // 오늘 날짜

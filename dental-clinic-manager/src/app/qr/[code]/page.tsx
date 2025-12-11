@@ -356,6 +356,62 @@ function SuccessScreen({ message, actionType }: { message: string; actionType: s
 
 // 오류 화면
 function ErrorScreen({ message }: { message: string }) {
+  // 오류 유형에 따른 구체적인 안내
+  const getErrorGuidance = () => {
+    if (message.includes('QR 코드 형식') || message.includes('입력값')) {
+      return {
+        title: 'QR 코드 인식 오류',
+        suggestions: [
+          '• QR 코드를 다시 스캔해 주세요',
+          '• 카메라 앱 설정에서 URL 자동 열기를 확인하세요',
+          '• 다른 QR 스캐너 앱을 사용해 보세요',
+          '• 문제가 지속되면 관리자에게 문의하세요'
+        ]
+      }
+    }
+    if (message.includes('찾을 수 없습니다') || message.includes('코드:')) {
+      return {
+        title: 'QR 코드 만료 또는 비활성',
+        suggestions: [
+          '• 관리자에게 새 QR 코드를 요청하세요',
+          '• QR 코드가 최신인지 확인하세요',
+          '• 오래된 QR 코드 이미지는 사용할 수 없습니다'
+        ]
+      }
+    }
+    if (message.includes('만료') || message.includes('expired')) {
+      return {
+        title: 'QR 코드 만료',
+        suggestions: [
+          '• QR 코드의 유효 기간이 지났습니다',
+          '• 관리자에게 새 QR 코드를 요청하세요'
+        ]
+      }
+    }
+    if (message.includes('위치') || message.includes('distance') || message.includes('away')) {
+      return {
+        title: '위치 확인 필요',
+        suggestions: [
+          '• 병원 건물 안에서 스캔해 주세요',
+          '• GPS 신호가 약할 수 있으니 잠시 기다려 주세요',
+          '• 위치 권한이 허용되어 있는지 확인하세요'
+        ]
+      }
+    }
+    // 기본 안내
+    return {
+      title: '처리 실패',
+      suggestions: [
+        '• QR 코드가 유효한지 확인해주세요',
+        '• 위치 권한을 허용했는지 확인해주세요',
+        '• 병원 근처에 있는지 확인해주세요',
+        '• 관리자에게 문의해주세요'
+      ]
+    }
+  }
+
+  const guidance = getErrorGuidance()
+
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
       {/* 아이콘 */}
@@ -378,18 +434,27 @@ function ErrorScreen({ message }: { message: string }) {
       </div>
 
       {/* 메시지 */}
-      <h2 className="text-3xl font-bold text-gray-800 mb-4">처리 실패</h2>
+      <h2 className="text-3xl font-bold text-gray-800 mb-4">{guidance.title}</h2>
       <p className="text-lg text-gray-600 mb-6">{message}</p>
 
       {/* 안내 */}
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-left">
         <h3 className="font-semibold text-yellow-800 mb-2">해결 방법:</h3>
         <ul className="space-y-1 text-yellow-700">
-          <li>• QR 코드가 유효한지 확인해주세요</li>
-          <li>• 위치 권한을 허용했는지 확인해주세요</li>
-          <li>• 병원 근처에 있는지 확인해주세요</li>
-          <li>• 관리자에게 문의해주세요</li>
+          {guidance.suggestions.map((suggestion, index) => (
+            <li key={index}>{suggestion}</li>
+          ))}
         </ul>
+      </div>
+
+      {/* 다시 시도 버튼 */}
+      <div className="mt-6">
+        <button
+          onClick={() => window.location.reload()}
+          className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors"
+        >
+          다시 시도
+        </button>
       </div>
     </div>
   )
