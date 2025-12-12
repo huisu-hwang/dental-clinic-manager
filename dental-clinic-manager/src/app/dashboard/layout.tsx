@@ -94,6 +94,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/dashboard?tab=protocols')
     } else if (tab === 'vendors') {
       router.push('/dashboard?tab=vendors')
+    } else if (tab === 'documents') {
+      router.push('/dashboard?tab=documents')
     } else if (tab === 'guide') {
       router.push('/dashboard?tab=guide')
     } else {

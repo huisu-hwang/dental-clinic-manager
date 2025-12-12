@@ -14,7 +14,8 @@ import {
   Package,
   HelpCircle,
   CalendarDays,
-  Building2
+  Building2,
+  FileText
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -41,6 +42,7 @@ const defaultTabs: Tab[] = [
   { id: 'protocols', label: '진료 프로토콜', icon: BookOpen, requiredPermissions: ['protocol_view'] },
   { id: 'vendors', label: '업체 연락처', icon: Building2, requiredPermissions: ['vendor_contacts_view'] },
   { id: 'contracts', label: '근로계약서', icon: FileSignature, requiredPermissions: ['contract_view'] },
+  { id: 'documents', label: '문서 양식', icon: FileText, requiredPermissions: ['contract_view'] },
   { id: 'settings', label: '재고 관리', icon: Package, requiredPermissions: ['inventory_view'] },
   { id: 'guide', label: '사용 안내', icon: HelpCircle, requiredPermissions: ['guide_view'] }
 ]
