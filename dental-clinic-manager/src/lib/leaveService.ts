@@ -517,15 +517,17 @@ export const leaveService = {
         .single()
 
       // 승인된 무급휴가 일수 조회 (잔여 연차에서 음수로 표시하기 위함)
+      // 지난 달의 무급휴가는 제외하고, 오늘 이후의 무급휴가만 계산
       let unpaidUsedDays = 0
       if (unpaidType) {
+        const today = new Date().toISOString().split('T')[0]
         const { data: unpaidRequests } = await (supabase as any)
           .from('leave_requests')
           .select('total_days')
           .eq('user_id', userId)
           .eq('leave_type_id', unpaidType.id)
           .eq('status', 'approved')
-          .gte('start_date', `${year}-01-01`)
+          .gte('start_date', today)  // 오늘 이후의 무급휴가만 계산
           .lte('start_date', `${year}-12-31`)
 
         unpaidUsedDays = (unpaidRequests || []).reduce((sum: number, r: any) => sum + r.total_days, 0)
