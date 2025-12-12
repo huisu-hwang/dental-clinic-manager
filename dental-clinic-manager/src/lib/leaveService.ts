@@ -900,6 +900,9 @@ export const leaveService = {
 
       if (error) throw error
 
+      // 연차 조정 후 잔여 연차 즉시 재계산
+      await this.initializeBalance(input.user_id, input.year)
+
       return { success: true, error: null }
     } catch (error) {
       console.error('[leaveService.addAdjustment] Error:', error)
@@ -950,6 +953,15 @@ export const leaveService = {
       const user = getCurrentUser()
       if (!user) throw new Error('User not found')
 
+      // 삭제 전 조정 정보 조회 (user_id, year 필요)
+      const { data: adjustment, error: fetchError } = await (supabase as any)
+        .from('leave_adjustments')
+        .select('user_id, year')
+        .eq('id', adjustmentId)
+        .single()
+
+      if (fetchError) throw fetchError
+
       const { error } = await (supabase as any)
         .from('leave_adjustments')
         .delete()
@@ -957,6 +969,11 @@ export const leaveService = {
         .eq('adjusted_by', user.id)
 
       if (error) throw error
+
+      // 조정 삭제 후 잔여 연차 즉시 재계산
+      if (adjustment) {
+        await this.initializeBalance(adjustment.user_id, adjustment.year)
+      }
 
       return { success: true, error: null }
     } catch (error) {
