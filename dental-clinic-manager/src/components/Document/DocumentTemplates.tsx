@@ -23,6 +23,23 @@ import {
 import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool } from 'lucide-react'
 import SignaturePad from '@/components/Contract/SignaturePad'
 
+// 직급 영문 -> 한글 변환
+const translateRole = (role: string): string => {
+  const roleMap: Record<string, string> = {
+    'owner': '대표',
+    'manager': '관리자',
+    'staff': '직원',
+    'dentist': '치과의사',
+    'hygienist': '치위생사',
+    'assistant': '치과조무사',
+    'receptionist': '데스크',
+    'admin': '사무장',
+    'intern': '인턴',
+    'part-time': '파트타임'
+  }
+  return roleMap[role?.toLowerCase()] || role || ''
+}
+
 interface StaffMember {
   id: string
   name: string
@@ -69,7 +86,7 @@ export default function DocumentTemplates() {
             id: s.id,
             name: s.name || '',
             role: s.role || '',
-            position: s.position || s.role || '',
+            position: s.position || translateRole(s.role) || '',
             phone: s.phone || '',
             hire_date: s.hire_date || '',
             address: s.address || '',
@@ -100,7 +117,7 @@ export default function DocumentTemplates() {
         ...prev,
         ...clinicInfo,
         employeeName: prev.employeeName || user.name || '',
-        employeePosition: prev.employeePosition || user.position || user.role || '',
+        employeePosition: prev.employeePosition || user.position || translateRole(user.role) || '',
         hireDate: prev.hireDate || user.hire_date || ''
       }))
 
@@ -110,7 +127,7 @@ export default function DocumentTemplates() {
         businessNumber: user.clinic?.business_number || '',
         clinicPhone: user.clinic?.phone || '',
         employeeName: prev.employeeName || user.name || '',
-        position: prev.position || user.position || user.role || '',
+        position: prev.position || user.position || translateRole(user.role) || '',
         employeePhone: prev.employeePhone || user.phone || '',
         hireDate: prev.hireDate || user.hire_date || '',
         employeeAddress: prev.employeeAddress || user.address || '',
@@ -129,14 +146,14 @@ export default function DocumentTemplates() {
       setResignationData(prev => ({
         ...prev,
         employeeName: staff.name || '',
-        employeePosition: staff.position || staff.role || '',
+        employeePosition: staff.position || translateRole(staff.role) || '',
         hireDate: staff.hire_date || ''
       }))
     } else {
       setCertificateData(prev => ({
         ...prev,
         employeeName: staff.name || '',
-        position: staff.position || staff.role || '',
+        position: staff.position || translateRole(staff.role) || '',
         employeePhone: staff.phone || '',
         hireDate: staff.hire_date || '',
         employeeAddress: staff.address || '',
@@ -292,7 +309,7 @@ export default function DocumentTemplates() {
                 <option value="">직원을 선택하세요</option>
                 {staffList.map((staff) => (
                   <option key={staff.id} value={staff.id}>
-                    {staff.name} ({staff.position || staff.role})
+                    {staff.name} ({staff.position || translateRole(staff.role)})
                   </option>
                 ))}
               </select>
