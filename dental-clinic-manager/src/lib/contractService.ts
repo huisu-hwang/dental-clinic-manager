@@ -7,6 +7,7 @@ import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import type { Session } from '@supabase/supabase-js'
 import { clinicHoursService } from './clinicHoursService'
 import { refreshSessionWithTimeout } from './sessionUtils'
+import { userNotificationService } from './userNotificationService'
 import type {
   EmploymentContract,
   ContractTemplate,
@@ -456,7 +457,8 @@ class ContractService {
    */
   async updateContractStatus(
     contractId: string,
-    status: ContractStatus
+    status: ContractStatus,
+    sendNotification: boolean = false
   ): Promise<CreateContractResponse> {
     const supabase = getSupabase()
     if (!supabase) {
@@ -482,6 +484,33 @@ class ContractService {
 
       if (error) {
         return { success: false, error: error.message }
+      }
+
+      // 알림 전송 (선택적)
+      if (sendNotification && data) {
+        try {
+          const contract = data as EmploymentContract
+          const contractData = contract.contract_data as ContractData
+          const employeeName = contractData?.employee_name || '직원'
+
+          if (status === 'pending_employee_signature' && contract.employee_user_id) {
+            // 직원에게 서명 요청 알림
+            await userNotificationService.notifyContractSignatureRequired(
+              contract.employee_user_id,
+              employeeName,
+              contractId
+            )
+          } else if (status === 'pending_employer_signature' && contract.employer_user_id) {
+            // 원장에게 서명 요청 알림
+            await userNotificationService.notifyContractSignatureRequired(
+              contract.employer_user_id,
+              employeeName,
+              contractId
+            )
+          }
+        } catch (notifyError) {
+          console.error('[contractService.updateContractStatus] Notification error:', notifyError)
+        }
       }
 
       return { success: true, contract: data as EmploymentContract }
@@ -522,6 +551,30 @@ class ContractService {
 
       if (error) {
         return { success: false, error: error.message }
+      }
+
+      // 계약서 취소 알림
+      try {
+        if (data) {
+          const contract = data as EmploymentContract
+          const contractData = contract.contract_data as ContractData
+          const employeeName = contractData?.employee_name || '직원'
+
+          // 취소자가 아닌 상대방에게 알림
+          const recipientIds = [contract.employee_user_id, contract.employer_user_id]
+            .filter(id => id && id !== cancelledBy) as string[]
+
+          if (recipientIds.length > 0) {
+            await userNotificationService.notifyContractCancelled(
+              recipientIds,
+              employeeName,
+              contractId,
+              reason
+            )
+          }
+        }
+      } catch (notifyError) {
+        console.error('[contractService.cancelContract] Notification error:', notifyError)
       }
 
       return { success: true, contract: data as EmploymentContract }
@@ -624,6 +677,43 @@ class ContractService {
       // Update contract status if changed
       if (newStatus !== contract.status) {
         await this.updateContractStatus(data.contract_id, newStatus)
+      }
+
+      // 알림 생성
+      try {
+        const contractData = contract.contract_data as ContractData
+        const employeeName = contractData.employee_name || '직원'
+
+        if (newStatus === 'completed') {
+          // 계약 완료: 양측에게 완료 알림
+          const userIds = [contract.employee_user_id, contract.employer_user_id].filter(Boolean) as string[]
+          await userNotificationService.notifyContractCompleted(
+            userIds,
+            employeeName,
+            data.contract_id
+          )
+        } else if (newStatus === 'pending_employer_signature') {
+          // 직원이 서명 완료 → 원장에게 서명 요청 알림
+          if (contract.employer_user_id) {
+            await userNotificationService.notifyContractSignatureRequired(
+              contract.employer_user_id,
+              employeeName,
+              data.contract_id
+            )
+          }
+        } else if (newStatus === 'pending_employee_signature') {
+          // 원장이 서명 완료 → 직원에게 서명 요청 알림
+          if (contract.employee_user_id) {
+            await userNotificationService.notifyContractSignatureRequired(
+              contract.employee_user_id,
+              employeeName,
+              data.contract_id
+            )
+          }
+        }
+      } catch (notifyError) {
+        console.error('[contractService.signContract] Notification error:', notifyError)
+        // 알림 실패해도 서명은 성공으로 처리
       }
 
       return {

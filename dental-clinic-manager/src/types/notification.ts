@@ -211,3 +211,96 @@ export function getDefaultNotificationFormData(): NotificationFormData {
     priority: 10
   }
 }
+
+// =====================================================
+// 사용자별 알림 (User Notifications) - 개인 알림 시스템
+// =====================================================
+
+// 사용자 알림 타입
+export type UserNotificationType =
+  | 'leave_approval_pending'      // 연차 승인 대기 (결재자에게)
+  | 'leave_approved'              // 연차 승인됨 (신청자에게)
+  | 'leave_rejected'              // 연차 반려됨 (신청자에게)
+  | 'leave_forwarded'             // 연차 다음 단계로 전달 (신청자에게)
+  | 'contract_signature_required' // 계약서 서명 필요 (서명 대상자에게)
+  | 'contract_signed'             // 계약서 서명 완료 (양측에게)
+  | 'contract_completed'          // 계약서 완료 (양측에게)
+  | 'contract_cancelled'          // 계약서 취소 (양측에게)
+  | 'system'                      // 시스템 알림
+
+// 사용자 알림 타입 라벨
+export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string> = {
+  leave_approval_pending: '연차 승인 요청',
+  leave_approved: '연차 승인',
+  leave_rejected: '연차 반려',
+  leave_forwarded: '연차 승인 진행',
+  contract_signature_required: '서명 요청',
+  contract_signed: '서명 완료',
+  contract_completed: '계약 완료',
+  contract_cancelled: '계약 취소',
+  system: '시스템 알림'
+}
+
+// 사용자 알림 아이콘 매핑
+export const USER_NOTIFICATION_TYPE_ICONS: Record<UserNotificationType, string> = {
+  leave_approval_pending: 'clock',
+  leave_approved: 'check-circle',
+  leave_rejected: 'x-circle',
+  leave_forwarded: 'arrow-right',
+  contract_signature_required: 'pencil',
+  contract_signed: 'document-check',
+  contract_completed: 'document-text',
+  contract_cancelled: 'document-minus',
+  system: 'bell'
+}
+
+// 사용자 알림 색상 매핑
+export const USER_NOTIFICATION_TYPE_COLORS: Record<UserNotificationType, { icon: string; bg: string; text: string }> = {
+  leave_approval_pending: { icon: 'text-amber-500', bg: 'bg-amber-50', text: 'text-amber-700' },
+  leave_approved: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
+  leave_rejected: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
+  leave_forwarded: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' },
+  contract_signature_required: { icon: 'text-purple-500', bg: 'bg-purple-50', text: 'text-purple-700' },
+  contract_signed: { icon: 'text-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  contract_completed: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
+  contract_cancelled: { icon: 'text-gray-500', bg: 'bg-gray-50', text: 'text-gray-700' },
+  system: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' }
+}
+
+// 사용자 알림 인터페이스
+export interface UserNotification {
+  id: string
+  clinic_id: string
+  user_id: string              // 알림 수신자
+  type: UserNotificationType
+  title: string
+  content?: string
+  link?: string                // 관련 페이지 링크 (예: /management?tab=leave)
+  reference_type?: string      // 참조 타입 (leave_request, contract)
+  reference_id?: string        // 참조 ID
+  is_read: boolean
+  read_at?: string
+  created_at: string
+  created_by?: string          // 알림 발생시킨 사용자
+  expires_at?: string          // 알림 만료 시간 (선택)
+}
+
+// 사용자 알림 생성용 입력 인터페이스
+export interface CreateUserNotificationInput {
+  user_id: string
+  type: UserNotificationType
+  title: string
+  content?: string
+  link?: string
+  reference_type?: string
+  reference_id?: string
+  created_by?: string
+  expires_at?: string
+}
+
+// 사용자 알림 목록 응답
+export interface UserNotificationListResponse {
+  notifications: UserNotification[]
+  unreadCount: number
+  total: number
+}
