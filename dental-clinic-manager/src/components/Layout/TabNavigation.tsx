@@ -109,11 +109,13 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick }: T
 
   // 현재 선택된 탭이 권한이 없는 탭이면 첫 번째 탭으로 변경
   // useEffect를 사용하여 렌더링 이후에 비동기적으로 처리 (렌더링 중 상태 변경 방지)
+  // isLoading 중에는 탭 자동 변경을 하지 않음 (메뉴 설정 로드 완료 후 처리)
   useEffect(() => {
+    if (isLoading) return // 로딩 중에는 탭 변경하지 않음
     if (visibleTabs.length > 0 && !visibleTabs.find(tab => tab.id === activeTab)) {
       onTabChange(visibleTabs[0].id)
     }
-  }, [activeTab, visibleTabs, onTabChange])
+  }, [activeTab, visibleTabs, onTabChange, isLoading])
 
   const handleTabClick = (tabId: string) => {
     onTabChange(tabId)
