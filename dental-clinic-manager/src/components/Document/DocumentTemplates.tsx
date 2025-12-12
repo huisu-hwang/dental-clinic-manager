@@ -20,8 +20,22 @@ import {
   getDefaultResignationData,
   getDefaultEmploymentCertificateData
 } from '@/types/document'
-import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool } from 'lucide-react'
+import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool, Send, CheckCircle, Clock, XCircle, List } from 'lucide-react'
 import SignaturePad from '@/components/Contract/SignaturePad'
+
+// 문서 제출 상태 타입
+interface DocumentSubmission {
+  id: string
+  document_type: string
+  document_data: any
+  employee_signature?: string
+  owner_signature?: string
+  status: 'pending' | 'approved' | 'rejected'
+  reject_reason?: string
+  created_at: string
+  submitter?: { id: string; name: string; role: string }
+  approver?: { id: string; name: string; role: string }
+}
 
 // 직급 영문 -> 한글 변환 (StaffManagement의 getRoleLabel과 동일)
 const translateRole = (role: string | undefined): string => {
@@ -56,7 +70,15 @@ export default function DocumentTemplates() {
   const [selectedStaff, setSelectedStaff] = useState<string>('')
   const [loadingStaff, setLoadingStaff] = useState(false)
   const [showSignatureModal, setShowSignatureModal] = useState(false)
+  const [showOwnerSignatureModal, setShowOwnerSignatureModal] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissions, setSubmissions] = useState<DocumentSubmission[]>([])
+  const [showSubmissionList, setShowSubmissionList] = useState(false)
+  const [selectedSubmission, setSelectedSubmission] = useState<DocumentSubmission | null>(null)
   const documentRef = useRef<HTMLDivElement>(null)
+
+  // 원장인지 확인
+  const isOwner = user?.role === 'owner'
 
   // 사직서 데이터
   const [resignationData, setResignationData] = useState<ResignationData>(
@@ -131,6 +153,119 @@ export default function DocumentTemplates() {
       }))
     }
   }, [user])
+
+  // 문서 제출 목록 로드
+  useEffect(() => {
+    const loadSubmissions = async () => {
+      if (!user?.clinic_id) return
+      try {
+        const response = await fetch(
+          `/api/document-submissions?clinicId=${user.clinic_id}${isOwner ? '' : `&userId=${user.id}`}`
+        )
+        const result = await response.json()
+        if (result.data) {
+          setSubmissions(result.data)
+        }
+      } catch (error) {
+        console.error('Failed to load submissions:', error)
+      }
+    }
+    loadSubmissions()
+  }, [user?.clinic_id, user?.id, isOwner])
+
+  // 문서 제출 핸들러
+  const handleSubmitDocument = async () => {
+    if (!user?.clinic_id || !user?.id) return
+
+    // 사직서는 서명 필수
+    if (documentType === 'resignation' && !resignationData.employeeSignature) {
+      alert('사직서 제출을 위해 서명이 필요합니다.')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const documentData = documentType === 'resignation' ? resignationData : certificateData
+      const signature = documentType === 'resignation' ? resignationData.employeeSignature : undefined
+
+      const response = await fetch('/api/document-submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinicId: user.clinic_id,
+          userId: user.id,
+          documentType,
+          documentData,
+          signature
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        alert(`${DocumentTypeLabels[documentType]}가 제출되었습니다. 원장님의 확인을 기다려주세요.`)
+        // 목록 새로고침
+        const listResponse = await fetch(
+          `/api/document-submissions?clinicId=${user.clinic_id}${isOwner ? '' : `&userId=${user.id}`}`
+        )
+        const listResult = await listResponse.json()
+        if (listResult.data) {
+          setSubmissions(listResult.data)
+        }
+      } else {
+        alert(`제출 실패: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Submit error:', error)
+      alert('문서 제출 중 오류가 발생했습니다.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // 문서 승인/반려 핸들러 (원장 전용)
+  const handleApproveReject = async (submissionId: string, action: 'approve' | 'reject', ownerSignature?: string, rejectReason?: string) => {
+    if (!user?.clinic_id || !user?.id || !isOwner) return
+
+    try {
+      const response = await fetch('/api/document-submissions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinicId: user.clinic_id,
+          userId: user.id,
+          submissionId,
+          action,
+          ownerSignature,
+          rejectReason
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        alert(action === 'approve' ? '승인되었습니다.' : '반려되었습니다.')
+        // 목록 새로고침
+        const listResponse = await fetch(`/api/document-submissions?clinicId=${user.clinic_id}`)
+        const listResult = await listResponse.json()
+        if (listResult.data) {
+          setSubmissions(listResult.data)
+        }
+        setSelectedSubmission(null)
+        setShowOwnerSignatureModal(false)
+      } else {
+        alert(`처리 실패: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Approve/Reject error:', error)
+      alert('처리 중 오류가 발생했습니다.')
+    }
+  }
+
+  // 원장 서명 후 승인
+  const handleOwnerSignAndApprove = (signatureData: string) => {
+    if (selectedSubmission) {
+      handleApproveReject(selectedSubmission.id, 'approve', signatureData)
+    }
+  }
 
   // 직원 선택 시 데이터 자동 입력
   const handleStaffSelect = (staffId: string) => {
@@ -263,7 +398,139 @@ export default function DocumentTemplates() {
           <h2 className="text-2xl font-bold text-slate-800">문서 양식</h2>
           <p className="text-slate-500 mt-1">사직서, 재직증명서 등 문서 양식을 작성하고 출력하세요</p>
         </div>
+        <button
+          onClick={() => setShowSubmissionList(!showSubmissionList)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            showSubmissionList
+              ? 'bg-blue-600 text-white'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          <List className="w-4 h-4" />
+          {isOwner ? '제출된 문서' : '내 제출 목록'}
+          {submissions.filter(s => s.status === 'pending').length > 0 && (
+            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+              {submissions.filter(s => s.status === 'pending').length}
+            </span>
+          )}
+        </button>
       </div>
+
+      {/* 제출 목록 */}
+      {showSubmissionList && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 print:hidden">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">
+            {isOwner ? '제출된 문서 목록' : '내 제출 목록'}
+          </h3>
+          {submissions.length === 0 ? (
+            <p className="text-slate-500 text-center py-8">제출된 문서가 없습니다.</p>
+          ) : (
+            <div className="space-y-3">
+              {submissions.map((submission) => (
+                <div
+                  key={submission.id}
+                  className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-full ${
+                      submission.status === 'pending' ? 'bg-yellow-100' :
+                      submission.status === 'approved' ? 'bg-green-100' : 'bg-red-100'
+                    }`}>
+                      {submission.status === 'pending' ? (
+                        <Clock className="w-5 h-5 text-yellow-600" />
+                      ) : submission.status === 'approved' ? (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-red-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800">
+                        {submission.document_type === 'resignation' ? '사직서' : '재직증명서'}
+                        {isOwner && submission.submitter && (
+                          <span className="text-slate-500 ml-2">- {submission.submitter.name}</span>
+                        )}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {new Date(submission.created_at).toLocaleDateString('ko-KR')}
+                        <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                          submission.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          submission.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {submission.status === 'pending' ? '대기중' :
+                           submission.status === 'approved' ? '승인됨' : '반려됨'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isOwner && submission.status === 'pending' && (
+                      <>
+                        {submission.document_type === 'employment_certificate' ? (
+                          <button
+                            onClick={() => {
+                              setSelectedSubmission(submission)
+                              setShowOwnerSignatureModal(true)
+                            }}
+                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                          >
+                            서명 후 승인
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleApproveReject(submission.id, 'approve')}
+                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                          >
+                            승인
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            const reason = prompt('반려 사유를 입력하세요:')
+                            if (reason) {
+                              handleApproveReject(submission.id, 'reject', undefined, reason)
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                        >
+                          반려
+                        </button>
+                      </>
+                    )}
+                    {submission.status === 'approved' && (
+                      <button
+                        onClick={() => {
+                          // 승인된 문서 데이터로 미리보기 설정
+                          if (submission.document_type === 'resignation') {
+                            setResignationData({
+                              ...submission.document_data,
+                              employeeSignature: submission.employee_signature
+                            })
+                            setDocumentType('resignation')
+                          } else {
+                            setCertificateData(submission.document_data)
+                            setDocumentType('employment_certificate')
+                          }
+                          setShowPreview(true)
+                          setShowSubmissionList(false)
+                        }}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                      >
+                        출력
+                      </button>
+                    )}
+                    {submission.reject_reason && (
+                      <span className="text-sm text-red-600">
+                        사유: {submission.reject_reason}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 문서 타입 선택 */}
       <div className="flex gap-3 print:hidden">
@@ -354,10 +621,10 @@ export default function DocumentTemplates() {
           )}
 
           {/* 액션 버튼 */}
-          <div className="flex gap-3 mt-6 pt-4 border-t">
+          <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t">
             <button
               onClick={() => setShowPreview(!showPreview)}
-              className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+              className="flex-1 min-w-[100px] px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
             >
               {showPreview ? (
                 <>
@@ -371,9 +638,24 @@ export default function DocumentTemplates() {
                 </>
               )}
             </button>
+            {/* 원장이 아닌 경우에만 제출 버튼 표시 */}
+            {!isOwner && (
+              <button
+                onClick={handleSubmitDocument}
+                disabled={isSubmitting}
+                className={`flex-1 min-w-[100px] px-4 py-2 rounded-lg transition-colors ${
+                  isSubmitting
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                <Send className="w-4 h-4 inline-block mr-1" />
+                {isSubmitting ? '제출 중...' : '제출'}
+              </button>
+            )}
             <button
               onClick={handlePrint}
-              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="flex-1 min-w-[100px] px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
               <Printer className="w-4 h-4 inline-block mr-1" />
               인쇄
@@ -381,7 +663,7 @@ export default function DocumentTemplates() {
             <button
               onClick={handleDownloadPdf}
               disabled={isPdfGenerating}
-              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex-1 min-w-[100px] px-4 py-2 rounded-lg transition-colors ${
                 isPdfGenerating
                   ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -425,6 +707,36 @@ export default function DocumentTemplates() {
             <SignaturePad
               onSave={handleSignatureSave}
               onCancel={() => setShowSignatureModal(false)}
+              width={450}
+              height={180}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 원장 서명 모달 (재직증명서 승인용) */}
+      {showOwnerSignatureModal && selectedSubmission && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setShowOwnerSignatureModal(false)
+            setSelectedSubmission(null)
+          }}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">원장 서명</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              재직증명서 발급을 위해 서명해주세요.
+            </p>
+            <SignaturePad
+              onSave={handleOwnerSignAndApprove}
+              onCancel={() => {
+                setShowOwnerSignatureModal(false)
+                setSelectedSubmission(null)
+              }}
               width={450}
               height={180}
             />
@@ -502,16 +814,6 @@ function ResignationForm({
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">마지막 근무일</label>
-        <input
-          type="date"
-          value={data.lastWorkDate}
-          onChange={(e) => handleChange('lastWorkDate', e.target.value)}
-          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
       </div>
 
       <div>
@@ -815,10 +1117,6 @@ function ResignationPreview({
                 <td className="py-3 px-4">{formatDate(data.hireDate) || '　'}</td>
                 <td className="py-3 px-4 bg-slate-50 font-medium">퇴사 희망일</td>
                 <td className="py-3 px-4">{formatDate(data.resignationDate) || '　'}</td>
-              </tr>
-              <tr className="border-b border-slate-300">
-                <td className="py-3 px-4 bg-slate-50 font-medium">마지막 근무일</td>
-                <td className="py-3 px-4" colSpan={3}>{formatDate(data.lastWorkDate) || '　'}</td>
               </tr>
             </tbody>
           </table>

@@ -22,7 +22,6 @@ export interface ResignationData {
   // 퇴사 정보
   hireDate: string
   resignationDate: string
-  lastWorkDate: string
 
   // 사유
   resignationReason: string
@@ -108,7 +107,6 @@ export const getDefaultResignationData = (
   department: '진료실',
   hireDate: '',
   resignationDate: '',
-  lastWorkDate: '',
   resignationReason: '개인 사정',
   detailedReason: '',
   clinicName: clinicName || '',
