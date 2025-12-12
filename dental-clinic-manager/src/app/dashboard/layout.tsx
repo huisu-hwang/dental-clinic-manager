@@ -141,6 +141,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           activeTab={getActiveTab()}
           onTabChange={handleTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
+          skipAutoRedirect={true}
         />
       </aside>
 
