@@ -114,6 +114,7 @@ export default function DashboardHome() {
     let consultTotal = 0
     let consultSuccess = 0
     let recallTotal = 0
+    let recallBookingTotal = 0
     let giftTotal = 0
     let reviewTotal = 0
 
@@ -121,6 +122,7 @@ export default function DashboardHome() {
       consultTotal += (report.consult_proceed || 0) + (report.consult_hold || 0)
       consultSuccess += report.consult_proceed || 0
       recallTotal += report.recall_count || 0
+      recallBookingTotal += report.recall_booking_count || 0
       reviewTotal += report.naver_review_count || 0
     })
 
@@ -145,6 +147,7 @@ export default function DashboardHome() {
       consultSuccess,
       successRate,
       recallTotal,
+      recallBookingTotal,
       giftTotal,
       reviewTotal,
     }
@@ -428,8 +431,8 @@ export default function DashboardHome() {
                     <p className="text-xs text-slate-500">성공/상담 ({weeklySummary.successRate}%)</p>
                   </div>
                   <div>
-                    <p className="text-lg sm:text-xl font-bold text-orange-600">{weeklySummary.recallTotal}</p>
-                    <p className="text-xs text-slate-500">리콜</p>
+                    <p className="text-lg sm:text-xl font-bold text-orange-600">{weeklySummary.recallBookingTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.recallTotal}</span></p>
+                    <p className="text-xs text-slate-500">예약/리콜</p>
                   </div>
                   <div>
                     <p className="text-lg sm:text-xl font-bold text-purple-600">{weeklySummary.giftTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.reviewTotal}</span></p>
