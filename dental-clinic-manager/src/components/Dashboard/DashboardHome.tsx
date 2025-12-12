@@ -202,48 +202,35 @@ export default function DashboardHome() {
 
   const fetchWeather = async (lat: number, lon: number) => {
     try {
-      const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY
-      if (!API_KEY) {
-        setWeather({
-          location: '서울',
-          temp: 8,
-          feels_like: 5,
-          humidity: 55,
-          description: '맑음',
-          main: 'Clear',
-          icon: '01d',
-          wind_speed: 2.5
-        })
-        setWeatherLoading(false)
-        return
-      }
-
-      const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=kr`
-      )
+      // 기상청 API 호출 (서버사이드)
+      const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`)
       if (!response.ok) throw new Error('날씨 데이터 로드 실패')
       const data = await response.json()
 
-      setWeather({
-        location: data.name || '현재 위치',
-        temp: Math.round(data.main.temp),
-        feels_like: Math.round(data.main.feels_like),
-        humidity: data.main.humidity,
-        description: data.weather[0].description,
-        main: data.weather[0].main,
-        icon: data.weather[0].icon,
-        wind_speed: data.wind.speed
-      })
+      if (data.weather) {
+        setWeather({
+          location: data.weather.location || '현재 위치',
+          temp: data.weather.temp,
+          feels_like: data.weather.feels_like,
+          humidity: data.weather.humidity,
+          description: data.weather.description,
+          main: data.weather.main,
+          icon: data.weather.icon,
+          wind_speed: data.weather.wind_speed
+        })
+      } else {
+        throw new Error('Invalid weather data')
+      }
     } catch {
       setWeather({
         location: '서울',
-        temp: 8,
-        feels_like: 5,
-        humidity: 55,
+        temp: 10,
+        feels_like: 8,
+        humidity: 60,
         description: '맑음',
         main: 'Clear',
         icon: '01d',
-        wind_speed: 2.5
+        wind_speed: 2.0
       })
     } finally {
       setWeatherLoading(false)
