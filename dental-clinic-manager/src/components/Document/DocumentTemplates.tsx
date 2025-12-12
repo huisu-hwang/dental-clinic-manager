@@ -23,20 +23,15 @@ import {
 import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool } from 'lucide-react'
 import SignaturePad from '@/components/Contract/SignaturePad'
 
-// 직급 영문 -> 한글 변환
+// 직급 영문 -> 한글 변환 (StaffManagement의 getRoleLabel과 동일)
 const translateRole = (role: string | undefined): string => {
   if (!role) return ''
   const roleMap: Record<string, string> = {
-    'owner': '대표',
-    'manager': '관리자',
-    'staff': '직원',
-    'dentist': '치과의사',
-    'hygienist': '치위생사',
-    'assistant': '치과조무사',
-    'receptionist': '데스크',
-    'admin': '사무장',
-    'intern': '인턴',
-    'part-time': '파트타임'
+    'owner': '원장',
+    'vice_director': '부원장',
+    'manager': '실장',
+    'team_leader': '진료팀장',
+    'staff': '직원'
   }
   return roleMap[role?.toLowerCase()] || role || ''
 }
