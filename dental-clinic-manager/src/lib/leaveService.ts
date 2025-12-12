@@ -97,7 +97,7 @@ export function calculateYearsOfService(hireDate: Date, referenceDate: Date = ne
 
 /**
  * 직급에 따른 승인 프로세스 결정
- * - 부원장: 원장에게 직접 승인
+ * - 부원장/실장: 원장에게 직접 승인
  * - 팀장 이하: 정책에 따라 실장 승인 포함 또는 원장 직접 승인
  * @param role 신청자 직급
  * @param requireManagerApproval 실장 결재 포함 여부 (기본값: true)
@@ -106,8 +106,8 @@ export function getApprovalStepsForRole(
   role: string,
   requireManagerApproval: boolean = true
 ): { step: number; role: string; description: string }[] {
-  if (role === 'vice_director') {
-    // 부원장은 원장에게 직접 승인
+  // 부원장 또는 실장은 원장에게 직접 승인
+  if (role === 'vice_director' || role === 'manager') {
     return [
       { step: 1, role: 'owner', description: '원장 승인' }
     ]
