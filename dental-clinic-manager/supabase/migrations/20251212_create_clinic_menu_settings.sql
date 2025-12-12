@@ -15,10 +15,10 @@ CREATE TABLE IF NOT EXISTS clinic_menu_settings (
 CREATE INDEX IF NOT EXISTS idx_clinic_menu_settings_clinic_id ON clinic_menu_settings(clinic_id);
 
 -- 코멘트 추가
-COMMENT ON TABLE clinic_menu_settings IS '병원별 메뉴 설정 - 좌측 탭 메뉴의 표시 여부와 순서 설정';
+COMMENT ON TABLE clinic_menu_settings IS '병원별 메뉴 설정';
 COMMENT ON COLUMN clinic_menu_settings.id IS '고유 식별자';
-COMMENT ON COLUMN clinic_menu_settings.clinic_id IS '병원 ID (외래 키)';
-COMMENT ON COLUMN clinic_menu_settings.settings IS '메뉴 설정 JSON 배열 [{id, label, visible, order}, ...]';
+COMMENT ON COLUMN clinic_menu_settings.clinic_id IS '병원 ID';
+COMMENT ON COLUMN clinic_menu_settings.settings IS '메뉴 설정 JSON 배열';
 COMMENT ON COLUMN clinic_menu_settings.created_at IS '생성 일시';
 COMMENT ON COLUMN clinic_menu_settings.updated_at IS '수정 일시';
 
@@ -26,7 +26,7 @@ COMMENT ON COLUMN clinic_menu_settings.updated_at IS '수정 일시';
 ALTER TABLE clinic_menu_settings ENABLE ROW LEVEL SECURITY;
 
 -- 정책: 같은 병원 소속 사용자는 메뉴 설정을 조회할 수 있음
-CREATE POLICY "같은 병원 소속 사용자는 메뉴 설정 조회 가능" ON clinic_menu_settings
+CREATE POLICY "clinic_menu_settings_select_policy" ON clinic_menu_settings
   FOR SELECT
   USING (
     clinic_id IN (
@@ -35,7 +35,7 @@ CREATE POLICY "같은 병원 소속 사용자는 메뉴 설정 조회 가능" ON
   );
 
 -- 정책: 대표 원장(owner)만 메뉴 설정을 생성할 수 있음
-CREATE POLICY "대표 원장만 메뉴 설정 생성 가능" ON clinic_menu_settings
+CREATE POLICY "clinic_menu_settings_insert_policy" ON clinic_menu_settings
   FOR INSERT
   WITH CHECK (
     EXISTS (
@@ -47,7 +47,7 @@ CREATE POLICY "대표 원장만 메뉴 설정 생성 가능" ON clinic_menu_sett
   );
 
 -- 정책: 대표 원장(owner)만 메뉴 설정을 수정할 수 있음
-CREATE POLICY "대표 원장만 메뉴 설정 수정 가능" ON clinic_menu_settings
+CREATE POLICY "clinic_menu_settings_update_policy" ON clinic_menu_settings
   FOR UPDATE
   USING (
     EXISTS (
@@ -67,7 +67,7 @@ CREATE POLICY "대표 원장만 메뉴 설정 수정 가능" ON clinic_menu_sett
   );
 
 -- 정책: 대표 원장(owner)만 메뉴 설정을 삭제할 수 있음
-CREATE POLICY "대표 원장만 메뉴 설정 삭제 가능" ON clinic_menu_settings
+CREATE POLICY "clinic_menu_settings_delete_policy" ON clinic_menu_settings
   FOR DELETE
   USING (
     EXISTS (
@@ -78,7 +78,7 @@ CREATE POLICY "대표 원장만 메뉴 설정 삭제 가능" ON clinic_menu_sett
     )
   );
 
--- 트리거: updated_at 자동 업데이트
+-- 트리거 함수: updated_at 자동 업데이트
 CREATE OR REPLACE FUNCTION update_clinic_menu_settings_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -87,6 +87,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 트리거 생성
 DROP TRIGGER IF EXISTS clinic_menu_settings_updated_at ON clinic_menu_settings;
 CREATE TRIGGER clinic_menu_settings_updated_at
   BEFORE UPDATE ON clinic_menu_settings
