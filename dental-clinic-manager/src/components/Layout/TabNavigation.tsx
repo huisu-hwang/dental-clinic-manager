@@ -33,7 +33,7 @@ interface Tab {
   requiredPermissions?: Permission[]
 }
 
-const tabs: Tab[] = [
+const defaultTabs: Tab[] = [
   { id: 'home', label: '대시보드 홈', icon: Home },
   { id: 'daily-input', label: '일일보고서', icon: ClipboardList, requiredPermissions: ['daily_report_view'] },
   { id: 'attendance', label: '출근 관리', icon: Clock, requiredPermissions: ['attendance_check_in', 'attendance_view_own'] },
@@ -47,6 +47,38 @@ const tabs: Tab[] = [
   { id: 'settings', label: '재고 관리', icon: Package, requiredPermissions: ['inventory_view'] },
   { id: 'guide', label: '사용 안내', icon: HelpCircle, requiredPermissions: ['guide_view'] }
 ]
+
+// 아이콘 매핑
+const iconMap: Record<string, React.ElementType> = {
+  'home': Home,
+  'daily-input': ClipboardList,
+  'attendance': Clock,
+  'leave': CalendarDays,
+  'stats': BarChart3,
+  'logs': History,
+  'protocols': BookOpen,
+  'vendors': Building2,
+  'contracts': FileSignature,
+  'documents': FileText,
+  'settings': Package,
+  'guide': HelpCircle
+}
+
+// 권한 매핑
+const permissionsMap: Record<string, Permission[]> = {
+  'home': [],
+  'daily-input': ['daily_report_view'],
+  'attendance': ['attendance_check_in', 'attendance_view_own'],
+  'leave': ['leave_request_view_own', 'leave_balance_view_own'],
+  'stats': ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'],
+  'logs': ['logs_view'],
+  'protocols': ['protocol_view'],
+  'vendors': ['vendor_contacts_view'],
+  'contracts': ['contract_view'],
+  'documents': ['contract_view'],
+  'settings': ['inventory_view'],
+  'guide': ['guide_view']
+}
 
 export default function TabNavigation({ activeTab, onTabChange, onItemClick, skipAutoRedirect = false }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
