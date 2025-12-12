@@ -483,9 +483,15 @@ export const leaveService = {
         .eq('user_id', userId)
         .eq('year', year)
 
-      const adjustmentDays = (adjustments || []).reduce((sum: number, adj: any) => {
+      // 추가된 연차 (total_days에 더함)
+      const addedDays = (adjustments || []).reduce((sum: number, adj: any) => {
+        if (adj.adjustment_type === 'add') return sum + adj.days
+        return sum
+      }, 0)
+
+      // 차감된 연차 (used_days에 더함)
+      const deductedDays = (adjustments || []).reduce((sum: number, adj: any) => {
         if (adj.adjustment_type === 'deduct') return sum + adj.days
-        if (adj.adjustment_type === 'add') return sum - adj.days
         return sum
       }, 0)
 
@@ -502,7 +508,10 @@ export const leaveService = {
         .filter((r: any) => r.leave_types?.deduct_from_annual)
         .reduce((sum: number, r: any) => sum + r.total_days, 0)
 
-      const remainingDays = totalDays - usedDays - adjustmentDays - pendingDays
+      // 총 연차 = 기본 연차 + 추가된 연차
+      const finalTotalDays = totalDays + addedDays
+      // 잔여 연차 = 총 연차 - 사용 - 차감 - 대기
+      const remainingDays = finalTotalDays - usedDays - deductedDays - pendingDays
 
       // Upsert
       const { error } = await (supabase as any)
@@ -511,8 +520,8 @@ export const leaveService = {
           user_id: userId,
           clinic_id: clinicId,
           year,
-          total_days: totalDays,
-          used_days: usedDays + adjustmentDays,
+          total_days: finalTotalDays,
+          used_days: usedDays + deductedDays,
           pending_days: pendingDays,
           remaining_days: remainingDays,
           years_of_service: yearsOfService,
