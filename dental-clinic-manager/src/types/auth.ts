@@ -77,7 +77,7 @@ export interface AuditLog {
 }
 
 // 사용자 활동 기록 타입
-export type ActivityType = 'login' | 'logout' | 'page_view' | 'action'
+export type ActivityType = 'login' | 'logout' | 'page_view' | 'action' | 'access'
 
 export interface UserActivityLog {
   id: string

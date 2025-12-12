@@ -134,6 +134,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (result.success && result.data) {
                 console.log('AuthContext: 사용자 프로필 로드 성공', result.data)
 
+                // 세션 복원 시 접속 기록 저장 (로그인과 구분)
+                // 30분 이내 중복 접속은 기록하지 않음
+                const lastAccessTime = sessionStorage.getItem('last_access_log_time')
+                const now = Date.now()
+                const thirtyMinutes = 30 * 60 * 1000
+
+                if (!lastAccessTime || now - parseInt(lastAccessTime) > thirtyMinutes) {
+                  // 접속 기록 저장 (비동기로 처리, 실패해도 무시)
+                  fetch('/api/activity-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      user_id: result.data.id,
+                      clinic_id: result.data.clinic_id || null,
+                      activity_type: 'access',
+                      activity_description: '앱 접속',
+                      metadata: {
+                        email: result.data.email,
+                        role: result.data.role,
+                        clinic_name: result.data.clinic?.name || null
+                      }
+                    })
+                  }).then(() => {
+                    console.log('[AuthContext] Access log saved successfully')
+                    sessionStorage.setItem('last_access_log_time', now.toString())
+                  }).catch((err) => {
+                    console.warn('[AuthContext] Failed to save access log:', err)
+                  })
+                }
+
                 // 승인 대기/거절된 사용자는 pending-approval 페이지로 이동 (세션 유지)
                 if (result.data.status === 'pending' || result.data.status === 'rejected') {
                   console.warn('[AuthContext] User status:', result.data.status, '- restricting access')
