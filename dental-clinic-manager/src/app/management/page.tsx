@@ -59,10 +59,15 @@ export default function ManagementPage() {
   // 메인 탭 네비게이션 핸들러
   const handleMainTabChange = (tab: string) => {
     if (tab === 'settings') return // Already on settings/management page
+    // 연차 관리는 관리 페이지 내에서 로컬로 처리
+    if (tab === 'leave') {
+      setActiveTab('leave')
+      setIsMobileMenuOpen(false)
+      return
+    }
     if (tab === 'home') router.push('/dashboard')
     else if (tab === 'daily-input') router.push('/dashboard?tab=daily-input')
     else if (tab === 'attendance') router.push('/attendance')
-    else if (tab === 'leave') router.push('/dashboard?tab=leave')
     else if (tab === 'contracts') router.push('/dashboard/contracts')
     else if (tab === 'stats') router.push('/dashboard?tab=stats')
     else if (tab === 'logs') router.push('/dashboard?tab=logs')
@@ -182,9 +187,10 @@ export default function ManagementPage() {
         `}
       >
         <TabNavigation
-          activeTab="settings"
+          activeTab={activeTab === 'leave' ? 'leave' : 'settings'}
           onTabChange={handleMainTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
+          skipAutoRedirect={true}
         />
       </aside>
 

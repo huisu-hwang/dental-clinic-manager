@@ -21,6 +21,7 @@ interface TabNavigationProps {
   activeTab: string
   onTabChange: (tab: string) => void
   onItemClick?: () => void  // 모바일에서 메뉴 닫기용
+  skipAutoRedirect?: boolean  // 자동 리다이렉트 방지 (관리 페이지 등에서 사용)
 }
 
 interface Tab {
@@ -44,7 +45,7 @@ const tabs: Tab[] = [
   { id: 'guide', label: '사용 안내', icon: HelpCircle, requiredPermissions: ['guide_view'] }
 ]
 
-export default function TabNavigation({ activeTab, onTabChange, onItemClick }: TabNavigationProps) {
+export default function TabNavigation({ activeTab, onTabChange, onItemClick, skipAutoRedirect = false }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
 
   // 권한이 있는 탭만 필터링 (useMemo로 캐싱하여 불필요한 재계산 방지)
@@ -58,11 +59,13 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick }: T
 
   // 현재 선택된 탭이 권한이 없는 탭이면 첫 번째 탭으로 변경
   // useEffect를 사용하여 렌더링 이후에 비동기적으로 처리 (렌더링 중 상태 변경 방지)
+  // skipAutoRedirect가 true면 자동 리다이렉트 하지 않음 (관리 페이지 등)
   useEffect(() => {
+    if (skipAutoRedirect) return
     if (visibleTabs.length > 0 && !visibleTabs.find(tab => tab.id === activeTab)) {
       onTabChange(visibleTabs[0].id)
     }
-  }, [activeTab, visibleTabs, onTabChange])
+  }, [activeTab, visibleTabs, onTabChange, skipAutoRedirect])
 
   const handleTabClick = (tabId: string) => {
     onTabChange(tabId)
