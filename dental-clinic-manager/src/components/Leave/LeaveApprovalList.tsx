@@ -32,11 +32,14 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
   const [rejectReason, setRejectReason] = useState('')
 
   useEffect(() => {
-    loadPendingRequests()
+    loadPendingRequests(true)
   }, [])
 
-  const loadPendingRequests = async () => {
-    setLoading(true)
+  const loadPendingRequests = async (isInitialLoad = false) => {
+    // 초기 로딩일 때만 로딩 스피너 표시 (깜빡임 방지)
+    if (isInitialLoad) {
+      setLoading(true)
+    }
     setError('')
 
     try {
@@ -50,7 +53,9 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
       console.error('Error loading pending requests:', err)
       setError('승인 대기 목록을 불러오는 중 오류가 발생했습니다.')
     } finally {
-      setLoading(false)
+      if (isInitialLoad) {
+        setLoading(false)
+      }
     }
   }
 
@@ -63,12 +68,15 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
       if (result.error) {
         setError(result.error)
       } else {
-        loadPendingRequests()
+        // 낙관적 업데이트: 승인된 항목 즉시 제거
+        setPendingRequests(prev => prev.filter(req => req.id !== requestId))
         onSuccess()
       }
     } catch (err) {
       console.error('Error approving request:', err)
       setError('승인 처리 중 오류가 발생했습니다.')
+      // 에러 시 목록 새로고침
+      loadPendingRequests(false)
     } finally {
       setProcessingId(null)
     }
@@ -90,12 +98,15 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
       } else {
         setRejectingId(null)
         setRejectReason('')
-        loadPendingRequests()
+        // 낙관적 업데이트: 반려된 항목 즉시 제거
+        setPendingRequests(prev => prev.filter(req => req.id !== requestId))
         onSuccess()
       }
     } catch (err) {
       console.error('Error rejecting request:', err)
       setError('반려 처리 중 오류가 발생했습니다.')
+      // 에러 시 목록 새로고침
+      loadPendingRequests(false)
     } finally {
       setProcessingId(null)
     }

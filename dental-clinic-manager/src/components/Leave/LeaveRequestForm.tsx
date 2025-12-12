@@ -137,14 +137,14 @@ export default function LeaveRequestForm({
           }
         }
 
-        // 초과분은 무급휴가로 신청
+        // 초과분은 무급휴가로 신청 (연차 증가 시 자동 전환 가능하도록 [CONVERTIBLE] 태그 추가)
         const unpaidResult = await leaveService.createRequest({
           leave_type_id: unpaidLeaveType.id,
           start_date: formData.start_date,
           end_date: formData.end_date,
           half_day_type: formData.half_day_type || undefined,
           total_days: unpaidDays,
-          reason: `[무급휴가] ${formData.reason || '연차 초과분'}`,
+          reason: `[CONVERTIBLE][무급휴가] ${formData.reason || '연차 초과분'}`,
           emergency: formData.emergency,
           user_id: '',
           clinic_id: '',
@@ -283,39 +283,62 @@ export default function LeaveRequestForm({
         </div>
       )}
 
-      {/* 무급휴가 확인 모달 */}
+      {/* 무급휴가 확인 모달 팝업 */}
       {showUnpaidConfirm && (
-        <div className="mb-4 bg-amber-50 border border-amber-200 p-4 rounded-lg">
-          <div className="flex items-start space-x-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-medium text-amber-800">잔여 연차가 부족합니다</p>
-              <p className="text-sm text-amber-700 mt-1">
-                신청 일수: {totalDays}일 / 잔여 연차: {balance?.remaining_days ?? 0}일
-              </p>
-              <p className="text-sm text-amber-700">
-                부족한 {unpaidDays}일을 무급휴가로 신청하시겠습니까?
-              </p>
-              <div className="mt-3 flex space-x-2">
-                <button
-                  type="button"
-                  onClick={() => submitRequest(true)}
-                  disabled={loading}
-                  className="px-3 py-1.5 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
-                >
-                  {loading ? '처리 중...' : '무급휴가로 신청'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowUnpaidConfirm(false)
-                    setUnpaidDays(0)
-                  }}
-                  className="px-3 py-1.5 text-sm font-medium text-amber-700 bg-white border border-amber-300 rounded-lg hover:bg-amber-50"
-                >
-                  취소
-                </button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-amber-600" />
               </div>
+              <h3 className="text-lg font-semibold text-slate-800">잔여 연차가 부족합니다</h3>
+            </div>
+
+            <div className="bg-amber-50 rounded-lg p-4 mb-6">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-slate-600">신청 일수</span>
+                <span className="font-semibold text-slate-800">{totalDays}일</span>
+              </div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-slate-600">잔여 연차</span>
+                <span className="font-semibold text-blue-600">{balance?.remaining_days ?? 0}일</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t border-amber-200">
+                <span className="text-slate-600">부족한 일수</span>
+                <span className="font-semibold text-amber-600">{unpaidDays}일</span>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-600 mb-4">
+              부족한 <span className="font-semibold text-amber-600">{unpaidDays}일</span>을 무급휴가로 신청하시겠습니까?
+            </p>
+
+            <div className="bg-blue-50 rounded-lg p-3 mb-6 border border-blue-100">
+              <p className="text-xs text-blue-700">
+                <span className="font-semibold">💡 안내:</span> 1년 미만 근무자의 경우, 매월 만근 시 연차가 1일씩 증가합니다.
+                연차가 증가하면 무급휴가로 신청한 일수가 <span className="font-semibold">자동으로 유급휴가(연차)로 전환</span>됩니다.
+              </p>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUnpaidConfirm(false)
+                  setUnpaidDays(0)
+                }}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => submitRequest(true)}
+                disabled={loading}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
+              >
+                {loading ? '처리 중...' : '무급휴가로 신청'}
+              </button>
             </div>
           </div>
         </div>

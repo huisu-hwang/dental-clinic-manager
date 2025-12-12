@@ -24,6 +24,7 @@ import LeaveApprovalList from './LeaveApprovalList'
 import LeaveAdminInput from './LeaveAdminInput'
 import LeavePolicySettings from './LeavePolicySettings'
 import ClinicHolidayManager from './ClinicHolidayManager'
+import Toast from '@/components/ui/Toast'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
@@ -61,7 +62,12 @@ const LeaveBalanceCard = ({ balance, hireDate }: { balance: EmployeeLeaveBalance
         </div>
         <div className="bg-white rounded-lg p-4 shadow-sm">
           <p className="text-xs text-slate-500 mb-1">잔여</p>
-          <p className="text-2xl font-bold text-indigo-600">{balance?.remaining_days ?? 0}일</p>
+          <p className={`text-2xl font-bold ${(balance?.remaining_days ?? 0) < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
+            {balance?.remaining_days ?? 0}일
+          </p>
+          {(balance?.remaining_days ?? 0) < 0 && (
+            <p className="text-xs text-red-500 mt-1">무급휴가 사용</p>
+          )}
         </div>
       </div>
 
@@ -94,7 +100,15 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
   const [activeTab, setActiveTab] = useState<'my' | 'request' | 'approval' | 'all' | 'admin' | 'holiday' | 'policy'>('my')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [toast, setToast] = useState<{
+    show: boolean
+    message: string
+    type: 'success' | 'error' | 'warning' | 'info'
+  }>({ show: false, message: '', type: 'info' })
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setToast({ show: true, message, type })
+  }
 
   // 데이터 상태
   const [myBalance, setMyBalance] = useState<EmployeeLeaveBalance | null>(null)
@@ -110,11 +124,14 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
   const canViewAll = hasPermission('leave_request_view_all')
 
   useEffect(() => {
-    fetchInitialData()
+    fetchInitialData(true)
   }, [selectedYear])
 
-  const fetchInitialData = async () => {
-    setLoading(true)
+  const fetchInitialData = async (isInitialLoad = false) => {
+    // 초기 로딩일 때만 전체 로딩 스피너 표시 (깜빡임 방지)
+    if (isInitialLoad) {
+      setLoading(true)
+    }
     setError('')
 
     try {
@@ -148,21 +165,21 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
       console.error('Error fetching leave data:', err)
       setError('데이터를 불러오는 중 오류가 발생했습니다.')
     } finally {
-      setLoading(false)
+      if (isInitialLoad) {
+        setLoading(false)
+      }
     }
   }
 
   const handleRequestSuccess = () => {
-    setSuccess('연차가 신청되었습니다.')
+    showToast('연차가 신청되었습니다.', 'success')
     setActiveTab('my')
-    fetchInitialData()
-    setTimeout(() => setSuccess(''), 3000)
+    fetchInitialData(false)
   }
 
   const handleApprovalSuccess = () => {
-    setSuccess('처리가 완료되었습니다.')
-    fetchInitialData()
-    setTimeout(() => setSuccess(''), 3000)
+    showToast('처리가 완료되었습니다.', 'success')
+    fetchInitialData(false)
   }
 
   const handleCancelRequest = async (requestId: string) => {
@@ -170,15 +187,11 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
 
     const result = await leaveService.cancelRequest(requestId)
     if (result.error) {
-      setError(result.error)
+      showToast(result.error, 'error')
     } else {
-      setSuccess('연차 신청이 취소되었습니다.')
-      fetchInitialData()
+      showToast('연차 신청이 취소되었습니다.', 'success')
+      fetchInitialData(false)
     }
-    setTimeout(() => {
-      setError('')
-      setSuccess('')
-    }, 3000)
   }
 
   // 탭 구성
@@ -225,17 +238,11 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
         ))}
       </div>
 
-      {/* 알림 메시지 */}
+      {/* 에러 메시지 */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center">
           <AlertCircle className="w-4 h-4 mr-2" />
           {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm flex items-center">
-          <CheckCircle className="w-4 h-4 mr-2" />
-          {success}
         </div>
       )}
 
@@ -392,6 +399,14 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
       {activeTab === 'policy' && canManagePolicy && (
         <LeavePolicySettings />
       )}
+
+      {/* Toast 팝업 */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        show={toast.show}
+        onClose={() => setToast(prev => ({ ...prev, show: false }))}
+      />
     </div>
   )
 }
@@ -452,7 +467,7 @@ function AllEmployeeBalances({ year }: { year: number }) {
                 <td className="px-4 py-3 text-center">{item.total_days}일</td>
                 <td className="px-4 py-3 text-center text-green-600">{item.used_days}일</td>
                 <td className="px-4 py-3 text-center text-yellow-600">{item.pending_days}일</td>
-                <td className="px-4 py-3 text-center font-semibold text-indigo-600">
+                <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
                   {item.remaining_days}일
                 </td>
                 <td className="px-4 py-3 text-center">

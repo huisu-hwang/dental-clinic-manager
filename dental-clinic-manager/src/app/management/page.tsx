@@ -74,6 +74,7 @@ export default function ManagementPage() {
   const canAccessStaffManagement = ['staff_manage', 'staff_view'].some(p => hasPermission(p as any))
   const canAccessClinicSettings = hasPermission('clinic_settings')
   const canAccessProtocols = ['protocol_view', 'protocol_create', 'protocol_edit'].some(p => hasPermission(p as any))
+  const canAccessLeave = ['leave_request_view_own', 'leave_request_view_all', 'leave_balance_view_own'].some(p => hasPermission(p as any))
 
   // 권한 로딩 상태 추적
   useEffect(() => {
@@ -95,23 +96,30 @@ export default function ManagementPage() {
     }
 
     // 권한이 전혀 없으면 리디렉션
-    if (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols) {
+    if (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols && !canAccessLeave) {
       router.push('/dashboard')
       return
     }
 
     // 현재 탭에 권한이 없으면 권한이 있는 탭으로 변경
     if (activeTab === 'staff' && !canAccessStaffManagement) {
-      if (canAccessClinicSettings) setActiveTab('clinic')
+      if (canAccessLeave) setActiveTab('leave')
+      else if (canAccessClinicSettings) setActiveTab('clinic')
       else if (canAccessProtocols) setActiveTab('protocols')
     } else if (activeTab === 'clinic' && !canAccessClinicSettings) {
       if (canAccessStaffManagement) setActiveTab('staff')
+      else if (canAccessLeave) setActiveTab('leave')
       else if (canAccessProtocols) setActiveTab('protocols')
     } else if (activeTab === 'protocols' && !canAccessProtocols) {
       if (canAccessStaffManagement) setActiveTab('staff')
+      else if (canAccessLeave) setActiveTab('leave')
       else if (canAccessClinicSettings) setActiveTab('clinic')
+    } else if (activeTab === 'leave' && !canAccessLeave) {
+      if (canAccessStaffManagement) setActiveTab('staff')
+      else if (canAccessClinicSettings) setActiveTab('clinic')
+      else if (canAccessProtocols) setActiveTab('protocols')
     }
-  }, [authLoading, permissionsLoaded, user, canAccessStaffManagement, canAccessClinicSettings, canAccessProtocols, activeTab, router])
+  }, [authLoading, permissionsLoaded, user, canAccessStaffManagement, canAccessClinicSettings, canAccessProtocols, canAccessLeave, activeTab, router])
 
   // 로딩 중이거나 권한이 없는 경우
   if (authLoading || !permissionsLoaded) {
@@ -125,7 +133,7 @@ export default function ManagementPage() {
     )
   }
 
-  if (!user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols)) {
+  if (!user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols && !canAccessLeave)) {
     return (
       <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center px-4">
         <div className="text-center">

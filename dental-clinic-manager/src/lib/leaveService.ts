@@ -97,7 +97,7 @@ export function calculateYearsOfService(hireDate: Date, referenceDate: Date = ne
 
 /**
  * 직급에 따른 승인 프로세스 결정
- * - 부원장: 원장에게 직접 승인
+ * - 부원장/실장: 원장에게 직접 승인
  * - 팀장 이하: 정책에 따라 실장 승인 포함 또는 원장 직접 승인
  * @param role 신청자 직급
  * @param requireManagerApproval 실장 결재 포함 여부 (기본값: true)
@@ -106,8 +106,8 @@ export function getApprovalStepsForRole(
   role: string,
   requireManagerApproval: boolean = true
 ): { step: number; role: string; description: string }[] {
-  if (role === 'vice_director') {
-    // 부원장은 원장에게 직접 승인
+  // 부원장 또는 실장은 원장에게 직접 승인
+  if (role === 'vice_director' || role === 'manager') {
     return [
       { step: 1, role: 'owner', description: '원장 승인' }
     ]
@@ -483,9 +483,15 @@ export const leaveService = {
         .eq('user_id', userId)
         .eq('year', year)
 
-      const adjustmentDays = (adjustments || []).reduce((sum: number, adj: any) => {
+      // 추가된 연차 (total_days에 더함)
+      const addedDays = (adjustments || []).reduce((sum: number, adj: any) => {
+        if (adj.adjustment_type === 'add') return sum + adj.days
+        return sum
+      }, 0)
+
+      // 차감된 연차 (used_days에 더함)
+      const deductedDays = (adjustments || []).reduce((sum: number, adj: any) => {
         if (adj.adjustment_type === 'deduct') return sum + adj.days
-        if (adj.adjustment_type === 'add') return sum - adj.days
         return sum
       }, 0)
 
@@ -502,7 +508,35 @@ export const leaveService = {
         .filter((r: any) => r.leave_types?.deduct_from_annual)
         .reduce((sum: number, r: any) => sum + r.total_days, 0)
 
-      const remainingDays = totalDays - usedDays - adjustmentDays - pendingDays
+      // 무급휴가 타입 조회
+      const { data: unpaidType } = await (supabase as any)
+        .from('leave_types')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('code', 'unpaid')
+        .single()
+
+      // 승인된 무급휴가 일수 조회 (잔여 연차에서 음수로 표시하기 위함)
+      // 지난 달의 무급휴가는 제외하고, 오늘 이후의 무급휴가만 계산
+      let unpaidUsedDays = 0
+      if (unpaidType) {
+        const today = new Date().toISOString().split('T')[0]
+        const { data: unpaidRequests } = await (supabase as any)
+          .from('leave_requests')
+          .select('total_days')
+          .eq('user_id', userId)
+          .eq('leave_type_id', unpaidType.id)
+          .eq('status', 'approved')
+          .gte('start_date', today)  // 오늘 이후의 무급휴가만 계산
+          .lte('start_date', `${year}-12-31`)
+
+        unpaidUsedDays = (unpaidRequests || []).reduce((sum: number, r: any) => sum + r.total_days, 0)
+      }
+
+      // 총 연차 = 기본 연차 + 추가된 연차
+      const finalTotalDays = totalDays + addedDays
+      // 잔여 연차 = 총 연차 - 사용 - 차감 - 대기 - 무급휴가 (음수 가능)
+      const remainingDays = finalTotalDays - usedDays - deductedDays - pendingDays - unpaidUsedDays
 
       // Upsert
       const { error } = await (supabase as any)
@@ -511,8 +545,8 @@ export const leaveService = {
           user_id: userId,
           clinic_id: clinicId,
           year,
-          total_days: totalDays,
-          used_days: usedDays + adjustmentDays,
+          total_days: finalTotalDays,
+          used_days: usedDays + deductedDays,
           pending_days: pendingDays,
           remaining_days: remainingDays,
           years_of_service: yearsOfService,
@@ -524,10 +558,117 @@ export const leaveService = {
 
       if (error) throw error
 
+      // 연차가 증가했을 때 전환 가능한 무급휴가를 연차로 자동 전환
+      await this.convertUnpaidToAnnual(userId, year)
+
       return { success: true, error: null }
     } catch (error) {
       console.error('[leaveService.initializeBalance] Error:', error)
       return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 전환 가능한 무급휴가를 연차로 자동 전환
+   * 연차 부족으로 무급휴가로 신청했다가, 나중에 연차가 증가하면 자동으로 유급휴가로 전환
+   */
+  async convertUnpaidToAnnual(userId: string, year: number): Promise<{ converted: number; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      // 현재 잔여 연차 조회
+      const { data: balance } = await (supabase as any)
+        .from('employee_leave_balances')
+        .select('remaining_days')
+        .eq('user_id', userId)
+        .eq('year', year)
+        .single()
+
+      const remainingDays = balance?.remaining_days ?? 0
+
+      // 잔여 연차가 없으면 전환할 수 없음
+      if (remainingDays <= 0) {
+        return { converted: 0, error: null }
+      }
+
+      // 무급휴가 타입 조회
+      const { data: unpaidType } = await (supabase as any)
+        .from('leave_types')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('code', 'unpaid')
+        .single()
+
+      if (!unpaidType) {
+        return { converted: 0, error: null }
+      }
+
+      // 연차 타입 조회
+      const { data: annualType } = await (supabase as any)
+        .from('leave_types')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('code', 'annual')
+        .single()
+
+      if (!annualType) {
+        return { converted: 0, error: null }
+      }
+
+      // 전환 가능한 무급휴가 조회 (reason에 [CONVERTIBLE] 태그가 있는 것)
+      const { data: convertibleRequests } = await (supabase as any)
+        .from('leave_requests')
+        .select('id, total_days, reason')
+        .eq('user_id', userId)
+        .eq('leave_type_id', unpaidType.id)
+        .eq('status', 'approved')
+        .gte('start_date', `${year}-01-01`)
+        .lte('start_date', `${year}-12-31`)
+        .like('reason', '%[CONVERTIBLE]%')
+        .order('start_date', { ascending: true })
+
+      if (!convertibleRequests || convertibleRequests.length === 0) {
+        return { converted: 0, error: null }
+      }
+
+      let availableDays = remainingDays
+      let totalConverted = 0
+
+      // 무급휴가를 연차로 전환
+      for (const request of convertibleRequests) {
+        if (availableDays <= 0) break
+
+        const daysToConvert = Math.min(request.total_days, availableDays)
+
+        if (daysToConvert >= request.total_days) {
+          // 전체 전환: 무급휴가를 연차로 변경
+          await (supabase as any)
+            .from('leave_requests')
+            .update({
+              leave_type_id: annualType.id,
+              reason: request.reason.replace('[CONVERTIBLE]', '[CONVERTED]'),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', request.id)
+
+          totalConverted += request.total_days
+          availableDays -= request.total_days
+        } else {
+          // 부분 전환: 원본 무급휴가 일수 감소, 새로운 연차 신청 생성
+          // 구현 복잡도를 위해 전체 전환만 지원
+          // 부분 전환이 필요한 경우 건너뜀
+          continue
+        }
+      }
+
+      return { converted: totalConverted, error: null }
+    } catch (error) {
+      console.error('[leaveService.convertUnpaidToAnnual] Error:', error)
+      return { converted: 0, error: extractErrorMessage(error) }
     }
   },
 
@@ -900,6 +1041,9 @@ export const leaveService = {
 
       if (error) throw error
 
+      // 연차 조정 후 잔여 연차 즉시 재계산
+      await this.initializeBalance(input.user_id, input.year)
+
       return { success: true, error: null }
     } catch (error) {
       console.error('[leaveService.addAdjustment] Error:', error)
@@ -950,6 +1094,15 @@ export const leaveService = {
       const user = getCurrentUser()
       if (!user) throw new Error('User not found')
 
+      // 삭제 전 조정 정보 조회 (user_id, year 필요)
+      const { data: adjustment, error: fetchError } = await (supabase as any)
+        .from('leave_adjustments')
+        .select('user_id, year')
+        .eq('id', adjustmentId)
+        .single()
+
+      if (fetchError) throw fetchError
+
       const { error } = await (supabase as any)
         .from('leave_adjustments')
         .delete()
@@ -957,6 +1110,11 @@ export const leaveService = {
         .eq('adjusted_by', user.id)
 
       if (error) throw error
+
+      // 조정 삭제 후 잔여 연차 즉시 재계산
+      if (adjustment) {
+        await this.initializeBalance(adjustment.user_id, adjustment.year)
+      }
 
       return { success: true, error: null }
     } catch (error) {
