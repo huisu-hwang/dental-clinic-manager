@@ -230,21 +230,14 @@ async function fetchTomorrowForecast(
 ): Promise<TomorrowWeather> {
   const { baseDate, baseTime, tomorrowDate } = getShortTermBaseDateTime()
 
-  const apiUrl = new URL('http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst')
-  apiUrl.searchParams.set('serviceKey', serviceKey)
-  apiUrl.searchParams.set('numOfRows', '500') // 내일 전체 예보 가져오기
-  apiUrl.searchParams.set('pageNo', '1')
-  apiUrl.searchParams.set('dataType', 'JSON')
-  apiUrl.searchParams.set('base_date', baseDate)
-  apiUrl.searchParams.set('base_time', baseTime)
-  apiUrl.searchParams.set('nx', String(nx))
-  apiUrl.searchParams.set('ny', String(ny))
+  // URL을 직접 구성 (이중 인코딩 방지)
+  const apiUrl = `http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${serviceKey}&numOfRows=500&pageNo=1&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&nx=${nx}&ny=${ny}`
 
   console.log(`[Weather API] Fetching tomorrow forecast: baseDate=${baseDate}, baseTime=${baseTime}, tomorrowDate=${tomorrowDate}`)
 
-  const response = await fetch(apiUrl.toString(), {
+  const response = await fetch(apiUrl, {
     headers: { 'Accept': 'application/json' },
-    next: { revalidate: 600 }
+    cache: 'no-store'
   })
 
   if (!response.ok) {
@@ -362,24 +355,17 @@ export async function GET(request: Request) {
 
     const { baseDate, baseTime } = getBaseDateTime()
 
-    // 초단기실황 API 호출
-    const apiUrl = new URL('http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst')
-    apiUrl.searchParams.set('serviceKey', serviceKey)
-    apiUrl.searchParams.set('numOfRows', '10')
-    apiUrl.searchParams.set('pageNo', '1')
-    apiUrl.searchParams.set('dataType', 'JSON')
-    apiUrl.searchParams.set('base_date', baseDate)
-    apiUrl.searchParams.set('base_time', baseTime)
-    apiUrl.searchParams.set('nx', String(nx))
-    apiUrl.searchParams.set('ny', String(ny))
+    // 초단기실황 API 호출 - URL을 직접 구성 (이중 인코딩 방지)
+    const apiUrl = `http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?serviceKey=${serviceKey}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&nx=${nx}&ny=${ny}`
 
     console.log(`[Weather API] Fetching from KMA: baseDate=${baseDate}, baseTime=${baseTime}, nx=${nx}, ny=${ny}`)
+    console.log(`[Weather API] API URL (without key): ...getUltraSrtNcst?serviceKey=***&numOfRows=10&...`)
 
-    const response = await fetch(apiUrl.toString(), {
+    const response = await fetch(apiUrl, {
       headers: {
         'Accept': 'application/json',
       },
-      next: { revalidate: 600 } // 10분 캐시
+      cache: 'no-store' // 캐시 비활성화로 항상 최신 데이터
     })
 
     if (!response.ok) {
@@ -389,7 +375,14 @@ export async function GET(request: Request) {
 
     const data = await response.json()
 
-    // 응답 검증
+    // 응답 검증 및 에러 확인
+    console.log('[Weather API] Response header:', data.response?.header)
+
+    if (data.response?.header?.resultCode !== '00') {
+      console.error('[Weather API] API Error:', data.response?.header?.resultMsg)
+      throw new Error(`KMA API Error: ${data.response?.header?.resultMsg}`)
+    }
+
     if (!data.response?.body?.items?.item) {
       console.error('[Weather API] Invalid response structure:', JSON.stringify(data).substring(0, 500))
       throw new Error('Invalid KMA API response')
@@ -423,20 +416,12 @@ export async function GET(request: Request) {
 
     // 초단기예보에서 하늘상태 가져오기 (실황에는 없음)
     try {
-      const fcstUrl = new URL('http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst')
-      fcstUrl.searchParams.set('serviceKey', serviceKey)
-      fcstUrl.searchParams.set('numOfRows', '60')
-      fcstUrl.searchParams.set('pageNo', '1')
-      fcstUrl.searchParams.set('dataType', 'JSON')
-      fcstUrl.searchParams.set('base_date', baseDate)
-      fcstUrl.searchParams.set('base_time', baseTime)
-      fcstUrl.searchParams.set('nx', String(nx))
-      fcstUrl.searchParams.set('ny', String(ny))
+      const fcstUrl = `http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst?serviceKey=${serviceKey}&numOfRows=60&pageNo=1&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&nx=${nx}&ny=${ny}`
 
-      const fcstResponse = await fetch(fcstUrl.toString())
+      const fcstResponse = await fetch(fcstUrl, { cache: 'no-store' })
       if (fcstResponse.ok) {
         const fcstData = await fcstResponse.json()
-        if (fcstData.response?.body?.items?.item) {
+        if (fcstData.response?.header?.resultCode === '00' && fcstData.response?.body?.items?.item) {
           const fcstItems = fcstData.response.body.items.item
           for (const item of fcstItems) {
             if (item.category === 'SKY') {
