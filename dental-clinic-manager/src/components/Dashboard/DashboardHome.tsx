@@ -258,14 +258,26 @@ export default function DashboardHome() {
   const loadNews = async () => {
     setNewsLoading(true)
     try {
-      const demoNews: NewsItem[] = [
-        { title: '2024년 치과 건강보험 수가 인상 확정', link: '#', source: '대한치과의사협회', date: '2024-12-12' },
-        { title: '디지털 치과 진료 시스템 도입 가속화', link: '#', source: '치의신보', date: '2024-12-11' },
-        { title: '치과 감염관리 가이드라인 개정안 발표', link: '#', source: '보건복지부', date: '2024-12-10' },
+      // API에서 치의신보 뉴스 가져오기
+      const response = await fetch('/api/news/dental')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.news && data.news.length > 0) {
+          setNews(data.news)
+          return
+        }
+      }
+      // API 실패 시 폴백 데이터
+      const fallbackNews: NewsItem[] = [
+        { title: '치의신보 뉴스를 불러오는 중입니다...', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
       ]
-      setNews(demoNews)
+      setNews(fallbackNews)
     } catch {
-      // ignore
+      // 에러 시 폴백
+      const fallbackNews: NewsItem[] = [
+        { title: '뉴스를 불러올 수 없습니다', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+      ]
+      setNews(fallbackNews)
     } finally {
       setNewsLoading(false)
     }
