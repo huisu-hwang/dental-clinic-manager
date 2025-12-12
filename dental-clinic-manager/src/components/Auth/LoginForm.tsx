@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
@@ -24,7 +24,21 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [rememberMe, setRememberMe] = useState(true)
+  const [rememberMe, setRememberMe] = useState(false)
+
+  // 컴포넌트 마운트 시 저장된 로그인 정보 불러오기
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('savedLoginEmail')
+    const savedPassword = localStorage.getItem('savedLoginPassword')
+
+    if (savedEmail && savedPassword) {
+      setFormData({
+        email: savedEmail,
+        password: savedPassword
+      })
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -196,6 +210,18 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
 
       console.log('[LoginForm] Login successful - Cookie-based session')
       console.log('[LoginForm] Session managed by Middleware (automatic refresh)')
+
+      // 로그인 정보 저장 처리
+      if (rememberMe) {
+        console.log('[LoginForm] Saving login credentials to localStorage')
+        localStorage.setItem('savedLoginEmail', formData.email)
+        localStorage.setItem('savedLoginPassword', formData.password)
+      } else {
+        console.log('[LoginForm] Removing saved login credentials from localStorage')
+        localStorage.removeItem('savedLoginEmail')
+        localStorage.removeItem('savedLoginPassword')
+      }
+
       console.log('[LoginForm] Calling onLoginSuccess...')
       // localStorage 저장이 완료될 때까지 약간 대기
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -292,7 +318,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600">
-                  로그인 상태 자동 유지
+                  로그인 정보 저장
                 </label>
               </div>
 
