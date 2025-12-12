@@ -30,8 +30,9 @@ export const DEFAULT_MENU_ITEMS: MenuItemSetting[] = [
   { id: 'protocols', label: '진료 프로토콜', visible: true, order: 5 },
   { id: 'vendors', label: '업체 연락처', visible: true, order: 6 },
   { id: 'contracts', label: '근로계약서', visible: true, order: 7 },
-  { id: 'settings', label: '재고 관리', visible: true, order: 8 },
-  { id: 'guide', label: '사용 안내', visible: true, order: 9 },
+  { id: 'documents', label: '문서 양식', visible: true, order: 8 },
+  { id: 'settings', label: '재고 관리', visible: true, order: 9 },
+  { id: 'guide', label: '사용 안내', visible: true, order: 10 },
 ]
 
 // 메뉴 ID 목록 (유효성 검사용)
