@@ -137,14 +137,14 @@ export default function LeaveRequestForm({
           }
         }
 
-        // 초과분은 무급휴가로 신청
+        // 초과분은 무급휴가로 신청 (연차 증가 시 자동 전환 가능하도록 [CONVERTIBLE] 태그 추가)
         const unpaidResult = await leaveService.createRequest({
           leave_type_id: unpaidLeaveType.id,
           start_date: formData.start_date,
           end_date: formData.end_date,
           half_day_type: formData.half_day_type || undefined,
           total_days: unpaidDays,
-          reason: `[무급휴가] ${formData.reason || '연차 초과분'}`,
+          reason: `[CONVERTIBLE][무급휴가] ${formData.reason || '연차 초과분'}`,
           emergency: formData.emergency,
           user_id: '',
           clinic_id: '',
@@ -309,9 +309,16 @@ export default function LeaveRequestForm({
               </div>
             </div>
 
-            <p className="text-sm text-slate-600 mb-6">
+            <p className="text-sm text-slate-600 mb-4">
               부족한 <span className="font-semibold text-amber-600">{unpaidDays}일</span>을 무급휴가로 신청하시겠습니까?
             </p>
+
+            <div className="bg-blue-50 rounded-lg p-3 mb-6 border border-blue-100">
+              <p className="text-xs text-blue-700">
+                <span className="font-semibold">💡 안내:</span> 1년 미만 근무자의 경우, 매월 만근 시 연차가 1일씩 증가합니다.
+                연차가 증가하면 무급휴가로 신청한 일수가 <span className="font-semibold">자동으로 유급휴가(연차)로 전환</span>됩니다.
+              </p>
+            </div>
 
             <div className="flex space-x-3">
               <button

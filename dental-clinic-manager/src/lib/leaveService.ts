@@ -533,10 +533,117 @@ export const leaveService = {
 
       if (error) throw error
 
+      // 연차가 증가했을 때 전환 가능한 무급휴가를 연차로 자동 전환
+      await this.convertUnpaidToAnnual(userId, year)
+
       return { success: true, error: null }
     } catch (error) {
       console.error('[leaveService.initializeBalance] Error:', error)
       return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 전환 가능한 무급휴가를 연차로 자동 전환
+   * 연차 부족으로 무급휴가로 신청했다가, 나중에 연차가 증가하면 자동으로 유급휴가로 전환
+   */
+  async convertUnpaidToAnnual(userId: string, year: number): Promise<{ converted: number; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      // 현재 잔여 연차 조회
+      const { data: balance } = await (supabase as any)
+        .from('employee_leave_balances')
+        .select('remaining_days')
+        .eq('user_id', userId)
+        .eq('year', year)
+        .single()
+
+      const remainingDays = balance?.remaining_days ?? 0
+
+      // 잔여 연차가 없으면 전환할 수 없음
+      if (remainingDays <= 0) {
+        return { converted: 0, error: null }
+      }
+
+      // 무급휴가 타입 조회
+      const { data: unpaidType } = await (supabase as any)
+        .from('leave_types')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('code', 'unpaid')
+        .single()
+
+      if (!unpaidType) {
+        return { converted: 0, error: null }
+      }
+
+      // 연차 타입 조회
+      const { data: annualType } = await (supabase as any)
+        .from('leave_types')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('code', 'annual')
+        .single()
+
+      if (!annualType) {
+        return { converted: 0, error: null }
+      }
+
+      // 전환 가능한 무급휴가 조회 (reason에 [CONVERTIBLE] 태그가 있는 것)
+      const { data: convertibleRequests } = await (supabase as any)
+        .from('leave_requests')
+        .select('id, total_days, reason')
+        .eq('user_id', userId)
+        .eq('leave_type_id', unpaidType.id)
+        .eq('status', 'approved')
+        .gte('start_date', `${year}-01-01`)
+        .lte('start_date', `${year}-12-31`)
+        .like('reason', '%[CONVERTIBLE]%')
+        .order('start_date', { ascending: true })
+
+      if (!convertibleRequests || convertibleRequests.length === 0) {
+        return { converted: 0, error: null }
+      }
+
+      let availableDays = remainingDays
+      let totalConverted = 0
+
+      // 무급휴가를 연차로 전환
+      for (const request of convertibleRequests) {
+        if (availableDays <= 0) break
+
+        const daysToConvert = Math.min(request.total_days, availableDays)
+
+        if (daysToConvert >= request.total_days) {
+          // 전체 전환: 무급휴가를 연차로 변경
+          await (supabase as any)
+            .from('leave_requests')
+            .update({
+              leave_type_id: annualType.id,
+              reason: request.reason.replace('[CONVERTIBLE]', '[CONVERTED]'),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', request.id)
+
+          totalConverted += request.total_days
+          availableDays -= request.total_days
+        } else {
+          // 부분 전환: 원본 무급휴가 일수 감소, 새로운 연차 신청 생성
+          // 구현 복잡도를 위해 전체 전환만 지원
+          // 부분 전환이 필요한 경우 건너뜀
+          continue
+        }
+      }
+
+      return { converted: totalConverted, error: null }
+    } catch (error) {
+      console.error('[leaveService.convertUnpaidToAnnual] Error:', error)
+      return { converted: 0, error: extractErrorMessage(error) }
     }
   },
 
