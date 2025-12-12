@@ -116,6 +116,7 @@ export default function AttendancePage() {
           activeTab="attendance"
           onTabChange={handleMainTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
+          skipAutoRedirect={true}
         />
       </aside>
 
