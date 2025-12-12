@@ -13,6 +13,7 @@ import ClinicSettings from '@/components/Management/ClinicSettings'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import AccountProfile from '@/components/Management/AccountProfile'
 import LeaveManagement from '@/components/Leave/LeaveManagement'
+import MenuSettings from '@/components/Management/MenuSettings'
 import Toast from '@/components/ui/Toast'
 
 // 서브 탭 설정
@@ -267,11 +268,16 @@ export default function ManagementPage() {
                   </div>
                 )}
 
-                {/* System Settings Tab */}
-                {activeTab === 'system' && user.role === 'owner' && (
-                  <div className="text-center py-12">
-                    <Cog className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-600">시스템 설정 기능은 곧 제공될 예정입니다.</p>
+                {/* System Settings Tab - 메뉴 커스터마이징 (대표 원장만) */}
+                {activeTab === 'system' && user.role === 'owner' && user.clinic_id && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-800 mb-2">메뉴 커스터마이징</h3>
+                      <p className="text-sm text-slate-600 mb-4">
+                        좌측 메뉴의 표시 여부와 순서를 설정할 수 있습니다. 이 설정은 병원의 모든 직원에게 적용됩니다.
+                      </p>
+                    </div>
+                    <MenuSettings clinicId={user.clinic_id} />
                   </div>
                 )}
               </div>
