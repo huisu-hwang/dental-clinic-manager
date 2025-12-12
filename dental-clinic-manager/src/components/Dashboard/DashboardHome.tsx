@@ -20,7 +20,8 @@ import {
   Gift,
   Calendar,
   TrendingUp,
-  Clock
+  Clock,
+  BarChart3
 } from 'lucide-react'
 
 // 날씨 아이콘 매핑
@@ -92,6 +93,62 @@ export default function DashboardHome() {
       recallCount: todayReport?.recall_count || 0,
       recallBookingCount: todayReport?.recall_booking_count || 0,
       naverReviewCount: todayReport?.naver_review_count || 0,
+    }
+  }, [dailyReports, consultLogs, giftLogs, today])
+
+  // 주간 통계 계산 (이번 주 월요일부터 오늘까지)
+  const weeklySummary = useMemo(() => {
+    const now = new Date()
+    const dayOfWeek = now.getDay()
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    const monday = new Date(now)
+    monday.setDate(now.getDate() + mondayOffset)
+    monday.setHours(0, 0, 0, 0)
+
+    const weekStartStr = monday.toISOString().split('T')[0]
+
+    // 이번 주 데이터 필터링
+    const weekReports = dailyReports.filter(r => r.date >= weekStartStr && r.date <= today)
+    const weekConsults = consultLogs.filter(c => c.date >= weekStartStr && c.date <= today)
+    const weekGifts = giftLogs.filter(g => g.date >= weekStartStr && g.date <= today)
+
+    // 상담 건수 및 성공 건수
+    let consultTotal = 0
+    let consultSuccess = 0
+    let recallTotal = 0
+    let giftTotal = 0
+    let reviewTotal = 0
+
+    weekReports.forEach(report => {
+      consultTotal += (report.consult_proceed || 0) + (report.consult_hold || 0)
+      consultSuccess += report.consult_proceed || 0
+      recallTotal += report.recall_count || 0
+      reviewTotal += report.naver_review_count || 0
+    })
+
+    // 보고서에 없는 날짜의 상담 로그 추가
+    const reportDates = new Set(weekReports.map(r => r.date))
+    weekConsults.forEach(c => {
+      if (!reportDates.has(c.date)) {
+        consultTotal += 1
+        if (c.consult_status === 'O') consultSuccess += 1
+      }
+    })
+
+    // 선물 건수
+    giftTotal = weekGifts.reduce((sum, g) => sum + (g.quantity || 1), 0)
+
+    // 성공률 계산
+    const successRate = consultTotal > 0 ? ((consultSuccess / consultTotal) * 100).toFixed(0) : '0'
+
+    return {
+      weekStart: weekStartStr,
+      consultTotal,
+      consultSuccess,
+      successRate,
+      recallTotal,
+      giftTotal,
+      reviewTotal,
     }
   }, [dailyReports, consultLogs, giftLogs, today])
 
@@ -399,12 +456,65 @@ export default function DashboardHome() {
           )}
         </div>
 
+        {/* 주간 통계 */}
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
+            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold mr-2">3</span>
+            주간 통계
+            <span className="ml-2 text-xs font-normal text-slate-400">
+              ({weeklySummary.weekStart.replace(/-/g, '.')} ~ {today.replace(/-/g, '.')})
+            </span>
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 sm:p-4 border border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-blue-600" />
+                <span className="text-xs font-medium text-blue-700">상담 건수</span>
+              </div>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-800">{weeklySummary.consultTotal}<span className="text-sm font-normal text-blue-500 ml-1">건</span></p>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 sm:p-4 border border-green-200">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-green-600" />
+                <span className="text-xs font-medium text-green-700">상담 성공</span>
+              </div>
+              <p className="text-2xl sm:text-3xl font-bold text-green-800">{weeklySummary.consultSuccess}<span className="text-sm font-normal text-green-500 ml-1">건</span></p>
+              <p className="text-xs text-green-600 mt-1">성공률 {weeklySummary.successRate}%</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-3 sm:p-4 border border-orange-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="w-4 h-4 text-orange-600" />
+                <span className="text-xs font-medium text-orange-700">리콜</span>
+              </div>
+              <p className="text-2xl sm:text-3xl font-bold text-orange-800">{weeklySummary.recallTotal}<span className="text-sm font-normal text-orange-500 ml-1">건</span></p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3 sm:p-4 border border-purple-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Gift className="w-4 h-4 text-purple-600" />
+                <span className="text-xs font-medium text-purple-700">선물</span>
+              </div>
+              <p className="text-2xl sm:text-3xl font-bold text-purple-800">{weeklySummary.giftTotal}<span className="text-sm font-normal text-purple-500 ml-1">건</span></p>
+            </div>
+
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-3 sm:p-4 border border-emerald-200">
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-medium text-emerald-700">리뷰</span>
+              </div>
+              <p className="text-2xl sm:text-3xl font-bold text-emerald-800">{weeklySummary.reviewTotal}<span className="text-sm font-normal text-emerald-500 ml-1">건</span></p>
+            </div>
+          </div>
+        </div>
+
         {/* 날씨 & 뉴스 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* 날씨 */}
           <div>
             <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
-              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold mr-2">3</span>
+              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold mr-2">4</span>
               오늘의 날씨
             </h3>
             <div className="bg-slate-50 rounded-lg p-4">
@@ -436,7 +546,7 @@ export default function DashboardHome() {
           {/* 뉴스 */}
           <div>
             <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
-              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold mr-2">4</span>
+              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold mr-2">5</span>
               치과계 소식
             </h3>
             <div className="bg-slate-50 rounded-lg overflow-hidden">
