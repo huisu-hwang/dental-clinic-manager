@@ -16,13 +16,9 @@ import {
   RefreshCw,
   MapPin,
   ExternalLink,
-  Users,
-  Gift,
   Calendar,
   TrendingUp,
-  Clock,
   BarChart3,
-  CheckCircle2,
   AlertCircle
 } from 'lucide-react'
 
@@ -341,36 +337,21 @@ export default function DashboardHome() {
             {/* 오늘의 현황 */}
             <div>
               <h3 className="text-sm font-semibold text-slate-700 mb-3">오늘의 현황</h3>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
-                <div className="bg-slate-50 rounded-lg p-3 text-center">
-                  <Users className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-slate-800">{todaySummary.consultCount}</p>
-                  <p className="text-xs text-slate-500">상담</p>
-                </div>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <div className="bg-slate-50 rounded-lg p-3 text-center">
                   <TrendingUp className="w-5 h-5 text-green-500 mx-auto mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-green-600">{todaySummary.consultProceed}</p>
-                  <p className="text-xs text-slate-500">성공</p>
+                  <p className="text-lg sm:text-xl font-bold text-green-600">{todaySummary.consultProceed}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.consultCount}</span></p>
+                  <p className="text-xs text-slate-500">성공/상담</p>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-3 text-center">
                   <Calendar className="w-5 h-5 text-orange-500 mx-auto mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-slate-800">{todaySummary.recallCount}</p>
-                  <p className="text-xs text-slate-500">리콜</p>
+                  <p className="text-lg sm:text-xl font-bold text-orange-600">{todaySummary.recallBookingCount}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.recallCount}</span></p>
+                  <p className="text-xs text-slate-500">예약/리콜</p>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-3 text-center">
-                  <Gift className="w-5 h-5 text-purple-500 mx-auto mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-slate-800">{todaySummary.giftCount}</p>
-                  <p className="text-xs text-slate-500">선물</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3 text-center">
-                  <BarChart3 className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-slate-800">{todaySummary.naverReviewCount}</p>
-                  <p className="text-xs text-slate-500">리뷰</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3 text-center">
-                  <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-green-600">{teamStatus?.checked_in || 0}<span className="text-sm text-slate-400">/{teamStatus?.total_employees || 0}</span></p>
-                  <p className="text-xs text-slate-500">출근</p>
+                  <BarChart3 className="w-5 h-5 text-purple-500 mx-auto mb-1" />
+                  <p className="text-lg sm:text-xl font-bold text-purple-600">{todaySummary.naverReviewCount}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.giftCount}</span></p>
+                  <p className="text-xs text-slate-500">리뷰/선물</p>
                 </div>
               </div>
             </div>
@@ -384,14 +365,10 @@ export default function DashboardHome() {
                 </div>
               ) : teamStatus ? (
                 <div className="bg-slate-50 rounded-lg p-4">
-                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center">
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
                     <div>
-                      <p className="text-lg font-bold text-gray-800">{teamStatus.total_employees}</p>
-                      <p className="text-xs text-gray-500">전체</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-green-600">{teamStatus.checked_in}</p>
-                      <p className="text-xs text-green-600">출근</p>
+                      <p className="text-lg font-bold text-green-600">{teamStatus.checked_in}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{teamStatus.total_employees}</span></p>
+                      <p className="text-xs text-green-600">출근/전체</p>
                     </div>
                     <div>
                       <p className="text-lg font-bold text-blue-600">{teamStatus.checked_out || 0}</p>
@@ -399,7 +376,7 @@ export default function DashboardHome() {
                     </div>
                     <div>
                       <p className="text-lg font-bold text-orange-600">{teamStatus.not_checked_in}</p>
-                      <p className="text-xs text-orange-600">미출근</p>
+                      <p className="text-xs text-orange-600">결근</p>
                     </div>
                     <div className="hidden sm:block">
                       <p className="text-lg font-bold text-yellow-600">{teamStatus.late_count}</p>
@@ -445,26 +422,18 @@ export default function DashboardHome() {
                 </span>
               </div>
               <div className="bg-slate-50 rounded-lg p-4">
-                <div className="grid grid-cols-5 gap-2 text-center">
+                <div className="grid grid-cols-3 gap-2 text-center">
                   <div>
-                    <p className="text-lg sm:text-xl font-bold text-blue-600">{weeklySummary.consultTotal}</p>
-                    <p className="text-xs text-slate-500">상담</p>
-                  </div>
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold text-green-600">{weeklySummary.consultSuccess}</p>
-                    <p className="text-xs text-slate-500">성공 ({weeklySummary.successRate}%)</p>
+                    <p className="text-lg sm:text-xl font-bold text-green-600">{weeklySummary.consultSuccess}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.consultTotal}</span></p>
+                    <p className="text-xs text-slate-500">성공/상담 ({weeklySummary.successRate}%)</p>
                   </div>
                   <div>
                     <p className="text-lg sm:text-xl font-bold text-orange-600">{weeklySummary.recallTotal}</p>
                     <p className="text-xs text-slate-500">리콜</p>
                   </div>
                   <div>
-                    <p className="text-lg sm:text-xl font-bold text-purple-600">{weeklySummary.giftTotal}</p>
-                    <p className="text-xs text-slate-500">선물</p>
-                  </div>
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold text-emerald-600">{weeklySummary.reviewTotal}</p>
-                    <p className="text-xs text-slate-500">리뷰</p>
+                    <p className="text-lg sm:text-xl font-bold text-purple-600">{weeklySummary.giftTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.reviewTotal}</span></p>
+                    <p className="text-xs text-slate-500">선물/리뷰</p>
                   </div>
                 </div>
               </div>
