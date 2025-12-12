@@ -110,11 +110,14 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
   const canViewAll = hasPermission('leave_request_view_all')
 
   useEffect(() => {
-    fetchInitialData()
+    fetchInitialData(true)
   }, [selectedYear])
 
-  const fetchInitialData = async () => {
-    setLoading(true)
+  const fetchInitialData = async (isInitialLoad = false) => {
+    // 초기 로딩일 때만 전체 로딩 스피너 표시 (깜빡임 방지)
+    if (isInitialLoad) {
+      setLoading(true)
+    }
     setError('')
 
     try {
@@ -148,20 +151,22 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
       console.error('Error fetching leave data:', err)
       setError('데이터를 불러오는 중 오류가 발생했습니다.')
     } finally {
-      setLoading(false)
+      if (isInitialLoad) {
+        setLoading(false)
+      }
     }
   }
 
   const handleRequestSuccess = () => {
     setSuccess('연차가 신청되었습니다.')
     setActiveTab('my')
-    fetchInitialData()
+    fetchInitialData(false)
     setTimeout(() => setSuccess(''), 3000)
   }
 
   const handleApprovalSuccess = () => {
     setSuccess('처리가 완료되었습니다.')
-    fetchInitialData()
+    fetchInitialData(false)
     setTimeout(() => setSuccess(''), 3000)
   }
 
@@ -173,7 +178,7 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
       setError(result.error)
     } else {
       setSuccess('연차 신청이 취소되었습니다.')
-      fetchInitialData()
+      fetchInitialData(false)
     }
     setTimeout(() => {
       setError('')
