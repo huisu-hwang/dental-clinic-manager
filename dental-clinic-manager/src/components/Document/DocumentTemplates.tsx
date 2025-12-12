@@ -24,7 +24,8 @@ import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool 
 import SignaturePad from '@/components/Contract/SignaturePad'
 
 // 직급 영문 -> 한글 변환
-const translateRole = (role: string): string => {
+const translateRole = (role: string | undefined): string => {
+  if (!role) return ''
   const roleMap: Record<string, string> = {
     'owner': '대표',
     'manager': '관리자',
