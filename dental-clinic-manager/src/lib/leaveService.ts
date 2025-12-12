@@ -508,10 +508,33 @@ export const leaveService = {
         .filter((r: any) => r.leave_types?.deduct_from_annual)
         .reduce((sum: number, r: any) => sum + r.total_days, 0)
 
+      // 무급휴가 타입 조회
+      const { data: unpaidType } = await (supabase as any)
+        .from('leave_types')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('code', 'unpaid')
+        .single()
+
+      // 승인된 무급휴가 일수 조회 (잔여 연차에서 음수로 표시하기 위함)
+      let unpaidUsedDays = 0
+      if (unpaidType) {
+        const { data: unpaidRequests } = await (supabase as any)
+          .from('leave_requests')
+          .select('total_days')
+          .eq('user_id', userId)
+          .eq('leave_type_id', unpaidType.id)
+          .eq('status', 'approved')
+          .gte('start_date', `${year}-01-01`)
+          .lte('start_date', `${year}-12-31`)
+
+        unpaidUsedDays = (unpaidRequests || []).reduce((sum: number, r: any) => sum + r.total_days, 0)
+      }
+
       // 총 연차 = 기본 연차 + 추가된 연차
       const finalTotalDays = totalDays + addedDays
-      // 잔여 연차 = 총 연차 - 사용 - 차감 - 대기
-      const remainingDays = finalTotalDays - usedDays - deductedDays - pendingDays
+      // 잔여 연차 = 총 연차 - 사용 - 차감 - 대기 - 무급휴가 (음수 가능)
+      const remainingDays = finalTotalDays - usedDays - deductedDays - pendingDays - unpaidUsedDays
 
       // Upsert
       const { error } = await (supabase as any)

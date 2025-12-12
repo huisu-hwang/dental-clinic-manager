@@ -62,7 +62,12 @@ const LeaveBalanceCard = ({ balance, hireDate }: { balance: EmployeeLeaveBalance
         </div>
         <div className="bg-white rounded-lg p-4 shadow-sm">
           <p className="text-xs text-slate-500 mb-1">잔여</p>
-          <p className="text-2xl font-bold text-indigo-600">{balance?.remaining_days ?? 0}일</p>
+          <p className={`text-2xl font-bold ${(balance?.remaining_days ?? 0) < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
+            {balance?.remaining_days ?? 0}일
+          </p>
+          {(balance?.remaining_days ?? 0) < 0 && (
+            <p className="text-xs text-red-500 mt-1">무급휴가 사용</p>
+          )}
         </div>
       </div>
 
@@ -462,7 +467,7 @@ function AllEmployeeBalances({ year }: { year: number }) {
                 <td className="px-4 py-3 text-center">{item.total_days}일</td>
                 <td className="px-4 py-3 text-center text-green-600">{item.used_days}일</td>
                 <td className="px-4 py-3 text-center text-yellow-600">{item.pending_days}일</td>
-                <td className="px-4 py-3 text-center font-semibold text-indigo-600">
+                <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
                   {item.remaining_days}일
                 </td>
                 <td className="px-4 py-3 text-center">
