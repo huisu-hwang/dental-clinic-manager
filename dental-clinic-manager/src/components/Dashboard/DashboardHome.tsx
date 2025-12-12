@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { attendanceService } from '@/lib/attendanceService'
@@ -34,8 +34,8 @@ const weatherIcons: Record<string, React.ReactNode> = {
   'Fog': <Wind className="w-10 h-10 text-gray-400" />,
 }
 
-// 날씨 데이터 타입
-interface WeatherData {
+// 현재 날씨 데이터 타입
+interface CurrentWeather {
   location: string
   temp: number
   feels_like: number
@@ -44,6 +44,22 @@ interface WeatherData {
   main: string
   icon: string
   wind_speed: number
+}
+
+// 내일 날씨 데이터 타입
+interface TomorrowWeather {
+  date: string
+  tempMin: number
+  tempMax: number
+  description: string
+  main: string
+  icon: string
+}
+
+// 날씨 데이터 타입
+interface WeatherData {
+  current: CurrentWeather
+  tomorrow: TomorrowWeather
 }
 
 // 뉴스 데이터 타입
@@ -209,28 +225,48 @@ export default function DashboardHome() {
 
       if (data.weather) {
         setWeather({
-          location: data.weather.location || '현재 위치',
-          temp: data.weather.temp,
-          feels_like: data.weather.feels_like,
-          humidity: data.weather.humidity,
-          description: data.weather.description,
-          main: data.weather.main,
-          icon: data.weather.icon,
-          wind_speed: data.weather.wind_speed
+          current: {
+            location: data.weather.current?.location || '현재 위치',
+            temp: data.weather.current?.temp ?? 10,
+            feels_like: data.weather.current?.feels_like ?? 8,
+            humidity: data.weather.current?.humidity ?? 60,
+            description: data.weather.current?.description || '맑음',
+            main: data.weather.current?.main || 'Clear',
+            icon: data.weather.current?.icon || '01d',
+            wind_speed: data.weather.current?.wind_speed ?? 2.0
+          },
+          tomorrow: {
+            date: data.weather.tomorrow?.date || '내일',
+            tempMin: data.weather.tomorrow?.tempMin ?? 5,
+            tempMax: data.weather.tomorrow?.tempMax ?? 15,
+            description: data.weather.tomorrow?.description || '맑음',
+            main: data.weather.tomorrow?.main || 'Clear',
+            icon: data.weather.tomorrow?.icon || '01d'
+          }
         })
       } else {
         throw new Error('Invalid weather data')
       }
     } catch {
       setWeather({
-        location: '서울',
-        temp: 10,
-        feels_like: 8,
-        humidity: 60,
-        description: '맑음',
-        main: 'Clear',
-        icon: '01d',
-        wind_speed: 2.0
+        current: {
+          location: '서울',
+          temp: 10,
+          feels_like: 8,
+          humidity: 60,
+          description: '맑음',
+          main: 'Clear',
+          icon: '01d',
+          wind_speed: 2.0
+        },
+        tomorrow: {
+          date: '내일',
+          tempMin: 5,
+          tempMax: 15,
+          description: '맑음',
+          main: 'Clear',
+          icon: '01d'
+        }
       })
     } finally {
       setWeatherLoading(false)
@@ -448,22 +484,48 @@ export default function DashboardHome() {
             <div className="bg-slate-50 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
                 <Sun className="w-4 h-4 text-yellow-500 mr-1.5" />
-                오늘의 날씨
+                날씨
               </h3>
               {weatherLoading ? (
                 <div className="flex justify-center py-6">
                   <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               ) : weather ? (
-                <div className="flex items-center gap-3">
-                  {weatherIcons[weather.main] || <Cloud className="w-10 h-10 text-gray-400" />}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1 text-xs text-slate-500 mb-0.5">
-                      <MapPin className="w-3 h-3" />
-                      <span>{weather.location}</span>
+                <div className="space-y-3">
+                  {/* 현재 날씨 */}
+                  <div className="flex items-center gap-3">
+                    {weatherIcons[weather.current.main] || <Cloud className="w-10 h-10 text-gray-400" />}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1 text-xs text-slate-500 mb-0.5">
+                        <MapPin className="w-3 h-3" />
+                        <span>{weather.current.location}</span>
+                        <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-[10px] font-medium">현재</span>
+                      </div>
+                      <p className="text-2xl font-bold text-slate-800">{weather.current.temp}°<span className="text-sm font-normal text-slate-500 ml-1">{weather.current.description}</span></p>
+                      <p className="text-xs text-slate-400 mt-0.5">체감 {weather.current.feels_like}° · 습도 {weather.current.humidity}%</p>
                     </div>
-                    <p className="text-2xl font-bold text-slate-800">{weather.temp}°<span className="text-sm font-normal text-slate-500 ml-1">{weather.description}</span></p>
-                    <p className="text-xs text-slate-400 mt-0.5">체감 {weather.feels_like}° · 습도 {weather.humidity}%</p>
+                  </div>
+
+                  {/* 구분선 */}
+                  <div className="border-t border-slate-200"></div>
+
+                  {/* 내일 날씨 */}
+                  <div className="flex items-center gap-3">
+                    {React.cloneElement(
+                      (weatherIcons[weather.tomorrow.main] || <Cloud className="w-10 h-10 text-gray-400" />) as React.ReactElement,
+                      { className: 'w-8 h-8 opacity-70' }
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1 text-xs text-slate-500 mb-0.5">
+                        <Calendar className="w-3 h-3" />
+                        <span>내일 ({weather.tomorrow.date})</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-bold text-slate-700">{weather.tomorrow.tempMax}°</span>
+                        <span className="text-sm text-slate-400">/ {weather.tomorrow.tempMin}°</span>
+                        <span className="text-sm text-slate-500 ml-1">{weather.tomorrow.description}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : null}

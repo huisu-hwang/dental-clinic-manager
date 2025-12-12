@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-interface WeatherResponse {
+interface WeatherData {
   location: string
   temp: number
   feels_like: number
@@ -11,6 +11,22 @@ interface WeatherResponse {
   wind_speed: number
   sky: string
   precipitation: string
+}
+
+interface TomorrowWeather {
+  date: string
+  tempMin: number
+  tempMax: number
+  description: string
+  main: string
+  icon: string
+  sky: string
+  precipitation: string
+}
+
+interface WeatherResponse {
+  current: WeatherData
+  tomorrow: TomorrowWeather
 }
 
 // 기상청 격자 좌표 변환 (위도/경도 -> nx, ny)
@@ -79,6 +95,51 @@ function getBaseDateTime(): { baseDate: string; baseTime: string } {
   return {
     baseDate: `${year}${month}${day}`,
     baseTime: `${String(hour).padStart(2, '0')}00`
+  }
+}
+
+// 단기예보용 base_date, base_time 계산
+// 단기예보는 02, 05, 08, 11, 14, 17, 20, 23시에 발표
+function getShortTermBaseDateTime(): { baseDate: string; baseTime: string; tomorrowDate: string } {
+  const now = new Date()
+  const kstOffset = 9 * 60 * 60 * 1000
+  const kstNow = new Date(now.getTime() + kstOffset)
+
+  const hour = kstNow.getUTCHours()
+  const baseTimes = [2, 5, 8, 11, 14, 17, 20, 23]
+
+  // 현재 시간에서 가장 가까운 과거 발표 시간 찾기
+  let baseHour = 23
+  let baseDate = new Date(kstNow)
+
+  for (let i = baseTimes.length - 1; i >= 0; i--) {
+    if (hour >= baseTimes[i] + 1) { // 발표 후 1시간 뒤에 데이터 사용 가능
+      baseHour = baseTimes[i]
+      break
+    }
+  }
+
+  // 만약 현재 시간이 03시 이전이면 전날 23시 데이터 사용
+  if (hour < 3) {
+    baseHour = 23
+    baseDate.setUTCDate(baseDate.getUTCDate() - 1)
+  }
+
+  const year = baseDate.getUTCFullYear()
+  const month = String(baseDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(baseDate.getUTCDate()).padStart(2, '0')
+
+  // 내일 날짜 계산
+  const tomorrow = new Date(kstNow)
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+  const tomorrowYear = tomorrow.getUTCFullYear()
+  const tomorrowMonth = String(tomorrow.getUTCMonth() + 1).padStart(2, '0')
+  const tomorrowDay = String(tomorrow.getUTCDate()).padStart(2, '0')
+
+  return {
+    baseDate: `${year}${month}${day}`,
+    baseTime: `${String(baseHour).padStart(2, '0')}00`,
+    tomorrowDate: `${tomorrowYear}${tomorrowMonth}${tomorrowDay}`
   }
 }
 
@@ -161,6 +222,93 @@ function getLocationName(nx: number, ny: number): string {
 let cachedWeather: { data: WeatherResponse; nx: number; ny: number; timestamp: number } | null = null
 const CACHE_DURATION = 10 * 60 * 1000 // 10분
 
+// 내일 예보 가져오기
+async function fetchTomorrowForecast(
+  serviceKey: string,
+  nx: number,
+  ny: number
+): Promise<TomorrowWeather> {
+  const { baseDate, baseTime, tomorrowDate } = getShortTermBaseDateTime()
+
+  const apiUrl = new URL('http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst')
+  apiUrl.searchParams.set('serviceKey', serviceKey)
+  apiUrl.searchParams.set('numOfRows', '500') // 내일 전체 예보 가져오기
+  apiUrl.searchParams.set('pageNo', '1')
+  apiUrl.searchParams.set('dataType', 'JSON')
+  apiUrl.searchParams.set('base_date', baseDate)
+  apiUrl.searchParams.set('base_time', baseTime)
+  apiUrl.searchParams.set('nx', String(nx))
+  apiUrl.searchParams.set('ny', String(ny))
+
+  console.log(`[Weather API] Fetching tomorrow forecast: baseDate=${baseDate}, baseTime=${baseTime}, tomorrowDate=${tomorrowDate}`)
+
+  const response = await fetch(apiUrl.toString(), {
+    headers: { 'Accept': 'application/json' },
+    next: { revalidate: 600 }
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch tomorrow forecast')
+  }
+
+  const data = await response.json()
+
+  if (!data.response?.body?.items?.item) {
+    throw new Error('Invalid tomorrow forecast response')
+  }
+
+  const items = data.response.body.items.item
+
+  // 내일 날짜의 데이터만 필터링
+  const tomorrowItems = items.filter((item: any) => item.fcstDate === tomorrowDate)
+
+  let tempMin: number | null = null
+  let tempMax: number | null = null
+  let sky = '1'
+  let pty = '0'
+
+  // 내일 낮 12시 기준 하늘상태/강수형태
+  for (const item of tomorrowItems) {
+    if (item.category === 'TMN') {
+      tempMin = parseFloat(item.fcstValue)
+    } else if (item.category === 'TMX') {
+      tempMax = parseFloat(item.fcstValue)
+    } else if (item.category === 'SKY' && item.fcstTime === '1200') {
+      sky = item.fcstValue
+    } else if (item.category === 'PTY' && item.fcstTime === '1200') {
+      pty = item.fcstValue
+    }
+  }
+
+  // 최저/최고 기온이 없으면 TMP에서 추정
+  if (tempMin === null || tempMax === null) {
+    const temps = tomorrowItems
+      .filter((item: any) => item.category === 'TMP')
+      .map((item: any) => parseFloat(item.fcstValue))
+
+    if (temps.length > 0) {
+      if (tempMin === null) tempMin = Math.min(...temps)
+      if (tempMax === null) tempMax = Math.max(...temps)
+    }
+  }
+
+  const { description, main } = getSkyDescription(sky, pty)
+
+  // 날짜 포맷팅 (YYYYMMDD -> MM.DD)
+  const formattedDate = `${tomorrowDate.substring(4, 6)}.${tomorrowDate.substring(6, 8)}`
+
+  return {
+    date: formattedDate,
+    tempMin: tempMin !== null ? Math.round(tempMin) : 5,
+    tempMax: tempMax !== null ? Math.round(tempMax) : 15,
+    description,
+    main,
+    icon: main === 'Clear' ? '01d' : main === 'Rain' ? '09d' : main === 'Snow' ? '13d' : '03d',
+    sky,
+    precipitation: pty
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -169,6 +317,7 @@ export async function GET(request: Request) {
 
     // 격자 좌표 변환
     const { nx, ny } = convertToGrid(lat, lon)
+    const location = getLocationName(nx, ny)
 
     // 캐시 확인 (같은 격자 좌표이고 10분 이내면 캐시 반환)
     const now = Date.now()
@@ -185,16 +334,28 @@ export async function GET(request: Request) {
     if (!serviceKey) {
       console.log('[Weather API] KMA_API_KEY not configured, returning fallback data')
       const fallbackData: WeatherResponse = {
-        location: getLocationName(nx, ny),
-        temp: 10,
-        feels_like: 8,
-        humidity: 60,
-        description: '맑음',
-        main: 'Clear',
-        icon: '01d',
-        wind_speed: 2.0,
-        sky: '1',
-        precipitation: '0'
+        current: {
+          location,
+          temp: 10,
+          feels_like: 8,
+          humidity: 60,
+          description: '맑음',
+          main: 'Clear',
+          icon: '01d',
+          wind_speed: 2.0,
+          sky: '1',
+          precipitation: '0'
+        },
+        tomorrow: {
+          date: '내일',
+          tempMin: 5,
+          tempMax: 15,
+          description: '맑음',
+          main: 'Clear',
+          icon: '01d',
+          sky: '1',
+          precipitation: '0'
+        }
       }
       return NextResponse.json({ weather: fallbackData, cached: false, fallback: true })
     }
@@ -292,24 +453,44 @@ export async function GET(request: Request) {
     const { description, main } = getSkyDescription(sky, pty)
 
     // 체감온도 계산 (간단한 공식)
-    // 체감온도 = 13.12 + 0.6215*T - 11.37*V^0.16 + 0.3965*T*V^0.16 (T: 기온, V: 풍속)
     let feelsLike = temp
     if (windSpeed > 0 && temp <= 10) {
       feelsLike = 13.12 + 0.6215 * temp - 11.37 * Math.pow(windSpeed * 3.6, 0.16) + 0.3965 * temp * Math.pow(windSpeed * 3.6, 0.16)
       feelsLike = Math.round(feelsLike)
     }
 
+    // 내일 예보 가져오기
+    let tomorrow: TomorrowWeather
+    try {
+      tomorrow = await fetchTomorrowForecast(serviceKey, nx, ny)
+    } catch (tomorrowError) {
+      console.warn('[Weather API] Failed to fetch tomorrow forecast:', tomorrowError)
+      tomorrow = {
+        date: '내일',
+        tempMin: Math.round(temp - 5),
+        tempMax: Math.round(temp + 5),
+        description: '맑음',
+        main: 'Clear',
+        icon: '01d',
+        sky: '1',
+        precipitation: '0'
+      }
+    }
+
     const weatherData: WeatherResponse = {
-      location: getLocationName(nx, ny),
-      temp: Math.round(temp),
-      feels_like: feelsLike,
-      humidity,
-      description,
-      main,
-      icon: main === 'Clear' ? '01d' : main === 'Rain' ? '09d' : main === 'Snow' ? '13d' : '03d',
-      wind_speed: Math.round(windSpeed * 10) / 10,
-      sky,
-      precipitation: pty
+      current: {
+        location,
+        temp: Math.round(temp),
+        feels_like: feelsLike,
+        humidity,
+        description,
+        main,
+        icon: main === 'Clear' ? '01d' : main === 'Rain' ? '09d' : main === 'Snow' ? '13d' : '03d',
+        wind_speed: Math.round(windSpeed * 10) / 10,
+        sky,
+        precipitation: pty
+      },
+      tomorrow
     }
 
     // 캐시 저장
@@ -328,16 +509,28 @@ export async function GET(request: Request) {
 
     // 에러 시 폴백 데이터 반환
     const fallbackData: WeatherResponse = {
-      location: '서울',
-      temp: 10,
-      feels_like: 8,
-      humidity: 60,
-      description: '맑음',
-      main: 'Clear',
-      icon: '01d',
-      wind_speed: 2.0,
-      sky: '1',
-      precipitation: '0'
+      current: {
+        location: '서울',
+        temp: 10,
+        feels_like: 8,
+        humidity: 60,
+        description: '맑음',
+        main: 'Clear',
+        icon: '01d',
+        wind_speed: 2.0,
+        sky: '1',
+        precipitation: '0'
+      },
+      tomorrow: {
+        date: '내일',
+        tempMin: 5,
+        tempMax: 15,
+        description: '맑음',
+        main: 'Clear',
+        icon: '01d',
+        sky: '1',
+        precipitation: '0'
+      }
     }
 
     return NextResponse.json({
