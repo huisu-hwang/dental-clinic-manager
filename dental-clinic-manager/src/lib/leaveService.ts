@@ -54,7 +54,7 @@ const getCurrentUserId = (): string | null => {
 }
 
 // 현재 사용자 정보 가져오기
-const getCurrentUser = (): { id: string; role: string; clinic_id: string } | null => {
+const getCurrentUser = (): { id: string; role: string; clinic_id: string; name?: string } | null => {
   if (typeof window === 'undefined') return null
   const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
   if (!userStr) return null
