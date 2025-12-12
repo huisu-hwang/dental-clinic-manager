@@ -4,6 +4,7 @@
  */
 
 import { ensureConnection } from './supabase/connectionCheck'
+import { userNotificationService } from './userNotificationService'
 import type {
   LeavePolicy,
   LeaveType,
@@ -578,6 +579,34 @@ export const leaveService = {
 
       if (error) throw error
 
+      // 알림 생성: 현재 단계의 결재자에게 알림 전송
+      try {
+        const currentStepRole = approvalSteps[0]?.role // 첫 번째 단계 역할
+        if (currentStepRole && data) {
+          // 해당 역할의 사용자들 조회
+          const { data: approvers } = await (supabase as any)
+            .from('users')
+            .select('id')
+            .eq('clinic_id', user.clinic_id)
+            .eq('role', currentStepRole)
+            .eq('status', 'active')
+
+          if (approvers && approvers.length > 0) {
+            const approverIds = approvers.map((a: any) => a.id)
+            await userNotificationService.notifyLeaveApprovalPending(
+              approverIds,
+              user.name || '직원',
+              input.start_date,
+              input.end_date,
+              data.id
+            )
+          }
+        }
+      } catch (notifyError) {
+        console.error('[leaveService.createRequest] Notification error:', notifyError)
+        // 알림 실패해도 연차 신청은 성공으로 처리
+      }
+
       return { data, error: null }
     } catch (error) {
       console.error('[leaveService.createRequest] Error:', error)
@@ -734,13 +763,15 @@ export const leaveService = {
       // 현재 요청 정보 조회
       const { data: request, error: reqError } = await (supabase as any)
         .from('leave_requests')
-        .select('*, users:user_id (role)')
+        .select('*, users:user_id (id, role, name)')
         .eq('id', requestId)
         .single()
 
       if (reqError) throw reqError
 
       const applicantRole = request.users?.role
+      const applicantId = request.users?.id
+      const applicantName = request.users?.name
       const steps = getApprovalStepsForRole(applicantRole, requireManagerApproval)
       const currentStep = request.current_step
       const isLastStep = currentStep >= steps.length
@@ -783,6 +814,55 @@ export const leaveService = {
 
       if (updateError) throw updateError
 
+      // 알림 생성
+      try {
+        if (isLastStep) {
+          // 최종 승인: 신청자에게 승인 알림
+          await userNotificationService.notifyLeaveApproved(
+            applicantId,
+            request.start_date,
+            request.end_date,
+            requestId
+          )
+        } else {
+          // 다음 단계로 전달: 신청자에게 진행 알림 + 다음 결재자에게 승인 요청 알림
+          const nextStepRole = steps[currentStep]?.role
+          const nextStepDesc = steps[currentStep]?.description
+
+          // 신청자에게 진행 알림
+          await userNotificationService.notifyLeaveForwarded(
+            applicantId,
+            request.start_date,
+            request.end_date,
+            requestId,
+            nextStepDesc || '다음 단계'
+          )
+
+          // 다음 결재자에게 승인 요청 알림
+          if (nextStepRole) {
+            const { data: nextApprovers } = await (supabase as any)
+              .from('users')
+              .select('id')
+              .eq('clinic_id', user.clinic_id)
+              .eq('role', nextStepRole)
+              .eq('status', 'active')
+
+            if (nextApprovers && nextApprovers.length > 0) {
+              const approverIds = nextApprovers.map((a: any) => a.id)
+              await userNotificationService.notifyLeaveApprovalPending(
+                approverIds,
+                applicantName || '직원',
+                request.start_date,
+                request.end_date,
+                requestId
+              )
+            }
+          }
+        }
+      } catch (notifyError) {
+        console.error('[leaveService.approveRequest] Notification error:', notifyError)
+      }
+
       return { success: true, error: null }
     } catch (error) {
       console.error('[leaveService.approveRequest] Error:', error)
@@ -808,13 +888,14 @@ export const leaveService = {
       // 현재 요청 정보 조회
       const { data: request, error: reqError } = await (supabase as any)
         .from('leave_requests')
-        .select('*, users:user_id (role)')
+        .select('*, users:user_id (id, role)')
         .eq('id', requestId)
         .single()
 
       if (reqError) throw reqError
 
       const applicantRole = request.users?.role
+      const applicantId = request.users?.id
       const steps = getApprovalStepsForRole(applicantRole, requireManagerApproval)
 
       // 반려 기록 추가
@@ -847,6 +928,19 @@ export const leaveService = {
         .eq('id', requestId)
 
       if (updateError) throw updateError
+
+      // 알림 생성: 신청자에게 반려 알림
+      try {
+        await userNotificationService.notifyLeaveRejected(
+          applicantId,
+          request.start_date,
+          request.end_date,
+          requestId,
+          reason
+        )
+      } catch (notifyError) {
+        console.error('[leaveService.rejectRequest] Notification error:', notifyError)
+      }
 
       return { success: true, error: null }
     } catch (error) {
