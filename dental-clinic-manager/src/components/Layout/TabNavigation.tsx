@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import type { Permission } from '@/types/permissions'
 import {
+  Home,
   ClipboardList,
   Clock,
   BarChart3,
@@ -30,6 +31,7 @@ interface Tab {
 }
 
 const tabs: Tab[] = [
+  { id: 'home', label: '대시보드 홈', icon: Home },
   { id: 'daily-input', label: '일일보고서', icon: ClipboardList, requiredPermissions: ['daily_report_view'] },
   { id: 'attendance', label: '출근 관리', icon: Clock, requiredPermissions: ['attendance_check_in', 'attendance_view_own'] },
   { id: 'leave', label: '연차 관리', icon: CalendarDays, requiredPermissions: ['leave_request_view_own', 'leave_balance_view_own'] },
