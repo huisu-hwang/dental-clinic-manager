@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { attendanceService } from '@/lib/attendanceService'
@@ -32,6 +32,18 @@ const weatherIcons: Record<string, React.ReactNode> = {
   'Thunderstorm': <CloudRain className="w-10 h-10 text-purple-500" />,
   'Mist': <Wind className="w-10 h-10 text-gray-400" />,
   'Fog': <Wind className="w-10 h-10 text-gray-400" />,
+}
+
+// 내일 날씨용 작은 아이콘 매핑
+const weatherIconsSmall: Record<string, React.ReactNode> = {
+  'Clear': <Sun className="w-8 h-8 text-yellow-500 opacity-70" />,
+  'Clouds': <Cloud className="w-8 h-8 text-gray-400 opacity-70" />,
+  'Rain': <CloudRain className="w-8 h-8 text-blue-500 opacity-70" />,
+  'Snow': <CloudSnow className="w-8 h-8 text-blue-300 opacity-70" />,
+  'Drizzle': <CloudRain className="w-8 h-8 text-blue-400 opacity-70" />,
+  'Thunderstorm': <CloudRain className="w-8 h-8 text-purple-500 opacity-70" />,
+  'Mist': <Wind className="w-8 h-8 text-gray-400 opacity-70" />,
+  'Fog': <Wind className="w-8 h-8 text-gray-400 opacity-70" />,
 }
 
 // 현재 날씨 데이터 타입
@@ -511,10 +523,7 @@ export default function DashboardHome() {
 
                   {/* 내일 날씨 */}
                   <div className="flex items-center gap-3">
-                    {React.cloneElement(
-                      (weatherIcons[weather.tomorrow.main] || <Cloud className="w-10 h-10 text-gray-400" />) as React.ReactElement,
-                      { className: 'w-8 h-8 opacity-70' }
-                    )}
+                    {weatherIconsSmall[weather.tomorrow.main] || <Cloud className="w-8 h-8 text-gray-400 opacity-70" />}
                     <div className="flex-1">
                       <div className="flex items-center gap-1 text-xs text-slate-500 mb-0.5">
                         <Calendar className="w-3 h-3" />
