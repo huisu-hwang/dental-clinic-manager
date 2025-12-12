@@ -402,6 +402,7 @@ export default function MasterAdminPage() {
     switch (type) {
       case 'login': return '로그인'
       case 'logout': return '로그아웃'
+      case 'access': return '접속'
       case 'page_view': return '페이지 조회'
       case 'action': return '작업'
       default: return type
@@ -413,6 +414,7 @@ export default function MasterAdminPage() {
     switch (type) {
       case 'login': return 'bg-green-100 text-green-800'
       case 'logout': return 'bg-gray-100 text-gray-800'
+      case 'access': return 'bg-teal-100 text-teal-800'
       case 'page_view': return 'bg-blue-100 text-blue-800'
       case 'action': return 'bg-purple-100 text-purple-800'
       default: return 'bg-gray-100 text-gray-800'

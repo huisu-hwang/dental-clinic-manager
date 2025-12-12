@@ -6,6 +6,7 @@ import Link from 'next/link'
 import type { UserProfile } from '@/contexts/AuthContext'
 import type { TodayNotification } from '@/types/notification'
 import HeaderNotificationBanner from './HeaderNotificationBanner'
+import UserNotificationDropdown from './UserNotificationDropdown'
 
 interface HeaderProps {
   dbStatus?: 'connected' | 'connecting' | 'error'
@@ -131,6 +132,9 @@ export default function Header({
                 <span className="hidden sm:inline">관리</span>
               </Link>
             )}
+
+            {/* 사용자 알림 드롭다운 */}
+            <UserNotificationDropdown />
 
             {/* 프로필 버튼 */}
             <button

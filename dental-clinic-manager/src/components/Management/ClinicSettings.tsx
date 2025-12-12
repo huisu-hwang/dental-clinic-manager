@@ -8,12 +8,14 @@ import {
   CreditCardIcon,
   ShieldCheckIcon,
   ClockIcon,
-  BellIcon
+  BellIcon,
+  Bars3BottomLeftIcon
 } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
 import type { UserProfile } from '@/contexts/AuthContext'
 import ClinicHoursSettings from './ClinicHoursSettings'
 import NotificationSettings from './NotificationSettings'
+import MenuSettings from './MenuSettings'
 
 // Clinic 타입을 이 파일에 직접 정의
 interface Clinic {
@@ -39,12 +41,15 @@ interface ClinicSettingsProps {
 }
 
 export default function ClinicSettings({ currentUser }: ClinicSettingsProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'hours' | 'notifications'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'hours' | 'notifications' | 'menu'>('info')
   const [clinic, setClinic] = useState<Clinic | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  // 대표 원장인지 확인
+  const isOwner = currentUser.role === 'owner'
 
   interface ClinicFormData {
   name: string;
@@ -202,7 +207,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
     <div className="bg-white rounded-lg shadow-sm border border-slate-200">
       {/* 탭 네비게이션 */}
       <div className="border-b border-slate-200">
-        <div className="flex">
+        <div className="flex flex-wrap">
           <button
             onClick={() => setActiveTab('info')}
             className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
@@ -236,6 +241,20 @@ const [formData, setFormData] = useState<ClinicFormData>({
             <BellIcon className="h-5 w-5" />
             알림 관리
           </button>
+          {/* 메뉴 설정 탭 - 대표 원장만 표시 */}
+          {isOwner && (
+            <button
+              onClick={() => setActiveTab('menu')}
+              className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
+                activeTab === 'menu'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-600 hover:text-slate-800'
+              }`}
+            >
+              <Bars3BottomLeftIcon className="h-5 w-5" />
+              메뉴 설정
+            </button>
+          )}
         </div>
       </div>
 
@@ -506,9 +525,9 @@ const [formData, setFormData] = useState<ClinicFormData>({
                 <h4 className="font-semibold text-blue-800">보안 안내</h4>
               </div>
               <ul className="space-y-1 text-xs text-blue-700">
-                <li>• 병원을 공개하면 가입 신청을 받을 수 있습니다</li>
-                <li>• 모든 가입 신청은 원장님의 승인이 필요합니다</li>
-                <li>• 직원의 권한은 역할에 따라 자동 설정됩니다</li>
+                <li>- 병원을 공개하면 가입 신청을 받을 수 있습니다</li>
+                <li>- 모든 가입 신청은 원장님의 승인이 필요합니다</li>
+                <li>- 직원의 권한은 역할에 따라 자동 설정됩니다</li>
               </ul>
             </div>
           </div>
@@ -522,7 +541,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
             <ClinicHoursSettings clinicId={currentUser.clinic_id} />
           )}
         </>
-      ) : (
+      ) : activeTab === 'notifications' ? (
         <>
           {/* 알림 관리 탭 */}
           {currentUser.clinic_id && (
@@ -532,7 +551,14 @@ const [formData, setFormData] = useState<ClinicFormData>({
             />
           )}
         </>
-      )}
+      ) : activeTab === 'menu' && isOwner ? (
+        <>
+          {/* 메뉴 설정 탭 - 대표 원장만 */}
+          {currentUser.clinic_id && (
+            <MenuSettings clinicId={currentUser.clinic_id} />
+          )}
+        </>
+      ) : null}
       </div>
     </div>
   )

@@ -14,6 +14,7 @@ import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import LeaveManagement from '@/components/Leave/LeaveManagement'
 import VendorContactManagement from '@/components/Vendor/VendorContactManagement'
+import DocumentTemplates from '@/components/Document/DocumentTemplates'
 import Toast from '@/components/ui/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
 import DatabaseVerifier from '@/components/Debug/DatabaseVerifier'
@@ -626,6 +627,11 @@ export default function DashboardPage() {
           {/* 업체 연락처 */}
           {activeTab === 'vendors' && (
             <VendorContactManagement />
+          )}
+
+          {/* 문서 양식 */}
+          {activeTab === 'documents' && (
+            <DocumentTemplates />
           )}
 
           {/* 설정 */}

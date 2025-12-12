@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useMenuSettings } from '@/hooks/useMenuSettings'
 import type { Permission } from '@/types/permissions'
 import {
   Home,
@@ -14,7 +15,8 @@ import {
   Package,
   HelpCircle,
   CalendarDays,
-  Building2
+  Building2,
+  FileText
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -41,12 +43,36 @@ const tabs: Tab[] = [
   { id: 'protocols', label: '진료 프로토콜', icon: BookOpen, requiredPermissions: ['protocol_view'] },
   { id: 'vendors', label: '업체 연락처', icon: Building2, requiredPermissions: ['vendor_contacts_view'] },
   { id: 'contracts', label: '근로계약서', icon: FileSignature, requiredPermissions: ['contract_view'] },
+  { id: 'documents', label: '문서 양식', icon: FileText, requiredPermissions: ['contract_view'] },
   { id: 'settings', label: '재고 관리', icon: Package, requiredPermissions: ['inventory_view'] },
   { id: 'guide', label: '사용 안내', icon: HelpCircle, requiredPermissions: ['guide_view'] }
 ]
 
 export default function TabNavigation({ activeTab, onTabChange, onItemClick, skipAutoRedirect = false }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
+  const { menuSettings, isLoading } = useMenuSettings()
+
+  // 메뉴 설정을 적용한 탭 목록 생성
+  const tabs = useMemo(() => {
+    // 메뉴 설정에서 보이는 메뉴만 순서대로 정렬
+    const visibleMenuIds = menuSettings
+      .filter(menu => menu.visible)
+      .sort((a, b) => a.order - b.order)
+      .map(menu => menu.id)
+
+    // 탭 정보 생성
+    return visibleMenuIds.map(id => {
+      const defaultTab = defaultTabs.find(t => t.id === id)
+      const menuSetting = menuSettings.find(m => m.id === id)
+
+      return {
+        id,
+        label: menuSetting?.label || defaultTab?.label || id,
+        icon: iconMap[id] || HelpCircle,
+        requiredPermissions: permissionsMap[id] || []
+      }
+    })
+  }, [menuSettings])
 
   // 권한이 있는 탭만 필터링 (useMemo로 캐싱하여 불필요한 재계산 방지)
   const visibleTabs = useMemo(() =>
@@ -55,7 +81,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
         return true
       }
       return tab.requiredPermissions.some(perm => hasPermission(perm))
-    }), [hasPermission])
+    }), [tabs, hasPermission])
 
   // 현재 선택된 탭이 권한이 없는 탭이면 첫 번째 탭으로 변경
   // useEffect를 사용하여 렌더링 이후에 비동기적으로 처리 (렌더링 중 상태 변경 방지)
@@ -73,6 +99,23 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     if (onItemClick) {
       onItemClick()
     }
+  }
+
+  // 로딩 중일 때 스켈레톤 표시
+  if (isLoading) {
+    return (
+      <nav className="flex flex-col space-y-1 w-full">
+        {[...Array(6)].map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center space-x-3 py-3 lg:py-2.5 px-4 lg:px-3 rounded-xl animate-pulse"
+          >
+            <div className="w-5 h-5 bg-slate-200 rounded" />
+            <div className="h-4 bg-slate-200 rounded w-20" />
+          </div>
+        ))}
+      </nav>
+    )
   }
 
   return (
