@@ -20,7 +20,8 @@ import {
   getDefaultResignationData,
   getDefaultEmploymentCertificateData
 } from '@/types/document'
-import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users } from 'lucide-react'
+import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool } from 'lucide-react'
+import SignaturePad from '@/components/Contract/SignaturePad'
 
 interface StaffMember {
   id: string
@@ -41,6 +42,7 @@ export default function DocumentTemplates() {
   const [staffList, setStaffList] = useState<StaffMember[]>([])
   const [selectedStaff, setSelectedStaff] = useState<string>('')
   const [loadingStaff, setLoadingStaff] = useState(false)
+  const [showSignatureModal, setShowSignatureModal] = useState(false)
   const documentRef = useRef<HTMLDivElement>(null)
 
   // 사직서 데이터
@@ -83,25 +85,39 @@ export default function DocumentTemplates() {
     loadStaff()
   }, [user?.clinic_id])
 
-  // 사용자 정보 변경 시 기본값 업데이트
+  // 사용자 정보 변경 시 기본값 업데이트 (회사 정보 + 본인 정보 자동 입력)
   useEffect(() => {
-    if (user?.clinic) {
-      setResignationData(prev => ({
-        ...prev,
+    if (user) {
+      // 회사 정보 업데이트
+      const clinicInfo = {
         clinicName: user.clinic?.name || '',
         representativeName: user.clinic?.owner_name || '',
         clinicAddress: user.clinic?.address || ''
+      }
+
+      // 본인 정보 자동 입력 (직원 선택 없이 본인이 작성하는 경우)
+      setResignationData(prev => ({
+        ...prev,
+        ...clinicInfo,
+        employeeName: prev.employeeName || user.name || '',
+        employeePosition: prev.employeePosition || user.position || user.role || '',
+        hireDate: prev.hireDate || user.hire_date || ''
       }))
+
       setCertificateData(prev => ({
         ...prev,
-        clinicName: user.clinic?.name || '',
-        representativeName: user.clinic?.owner_name || '',
-        clinicAddress: user.clinic?.address || '',
+        ...clinicInfo,
         businessNumber: user.clinic?.business_number || '',
-        clinicPhone: user.clinic?.phone || ''
+        clinicPhone: user.clinic?.phone || '',
+        employeeName: prev.employeeName || user.name || '',
+        position: prev.position || user.position || user.role || '',
+        employeePhone: prev.employeePhone || user.phone || '',
+        hireDate: prev.hireDate || user.hire_date || '',
+        employeeAddress: prev.employeeAddress || user.address || '',
+        employeeBirthDate: prev.employeeBirthDate || user.birth_date || ''
       }))
     }
-  }, [user?.clinic])
+  }, [user])
 
   // 직원 선택 시 데이터 자동 입력
   const handleStaffSelect = (staffId: string) => {
@@ -207,6 +223,23 @@ export default function DocumentTemplates() {
     setDocumentType(type)
     setShowPreview(false)
     setSelectedStaff('')
+    // 서명 초기화
+    if (type === 'resignation') {
+      setResignationData(prev => ({ ...prev, employeeSignature: undefined }))
+    }
+  }
+
+  // 서명 저장 핸들러
+  const handleSignatureSave = (signatureData: string) => {
+    setResignationData(prev => ({ ...prev, employeeSignature: signatureData }))
+    setShowSignatureModal(false)
+  }
+
+  // 서명 삭제 핸들러
+  const handleSignatureDelete = () => {
+    if (confirm('서명을 삭제하시겠습니까?')) {
+      setResignationData(prev => ({ ...prev, employeeSignature: undefined }))
+    }
   }
 
   return (
@@ -272,6 +305,41 @@ export default function DocumentTemplates() {
             <EmploymentCertificateForm data={certificateData} onChange={setCertificateData} />
           )}
 
+          {/* 서명 섹션 (사직서만) */}
+          {documentType === 'resignation' && (
+            <div className="mt-6 pt-4 border-t">
+              <label className="block text-sm font-medium text-slate-700 mb-3">
+                <PenTool className="w-4 h-4 inline-block mr-1" />
+                본인 서명
+              </label>
+              {resignationData.employeeSignature ? (
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <img
+                      src={resignationData.employeeSignature}
+                      alt="서명"
+                      className="max-h-16 mx-auto"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSignatureDelete}
+                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    삭제
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSignatureModal(true)}
+                  className="w-full px-4 py-3 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                >
+                  <PenTool className="w-4 h-4 inline-block mr-2" />
+                  서명하기
+                </button>
+              )}
+            </div>
+          )}
+
           {/* 액션 버튼 */}
           <div className="flex gap-3 mt-6 pt-4 border-t">
             <button
@@ -330,6 +398,26 @@ export default function DocumentTemplates() {
           </div>
         </div>
       </div>
+
+      {/* 서명 모달 */}
+      {showSignatureModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowSignatureModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SignaturePad
+              onSave={handleSignatureSave}
+              onCancel={() => setShowSignatureModal(false)}
+              width={450}
+              height={180}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -753,7 +841,15 @@ function ResignationPreview({
           <div className="flex justify-end items-center gap-4">
             <span className="font-medium">작성자:</span>
             <span className="text-lg">{data.employeeName || '　　　　　'}</span>
-            <span className="text-slate-400">(인)</span>
+            {data.employeeSignature ? (
+              <img
+                src={data.employeeSignature}
+                alt="서명"
+                className="h-12 ml-2"
+              />
+            ) : (
+              <span className="text-slate-400">(인)</span>
+            )}
           </div>
         </section>
 

@@ -35,6 +35,9 @@ export interface ResignationData {
 
   // 작성일
   submissionDate: string
+
+  // 서명
+  employeeSignature?: string
 }
 
 // 재직증명서 데이터
