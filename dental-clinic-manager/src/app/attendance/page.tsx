@@ -48,12 +48,14 @@ export default function AttendancePage() {
   // 메인 탭 네비게이션 핸들러
   const handleMainTabChange = (tab: string) => {
     if (tab === 'attendance') return // Already on attendance page
-    if (tab === 'daily-input') router.push('/dashboard')
+    if (tab === 'home') router.push('/dashboard')
+    else if (tab === 'daily-input') router.push('/dashboard?tab=daily-input')
     else if (tab === 'leave') router.push('/dashboard?tab=leave')
     else if (tab === 'contracts') router.push('/dashboard/contracts')
     else if (tab === 'stats') router.push('/dashboard?tab=stats')
     else if (tab === 'logs') router.push('/dashboard?tab=logs')
     else if (tab === 'protocols') router.push('/dashboard?tab=protocols')
+    else if (tab === 'vendors') router.push('/dashboard?tab=vendors')
     else if (tab === 'settings') router.push('/dashboard?tab=settings')
     else if (tab === 'guide') router.push('/dashboard?tab=guide')
     else router.push('/dashboard')
