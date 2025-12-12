@@ -16,6 +16,16 @@ export default function AuthApp() {
   const { isAuthenticated, user, loading } = useAuth()
   const [appState, setAppState] = useState<AppState>('landing')
 
+  // URL 파라미터로 초기 앱 상태 설정
+  useEffect(() => {
+    const show = searchParams.get('show')
+    if (show === 'login') {
+      setAppState('login')
+    } else if (show === 'signup') {
+      setAppState('signup')
+    }
+  }, [searchParams])
+
   // 인증된 경우 대시보드로 리디렉션 (승인된 사용자만)
   useEffect(() => {
     if (isAuthenticated) {
