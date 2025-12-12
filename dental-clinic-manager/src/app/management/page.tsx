@@ -183,6 +183,7 @@ export default function ManagementPage() {
           activeTab="settings"
           onTabChange={handleMainTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
+          disableAutoSwitch={true}
         />
       </aside>
 

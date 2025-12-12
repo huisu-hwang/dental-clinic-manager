@@ -21,6 +21,7 @@ interface TabNavigationProps {
   activeTab: string
   onTabChange: (tab: string) => void
   onItemClick?: () => void  // 모바일에서 메뉴 닫기용
+  disableAutoSwitch?: boolean  // 자동 탭 전환 비활성화 (관리 페이지 등에서 사용)
 }
 
 interface Tab {
@@ -72,7 +73,7 @@ const permissionsMap: Record<string, Permission[]> = {
   'guide': ['guide_view']
 }
 
-export default function TabNavigation({ activeTab, onTabChange, onItemClick }: TabNavigationProps) {
+export default function TabNavigation({ activeTab, onTabChange, onItemClick, disableAutoSwitch = false }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
   const { menuSettings, isLoading } = useMenuSettings()
 
@@ -110,12 +111,13 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick }: T
   // 현재 선택된 탭이 권한이 없는 탭이면 첫 번째 탭으로 변경
   // useEffect를 사용하여 렌더링 이후에 비동기적으로 처리 (렌더링 중 상태 변경 방지)
   // isLoading 중에는 탭 자동 변경을 하지 않음 (메뉴 설정 로드 완료 후 처리)
+  // disableAutoSwitch가 true면 자동 탭 전환을 하지 않음 (관리 페이지 등에서 사용)
   useEffect(() => {
-    if (isLoading) return // 로딩 중에는 탭 변경하지 않음
+    if (isLoading || disableAutoSwitch) return // 로딩 중이거나 자동 전환 비활성화 시 탭 변경하지 않음
     if (visibleTabs.length > 0 && !visibleTabs.find(tab => tab.id === activeTab)) {
       onTabChange(visibleTabs[0].id)
     }
-  }, [activeTab, visibleTabs, onTabChange, isLoading])
+  }, [activeTab, visibleTabs, onTabChange, isLoading, disableAutoSwitch])
 
   const handleTabClick = (tabId: string) => {
     onTabChange(tabId)
