@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { MenuItemSetting } from '@/types/menuSettings'
 import { DEFAULT_MENU_ITEMS } from '@/types/menuSettings'
-import { getMenuSettings, clearMenuSettingsCache } from '@/lib/menuSettingsService'
+import { getMenuSettings, clearMenuSettingsCache, MENU_SETTINGS_CHANGED_EVENT } from '@/lib/menuSettingsService'
 
 interface UseMenuSettingsReturn {
   menuSettings: MenuItemSetting[]
@@ -16,6 +16,7 @@ interface UseMenuSettingsReturn {
 /**
  * 병원의 메뉴 설정을 가져오는 훅
  * 로그인한 사용자의 병원에 맞는 메뉴 설정을 반환
+ * 메뉴 설정이 변경되면 자동으로 업데이트됨
  */
 export function useMenuSettings(): UseMenuSettingsReturn {
   const { user } = useAuth()
@@ -57,6 +58,28 @@ export function useMenuSettings(): UseMenuSettingsReturn {
   useEffect(() => {
     loadSettings(true)
   }, [loadSettings])
+
+  // 메뉴 설정 변경 이벤트 리스너
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user?.clinic_id) return
+
+    const handleMenuSettingsChanged = (event: CustomEvent<{ clinicId: string; settings: MenuItemSetting[] }>) => {
+      const { clinicId, settings } = event.detail
+
+      // 현재 사용자의 병원 설정만 업데이트
+      if (clinicId === user.clinic_id) {
+        console.log('[useMenuSettings] Menu settings changed, updating...')
+        const sortedSettings = [...settings].sort((a, b) => a.order - b.order)
+        setMenuSettings(sortedSettings)
+      }
+    }
+
+    window.addEventListener(MENU_SETTINGS_CHANGED_EVENT, handleMenuSettingsChanged as EventListener)
+
+    return () => {
+      window.removeEventListener(MENU_SETTINGS_CHANGED_EVENT, handleMenuSettingsChanged as EventListener)
+    }
+  }, [user?.clinic_id])
 
   // 새로고침 함수 (캐시 무시)
   const refresh = useCallback(async () => {

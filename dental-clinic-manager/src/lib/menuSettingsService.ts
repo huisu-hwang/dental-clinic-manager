@@ -10,6 +10,20 @@ import { DEFAULT_MENU_ITEMS, normalizeMenuSettings } from '@/types/menuSettings'
 // 메뉴 설정을 localStorage에 캐시하는 키
 const MENU_SETTINGS_CACHE_KEY = 'dental_menu_settings'
 
+// 메뉴 설정 변경 이벤트 이름
+export const MENU_SETTINGS_CHANGED_EVENT = 'menuSettingsChanged'
+
+// 메뉴 설정 변경 이벤트 발생
+export function emitMenuSettingsChanged(clinicId: string, settings: MenuItemSetting[]): void {
+  if (typeof window === 'undefined') return
+
+  const event = new CustomEvent(MENU_SETTINGS_CHANGED_EVENT, {
+    detail: { clinicId, settings }
+  })
+  window.dispatchEvent(event)
+  console.log('[menuSettingsService] Menu settings changed event emitted')
+}
+
 // 캐시된 메뉴 설정 가져오기
 function getCachedMenuSettings(clinicId: string): MenuItemSetting[] | null {
   if (typeof window === 'undefined') return null
@@ -151,6 +165,9 @@ export async function saveMenuSettings(
     setCachedMenuSettings(clinicId, normalizedSettings)
     console.log('[menuSettingsService] Menu settings saved successfully')
 
+    // 메뉴 설정 변경 이벤트 발생 (TabNavigation에서 즉시 반영)
+    emitMenuSettingsChanged(clinicId, normalizedSettings)
+
     return { success: true }
   } catch (error) {
     console.error('[menuSettingsService] Unexpected error:', error)
@@ -185,6 +202,9 @@ export async function resetMenuSettings(
     // 캐시 삭제
     clearMenuSettingsCache(clinicId)
     console.log('[menuSettingsService] Menu settings reset successfully')
+
+    // 메뉴 설정 변경 이벤트 발생 (기본값으로 초기화)
+    emitMenuSettingsChanged(clinicId, DEFAULT_MENU_ITEMS)
 
     return { success: true }
   } catch (error) {
