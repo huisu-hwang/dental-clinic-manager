@@ -97,7 +97,9 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === '/signup' ||
     request.nextUrl.pathname === '/pending-approval' ||
     request.nextUrl.pathname === '/update-password' ||
-    request.nextUrl.pathname.startsWith('/test')
+    request.nextUrl.pathname.startsWith('/test') ||
+    request.nextUrl.pathname.startsWith('/auth') ||
+    request.nextUrl.pathname.startsWith('/api')
 
   // 5. 인증 필요한 경로에 미인증 사용자 접근 시 리다이렉트
   if (!user && !isPublicPath) {

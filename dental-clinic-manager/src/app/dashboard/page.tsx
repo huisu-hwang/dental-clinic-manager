@@ -19,6 +19,7 @@ import Toast from '@/components/ui/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
 import DatabaseVerifier from '@/components/Debug/DatabaseVerifier'
 import CheckInOut from '@/components/Attendance/CheckInOut'
+import DashboardHome from '@/components/Dashboard/DashboardHome'
 import AttendanceHistory from '@/components/Attendance/AttendanceHistory'
 import AttendanceStats from '@/components/Attendance/AttendanceStats'
 import ScheduleManagement from '@/components/Attendance/ScheduleManagement'
@@ -50,7 +51,7 @@ export default function DashboardPage() {
   const canManageQR = hasPermission('qr_code_manage')
 
   // URL 쿼리 파라미터에서 활성 탭 읽기
-  const activeTab = searchParams.get('tab') || 'daily-input'
+  const activeTab = searchParams.get('tab') || 'home'
   const [statsSubTab, setStatsSubTab] = useState<'weekly' | 'monthly' | 'annual'>('weekly')
   const [attendanceSubTab, setAttendanceSubTab] = useState<'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'>('checkin')
   const [dbStatus, setDbStatus] = useState<'connected' | 'connecting' | 'error'>('connecting')
@@ -284,6 +285,11 @@ export default function DashboardPage() {
 
   return (
     <>
+          {/* 대시보드 홈 */}
+          {activeTab === 'home' && (
+            <DashboardHome />
+          )}
+
           {/* 일일 보고서 입력 */}
           {activeTab === 'daily-input' && (
             <DailyInputForm

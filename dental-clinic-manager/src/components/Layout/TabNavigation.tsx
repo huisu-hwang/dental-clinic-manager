@@ -5,6 +5,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { useMenuSettings } from '@/hooks/useMenuSettings'
 import type { Permission } from '@/types/permissions'
 import {
+  Home,
   ClipboardList,
   Clock,
   BarChart3,
@@ -22,7 +23,7 @@ interface TabNavigationProps {
   activeTab: string
   onTabChange: (tab: string) => void
   onItemClick?: () => void  // 모바일에서 메뉴 닫기용
-  disableAutoSwitch?: boolean  // 자동 탭 전환 비활성화 (관리 페이지 등에서 사용)
+  skipAutoRedirect?: boolean  // 자동 리다이렉트 방지 (관리 페이지 등에서 사용)
 }
 
 interface Tab {
@@ -32,8 +33,8 @@ interface Tab {
   requiredPermissions?: Permission[]
 }
 
-// 기본 탭 정의 (메뉴 설정에서 순서와 표시 여부를 오버라이드)
 const defaultTabs: Tab[] = [
+  { id: 'home', label: '대시보드 홈', icon: Home },
   { id: 'daily-input', label: '일일보고서', icon: ClipboardList, requiredPermissions: ['daily_report_view'] },
   { id: 'attendance', label: '출근 관리', icon: Clock, requiredPermissions: ['attendance_check_in', 'attendance_view_own'] },
   { id: 'leave', label: '연차 관리', icon: CalendarDays, requiredPermissions: ['leave_request_view_own', 'leave_balance_view_own'] },
@@ -49,6 +50,7 @@ const defaultTabs: Tab[] = [
 
 // 아이콘 매핑
 const iconMap: Record<string, React.ElementType> = {
+  'home': Home,
   'daily-input': ClipboardList,
   'attendance': Clock,
   'leave': CalendarDays,
@@ -57,12 +59,14 @@ const iconMap: Record<string, React.ElementType> = {
   'protocols': BookOpen,
   'vendors': Building2,
   'contracts': FileSignature,
+  'documents': FileText,
   'settings': Package,
   'guide': HelpCircle
 }
 
 // 권한 매핑
 const permissionsMap: Record<string, Permission[]> = {
+  'home': [],
   'daily-input': ['daily_report_view'],
   'attendance': ['attendance_check_in', 'attendance_view_own'],
   'leave': ['leave_request_view_own', 'leave_balance_view_own'],
@@ -71,11 +75,12 @@ const permissionsMap: Record<string, Permission[]> = {
   'protocols': ['protocol_view'],
   'vendors': ['vendor_contacts_view'],
   'contracts': ['contract_view'],
+  'documents': ['contract_view'],
   'settings': ['inventory_view'],
   'guide': ['guide_view']
 }
 
-export default function TabNavigation({ activeTab, onTabChange, onItemClick, disableAutoSwitch = false }: TabNavigationProps) {
+export default function TabNavigation({ activeTab, onTabChange, onItemClick, skipAutoRedirect = false }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
   const { menuSettings, isLoading } = useMenuSettings()
 
@@ -112,14 +117,13 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, dis
 
   // 현재 선택된 탭이 권한이 없는 탭이면 첫 번째 탭으로 변경
   // useEffect를 사용하여 렌더링 이후에 비동기적으로 처리 (렌더링 중 상태 변경 방지)
-  // isLoading 중에는 탭 자동 변경을 하지 않음 (메뉴 설정 로드 완료 후 처리)
-  // disableAutoSwitch가 true면 자동 탭 전환을 하지 않음 (관리 페이지 등에서 사용)
+  // skipAutoRedirect가 true면 자동 리다이렉트 하지 않음 (관리 페이지 등)
   useEffect(() => {
-    if (isLoading || disableAutoSwitch) return // 로딩 중이거나 자동 전환 비활성화 시 탭 변경하지 않음
+    if (skipAutoRedirect) return
     if (visibleTabs.length > 0 && !visibleTabs.find(tab => tab.id === activeTab)) {
       onTabChange(visibleTabs[0].id)
     }
-  }, [activeTab, visibleTabs, onTabChange, isLoading, disableAutoSwitch])
+  }, [activeTab, visibleTabs, onTabChange, skipAutoRedirect])
 
   const handleTabClick = (tabId: string) => {
     onTabChange(tabId)

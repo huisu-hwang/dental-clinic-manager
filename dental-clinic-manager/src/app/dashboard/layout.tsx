@@ -70,8 +70,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return tab
     }
 
-    // 기본값: daily-input
-    return 'daily-input'
+    // 기본값: home (대시보드 홈)
+    return 'home'
   }
 
   // 탭 변경 핸들러
@@ -84,8 +84,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/dashboard?tab=leave')
     } else if (tab === 'settings') {
       router.push('/dashboard?tab=settings')
-    } else if (tab === 'daily-input') {
+    } else if (tab === 'home') {
       router.push('/dashboard')
+    } else if (tab === 'daily-input') {
+      router.push('/dashboard?tab=daily-input')
     } else if (tab === 'stats') {
       router.push('/dashboard?tab=stats')
     } else if (tab === 'logs') {
@@ -141,6 +143,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           activeTab={getActiveTab()}
           onTabChange={handleTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
+          skipAutoRedirect={true}
         />
       </aside>
 
