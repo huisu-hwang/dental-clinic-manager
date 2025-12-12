@@ -809,7 +809,7 @@ function ResignationPreview({
                 <td className="py-3 px-4 bg-slate-50 font-medium w-28">성 명</td>
                 <td className="py-3 px-4">{data.employeeName || '　'}</td>
                 <td className="py-3 px-4 bg-slate-50 font-medium w-28">직 위</td>
-                <td className="py-3 px-4">{data.employeePosition || '　'}</td>
+                <td className="py-3 px-4">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
               </tr>
               <tr className="border-b border-slate-300">
                 <td className="py-3 px-4 bg-slate-50 font-medium">부 서</td>
@@ -931,7 +931,7 @@ function EmploymentCertificatePreview({
               <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">소 속</td>
               <td className="py-3 px-4 border border-slate-300">{data.department || '　'}</td>
               <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">직 위</td>
-              <td className="py-3 px-4 border border-slate-300">{data.position || '　'}</td>
+              <td className="py-3 px-4 border border-slate-300">{translateRole(data.position) || data.position || '　'}</td>
             </tr>
             <tr>
               <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">재직기간</td>
