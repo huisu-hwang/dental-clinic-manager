@@ -25,11 +25,13 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
+  const [autoLogin, setAutoLogin] = useState(false)
 
-  // 컴포넌트 마운트 시 저장된 로그인 정보 불러오기
+  // 컴포넌트 마운트 시 저장된 로그인 정보 불러오기 및 자동 로그인
   useEffect(() => {
     const savedEmail = localStorage.getItem('savedLoginEmail')
     const savedPassword = localStorage.getItem('savedLoginPassword')
+    const savedAutoLogin = localStorage.getItem('autoLogin') === 'true'
 
     if (savedEmail && savedPassword) {
       setFormData({
@@ -37,6 +39,19 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         password: savedPassword
       })
       setRememberMe(true)
+      setAutoLogin(savedAutoLogin)
+
+      // 자동 로그인 설정이 활성화되어 있으면 자동으로 로그인 시도
+      if (savedAutoLogin && !loading) {
+        console.log('[LoginForm] Auto login enabled, attempting automatic login...')
+        // 약간의 지연을 주어 UI가 렌더링된 후 로그인 시도
+        setTimeout(() => {
+          const form = document.querySelector('form')
+          if (form) {
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
+          }
+        }, 500)
+      }
     }
   }, [])
 
@@ -222,6 +237,15 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         localStorage.removeItem('savedLoginPassword')
       }
 
+      // 자동 로그인 설정 저장
+      if (autoLogin && rememberMe) {
+        console.log('[LoginForm] Saving auto login setting to localStorage')
+        localStorage.setItem('autoLogin', 'true')
+      } else {
+        console.log('[LoginForm] Removing auto login setting from localStorage')
+        localStorage.removeItem('autoLogin')
+      }
+
       console.log('[LoginForm] Calling onLoginSuccess...')
       // localStorage 저장이 완료될 때까지 약간 대기
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -307,30 +331,48 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
               </button>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600">
-                  로그인 정보 저장
-                </label>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600">
+                    로그인 정보 저장
+                  </label>
+                </div>
+
+                <div className="text-sm">
+                  <button
+                    type="button"
+                    onClick={onShowForgotPassword}
+                    className="font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    비밀번호를 잊으셨나요?
+                  </button>
+                </div>
               </div>
 
-              <div className="text-sm">
-                <button
-                  type="button"
-                  onClick={onShowForgotPassword}
-                  className="font-medium text-blue-600 hover:text-blue-700"
-                >
-                  비밀번호를 잊으셨나요?
-                </button>
-              </div>
+              {rememberMe && (
+                <div className="flex items-center ml-6">
+                  <input
+                    id="auto-login"
+                    name="auto-login"
+                    type="checkbox"
+                    checked={autoLogin}
+                    onChange={(e) => setAutoLogin(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="auto-login" className="ml-2 block text-sm text-slate-500">
+                    자동 로그인 (다음에 자동으로 로그인)
+                  </label>
+                </div>
+              )}
             </div>
 
             {error && (
