@@ -9,9 +9,11 @@ interface NewsItem {
 
 // 데모 뉴스 데이터 (폴백용)
 const fallbackNews: NewsItem[] = [
-  { title: '2024년 치과 건강보험 수가 인상 확정', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
-  { title: '디지털 치과 진료 시스템 도입 가속화', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
-  { title: '치과 감염관리 가이드라인 개정안 발표', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+  { title: '치의신보 웹사이트를 방문하여 최신 뉴스를 확인하세요', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+  { title: '치과 건강보험 수가 관련 최신 소식', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+  { title: '디지털 치과 진료 시스템 최신 동향', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+  { title: '치과 감염관리 및 안전 관련 소식', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+  { title: '치과계 주요 이슈 및 정책 뉴스', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1', source: '치의신보', date: new Date().toISOString().split('T')[0] },
 ]
 
 // 캐시 (5분)
@@ -49,16 +51,27 @@ async function fetchDailyDentalNews(): Promise<NewsItem[]> {
     // 치의신보 최신기사 페이지
     const response = await fetch('https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1&view_type=sm', {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Cache-Control': 'no-cache',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Cache-Control': 'max-age=0',
+        'Referer': 'https://www.dailydental.co.kr/',
       },
       next: { revalidate: 300 } // 5분 캐시
     })
 
     if (!response.ok) {
-      console.error('[News API] Response not OK:', response.status)
+      console.error('[News API] Response not OK:', response.status, response.statusText)
       return []
     }
 
@@ -77,67 +90,53 @@ function parseNewsFromHtml(html: string): NewsItem[] {
   const news: NewsItem[] = []
 
   try {
-    // 기사 목록 패턴 찾기 (치의신보 HTML 구조에 맞게 조정)
-    // <a href="/news/articleView.html?idxno=XXXXX" class="..." >기사제목</a>
-    const articlePattern = /<a[^>]*href="(\/news\/articleView\.html\?idxno=\d+)"[^>]*>([^<]+)<\/a>/gi
-    const datePattern = /(\d{4})\.(\d{2})\.(\d{2})/g
-
-    let match
     const seenTitles = new Set<string>()
 
-    while ((match = articlePattern.exec(html)) !== null) {
-      const link = match[1]
-      let title = match[2].trim()
+    // 여러 패턴 시도
+    const patterns = [
+      // 패턴 1: 기본 링크 패턴
+      /<a[^>]*href="(\/news\/articleView\.html\?idxno=\d+)"[^>]*>([^<]+)<\/a>/gi,
+      // 패턴 2: 제목이 strong 태그 안에 있는 경우
+      /<a[^>]*href="(\/news\/articleView\.html\?idxno=\d+)"[^>]*><strong>([^<]+)<\/strong><\/a>/gi,
+      // 패턴 3: 제목이 span 태그 안에 있는 경우
+      /<a[^>]*href="(\/news\/articleView\.html\?idxno=\d+)"[^>]*><span[^>]*>([^<]+)<\/span><\/a>/gi,
+      // 패턴 4: div 안의 링크
+      /<div[^>]*class="[^"]*article[^"]*"[^>]*>[\s\S]*?<a[^>]*href="(\/news\/articleView\.html\?idxno=\d+)"[^>]*>([^<]+)<\/a>/gi,
+      // 패턴 5: list-titles 클래스
+      /<div[^>]*class="[^"]*list-titles[^"]*"[^>]*>[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/gi,
+      // 패턴 6: 더 광범위한 패턴
+      /<a[^>]*href="([^"]*articleView[^"]*)"[^>]*>([^<]+)<\/a>/gi,
+    ]
 
-      // HTML 엔티티 디코딩
-      title = title
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/\s+/g, ' ')
-        .trim()
+    for (const pattern of patterns) {
+      let match
+      pattern.lastIndex = 0 // 정규식 리셋
 
-      // 빈 제목이나 너무 짧은 제목 건너뛰기
-      if (!title || title.length < 5) continue
-
-      // 중복 제목 건너뛰기
-      if (seenTitles.has(title)) continue
-      seenTitles.add(title)
-
-      // 메뉴나 버튼 텍스트 제외
-      if (['로그인', '회원가입', '기사검색', '뉴스', '오피니언', '포토', '전체기사'].includes(title)) continue
-
-      news.push({
-        title,
-        link: `https://www.dailydental.co.kr${link}`,
-        source: '치의신보',
-        date: new Date().toISOString().split('T')[0]
-      })
-
-      if (news.length >= 5) break
-    }
-
-    // 대체 패턴 시도 (다른 HTML 구조)
-    if (news.length === 0) {
-      const altPattern = /<div[^>]*class="[^"]*list-titles[^"]*"[^>]*>[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/gi
-
-      while ((match = altPattern.exec(html)) !== null) {
+      while ((match = pattern.exec(html)) !== null) {
         const link = match[1]
         let title = match[2].trim()
 
+        // HTML 엔티티 디코딩
         title = title
           .replace(/&amp;/g, '&')
           .replace(/&lt;/g, '<')
           .replace(/&gt;/g, '>')
           .replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'")
+          .replace(/&nbsp;/g, ' ')
           .replace(/\s+/g, ' ')
           .trim()
 
+        // 빈 제목이나 너무 짧은 제목 건너뛰기
         if (!title || title.length < 5) continue
+
+        // 중복 제목 건너뛰기
         if (seenTitles.has(title)) continue
+
+        // 메뉴나 버튼 텍스트 제외
+        const excludeKeywords = ['로그인', '회원가입', '기사검색', '뉴스', '오피니언', '포토', '전체기사', '더보기', '목록', '이전', '다음']
+        if (excludeKeywords.some(keyword => title === keyword)) continue
+
         seenTitles.add(title)
 
         const fullLink = link.startsWith('http') ? link : `https://www.dailydental.co.kr${link}`
@@ -151,7 +150,11 @@ function parseNewsFromHtml(html: string): NewsItem[] {
 
         if (news.length >= 5) break
       }
+
+      if (news.length >= 5) break
     }
+
+    console.log('[News API] Parsed news count:', news.length)
   } catch (error) {
     console.error('[News API] Parse error:', error)
   }
