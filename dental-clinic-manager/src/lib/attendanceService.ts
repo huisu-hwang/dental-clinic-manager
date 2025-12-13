@@ -33,6 +33,65 @@ function getKoreanDateString(date: Date = new Date()): string {
 }
 
 /**
+ * 한국 시간대 기준 현재 시간 반환 (HH:MM:SS 형식)
+ */
+function getKoreanTimeString(date: Date = new Date()): string {
+  return date.toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+}
+
+/**
+ * 지각 여부 및 지각 시간 계산
+ * @param checkInTime 출근 시간 (ISO 8601 형식)
+ * @param scheduledStart 예정 출근 시간 (HH:MM:SS 형식)
+ * @returns { isLate: boolean, lateMinutes: number, status: 'present' | 'late' }
+ */
+function calculateLateStatus(
+  checkInTime: string,
+  scheduledStart: string | undefined
+): { isLate: boolean; lateMinutes: number; status: 'present' | 'late' } {
+  const toleranceMinutes = 5 // 5분 허용 범위
+
+  // 예정 출근 시간이 없으면 정상 출근으로 처리
+  if (!scheduledStart) {
+    return { isLate: false, lateMinutes: 0, status: 'present' }
+  }
+
+  // 출근 시간을 한국 시간으로 변환 (HH:MM:SS 형식)
+  const checkInDate = new Date(checkInTime)
+  const actualStartTime = getKoreanTimeString(checkInDate)
+
+  // 시간 문자열을 분 단위로 변환
+  const timeToMinutes = (timeStr: string): number => {
+    const parts = timeStr.split(':')
+    const hours = parseInt(parts[0], 10)
+    const minutes = parseInt(parts[1], 10)
+    return hours * 60 + minutes
+  }
+
+  const actualMinutes = timeToMinutes(actualStartTime)
+  const scheduledMinutes = timeToMinutes(scheduledStart)
+
+  // 지각 계산 (허용 범위 초과 시)
+  const lateMinutes = actualMinutes - scheduledMinutes - toleranceMinutes
+
+  if (lateMinutes > 0) {
+    return {
+      isLate: true,
+      lateMinutes: actualMinutes - scheduledMinutes, // 실제 지각 시간 (허용 범위 제외하지 않음)
+      status: 'late'
+    }
+  }
+
+  return { isLate: false, lateMinutes: 0, status: 'present' }
+}
+
+/**
  * 날짜 문자열(YYYY-MM-DD)에서 로컬 시간대 기준 요일 반환
  * new Date("YYYY-MM-DD")는 UTC로 해석되어 시간대에 따라 요일이 달라질 수 있음
  */
@@ -650,6 +709,14 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 
     const checkInTime = new Date().toISOString()
 
+    // 지각 여부 계산 (트리거에 의존하지 않고 직접 계산)
+    const lateStatus = calculateLateStatus(checkInTime, schedule?.start_time)
+    console.log('[checkIn] 지각 계산 결과:', {
+      checkInTime,
+      scheduledStart: schedule?.start_time,
+      ...lateStatus
+    })
+
     // 출근 기록 저장 또는 업데이트
     if (existingRecord) {
       // 기존 레코드 업데이트
@@ -662,7 +729,10 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
           check_in_device_info: device_info,
           scheduled_start: schedule?.start_time,
           scheduled_end: schedule?.end_time,
-          branch_id: finalBranchId, // 자동 감지된 또는 QR의 branch_id
+          branch_id: finalBranchId,
+          // 지각 정보 직접 저장 (트리거 의존성 제거)
+          late_minutes: lateStatus.lateMinutes,
+          status: lateStatus.status,
         })
         .eq('id', existingRecord.id)
         .select()
@@ -685,7 +755,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
         .insert({
           user_id,
           clinic_id: validation.clinic_id,
-          branch_id: finalBranchId, // 자동 감지된 또는 QR의 branch_id
+          branch_id: finalBranchId,
           work_date,
           check_in_time: checkInTime,
           check_in_latitude: latitude,
@@ -693,6 +763,9 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
           check_in_device_info: device_info,
           scheduled_start: schedule?.start_time,
           scheduled_end: schedule?.end_time,
+          // 지각 정보 직접 저장 (트리거 의존성 제거)
+          late_minutes: lateStatus.lateMinutes,
+          status: lateStatus.status,
         })
         .select()
         .single()
