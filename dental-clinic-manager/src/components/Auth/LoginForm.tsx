@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
@@ -24,7 +24,36 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [rememberMe, setRememberMe] = useState(true)
+  const [rememberMe, setRememberMe] = useState(false)
+  const [autoLogin, setAutoLogin] = useState(false)
+
+  // 컴포넌트 마운트 시 저장된 로그인 정보 불러오기 및 자동 로그인
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('savedLoginEmail')
+    const savedPassword = localStorage.getItem('savedLoginPassword')
+    const savedAutoLogin = localStorage.getItem('autoLogin') === 'true'
+
+    if (savedEmail && savedPassword) {
+      setFormData({
+        email: savedEmail,
+        password: savedPassword
+      })
+      setRememberMe(true)
+      setAutoLogin(savedAutoLogin)
+
+      // 자동 로그인 설정이 활성화되어 있으면 자동으로 로그인 시도
+      if (savedAutoLogin && !loading) {
+        console.log('[LoginForm] Auto login enabled, attempting automatic login...')
+        // 약간의 지연을 주어 UI가 렌더링된 후 로그인 시도
+        setTimeout(() => {
+          const form = document.querySelector('form')
+          if (form) {
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
+          }
+        }, 500)
+      }
+    }
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -196,6 +225,27 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
 
       console.log('[LoginForm] Login successful - Cookie-based session')
       console.log('[LoginForm] Session managed by Middleware (automatic refresh)')
+
+      // 로그인 정보 저장 처리
+      if (rememberMe) {
+        console.log('[LoginForm] Saving login credentials to localStorage')
+        localStorage.setItem('savedLoginEmail', formData.email)
+        localStorage.setItem('savedLoginPassword', formData.password)
+      } else {
+        console.log('[LoginForm] Removing saved login credentials from localStorage')
+        localStorage.removeItem('savedLoginEmail')
+        localStorage.removeItem('savedLoginPassword')
+      }
+
+      // 자동 로그인 설정 저장
+      if (autoLogin && rememberMe) {
+        console.log('[LoginForm] Saving auto login setting to localStorage')
+        localStorage.setItem('autoLogin', 'true')
+      } else {
+        console.log('[LoginForm] Removing auto login setting from localStorage')
+        localStorage.removeItem('autoLogin')
+      }
+
       console.log('[LoginForm] Calling onLoginSuccess...')
       // localStorage 저장이 완료될 때까지 약간 대기
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -281,7 +331,8 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
               </button>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="space-y-3">
+              {/* 로그인 정보 저장 체크박스 */}
               <div className="flex items-center">
                 <input
                   id="remember-me"
@@ -292,11 +343,29 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600">
-                  로그인 상태 자동 유지
+                  로그인 정보 저장
                 </label>
               </div>
 
-              <div className="text-sm">
+              {/* 자동 로그인 체크박스 */}
+              {rememberMe && (
+                <div className="flex items-center">
+                  <input
+                    id="auto-login"
+                    name="auto-login"
+                    type="checkbox"
+                    checked={autoLogin}
+                    onChange={(e) => setAutoLogin(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="auto-login" className="ml-2 block text-sm text-slate-600">
+                    자동 로그인 (다음에 자동으로 로그인)
+                  </label>
+                </div>
+              )}
+
+              {/* 비밀번호 찾기 링크 */}
+              <div className="text-sm text-right">
                 <button
                   type="button"
                   onClick={onShowForgotPassword}

@@ -1,7 +1,8 @@
 'use client'
 
-import { Shield, LogOut, User, Cog, Crown, Menu, X } from 'lucide-react'
+import { Shield, LogOut, User, Cog, Crown, Menu, X, UserX } from 'lucide-react'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 
 import type { UserProfile } from '@/contexts/AuthContext'
 import type { TodayNotification } from '@/types/notification'
@@ -31,6 +32,34 @@ export default function Header({
   notifications = [],
   onDismissNotification
 }: HeaderProps) {
+  const [isAutoLoginEnabled, setIsAutoLoginEnabled] = useState(false)
+
+  // 자동 로그인 설정 상태 확인
+  useEffect(() => {
+    const checkAutoLogin = () => {
+      const autoLogin = localStorage.getItem('autoLogin') === 'true'
+      setIsAutoLoginEnabled(autoLogin)
+    }
+
+    checkAutoLogin()
+
+    // localStorage 변경 감지 (다른 탭에서 변경된 경우)
+    window.addEventListener('storage', checkAutoLogin)
+    return () => window.removeEventListener('storage', checkAutoLogin)
+  }, [])
+
+  // 자동 로그인 토글
+  const handleToggleAutoLogin = () => {
+    const newState = !isAutoLoginEnabled
+    if (newState) {
+      localStorage.setItem('autoLogin', 'true')
+      console.log('[Header] Auto login enabled')
+    } else {
+      localStorage.removeItem('autoLogin')
+      console.log('[Header] Auto login disabled')
+    }
+    setIsAutoLoginEnabled(newState)
+  }
 
   const getStatusColor = () => {
     switch (dbStatus) {
@@ -144,6 +173,23 @@ export default function Header({
             >
               <User className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
               <span className="hidden sm:inline">{user.name || user.userId}</span>
+            </button>
+
+            {/* 자동 로그인 토글 버튼 */}
+            <button
+              onClick={handleToggleAutoLogin}
+              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium hover:bg-slate-100 rounded-lg transition-all duration-200"
+              title={isAutoLoginEnabled ? "자동 로그인 켜짐" : "자동 로그인 꺼짐"}
+            >
+              <span className="hidden lg:inline text-slate-600 text-xs">자동로그인</span>
+              {/* 토글 스위치 */}
+              <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
+                isAutoLoginEnabled ? 'bg-blue-600' : 'bg-slate-300'
+              }`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                  isAutoLoginEnabled ? 'translate-x-4' : 'translate-x-0.5'
+                }`} />
+              </div>
             </button>
 
             {/* 구분선 */}
