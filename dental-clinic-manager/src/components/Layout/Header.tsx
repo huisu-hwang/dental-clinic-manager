@@ -48,11 +48,17 @@ export default function Header({
     return () => window.removeEventListener('storage', checkAutoLogin)
   }, [])
 
-  // 자동 로그인 해제
-  const handleDisableAutoLogin = () => {
-    localStorage.removeItem('autoLogin')
-    setIsAutoLoginEnabled(false)
-    console.log('[Header] Auto login disabled')
+  // 자동 로그인 토글
+  const handleToggleAutoLogin = () => {
+    const newState = !isAutoLoginEnabled
+    if (newState) {
+      localStorage.setItem('autoLogin', 'true')
+      console.log('[Header] Auto login enabled')
+    } else {
+      localStorage.removeItem('autoLogin')
+      console.log('[Header] Auto login disabled')
+    }
+    setIsAutoLoginEnabled(newState)
   }
 
   const getStatusColor = () => {
@@ -169,17 +175,22 @@ export default function Header({
               <span className="hidden sm:inline">{user.name || user.userId}</span>
             </button>
 
-            {/* 자동 로그인 해제 버튼 - 자동 로그인이 활성화되어 있을 때만 표시 */}
-            {isAutoLoginEnabled && (
-              <button
-                onClick={handleDisableAutoLogin}
-                className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-all duration-200"
-                title="자동 로그인 해제"
-              >
-                <UserX className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
-                <span className="hidden lg:inline">자동로그인 해제</span>
-              </button>
-            )}
+            {/* 자동 로그인 토글 버튼 */}
+            <button
+              onClick={handleToggleAutoLogin}
+              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium hover:bg-slate-100 rounded-lg transition-all duration-200"
+              title={isAutoLoginEnabled ? "자동 로그인 켜짐" : "자동 로그인 꺼짐"}
+            >
+              <span className="hidden lg:inline text-slate-600 text-xs">자동로그인</span>
+              {/* 토글 스위치 */}
+              <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
+                isAutoLoginEnabled ? 'bg-blue-600' : 'bg-slate-300'
+              }`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                  isAutoLoginEnabled ? 'translate-x-4' : 'translate-x-0.5'
+                }`} />
+              </div>
+            </button>
 
             {/* 구분선 */}
             <div className="hidden sm:block w-px h-5 bg-slate-200 mx-1" />

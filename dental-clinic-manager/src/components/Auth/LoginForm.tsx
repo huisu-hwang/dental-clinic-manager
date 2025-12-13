@@ -331,35 +331,25 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
               </button>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600">
-                    로그인 정보 저장
-                  </label>
-                </div>
-
-                <div className="text-sm">
-                  <button
-                    type="button"
-                    onClick={onShowForgotPassword}
-                    className="font-medium text-blue-600 hover:text-blue-700"
-                  >
-                    비밀번호를 잊으셨나요?
-                  </button>
-                </div>
+            <div className="space-y-3">
+              {/* 로그인 정보 저장 체크박스 */}
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600">
+                  로그인 정보 저장
+                </label>
               </div>
 
+              {/* 자동 로그인 체크박스 */}
               {rememberMe && (
-                <div className="flex items-center ml-6">
+                <div className="flex items-center">
                   <input
                     id="auto-login"
                     name="auto-login"
@@ -368,11 +358,22 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                     onChange={(e) => setAutoLogin(e.target.checked)}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="auto-login" className="ml-2 block text-sm text-slate-500">
+                  <label htmlFor="auto-login" className="ml-2 block text-sm text-slate-600">
                     자동 로그인 (다음에 자동으로 로그인)
                   </label>
                 </div>
               )}
+
+              {/* 비밀번호 찾기 링크 */}
+              <div className="text-sm text-right">
+                <button
+                  type="button"
+                  onClick={onShowForgotPassword}
+                  className="font-medium text-blue-600 hover:text-blue-700"
+                >
+                  비밀번호를 잊으셨나요?
+                </button>
+              </div>
             </div>
 
             {error && (
