@@ -45,8 +45,8 @@ export default function QRAttendancePage() {
 
     // 1. 인증 확인
     if (!user) {
-      // 로그인 페이지로 리디렉션 (로그인 후 다시 돌아오도록)
-      router.push(`/?redirect=/qr/${code}`)
+      // 로그인 페이지로 직접 리디렉션 (로그인 후 다시 돌아오도록)
+      router.push(`/?show=login&redirect=/qr/${code}`)
       return
     }
 
@@ -96,7 +96,20 @@ export default function QRAttendancePage() {
     } catch (error: any) {
       console.error('[QRAttendancePage] Error:', error)
       setStatus('error')
-      setMessage(error.message || '알 수 없는 오류가 발생했습니다.')
+
+      // 오류 메시지를 더 명확하게 표시
+      let errorMessage = '알 수 없는 오류가 발생했습니다.'
+      if (error.message) {
+        errorMessage = error.message
+      } else if (error.code === 'PGRST116') {
+        errorMessage = 'QR 코드를 찾을 수 없습니다. 올바른 QR 코드인지 확인해주세요.'
+      } else if (error.code === 'PGRST301') {
+        errorMessage = '데이터베이스 연결에 실패했습니다. 네트워크 연결을 확인해주세요.'
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인해주세요.'
+      }
+
+      setMessage(errorMessage)
       setActionType('error')
     }
   }
@@ -130,7 +143,18 @@ export default function QRAttendancePage() {
     } catch (error: any) {
       console.error('[QRAttendancePage] Checkout error:', error)
       setStatus('error')
-      setMessage(error.message || '퇴근 처리 중 오류가 발생했습니다.')
+
+      // 오류 메시지를 더 명확하게 표시
+      let errorMessage = '퇴근 처리 중 알 수 없는 오류가 발생했습니다.'
+      if (error.message) {
+        errorMessage = error.message
+      } else if (error.code === 'PGRST301') {
+        errorMessage = '데이터베이스 연결에 실패했습니다. 네트워크 연결을 확인해주세요.'
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인해주세요.'
+      }
+
+      setMessage(errorMessage)
       setActionType('error')
     }
   }
@@ -383,12 +407,27 @@ function ErrorScreen({ message }: { message: string }) {
 
       {/* 안내 */}
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-left">
-        <h3 className="font-semibold text-yellow-800 mb-2">해결 방법:</h3>
-        <ul className="space-y-1 text-yellow-700">
-          <li>• QR 코드가 유효한지 확인해주세요</li>
-          <li>• 위치 권한을 허용했는지 확인해주세요</li>
-          <li>• 병원 근처에 있는지 확인해주세요</li>
-          <li>• 관리자에게 문의해주세요</li>
+        <h3 className="font-semibold text-yellow-800 mb-2">문제 해결 가이드:</h3>
+        <ul className="space-y-2 text-yellow-700">
+          <li>
+            <strong>QR 코드 오류:</strong><br />
+            • QR 코드가 최신 버전인지 확인해주세요<br />
+            • QR 코드가 만료되지 않았는지 확인해주세요
+          </li>
+          <li>
+            <strong>위치 오류:</strong><br />
+            • 브라우저에서 위치 권한을 허용했는지 확인해주세요<br />
+            • 병원 출입구 근처에 있는지 확인해주세요
+          </li>
+          <li>
+            <strong>네트워크 오류:</strong><br />
+            • 인터넷 연결 상태를 확인해주세요<br />
+            • Wi-Fi 또는 모바일 데이터가 켜져 있는지 확인해주세요
+          </li>
+          <li>
+            <strong>기타 문제:</strong><br />
+            • 관리자에게 문의해주세요
+          </li>
         </ul>
       </div>
     </div>

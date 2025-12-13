@@ -351,7 +351,8 @@ export async function validateQRCode(
       .single()
 
     if (qrError || !qrData) {
-      return { is_valid: false, error_message: 'Invalid or expired QR code' }
+      console.error('[validateQRCode] QR code not found or inactive:', qrError)
+      return { is_valid: false, error_message: 'QR 코드를 찾을 수 없거나 비활성화되었습니다. QR 코드가 올바른지 확인하거나 관리자에게 문의해주세요.' }
     }
 
     const qrCode = qrData as AttendanceQRCode
@@ -362,7 +363,10 @@ export async function validateQRCode(
     const validUntil = qrCode.valid_until || qrCode.valid_date // valid_until이 없으면 당일만 유효
 
     if (today < validFrom || today > validUntil) {
-      return { is_valid: false, error_message: 'QR 코드가 만료되었습니다. 새로운 QR 코드를 스캔해주세요.' }
+      return {
+        is_valid: false,
+        error_message: `QR 코드가 만료되었습니다. 이 QR 코드는 ${validFrom}부터 ${validUntil}까지 유효합니다. 관리자에게 새로운 QR 코드를 요청해주세요.`
+      }
     }
 
     // 위치 검증 (위치 정보가 있는 경우)
@@ -377,7 +381,7 @@ export async function validateQRCode(
       if (distance > qrCode.radius_meters) {
         return {
           is_valid: false,
-          error_message: `You are ${Math.round(distance)}m away from the clinic. Please come closer (within ${qrCode.radius_meters}m).`,
+          error_message: `현재 위치가 병원에서 ${Math.round(distance)}m 떨어져 있습니다. ${qrCode.radius_meters}m 이내로 가까이 이동한 후 다시 시도해주세요.`,
           distance_meters: Math.round(distance),
         }
       }
@@ -559,7 +563,7 @@ export async function autoCheckInOut(request: {
 export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckResponse> {
   const supabase = createClient()
   if (!supabase) {
-    return { success: false, message: 'Database connection not available' }
+    return { success: false, message: '데이터베이스 연결을 사용할 수 없습니다. 네트워크 연결을 확인하거나 관리자에게 문의해주세요.' }
   }
 
   try {
@@ -577,7 +581,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
     if (!validation.is_valid) {
       return {
         success: false,
-        message: validation.error_message || 'QR code validation failed',
+        message: validation.error_message || 'QR 코드 검증에 실패했습니다. 올바른 QR 코드인지 확인해주세요.',
       }
     }
 
@@ -649,7 +653,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 
       if (updateError) {
         console.error('[checkIn] Update error:', updateError)
-        return { success: false, message: updateError.message }
+        return { success: false, message: `출근 기록 업데이트 실패: ${updateError.message}` }
       }
 
       return {
@@ -678,7 +682,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 
       if (insertError) {
         console.error('[checkIn] Insert error:', insertError)
-        return { success: false, message: insertError.message }
+        return { success: false, message: `출근 기록 생성 실패: ${insertError.message}` }
       }
 
       return {
@@ -689,7 +693,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
     }
   } catch (error: any) {
     console.error('[checkIn] Unexpected error:', error)
-    return { success: false, message: error.message || 'Check-in failed' }
+    return { success: false, message: error.message || '출근 처리 중 예기치 않은 오류가 발생했습니다. 관리자에게 문의해주세요.' }
   }
 }
 
@@ -699,7 +703,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 export async function checkOut(request: CheckOutRequest): Promise<AttendanceCheckResponse> {
   const supabase = createClient()
   if (!supabase) {
-    return { success: false, message: 'Database connection not available' }
+    return { success: false, message: '데이터베이스 연결을 사용할 수 없습니다. 네트워크 연결을 확인하거나 관리자에게 문의해주세요.' }
   }
 
   try {
@@ -717,7 +721,7 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
     if (!validation.is_valid) {
       return {
         success: false,
-        message: validation.error_message || 'QR code validation failed',
+        message: validation.error_message || 'QR 코드 검증에 실패했습니다. 올바른 QR 코드인지 확인해주세요.',
       }
     }
 
@@ -768,7 +772,7 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
 
     if (updateError) {
       console.error('[checkOut] Update error:', updateError)
-      return { success: false, message: updateError.message }
+      return { success: false, message: `퇴근 기록 업데이트 실패: ${updateError.message}` }
     }
 
     return {
@@ -778,7 +782,7 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
     }
   } catch (error: any) {
     console.error('[checkOut] Unexpected error:', error)
-    return { success: false, message: error.message || 'Check-out failed' }
+    return { success: false, message: error.message || '퇴근 처리 중 예기치 않은 오류가 발생했습니다. 관리자에게 문의해주세요.' }
   }
 }
 
