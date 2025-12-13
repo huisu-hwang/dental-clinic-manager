@@ -1,7 +1,8 @@
 'use client'
 
-import { Shield, LogOut, User, Cog, Crown, Menu, X } from 'lucide-react'
+import { Shield, LogOut, User, Cog, Crown, Menu, X, UserX } from 'lucide-react'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 
 import type { UserProfile } from '@/contexts/AuthContext'
 import type { TodayNotification } from '@/types/notification'
@@ -31,6 +32,28 @@ export default function Header({
   notifications = [],
   onDismissNotification
 }: HeaderProps) {
+  const [isAutoLoginEnabled, setIsAutoLoginEnabled] = useState(false)
+
+  // 자동 로그인 설정 상태 확인
+  useEffect(() => {
+    const checkAutoLogin = () => {
+      const autoLogin = localStorage.getItem('autoLogin') === 'true'
+      setIsAutoLoginEnabled(autoLogin)
+    }
+
+    checkAutoLogin()
+
+    // localStorage 변경 감지 (다른 탭에서 변경된 경우)
+    window.addEventListener('storage', checkAutoLogin)
+    return () => window.removeEventListener('storage', checkAutoLogin)
+  }, [])
+
+  // 자동 로그인 해제
+  const handleDisableAutoLogin = () => {
+    localStorage.removeItem('autoLogin')
+    setIsAutoLoginEnabled(false)
+    console.log('[Header] Auto login disabled')
+  }
 
   const getStatusColor = () => {
     switch (dbStatus) {
@@ -145,6 +168,18 @@ export default function Header({
               <User className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
               <span className="hidden sm:inline">{user.name || user.userId}</span>
             </button>
+
+            {/* 자동 로그인 해제 버튼 - 자동 로그인이 활성화되어 있을 때만 표시 */}
+            {isAutoLoginEnabled && (
+              <button
+                onClick={handleDisableAutoLogin}
+                className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-all duration-200"
+                title="자동 로그인 해제"
+              >
+                <UserX className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+                <span className="hidden lg:inline">자동로그인 해제</span>
+              </button>
+            )}
 
             {/* 구분선 */}
             <div className="hidden sm:block w-px h-5 bg-slate-200 mx-1" />
