@@ -939,6 +939,7 @@ export async function getAttendanceRecords(
 
 /**
  * 특정 사용자의 오늘 출퇴근 기록 조회
+ * 기존 기록의 지각 여부가 잘못된 경우 재계산하여 업데이트
  */
 export async function getTodayAttendance(
   userId: string
@@ -961,6 +962,40 @@ export async function getTodayAttendance(
     if (error) {
       console.error('[getTodayAttendance] Error:', error)
       return { success: false, error: error.message }
+    }
+
+    // 기록이 있고, 출근 시간과 예정 출근 시간이 있는 경우 지각 여부 재계산
+    if (data && data.check_in_time && data.scheduled_start) {
+      const lateStatus = calculateLateStatus(data.check_in_time, data.scheduled_start)
+
+      // 현재 저장된 상태와 다르면 업데이트
+      if (data.status !== lateStatus.status || data.late_minutes !== lateStatus.lateMinutes) {
+        console.log('[getTodayAttendance] 지각 상태 재계산 및 업데이트:', {
+          recordId: data.id,
+          oldStatus: data.status,
+          newStatus: lateStatus.status,
+          oldLateMinutes: data.late_minutes,
+          newLateMinutes: lateStatus.lateMinutes
+        })
+
+        const { data: updatedRecord, error: updateError } = await supabase
+          .from('attendance_records')
+          .update({
+            late_minutes: lateStatus.lateMinutes,
+            status: lateStatus.status,
+          })
+          .eq('id', data.id)
+          .select()
+          .single()
+
+        if (updateError) {
+          console.error('[getTodayAttendance] Update error:', updateError)
+          // 업데이트 실패해도 기존 데이터 반환
+          return { success: true, record: data as AttendanceRecord }
+        }
+
+        return { success: true, record: updatedRecord as AttendanceRecord }
+      }
     }
 
     return { success: true, record: data as AttendanceRecord | undefined }
