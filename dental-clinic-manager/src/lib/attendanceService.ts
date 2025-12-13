@@ -24,6 +24,25 @@ import type {
 import type { ClinicBranch } from '@/types/branch'
 
 /**
+ * 한국 시간대 기준 오늘 날짜 반환 (YYYY-MM-DD 형식)
+ * toISOString()은 UTC를 반환하므로 한국 시간(UTC+9)에서 오전 0시~8시59분에는
+ * 전날 날짜가 반환되는 문제를 해결
+ */
+function getKoreanDateString(date: Date = new Date()): string {
+  return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+}
+
+/**
+ * 날짜 문자열(YYYY-MM-DD)에서 로컬 시간대 기준 요일 반환
+ * new Date("YYYY-MM-DD")는 UTC로 해석되어 시간대에 따라 요일이 달라질 수 있음
+ */
+function getDayOfWeekFromDateString(dateString: string): number {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const localDate = new Date(year, month - 1, day) // 로컬 시간대 자정
+  return localDate.getDay()
+}
+
+/**
  * 유효 기간(일수) 계산 함수
  */
 function calculateValidityDays(validity_type?: string, validity_days?: number): number {
@@ -66,7 +85,7 @@ export async function generateDailyQRCode(
     } = input
 
     // 오늘 날짜
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
     // 유효 기간 계산
     const validityDays = calculateValidityDays(validity_type, customValidityDays)
@@ -179,7 +198,7 @@ export async function getQRCodeForToday(
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
     // 오늘이 유효 기간 내에 있는 QR 코드 조회
     let query = supabase
@@ -357,7 +376,7 @@ export async function validateQRCode(
     const qrCode = qrData as AttendanceQRCode
 
     // 날짜 검증 (유효 기간 범위 확인)
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
     const validFrom = qrCode.valid_date
     const validUntil = qrCode.valid_until || qrCode.valid_date // valid_until이 없으면 당일만 유효
 
@@ -414,7 +433,9 @@ async function getUserScheduleForDate(
   if (!supabase) return null
 
   try {
-    const dayOfWeek = new Date(date).getDay()
+    // 날짜 문자열에서 로컬 시간대 기준으로 요일 계산
+    // new Date("YYYY-MM-DD")는 UTC로 해석되어 시간대에 따라 요일이 달라질 수 있음
+    const dayOfWeek = getDayOfWeekFromDateString(date)
 
     // 요일 숫자를 요일명으로 매핑
     const dayMap: Record<number, string> = {
@@ -505,7 +526,7 @@ export async function autoCheckInOut(request: {
     }
 
     // 오늘 날짜
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
     // 오늘 출퇴근 기록 확인
     const { data: todayRecord } = await supabase
@@ -855,7 +876,7 @@ export async function getTodayAttendance(
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
     const { data, error } = await supabase
       .from('attendance_records')

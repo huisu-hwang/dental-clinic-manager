@@ -75,10 +75,12 @@ export default function QRAttendancePage() {
       }
 
       // 미출근 → 출근 처리
+      // 한국 시간 기준 오늘 날짜 (UTC 사용 시 오전 0시~8시59분에 전날로 계산되는 문제 해결)
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
       const result = await attendanceService.checkIn({
         user_id: user.id,
         qr_code: code,
-        work_date: new Date().toISOString().split('T')[0],
+        work_date: today,
         latitude: loc?.latitude,
         longitude: loc?.longitude,
         device_info: getDeviceInfo(),
@@ -109,10 +111,12 @@ export default function QRAttendancePage() {
     setStatus('loading')
 
     try {
+      // 한국 시간 기준 오늘 날짜 (UTC 사용 시 오전 0시~8시59분에 전날로 계산되는 문제 해결)
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
       const result = await attendanceService.checkOut({
         user_id: user.id,
         qr_code: code,
-        work_date: new Date().toISOString().split('T')[0],
+        work_date: today,
         latitude: location?.latitude,
         longitude: location?.longitude,
         device_info: getDeviceInfo(),
