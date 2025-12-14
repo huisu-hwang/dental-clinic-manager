@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Calendar,
   Clock,
@@ -12,6 +12,7 @@ import {
   FileText,
   AlertCircle,
   ChevronRight,
+  ChevronDown,
   Building2,
 } from 'lucide-react'
 import { UserProfile } from '@/contexts/AuthContext'
@@ -415,9 +416,18 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
 function AllEmployeeBalances({ year }: { year: number }) {
   const [balances, setBalances] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [selectedUserRequests, setSelectedUserRequests] = useState<any[]>([])
+  const [loadingRequests, setLoadingRequests] = useState(false)
 
   useEffect(() => {
     loadBalances()
+  }, [year])
+
+  // 연도 변경 시 선택 초기화
+  useEffect(() => {
+    setSelectedUserId(null)
+    setSelectedUserRequests([])
   }, [year])
 
   const loadBalances = async () => {
@@ -425,6 +435,35 @@ function AllEmployeeBalances({ year }: { year: number }) {
     const result = await leaveService.getAllEmployeeBalances(year)
     setBalances(result.data || [])
     setLoading(false)
+  }
+
+  const handleRowClick = async (userId: string) => {
+    // 같은 직원 클릭 시 닫기
+    if (selectedUserId === userId) {
+      setSelectedUserId(null)
+      setSelectedUserRequests([])
+      return
+    }
+
+    setSelectedUserId(userId)
+    setLoadingRequests(true)
+
+    // 승인된 연차와 사용된 연차 내역 조회 (approved 상태만)
+    const result = await leaveService.getAllRequests({ year, userId, status: 'approved' })
+    setSelectedUserRequests(result.data || [])
+    setLoadingRequests(false)
+  }
+
+  // 날짜 포맷팅
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return `${date.getMonth() + 1}/${date.getDate()}`
+  }
+
+  // 연차 상태 표시 (사용 완료 vs 예정)
+  const getLeaveStatus = (startDate: string) => {
+    const today = new Date().toISOString().split('T')[0]
+    return startDate <= today ? '사용 완료' : '사용 예정'
   }
 
   if (loading) {
@@ -454,34 +493,113 @@ function AllEmployeeBalances({ year }: { year: number }) {
             const usageRate = item.total_days > 0
               ? Math.round((item.used_days / item.total_days) * 100)
               : 0
+            const isSelected = selectedUserId === item.user_id
             return (
-              <tr key={item.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium text-slate-800">
-                  {item.user_name || '알 수 없음'}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                    {getRoleLabel(item.user_role)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">{item.total_days}일</td>
-                <td className="px-4 py-3 text-center text-green-600">{item.used_days}일</td>
-                <td className="px-4 py-3 text-center text-yellow-600">{item.pending_days}일</td>
-                <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
-                  {item.remaining_days}일
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-16 bg-slate-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full"
-                        style={{ width: `${Math.min(usageRate, 100)}%` }}
-                      />
+              <React.Fragment key={item.id}>
+                <tr
+                  className={`hover:bg-slate-50 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : ''}`}
+                  onClick={() => handleRowClick(item.user_id)}
+                >
+                  <td className="px-4 py-3 font-medium text-slate-800">
+                    <div className="flex items-center gap-2">
+                      {isSelected ? (
+                        <ChevronDown className="w-4 h-4 text-blue-500" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      )}
+                      {item.user_name || '알 수 없음'}
                     </div>
-                    <span className="text-xs text-slate-500">{usageRate}%</span>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                      {getRoleLabel(item.user_role)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">{item.total_days}일</td>
+                  <td className="px-4 py-3 text-center text-green-600">{item.used_days}일</td>
+                  <td className="px-4 py-3 text-center text-yellow-600">{item.pending_days}일</td>
+                  <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
+                    {item.remaining_days}일
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-16 bg-slate-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-500 h-2 rounded-full"
+                          style={{ width: `${Math.min(usageRate, 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-slate-500">{usageRate}%</span>
+                    </div>
+                  </td>
+                </tr>
+                {/* 선택된 직원의 연차 내역 */}
+                {isSelected && (
+                  <tr>
+                    <td colSpan={7} className="px-0 py-0 bg-slate-50">
+                      <div className="px-6 py-4 border-t border-slate-200">
+                        <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          {item.user_name}님의 연차 사용 내역
+                        </h4>
+                        {loadingRequests ? (
+                          <div className="flex justify-center py-4">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                          </div>
+                        ) : selectedUserRequests.length > 0 ? (
+                          <div className="space-y-2">
+                            {selectedUserRequests.map((request) => {
+                              const status = getLeaveStatus(request.start_date)
+                              const isCompleted = status === '사용 완료'
+                              return (
+                                <div
+                                  key={request.id}
+                                  className="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-slate-200"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <span
+                                      className="px-2 py-1 text-xs font-medium rounded"
+                                      style={{
+                                        backgroundColor: request.leave_types?.color ? `${request.leave_types.color}20` : '#e2e8f0',
+                                        color: request.leave_types?.color || '#64748b'
+                                      }}
+                                    >
+                                      {request.leave_types?.name || '연차'}
+                                    </span>
+                                    <span className="text-sm text-slate-700">
+                                      {formatDate(request.start_date)}
+                                      {request.start_date !== request.end_date && ` ~ ${formatDate(request.end_date)}`}
+                                    </span>
+                                    <span className="text-sm text-slate-500">
+                                      ({request.total_days}일)
+                                    </span>
+                                    {request.reason && (
+                                      <span className="text-xs text-slate-400 truncate max-w-[200px]">
+                                        {request.reason}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                    isCompleted
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-yellow-100 text-yellow-700'
+                                  }`}>
+                                    {status}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-500 text-center py-4">
+                            승인된 연차 내역이 없습니다.
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             )
           })}
           {balances.length === 0 && (
