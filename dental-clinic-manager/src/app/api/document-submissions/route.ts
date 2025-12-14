@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { clinicId, userId, documentType, documentData, signature } = body
+    const { clinicId, userId, documentType, documentData, signature, targetEmployeeId } = body
 
     if (!clinicId || !userId || !documentType || !documentData) {
       return NextResponse.json(
@@ -108,6 +108,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 권고사직서/해고통보서는 원장만 작성 가능
+    const ownerOnlyTypes = ['recommended_resignation', 'termination_notice']
+    if (ownerOnlyTypes.includes(documentType) && user.role !== 'owner') {
+      return NextResponse.json(
+        { error: 'Only owner can create this document type' },
+        { status: 403 }
+      )
+    }
+
     // 문서 제출 생성
     const { data: submission, error: insertError } = await supabaseAdmin
       .from('document_submissions')
@@ -116,8 +125,11 @@ export async function POST(request: NextRequest) {
         submitted_by: userId,
         document_type: documentType,
         document_data: documentData,
-        employee_signature: signature || null,
-        status: 'pending',
+        employee_signature: ownerOnlyTypes.includes(documentType) ? null : (signature || null),
+        owner_signature: ownerOnlyTypes.includes(documentType) ? (signature || null) : null,
+        status: ownerOnlyTypes.includes(documentType) ? 'approved' : 'pending', // 원장 문서는 바로 승인됨
+        approved_by: ownerOnlyTypes.includes(documentType) ? userId : null,
+        approved_at: ownerOnlyTypes.includes(documentType) ? new Date().toISOString() : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -132,32 +144,77 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 알림 생성 (원장, 실장에게)
-    const documentTypeLabel = documentType === 'resignation' ? '사직서' : '재직증명서'
     const today = new Date().toISOString().split('T')[0]
 
-    const targetRoles = documentType === 'resignation'
-      ? ['owner', 'manager'] // 사직서: 원장, 실장
-      : ['owner'] // 재직증명서: 원장만
+    // 권고사직서/해고통보서인 경우 대상 직원에게 개인 알림 발송
+    if (ownerOnlyTypes.includes(documentType) && targetEmployeeId) {
+      // 대상 직원 정보 확인
+      const { data: targetEmployee, error: targetError } = await supabaseAdmin
+        .from('users')
+        .select('id, name, clinic_id, status')
+        .eq('id', targetEmployeeId)
+        .single()
 
-    await supabaseAdmin
-      .from('clinic_notifications')
-      .insert({
-        clinic_id: clinicId,
-        created_by: userId,
-        title: `${documentTypeLabel} 제출 - ${user.name}`,
-        content: `${user.name}님이 ${documentTypeLabel}를 제출했습니다. 확인이 필요합니다.`,
-        category: 'important',
-        target_roles: targetRoles,
-        recurrence_type: 'none',
-        start_date: today,
-        is_active: true,
-        priority: 1,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        // 문서 제출 ID 참조
-        metadata: { document_submission_id: submission.id }
-      })
+      if (!targetError && targetEmployee && targetEmployee.clinic_id === clinicId && targetEmployee.status === 'active') {
+        if (documentType === 'recommended_resignation') {
+          // 권고사직서: 사직서 작성 요청 알림
+          await supabaseAdmin
+            .from('user_notifications')
+            .insert({
+              clinic_id: clinicId,
+              user_id: targetEmployeeId,
+              type: 'document',
+              title: '권고사직서가 발송되었습니다',
+              content: `원장님이 권고사직서를 발송하였습니다. 내용을 확인하시고, 동의하시는 경우 사직서를 작성하여 제출해 주세요.`,
+              link: '/dashboard?tab=documents',
+              reference_type: 'document_submission',
+              reference_id: submission.id,
+              created_by: userId,
+              created_at: new Date().toISOString(),
+            })
+        } else if (documentType === 'termination_notice') {
+          // 해고통보서: 해고 통보 알림
+          await supabaseAdmin
+            .from('user_notifications')
+            .insert({
+              clinic_id: clinicId,
+              user_id: targetEmployeeId,
+              type: 'important',
+              title: '해고통보서가 발송되었습니다',
+              content: `해고통보서가 발송되었습니다. 문서 양식 메뉴에서 상세 내용을 확인하시기 바랍니다.`,
+              link: '/dashboard?tab=documents',
+              reference_type: 'document_submission',
+              reference_id: submission.id,
+              created_by: userId,
+              created_at: new Date().toISOString(),
+            })
+        }
+      }
+    } else if (!ownerOnlyTypes.includes(documentType)) {
+      // 기존 사직서/재직증명서: 원장에게 알림
+      const documentTypeLabel = documentType === 'resignation' ? '사직서' : '재직증명서'
+      const targetRoles = documentType === 'resignation'
+        ? ['owner', 'manager'] // 사직서: 원장, 실장
+        : ['owner'] // 재직증명서: 원장만
+
+      await supabaseAdmin
+        .from('clinic_notifications')
+        .insert({
+          clinic_id: clinicId,
+          created_by: userId,
+          title: `${documentTypeLabel} 제출 - ${user.name}`,
+          content: `${user.name}님이 ${documentTypeLabel}를 제출했습니다. 확인이 필요합니다.`,
+          category: 'important',
+          target_roles: targetRoles,
+          recurrence_type: 'none',
+          start_date: today,
+          is_active: true,
+          priority: 1,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          metadata: { document_submission_id: submission.id }
+        })
+    }
 
     return NextResponse.json({ data: submission, success: true })
 

@@ -78,6 +78,7 @@ export default function DocumentTemplates() {
   const [loadingStaff, setLoadingStaff] = useState(false)
   const [showSignatureModal, setShowSignatureModal] = useState(false)
   const [showOwnerSignatureModal, setShowOwnerSignatureModal] = useState(false)
+  const [showOwnerDocumentSignatureModal, setShowOwnerDocumentSignatureModal] = useState(false) // 권고사직서/해고통보서용
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissions, setSubmissions] = useState<DocumentSubmission[]>([])
   const [showSubmissionList, setShowSubmissionList] = useState(false)
@@ -446,6 +447,115 @@ export default function DocumentTemplates() {
     }
   }
 
+  // 권고사직서 원장 서명 저장 핸들러
+  const handleRecommendedResignationSignature = (signatureData: string) => {
+    setRecommendedResignationData(prev => ({ ...prev, ownerSignature: signatureData }))
+    setShowOwnerDocumentSignatureModal(false)
+  }
+
+  // 해고통보서 원장 서명 저장 핸들러
+  const handleTerminationNoticeSignature = (signatureData: string) => {
+    setTerminationNoticeData(prev => ({ ...prev, ownerSignature: signatureData }))
+    setShowOwnerDocumentSignatureModal(false)
+  }
+
+  // 권고사직서/해고통보서 서명 삭제 핸들러
+  const handleOwnerDocumentSignatureDelete = () => {
+    if (confirm('서명을 삭제하시겠습니까?')) {
+      if (documentType === 'recommended_resignation') {
+        setRecommendedResignationData(prev => ({ ...prev, ownerSignature: undefined }))
+      } else if (documentType === 'termination_notice') {
+        setTerminationNoticeData(prev => ({ ...prev, ownerSignature: undefined }))
+      }
+    }
+  }
+
+  // 권고사직서/해고통보서 발송 핸들러
+  const handleSendOwnerDocument = async () => {
+    if (!user?.clinic_id || !user?.id || !selectedStaff) {
+      alert('대상 직원을 선택해주세요.')
+      return
+    }
+
+    // 서명 필수 확인
+    if (documentType === 'recommended_resignation' && !recommendedResignationData.ownerSignature) {
+      alert('서명이 필요합니다.')
+      return
+    }
+    if (documentType === 'termination_notice' && !terminationNoticeData.ownerSignature) {
+      alert('서명이 필요합니다.')
+      return
+    }
+
+    // 해고통보서의 경우 상세 사유 필수
+    if (documentType === 'termination_notice' && !terminationNoticeData.detailedReason.trim()) {
+      alert('해고 상세 사유는 필수입니다. (근로기준법 제27조)')
+      return
+    }
+
+    const targetStaff = staffList.find(s => s.id === selectedStaff)
+    const documentTypeLabel = documentType === 'recommended_resignation' ? '권고사직서' : '해고통보서'
+
+    if (!confirm(`${targetStaff?.name}님에게 ${documentTypeLabel}를 발송하시겠습니까?\n\n발송 후 해당 직원에게 알림이 전송됩니다.`)) {
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const documentData = documentType === 'recommended_resignation'
+        ? recommendedResignationData
+        : terminationNoticeData
+      const signature = documentType === 'recommended_resignation'
+        ? recommendedResignationData.ownerSignature
+        : terminationNoticeData.ownerSignature
+
+      const response = await fetch('/api/document-submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinicId: user.clinic_id,
+          userId: user.id,
+          documentType,
+          documentData,
+          signature,
+          targetEmployeeId: selectedStaff
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        const actionMessage = documentType === 'recommended_resignation'
+          ? '권고사직서가 발송되었습니다. 해당 직원에게 사직서 작성 요청 알림이 전송되었습니다.'
+          : '해고통보서가 발송되었습니다. 해당 직원에게 해고 통보 알림이 전송되었습니다.'
+        alert(actionMessage)
+
+        // 목록 새로고침
+        const listResponse = await fetch(
+          `/api/document-submissions?clinicId=${user.clinic_id}`
+        )
+        const listResult = await listResponse.json()
+        if (listResult.data) {
+          setSubmissions(listResult.data)
+        }
+
+        // 폼 초기화
+        if (documentType === 'recommended_resignation') {
+          setRecommendedResignationData(getDefaultRecommendedResignationData(user.clinic?.name, user.clinic?.owner_name))
+        } else {
+          setTerminationNoticeData(getDefaultTerminationNoticeData(user.clinic?.name, user.clinic?.owner_name))
+        }
+        setSelectedStaff('')
+      } else {
+        alert(`발송 실패: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Send error:', error)
+      alert('문서 발송 중 오류가 발생했습니다.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* 헤더 */}
@@ -695,6 +805,85 @@ export default function DocumentTemplates() {
             </div>
           )}
 
+          {/* 원장 서명 및 발송 섹션 (권고사직서/해고통보서) */}
+          {(documentType === 'recommended_resignation' || documentType === 'termination_notice') && (
+            <div className="mt-6 pt-4 border-t space-y-4">
+              {/* 발송 안내 */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-semibold text-blue-800 mb-2">
+                  {documentType === 'recommended_resignation' ? '📋 권고사직서 발송 안내' : '📋 해고통보서 발송 안내'}
+                </h4>
+                <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                  <li>서명 후 발송하면 선택한 직원에게 <strong>알림이 전송</strong>됩니다</li>
+                  {documentType === 'recommended_resignation' ? (
+                    <li>해당 직원은 알림을 통해 <strong>사직서 작성 요청</strong>을 받게 됩니다</li>
+                  ) : (
+                    <li>해당 직원은 알림을 통해 <strong>해고 통보</strong>를 받게 됩니다</li>
+                  )}
+                  <li>발송된 문서는 제출 목록에서 확인할 수 있습니다</li>
+                </ul>
+              </div>
+
+              {/* 대상 직원 선택 확인 */}
+              {!selectedStaff && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-700">
+                    ⚠️ 대상 직원을 선택해주세요 (상단 직원 선택)
+                  </p>
+                </div>
+              )}
+
+              {/* 원장 서명 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-3">
+                  <PenTool className="w-4 h-4 inline-block mr-1" />
+                  원장 서명
+                </label>
+                {(documentType === 'recommended_resignation' ? recommendedResignationData.ownerSignature : terminationNoticeData.ownerSignature) ? (
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                      <img
+                        src={documentType === 'recommended_resignation' ? recommendedResignationData.ownerSignature : terminationNoticeData.ownerSignature}
+                        alt="원장 서명"
+                        className="max-h-16 mx-auto"
+                      />
+                    </div>
+                    <button
+                      onClick={handleOwnerDocumentSignatureDelete}
+                      className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowOwnerDocumentSignatureModal(true)}
+                    className="w-full px-4 py-3 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                  >
+                    <PenTool className="w-4 h-4 inline-block mr-2" />
+                    서명하기
+                  </button>
+                )}
+              </div>
+
+              {/* 발송 버튼 */}
+              <button
+                onClick={handleSendOwnerDocument}
+                disabled={isSubmitting || !selectedStaff || !(documentType === 'recommended_resignation' ? recommendedResignationData.ownerSignature : terminationNoticeData.ownerSignature)}
+                className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
+                  isSubmitting || !selectedStaff || !(documentType === 'recommended_resignation' ? recommendedResignationData.ownerSignature : terminationNoticeData.ownerSignature)
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : documentType === 'recommended_resignation'
+                      ? 'bg-amber-600 text-white hover:bg-amber-700'
+                      : 'bg-red-600 text-white hover:bg-red-700'
+                }`}
+              >
+                <Send className="w-4 h-4 inline-block mr-2" />
+                {isSubmitting ? '발송 중...' : (documentType === 'recommended_resignation' ? '권고사직서 발송' : '해고통보서 발송')}
+              </button>
+            </div>
+          )}
+
           {/* 액션 버튼 */}
           <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t">
             <button
@@ -714,20 +903,34 @@ export default function DocumentTemplates() {
               )}
             </button>
             {/* 직원이 사직서/재직증명서 작성 시에만 제출 버튼 표시 */}
-            {!isOwner && !OwnerOnlyDocumentTypes.includes(documentType) && (
-              <button
-                onClick={handleSubmitDocument}
-                disabled={isSubmitting}
-                className={`flex-1 min-w-[100px] px-4 py-2 rounded-lg transition-colors ${
-                  isSubmitting
-                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                }`}
-              >
-                <Send className="w-4 h-4 inline-block mr-1" />
-                {isSubmitting ? '제출 중...' : '제출'}
-              </button>
-            )}
+            {!isOwner && !OwnerOnlyDocumentTypes.includes(documentType) && (() => {
+              // 현재 문서 타입에 대해 제출된 내역이 있는지 확인
+              const hasSubmitted = submissions.some(
+                s => s.document_type === documentType && (s.status === 'pending' || s.status === 'approved')
+              )
+              return hasSubmitted ? (
+                <button
+                  disabled
+                  className="flex-1 min-w-[100px] px-4 py-2 rounded-lg bg-green-100 text-green-700 border border-green-300 cursor-default"
+                >
+                  <CheckCircle className="w-4 h-4 inline-block mr-1" />
+                  제출 완료
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmitDocument}
+                  disabled={isSubmitting}
+                  className={`flex-1 min-w-[100px] px-4 py-2 rounded-lg transition-colors ${
+                    isSubmitting
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
+                >
+                  <Send className="w-4 h-4 inline-block mr-1" />
+                  {isSubmitting ? '제출 중...' : '제출'}
+                </button>
+              )
+            })()}
             <button
               onClick={handlePrint}
               className="flex-1 min-w-[100px] px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
@@ -819,6 +1022,37 @@ export default function DocumentTemplates() {
                 setShowOwnerSignatureModal(false)
                 setSelectedSubmission(null)
               }}
+              width={450}
+              height={180}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 원장 서명 모달 (권고사직서/해고통보서용) */}
+      {showOwnerDocumentSignatureModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowOwnerDocumentSignatureModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
+              {documentType === 'recommended_resignation' ? '권고사직서 서명' : '해고통보서 서명'}
+            </h3>
+            <p className="text-sm text-slate-600 mb-4">
+              {documentType === 'recommended_resignation'
+                ? '권고사직서 발송을 위해 원장님의 서명이 필요합니다.'
+                : '해고통보서 발송을 위해 원장님의 서명이 필요합니다. (근로기준법 제27조)'}
+            </p>
+            <SignaturePad
+              onSave={documentType === 'recommended_resignation'
+                ? handleRecommendedResignationSignature
+                : handleTerminationNoticeSignature
+              }
+              onCancel={() => setShowOwnerDocumentSignatureModal(false)}
               width={450}
               height={180}
             />
