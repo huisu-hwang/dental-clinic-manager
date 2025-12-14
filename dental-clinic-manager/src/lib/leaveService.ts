@@ -16,6 +16,7 @@ import type {
   LeaveApprovalWorkflow,
   LeaveRequestStatus,
   YearlyLeaveRule,
+  ManagerApprovalByRank,
 } from '@/types/leave'
 
 // Helper function to extract error message
@@ -97,25 +98,60 @@ export function calculateYearsOfService(hireDate: Date, referenceDate: Date = ne
 }
 
 /**
- * 직급에 따른 승인 프로세스 결정
- * - 부원장/실장: 원장에게 직접 승인
- * - 팀장 이하: 정책에 따라 실장 승인 포함 또는 원장 직접 승인
+ * 직급별 실장 결재 포함 여부를 판단하는 헬퍼 함수
  * @param role 신청자 직급
- * @param requireManagerApproval 실장 결재 포함 여부 (기본값: true)
+ * @param requireManagerApproval 실장 결재 설정 (boolean 또는 직급별 객체)
+ */
+function shouldRequireManagerApproval(
+  role: string,
+  requireManagerApproval: boolean | ManagerApprovalByRank
+): boolean {
+  // boolean인 경우 모든 직급에 동일하게 적용 (부원장 제외)
+  if (typeof requireManagerApproval === 'boolean') {
+    // 부원장은 기존 boolean 설정에서는 기본적으로 원장 직접 승인
+    if (role === 'vice_director') {
+      return false
+    }
+    return requireManagerApproval
+  }
+
+  // 직급별 객체인 경우 해당 직급의 설정을 확인
+  if (role === 'vice_director') {
+    return requireManagerApproval.vice_director ?? false
+  }
+  if (role === 'team_leader') {
+    return requireManagerApproval.team_leader ?? true
+  }
+  if (role === 'staff') {
+    return requireManagerApproval.staff ?? true
+  }
+
+  // 그 외 직급은 기본값 true
+  return true
+}
+
+/**
+ * 직급에 따른 승인 프로세스 결정
+ * - 실장: 원장에게 직접 승인 (고정)
+ * - 부원장/팀장/직원: 정책에 따라 직급별로 실장 승인 포함 또는 원장 직접 승인
+ * @param role 신청자 직급
+ * @param requireManagerApproval 실장 결재 포함 여부 (boolean 또는 직급별 객체)
  */
 export function getApprovalStepsForRole(
   role: string,
-  requireManagerApproval: boolean = true
+  requireManagerApproval: boolean | ManagerApprovalByRank = true
 ): { step: number; role: string; description: string }[] {
-  // 부원장 또는 실장은 원장에게 직접 승인
-  if (role === 'vice_director' || role === 'manager') {
+  // 실장은 원장에게 직접 승인 (실장이 자기 자신을 승인할 수 없음)
+  if (role === 'manager') {
     return [
       { step: 1, role: 'owner', description: '원장 승인' }
     ]
   }
 
-  // 팀장 이하 (team_leader, staff)
-  if (requireManagerApproval) {
+  // 부원장, 팀장, 직원: 직급별 설정에 따라 결정
+  const needsManagerApproval = shouldRequireManagerApproval(role, requireManagerApproval)
+
+  if (needsManagerApproval) {
     // 실장 결재 포함: 실장 -> 원장 2단계
     return [
       { step: 1, role: 'manager', description: '실장 1차 승인' },
