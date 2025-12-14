@@ -28,7 +28,7 @@ export interface LeavePolicy {
   min_attendance_rate: number; // 최소 출근율 (%)
 
   // 결재 프로세스 설정
-  require_manager_approval: boolean; // 실장 결재 포함 여부 (기본값: true)
+  require_manager_approval: boolean | ManagerApprovalByRank; // 실장 결재 포함 여부 (직급별 설정 가능)
 
   // 활성화 상태
   is_active: boolean;
@@ -37,6 +37,15 @@ export interface LeavePolicy {
   created_at: string;
   updated_at: string;
   created_by?: string;
+}
+
+/**
+ * 직급별 실장 결재 포함 여부
+ * Rank-based Manager Approval Settings
+ */
+export interface ManagerApprovalByRank {
+  team_leader: boolean; // 팀장 - 실장 결재 포함 여부
+  staff: boolean; // 직원 - 실장 결재 포함 여부
 }
 
 /**
@@ -63,7 +72,7 @@ export interface LeavePolicyInput {
   carryover_max_days?: number;
   carryover_expiry_months: number;
   min_attendance_rate: number;
-  require_manager_approval?: boolean; // 실장 결재 포함 여부 (기본값: true)
+  require_manager_approval?: boolean | ManagerApprovalByRank; // 실장 결재 포함 여부 (직급별 설정 가능)
   is_default?: boolean;
 }
 
