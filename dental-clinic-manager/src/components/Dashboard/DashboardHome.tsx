@@ -293,52 +293,122 @@ export default function DashboardHome() {
   const loadNews = async () => {
     setNewsLoading(true)
     try {
-      console.log('[DashboardHome] Fetching news from API...')
-      // API에서 치의신보 뉴스 가져오기
+      console.log('[DashboardHome] Fetching news...')
+
+      // 1단계: 클라이언트에서 직접 RSS 피드 가져오기 시도 (CORS 허용 시)
+      const rssSources = [
+        'https://www.dailydental.co.kr/rss/allArticle.xml',
+        'https://www.dailydental.co.kr/rss/S1N1.xml',
+      ]
+
+      for (const rssUrl of rssSources) {
+        try {
+          console.log('[DashboardHome] Trying RSS:', rssUrl)
+          const rssResponse = await fetch(rssUrl, {
+            mode: 'cors',
+            credentials: 'omit',
+            headers: {
+              'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+            }
+          })
+
+          if (rssResponse.ok) {
+            const xmlText = await rssResponse.text()
+            const parsedNews = parseRSSFeed(xmlText)
+
+            if (parsedNews.length > 0) {
+              console.log('[DashboardHome] ✅ RSS 성공:', parsedNews.length, 'articles')
+              setNews(parsedNews.slice(0, 5))
+              return
+            }
+          }
+        } catch (rssError) {
+          console.warn('[DashboardHome] RSS failed:', rssError instanceof Error ? rssError.message : rssError)
+          // CORS 에러 등으로 실패하면 다음 소스 시도
+          continue
+        }
+      }
+
+      // 2단계: 서버 API 시도 (서버 환경에서 동작할 수 있음)
+      console.log('[DashboardHome] Trying server API...')
       const response = await fetch('/api/news/dental')
 
-      if (!response.ok) {
-        console.error('[DashboardHome] API response not OK:', response.status)
-        throw new Error(`HTTP ${response.status}`)
-      }
+      if (response.ok) {
+        const data = await response.json()
+        console.log('[DashboardHome] API response:', data.fallback ? 'fallback' : 'live')
 
-      const data = await response.json()
-      console.log('[DashboardHome] API response:', data)
-
-      if (data.news && data.news.length > 0) {
-        setNews(data.news)
-        const statusMsg = data.fallback ? '(fallback data)' : data.cached ? '(cached)' : '(fresh)'
-        console.log('[DashboardHome] News loaded:', data.news.length, 'articles', statusMsg)
-
-        // 첫 번째 기사 로그 확인
-        if (data.news[0]) {
-          console.log('[DashboardHome] First article:', {
-            title: data.news[0].title,
-            link: data.news[0].link
-          })
+        if (data.news && data.news.length > 0 && !data.fallback) {
+          setNews(data.news)
+          console.log('[DashboardHome] ✅ Server API 성공:', data.news.length, 'articles')
+          return
         }
-        return
       }
 
-      // API 응답은 있지만 뉴스가 없는 경우
-      console.warn('[DashboardHome] API returned no news, using fallback')
+      // 3단계: 모두 실패하면 fallback
+      console.warn('[DashboardHome] All sources failed, using fallback')
       const fallbackNews: NewsItem[] = [
-        { title: '치의신보 웹사이트를 방문하여 최신 뉴스를 확인하세요', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
-        { title: '치과 건강보험 수가 관련 최신 소식', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1', source: '치의신보', date: new Date().toISOString().split('T')[0] },
-        { title: '디지털 치과 진료 시스템 최신 동향', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+        { title: '치의신보 - 최신 치과 뉴스', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+        { title: '치과계 건강보험 및 정책 뉴스', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+        { title: '디지털 치과 기술 동향', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N2', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+        { title: '치과 학술 및 연구 소식', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N3', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+        { title: '치의신보 전체 기사 보기', link: 'https://www.dailydental.co.kr/news/articleList.html', source: '치의신보', date: new Date().toISOString().split('T')[0] },
       ]
       setNews(fallbackNews)
     } catch (error) {
-      console.error('[DashboardHome] Failed to load news:', error)
-      // 에러 시 폴백
+      console.error('[DashboardHome] Error:', error)
       const fallbackNews: NewsItem[] = [
-        { title: '치의신보 웹사이트를 방문하여 최신 뉴스를 확인하세요', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
-        { title: '뉴스를 일시적으로 불러올 수 없습니다', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+        { title: '치의신보 웹사이트 방문하기', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
+        { title: '최신 뉴스를 확인하세요', link: 'https://www.dailydental.co.kr/news/articleList.html', source: '치의신보', date: new Date().toISOString().split('T')[0] },
       ]
       setNews(fallbackNews)
     } finally {
       setNewsLoading(false)
     }
+  }
+
+  // RSS 파싱 헬퍼 함수
+  const parseRSSFeed = (xml: string): NewsItem[] => {
+    const news: NewsItem[] = []
+    try {
+      const itemPattern = /<item>([\s\S]*?)<\/item>/gi
+      const titlePattern = /<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/i
+      const linkPattern = /<link>(.*?)<\/link>/i
+      const pubDatePattern = /<pubDate>(.*?)<\/pubDate>/i
+
+      let match
+      while ((match = itemPattern.exec(xml)) !== null && news.length < 10) {
+        const item = match[1]
+        const titleMatch = titlePattern.exec(item)
+        const linkMatch = linkPattern.exec(item)
+        const dateMatch = pubDatePattern.exec(item)
+
+        if (titleMatch && linkMatch) {
+          let title = titleMatch[1]
+            .replace(/<!\[CDATA\[/g, '')
+            .replace(/\]\]>/g, '')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .trim()
+
+          const link = linkMatch[1].trim()
+
+          if (title && title.length >= 5) {
+            news.push({
+              title,
+              link,
+              source: '치의신보',
+              date: dateMatch ? new Date(dateMatch[1]).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+            })
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[DashboardHome] RSS parse error:', error)
+    }
+    return news
   }
 
   // 날짜 포맷
