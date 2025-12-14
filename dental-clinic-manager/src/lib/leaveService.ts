@@ -464,7 +464,8 @@ export const leaveService = {
       const yearsOfService = calculateYearsOfService(hireDate)
       const totalDays = calculateAnnualLeaveDays(hireDate)
 
-      // 이미 승인된 연차 조회
+      // 이미 승인된 연차 조회 (날짜가 지난 것만 사용으로 처리)
+      const today = new Date().toISOString().split('T')[0]
       const { data: approved } = await (supabase as any)
         .from('leave_requests')
         .select('total_days, leave_types!inner(deduct_from_annual)')
@@ -472,6 +473,7 @@ export const leaveService = {
         .eq('status', 'approved')
         .gte('start_date', `${year}-01-01`)
         .lte('start_date', `${year}-12-31`)
+        .lte('start_date', today)  // 오늘 이전에 시작된 연차만 사용으로
 
       const usedDays = (approved || [])
         .filter((r: any) => r.leave_types?.deduct_from_annual)
@@ -496,7 +498,7 @@ export const leaveService = {
         return sum
       }, 0)
 
-      // 대기 중인 연차
+      // 대기 중인 연차 (승인 대기 + 승인됐지만 아직 시작되지 않은 연차)
       const { data: pending } = await (supabase as any)
         .from('leave_requests')
         .select('total_days, leave_types!inner(deduct_from_annual)')
@@ -505,7 +507,17 @@ export const leaveService = {
         .gte('start_date', `${year}-01-01`)
         .lte('start_date', `${year}-12-31`)
 
-      const pendingDays = (pending || [])
+      // 승인됐지만 아직 시작 날짜가 지나지 않은 연차 (대기로 표시)
+      const { data: approvedFuture } = await (supabase as any)
+        .from('leave_requests')
+        .select('total_days, leave_types!inner(deduct_from_annual)')
+        .eq('user_id', userId)
+        .eq('status', 'approved')
+        .gte('start_date', `${year}-01-01`)
+        .lte('start_date', `${year}-12-31`)
+        .gt('start_date', today)  // 오늘 이후에 시작되는 연차
+
+      const pendingDays = [...(pending || []), ...(approvedFuture || [])]
         .filter((r: any) => r.leave_types?.deduct_from_annual)
         .reduce((sum: number, r: any) => sum + r.total_days, 0)
 
@@ -521,7 +533,6 @@ export const leaveService = {
       // 지난 달의 무급휴가는 제외하고, 오늘 이후의 무급휴가만 계산
       let unpaidUsedDays = 0
       if (unpaidType) {
-        const today = new Date().toISOString().split('T')[0]
         const { data: unpaidRequests } = await (supabase as any)
           .from('leave_requests')
           .select('total_days')
