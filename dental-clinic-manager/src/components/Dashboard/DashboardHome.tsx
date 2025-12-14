@@ -295,7 +295,42 @@ export default function DashboardHome() {
     try {
       console.log('[DashboardHome] Fetching news...')
 
-      // 1단계: 클라이언트에서 직접 RSS 피드 가져오기 시도 (CORS 허용 시)
+      // 1단계: CORS 프록시를 통해 "많이 본 뉴스" 직접 가져오기
+      const corsProxies = [
+        'https://api.allorigins.win/raw?url=',
+        'https://corsproxy.io/?',
+      ]
+
+      for (const proxy of corsProxies) {
+        try {
+          const targetUrl = encodeURIComponent('https://www.dailydental.co.kr')
+          console.log('[DashboardHome] Trying proxy:', proxy)
+
+          const proxyResponse = await fetch(proxy + targetUrl, {
+            headers: {
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            }
+          })
+
+          if (proxyResponse.ok) {
+            const html = await proxyResponse.text()
+            console.log('[DashboardHome] HTML fetched via proxy, size:', (html.length / 1024).toFixed(2), 'KB')
+
+            const parsedNews = parseMostViewedNews(html)
+
+            if (parsedNews.length > 0) {
+              console.log('[DashboardHome] ✅ Proxy 성공:', parsedNews.length, 'articles')
+              setNews(parsedNews.slice(0, 7)) // 많이 본 뉴스는 보통 7개
+              return
+            }
+          }
+        } catch (proxyError) {
+          console.warn('[DashboardHome] Proxy failed:', proxyError instanceof Error ? proxyError.message : proxyError)
+          continue
+        }
+      }
+
+      // 2단계: 클라이언트에서 직접 RSS 피드 가져오기 시도
       const rssSources = [
         'https://www.dailydental.co.kr/rss/allArticle.xml',
         'https://www.dailydental.co.kr/rss/S1N1.xml',
@@ -324,12 +359,11 @@ export default function DashboardHome() {
           }
         } catch (rssError) {
           console.warn('[DashboardHome] RSS failed:', rssError instanceof Error ? rssError.message : rssError)
-          // CORS 에러 등으로 실패하면 다음 소스 시도
           continue
         }
       }
 
-      // 2단계: 서버 API 시도 (서버 환경에서 동작할 수 있음)
+      // 3단계: 서버 API 시도
       console.log('[DashboardHome] Trying server API...')
       const response = await fetch('/api/news/dental')
 
@@ -344,7 +378,7 @@ export default function DashboardHome() {
         }
       }
 
-      // 3단계: 모두 실패하면 fallback
+      // 4단계: 모두 실패하면 fallback
       console.warn('[DashboardHome] All sources failed, using fallback')
       const fallbackNews: NewsItem[] = [
         { title: '치의신보 - 최신 치과 뉴스', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
@@ -364,6 +398,105 @@ export default function DashboardHome() {
     } finally {
       setNewsLoading(false)
     }
+  }
+
+  // "많이 본 뉴스" 섹션 파싱
+  const parseMostViewedNews = (html: string): NewsItem[] => {
+    const news: NewsItem[] = []
+    try {
+      // "많이 본 뉴스" 섹션 찾기
+      const mostViewedPatterns = [
+        // 패턴 1: class에 "most", "view", "ranking" 등이 포함된 div
+        /<div[^>]*class="[^"]*(?:most|view|ranking|popular|많이)[^"]*"[^>]*>([\s\S]{0,5000}?)<\/div>/gi,
+        // 패턴 2: 제목에 "많이 본" 포함
+        /<[^>]*>많이\s*본\s*뉴스<[^>]*>([\s\S]{0,5000}?)<\/div>/gi,
+        // 패턴 3: ul/ol 태그
+        /<[uo]l[^>]*class="[^"]*(?:most|view|ranking)[^"]*"[^>]*>([\s\S]{0,5000}?)<\/[uo]l>/gi,
+      ]
+
+      let mostViewedSection = ''
+
+      for (const pattern of mostViewedPatterns) {
+        const matches = html.match(pattern)
+        if (matches && matches.length > 0) {
+          // 가장 긴 매치를 사용 (가장 완전한 섹션일 가능성)
+          mostViewedSection = matches.reduce((a, b) => a.length > b.length ? a : b, '')
+          if (mostViewedSection.length > 100) {
+            console.log('[DashboardHome] Found most-viewed section:', mostViewedSection.length, 'chars')
+            break
+          }
+        }
+      }
+
+      // 섹션을 찾았으면 해당 섹션에서, 못 찾았으면 전체 HTML에서 파싱
+      const targetHtml = mostViewedSection || html
+
+      // 기사 링크 패턴
+      const articlePattern = /<a[^>]*href="([^"]*(?:\/news\/articleView\.html\?idxno=\d+|articleView\.html\?idxno=\d+))"[^>]*>([\s\S]*?)<\/a>/gi
+      const seenLinks = new Set<string>()
+
+      let match
+      while ((match = articlePattern.exec(targetHtml)) !== null && news.length < 10) {
+        let link = match[1]
+        let titleContent = match[2]
+
+        // 링크 정규화
+        if (!link.startsWith('http')) {
+          link = `https://www.dailydental.co.kr${link.startsWith('/') ? '' : '/'}${link}`
+        }
+
+        // 중복 링크 건너뛰기
+        if (seenLinks.has(link)) continue
+        seenLinks.add(link)
+
+        // 제목 추출 및 정제
+        let title = titleContent
+          .replace(/<img[^>]*>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&nbsp;/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+
+        // 숫자 제거 (1, [1], (1), 1. 등)
+        title = title.replace(/^[\[\(]?\d+[\]\)]?[\.\s:：]*/, '').trim()
+
+        // 빈 제목이나 너무 짧은/긴 제목 건너뛰기
+        if (!title || title.length < 5 || title.length > 200) continue
+
+        // 불필요한 키워드 제외
+        const excludeKeywords = [
+          '로그인', '회원가입', '기사검색', '뉴스', '오피니언', '포토', '전체기사',
+          '더보기', '목록', '이전', '다음', '구독', '신청', '많이 본 뉴스', '인기기사',
+          'TOP', 'BEST', '바로가기', '자세히', 'more'
+        ]
+
+        const isExcluded = excludeKeywords.some(keyword => {
+          const lower = title.toLowerCase()
+          return lower === keyword.toLowerCase() || lower.includes(keyword.toLowerCase() + ' ')
+        })
+
+        if (isExcluded) continue
+
+        news.push({
+          title,
+          link,
+          source: '치의신보',
+          date: new Date().toISOString().split('T')[0]
+        })
+
+        console.log(`[DashboardHome] Parsed [${news.length}]: ${title.substring(0, 40)}...`)
+      }
+
+      console.log('[DashboardHome] Most-viewed parsed:', news.length, 'articles')
+    } catch (error) {
+      console.error('[DashboardHome] Parse error:', error)
+    }
+    return news
   }
 
   // RSS 파싱 헬퍼 함수
