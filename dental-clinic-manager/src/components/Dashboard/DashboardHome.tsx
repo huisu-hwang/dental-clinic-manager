@@ -458,21 +458,39 @@ export default function DashboardHome() {
 
       if (!mostViewedSection) {
         console.warn('[DashboardHome] No most-viewed section found, using full HTML')
+        console.log('[DashboardHome] Will extract articles from entire page')
+      } else {
+        console.log('[DashboardHome] ✓ Found most-viewed section, parsing from it')
       }
 
       // 섹션을 찾았으면 해당 섹션에서, 못 찾았으면 전체 HTML에서 파싱
       const targetHtml = mostViewedSection || html
 
-      // 2단계: 기사 링크 추출
-      const articlePattern = /<a[^>]*href="([^"]*(?:\/news\/articleView\.html\?idxno=\d+|articleView\.html\?idxno=\d+))"[^>]*>([\s\S]*?)<\/a>/gi
+      // 2단계: 기사 링크 추출 - 더 유연한 패턴 사용
+      const articlePattern = /<a[^>]*href="([^"]*articleView\.html[^"]*idxno=\d+[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi
       const seenLinks = new Set<string>()
       const allMatches: Array<{ link: string; title: string }> = []
 
       let match
       let totalFound = 0
 
+      console.log('[DashboardHome] Starting article link extraction...')
+      console.log('[DashboardHome] Target HTML size for extraction:', (targetHtml.length / 1024).toFixed(2), 'KB')
+
+      // 먼저 간단한 테스트로 articleView 링크가 있는지 확인
+      const simpleTest = targetHtml.match(/articleView\.html\?idxno=\d+/g)
+      console.log('[DashboardHome] Simple test - articleView links found:', simpleTest ? simpleTest.length : 0)
+      if (simpleTest && simpleTest.length > 0) {
+        console.log('[DashboardHome] Example links:', simpleTest.slice(0, 3))
+      }
+
       while ((match = articlePattern.exec(targetHtml)) !== null) {
         totalFound++
+
+        if (totalFound <= 3) {
+          console.log(`[DashboardHome] Raw match ${totalFound}:`, match[0].substring(0, 200))
+        }
+
         let link = match[1]
         let titleContent = match[2]
 
@@ -482,7 +500,12 @@ export default function DashboardHome() {
         }
 
         // 중복 링크 건너뛰기
-        if (seenLinks.has(link)) continue
+        if (seenLinks.has(link)) {
+          if (totalFound <= 10) {
+            console.log(`[DashboardHome] Skipped duplicate:`, link)
+          }
+          continue
+        }
         seenLinks.add(link)
 
         // 제목 추출 및 정제
