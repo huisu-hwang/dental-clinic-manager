@@ -55,7 +55,7 @@ function calculateLateStatus(
   checkInTime: string,
   scheduledStart: string | undefined
 ): { isLate: boolean; lateMinutes: number; status: 'present' | 'late' } {
-  const toleranceMinutes = 5 // 5분 허용 범위
+  const toleranceMinutes = 0 // 허용 범위 없음 - 1분이라도 늦으면 지각
 
   // 예정 출근 시간이 없으면 정상 출근으로 처리
   if (!scheduledStart) {
