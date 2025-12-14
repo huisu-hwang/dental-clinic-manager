@@ -44,6 +44,7 @@ export interface LeavePolicy {
  * Rank-based Manager Approval Settings
  */
 export interface ManagerApprovalByRank {
+  vice_director: boolean; // 부원장 - 실장 결재 포함 여부
   team_leader: boolean; // 팀장 - 실장 결재 포함 여부
   staff: boolean; // 직원 - 실장 결재 포함 여부
 }

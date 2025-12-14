@@ -7,6 +7,7 @@ import type { LeavePolicy, YearlyLeaveRule, ManagerApprovalByRank } from '@/type
 
 // 기본 직급별 실장 결재 설정
 const DEFAULT_MANAGER_APPROVAL_BY_RANK: ManagerApprovalByRank = {
+  vice_director: false, // 부원장은 기본적으로 원장 직접 승인
   team_leader: true,
   staff: true,
 }
@@ -58,14 +59,16 @@ export default function LeavePolicySettings() {
       return DEFAULT_MANAGER_APPROVAL_BY_RANK
     }
     if (typeof value === 'boolean') {
-      // 기존 boolean 값 -> 모든 직급에 동일하게 적용
+      // 기존 boolean 값 -> 팀장/직원에만 적용, 부원장은 기본값 false
       return {
+        vice_director: false,
         team_leader: value,
         staff: value,
       }
     }
     // 이미 객체 형식인 경우
     return {
+      vice_director: value.vice_director ?? false,
       team_leader: value.team_leader ?? true,
       staff: value.staff ?? true,
     }
@@ -363,6 +366,35 @@ export default function LeavePolicySettings() {
           </p>
 
           <div className="space-y-3 mt-3">
+            {/* 부원장 설정 */}
+            <label className="flex items-start space-x-3 cursor-pointer p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.require_manager_approval.vice_director}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  require_manager_approval: {
+                    ...formData.require_manager_approval,
+                    vice_director: e.target.checked
+                  }
+                })}
+                className="w-4 h-4 mt-0.5 text-blue-600 rounded"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-slate-700">부원장</span>
+                  <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">vice_director</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {formData.require_manager_approval.vice_director ? (
+                    <span>부원장 → <span className="text-blue-600 font-medium">실장 승인</span> → <span className="text-green-600 font-medium">원장 최종 승인</span></span>
+                  ) : (
+                    <span>부원장 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+                  )}
+                </p>
+              </div>
+            </label>
+
             {/* 팀장 설정 */}
             <label className="flex items-start space-x-3 cursor-pointer p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
               <input
@@ -426,6 +458,14 @@ export default function LeavePolicySettings() {
             <p className="text-xs font-medium text-blue-800 mb-2">전체 결재 흐름 요약</p>
             <div className="space-y-1.5">
               <div className="flex items-center text-xs text-slate-600">
+                <span className="w-14 text-slate-500 font-medium">부원장:</span>
+                {formData.require_manager_approval.vice_director ? (
+                  <span>신청 → <span className="text-blue-600 font-medium">실장 승인</span> → <span className="text-green-600 font-medium">원장 승인</span></span>
+                ) : (
+                  <span>신청 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+                )}
+              </div>
+              <div className="flex items-center text-xs text-slate-600">
                 <span className="w-14 text-slate-500 font-medium">팀장:</span>
                 {formData.require_manager_approval.team_leader ? (
                   <span>신청 → <span className="text-blue-600 font-medium">실장 승인</span> → <span className="text-green-600 font-medium">원장 승인</span></span>
@@ -443,10 +483,6 @@ export default function LeavePolicySettings() {
               </div>
               <div className="flex items-center text-xs text-slate-600">
                 <span className="w-14 text-slate-500 font-medium">실장:</span>
-                <span>신청 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
-              </div>
-              <div className="flex items-center text-xs text-slate-600">
-                <span className="w-14 text-slate-500 font-medium">부원장:</span>
                 <span>신청 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
               </div>
             </div>
