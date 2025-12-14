@@ -303,18 +303,19 @@ export default function DashboardHome() {
       ]
 
       const corsProxies = [
-        { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' },
-        { name: 'corsproxy.io', url: 'https://corsproxy.io/?' },
-        { name: 'cors-anywhere', url: 'https://cors-anywhere.herokuapp.com/' },
+        { name: 'allorigins', buildUrl: (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+        { name: 'corsproxy.io', buildUrl: (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}` },
+        { name: 'thingproxy', buildUrl: (url: string) => `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(url)}` },
       ]
 
       for (const page of targetPages) {
         for (const proxy of corsProxies) {
           try {
-            const targetUrl = encodeURIComponent(page)
+            const proxyUrl = proxy.buildUrl(page)
             console.log(`[DashboardHome] Trying ${proxy.name} with ${page}`)
+            console.log(`[DashboardHome] Proxy URL: ${proxyUrl}`)
 
-            const proxyResponse = await fetch(proxy.url + targetUrl, {
+            const proxyResponse = await fetch(proxyUrl, {
               headers: {
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
               },
