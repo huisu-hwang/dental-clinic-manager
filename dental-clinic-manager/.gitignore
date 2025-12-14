@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+test-news-api.js
+dailydental-homepage.html
+parsed-articles.json

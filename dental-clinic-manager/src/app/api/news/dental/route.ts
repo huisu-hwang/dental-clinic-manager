@@ -69,142 +69,213 @@ export async function GET() {
 }
 
 async function fetchDailyDentalNews(): Promise<NewsItem[]> {
-  try {
-    // 치의신보 메인 페이지 (가장 많이 본 뉴스 포함)
-    const response = await fetch('https://www.dailydental.co.kr/', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Cache-Control': 'max-age=0',
-      },
-      next: { revalidate: 300 } // 5분 캐시
-    })
+  // 여러 소스를 시도 (우선순위 순서)
+  const sources = [
+    {
+      name: 'RSS 피드 (allArticle)',
+      url: 'https://www.dailydental.co.kr/rss/allArticle.xml',
+      parser: parseRSSFeed
+    },
+    {
+      name: 'RSS 피드 (S1N1)',
+      url: 'https://www.dailydental.co.kr/rss/S1N1.xml',
+      parser: parseRSSFeed
+    },
+    {
+      name: '메인 페이지',
+      url: 'https://www.dailydental.co.kr/',
+      parser: parseNewsFromHtml
+    },
+    {
+      name: '뉴스 목록 페이지',
+      url: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1',
+      parser: parseNewsFromHtml
+    }
+  ]
 
-    if (!response.ok) {
-      console.error('[News API] Response not OK:', response.status, response.statusText)
-      return []
+  for (const source of sources) {
+    try {
+      console.log(`[News API] Trying ${source.name}: ${source.url}`)
+
+      const response = await fetch(source.url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Accept': source.url.endsWith('.xml')
+            ? 'application/rss+xml, application/xml, text/xml, */*'
+            : 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0',
+        },
+        next: { revalidate: 300 } // 5분 캐시
+      })
+
+      console.log(`[News API] ${source.name} response:`, response.status, response.statusText)
+
+      if (!response.ok) {
+        console.warn(`[News API] ${source.name} failed:`, response.status)
+        continue // 다음 소스 시도
+      }
+
+      const content = await response.text()
+      console.log(`[News API] ${source.name} content size:`, (content.length / 1024).toFixed(2), 'KB')
+
+      const news = source.parser(content)
+
+      if (news.length > 0) {
+        console.log(`[News API] ✅ ${source.name} succeeded: ${news.length} articles`)
+        return news.slice(0, 5)
+      } else {
+        console.warn(`[News API] ${source.name} returned no articles`)
+      }
+    } catch (error) {
+      console.error(`[News API] ${source.name} error:`, error instanceof Error ? error.message : error)
+      continue // 다음 소스 시도
+    }
+  }
+
+  console.error('[News API] ❌ All sources failed')
+  return []
+}
+
+function parseRSSFeed(xml: string): NewsItem[] {
+  const news: NewsItem[] = []
+
+  try {
+    // RSS 아이템 추출
+    const itemPattern = /<item>([\s\S]*?)<\/item>/gi
+    const titlePattern = /<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/i
+    const linkPattern = /<link>(.*?)<\/link>/i
+    const pubDatePattern = /<pubDate>(.*?)<\/pubDate>/i
+
+    let match
+    while ((match = itemPattern.exec(xml)) !== null && news.length < 10) {
+      const item = match[1]
+
+      const titleMatch = titlePattern.exec(item)
+      const linkMatch = linkPattern.exec(item)
+      const dateMatch = pubDatePattern.exec(item)
+
+      if (titleMatch && linkMatch) {
+        let title = titleMatch[1]
+          .replace(/<!\[CDATA\[/g, '')
+          .replace(/\]\]>/g, '')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .trim()
+
+        const link = linkMatch[1].trim()
+
+        if (title && title.length >= 5) {
+          news.push({
+            title,
+            link,
+            source: '치의신보',
+            date: dateMatch ? new Date(dateMatch[1]).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+          })
+        }
+      }
     }
 
-    const html = await response.text()
-
-    // HTML에서 "가장 많이 본 뉴스" 파싱
-    const news = parseNewsFromHtml(html)
-
-    console.log('[News API] Fetched news count:', news.length)
-
-    return news.slice(0, 5) // 최대 5개
+    console.log('[News API] RSS parsed:', news.length, 'articles')
   } catch (error) {
-    console.error('[News API] Fetch error:', error)
-    return []
+    console.error('[News API] RSS parse error:', error)
   }
+
+  return news
 }
 
 function parseNewsFromHtml(html: string): NewsItem[] {
   const news: NewsItem[] = []
 
   try {
-    const seenTitles = new Set<string>()
+    const seenLinks = new Set<string>()
 
-    // 1. 먼저 "가장 많이 본 뉴스" 또는 "인기기사" 섹션 찾기
-    const mostViewedPatterns = [
-      // 패턴 1: 가장 많이 본 뉴스 섹션
-      /<div[^>]*class="[^"]*(?:most|popular|ranking|많이|인기)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-      // 패턴 2: ul 태그 기반
-      /<ul[^>]*class="[^"]*(?:most|popular|ranking|많이|인기)[^"]*"[^>]*>([\s\S]*?)<\/ul>/gi,
-    ]
+    // 기사 링크를 모두 찾기
+    const articlePattern = /<a[^>]*href="([^"]*(?:\/news\/articleView\.html\?idxno=\d+|articleView\.html\?idxno=\d+))"[^>]*>([\s\S]*?)<\/a>/gi
 
-    let mostViewedSection = ''
-    for (const sectionPattern of mostViewedPatterns) {
-      const sectionMatch = sectionPattern.exec(html)
-      if (sectionMatch) {
-        mostViewedSection = sectionMatch[1]
-        console.log('[News API] Found most viewed section')
-        break
-      }
-    }
+    let match
+    let count = 0
+    const MAX_ARTICLES = 20 // 더 많이 수집해서 필터링
 
-    // 2. 섹션을 찾았다면 해당 섹션에서 기사 추출, 아니면 전체 HTML에서 추출
-    const targetHtml = mostViewedSection || html
+    while ((match = articlePattern.exec(html)) !== null && count < MAX_ARTICLES) {
+      let link = match[1]
+      let titleContent = match[2]
 
-    // 3. 기사 링크 패턴 - 더 광범위하게 수집
-    const articlePatterns = [
-      // 패턴 1: 기본 articleView 링크
-      /<a[^>]*href="(\/news\/articleView\.html\?idxno=\d+)"[^>]*>([\s\S]*?)<\/a>/gi,
-      // 패턴 2: 전체 URL
-      /<a[^>]*href="(https?:\/\/www\.dailydental\.co\.kr\/news\/articleView\.html\?idxno=\d+)"[^>]*>([\s\S]*?)<\/a>/gi,
-    ]
-
-    for (const pattern of articlePatterns) {
-      pattern.lastIndex = 0
-      let match
-
-      while ((match = pattern.exec(targetHtml)) !== null && news.length < 10) {
-        const link = match[1]
-        let titleContent = match[2]
-
-        // titleContent에서 실제 텍스트만 추출 (HTML 태그 제거)
-        let title = titleContent
-          .replace(/<[^>]+>/g, ' ') // 모든 HTML 태그 제거
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/&nbsp;/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-
-        // 숫자만 있는 경우 건너뛰기 (랭킹 번호)
-        if (/^\d+$/.test(title)) continue
-
-        // 숫자로 시작하는 경우 숫자 제거 (예: "1. 제목" -> "제목")
-        title = title.replace(/^\d+[\.\s]+/, '').trim()
-
-        // 빈 제목이나 너무 짧은 제목 건너뛰기
-        if (!title || title.length < 5) continue
-
-        // 중복 제목 건너뛰기
-        if (seenTitles.has(title)) continue
-
-        // 메뉴나 버튼 텍스트 제외
-        const excludeKeywords = [
-          '로그인', '회원가입', '기사검색', '뉴스', '오피니언', '포토', '전체기사',
-          '더보기', '목록', '이전', '다음', '구독', '신청', '주요뉴스', '최신뉴스',
-          '많이 본 뉴스', '인기기사', 'TOP', 'BEST'
-        ]
-        if (excludeKeywords.some(keyword => title === keyword || title.includes('바로가기'))) continue
-
-        seenTitles.add(title)
-
-        const fullLink = link.startsWith('http') ? link : `https://www.dailydental.co.kr${link}`
-
-        news.push({
-          title,
-          link: fullLink,
-          source: '치의신보',
-          date: new Date().toISOString().split('T')[0]
-        })
-
-        console.log('[News API] Parsed article:', title.substring(0, 30) + '...')
+      // 링크 정규화
+      if (!link.startsWith('http')) {
+        link = `https://www.dailydental.co.kr${link.startsWith('/') ? '' : '/'}${link}`
       }
 
-      if (news.length >= 5) break
+      // 중복 링크 건너뛰기
+      if (seenLinks.has(link)) continue
+      seenLinks.add(link)
+
+      // titleContent에서 실제 텍스트만 추출
+      let title = titleContent
+        .replace(/<img[^>]*>/gi, '') // 이미지 태그 제거
+        .replace(/<[^>]+>/g, ' ') // 모든 HTML 태그 제거
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+
+      // 숫자만 있는 경우 건너뛰기 (랭킹 번호)
+      if (/^\d+$/.test(title)) continue
+
+      // 숫자로 시작하는 경우 숫자 제거
+      title = title.replace(/^\d+[\.\s:：]+/, '').trim()
+
+      // 괄호 안의 숫자 제거 (예: "[1] 제목" -> "제목")
+      title = title.replace(/^[\[\(]\d+[\]\)]\s*/, '').trim()
+
+      // 빈 제목이나 너무 짧은 제목 건너뛰기
+      if (!title || title.length < 5 || title.length > 200) continue
+
+      // 메뉴나 버튼 텍스트 제외
+      const excludeKeywords = [
+        '로그인', '회원가입', '기사검색', '뉴스', '오피니언', '포토', '전체기사',
+        '더보기', '목록', '이전', '다음', '구독', '신청', '주요뉴스', '최신뉴스',
+        '많이 본 뉴스', '인기기사', 'TOP', 'BEST', '바로가기', '자세히', 'more',
+        '기사보기', '계속읽기', '전문보기'
+      ]
+
+      const isExcluded = excludeKeywords.some(keyword => {
+        const lowerTitle = title.toLowerCase()
+        const lowerKeyword = keyword.toLowerCase()
+        return lowerTitle === lowerKeyword || lowerTitle.includes(lowerKeyword + ' ') || lowerTitle.endsWith(' ' + lowerKeyword)
+      })
+
+      if (isExcluded) continue
+
+      // 유효한 기사로 판단
+      news.push({
+        title,
+        link,
+        source: '치의신보',
+        date: new Date().toISOString().split('T')[0]
+      })
+
+      count++
+      console.log(`[News API] Parsed [${count}]: ${title}`)
     }
 
-    console.log('[News API] Total parsed news count:', news.length)
+    console.log('[News API] HTML parsed:', news.length, 'articles')
   } catch (error) {
-    console.error('[News API] Parse error:', error)
+    console.error('[News API] HTML parse error:', error)
   }
 
   return news
