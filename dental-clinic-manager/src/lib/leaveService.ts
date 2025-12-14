@@ -498,16 +498,8 @@ export const leaveService = {
         return sum
       }, 0)
 
-      // 대기 중인 연차 (승인 대기 + 승인됐지만 아직 시작되지 않은 연차)
-      const { data: pending } = await (supabase as any)
-        .from('leave_requests')
-        .select('total_days, leave_types!inner(deduct_from_annual)')
-        .eq('user_id', userId)
-        .eq('status', 'pending')
-        .gte('start_date', `${year}-01-01`)
-        .lte('start_date', `${year}-12-31`)
-
       // 승인됐지만 아직 시작 날짜가 지나지 않은 연차 (대기로 표시)
+      // 주의: 승인 대기(status='pending')는 대기에 포함하지 않음
       const { data: approvedFuture } = await (supabase as any)
         .from('leave_requests')
         .select('total_days, leave_types!inner(deduct_from_annual)')
@@ -517,7 +509,7 @@ export const leaveService = {
         .lte('start_date', `${year}-12-31`)
         .gt('start_date', today)  // 오늘 이후에 시작되는 연차
 
-      const pendingDays = [...(pending || []), ...(approvedFuture || [])]
+      const pendingDays = (approvedFuture || [])
         .filter((r: any) => r.leave_types?.deduct_from_annual)
         .reduce((sum: number, r: any) => sum + r.total_days, 0)
 
