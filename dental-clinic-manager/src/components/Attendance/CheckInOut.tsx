@@ -112,7 +112,8 @@ export default function CheckInOut() {
     setMessage(null)
 
     try {
-      const today = new Date().toISOString().split('T')[0]
+      // 한국 시간 기준 오늘 날짜 (UTC 사용 시 오전 0시~8시59분에 전날로 계산되는 문제 해결)
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
       const result = await attendanceService.checkIn({
         user_id: user.id,
         qr_code: qrCodeToUse,
@@ -151,7 +152,8 @@ export default function CheckInOut() {
     setMessage(null)
 
     try {
-      const today = new Date().toISOString().split('T')[0]
+      // 한국 시간 기준 오늘 날짜 (UTC 사용 시 오전 0시~8시59분에 전날로 계산되는 문제 해결)
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
       const result = await attendanceService.checkOut({
         user_id: user.id,
         qr_code: qrCodeToUse,

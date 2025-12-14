@@ -24,6 +24,84 @@ import type {
 import type { ClinicBranch } from '@/types/branch'
 
 /**
+ * 한국 시간대 기준 오늘 날짜 반환 (YYYY-MM-DD 형식)
+ * toISOString()은 UTC를 반환하므로 한국 시간(UTC+9)에서 오전 0시~8시59분에는
+ * 전날 날짜가 반환되는 문제를 해결
+ */
+function getKoreanDateString(date: Date = new Date()): string {
+  return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+}
+
+/**
+ * 한국 시간대 기준 현재 시간 반환 (HH:MM:SS 형식)
+ */
+function getKoreanTimeString(date: Date = new Date()): string {
+  return date.toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+}
+
+/**
+ * 지각 여부 및 지각 시간 계산
+ * @param checkInTime 출근 시간 (ISO 8601 형식)
+ * @param scheduledStart 예정 출근 시간 (HH:MM:SS 형식)
+ * @returns { isLate: boolean, lateMinutes: number, status: 'present' | 'late' }
+ */
+function calculateLateStatus(
+  checkInTime: string,
+  scheduledStart: string | undefined
+): { isLate: boolean; lateMinutes: number; status: 'present' | 'late' } {
+  const toleranceMinutes = 0 // 허용 범위 없음 - 1분이라도 늦으면 지각
+
+  // 예정 출근 시간이 없으면 정상 출근으로 처리
+  if (!scheduledStart) {
+    return { isLate: false, lateMinutes: 0, status: 'present' }
+  }
+
+  // 출근 시간을 한국 시간으로 변환 (HH:MM:SS 형식)
+  const checkInDate = new Date(checkInTime)
+  const actualStartTime = getKoreanTimeString(checkInDate)
+
+  // 시간 문자열을 분 단위로 변환
+  const timeToMinutes = (timeStr: string): number => {
+    const parts = timeStr.split(':')
+    const hours = parseInt(parts[0], 10)
+    const minutes = parseInt(parts[1], 10)
+    return hours * 60 + minutes
+  }
+
+  const actualMinutes = timeToMinutes(actualStartTime)
+  const scheduledMinutes = timeToMinutes(scheduledStart)
+
+  // 지각 계산 (허용 범위 초과 시)
+  const lateMinutes = actualMinutes - scheduledMinutes - toleranceMinutes
+
+  if (lateMinutes > 0) {
+    return {
+      isLate: true,
+      lateMinutes: actualMinutes - scheduledMinutes, // 실제 지각 시간 (허용 범위 제외하지 않음)
+      status: 'late'
+    }
+  }
+
+  return { isLate: false, lateMinutes: 0, status: 'present' }
+}
+
+/**
+ * 날짜 문자열(YYYY-MM-DD)에서 로컬 시간대 기준 요일 반환
+ * new Date("YYYY-MM-DD")는 UTC로 해석되어 시간대에 따라 요일이 달라질 수 있음
+ */
+function getDayOfWeekFromDateString(dateString: string): number {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const localDate = new Date(year, month - 1, day) // 로컬 시간대 자정
+  return localDate.getDay()
+}
+
+/**
  * 유효 기간(일수) 계산 함수
  */
 function calculateValidityDays(validity_type?: string, validity_days?: number): number {
@@ -66,7 +144,7 @@ export async function generateDailyQRCode(
     } = input
 
     // 오늘 날짜
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
     // 유효 기간 계산
     const validityDays = calculateValidityDays(validity_type, customValidityDays)
@@ -179,7 +257,7 @@ export async function getQRCodeForToday(
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
     // 오늘이 유효 기간 내에 있는 QR 코드 조회
     let query = supabase
@@ -358,7 +436,7 @@ export async function validateQRCode(
     const qrCode = qrData as AttendanceQRCode
 
     // 날짜 검증 (유효 기간 범위 확인)
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
     const validFrom = qrCode.valid_date
     const validUntil = qrCode.valid_until || qrCode.valid_date // valid_until이 없으면 당일만 유효
 
@@ -418,7 +496,9 @@ async function getUserScheduleForDate(
   if (!supabase) return null
 
   try {
-    const dayOfWeek = new Date(date).getDay()
+    // 날짜 문자열에서 로컬 시간대 기준으로 요일 계산
+    // new Date("YYYY-MM-DD")는 UTC로 해석되어 시간대에 따라 요일이 달라질 수 있음
+    const dayOfWeek = getDayOfWeekFromDateString(date)
 
     // 요일 숫자를 요일명으로 매핑
     const dayMap: Record<number, string> = {
@@ -509,7 +589,7 @@ export async function autoCheckInOut(request: {
     }
 
     // 오늘 날짜
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
     // 오늘 출퇴근 기록 확인
     const { data: todayRecord } = await supabase
@@ -633,6 +713,14 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 
     const checkInTime = new Date().toISOString()
 
+    // 지각 여부 계산 (트리거에 의존하지 않고 직접 계산)
+    const lateStatus = calculateLateStatus(checkInTime, schedule?.start_time)
+    console.log('[checkIn] 지각 계산 결과:', {
+      checkInTime,
+      scheduledStart: schedule?.start_time,
+      ...lateStatus
+    })
+
     // 출근 기록 저장 또는 업데이트
     if (existingRecord) {
       // 기존 레코드 업데이트
@@ -645,7 +733,10 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
           check_in_device_info: device_info,
           scheduled_start: schedule?.start_time,
           scheduled_end: schedule?.end_time,
-          branch_id: finalBranchId, // 자동 감지된 또는 QR의 branch_id
+          branch_id: finalBranchId,
+          // 지각 정보 직접 저장 (트리거 의존성 제거)
+          late_minutes: lateStatus.lateMinutes,
+          status: lateStatus.status,
         })
         .eq('id', existingRecord.id)
         .select()
@@ -668,7 +759,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
         .insert({
           user_id,
           clinic_id: validation.clinic_id,
-          branch_id: finalBranchId, // 자동 감지된 또는 QR의 branch_id
+          branch_id: finalBranchId,
           work_date,
           check_in_time: checkInTime,
           check_in_latitude: latitude,
@@ -676,6 +767,9 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
           check_in_device_info: device_info,
           scheduled_start: schedule?.start_time,
           scheduled_end: schedule?.end_time,
+          // 지각 정보 직접 저장 (트리거 의존성 제거)
+          late_minutes: lateStatus.lateMinutes,
+          status: lateStatus.status,
         })
         .select()
         .single()
@@ -849,6 +943,7 @@ export async function getAttendanceRecords(
 
 /**
  * 특정 사용자의 오늘 출퇴근 기록 조회
+ * 기존 기록의 지각 여부가 잘못된 경우 재계산하여 업데이트
  */
 export async function getTodayAttendance(
   userId: string
@@ -859,7 +954,7 @@ export async function getTodayAttendance(
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
     const { data, error } = await supabase
       .from('attendance_records')
@@ -871,6 +966,40 @@ export async function getTodayAttendance(
     if (error) {
       console.error('[getTodayAttendance] Error:', error)
       return { success: false, error: error.message }
+    }
+
+    // 기록이 있고, 출근 시간과 예정 출근 시간이 있는 경우 지각 여부 재계산
+    if (data && data.check_in_time && data.scheduled_start) {
+      const lateStatus = calculateLateStatus(data.check_in_time, data.scheduled_start)
+
+      // 현재 저장된 상태와 다르면 업데이트
+      if (data.status !== lateStatus.status || data.late_minutes !== lateStatus.lateMinutes) {
+        console.log('[getTodayAttendance] 지각 상태 재계산 및 업데이트:', {
+          recordId: data.id,
+          oldStatus: data.status,
+          newStatus: lateStatus.status,
+          oldLateMinutes: data.late_minutes,
+          newLateMinutes: lateStatus.lateMinutes
+        })
+
+        const { data: updatedRecord, error: updateError } = await supabase
+          .from('attendance_records')
+          .update({
+            late_minutes: lateStatus.lateMinutes,
+            status: lateStatus.status,
+          })
+          .eq('id', data.id)
+          .select()
+          .single()
+
+        if (updateError) {
+          console.error('[getTodayAttendance] Update error:', updateError)
+          // 업데이트 실패해도 기존 데이터 반환
+          return { success: true, record: data as AttendanceRecord }
+        }
+
+        return { success: true, record: updatedRecord as AttendanceRecord }
+      }
     }
 
     return { success: true, record: data as AttendanceRecord | undefined }
