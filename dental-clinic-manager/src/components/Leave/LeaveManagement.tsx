@@ -43,6 +43,7 @@ const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: s
 // 연차 현황 카드
 const LeaveBalanceCard = ({ balance, hireDate }: { balance: EmployeeLeaveBalance | null; hireDate?: string }) => {
   const yearsOfService = hireDate ? calculateYearsOfService(new Date(hireDate)) : 0
+  const hasSpecialLeave = (balance?.family_event_days ?? 0) > 0 || (balance?.unpaid_days ?? 0) > 0
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
@@ -71,6 +72,27 @@ const LeaveBalanceCard = ({ balance, hireDate }: { balance: EmployeeLeaveBalance
           )}
         </div>
       </div>
+
+      {/* 특별휴가 사용 현황 (경조사, 무급휴가) */}
+      {hasSpecialLeave && (
+        <div className="mt-4 pt-4 border-t border-blue-200">
+          <p className="text-xs text-slate-500 mb-2">특별휴가 사용 현황</p>
+          <div className="flex gap-4">
+            {(balance?.family_event_days ?? 0) > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg">
+                <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                <span className="text-sm text-purple-700">경조사 {balance?.family_event_days}일</span>
+              </div>
+            )}
+            {(balance?.unpaid_days ?? 0) > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg">
+                <span className="w-2 h-2 rounded-full bg-gray-500"></span>
+                <span className="text-sm text-gray-700">무급휴가 {balance?.unpaid_days}일</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
         <span>근속연수: {yearsOfService.toFixed(1)}년</span>
@@ -485,6 +507,8 @@ function AllEmployeeBalances({ year }: { year: number }) {
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">대기</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">잔여</th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-purple-600">경조사</th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">무급휴가</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용률</th>
           </tr>
         </thead>
@@ -521,6 +545,12 @@ function AllEmployeeBalances({ year }: { year: number }) {
                   <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
                     {item.remaining_days}일
                   </td>
+                  <td className="px-4 py-3 text-center text-purple-600">
+                    {(item.family_event_days ?? 0) > 0 ? `${item.family_event_days}일` : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-center text-gray-600">
+                    {(item.unpaid_days ?? 0) > 0 ? `${item.unpaid_days}일` : '-'}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-16 bg-slate-200 rounded-full h-2">
@@ -536,7 +566,7 @@ function AllEmployeeBalances({ year }: { year: number }) {
                 {/* 선택된 직원의 연차 내역 */}
                 {isSelected && (
                   <tr>
-                    <td colSpan={7} className="px-0 py-0 bg-slate-50">
+                    <td colSpan={9} className="px-0 py-0 bg-slate-50">
                       <div className="px-6 py-4 border-t border-slate-200">
                         <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
@@ -604,7 +634,7 @@ function AllEmployeeBalances({ year }: { year: number }) {
           })}
           {balances.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+              <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
                 등록된 연차 현황이 없습니다.
               </td>
             </tr>
