@@ -293,24 +293,41 @@ export default function DashboardHome() {
   const loadNews = async () => {
     setNewsLoading(true)
     try {
+      console.log('[DashboardHome] Fetching news from API...')
       // API에서 치의신보 뉴스 가져오기
       const response = await fetch('/api/news/dental')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.news && data.news.length > 0) {
-          setNews(data.news)
-          console.log('[DashboardHome] News loaded:', data.news.length, 'articles', data.fallback ? '(fallback)' : '')
-          return
-        }
+
+      if (!response.ok) {
+        console.error('[DashboardHome] API response not OK:', response.status)
+        throw new Error(`HTTP ${response.status}`)
       }
-      // API 실패 시 폴백 데이터
+
+      const data = await response.json()
+      console.log('[DashboardHome] API response:', data)
+
+      if (data.news && data.news.length > 0) {
+        setNews(data.news)
+        const statusMsg = data.fallback ? '(fallback data)' : data.cached ? '(cached)' : '(fresh)'
+        console.log('[DashboardHome] News loaded:', data.news.length, 'articles', statusMsg)
+
+        // 첫 번째 기사 로그 확인
+        if (data.news[0]) {
+          console.log('[DashboardHome] First article:', {
+            title: data.news[0].title,
+            link: data.news[0].link
+          })
+        }
+        return
+      }
+
+      // API 응답은 있지만 뉴스가 없는 경우
+      console.warn('[DashboardHome] API returned no news, using fallback')
       const fallbackNews: NewsItem[] = [
         { title: '치의신보 웹사이트를 방문하여 최신 뉴스를 확인하세요', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
         { title: '치과 건강보험 수가 관련 최신 소식', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1', source: '치의신보', date: new Date().toISOString().split('T')[0] },
         { title: '디지털 치과 진료 시스템 최신 동향', link: 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1', source: '치의신보', date: new Date().toISOString().split('T')[0] },
       ]
       setNews(fallbackNews)
-      console.warn('[DashboardHome] Using fallback news data')
     } catch (error) {
       console.error('[DashboardHome] Failed to load news:', error)
       // 에러 시 폴백
