@@ -42,3 +42,4 @@ next-env.d.ts
 test-news-api.js
 dailydental-homepage.html
 parsed-articles.json
+test-api-endpoint.js
