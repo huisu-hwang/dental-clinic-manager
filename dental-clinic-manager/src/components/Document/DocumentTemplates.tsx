@@ -557,8 +557,8 @@ export default function DocumentTemplates() {
             {DocumentTypeLabels[documentType]} 정보 입력
           </h3>
 
-          {/* 직원 선택 */}
-          {staffList.length > 0 && (
+          {/* 직원 선택 - 원장만 다른 직원 선택 가능 */}
+          {isOwner && staffList.length > 0 && (
             <div className="mb-6 p-4 bg-blue-50 rounded-lg">
               <label className="block text-sm font-medium text-blue-800 mb-2">
                 <Users className="w-4 h-4 inline-block mr-1" />
