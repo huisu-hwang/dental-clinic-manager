@@ -549,6 +549,29 @@ export const leaveService = {
         .filter((r: any) => r.leave_types?.deduct_from_annual)
         .reduce((sum: number, r: any) => sum + r.total_days, 0)
 
+      // 경조사 타입 조회
+      const { data: familyEventType } = await (supabase as any)
+        .from('leave_types')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('code', 'family_event')
+        .single()
+
+      // 승인된 경조사 일수 조회 (연도 내 전체)
+      let familyEventDays = 0
+      if (familyEventType) {
+        const { data: familyEventRequests } = await (supabase as any)
+          .from('leave_requests')
+          .select('total_days')
+          .eq('user_id', userId)
+          .eq('leave_type_id', familyEventType.id)
+          .eq('status', 'approved')
+          .gte('start_date', `${year}-01-01`)
+          .lte('start_date', `${year}-12-31`)
+
+        familyEventDays = (familyEventRequests || []).reduce((sum: number, r: any) => sum + r.total_days, 0)
+      }
+
       // 무급휴가 타입 조회
       const { data: unpaidType } = await (supabase as any)
         .from('leave_types')
@@ -557,26 +580,32 @@ export const leaveService = {
         .eq('code', 'unpaid')
         .single()
 
-      // 승인된 무급휴가 일수 조회 (잔여 연차에서 음수로 표시하기 위함)
-      // 지난 달의 무급휴가는 제외하고, 오늘 이후의 무급휴가만 계산
-      let unpaidUsedDays = 0
+      // 승인된 무급휴가 일수 조회 (연도 내 전체 - 현황 표시용)
+      let unpaidTotalDays = 0
+      // 미래 무급휴가 (remaining_days 계산용)
+      let unpaidFutureDays = 0
       if (unpaidType) {
+        // 연도 내 전체 승인된 무급휴가
         const { data: unpaidRequests } = await (supabase as any)
           .from('leave_requests')
-          .select('total_days')
+          .select('total_days, start_date')
           .eq('user_id', userId)
           .eq('leave_type_id', unpaidType.id)
           .eq('status', 'approved')
-          .gte('start_date', today)  // 오늘 이후의 무급휴가만 계산
+          .gte('start_date', `${year}-01-01`)
           .lte('start_date', `${year}-12-31`)
 
-        unpaidUsedDays = (unpaidRequests || []).reduce((sum: number, r: any) => sum + r.total_days, 0)
+        unpaidTotalDays = (unpaidRequests || []).reduce((sum: number, r: any) => sum + r.total_days, 0)
+        // 오늘 이후의 무급휴가만 remaining_days에서 차감
+        unpaidFutureDays = (unpaidRequests || [])
+          .filter((r: any) => r.start_date >= today)
+          .reduce((sum: number, r: any) => sum + r.total_days, 0)
       }
 
       // 총 연차 = 기본 연차 + 추가된 연차
       const finalTotalDays = totalDays + addedDays
-      // 잔여 연차 = 총 연차 - 사용 - 차감 - 대기 - 무급휴가 (음수 가능)
-      const remainingDays = finalTotalDays - usedDays - deductedDays - pendingDays - unpaidUsedDays
+      // 잔여 연차 = 총 연차 - 사용 - 차감 - 대기 - 미래 무급휴가 (음수 가능)
+      const remainingDays = finalTotalDays - usedDays - deductedDays - pendingDays - unpaidFutureDays
 
       // Upsert
       const { error } = await (supabase as any)
@@ -589,6 +618,8 @@ export const leaveService = {
           used_days: usedDays + deductedDays,
           pending_days: pendingDays,
           remaining_days: remainingDays,
+          family_event_days: familyEventDays,  // 경조사 사용 일수
+          unpaid_days: unpaidTotalDays,        // 무급휴가 사용 일수
           years_of_service: yearsOfService,
           hire_date: hireDate.toISOString().split('T')[0],
           last_calculated_at: new Date().toISOString(),

@@ -200,6 +200,10 @@ export interface EmployeeLeaveBalance {
   pending_days: number; // 승인 대기 중인 연차 일수
   remaining_days: number; // 잔여 연차 일수
 
+  // 특별휴가 사용 현황 (연차와 별도 관리)
+  family_event_days?: number; // 경조사 휴가 사용 일수
+  unpaid_days?: number; // 무급휴가 사용 일수
+
   // 이월 연차
   carryover_days: number; // 이월 연차 일수
   carryover_used: number; // 사용한 이월 연차
