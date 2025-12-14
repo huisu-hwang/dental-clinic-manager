@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
     const clinicId = searchParams.get('clinicId')
     const userId = searchParams.get('userId')
     const status = searchParams.get('status') // pending, approved, rejected
-    const type = searchParams.get('type') // resignation, employment_certificate
+    const type = searchParams.get('type') // resignation, employment_certificate, recommended_resignation, termination_notice
+    const filter = searchParams.get('filter') // 'sent' | 'received' - 보낸 문서 또는 받은 문서 필터
 
     if (!clinicId) {
       return NextResponse.json(
@@ -35,13 +36,31 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         submitter:users!document_submissions_submitted_by_fkey(id, name, role),
-        approver:users!document_submissions_approved_by_fkey(id, name, role)
+        approver:users!document_submissions_approved_by_fkey(id, name, role),
+        target_employee:users!document_submissions_target_employee_id_fkey(id, name, role)
       `)
       .eq('clinic_id', clinicId)
       .order('created_at', { ascending: false })
 
-    if (userId) {
+    // 보낸 문서/받은 문서 필터
+    const isOwnerFilter = searchParams.get('isOwner') === 'true'
+
+    if (filter === 'sent' && userId) {
+      // 보낸 문서: 내가 작성한 문서
       query = query.eq('submitted_by', userId)
+    } else if (filter === 'received' && userId) {
+      if (isOwnerFilter) {
+        // 원장이 받은 문서: 직원들이 제출한 사직서/재직증명서 (권고사직서/해고통보서 제외)
+        query = query
+          .neq('submitted_by', userId)
+          .in('document_type', ['resignation', 'employment_certificate'])
+      } else {
+        // 직원이 받은 문서: 나를 대상으로 한 문서 (권고사직서/해고통보서 등)
+        query = query.eq('target_employee_id', userId)
+      }
+    } else if (userId) {
+      // 기존 로직: submitted_by 또는 target_employee_id가 userId인 경우
+      query = query.or(`submitted_by.eq.${userId},target_employee_id.eq.${userId}`)
     }
 
     if (status) {
@@ -123,6 +142,7 @@ export async function POST(request: NextRequest) {
       .insert({
         clinic_id: clinicId,
         submitted_by: userId,
+        target_employee_id: ownerOnlyTypes.includes(documentType) ? (targetEmployeeId || null) : null, // 권고사직서/해고통보서 대상 직원
         document_type: documentType,
         document_data: documentData,
         employee_signature: ownerOnlyTypes.includes(documentType) ? null : (signature || null),

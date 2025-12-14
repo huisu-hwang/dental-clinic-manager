@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS document_submissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
   submitted_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  document_type VARCHAR(50) NOT NULL, -- 'resignation', 'employment_certificate'
+  target_employee_id UUID REFERENCES users(id) ON DELETE SET NULL, -- 문서 수신 대상 직원 (권고사직서/해고통보서용)
+  document_type VARCHAR(50) NOT NULL, -- 'resignation', 'employment_certificate', 'recommended_resignation', 'termination_notice'
   document_data JSONB NOT NULL, -- 문서 데이터 (사직서/재직증명서 내용)
   employee_signature TEXT, -- 직원 서명 (base64)
   owner_signature TEXT, -- 원장 서명 (base64, 재직증명서용)
@@ -15,9 +16,13 @@ CREATE TABLE IF NOT EXISTS document_submissions (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 기존 테이블에 target_employee_id 컬럼 추가 (이미 테이블이 있는 경우)
+ALTER TABLE document_submissions ADD COLUMN IF NOT EXISTS target_employee_id UUID REFERENCES users(id) ON DELETE SET NULL;
+
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_document_submissions_clinic_id ON document_submissions(clinic_id);
 CREATE INDEX IF NOT EXISTS idx_document_submissions_submitted_by ON document_submissions(submitted_by);
+CREATE INDEX IF NOT EXISTS idx_document_submissions_target_employee ON document_submissions(target_employee_id);
 CREATE INDEX IF NOT EXISTS idx_document_submissions_status ON document_submissions(status);
 CREATE INDEX IF NOT EXISTS idx_document_submissions_document_type ON document_submissions(document_type);
 

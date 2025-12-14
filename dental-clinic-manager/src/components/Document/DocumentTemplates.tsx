@@ -40,8 +40,11 @@ interface DocumentSubmission {
   status: 'pending' | 'approved' | 'rejected'
   reject_reason?: string
   created_at: string
+  submitted_by?: string
+  target_employee_id?: string
   submitter?: { id: string; name: string; role: string }
   approver?: { id: string; name: string; role: string }
+  target_employee?: { id: string; name: string; role: string }
 }
 
 // 직급 영문 -> 한글 변환 (StaffManagement의 getRoleLabel과 동일)
@@ -80,9 +83,10 @@ export default function DocumentTemplates() {
   const [showOwnerSignatureModal, setShowOwnerSignatureModal] = useState(false)
   const [showOwnerDocumentSignatureModal, setShowOwnerDocumentSignatureModal] = useState(false) // 권고사직서/해고통보서용
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submissions, setSubmissions] = useState<DocumentSubmission[]>([])
-  const [showSubmissionList, setShowSubmissionList] = useState(false)
-  const [selectedSubmission, setSelectedSubmission] = useState<DocumentSubmission | null>(null)
+  const [sentDocuments, setSentDocuments] = useState<DocumentSubmission[]>([]) // 보낸 문서
+  const [receivedDocuments, setReceivedDocuments] = useState<DocumentSubmission[]>([]) // 받은 문서
+  const [activeTab, setActiveTab] = useState<'form' | 'sent' | 'received'>('form') // 현재 탭
+  const [selectedDocument, setSelectedDocument] = useState<DocumentSubmission | null>(null) // 선택된 문서
   const documentRef = useRef<HTMLDivElement>(null)
 
   // 원장인지 확인
@@ -185,24 +189,43 @@ export default function DocumentTemplates() {
     }
   }, [user])
 
-  // 문서 제출 목록 로드
-  useEffect(() => {
-    const loadSubmissions = async () => {
-      if (!user?.clinic_id) return
-      try {
-        const response = await fetch(
-          `/api/document-submissions?clinicId=${user.clinic_id}${isOwner ? '' : `&userId=${user.id}`}`
-        )
-        const result = await response.json()
-        if (result.data) {
-          setSubmissions(result.data)
-        }
-      } catch (error) {
-        console.error('Failed to load submissions:', error)
+  // 보낸 문서 목록 로드
+  const loadSentDocuments = async () => {
+    if (!user?.clinic_id || !user?.id) return
+    try {
+      const response = await fetch(
+        `/api/document-submissions?clinicId=${user.clinic_id}&userId=${user.id}&filter=sent`
+      )
+      const result = await response.json()
+      if (result.data) {
+        setSentDocuments(result.data)
       }
+    } catch (error) {
+      console.error('Failed to load sent documents:', error)
     }
-    loadSubmissions()
-  }, [user?.clinic_id, user?.id, isOwner])
+  }
+
+  // 받은 문서 목록 로드
+  const loadReceivedDocuments = async () => {
+    if (!user?.clinic_id || !user?.id) return
+    try {
+      const response = await fetch(
+        `/api/document-submissions?clinicId=${user.clinic_id}&userId=${user.id}&filter=received&isOwner=${isOwner}`
+      )
+      const result = await response.json()
+      if (result.data) {
+        setReceivedDocuments(result.data)
+      }
+    } catch (error) {
+      console.error('Failed to load received documents:', error)
+    }
+  }
+
+  // 문서 목록 로드
+  useEffect(() => {
+    loadSentDocuments()
+    loadReceivedDocuments()
+  }, [user?.clinic_id, user?.id])
 
   // 문서 제출 핸들러
   const handleSubmitDocument = async () => {
@@ -234,14 +257,8 @@ export default function DocumentTemplates() {
       const result = await response.json()
       if (result.success) {
         alert(`${DocumentTypeLabels[documentType]}가 제출되었습니다. 원장님의 확인을 기다려주세요.`)
-        // 목록 새로고침
-        const listResponse = await fetch(
-          `/api/document-submissions?clinicId=${user.clinic_id}${isOwner ? '' : `&userId=${user.id}`}`
-        )
-        const listResult = await listResponse.json()
-        if (listResult.data) {
-          setSubmissions(listResult.data)
-        }
+        // 보낸 문서 목록 새로고침
+        loadSentDocuments()
       } else {
         alert(`제출 실패: ${result.error}`)
       }
@@ -274,13 +291,9 @@ export default function DocumentTemplates() {
       const result = await response.json()
       if (result.success) {
         alert(action === 'approve' ? '승인되었습니다.' : '반려되었습니다.')
-        // 목록 새로고침
-        const listResponse = await fetch(`/api/document-submissions?clinicId=${user.clinic_id}`)
-        const listResult = await listResponse.json()
-        if (listResult.data) {
-          setSubmissions(listResult.data)
-        }
-        setSelectedSubmission(null)
+        // 받은 문서 목록 새로고침
+        loadReceivedDocuments()
+        setSelectedDocument(null)
         setShowOwnerSignatureModal(false)
       } else {
         alert(`처리 실패: ${result.error}`)
@@ -293,8 +306,8 @@ export default function DocumentTemplates() {
 
   // 원장 서명 후 승인
   const handleOwnerSignAndApprove = (signatureData: string) => {
-    if (selectedSubmission) {
-      handleApproveReject(selectedSubmission.id, 'approve', signatureData)
+    if (selectedDocument) {
+      handleApproveReject(selectedDocument.id, 'approve', signatureData)
     }
   }
 
@@ -529,14 +542,8 @@ export default function DocumentTemplates() {
           : '해고통보서가 발송되었습니다. 해당 직원에게 해고 통보 알림이 전송되었습니다.'
         alert(actionMessage)
 
-        // 목록 새로고침
-        const listResponse = await fetch(
-          `/api/document-submissions?clinicId=${user.clinic_id}`
-        )
-        const listResult = await listResponse.json()
-        if (listResult.data) {
-          setSubmissions(listResult.data)
-        }
+        // 보낸 문서 목록 새로고침
+        loadSentDocuments()
 
         // 폼 초기화
         if (documentType === 'recommended_resignation') {
@@ -556,55 +563,127 @@ export default function DocumentTemplates() {
     }
   }
 
+  // 문서 타입 라벨 반환
+  const getDocumentTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'resignation': '사직서',
+      'employment_certificate': '재직증명서',
+      'recommended_resignation': '권고사직서',
+      'termination_notice': '해고통보서'
+    }
+    return labels[type] || type
+  }
+
+  // 문서 상세 보기 (프리뷰 모드로 전환)
+  const handleViewDocument = (doc: DocumentSubmission) => {
+    setSelectedDocument(doc)
+
+    // 문서 타입에 따라 데이터 설정
+    if (doc.document_type === 'resignation') {
+      setResignationData({
+        ...doc.document_data,
+        employeeSignature: doc.employee_signature
+      })
+      setDocumentType('resignation')
+    } else if (doc.document_type === 'employment_certificate') {
+      setCertificateData({
+        ...doc.document_data,
+        ownerSignature: doc.owner_signature
+      })
+      setDocumentType('employment_certificate')
+    } else if (doc.document_type === 'recommended_resignation') {
+      setRecommendedResignationData({
+        ...doc.document_data,
+        ownerSignature: doc.owner_signature
+      })
+      setDocumentType('recommended_resignation')
+    } else if (doc.document_type === 'termination_notice') {
+      setTerminationNoticeData({
+        ...doc.document_data,
+        ownerSignature: doc.owner_signature
+      })
+      setDocumentType('termination_notice')
+    }
+
+    setShowPreview(true)
+  }
+
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between print:hidden">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">문서 양식</h2>
-          <p className="text-slate-500 mt-1">사직서, 재직증명서 등 문서 양식을 작성하고 출력하세요</p>
-        </div>
+      <div className="print:hidden">
+        <h2 className="text-2xl font-bold text-slate-800">문서 양식</h2>
+        <p className="text-slate-500 mt-1">사직서, 재직증명서 등 문서 양식을 작성하고 출력하세요</p>
+      </div>
+
+      {/* 탭 네비게이션 */}
+      <div className="flex gap-2 border-b border-slate-200 print:hidden">
         <button
-          onClick={() => setShowSubmissionList(!showSubmissionList)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            showSubmissionList
-              ? 'bg-blue-600 text-white'
-              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          onClick={() => setActiveTab('form')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'form'
+              ? 'text-blue-600 border-blue-600'
+              : 'text-slate-500 border-transparent hover:text-slate-700'
           }`}
         >
-          <List className="w-4 h-4" />
-          {isOwner ? '제출된 문서' : '내 제출 목록'}
-          {submissions.filter(s => s.status === 'pending').length > 0 && (
-            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-              {submissions.filter(s => s.status === 'pending').length}
+          <FileText className="w-4 h-4 inline-block mr-2" />
+          문서 작성
+        </button>
+        <button
+          onClick={() => setActiveTab('sent')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'sent'
+              ? 'text-blue-600 border-blue-600'
+              : 'text-slate-500 border-transparent hover:text-slate-700'
+          }`}
+        >
+          <Send className="w-4 h-4 inline-block mr-2" />
+          보낸 문서
+          {sentDocuments.length > 0 && (
+            <span className="ml-2 bg-slate-200 text-slate-600 text-xs px-2 py-0.5 rounded-full">
+              {sentDocuments.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('received')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'received'
+              ? 'text-blue-600 border-blue-600'
+              : 'text-slate-500 border-transparent hover:text-slate-700'
+          }`}
+        >
+          <FileText className="w-4 h-4 inline-block mr-2" />
+          받은 문서
+          {receivedDocuments.filter(d => d.status === 'pending').length > 0 && (
+            <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+              {receivedDocuments.filter(d => d.status === 'pending').length}
             </span>
           )}
         </button>
       </div>
 
-      {/* 제출 목록 */}
-      {showSubmissionList && (
+      {/* 보낸 문서 목록 */}
+      {activeTab === 'sent' && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 print:hidden">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">
-            {isOwner ? '제출된 문서 목록' : '내 제출 목록'}
-          </h3>
-          {submissions.length === 0 ? (
-            <p className="text-slate-500 text-center py-8">제출된 문서가 없습니다.</p>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">보낸 문서 목록</h3>
+          {sentDocuments.length === 0 ? (
+            <p className="text-slate-500 text-center py-8">보낸 문서가 없습니다.</p>
           ) : (
             <div className="space-y-3">
-              {submissions.map((submission) => (
+              {sentDocuments.map((doc) => (
                 <div
-                  key={submission.id}
+                  key={doc.id}
                   className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200"
                 >
                   <div className="flex items-center gap-4">
                     <div className={`p-2 rounded-full ${
-                      submission.status === 'pending' ? 'bg-yellow-100' :
-                      submission.status === 'approved' ? 'bg-green-100' : 'bg-red-100'
+                      doc.status === 'pending' ? 'bg-yellow-100' :
+                      doc.status === 'approved' ? 'bg-green-100' : 'bg-red-100'
                     }`}>
-                      {submission.status === 'pending' ? (
+                      {doc.status === 'pending' ? (
                         <Clock className="w-5 h-5 text-yellow-600" />
-                      ) : submission.status === 'approved' ? (
+                      ) : doc.status === 'approved' ? (
                         <CheckCircle className="w-5 h-5 text-green-600" />
                       ) : (
                         <XCircle className="w-5 h-5 text-red-600" />
@@ -612,30 +691,117 @@ export default function DocumentTemplates() {
                     </div>
                     <div>
                       <p className="font-medium text-slate-800">
-                        {submission.document_type === 'resignation' ? '사직서' : '재직증명서'}
-                        {isOwner && submission.submitter && (
-                          <span className="text-slate-500 ml-2">- {submission.submitter.name}</span>
+                        {getDocumentTypeLabel(doc.document_type)}
+                        {doc.target_employee && (
+                          <span className="text-slate-500 ml-2">→ {doc.target_employee.name}</span>
                         )}
                       </p>
                       <p className="text-sm text-slate-500">
-                        {new Date(submission.created_at).toLocaleDateString('ko-KR')}
+                        {new Date(doc.created_at).toLocaleDateString('ko-KR')}
                         <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
-                          submission.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          submission.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          doc.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          doc.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                         }`}>
-                          {submission.status === 'pending' ? '대기중' :
-                           submission.status === 'approved' ? '승인됨' : '반려됨'}
+                          {doc.status === 'pending' ? '대기중' :
+                           doc.status === 'approved' ? '처리완료' : '반려됨'}
                         </span>
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isOwner && submission.status === 'pending' && (
+                    <button
+                      onClick={() => handleViewDocument(doc)}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    >
+                      상세보기
+                    </button>
+                    {doc.reject_reason && (
+                      <span className="text-sm text-red-600">
+                        사유: {doc.reject_reason}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 받은 문서 목록 */}
+      {activeTab === 'received' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 print:hidden">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">받은 문서 목록</h3>
+          {receivedDocuments.length === 0 ? (
+            <p className="text-slate-500 text-center py-8">받은 문서가 없습니다.</p>
+          ) : (
+            <div className="space-y-3">
+              {receivedDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className={`flex items-center justify-between p-4 rounded-lg border ${
+                    doc.status === 'pending'
+                      ? 'bg-yellow-50 border-yellow-200'
+                      : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-full ${
+                      doc.status === 'pending' ? 'bg-yellow-100' :
+                      doc.status === 'approved' ? 'bg-green-100' : 'bg-red-100'
+                    }`}>
+                      {doc.status === 'pending' ? (
+                        <Clock className="w-5 h-5 text-yellow-600" />
+                      ) : doc.status === 'approved' ? (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-red-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800">
+                        {getDocumentTypeLabel(doc.document_type)}
+                        {doc.submitter && (
+                          <span className="text-slate-500 ml-2">- {doc.submitter.name}님으로부터</span>
+                        )}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {new Date(doc.created_at).toLocaleDateString('ko-KR')}
+                        <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                          doc.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          doc.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {doc.status === 'pending' ? '확인 필요' :
+                           doc.status === 'approved' ? '처리완료' : '반려됨'}
+                        </span>
+                      </p>
+                      {/* 권고사직서/해고통보서 안내 메시지 */}
+                      {!isOwner && doc.status === 'approved' && (
+                        <p className="text-sm mt-1">
+                          {doc.document_type === 'recommended_resignation' && (
+                            <span className="text-orange-600">※ 권고사직에 동의하시면 사직서를 작성하여 제출해 주세요.</span>
+                          )}
+                          {doc.document_type === 'termination_notice' && (
+                            <span className="text-red-600">※ 해고통보서입니다. 내용을 확인해 주세요.</span>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleViewDocument(doc)}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    >
+                      상세보기
+                    </button>
+                    {/* 원장의 승인/반려 버튼 */}
+                    {isOwner && doc.status === 'pending' && (
                       <>
-                        {submission.document_type === 'employment_certificate' ? (
+                        {doc.document_type === 'employment_certificate' ? (
                           <button
                             onClick={() => {
-                              setSelectedSubmission(submission)
+                              setSelectedDocument(doc)
                               setShowOwnerSignatureModal(true)
                             }}
                             className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
@@ -644,7 +810,7 @@ export default function DocumentTemplates() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleApproveReject(submission.id, 'approve')}
+                            onClick={() => handleApproveReject(doc.id, 'approve')}
                             className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
                           >
                             승인
@@ -654,7 +820,7 @@ export default function DocumentTemplates() {
                           onClick={() => {
                             const reason = prompt('반려 사유를 입력하세요:')
                             if (reason) {
-                              handleApproveReject(submission.id, 'reject', undefined, reason)
+                              handleApproveReject(doc.id, 'reject', undefined, reason)
                             }
                           }}
                           className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
@@ -663,31 +829,9 @@ export default function DocumentTemplates() {
                         </button>
                       </>
                     )}
-                    {submission.status === 'approved' && (
-                      <button
-                        onClick={() => {
-                          // 승인된 문서 데이터로 미리보기 설정
-                          if (submission.document_type === 'resignation') {
-                            setResignationData({
-                              ...submission.document_data,
-                              employeeSignature: submission.employee_signature
-                            })
-                            setDocumentType('resignation')
-                          } else {
-                            setCertificateData(submission.document_data)
-                            setDocumentType('employment_certificate')
-                          }
-                          setShowPreview(true)
-                          setShowSubmissionList(false)
-                        }}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                      >
-                        출력
-                      </button>
-                    )}
-                    {submission.reject_reason && (
+                    {doc.reject_reason && (
                       <span className="text-sm text-red-600">
-                        사유: {submission.reject_reason}
+                        사유: {doc.reject_reason}
                       </span>
                     )}
                   </div>
@@ -699,6 +843,7 @@ export default function DocumentTemplates() {
       )}
 
       {/* 문서 타입 선택 */}
+      {activeTab === 'form' && (
       <div className="flex flex-wrap gap-3 print:hidden">
         {(Object.keys(DocumentTypeLabels) as DocumentType[])
           .filter(type => {
@@ -727,7 +872,9 @@ export default function DocumentTemplates() {
           </button>
         ))}
       </div>
+      )}
 
+      {(activeTab === 'form' || showPreview) && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:block">
         {/* 입력 폼 */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 print:hidden">
@@ -905,7 +1052,7 @@ export default function DocumentTemplates() {
             {/* 직원이 사직서/재직증명서 작성 시에만 제출 버튼 표시 */}
             {!isOwner && !OwnerOnlyDocumentTypes.includes(documentType) && (() => {
               // 현재 문서 타입에 대해 제출된 내역이 있는지 확인
-              const hasSubmitted = submissions.some(
+              const hasSubmitted = sentDocuments.some(
                 s => s.document_type === documentType && (s.status === 'pending' || s.status === 'approved')
               )
               return hasSubmitted ? (
@@ -978,6 +1125,7 @@ export default function DocumentTemplates() {
           </div>
         </div>
       </div>
+      )}
 
       {/* 서명 모달 */}
       {showSignatureModal && (
@@ -1000,12 +1148,12 @@ export default function DocumentTemplates() {
       )}
 
       {/* 원장 서명 모달 (재직증명서 승인용) */}
-      {showOwnerSignatureModal && selectedSubmission && (
+      {showOwnerSignatureModal && selectedDocument && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={() => {
             setShowOwnerSignatureModal(false)
-            setSelectedSubmission(null)
+            setSelectedDocument(null)
           }}
         >
           <div
@@ -1020,7 +1168,7 @@ export default function DocumentTemplates() {
               onSave={handleOwnerSignAndApprove}
               onCancel={() => {
                 setShowOwnerSignatureModal(false)
-                setSelectedSubmission(null)
+                setSelectedDocument(null)
               }}
               width={450}
               height={180}
