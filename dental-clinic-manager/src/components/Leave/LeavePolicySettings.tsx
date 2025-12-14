@@ -489,8 +489,22 @@ export default function LeavePolicySettings() {
           </div>
         </div>
 
-        {/* 저장 버튼 */}
-        <div className="flex justify-end">
+        {/* 저장 버튼 및 결과 메시지 */}
+        <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+          <div className="flex-1">
+            {success && (
+              <div className="flex items-center text-green-600 text-sm animate-fade-in">
+                <CheckCircle className="w-4 h-4 mr-2" />
+                {success}
+              </div>
+            )}
+            {error && (
+              <div className="flex items-center text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4 mr-2" />
+                {error}
+              </div>
+            )}
+          </div>
           <button
             type="submit"
             disabled={saving}
