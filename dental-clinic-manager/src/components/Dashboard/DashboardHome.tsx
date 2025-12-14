@@ -296,37 +296,51 @@ export default function DashboardHome() {
       console.log('[DashboardHome] Fetching news...')
 
       // 1단계: CORS 프록시를 통해 "많이 본 뉴스" 직접 가져오기
-      const corsProxies = [
-        'https://api.allorigins.win/raw?url=',
-        'https://corsproxy.io/?',
+      // 전체기사 페이지에서 많이 본 뉴스 섹션이 있음
+      const targetPages = [
+        'https://www.dailydental.co.kr/news/articleList.html', // 전체기사 페이지
+        'https://www.dailydental.co.kr', // 메인 페이지
       ]
 
-      for (const proxy of corsProxies) {
-        try {
-          const targetUrl = encodeURIComponent('https://www.dailydental.co.kr')
-          console.log('[DashboardHome] Trying proxy:', proxy)
+      const corsProxies = [
+        { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' },
+        { name: 'corsproxy.io', url: 'https://corsproxy.io/?' },
+        { name: 'cors-anywhere', url: 'https://cors-anywhere.herokuapp.com/' },
+      ]
 
-          const proxyResponse = await fetch(proxy + targetUrl, {
-            headers: {
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      for (const page of targetPages) {
+        for (const proxy of corsProxies) {
+          try {
+            const targetUrl = encodeURIComponent(page)
+            console.log(`[DashboardHome] Trying ${proxy.name} with ${page}`)
+
+            const proxyResponse = await fetch(proxy.url + targetUrl, {
+              headers: {
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              },
+              signal: AbortSignal.timeout(10000) // 10초 타임아웃
+            })
+
+            if (proxyResponse.ok) {
+              const html = await proxyResponse.text()
+              console.log('[DashboardHome] HTML fetched via proxy, size:', (html.length / 1024).toFixed(2), 'KB')
+
+              const parsedNews = parseMostViewedNews(html)
+
+              if (parsedNews.length > 0) {
+                console.log('[DashboardHome] ✅ Proxy 성공:', parsedNews.length, 'articles')
+                setNews(parsedNews.slice(0, 7))
+                return
+              } else {
+                console.warn('[DashboardHome] HTML fetched but no news parsed')
+              }
+            } else {
+              console.warn(`[DashboardHome] ${proxy.name} response not OK:`, proxyResponse.status)
             }
-          })
-
-          if (proxyResponse.ok) {
-            const html = await proxyResponse.text()
-            console.log('[DashboardHome] HTML fetched via proxy, size:', (html.length / 1024).toFixed(2), 'KB')
-
-            const parsedNews = parseMostViewedNews(html)
-
-            if (parsedNews.length > 0) {
-              console.log('[DashboardHome] ✅ Proxy 성공:', parsedNews.length, 'articles')
-              setNews(parsedNews.slice(0, 7)) // 많이 본 뉴스는 보통 7개
-              return
-            }
+          } catch (proxyError) {
+            console.warn(`[DashboardHome] ${proxy.name} failed:`, proxyError instanceof Error ? proxyError.message : proxyError)
+            continue
           }
-        } catch (proxyError) {
-          console.warn('[DashboardHome] Proxy failed:', proxyError instanceof Error ? proxyError.message : proxyError)
-          continue
         }
       }
 
@@ -404,39 +418,60 @@ export default function DashboardHome() {
   const parseMostViewedNews = (html: string): NewsItem[] => {
     const news: NewsItem[] = []
     try {
-      // "많이 본 뉴스" 섹션 찾기
+      console.log('[DashboardHome] Starting HTML parsing, total size:', (html.length / 1024).toFixed(2), 'KB')
+
+      // 1단계: "많이 본 뉴스" 섹션 찾기 - 더 광범위한 패턴
       const mostViewedPatterns = [
-        // 패턴 1: class에 "most", "view", "ranking" 등이 포함된 div
-        /<div[^>]*class="[^"]*(?:most|view|ranking|popular|많이)[^"]*"[^>]*>([\s\S]{0,5000}?)<\/div>/gi,
-        // 패턴 2: 제목에 "많이 본" 포함
-        /<[^>]*>많이\s*본\s*뉴스<[^>]*>([\s\S]{0,5000}?)<\/div>/gi,
+        // 패턴 1: "많이 본" 텍스트가 포함된 섹션
+        /많이\s*본\s*뉴스[\s\S]{0,3000}?(?=<div class=|<section|$)/gi,
+        // 패턴 2: class에 "most", "view", "ranking" 등 포함
+        /<div[^>]*class="[^"]*(?:most|view|ranking|popular|hot|best)[^"]*"[^>]*>[\s\S]{0,5000}?<\/div>/gi,
         // 패턴 3: ul/ol 태그
-        /<[uo]l[^>]*class="[^"]*(?:most|view|ranking)[^"]*"[^>]*>([\s\S]{0,5000}?)<\/[uo]l>/gi,
+        /<[uo]l[^>]*class="[^"]*(?:most|view|ranking|popular|hot|best)[^"]*"[^>]*>[\s\S]{0,5000}?<\/[uo]l>/gi,
+        // 패턴 4: aside나 section 태그
+        /<(?:aside|section)[^>]*class="[^"]*(?:most|view|ranking|popular|hot|best)[^"]*"[^>]*>[\s\S]{0,5000}?<\/(?:aside|section)>/gi,
       ]
 
       let mostViewedSection = ''
+      let patternIndex = -1
 
-      for (const pattern of mostViewedPatterns) {
+      for (let i = 0; i < mostViewedPatterns.length; i++) {
+        const pattern = mostViewedPatterns[i]
         const matches = html.match(pattern)
+
         if (matches && matches.length > 0) {
+          console.log(`[DashboardHome] Pattern ${i + 1} matched:`, matches.length, 'sections')
+
           // 가장 긴 매치를 사용 (가장 완전한 섹션일 가능성)
-          mostViewedSection = matches.reduce((a, b) => a.length > b.length ? a : b, '')
-          if (mostViewedSection.length > 100) {
-            console.log('[DashboardHome] Found most-viewed section:', mostViewedSection.length, 'chars')
+          const longestMatch = matches.reduce((a, b) => a.length > b.length ? a : b, '')
+
+          if (longestMatch.length > 100) {
+            mostViewedSection = longestMatch
+            patternIndex = i
+            console.log(`[DashboardHome] ✓ Using pattern ${i + 1}, section size:`, longestMatch.length, 'chars')
+            console.log('[DashboardHome] Section preview:', longestMatch.substring(0, 200))
             break
           }
         }
       }
 
+      if (!mostViewedSection) {
+        console.warn('[DashboardHome] No most-viewed section found, using full HTML')
+      }
+
       // 섹션을 찾았으면 해당 섹션에서, 못 찾았으면 전체 HTML에서 파싱
       const targetHtml = mostViewedSection || html
 
-      // 기사 링크 패턴
+      // 2단계: 기사 링크 추출
       const articlePattern = /<a[^>]*href="([^"]*(?:\/news\/articleView\.html\?idxno=\d+|articleView\.html\?idxno=\d+))"[^>]*>([\s\S]*?)<\/a>/gi
       const seenLinks = new Set<string>()
+      const allMatches: Array<{ link: string; title: string }> = []
 
       let match
-      while ((match = articlePattern.exec(targetHtml)) !== null && news.length < 10) {
+      let totalFound = 0
+
+      while ((match = articlePattern.exec(targetHtml)) !== null) {
+        totalFound++
         let link = match[1]
         let titleContent = match[2]
 
@@ -463,16 +498,20 @@ export default function DashboardHome() {
           .trim()
 
         // 숫자 제거 (1, [1], (1), 1. 등)
+        const originalTitle = title
         title = title.replace(/^[\[\(]?\d+[\]\)]?[\.\s:：]*/, '').trim()
 
         // 빈 제목이나 너무 짧은/긴 제목 건너뛰기
-        if (!title || title.length < 5 || title.length > 200) continue
+        if (!title || title.length < 5 || title.length > 200) {
+          console.log('[DashboardHome] Skipped (too short/long):', originalTitle)
+          continue
+        }
 
         // 불필요한 키워드 제외
         const excludeKeywords = [
           '로그인', '회원가입', '기사검색', '뉴스', '오피니언', '포토', '전체기사',
           '더보기', '목록', '이전', '다음', '구독', '신청', '많이 본 뉴스', '인기기사',
-          'TOP', 'BEST', '바로가기', '자세히', 'more'
+          'TOP', 'BEST', '바로가기', '자세히', 'more', '주요뉴스', '최신뉴스'
         ]
 
         const isExcluded = excludeKeywords.some(keyword => {
@@ -480,21 +519,41 @@ export default function DashboardHome() {
           return lower === keyword.toLowerCase() || lower.includes(keyword.toLowerCase() + ' ')
         })
 
-        if (isExcluded) continue
+        if (isExcluded) {
+          console.log('[DashboardHome] Skipped (excluded keyword):', title)
+          continue
+        }
 
+        allMatches.push({ link, title })
+
+        if (allMatches.length <= 10) {
+          console.log(`[DashboardHome] ✓ Valid article [${allMatches.length}]: ${title.substring(0, 50)}...`)
+        }
+      }
+
+      console.log(`[DashboardHome] Total article links found: ${totalFound}, valid after filtering: ${allMatches.length}`)
+
+      // 최종 뉴스 배열에 추가
+      for (const item of allMatches.slice(0, 10)) {
         news.push({
-          title,
-          link,
+          title: item.title,
+          link: item.link,
           source: '치의신보',
           date: new Date().toISOString().split('T')[0]
         })
-
-        console.log(`[DashboardHome] Parsed [${news.length}]: ${title.substring(0, 40)}...`)
       }
 
-      console.log('[DashboardHome] Most-viewed parsed:', news.length, 'articles')
+      console.log('[DashboardHome] ✅ Final parsed news count:', news.length)
+
+      if (news.length === 0) {
+        console.error('[DashboardHome] ❌ No news articles parsed! Debug info:')
+        console.log('- HTML size:', (html.length / 1024).toFixed(2), 'KB')
+        console.log('- Section found:', !!mostViewedSection)
+        console.log('- Pattern used:', patternIndex >= 0 ? patternIndex + 1 : 'none')
+        console.log('- Total links found:', totalFound)
+      }
     } catch (error) {
-      console.error('[DashboardHome] Parse error:', error)
+      console.error('[DashboardHome] ❌ Parse error:', error)
     }
     return news
   }
