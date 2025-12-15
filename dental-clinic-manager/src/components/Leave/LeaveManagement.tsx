@@ -116,11 +116,18 @@ const getRoleLabel = (role: string) => {
 
 interface LeaveManagementProps {
   currentUser: UserProfile
+  initialSubtab?: string | null  // URL에서 전달받는 subtab 파라미터
 }
 
-export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
+export default function LeaveManagement({ currentUser, initialSubtab }: LeaveManagementProps) {
   const { hasPermission } = usePermissions()
-  const [activeTab, setActiveTab] = useState<'my' | 'request' | 'approval' | 'all' | 'admin' | 'holiday' | 'policy'>('my')
+
+  // initialSubtab이 'approval'이면 승인 대기 탭으로 시작
+  const getInitialTab = () => {
+    if (initialSubtab === 'approval') return 'approval'
+    return 'my'
+  }
+  const [activeTab, setActiveTab] = useState<'my' | 'request' | 'approval' | 'all' | 'admin' | 'holiday' | 'policy'>(getInitialTab())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [toast, setToast] = useState<{
@@ -145,6 +152,13 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
   const canManageBalance = hasPermission('leave_balance_manage')
   const canManagePolicy = hasPermission('leave_policy_manage')
   const canViewAll = hasPermission('leave_request_view_all')
+
+  // initialSubtab 변경 시 탭 동기화 (알림 클릭으로 URL 변경 시)
+  useEffect(() => {
+    if (initialSubtab === 'approval' && canApprove) {
+      setActiveTab('approval')
+    }
+  }, [initialSubtab, canApprove])
 
   useEffect(() => {
     fetchInitialData(true)
