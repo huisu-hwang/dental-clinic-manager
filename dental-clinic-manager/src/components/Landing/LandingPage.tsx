@@ -204,55 +204,113 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
       </header>
 
       {/* ========== STORY SECTION 1: 후킹 - 명언 ========== */}
-      <section className="relative min-h-screen flex items-center justify-center pt-16">
-        {/* 배경 */}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-50 to-white" />
+      <section className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden bg-slate-950">
+        {/* 배경 그라데이션 오브들 */}
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-30 animate-pulse" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-30 animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-pulse" style={{ animationDelay: '2s' }} />
+
+        {/* 그리드 패턴 오버레이 */}
         <div
-          className="absolute inset-0 opacity-30"
+          className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage: `radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-                             radial-gradient(circle at 75% 75%, rgba(99, 102, 241, 0.1) 0%, transparent 50%)`
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                             linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundSize: '64px 64px'
           }}
         />
 
+        {/* 상단 장식 라인 */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
+
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           {/* 작은 라벨 */}
-          <div className="mb-8">
-            <span className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-full text-sm font-medium">
-              <LightBulbIcon className="w-4 h-4" />
+          <div className="mb-10 animate-fade-in">
+            <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/5 backdrop-blur-sm border border-white/10 text-blue-300 rounded-full text-sm font-medium">
+              <SparklesIcon className="w-4 h-4" />
               병원 경영의 본질
             </span>
           </div>
 
-          {/* 메인 명언 */}
-          <blockquote className="mb-12">
-            <p className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-800 leading-tight tracking-tight">
-              <span className="block mb-4">
-                "좋은 시스템이 지속적인 성장을
+          {/* 메인 명언 - 짧고 임팩트 있게 */}
+          <div className="mb-16">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] tracking-tight">
+              <span className="block mb-2 sm:mb-4 text-slate-400 text-2xl sm:text-3xl md:text-4xl font-medium">
+                "좋은 시스템 없이
               </span>
-              <span className="block mb-4">
-                <span className="text-slate-400">담보할 수는 없지만</span>
+              <span className="block bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent pb-2">
+                지속적인 성장은
               </span>
-              <span className="block">
-                좋은 시스템 <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">없이는</span>
+              <span className="block relative">
+                <span className="relative">
+                  없다
+                  <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 12" fill="none">
+                    <path d="M2 10C50 2 150 2 198 10" stroke="url(#underline-gradient)" strokeWidth="4" strokeLinecap="round"/>
+                    <defs>
+                      <linearGradient id="underline-gradient" x1="0" y1="0" x2="200" y2="0">
+                        <stop offset="0%" stopColor="#3B82F6"/>
+                        <stop offset="50%" stopColor="#6366F1"/>
+                        <stop offset="100%" stopColor="#8B5CF6"/>
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </span>
+                <span className="text-slate-400">"</span>
               </span>
-              <span className="block mt-4">
-                지속적인 성장이 <span className="underline decoration-blue-500 decoration-4 underline-offset-8">불가능</span>하다"
-              </span>
-            </p>
-          </blockquote>
+            </h1>
+          </div>
 
-          {/* 스크롤 안내 */}
-          <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 animate-bounce">
+          {/* 서브 텍스트 */}
+          <p className="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
+            반복되는 업무에서 벗어나<br className="sm:hidden" />
+            <span className="text-white font-medium">본질에 집중</span>하는 병원 운영
+          </p>
+
+          {/* CTA 버튼 */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+            <button
+              onClick={onShowSignup}
+              className="group px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-lg rounded-2xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-1 flex items-center gap-2"
+            >
+              지금 시작하기
+              <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
             <button
               onClick={() => document.getElementById('story-2')?.scrollIntoView({ behavior: 'smooth' })}
-              className="flex flex-col items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors"
+              className="px-8 py-4 text-slate-400 hover:text-white font-medium transition-colors flex items-center gap-2"
             >
-              <span className="text-sm font-medium">스크롤하여 계속</span>
-              <ChevronDownIcon className="w-6 h-6" />
+              자세히 알아보기
+              <ChevronDownIcon className="w-5 h-5" />
             </button>
           </div>
+
+          {/* 하단 장식 요소 */}
+          <div className="flex justify-center items-center gap-8 text-slate-500">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-sm">현직 원장 개발</span>
+            </div>
+            <div className="w-px h-4 bg-slate-700" />
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+              <span className="text-sm">실제 병원 운영 중</span>
+            </div>
+          </div>
         </div>
+
+        {/* 스크롤 안내 */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+          <button
+            onClick={() => document.getElementById('story-2')?.scrollIntoView({ behavior: 'smooth' })}
+            className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <span className="text-xs font-medium tracking-wider uppercase">Scroll</span>
+            <ChevronDownIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* 하단 그라데이션 페이드 */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-900 to-transparent" />
       </section>
 
       {/* ========== STORY SECTION 2: 에너지의 한계 ========== */}
