@@ -331,7 +331,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
             className="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-slide-up"
             style={{ animationDelay: '1.3s' }}
           >
-            반복되는 업무에서 벗어나<br className="sm:hidden" />
+            반복되는 업무에서 벗어나,<br className="sm:hidden" />{' '}
             <span className="text-white font-medium">본질에 집중</span>하는 병원 운영
           </p>
 
