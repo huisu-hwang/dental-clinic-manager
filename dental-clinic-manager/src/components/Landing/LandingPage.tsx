@@ -232,20 +232,83 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
             </span>
           </div>
 
-          {/* 메인 명언 - 짧고 임팩트 있게 */}
+          {/* 메인 명언 - 짧고 임팩트 있게 + 애니메이션 */}
           <div className="mb-16">
+            {/* 인라인 키프레임 정의 */}
+            <style>{`
+              @keyframes fadeSlideUp {
+                from {
+                  opacity: 0;
+                  transform: translateY(30px);
+                }
+                to {
+                  opacity: 1;
+                  transform: translateY(0);
+                }
+              }
+              @keyframes drawLine {
+                from {
+                  stroke-dashoffset: 300;
+                }
+                to {
+                  stroke-dashoffset: 0;
+                }
+              }
+              @keyframes glowPulse {
+                0%, 100% {
+                  text-shadow: 0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(99, 102, 241, 0.3);
+                }
+                50% {
+                  text-shadow: 0 0 30px rgba(99, 102, 241, 0.8), 0 0 60px rgba(99, 102, 241, 0.5);
+                }
+              }
+              .animate-fade-slide-up {
+                animation: fadeSlideUp 0.8s ease-out forwards;
+                opacity: 0;
+              }
+              .animate-draw-line {
+                stroke-dasharray: 300;
+                stroke-dashoffset: 300;
+                animation: drawLine 1s ease-out forwards;
+              }
+              .animate-glow-pulse {
+                animation: glowPulse 2s ease-in-out infinite;
+              }
+            `}</style>
+
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] tracking-tight">
-              <span className="block mb-2 sm:mb-4 text-slate-400 text-2xl sm:text-3xl md:text-4xl font-medium">
+              {/* 첫 번째 줄 - 0.2초 딜레이 */}
+              <span
+                className="block mb-2 sm:mb-4 text-slate-400 text-2xl sm:text-3xl md:text-4xl font-medium animate-fade-slide-up"
+                style={{ animationDelay: '0.2s' }}
+              >
                 "좋은 시스템 없이
               </span>
-              <span className="block bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent pb-2">
+
+              {/* 두 번째 줄 - 0.5초 딜레이 */}
+              <span
+                className="block bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent pb-2 animate-fade-slide-up"
+                style={{ animationDelay: '0.5s' }}
+              >
                 지속적인 성장은
               </span>
-              <span className="block relative">
-                <span className="relative">
+
+              {/* 세 번째 줄 - 0.8초 딜레이 + 글로우 효과 */}
+              <span
+                className="block relative animate-fade-slide-up"
+                style={{ animationDelay: '0.8s' }}
+              >
+                <span className="relative animate-glow-pulse" style={{ animationDelay: '1.6s' }}>
                   없다
                   <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 12" fill="none">
-                    <path d="M2 10C50 2 150 2 198 10" stroke="url(#underline-gradient)" strokeWidth="4" strokeLinecap="round"/>
+                    <path
+                      className="animate-draw-line"
+                      style={{ animationDelay: '1.2s' }}
+                      d="M2 10C50 2 150 2 198 10"
+                      stroke="url(#underline-gradient)"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                    />
                     <defs>
                       <linearGradient id="underline-gradient" x1="0" y1="0" x2="200" y2="0">
                         <stop offset="0%" stopColor="#3B82F6"/>
@@ -255,19 +318,28 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                     </defs>
                   </svg>
                 </span>
-                <span className="text-slate-400">"</span>
+                <span
+                  className="text-slate-400 animate-fade-slide-up inline-block"
+                  style={{ animationDelay: '1s' }}
+                >"</span>
               </span>
             </h1>
           </div>
 
-          {/* 서브 텍스트 */}
-          <p className="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
+          {/* 서브 텍스트 - 1.2초 딜레이 */}
+          <p
+            className="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-slide-up"
+            style={{ animationDelay: '1.3s' }}
+          >
             반복되는 업무에서 벗어나<br className="sm:hidden" />
             <span className="text-white font-medium">본질에 집중</span>하는 병원 운영
           </p>
 
-          {/* CTA 버튼 */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+          {/* CTA 버튼 - 1.5초 딜레이 */}
+          <div
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16 animate-fade-slide-up"
+            style={{ animationDelay: '1.5s' }}
+          >
             <button
               onClick={onShowSignup}
               className="group px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-lg rounded-2xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-1 flex items-center gap-2"
@@ -284,8 +356,11 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
             </button>
           </div>
 
-          {/* 하단 장식 요소 */}
-          <div className="flex justify-center items-center gap-8 text-slate-500">
+          {/* 하단 장식 요소 - 1.8초 딜레이 */}
+          <div
+            className="flex justify-center items-center gap-8 text-slate-500 animate-fade-slide-up"
+            style={{ animationDelay: '1.8s' }}
+          >
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               <span className="text-sm">현직 원장 개발</span>
