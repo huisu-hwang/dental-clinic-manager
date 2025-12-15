@@ -146,7 +146,7 @@ export default function PendingApprovalPage() {
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold">🦷</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">덴탈매니저</h1>
+            <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
           </div>
         </div>
 

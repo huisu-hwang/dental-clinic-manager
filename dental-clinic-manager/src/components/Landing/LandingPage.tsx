@@ -183,7 +183,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
               <div className="w-10 h-10 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl flex items-center justify-center shadow-lg">
                 <span className="text-xl">🦷</span>
               </div>
-              <span className="text-xl font-bold text-slate-800">덴탈매니저</span>
+              <span className="text-xl font-bold text-slate-800">클리닉 매니저</span>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -672,7 +672,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
               <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center">
                 <span className="text-xl">🦷</span>
               </div>
-              <span className="text-xl font-bold text-white">덴탈매니저</span>
+              <span className="text-xl font-bold text-white">클리닉 매니저</span>
             </div>
             <div className="flex items-center gap-4 text-slate-400 text-sm">
               <div className="flex items-center gap-2">
@@ -680,7 +680,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                 <span>안전한 데이터 보호</span>
               </div>
               <span>|</span>
-              <span>© 2024 덴탈매니저</span>
+              <span>© 2024 클리닉 매니저</span>
             </div>
           </div>
         </div>

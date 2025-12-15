@@ -333,7 +333,7 @@ export default function SignupForm({
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold">🦷</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">덴탈매니저</h1>
+            <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
           </div>
           <h2 className="text-3xl font-bold text-slate-800 mb-2">회원가입</h2>
           <p className="text-slate-600">치과 정보를 입력하여 계정을 생성하세요</p>
