@@ -358,17 +358,16 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
 
           {/* 하단 장식 요소 - 1.8초 딜레이 */}
           <div
-            className="flex justify-center items-center gap-8 text-slate-500 animate-fade-slide-up"
+            className="flex justify-center items-center gap-6 sm:gap-10 animate-fade-slide-up"
             style={{ animationDelay: '1.8s' }}
           >
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-sm">현직 원장 개발</span>
+            <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
+              <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse shadow-lg shadow-green-400/50" />
+              <span className="text-sm text-slate-300 font-medium">현직 원장 개발</span>
             </div>
-            <div className="w-px h-4 bg-slate-700" />
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-              <span className="text-sm">실제 병원 운영 중</span>
+            <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
+              <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-400/50" />
+              <span className="text-sm text-slate-300 font-medium">실제 병원 운영 중</span>
             </div>
           </div>
         </div>
