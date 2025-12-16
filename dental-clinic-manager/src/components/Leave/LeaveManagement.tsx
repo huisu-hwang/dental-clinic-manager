@@ -396,6 +396,21 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
       {activeTab === 'all' && canViewAll && (
         <div className="space-y-6">
           <SectionHeader number={1} title="전체 직원 연차 현황" icon={Users} />
+
+          {/* 연도 선택 */}
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              {[1, 0, -1, -2].map(offset => {
+                const year = new Date().getFullYear() + offset
+                return <option key={year} value={year}>{year}년</option>
+              })}
+            </select>
+          </div>
+
           <AllEmployeeBalances year={selectedYear} />
         </div>
       )}
