@@ -569,7 +569,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
               FEATURES
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-              반복 업무를 시스템이 대신합니다
+              반복 업무를 효율적으로 처리하세요
             </h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               치과 운영에 필요한 핵심 기능들을 하나의 플랫폼에서
