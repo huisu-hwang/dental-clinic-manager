@@ -484,8 +484,8 @@ function AllEmployeeBalances() {
             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직원</th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직급</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">총 연차</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">대기</th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">이미 사용</th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용 예정</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">잔여</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-purple-600">경조사</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">무급휴가</th>
