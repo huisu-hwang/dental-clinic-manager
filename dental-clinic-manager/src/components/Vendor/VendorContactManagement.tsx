@@ -28,6 +28,9 @@ import {
   Download
 } from 'lucide-react'
 import type { VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData } from '@/types'
+import PhoneDialSettingsModal from './PhoneDialSettingsModal'
+import { dialPhone, loadPhoneDialSettings } from '@/utils/phoneDialer'
+import type { PhoneDialSettings } from '@/types/phone'
 
 // 섹션 헤더 컴포넌트 (일일보고서 스타일)
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
@@ -113,10 +116,15 @@ export default function VendorContactManagement() {
   const [showContactModal, setShowContactModal] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [showPhoneSettings, setShowPhoneSettings] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
+  // 전화 다이얼 설정
+  const [phoneDialSettings, setPhoneDialSettings] = useState<PhoneDialSettings | null>(null)
+  const [dialingPhone, setDialingPhone] = useState<string | null>(null)
 
   // 선택 상태
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set())
@@ -206,6 +214,12 @@ export default function VendorContactManagement() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // 전화 다이얼 설정 로드
+  useEffect(() => {
+    const settings = loadPhoneDialSettings()
+    setPhoneDialSettings(settings)
+  }, [])
 
   // 검색 필터링된 연락처
   const filteredContacts = useMemo(() => {
@@ -799,9 +813,21 @@ export default function VendorContactManagement() {
     setShowCategoryModal(true)
   }
 
-  // 전화 걸기 (모바일)
-  const makePhoneCall = (phone: string) => {
-    window.location.href = `tel:${phone.replace(/[^0-9+]/g, '')}`
+  // 전화 걸기
+  const makePhoneCall = async (phone: string) => {
+    setDialingPhone(phone)
+    try {
+      const result = await dialPhone(phone, phoneDialSettings || undefined)
+      if (result.success) {
+        showToast(result.message, 'success')
+      } else {
+        showToast(result.message, 'error')
+      }
+    } catch (error) {
+      showToast('전화 연결에 실패했습니다.', 'error')
+    } finally {
+      setDialingPhone(null)
+    }
   }
 
   // 전화번호 포맷팅
@@ -871,6 +897,13 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
               {contacts.length}개 업체
             </span>
+            <button
+              onClick={() => setShowPhoneSettings(true)}
+              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+              title="전화 다이얼 설정"
+            >
+              <Settings className="w-4 h-4 text-white" />
+            </button>
           </div>
         </div>
       </div>
@@ -2102,6 +2135,13 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
         type={toast.type}
         show={toast.show}
         onClose={() => setToast(prev => ({ ...prev, show: false }))}
+      />
+
+      {/* 전화 다이얼 설정 모달 */}
+      <PhoneDialSettingsModal
+        isOpen={showPhoneSettings}
+        onClose={() => setShowPhoneSettings(false)}
+        onSave={(settings) => setPhoneDialSettings(settings)}
       />
     </div>
   )
