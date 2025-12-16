@@ -49,18 +49,26 @@ export function validateMenuSettings(settings: MenuItemSetting[]): boolean {
 // 메뉴 설정 정규화 (새로운 메뉴가 추가되었을 때 기본값으로 병합)
 export function normalizeMenuSettings(settings: MenuItemSetting[]): MenuItemSetting[] {
   const existingIds = new Set(settings.map(s => s.id))
-  const maxOrder = Math.max(...settings.map(s => s.order), -1)
 
-  // 기존 설정에 없는 새 메뉴 추가
+  // 더 이상 존재하지 않는 메뉴 제거
+  let validSettings = settings.filter(s => VALID_MENU_IDS.includes(s.id))
+
+  // 'home' 메뉴가 없으면 맨 앞에 추가하고 기존 메뉴 order를 1씩 증가
+  if (!existingIds.has('home')) {
+    validSettings = validSettings.map(s => ({ ...s, order: s.order + 1 }))
+    const homeItem = DEFAULT_MENU_ITEMS.find(item => item.id === 'home')!
+    validSettings.unshift({ ...homeItem, order: 0 })
+  }
+
+  // 나머지 새 메뉴는 맨 뒤에 추가
+  const updatedIds = new Set(validSettings.map(s => s.id))
+  const maxOrder = Math.max(...validSettings.map(s => s.order), -1)
   const newItems = DEFAULT_MENU_ITEMS
-    .filter(item => !existingIds.has(item.id))
+    .filter(item => !updatedIds.has(item.id))
     .map((item, index) => ({
       ...item,
       order: maxOrder + index + 1
     }))
-
-  // 더 이상 존재하지 않는 메뉴 제거
-  const validSettings = settings.filter(s => VALID_MENU_IDS.includes(s.id))
 
   return [...validSettings, ...newItems].sort((a, b) => a.order - b.order)
 }
