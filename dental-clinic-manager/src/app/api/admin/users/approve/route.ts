@@ -106,10 +106,10 @@ export async function POST(request: Request) {
     if (resendApiKey) {
       try {
         const resend = new Resend(resendApiKey)
-        const clinicName = (userData.clinics as any)?.name || '덴탈매니저'
+        const clinicName = (userData.clinics as any)?.name || '클리닉 매니저'
 
         await resend.emails.send({
-          from: 'DentalManager <noreply@hi-clinic.co.kr>',
+          from: 'ClinicManager <noreply@hi-clinic.co.kr>',
           to: [userData.email],
           subject: `[${clinicName}] 회원가입 승인 완료`,
           html: `
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
               <h2 style="color: #2563eb;">회원가입 승인 완료</h2>
               <p>안녕하세요, <strong>${userData.name}</strong>님!</p>
               <p><strong>${clinicName}</strong>의 회원가입이 승인되었습니다.</p>
-              <p>이제 덴탈매니저의 모든 기능을 사용하실 수 있습니다.</p>
+              <p>이제 클리닉 매니저의 모든 기능을 사용하실 수 있습니다.</p>
               <div style="margin: 30px 0;">
                 <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://hi-clinic.co.kr'}"
                    style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
