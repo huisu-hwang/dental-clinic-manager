@@ -281,7 +281,7 @@ export default function LeaveManagement({ currentUser }: LeaveManagementProps) {
               onChange={(e) => setSelectedYear(Number(e.target.value))}
               className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
             >
-              {[0, -1, -2].map(offset => {
+              {[1, 0, -1, -2].map(offset => {
                 const year = new Date().getFullYear() + offset
                 return <option key={year} value={year}>{year}년</option>
               })}
