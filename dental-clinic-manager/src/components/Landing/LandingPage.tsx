@@ -326,19 +326,43 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
             </h1>
           </div>
 
-          {/* 서브 텍스트 - 1.2초 딜레이 */}
+          {/* 확장된 설명 문구 - 1.1초부터 순차적 */}
+          <div
+            className="max-w-3xl mx-auto mb-12 animate-fade-slide-up"
+            style={{ animationDelay: '1.1s' }}
+          >
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-white/10">
+              <p className="text-slate-300 text-base sm:text-lg leading-relaxed mb-4">
+                좋은 시스템이 병원의 성장을 <span className="text-white font-medium">담보해주지는 않습니다.</span>
+                <br className="hidden sm:block" />
+                하지만 좋은 시스템 없이 <span className="text-blue-400 font-medium">지속적인 성장은 불가능</span>하다고 생각합니다.
+              </p>
+              <p
+                className="text-slate-400 text-base sm:text-lg leading-relaxed animate-fade-slide-up"
+                style={{ animationDelay: '1.4s' }}
+              >
+                제가 생각하는 좋은 시스템이란,
+                <br />
+                <span className="text-slate-200">반복 업무에 쏟는 시간과 에너지를 줄이고</span>,
+                <br />
+                <span className="text-slate-200">법적 리스크까지 체계적으로 관리</span>해주는 것입니다.
+              </p>
+            </div>
+          </div>
+
+          {/* 서브 텍스트 - 1.6초 딜레이 */}
           <p
             className="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-slide-up"
-            style={{ animationDelay: '1.3s' }}
+            style={{ animationDelay: '1.7s' }}
           >
             반복되는 업무에서 벗어나,<br className="sm:hidden" />{' '}
             <span className="text-white font-medium">본질에 집중</span>하는 병원 운영
           </p>
 
-          {/* CTA 버튼 - 1.5초 딜레이 */}
+          {/* CTA 버튼 - 1.9초 딜레이 */}
           <div
             className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16 animate-fade-slide-up"
-            style={{ animationDelay: '1.5s' }}
+            style={{ animationDelay: '2s' }}
           >
             <button
               onClick={onShowSignup}
@@ -356,10 +380,10 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
             </button>
           </div>
 
-          {/* 하단 장식 요소 - 1.8초 딜레이 */}
+          {/* 하단 장식 요소 - 2.2초 딜레이 */}
           <div
             className="flex justify-center items-center gap-6 sm:gap-10 animate-fade-slide-up"
-            style={{ animationDelay: '1.8s' }}
+            style={{ animationDelay: '2.3s' }}
           >
             <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
               <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse shadow-lg shadow-green-400/50" />
