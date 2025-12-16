@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Settings, Users, Building2, Building, FileText, BarChart3, Cog, Calendar } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -29,9 +29,14 @@ const subTabs = [
 
 export default function ManagementPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, logout, updateUser, loading: authLoading } = useAuth()
   const { hasPermission, permissions } = usePermissions()
-  const [activeTab, setActiveTab] = useState('staff')
+
+  // URL 파라미터에서 탭 정보 읽기 (연차 승인 알림 클릭 시 바로 이동을 위해)
+  const tabFromUrl = searchParams.get('tab')
+  const subtabFromUrl = searchParams.get('subtab')
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'staff')
   const [showProfile, setShowProfile] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [permissionsLoaded, setPermissionsLoaded] = useState(false)
@@ -44,6 +49,13 @@ export default function ManagementPage() {
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ show: true, message, type })
   }
+
+  // URL 파라미터 변경 시 activeTab 동기화
+  useEffect(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl)
+    }
+  }, [tabFromUrl])
 
   // 모바일 메뉴가 열려 있을 때 스크롤 방지
   useEffect(() => {
@@ -274,7 +286,7 @@ export default function ManagementPage() {
 
                 {/* Leave Management Tab */}
                 {activeTab === 'leave' && (
-                  <LeaveManagement currentUser={user} />
+                  <LeaveManagement currentUser={user} initialSubtab={subtabFromUrl} />
                 )}
 
                 {/* Analytics Tab */}
