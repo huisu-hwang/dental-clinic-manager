@@ -9,13 +9,15 @@ import {
   ShieldCheckIcon,
   ClockIcon,
   BellIcon,
-  Bars3BottomLeftIcon
+  Bars3BottomLeftIcon,
+  PhoneIcon
 } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
 import type { UserProfile } from '@/contexts/AuthContext'
 import ClinicHoursSettings from './ClinicHoursSettings'
 import NotificationSettings from './NotificationSettings'
 import MenuSettings from './MenuSettings'
+import PhoneDialSettingsInline from './PhoneDialSettingsInline'
 
 // Clinic 타입을 이 파일에 직접 정의
 interface Clinic {
@@ -41,7 +43,7 @@ interface ClinicSettingsProps {
 }
 
 export default function ClinicSettings({ currentUser }: ClinicSettingsProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'hours' | 'notifications' | 'menu'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'hours' | 'notifications' | 'phone' | 'menu'>('info')
   const [clinic, setClinic] = useState<Clinic | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -240,6 +242,17 @@ const [formData, setFormData] = useState<ClinicFormData>({
           >
             <BellIcon className="h-5 w-5" />
             알림 관리
+          </button>
+          <button
+            onClick={() => setActiveTab('phone')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
+              activeTab === 'phone'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <PhoneIcon className="h-5 w-5" />
+            전화 설정
           </button>
           {/* 메뉴 설정 탭 - 대표 원장만 표시 */}
           {isOwner && (
@@ -550,6 +563,11 @@ const [formData, setFormData] = useState<ClinicFormData>({
               clinicId={currentUser.clinic_id}
             />
           )}
+        </>
+      ) : activeTab === 'phone' ? (
+        <>
+          {/* 전화 설정 탭 */}
+          <PhoneDialSettingsInline />
         </>
       ) : activeTab === 'menu' && isOwner ? (
         <>
