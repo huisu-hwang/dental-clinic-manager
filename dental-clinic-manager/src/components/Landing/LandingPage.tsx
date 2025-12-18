@@ -341,11 +341,13 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                 className="text-slate-400 text-base sm:text-lg leading-relaxed animate-fade-slide-up"
                 style={{ animationDelay: '1.4s' }}
               >
-                제가 생각하는 좋은 시스템이란,
+                제가 생각하는 좋은 병원 시스템이란,
                 <br />
                 <span className="text-slate-200">반복 업무에 쏟는 시간과 에너지를 줄이고</span>,
                 <br />
-                <span className="text-slate-200">법적 리스크까지 체계적으로 관리</span>해주는 것입니다.
+                <span className="text-slate-200">체계적인 노무 관리로 리스크를 최소화</span>하여
+                <br />
+                <span className="text-slate-200">성장의 발판</span>을 마련해주는 것입니다.
               </p>
             </div>
           </div>
@@ -569,7 +571,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
               FEATURES
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-              반복 업무를 시스템이 대신합니다
+              반복 업무를 효율적으로 처리하세요
             </h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               치과 운영에 필요한 핵심 기능들을 하나의 플랫폼에서
