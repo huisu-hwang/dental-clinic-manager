@@ -195,6 +195,79 @@ export function canUserSeeNotification(notification: ClinicNotification, userRol
   return notification.target_roles.includes(userRole as TargetRole)
 }
 
+// 알림이 현재 주기에 해제되었는지 확인하는 유틸리티 함수
+// 해제된 경우 true 반환 (알림을 숨겨야 함)
+export function isNotificationDismissedForCurrentCycle(
+  notification: ClinicNotification,
+  dismissedAt: string | null | undefined
+): boolean {
+  if (!dismissedAt) return false
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const dismissedDate = new Date(dismissedAt)
+  dismissedDate.setHours(0, 0, 0, 0)
+
+  switch (notification.recurrence_type) {
+    case 'none':
+      // 반복 없음: 한 번 해제하면 영구적으로 숨김
+      return true
+
+    case 'daily':
+      // 매일 반복: 오늘 해제했으면 숨김 (내일은 다시 표시)
+      return dismissedAt === today.toISOString().split('T')[0]
+
+    case 'weekly': {
+      // 매주 반복: 해제 날짜가 현재 주기 내에 있으면 숨김
+      const daysOfWeek = notification.recurrence_config?.days_of_week || [0, 1, 2, 3, 4, 5, 6]
+
+      // 현재 주기의 시작일 계산 (가장 최근 표시일)
+      const currentCycleStart = new Date(today)
+      while (!daysOfWeek.includes(currentCycleStart.getDay() as DayOfWeek)) {
+        currentCycleStart.setDate(currentCycleStart.getDate() - 1)
+      }
+      currentCycleStart.setHours(0, 0, 0, 0)
+
+      return dismissedDate >= currentCycleStart
+    }
+
+    case 'monthly': {
+      // 매월 반복: 해제 날짜가 현재 주기 내에 있으면 숨김
+      const dayOfMonth = notification.recurrence_config?.day_of_month || 1
+      const currentMonthShowDate = new Date(today.getFullYear(), today.getMonth(), dayOfMonth)
+
+      // 오늘이 표시일 이전이면 이전 달의 표시일이 현재 주기 시작
+      if (today.getDate() < dayOfMonth) {
+        currentMonthShowDate.setMonth(currentMonthShowDate.getMonth() - 1)
+      }
+      currentMonthShowDate.setHours(0, 0, 0, 0)
+
+      return dismissedDate >= currentMonthShowDate
+    }
+
+    case 'yearly': {
+      // 매년 반복: 해제 날짜가 현재 주기 내에 있으면 숨김
+      const month = notification.recurrence_config?.month || 1
+      const day = notification.recurrence_config?.day || 1
+      const currentYearShowDate = new Date(today.getFullYear(), month - 1, day)
+
+      // 오늘이 표시일 이전이면 작년의 표시일이 현재 주기 시작
+      const todayMonthDay = today.getMonth() * 100 + today.getDate()
+      const showMonthDay = (month - 1) * 100 + day
+      if (todayMonthDay < showMonthDay) {
+        currentYearShowDate.setFullYear(currentYearShowDate.getFullYear() - 1)
+      }
+      currentYearShowDate.setHours(0, 0, 0, 0)
+
+      return dismissedDate >= currentYearShowDate
+    }
+
+    default:
+      return false
+  }
+}
+
 // 기본 폼 데이터 생성
 export function getDefaultNotificationFormData(): NotificationFormData {
   const today = new Date().toISOString().split('T')[0]
