@@ -26,14 +26,15 @@ export const DEFAULT_MENU_ITEMS: MenuItemSetting[] = [
   { id: 'daily-input', label: '일일보고서', visible: true, order: 1 },
   { id: 'attendance', label: '출근 관리', visible: true, order: 2 },
   { id: 'leave', label: '연차 관리', visible: true, order: 3 },
-  { id: 'stats', label: '통계', visible: true, order: 4 },
-  { id: 'logs', label: '상세 기록', visible: true, order: 5 },
-  { id: 'protocols', label: '진료 프로토콜', visible: true, order: 6 },
-  { id: 'vendors', label: '업체 연락처', visible: true, order: 7 },
-  { id: 'contracts', label: '근로계약서', visible: true, order: 8 },
-  { id: 'documents', label: '문서 양식', visible: true, order: 9 },
-  { id: 'settings', label: '재고 관리', visible: true, order: 10 },
-  { id: 'guide', label: '사용 안내', visible: true, order: 11 },
+  { id: 'bulletin', label: '병원 게시판', visible: true, order: 4 },
+  { id: 'stats', label: '통계', visible: true, order: 5 },
+  { id: 'logs', label: '상세 기록', visible: true, order: 6 },
+  { id: 'protocols', label: '진료 프로토콜', visible: true, order: 7 },
+  { id: 'vendors', label: '업체 연락처', visible: true, order: 8 },
+  { id: 'contracts', label: '근로계약서', visible: true, order: 9 },
+  { id: 'documents', label: '문서 양식', visible: true, order: 10 },
+  { id: 'settings', label: '재고 관리', visible: true, order: 11 },
+  { id: 'guide', label: '사용 안내', visible: true, order: 12 },
 ]
 
 // 메뉴 ID 목록 (유효성 검사용)
