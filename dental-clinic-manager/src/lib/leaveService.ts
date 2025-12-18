@@ -483,6 +483,7 @@ export const leaveService = {
    * 전체 직원의 연차 현황 조회
    * - 모든 직원의 연차를 최신 상태로 재계산하여 반환 (입사일 기준 연차 기간)
    * - 종류별 사용/예정 일수도 함께 반환
+   * - 각 직원별 현재 연차 기간 데이터만 조회 (중복 방지)
    */
   async getAllEmployeeBalances(year: number = new Date().getFullYear()): Promise<{ data: (EmployeeLeaveBalance & { user_name?: string; user_role?: string; used_by_type?: Record<string, number>; pending_by_type?: Record<string, number> })[]; error: string | null }> {
     try {
@@ -495,44 +496,51 @@ export const leaveService = {
       // 모든 활성 직원 조회 (입사일 포함)
       const { data: allUsers, error: usersError } = await (supabase as any)
         .from('users')
-        .select('id, hire_date, created_at')
+        .select('id, name, role, hire_date, created_at')
         .eq('clinic_id', clinicId)
         .eq('status', 'active')
 
       if (usersError) throw usersError
 
-      // 모든 직원의 연차 재계산 (입사일 기준)
-      if (allUsers && allUsers.length > 0) {
-        await Promise.all(allUsers.map((user: any) => this.initializeBalance(user.id, year)))
+      if (!allUsers || allUsers.length === 0) {
+        return { data: [], error: null }
       }
 
-      // 최신 데이터 조회 (leave_period_start, leave_period_end 포함)
-      const { data: balances, error } = await (supabase as any)
-        .from('employee_leave_balances')
-        .select(`
-          *,
-          users:user_id (name, role, hire_date, created_at)
-        `)
-        .eq('clinic_id', clinicId)
-        .order('remaining_days', { ascending: false })
+      // 각 직원의 현재 연차 기간 year 계산
+      const userPeriodYears: Record<string, number> = {}
+      for (const user of allUsers) {
+        const hireDate = user.hire_date ? new Date(user.hire_date) : new Date(user.created_at)
+        const leavePeriod = calculateLeavePeriod(hireDate)
+        userPeriodYears[user.id] = new Date(leavePeriod.startDate).getFullYear()
+      }
 
-      if (error) throw error
+      // 모든 직원의 연차 재계산 (입사일 기준)
+      await Promise.all(allUsers.map((user: any) => this.initializeBalance(user.id, year)))
 
       const today = new Date().toISOString().split('T')[0]
 
-      // 각 직원의 종류별 사용/예정 일수 계산 (입사일 기준 연차 기간)
-      const result = await Promise.all((balances || []).map(async (item: any) => {
-        // 입사일 기준 연차 기간 계산
-        const hireDate = item.users?.hire_date || item.users?.created_at || item.hire_date
-        const leavePeriod = hireDate
-          ? calculateLeavePeriod(new Date(hireDate))
-          : { startDate: `${year}-01-01`, endDate: `${year}-12-31` }
+      // 각 직원별로 현재 연차 기간 데이터만 조회
+      const result = await Promise.all(allUsers.map(async (user: any) => {
+        const periodYear = userPeriodYears[user.id]
+        const hireDate = user.hire_date ? new Date(user.hire_date) : new Date(user.created_at)
+        const leavePeriod = calculateLeavePeriod(hireDate)
+
+        // 해당 직원의 현재 연차 기간 balance 조회
+        const { data: balance } = await (supabase as any)
+          .from('employee_leave_balances')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('clinic_id', clinicId)
+          .eq('year', periodYear)
+          .single()
+
+        if (!balance) return null
 
         // 해당 직원의 승인된 연차 내역 조회 (입사일 기준 연차 기간 내)
         const { data: approvedRequests } = await (supabase as any)
           .from('leave_requests')
           .select('total_days, start_date, leave_types!inner(code, name, deduct_from_annual)')
-          .eq('user_id', item.user_id)
+          .eq('user_id', user.id)
           .eq('status', 'approved')
           .gte('start_date', leavePeriod.startDate)
           .lte('start_date', leavePeriod.endDate)
@@ -556,18 +564,22 @@ export const leaveService = {
         }
 
         return {
-          ...item,
-          user_name: item.users?.name,
-          user_role: item.users?.role,
+          ...balance,
+          user_name: user.name,
+          user_role: user.role,
           used_by_type: usedByType,
           pending_by_type: pendingByType,
           leave_period_start: leavePeriod.startDate,
           leave_period_end: leavePeriod.endDate,
-          users: undefined,
         }
       }))
 
-      return { data: result, error: null }
+      // null 제거 및 잔여 연차 내림차순 정렬
+      const filteredResult = result
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+        .sort((a, b) => b.remaining_days - a.remaining_days)
+
+      return { data: filteredResult, error: null }
     } catch (error) {
       console.error('[leaveService.getAllEmployeeBalances] Error:', error)
       return { data: [], error: extractErrorMessage(error) }
