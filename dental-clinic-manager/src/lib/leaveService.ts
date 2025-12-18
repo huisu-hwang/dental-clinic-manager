@@ -425,8 +425,9 @@ export const leaveService = {
   /**
    * 전체 직원의 연차 현황 조회
    * - 모든 직원의 연차를 최신 상태로 재계산하여 반환
+   * - 종류별 사용/예정 일수도 함께 반환
    */
-  async getAllEmployeeBalances(year: number = new Date().getFullYear()): Promise<{ data: (EmployeeLeaveBalance & { user_name?: string; user_role?: string })[]; error: string | null }> {
+  async getAllEmployeeBalances(year: number = new Date().getFullYear()): Promise<{ data: (EmployeeLeaveBalance & { user_name?: string; user_role?: string; used_by_type?: Record<string, number>; pending_by_type?: Record<string, number> })[]; error: string | null }> {
     try {
       const supabase = await ensureConnection()
       if (!supabase) throw new Error('Database connection failed')
@@ -461,12 +462,45 @@ export const leaveService = {
 
       if (error) throw error
 
-      // 사용자 정보 병합
-      const result = (balances || []).map((item: any) => ({
-        ...item,
-        user_name: item.users?.name,
-        user_role: item.users?.role,
-        users: undefined,
+      const today = new Date().toISOString().split('T')[0]
+
+      // 각 직원의 종류별 사용/예정 일수 계산
+      const result = await Promise.all((balances || []).map(async (item: any) => {
+        // 해당 직원의 승인된 연차 내역 조회
+        const { data: approvedRequests } = await (supabase as any)
+          .from('leave_requests')
+          .select('total_days, start_date, leave_types!inner(code, name, deduct_from_annual)')
+          .eq('user_id', item.user_id)
+          .eq('status', 'approved')
+          .gte('start_date', `${year}-01-01`)
+          .lte('start_date', `${year}-12-31`)
+
+        // 종류별 사용 완료 일수 (오늘 이전 시작)
+        const usedByType: Record<string, number> = {}
+        // 종류별 사용 예정 일수 (오늘 이후 시작)
+        const pendingByType: Record<string, number> = {}
+
+        for (const req of (approvedRequests || [])) {
+          const typeCode = req.leave_types?.code || 'unknown'
+          const days = req.total_days || 0
+
+          if (req.start_date <= today) {
+            // 사용 완료
+            usedByType[typeCode] = (usedByType[typeCode] || 0) + days
+          } else {
+            // 사용 예정
+            pendingByType[typeCode] = (pendingByType[typeCode] || 0) + days
+          }
+        }
+
+        return {
+          ...item,
+          user_name: item.users?.name,
+          user_role: item.users?.role,
+          used_by_type: usedByType,
+          pending_by_type: pendingByType,
+          users: undefined,
+        }
       }))
 
       return { data: result, error: null }

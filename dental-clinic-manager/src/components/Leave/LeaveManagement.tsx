@@ -18,8 +18,8 @@ import {
 import { UserProfile } from '@/contexts/AuthContext'
 import { leaveService, calculateAnnualLeaveDays, calculateYearsOfService } from '@/lib/leaveService'
 import { usePermissions } from '@/hooks/usePermissions'
-import type { EmployeeLeaveBalance, LeaveType } from '@/types/leave'
-import { LEAVE_STATUS_NAMES, LEAVE_STATUS_COLORS } from '@/types/leave'
+import type { EmployeeLeaveBalance, LeaveType, LeaveTypeCode } from '@/types/leave'
+import { LEAVE_STATUS_NAMES, LEAVE_STATUS_COLORS, LEAVE_TYPE_NAMES } from '@/types/leave'
 import LeaveRequestForm from './LeaveRequestForm'
 import LeaveApprovalList from './LeaveApprovalList'
 import LeaveAdminInput from './LeaveAdminInput'
@@ -433,6 +433,63 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
   )
 }
 
+// 연차 종류별 색상 매핑
+const LEAVE_TYPE_COLORS: Record<string, string> = {
+  annual: '#3B82F6',      // 파랑 - 연차
+  half_day: '#10B981',    // 초록 - 반차
+  sick: '#F59E0B',        // 주황 - 병가
+  family_event: '#8B5CF6', // 보라 - 경조사
+  compensatory: '#06B6D4', // 청록 - 대체휴가
+  unpaid: '#6B7280',      // 회색 - 무급휴가
+}
+
+// 연차 차감 대상 종류 (총 연차에서 차감되는 종류)
+const DEDUCT_LEAVE_TYPES: LeaveTypeCode[] = ['annual', 'half_day', 'sick']
+// 연차 비차감 종류 (경조사, 대체휴가)
+const NON_DEDUCT_LEAVE_TYPES: LeaveTypeCode[] = ['family_event', 'compensatory']
+
+// 종류별 사용 내역 표시 컴포넌트
+const LeaveByTypeCell = ({
+  byType,
+  filterTypes,
+  emptyText = '-'
+}: {
+  byType?: Record<string, number>
+  filterTypes?: LeaveTypeCode[]
+  emptyText?: string
+}) => {
+  if (!byType || Object.keys(byType).length === 0) {
+    return <span className="text-slate-400">{emptyText}</span>
+  }
+
+  // 필터가 있으면 해당 종류만 표시
+  const filteredEntries = Object.entries(byType).filter(([code, days]) => {
+    if (days <= 0) return false
+    if (filterTypes) return filterTypes.includes(code as LeaveTypeCode)
+    return true
+  })
+
+  if (filteredEntries.length === 0) {
+    return <span className="text-slate-400">{emptyText}</span>
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      {filteredEntries.map(([code, days]) => (
+        <div
+          key={code}
+          className="flex items-center gap-1 text-xs"
+          style={{ color: LEAVE_TYPE_COLORS[code] || '#64748b' }}
+        >
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: LEAVE_TYPE_COLORS[code] || '#64748b' }}></span>
+          <span>{LEAVE_TYPE_NAMES[code as LeaveTypeCode] || code}</span>
+          <span className="font-medium">{days}일</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // 전체 직원 연차 현황 컴포넌트
 function AllEmployeeBalances() {
   const [balances, setBalances] = useState<any[]>([])
@@ -482,6 +539,18 @@ function AllEmployeeBalances() {
     return startDate <= today ? '사용 완료' : '사용 예정'
   }
 
+  // 종류별 합계 계산 (차감 대상만)
+  const calculateDeductTotal = (byType?: Record<string, number>) => {
+    if (!byType) return 0
+    return DEDUCT_LEAVE_TYPES.reduce((sum, code) => sum + (byType[code] || 0), 0)
+  }
+
+  // 종류별 합계 계산 (비차감 대상만)
+  const calculateNonDeductTotal = (byType?: Record<string, number>) => {
+    if (!byType) return 0
+    return NON_DEDUCT_LEAVE_TYPES.reduce((sum, code) => sum + (byType[code] || 0), 0)
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -498,10 +567,19 @@ function AllEmployeeBalances() {
             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직원</th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직급</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">총 연차</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">이미 사용</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용 예정</th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">
+              <div>이미 사용</div>
+              <div className="text-[10px] text-slate-400 font-normal">(연차/반차/병가)</div>
+            </th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">
+              <div>사용 예정</div>
+              <div className="text-[10px] text-slate-400 font-normal">(연차/반차/병가)</div>
+            </th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">잔여</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-purple-600">경조사</th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-purple-600">
+              <div>경조사/대체휴가</div>
+              <div className="text-[10px] text-purple-400 font-normal">(연차 비차감)</div>
+            </th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">무급휴가</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용률</th>
           </tr>
@@ -512,6 +590,16 @@ function AllEmployeeBalances() {
               ? Math.round((item.used_days / item.total_days) * 100)
               : 0
             const isSelected = selectedUserId === item.user_id
+
+            // 이미 사용 (차감 대상만)
+            const usedDeductTotal = calculateDeductTotal(item.used_by_type)
+            // 사용 예정 (차감 대상만)
+            const pendingDeductTotal = calculateDeductTotal(item.pending_by_type)
+            // 경조사/대체휴가 (이미 사용 + 사용 예정)
+            const usedNonDeductTotal = calculateNonDeductTotal(item.used_by_type)
+            const pendingNonDeductTotal = calculateNonDeductTotal(item.pending_by_type)
+            const totalNonDeduct = usedNonDeductTotal + pendingNonDeductTotal
+
             return (
               <React.Fragment key={item.id}>
                 <tr
@@ -533,14 +621,44 @@ function AllEmployeeBalances() {
                       {getRoleLabel(item.user_role)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">{item.total_days}일</td>
-                  <td className="px-4 py-3 text-center text-green-600">{item.used_days}일</td>
-                  <td className="px-4 py-3 text-center text-yellow-600">{item.pending_days}일</td>
+                  <td className="px-4 py-3 text-center font-medium">{item.total_days}일</td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="font-medium text-green-600">{usedDeductTotal}일</span>
+                      <LeaveByTypeCell byType={item.used_by_type} filterTypes={DEDUCT_LEAVE_TYPES} emptyText="" />
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="font-medium text-yellow-600">{pendingDeductTotal}일</span>
+                      <LeaveByTypeCell byType={item.pending_by_type} filterTypes={DEDUCT_LEAVE_TYPES} emptyText="" />
+                    </div>
+                  </td>
                   <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
                     {item.remaining_days}일
                   </td>
-                  <td className="px-4 py-3 text-center text-purple-600">
-                    {(item.family_event_days ?? 0) > 0 ? `${item.family_event_days}일` : '-'}
+                  <td className="px-4 py-3 text-center">
+                    {totalNonDeduct > 0 ? (
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="font-medium text-purple-600">{totalNonDeduct}일</span>
+                        <div className="flex flex-col gap-0.5">
+                          {/* 이미 사용 (경조사/대체휴가) */}
+                          {usedNonDeductTotal > 0 && (
+                            <div className="text-[10px] text-green-600">
+                              사용: <LeaveByTypeCell byType={item.used_by_type} filterTypes={NON_DEDUCT_LEAVE_TYPES} emptyText="" />
+                            </div>
+                          )}
+                          {/* 사용 예정 (경조사/대체휴가) */}
+                          {pendingNonDeductTotal > 0 && (
+                            <div className="text-[10px] text-yellow-600">
+                              예정: <LeaveByTypeCell byType={item.pending_by_type} filterTypes={NON_DEDUCT_LEAVE_TYPES} emptyText="" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center text-gray-600">
                     {(item.unpaid_days ?? 0) > 0 ? `${item.unpaid_days}일` : '-'}

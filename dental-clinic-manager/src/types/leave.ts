@@ -197,12 +197,16 @@ export interface EmployeeLeaveBalance {
   // 연차 현황
   total_days: number; // 총 부여 연차 일수
   used_days: number; // 사용한 연차 일수
-  pending_days: number; // 승인 대기 중인 연차 일수
+  pending_days: number; // 승인 대기 중인 연차 일수 (사용 예정)
   remaining_days: number; // 잔여 연차 일수
 
   // 특별휴가 사용 현황 (연차와 별도 관리)
   family_event_days?: number; // 경조사 휴가 사용 일수
   unpaid_days?: number; // 무급휴가 사용 일수
+
+  // 종류별 사용 내역 (UI 표시용)
+  used_by_type?: Record<LeaveTypeCode, number>; // 종류별 사용 완료 일수
+  pending_by_type?: Record<LeaveTypeCode, number>; // 종류별 사용 예정 일수
 
   // 이월 연차
   carryover_days: number; // 이월 연차 일수
