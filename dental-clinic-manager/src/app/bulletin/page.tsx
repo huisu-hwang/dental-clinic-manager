@@ -49,7 +49,7 @@ export default function BulletinPage() {
   }, [authLoading, user, router])
 
   // 관리자 권한 확인
-  const isAdmin = user?.role && ['master_admin', 'owner', 'vice_director', 'manager', 'team_leader'].includes(user.role)
+  const isAdmin = !!(user?.role && ['master_admin', 'owner', 'vice_director', 'manager', 'team_leader'].includes(user.role))
 
   if (authLoading) {
     return (
