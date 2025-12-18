@@ -632,13 +632,13 @@ function AllEmployeeBalances() {
                   <td className="px-4 py-3 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <span className="font-medium text-green-600">{usedDeductTotal}일</span>
-                      <LeaveByTypeCell byType={item.used_by_type} filterTypes={DEDUCT_LEAVE_TYPES} emptyText="" />
+                      <LeaveByTypeCell byType={item.used_by_type} emptyText="" />
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <span className="font-medium text-yellow-600">{pendingDeductTotal}일</span>
-                      <LeaveByTypeCell byType={item.pending_by_type} filterTypes={DEDUCT_LEAVE_TYPES} emptyText="" />
+                      <LeaveByTypeCell byType={item.pending_by_type} emptyText="" />
                     </div>
                   </td>
                   <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
