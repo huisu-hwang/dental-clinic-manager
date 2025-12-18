@@ -145,7 +145,6 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
   const [myRequests, setMyRequests] = useState<any[]>([])
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
   const [pendingCount, setPendingCount] = useState(0)
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
   // 권한 확인
   const canApprove = hasPermission('leave_approve_step1') || hasPermission('leave_approve_step2') || hasPermission('leave_approve_final')
@@ -162,7 +161,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
 
   useEffect(() => {
     fetchInitialData(true)
-  }, [selectedYear])
+  }, [])
 
   const fetchInitialData = async (isInitialLoad = false) => {
     // 초기 로딩일 때만 전체 로딩 스피너 표시 (깜빡임 방지)
@@ -172,10 +171,10 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
     setError('')
 
     try {
-      // 병렬로 데이터 로드
+      // 병렬로 데이터 로드 (연도 필터 없이 전체 조회)
       const [balanceResult, requestsResult, typesResult] = await Promise.all([
-        leaveService.getMyBalance(selectedYear),
-        leaveService.getMyRequests(selectedYear),
+        leaveService.getMyBalance(),
+        leaveService.getMyRequests(),
         leaveService.getLeaveTypes(),
       ])
 
@@ -288,20 +287,6 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
         <div className="space-y-6">
           <SectionHeader number={1} title="내 연차 현황" icon={Calendar} />
 
-          {/* 연도 선택 */}
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              {[0, -1, -2].map(offset => {
-                const year = new Date().getFullYear() + offset
-                return <option key={year} value={year}>{year}년</option>
-              })}
-            </select>
-          </div>
-
           <LeaveBalanceCard balance={myBalance} hireDate={currentUser.hire_date} />
 
           <SectionHeader number={2} title="내 연차 신청 내역" icon={FileText} />
@@ -410,14 +395,14 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
       {activeTab === 'all' && canViewAll && (
         <div className="space-y-6">
           <SectionHeader number={1} title="전체 직원 연차 현황" icon={Users} />
-          <AllEmployeeBalances year={selectedYear} />
+          <AllEmployeeBalances />
         </div>
       )}
 
       {/* 연차 관리 탭 (소진 연차 입력) */}
       {activeTab === 'admin' && canManageBalance && (
         <LeaveAdminInput
-          year={selectedYear}
+          year={new Date().getFullYear()}
           leaveTypes={leaveTypes}
           onSuccess={handleApprovalSuccess}
         />
@@ -427,7 +412,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
       {activeTab === 'holiday' && currentUser.role === 'owner' && (
         <ClinicHolidayManager
           currentUser={currentUser}
-          year={selectedYear}
+          year={new Date().getFullYear()}
           onSuccess={fetchInitialData}
         />
       )}
@@ -449,7 +434,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
 }
 
 // 전체 직원 연차 현황 컴포넌트
-function AllEmployeeBalances({ year }: { year: number }) {
+function AllEmployeeBalances() {
   const [balances, setBalances] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -458,17 +443,12 @@ function AllEmployeeBalances({ year }: { year: number }) {
 
   useEffect(() => {
     loadBalances()
-  }, [year])
-
-  // 연도 변경 시 선택 초기화
-  useEffect(() => {
-    setSelectedUserId(null)
-    setSelectedUserRequests([])
-  }, [year])
+  }, [])
 
   const loadBalances = async () => {
     setLoading(true)
-    const result = await leaveService.getAllEmployeeBalances(year)
+    // 연도 필터 없이 전체 조회
+    const result = await leaveService.getAllEmployeeBalances()
     setBalances(result.data || [])
     setLoading(false)
   }
@@ -484,8 +464,8 @@ function AllEmployeeBalances({ year }: { year: number }) {
     setSelectedUserId(userId)
     setLoadingRequests(true)
 
-    // 승인된 연차와 사용된 연차 내역 조회 (approved 상태만)
-    const result = await leaveService.getAllRequests({ year, userId, status: 'approved' })
+    // 승인된 연차 내역 조회 (연도 필터 없이 전체)
+    const result = await leaveService.getAllRequests({ userId, status: 'approved' })
     setSelectedUserRequests(result.data || [])
     setLoadingRequests(false)
   }
@@ -518,8 +498,8 @@ function AllEmployeeBalances({ year }: { year: number }) {
             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직원</th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직급</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">총 연차</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">대기</th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">이미 사용</th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용 예정</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">잔여</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-purple-600">경조사</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">무급휴가</th>
