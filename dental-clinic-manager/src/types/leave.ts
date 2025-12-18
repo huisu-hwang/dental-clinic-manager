@@ -208,6 +208,10 @@ export interface EmployeeLeaveBalance {
   used_by_type?: Record<LeaveTypeCode, number>; // 종류별 사용 완료 일수
   pending_by_type?: Record<LeaveTypeCode, number>; // 종류별 사용 예정 일수
 
+  // 입사일 기준 연차 기간
+  leave_period_start?: string; // 연차 기간 시작일 (입사일 기준)
+  leave_period_end?: string; // 연차 기간 종료일 (입사일 기준 + 1년 - 1일)
+
   // 이월 연차
   carryover_days: number; // 이월 연차 일수
   carryover_used: number; // 사용한 이월 연차

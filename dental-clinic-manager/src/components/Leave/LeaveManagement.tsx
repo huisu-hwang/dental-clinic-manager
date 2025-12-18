@@ -613,7 +613,14 @@ function AllEmployeeBalances() {
                       ) : (
                         <ChevronRight className="w-4 h-4 text-slate-400" />
                       )}
-                      {item.user_name || '알 수 없음'}
+                      <div>
+                        <div>{item.user_name || '알 수 없음'}</div>
+                        {item.leave_period_start && item.leave_period_end && (
+                          <div className="text-[10px] text-slate-400 font-normal">
+                            {item.leave_period_start.slice(5).replace('-', '/')} ~ {item.leave_period_end.slice(5).replace('-', '/')}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
