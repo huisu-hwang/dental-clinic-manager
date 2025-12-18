@@ -8,7 +8,8 @@ import type {
 } from '@/types/notification'
 import {
   shouldShowNotificationToday,
-  canUserSeeNotification
+  canUserSeeNotification,
+  isNotificationDismissedForCurrentCycle
 } from '@/types/notification'
 
 interface UseClinicNotificationsOptions {
@@ -66,14 +67,11 @@ export function useClinicNotifications({
         return
       }
 
-      // 오늘 날짜 (해제된 알림 필터링용)
-      const today = new Date().toISOString().split('T')[0]
-
       // 오늘 표시할 알림 필터링
       const todayNotifications = (result.data as (ClinicNotification & { dismissed_at?: string | null })[])
         .filter(notification => {
-          // 오늘 해제된 알림은 표시하지 않음
-          if (notification.dismissed_at === today) return false
+          // 현재 주기에 해제된 알림은 표시하지 않음
+          if (isNotificationDismissedForCurrentCycle(notification, notification.dismissed_at)) return false
 
           // 오늘 표시할 알림인지 확인
           if (!shouldShowNotificationToday(notification)) return false
