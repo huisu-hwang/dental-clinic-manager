@@ -43,10 +43,6 @@ export default function AnnouncementDetail({
         return 'bg-blue-100 text-blue-700'
       case 'holiday':
         return 'bg-red-100 text-red-700'
-      case 'policy':
-        return 'bg-purple-100 text-purple-700'
-      case 'welfare':
-        return 'bg-green-100 text-green-700'
       default:
         return 'bg-gray-100 text-gray-700'
     }
