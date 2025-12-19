@@ -67,7 +67,8 @@ const getCurrentUser = (): { id: string; role: string; clinic_id: string; name?:
 }
 
 /**
- * 대한민국 근로기준법 기반 연차 계산
+ * 대한민국 근로기준법 기반 연차 계산 (기본 - DB 조회 없이)
+ * 1년 미만 직원의 경우 월별 만근 확인은 calculateAnnualLeaveDaysWithUnpaidCheck 함수 사용
  * @param hireDate 입사일
  * @param referenceDate 기준일 (기본값: 오늘)
  */
@@ -76,7 +77,7 @@ export function calculateAnnualLeaveDays(hireDate: Date, referenceDate: Date = n
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
   const yearsOfService = diffDays / 365
 
-  // 1년 미만: 월 1일 (최대 11일)
+  // 1년 미만: 월 1일 (최대 11일) - 기본 계산 (만근 여부 확인 없이)
   if (yearsOfService < 1) {
     const monthsWorked = Math.floor(diffDays / 30)
     return Math.min(monthsWorked, 11)
@@ -86,6 +87,60 @@ export function calculateAnnualLeaveDays(hireDate: Date, referenceDate: Date = n
   // 3년 이상부터 1일 추가 시작
   const extraDays = Math.floor((yearsOfService - 1) / 2)
   return Math.min(15 + extraDays, 25)
+}
+
+/**
+ * 1년 미만 직원의 월별 만근 기준 연차 계산
+ * 무급휴가를 사용한 달은 연차가 발생하지 않음
+ * @param hireDate 입사일
+ * @param referenceDate 기준일 (기본값: 오늘)
+ * @param unpaidLeaveByMonth 월별 무급휴가 사용 기록 (key: 'YYYY-MM', value: 일수)
+ */
+export function calculateAnnualLeaveDaysWithUnpaidCheck(
+  hireDate: Date,
+  referenceDate: Date = new Date(),
+  unpaidLeaveByMonth: Record<string, number> = {}
+): number {
+  const diffTime = referenceDate.getTime() - hireDate.getTime()
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  const yearsOfService = diffDays / 365
+
+  // 1년 이상인 경우 기존 로직 사용
+  if (yearsOfService >= 1) {
+    const extraDays = Math.floor((yearsOfService - 1) / 2)
+    return Math.min(15 + extraDays, 25)
+  }
+
+  // 1년 미만: 각 월별로 만근 여부 확인
+  let earnedDays = 0
+  const hire = new Date(hireDate)
+  const ref = new Date(referenceDate)
+
+  // 입사일부터 현재까지 각 월을 순회
+  let checkDate = new Date(hire)
+
+  while (earnedDays < 11) { // 최대 11일
+    // 해당 월의 마지막 날 계산
+    const monthEnd = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0)
+
+    // 아직 해당 월이 완전히 지나지 않았으면 중단
+    if (monthEnd > ref) {
+      break
+    }
+
+    // 해당 월의 키 생성 (YYYY-MM)
+    const monthKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`
+
+    // 해당 월에 무급휴가 사용이 없으면 연차 1일 부여
+    if (!unpaidLeaveByMonth[monthKey] || unpaidLeaveByMonth[monthKey] === 0) {
+      earnedDays++
+    }
+
+    // 다음 달로 이동
+    checkDate = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 1)
+  }
+
+  return earnedDays
 }
 
 /**
@@ -610,13 +665,48 @@ export const leaveService = {
 
       const hireDate = user.hire_date ? new Date(user.hire_date) : new Date(user.created_at)
       const yearsOfService = calculateYearsOfService(hireDate)
-      const totalDays = calculateAnnualLeaveDays(hireDate)
 
       // 입사일 기준 현재 연차 기간 계산
       const leavePeriod = calculateLeavePeriod(hireDate)
       const periodStartDate = leavePeriod.startDate
       const periodEndDate = leavePeriod.endDate
       const periodYear = new Date(periodStartDate).getFullYear() // DB 저장용 연도
+
+      // 1년 미만 직원의 경우 월별 무급휴가 사용 여부 확인하여 연차 계산
+      let totalDays: number
+      if (yearsOfService < 1) {
+        // 무급휴가 타입 조회
+        const { data: unpaidTypeForCalc } = await (supabase as any)
+          .from('leave_types')
+          .select('id')
+          .eq('clinic_id', clinicId)
+          .eq('code', 'unpaid')
+          .single()
+
+        // 월별 무급휴가 사용 기록 조회
+        let unpaidLeaveByMonth: Record<string, number> = {}
+        if (unpaidTypeForCalc) {
+          const { data: unpaidRequests } = await (supabase as any)
+            .from('leave_requests')
+            .select('total_days, start_date')
+            .eq('user_id', userId)
+            .eq('leave_type_id', unpaidTypeForCalc.id)
+            .eq('status', 'approved')
+            .gte('start_date', periodStartDate)
+            .lte('start_date', periodEndDate)
+
+          // 월별로 무급휴가 일수 집계
+          for (const req of (unpaidRequests || [])) {
+            const startDate = new Date(req.start_date)
+            const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`
+            unpaidLeaveByMonth[monthKey] = (unpaidLeaveByMonth[monthKey] || 0) + (req.total_days || 0)
+          }
+        }
+
+        totalDays = calculateAnnualLeaveDaysWithUnpaidCheck(hireDate, new Date(), unpaidLeaveByMonth)
+      } else {
+        totalDays = calculateAnnualLeaveDays(hireDate)
+      }
 
       // 이미 승인된 연차 조회 (연차 기간 내, 오늘 이전에 시작된 것만 사용으로 처리)
       const today = new Date().toISOString().split('T')[0]
