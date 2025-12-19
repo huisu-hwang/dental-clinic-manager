@@ -495,6 +495,7 @@ export const leaveService = {
   /**
    * 특정 직원의 연차 잔여 조회
    * - 항상 최신 데이터로 재계산하여 반환
+   * - 입사일 기준 연차 기간으로 조회
    */
   async getEmployeeBalance(userId: string, year: number = new Date().getFullYear()): Promise<{ data: EmployeeLeaveBalance | null; error: string | null }> {
     try {
@@ -504,16 +505,29 @@ export const leaveService = {
       const clinicId = getCurrentClinicId()
       if (!clinicId) throw new Error('Clinic not found')
 
+      // 사용자 입사일 조회하여 정확한 연차 기간 계산
+      const { data: user, error: userError } = await (supabase as any)
+        .from('users')
+        .select('hire_date, created_at')
+        .eq('id', userId)
+        .single()
+
+      if (userError) throw userError
+
+      const hireDate = user.hire_date ? new Date(user.hire_date) : new Date(user.created_at)
+      const leavePeriod = calculateLeavePeriod(hireDate)
+      const periodYear = new Date(leavePeriod.startDate).getFullYear()
+
       // 항상 최신 상태로 재계산
       await this.initializeBalance(userId, year)
 
-      // 재계산된 결과 조회
+      // 재계산된 결과 조회 (입사일 기준 연차 기간 연도로 조회)
       const { data: balance, error } = await (supabase as any)
         .from('employee_leave_balances')
         .select('*')
         .eq('user_id', userId)
         .eq('clinic_id', clinicId)
-        .eq('year', year)
+        .eq('year', periodYear)
         .single()
 
       if (error && error.code !== 'PGRST116') throw error
