@@ -267,15 +267,15 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
               <button
                 onClick={() => toggleCategory(category.id)}
                 className={`
-                  group flex items-center justify-between w-full py-2 px-3 rounded-lg text-xs font-semibold uppercase tracking-wide transition-all duration-200
+                  group flex items-center justify-between w-full py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200
                   ${hasActive && !isExpanded
                     ? 'text-blue-600 bg-blue-50'
-                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
                   }
                 `}
               >
-                <div className="flex items-center space-x-2">
-                  <CategoryIcon className="w-4 h-4" />
+                <div className="flex items-center space-x-2.5">
+                  <CategoryIcon className="w-5 h-5" />
                   <span>{category.label}</span>
                   {hasActive && !isExpanded && (
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
@@ -293,7 +293,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                   ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
                 `}
               >
-                <div className="pl-2 space-y-0.5 pt-0.5">
+                <div className="pl-3 space-y-0.5 pt-0.5">
                   {categoryTabs.map(tab => {
                     const isActive = activeTab === tab.id
                     const Icon = tab.icon
@@ -303,14 +303,14 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                         key={tab.id}
                         onClick={() => handleTabClick(tab.id)}
                         className={`
-                          group flex items-center space-x-3 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 w-full
+                          group flex items-center space-x-2.5 py-1.5 px-3 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
                           ${isActive
                             ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/20'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
                           }
                         `}
                       >
-                        <Icon className={`w-4.5 h-4.5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                        <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-500'}`} />
                         <span className="truncate">{tab.label}</span>
                       </button>
                     )
