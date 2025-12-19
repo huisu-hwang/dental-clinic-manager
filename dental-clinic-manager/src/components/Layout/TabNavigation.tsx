@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useMenuSettings } from '@/hooks/useMenuSettings'
 import type { Permission } from '@/types/permissions'
+import type { MenuCategorySetting } from '@/types/menuSettings'
 import {
   Home,
   ClipboardList,
@@ -22,7 +23,12 @@ import {
   Briefcase,
   MessageSquare,
   FolderOpen,
-  Settings
+  Settings,
+  Users,
+  Calendar,
+  Heart,
+  Clipboard,
+  Star
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -37,56 +43,22 @@ interface Tab {
   label: string
   icon: React.ElementType
   requiredPermissions?: Permission[]
+  categoryId?: string
 }
-
-interface MenuCategory {
-  id: string
-  label: string
-  icon: React.ElementType
-  items: string[]
-}
-
-// 카테고리 정의
-const menuCategories: MenuCategory[] = [
-  {
-    id: 'work',
-    label: '업무 관리',
-    icon: Briefcase,
-    items: ['daily-input', 'attendance', 'leave']
-  },
-  {
-    id: 'communication',
-    label: '소통 · 분석',
-    icon: MessageSquare,
-    items: ['bulletin', 'stats', 'logs']
-  },
-  {
-    id: 'documents',
-    label: '문서 · 자료',
-    icon: FolderOpen,
-    items: ['protocols', 'contracts', 'documents']
-  },
-  {
-    id: 'operations',
-    label: '운영 관리',
-    icon: Settings,
-    items: ['vendors', 'settings']
-  }
-]
 
 const defaultTabs: Tab[] = [
   { id: 'home', label: '대시보드', icon: Home },
-  { id: 'daily-input', label: '일일보고서', icon: ClipboardList, requiredPermissions: ['daily_report_view'] },
-  { id: 'attendance', label: '출근 관리', icon: Clock, requiredPermissions: ['attendance_check_in', 'attendance_view_own'] },
-  { id: 'leave', label: '연차 관리', icon: CalendarDays, requiredPermissions: ['leave_request_view_own', 'leave_balance_view_own'] },
-  { id: 'bulletin', label: '병원 게시판', icon: Megaphone },
-  { id: 'stats', label: '통계', icon: BarChart3, requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'] },
-  { id: 'logs', label: '상세 기록', icon: History, requiredPermissions: ['logs_view'] },
-  { id: 'protocols', label: '진료 프로토콜', icon: BookOpen, requiredPermissions: ['protocol_view'] },
-  { id: 'vendors', label: '업체 연락처', icon: Building2, requiredPermissions: ['vendor_contacts_view'] },
-  { id: 'contracts', label: '근로계약서', icon: FileSignature, requiredPermissions: ['contract_view'] },
-  { id: 'documents', label: '문서 양식', icon: FileText, requiredPermissions: ['contract_view'] },
-  { id: 'settings', label: '재고 관리', icon: Package, requiredPermissions: ['inventory_view'] },
+  { id: 'daily-input', label: '일일보고서', icon: ClipboardList, requiredPermissions: ['daily_report_view'], categoryId: 'work' },
+  { id: 'attendance', label: '출근 관리', icon: Clock, requiredPermissions: ['attendance_check_in', 'attendance_view_own'], categoryId: 'work' },
+  { id: 'leave', label: '연차 관리', icon: CalendarDays, requiredPermissions: ['leave_request_view_own', 'leave_balance_view_own'], categoryId: 'work' },
+  { id: 'bulletin', label: '병원 게시판', icon: Megaphone, categoryId: 'communication' },
+  { id: 'stats', label: '통계', icon: BarChart3, requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'], categoryId: 'communication' },
+  { id: 'logs', label: '상세 기록', icon: History, requiredPermissions: ['logs_view'], categoryId: 'communication' },
+  { id: 'protocols', label: '진료 프로토콜', icon: BookOpen, requiredPermissions: ['protocol_view'], categoryId: 'documents' },
+  { id: 'vendors', label: '업체 연락처', icon: Building2, requiredPermissions: ['vendor_contacts_view'], categoryId: 'operations' },
+  { id: 'contracts', label: '근로계약서', icon: FileSignature, requiredPermissions: ['contract_view'], categoryId: 'documents' },
+  { id: 'documents', label: '문서 양식', icon: FileText, requiredPermissions: ['contract_view'], categoryId: 'documents' },
+  { id: 'settings', label: '재고 관리', icon: Package, requiredPermissions: ['inventory_view'], categoryId: 'operations' },
   { id: 'guide', label: '사용 안내', icon: HelpCircle, requiredPermissions: ['guide_view'] }
 ]
 
@@ -104,6 +76,22 @@ const iconMap: Record<string, React.ElementType> = {
   'documents': FileText,
   'settings': Package,
   'guide': HelpCircle
+}
+
+// 카테고리 아이콘 매핑
+const categoryIconMap: Record<string, React.ElementType> = {
+  'Briefcase': Briefcase,
+  'MessageSquare': MessageSquare,
+  'FolderOpen': FolderOpen,
+  'Settings': Settings,
+  'Users': Users,
+  'Calendar': Calendar,
+  'FileText': FileText,
+  'BarChart': BarChart3,
+  'Heart': Heart,
+  'Building2': Building2,
+  'Clipboard': Clipboard,
+  'Star': Star
 }
 
 const permissionsMap: Record<string, Permission[]> = {
@@ -124,16 +112,12 @@ const permissionsMap: Record<string, Permission[]> = {
 
 export default function TabNavigation({ activeTab, onTabChange, onItemClick, skipAutoRedirect = false }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
-  const { menuSettings, isLoading } = useMenuSettings()
+  const { menuSettings, categorySettings, isLoading } = useMenuSettings()
 
   // 활성 탭이 속한 카테고리 찾기
   const getActiveCategoryId = (tabId: string): string | null => {
-    for (const category of menuCategories) {
-      if (category.items.includes(tabId)) {
-        return category.id
-      }
-    }
-    return null
+    const menuItem = menuSettings.find(m => m.id === tabId)
+    return menuItem?.categoryId || null
   }
 
   // 초기 열린 카테고리 설정 (활성 탭이 속한 카테고리)
@@ -148,7 +132,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     if (activeCategoryId && !expandedCategories.has(activeCategoryId)) {
       setExpandedCategories(prev => new Set([...prev, activeCategoryId]))
     }
-  }, [activeTab])
+  }, [activeTab, menuSettings])
 
   const tabs = useMemo(() => {
     const visibleMenuIds = menuSettings
@@ -164,7 +148,8 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
         id,
         label: menuSetting?.label || defaultTab?.label || id,
         icon: iconMap[id] || HelpCircle,
-        requiredPermissions: permissionsMap[id] || []
+        requiredPermissions: permissionsMap[id] || [],
+        categoryId: menuSetting?.categoryId || defaultTab?.categoryId
       }
     })
   }, [menuSettings])
@@ -178,16 +163,22 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     }), [tabs, hasPermission])
 
   // 카테고리별로 보이는 탭 필터링
-  const getVisibleTabsForCategory = (categoryItems: string[]) => {
-    return categoryItems
-      .map(id => visibleTabs.find(tab => tab.id === id))
-      .filter((tab): tab is typeof visibleTabs[number] => tab !== undefined)
+  const getVisibleTabsForCategory = (categoryId: string) => {
+    return visibleTabs.filter(tab => tab.categoryId === categoryId)
   }
 
   // 카테고리에 활성 탭이 있는지 확인
-  const categoryHasActiveTab = (categoryItems: string[]) => {
-    return categoryItems.includes(activeTab)
+  const categoryHasActiveTab = (categoryId: string) => {
+    return visibleTabs.some(tab => tab.categoryId === categoryId && tab.id === activeTab)
   }
+
+  // 보이는 카테고리 필터링 (카테고리가 visible이고 해당 카테고리에 표시 가능한 탭이 있는 경우)
+  const visibleCategories = useMemo(() => {
+    return categorySettings
+      .filter(cat => cat.visible)
+      .filter(cat => getVisibleTabsForCategory(cat.id).length > 0)
+      .sort((a, b) => a.order - b.order)
+  }, [categorySettings, visibleTabs])
 
   useEffect(() => {
     if (skipAutoRedirect) return
@@ -231,7 +222,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     )
   }
 
-  // 홈과 가이드 탭 분리
+  // 홈과 가이드 탭 분리 (카테고리가 없는 메뉴)
   const homeTab = visibleTabs.find(tab => tab.id === 'home')
   const guideTab = visibleTabs.find(tab => tab.id === 'guide')
 
@@ -262,13 +253,13 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
         </div>
 
         {/* 카테고리들 */}
-        {menuCategories.map(category => {
-          const categoryTabs = getVisibleTabsForCategory(category.items)
+        {visibleCategories.map(category => {
+          const categoryTabs = getVisibleTabsForCategory(category.id)
           if (categoryTabs.length === 0) return null
 
           const isExpanded = expandedCategories.has(category.id)
-          const hasActive = categoryHasActiveTab(category.items)
-          const CategoryIcon = category.icon
+          const hasActive = categoryHasActiveTab(category.id)
+          const CategoryIcon = categoryIconMap[category.icon] || Briefcase
 
           return (
             <div key={category.id} className="space-y-0.5">
