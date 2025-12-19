@@ -303,3 +303,25 @@ export function autoFormatResidentNumber(
     cursorPosition: newCursorPosition
   }
 }
+
+/**
+ * Extract birth date from resident registration number as YYYY-MM-DD string
+ * @param value - Resident registration number
+ * @returns Birth date string in YYYY-MM-DD format, or empty string if invalid
+ * @example
+ * getBirthDateFromResidentNumber('900115-1234567') // returns '1990-01-15'
+ * getBirthDateFromResidentNumber('010520-3234567') // returns '2001-05-20'
+ */
+export function getBirthDateFromResidentNumber(value: string): string {
+  const parsed = parseResidentNumber(value)
+
+  if (!parsed || !parsed.birthYear || !parsed.birthMonth || !parsed.birthDay) {
+    return ''
+  }
+
+  const year = parsed.birthYear
+  const month = String(parsed.birthMonth).padStart(2, '0')
+  const day = String(parsed.birthDay).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}

@@ -4,14 +4,15 @@
  */
 
 // 문서 타입
-export type DocumentType = 'resignation' | 'employment_certificate' | 'recommended_resignation' | 'termination_notice'
+export type DocumentType = 'resignation' | 'employment_certificate' | 'recommended_resignation' | 'termination_notice' | 'welfare_payment'
 
 // 문서 타입 한글 라벨
 export const DocumentTypeLabels: Record<DocumentType, string> = {
   resignation: '사직서',
   employment_certificate: '재직증명서',
   recommended_resignation: '권고사직서',
-  termination_notice: '해고통보서'
+  termination_notice: '해고통보서',
+  welfare_payment: '복지비 지급 확인서'
 }
 
 // 원장 전용 문서 타입 (직원은 작성 불가)
@@ -273,4 +274,49 @@ export const getDefaultTerminationNoticeData = (
   clinicAddress: '',
   clinicPhone: '',
   submissionDate: new Date().toISOString().split('T')[0]
+})
+
+// 복지비 지급 확인서 데이터
+export interface WelfarePaymentData {
+  // 신청자 정보
+  employeeName: string
+  birthDate: string
+  phone: string
+
+  // 회사 정보
+  clinicName: string
+
+  // 지급 정보
+  paymentMethod: 'cash' | 'transfer'
+  accountNumber?: string
+  accountHolder?: string
+  bankName?: string
+  paymentDate: string
+  requestDate: string
+  paymentAmount: string
+
+  // 지급 사유
+  paymentReason: string
+
+  // 서명
+  applicantSignature?: string
+  confirmSignature?: string
+}
+
+// 기본 복지비 지급 확인서 데이터
+export const getDefaultWelfarePaymentData = (
+  clinicName?: string
+): WelfarePaymentData => ({
+  employeeName: '',
+  birthDate: '',
+  phone: '',
+  clinicName: clinicName || '',
+  paymentMethod: 'transfer',
+  accountNumber: '',
+  accountHolder: '',
+  bankName: '',
+  paymentDate: '',
+  requestDate: new Date().toISOString().split('T')[0],
+  paymentAmount: '',
+  paymentReason: '해당 직원의 업무 기여도 및 향후 업무증진을 위해 운동비 등'
 })
