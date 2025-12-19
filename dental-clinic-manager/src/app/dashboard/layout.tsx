@@ -80,6 +80,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/dashboard/contracts')
     } else if (tab === 'attendance') {
       router.push('/attendance')
+    } else if (tab === 'bulletin') {
+      router.push('/bulletin')
     } else if (tab === 'leave') {
       router.push('/dashboard?tab=leave')
     } else if (tab === 'settings') {
