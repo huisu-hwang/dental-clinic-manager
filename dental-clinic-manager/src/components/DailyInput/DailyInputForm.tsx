@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw } from 'lucide-react'
+import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
@@ -534,7 +535,26 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
 
         {/* 상담 결과 */}
         <div>
-          <SectionHeader number={2} title="환자 상담 결과" icon={Users} />
+          <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
+                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </div>
+              <h3 className="text-sm sm:text-base font-semibold text-slate-800">
+                <span className="text-blue-600 mr-1">2.</span>
+                환자 상담 결과
+              </h3>
+            </div>
+            <Link
+              href="/dashboard?tab=logs"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group"
+              title="상담 상세 기록 페이지로 이동 (새 탭: Ctrl+클릭)"
+            >
+              <span className="hidden sm:inline">상담 상세 기록</span>
+              <span className="sm:hidden">상세 기록</span>
+              <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </Link>
+          </div>
           <ConsultTable
             consultRows={consultRows}
             onConsultRowsChange={setConsultRows}
