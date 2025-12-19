@@ -2,8 +2,6 @@
 export type AnnouncementCategory =
   | 'schedule'      // 일정 (휴가, 회식 등)
   | 'holiday'       // 연휴/휴진 일정
-  | 'policy'        // 취업규칙, 정책
-  | 'welfare'       // 복지 내용
   | 'general'       // 일반 공지
 
 // 공지사항
@@ -151,8 +149,6 @@ export type BulletinTab = 'announcements' | 'documents' | 'tasks'
 export const ANNOUNCEMENT_CATEGORY_LABELS: Record<AnnouncementCategory, string> = {
   schedule: '일정',
   holiday: '휴진/연휴',
-  policy: '취업규칙',
-  welfare: '복지',
   general: '일반 공지'
 }
 
