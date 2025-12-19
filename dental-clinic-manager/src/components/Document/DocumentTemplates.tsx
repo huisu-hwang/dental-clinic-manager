@@ -18,6 +18,7 @@ import {
   EmploymentCertificateData,
   RecommendedResignationData,
   TerminationNoticeData,
+  WelfarePaymentData,
   ResignationReasons,
   RecommendedResignationReasons,
   TerminationReasons,
@@ -25,7 +26,8 @@ import {
   getDefaultResignationData,
   getDefaultEmploymentCertificateData,
   getDefaultRecommendedResignationData,
-  getDefaultTerminationNoticeData
+  getDefaultTerminationNoticeData,
+  getDefaultWelfarePaymentData
 } from '@/types/document'
 import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool, Send, CheckCircle, Clock, XCircle, List } from 'lucide-react'
 import SignaturePad from '@/components/Contract/SignaturePad'
@@ -112,6 +114,11 @@ export default function DocumentTemplates() {
     getDefaultTerminationNoticeData(user?.clinic?.name, user?.clinic?.owner_name)
   )
 
+  // 복지비 지급 확인서 데이터
+  const [welfarePaymentData, setWelfarePaymentData] = useState<WelfarePaymentData>(
+    getDefaultWelfarePaymentData(user?.clinic?.name)
+  )
+
   // 직원 목록 로드
   useEffect(() => {
     const loadStaff = async () => {
@@ -185,6 +192,15 @@ export default function DocumentTemplates() {
         ...clinicInfo,
         businessNumber: user.clinic?.business_number || '',
         clinicPhone: user.clinic?.phone || ''
+      }))
+
+      // 복지비 지급 확인서 업데이트
+      setWelfarePaymentData(prev => ({
+        ...prev,
+        clinicName: user.clinic?.name || '',
+        employeeName: prev.employeeName || user.name || '',
+        phone: prev.phone || user.phone || '',
+        birthDate: prev.birthDate || user.birth_date || ''
       }))
     }
   }, [user])
@@ -569,7 +585,8 @@ export default function DocumentTemplates() {
       'resignation': '사직서',
       'employment_certificate': '재직증명서',
       'recommended_resignation': '권고사직서',
-      'termination_notice': '해고통보서'
+      'termination_notice': '해고통보서',
+      'welfare_payment': '복지비 지급 확인서'
     }
     return labels[type] || type
   }
@@ -603,6 +620,12 @@ export default function DocumentTemplates() {
         ownerSignature: doc.owner_signature
       })
       setDocumentType('termination_notice')
+    } else if (doc.document_type === 'welfare_payment') {
+      setWelfarePaymentData({
+        ...doc.document_data,
+        applicantSignature: doc.employee_signature
+      })
+      setDocumentType('welfare_payment')
     }
 
     setShowPreview(true)
@@ -916,6 +939,9 @@ export default function DocumentTemplates() {
           {documentType === 'termination_notice' && (
             <TerminationNoticeForm data={terminationNoticeData} onChange={setTerminationNoticeData} />
           )}
+          {documentType === 'welfare_payment' && (
+            <WelfarePaymentForm data={welfarePaymentData} onChange={setWelfarePaymentData} />
+          )}
 
           {/* 서명 섹션 (사직서만) */}
           {documentType === 'resignation' && (
@@ -1120,6 +1146,9 @@ export default function DocumentTemplates() {
               )}
               {documentType === 'termination_notice' && (
                 <TerminationNoticePreview data={terminationNoticeData} formatDate={formatDate} />
+              )}
+              {documentType === 'welfare_payment' && (
+                <WelfarePaymentPreview data={welfarePaymentData} formatDate={formatDate} />
               )}
             </div>
           </div>
@@ -2494,6 +2523,352 @@ function TerminationNoticePreview({
           <span>수령인: _________________ (서명)</span>
         </div>
       </section>
+    </div>
+  )
+}
+
+// 복지비 지급 확인서 입력 폼
+function WelfarePaymentForm({
+  data,
+  onChange
+}: {
+  data: WelfarePaymentData
+  onChange: (data: WelfarePaymentData) => void
+}) {
+  const handleChange = (field: keyof WelfarePaymentData, value: string) => {
+    onChange({ ...data, [field]: value })
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm font-semibold text-slate-600">신청자 정보</p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">성명</label>
+          <input
+            type="text"
+            value={data.employeeName}
+            onChange={(e) => handleChange('employeeName', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="홍길동"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">생년월일</label>
+          <input
+            type="date"
+            value={data.birthDate}
+            onChange={(e) => handleChange('birthDate', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">연락처</label>
+          <input
+            type="text"
+            value={data.phone}
+            onChange={(e) => handleChange('phone', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="010-1234-5678"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">상호명</label>
+          <input
+            type="text"
+            value={data.clinicName}
+            onChange={(e) => handleChange('clinicName', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
+      <hr className="my-4" />
+      <p className="text-sm font-semibold text-slate-600">지급 정보</p>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">지급방법</label>
+        <div className="flex gap-4">
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="cash"
+              checked={data.paymentMethod === 'cash'}
+              onChange={(e) => handleChange('paymentMethod', e.target.value)}
+              className="mr-2"
+            />
+            현금
+          </label>
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="transfer"
+              checked={data.paymentMethod === 'transfer'}
+              onChange={(e) => handleChange('paymentMethod', e.target.value)}
+              className="mr-2"
+            />
+            계좌이체
+          </label>
+        </div>
+      </div>
+
+      {data.paymentMethod === 'transfer' && (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">계좌번호</label>
+            <input
+              type="text"
+              value={data.accountNumber || ''}
+              onChange={(e) => handleChange('accountNumber', e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="123-456-789012"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">예금주</label>
+              <input
+                type="text"
+                value={data.accountHolder || ''}
+                onChange={(e) => handleChange('accountHolder', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="홍길동"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">은행명</label>
+              <input
+                type="text"
+                value={data.bankName || ''}
+                onChange={(e) => handleChange('bankName', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="국민은행"
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">지급 일자</label>
+          <input
+            type="date"
+            value={data.paymentDate}
+            onChange={(e) => handleChange('paymentDate', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">지급요청일</label>
+          <input
+            type="date"
+            value={data.requestDate}
+            onChange={(e) => handleChange('requestDate', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">지급 금액</label>
+        <input
+          type="text"
+          value={data.paymentAmount}
+          onChange={(e) => handleChange('paymentAmount', e.target.value)}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="100,000"
+        />
+      </div>
+
+      <hr className="my-4" />
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">복지비 지급 사유</label>
+        <textarea
+          value={data.paymentReason}
+          onChange={(e) => handleChange('paymentReason', e.target.value)}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          rows={3}
+          placeholder="해당 직원의 업무 기여도 및 향후 업무증진을 위해 운동비 등"
+        />
+      </div>
+    </div>
+  )
+}
+
+// 복지비 지급 확인서 미리보기
+function WelfarePaymentPreview({
+  data,
+  formatDate
+}: {
+  data: WelfarePaymentData
+  formatDate: (date: string) => string
+}) {
+  // 날짜를 년, 월, 일로 분리하는 함수
+  const parseDateParts = (dateStr: string) => {
+    if (!dateStr) return { year: '', month: '', day: '' }
+    const date = new Date(dateStr)
+    return {
+      year: date.getFullYear().toString(),
+      month: (date.getMonth() + 1).toString(),
+      day: date.getDate().toString()
+    }
+  }
+
+  const paymentDateParts = parseDateParts(data.paymentDate)
+  const requestDateParts = parseDateParts(data.requestDate)
+
+  return (
+    <div className="font-['Noto_Sans_KR'] text-slate-800 leading-relaxed">
+      {/* 제목 */}
+      <h1 className="text-2xl font-bold text-center mb-8 tracking-[0.5em]">복 지 비 지 급 확 인 서</h1>
+
+      {/* 신청자 정보 테이블 */}
+      <table className="w-full border-collapse border border-slate-400 mb-6">
+        <tbody>
+          <tr>
+            <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 w-28 text-center">성    명</td>
+            <td className="py-3 px-4 border border-slate-400">{data.employeeName || '　'}</td>
+          </tr>
+          <tr>
+            <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center">생년월일</td>
+            <td className="py-3 px-4 border border-slate-400">{formatDate(data.birthDate) || '　'}</td>
+          </tr>
+          <tr>
+            <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center">연 락 처</td>
+            <td className="py-3 px-4 border border-slate-400">{data.phone || '　'}</td>
+          </tr>
+          <tr>
+            <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center">상 호 명</td>
+            <td className="py-3 px-4 border border-slate-400">{data.clinicName || '　'}</td>
+          </tr>
+          <tr>
+            <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center">지급방법</td>
+            <td className="py-3 px-4 border border-slate-400">
+              <span className="mr-4">{data.paymentMethod === 'cash' ? '◉' : '○'} 현금</span>
+              <span>{data.paymentMethod === 'transfer' ? '◉' : '○'} 계좌이체</span>
+            </td>
+          </tr>
+          {data.paymentMethod === 'transfer' && (
+            <>
+              <tr>
+                <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center">계좌번호</td>
+                <td className="py-3 px-4 border border-slate-400">{data.accountNumber || '　'}</td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center">예금주/은행명</td>
+                <td className="py-3 px-4 border border-slate-400">
+                  {data.accountHolder || '　'} / {data.bankName || '　'}
+                </td>
+              </tr>
+            </>
+          )}
+          <tr>
+            <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center">지급 일자</td>
+            <td className="py-3 px-4 border border-slate-400">
+              20{paymentDateParts.year ? paymentDateParts.year.slice(-2) : '__'}년 {paymentDateParts.month || '__'}월 {paymentDateParts.day || '__'}일
+            </td>
+          </tr>
+          <tr>
+            <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center">지급요청일</td>
+            <td className="py-3 px-4 border border-slate-400">
+              {requestDateParts.year || '____'}년 {requestDateParts.month || '__'}월 {requestDateParts.day || '__'}일
+            </td>
+          </tr>
+          <tr>
+            <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center">지급 금액</td>
+            <td className="py-3 px-4 border border-slate-400">
+              일금 {data.paymentAmount || '           '} 원정
+            </td>
+          </tr>
+          <tr>
+            <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center align-top">
+              복지비<br />지급 사유
+            </td>
+            <td className="py-3 px-4 border border-slate-400 min-h-[60px]">
+              {data.paymentReason || '　'}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* 복지비 지급 확인 문구 */}
+      <div className="text-center my-6 text-base">
+        <p>복지비 지급을 확인합니다.</p>
+      </div>
+
+      {/* 복지비 지급 동의 */}
+      <div className="border border-slate-400 p-4 mb-6">
+        <p className="font-semibold mb-2">복지비 지급 동의</p>
+        <p className="text-sm leading-6">
+          상기와 같은 사유로 복지비를 요청하며, 요청한 복지비 금액을 확인할 수 있도록
+          업체로부터 발급받은 영수증을 회사에 제출함을 동의합니다.
+        </p>
+        <div className="flex justify-end items-center gap-4 mt-4">
+          <span>동의자</span>
+          {data.applicantSignature ? (
+            <img
+              src={data.applicantSignature}
+              alt="동의자 서명"
+              className="h-10"
+            />
+          ) : (
+            <span className="inline-block w-24 border-b border-slate-400"></span>
+          )}
+          <span>(인)</span>
+        </div>
+      </div>
+
+      {/* 신청 문구 */}
+      <div className="text-center my-8 text-base">
+        <p>상기 금액에 대해 위와 같은 사유로 복지비를 신청합니다.</p>
+      </div>
+
+      {/* 날짜 */}
+      <div className="text-center my-6">
+        <p>{requestDateParts.year || '____'}년 {requestDateParts.month || '__'}월 {requestDateParts.day || '__'}일</p>
+      </div>
+
+      {/* 서명란 */}
+      <div className="mt-8 space-y-4">
+        <div className="flex justify-center items-center gap-4">
+          <span className="w-20 text-right">신청자 :</span>
+          <span className="inline-block w-32 border-b border-slate-400 text-center">
+            {data.employeeName || '　'}
+          </span>
+          {data.applicantSignature ? (
+            <img
+              src={data.applicantSignature}
+              alt="신청자 서명"
+              className="h-8"
+            />
+          ) : (
+            <span>(인)</span>
+          )}
+        </div>
+        <div className="flex justify-center items-center gap-4">
+          <span className="w-20 text-right">확인자 :</span>
+          <span className="inline-block w-32 border-b border-slate-400 text-center">
+
+          </span>
+          {data.confirmSignature ? (
+            <img
+              src={data.confirmSignature}
+              alt="확인자 서명"
+              className="h-8"
+            />
+          ) : (
+            <span>(인)</span>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
