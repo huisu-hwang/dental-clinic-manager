@@ -67,6 +67,25 @@ const getCurrentUser = (): { id: string; role: string; clinic_id: string; name: 
   }
 }
 
+// 사용자 이름 조회 헬퍼 함수
+const getUserNames = async (supabase: any, userIds: string[]): Promise<Record<string, string>> => {
+  if (userIds.length === 0) return {}
+
+  const uniqueIds = [...new Set(userIds.filter(Boolean))]
+  if (uniqueIds.length === 0) return {}
+
+  const { data } = await supabase
+    .from('users')
+    .select('id, name')
+    .in('id', uniqueIds)
+
+  const nameMap: Record<string, string> = {}
+  ;(data || []).forEach((user: { id: string; name: string }) => {
+    nameMap[user.id] = user.name
+  })
+  return nameMap
+}
+
 // =====================================================
 // 공지사항 서비스
 // =====================================================
@@ -92,10 +111,7 @@ export const announcementService = {
 
       let query = (supabase as any)
         .from('announcements')
-        .select(`
-          *,
-          author:author_id (id, name)
-        `, { count: 'exact' })
+        .select('*', { count: 'exact' })
         .eq('clinic_id', clinicId)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
@@ -114,10 +130,14 @@ export const announcementService = {
 
       if (error) throw error
 
+      // author 이름 조회
+      const authorIds = (data || []).map((item: any) => item.author_id)
+      const nameMap = await getUserNames(supabase, authorIds)
+
       // author 정보 매핑
       const announcements = (data || []).map((item: any) => ({
         ...item,
-        author_name: item.author?.name || '알 수 없음',
+        author_name: nameMap[item.author_id] || '알 수 없음',
       }))
 
       return { data: announcements, total: count || 0, error: null }
@@ -137,10 +157,7 @@ export const announcementService = {
 
       const { data, error } = await (supabase as any)
         .from('announcements')
-        .select(`
-          *,
-          author:author_id (id, name)
-        `)
+        .select('*')
         .eq('id', id)
         .single()
 
@@ -149,10 +166,13 @@ export const announcementService = {
       // 조회수 증가
       await (supabase as any).rpc('increment_announcement_view_count', { p_announcement_id: id })
 
+      // author 이름 조회
+      const nameMap = await getUserNames(supabase, [data.author_id])
+
       return {
         data: {
           ...data,
-          author_name: data.author?.name || '알 수 없음',
+          author_name: nameMap[data.author_id] || '알 수 없음',
         },
         error: null,
       }
@@ -311,10 +331,7 @@ export const documentService = {
 
       let query = (supabase as any)
         .from('documents')
-        .select(`
-          *,
-          author:author_id (id, name)
-        `, { count: 'exact' })
+        .select('*', { count: 'exact' })
         .eq('clinic_id', clinicId)
         .order('created_at', { ascending: false })
 
@@ -332,10 +349,14 @@ export const documentService = {
 
       if (error) throw error
 
+      // author 이름 조회
+      const authorIds = (data || []).map((item: any) => item.author_id)
+      const nameMap = await getUserNames(supabase, authorIds)
+
       // author 정보 매핑
       const documents = (data || []).map((item: any) => ({
         ...item,
-        author_name: item.author?.name || '알 수 없음',
+        author_name: nameMap[item.author_id] || '알 수 없음',
       }))
 
       return { data: documents, total: count || 0, error: null }
@@ -355,10 +376,7 @@ export const documentService = {
 
       const { data, error } = await (supabase as any)
         .from('documents')
-        .select(`
-          *,
-          author:author_id (id, name)
-        `)
+        .select('*')
         .eq('id', id)
         .single()
 
@@ -367,10 +385,13 @@ export const documentService = {
       // 조회수 증가
       await (supabase as any).rpc('increment_document_view_count', { p_document_id: id })
 
+      // author 이름 조회
+      const nameMap = await getUserNames(supabase, [data.author_id])
+
       return {
         data: {
           ...data,
-          author_name: data.author?.name || '알 수 없음',
+          author_name: nameMap[data.author_id] || '알 수 없음',
         },
         error: null,
       }
@@ -517,11 +538,7 @@ export const taskService = {
 
       let query = (supabase as any)
         .from('tasks')
-        .select(`
-          *,
-          assignee:assignee_id (id, name),
-          assigner:assigner_id (id, name)
-        `, { count: 'exact' })
+        .select('*', { count: 'exact' })
         .eq('clinic_id', clinicId)
         .order('created_at', { ascending: false })
 
@@ -547,6 +564,10 @@ export const taskService = {
 
       if (error) throw error
 
+      // 사용자 이름 조회
+      const userIds = (data || []).flatMap((item: any) => [item.assignee_id, item.assigner_id])
+      const nameMap = await getUserNames(supabase, userIds)
+
       // 각 업무의 댓글 수 조회 및 매핑
       const tasks = await Promise.all(
         (data || []).map(async (item: any) => {
@@ -557,8 +578,8 @@ export const taskService = {
 
           return {
             ...item,
-            assignee_name: item.assignee?.name || '알 수 없음',
-            assigner_name: item.assigner?.name || '알 수 없음',
+            assignee_name: nameMap[item.assignee_id] || '알 수 없음',
+            assigner_name: nameMap[item.assigner_id] || '알 수 없음',
             comments_count: commentsCount || 0,
           }
         })
@@ -604,15 +625,14 @@ export const taskService = {
 
       const { data, error } = await (supabase as any)
         .from('tasks')
-        .select(`
-          *,
-          assignee:assignee_id (id, name),
-          assigner:assigner_id (id, name)
-        `)
+        .select('*')
         .eq('id', id)
         .single()
 
       if (error) throw error
+
+      // 사용자 이름 조회
+      const nameMap = await getUserNames(supabase, [data.assignee_id, data.assigner_id])
 
       // 댓글 수 조회
       const { count: commentsCount } = await (supabase as any)
@@ -623,8 +643,8 @@ export const taskService = {
       return {
         data: {
           ...data,
-          assignee_name: data.assignee?.name || '알 수 없음',
-          assigner_name: data.assigner?.name || '알 수 없음',
+          assignee_name: nameMap[data.assignee_id] || '알 수 없음',
+          assigner_name: nameMap[data.assigner_id] || '알 수 없음',
           comments_count: commentsCount || 0,
         },
         error: null,
@@ -834,18 +854,19 @@ export const taskCommentService = {
 
       const { data, error } = await (supabase as any)
         .from('task_comments')
-        .select(`
-          *,
-          author:author_id (id, name)
-        `)
+        .select('*')
         .eq('task_id', taskId)
         .order('created_at', { ascending: true })
 
       if (error) throw error
 
+      // author 이름 조회
+      const authorIds = (data || []).map((item: any) => item.author_id)
+      const nameMap = await getUserNames(supabase, authorIds)
+
       const comments = (data || []).map((item: any) => ({
         ...item,
-        author_name: item.author?.name || '알 수 없음',
+        author_name: nameMap[item.author_id] || '알 수 없음',
       }))
 
       return { data: comments, error: null }
