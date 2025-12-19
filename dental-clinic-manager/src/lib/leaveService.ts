@@ -664,7 +664,11 @@ export const leaveService = {
       if (userError) throw userError
 
       const hireDate = user.hire_date ? new Date(user.hire_date) : new Date(user.created_at)
-      const yearsOfService = calculateYearsOfService(hireDate)
+      const yearsOfService = calculateYearsOfService(hireDate) // DB 저장용 (반올림된 값)
+
+      // 1년 미만 판별용 정확한 근속 연수 계산 (반올림 없이)
+      const diffTime = new Date().getTime() - hireDate.getTime()
+      const exactYearsOfService = diffTime / (1000 * 60 * 60 * 24 * 365)
 
       // 입사일 기준 현재 연차 기간 계산
       const leavePeriod = calculateLeavePeriod(hireDate)
@@ -674,7 +678,7 @@ export const leaveService = {
 
       // 1년 미만 직원의 경우 월별 무급휴가 사용 여부 확인하여 연차 계산
       let totalDays: number
-      if (yearsOfService < 1) {
+      if (exactYearsOfService < 1) {
         // 무급휴가 타입 조회
         const { data: unpaidTypeForCalc } = await (supabase as any)
           .from('leave_types')
