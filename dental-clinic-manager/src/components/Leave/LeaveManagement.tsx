@@ -445,8 +445,6 @@ const LEAVE_TYPE_COLORS: Record<string, string> = {
 
 // 연차 차감 대상 종류 (총 연차에서 차감되는 종류)
 const DEDUCT_LEAVE_TYPES: LeaveTypeCode[] = ['annual', 'half_day', 'sick']
-// 연차 비차감 종류 (경조사, 대체휴가)
-const NON_DEDUCT_LEAVE_TYPES: LeaveTypeCode[] = ['family_event', 'compensatory']
 
 // 종류별 사용 내역 표시 컴포넌트
 const LeaveByTypeCell = ({
@@ -545,12 +543,6 @@ function AllEmployeeBalances() {
     return DEDUCT_LEAVE_TYPES.reduce((sum, code) => sum + (byType[code] || 0), 0)
   }
 
-  // 종류별 합계 계산 (비차감 대상만)
-  const calculateNonDeductTotal = (byType?: Record<string, number>) => {
-    if (!byType) return 0
-    return NON_DEDUCT_LEAVE_TYPES.reduce((sum, code) => sum + (byType[code] || 0), 0)
-  }
-
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -576,11 +568,6 @@ function AllEmployeeBalances() {
               <div className="text-[10px] text-slate-400 font-normal">(연차/반차/병가)</div>
             </th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">잔여</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-purple-600">
-              <div>경조사/대체휴가</div>
-              <div className="text-[10px] text-purple-400 font-normal">(연차 비차감)</div>
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">무급휴가</th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용률</th>
           </tr>
         </thead>
@@ -595,10 +582,6 @@ function AllEmployeeBalances() {
             const usedDeductTotal = calculateDeductTotal(item.used_by_type)
             // 사용 예정 (차감 대상만)
             const pendingDeductTotal = calculateDeductTotal(item.pending_by_type)
-            // 경조사/대체휴가 (이미 사용 + 사용 예정)
-            const usedNonDeductTotal = calculateNonDeductTotal(item.used_by_type)
-            const pendingNonDeductTotal = calculateNonDeductTotal(item.pending_by_type)
-            const totalNonDeduct = usedNonDeductTotal + pendingNonDeductTotal
 
             return (
               <React.Fragment key={item.id}>
@@ -645,32 +628,6 @@ function AllEmployeeBalances() {
                     {item.remaining_days}일
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {totalNonDeduct > 0 ? (
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="font-medium text-purple-600">{totalNonDeduct}일</span>
-                        <div className="flex flex-col gap-0.5">
-                          {/* 이미 사용 (경조사/대체휴가) */}
-                          {usedNonDeductTotal > 0 && (
-                            <div className="text-[10px] text-green-600">
-                              사용: <LeaveByTypeCell byType={item.used_by_type} filterTypes={NON_DEDUCT_LEAVE_TYPES} emptyText="" />
-                            </div>
-                          )}
-                          {/* 사용 예정 (경조사/대체휴가) */}
-                          {pendingNonDeductTotal > 0 && (
-                            <div className="text-[10px] text-yellow-600">
-                              예정: <LeaveByTypeCell byType={item.pending_by_type} filterTypes={NON_DEDUCT_LEAVE_TYPES} emptyText="" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center text-gray-600">
-                    {(item.unpaid_days ?? 0) > 0 ? `${item.unpaid_days}일` : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-16 bg-slate-200 rounded-full h-2">
                         <div
@@ -685,7 +642,7 @@ function AllEmployeeBalances() {
                 {/* 선택된 직원의 연차 내역 */}
                 {isSelected && (
                   <tr>
-                    <td colSpan={9} className="px-0 py-0 bg-slate-50">
+                    <td colSpan={7} className="px-0 py-0 bg-slate-50">
                       <div className="px-6 py-4 border-t border-slate-200">
                         <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
