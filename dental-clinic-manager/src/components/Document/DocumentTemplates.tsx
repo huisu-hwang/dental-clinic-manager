@@ -31,6 +31,8 @@ import {
 } from '@/types/document'
 import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool, Send, CheckCircle, Clock, XCircle, List } from 'lucide-react'
 import SignaturePad from '@/components/Contract/SignaturePad'
+import { decryptResidentNumber } from '@/utils/encryptionUtils'
+import { getBirthDateFromResidentNumber } from '@/utils/residentNumberUtils'
 
 // 문서 제출 상태 타입
 interface DocumentSubmission {
@@ -71,6 +73,7 @@ interface StaffMember {
   hire_date?: string
   address?: string
   birth_date?: string
+  resident_registration_number?: string
 }
 
 export default function DocumentTemplates() {
@@ -137,7 +140,8 @@ export default function DocumentTemplates() {
             phone: s.phone || '',
             hire_date: s.hire_date || '',
             address: s.address || '',
-            birth_date: s.birth_date || ''
+            birth_date: s.birth_date || '',
+            resident_registration_number: s.resident_registration_number || ''
           })))
         }
       } catch (error) {
@@ -151,12 +155,27 @@ export default function DocumentTemplates() {
 
   // 사용자 정보 변경 시 기본값 업데이트 (회사 정보 + 본인 정보 자동 입력)
   useEffect(() => {
-    if (user) {
+    const updateUserInfo = async () => {
+      if (!user) return
+
       // 회사 정보 업데이트
       const clinicInfo = {
         clinicName: user.clinic?.name || '',
         representativeName: user.clinic?.owner_name || '',
         clinicAddress: user.clinic?.address || ''
+      }
+
+      // 주민번호에서 생년월일 계산
+      let birthDateFromRrn = ''
+      if (user.resident_registration_number) {
+        try {
+          const decrypted = await decryptResidentNumber(user.resident_registration_number)
+          if (decrypted) {
+            birthDateFromRrn = getBirthDateFromResidentNumber(decrypted)
+          }
+        } catch (error) {
+          console.error('Failed to decrypt resident number:', error)
+        }
       }
 
       // 본인 정보 자동 입력 (직원 선택 없이 본인이 작성하는 경우)
@@ -178,7 +197,7 @@ export default function DocumentTemplates() {
         employeePhone: prev.employeePhone || user.phone || '',
         hireDate: prev.hireDate || user.hire_date || '',
         employeeAddress: prev.employeeAddress || user.address || '',
-        employeeBirthDate: prev.employeeBirthDate || user.birth_date || ''
+        employeeBirthDate: prev.employeeBirthDate || birthDateFromRrn || user.birth_date || ''
       }))
 
       // 권고사직서/해고통보서 회사 정보 업데이트 (원장 전용)
@@ -200,9 +219,11 @@ export default function DocumentTemplates() {
         clinicName: user.clinic?.name || '',
         employeeName: prev.employeeName || user.name || '',
         phone: prev.phone || user.phone || '',
-        birthDate: prev.birthDate || user.birth_date || ''
+        birthDate: prev.birthDate || birthDateFromRrn || user.birth_date || ''
       }))
     }
+
+    updateUserInfo()
   }, [user])
 
   // 보낸 문서 목록 로드
@@ -328,10 +349,23 @@ export default function DocumentTemplates() {
   }
 
   // 직원 선택 시 데이터 자동 입력
-  const handleStaffSelect = (staffId: string) => {
+  const handleStaffSelect = async (staffId: string) => {
     setSelectedStaff(staffId)
     const staff = staffList.find(s => s.id === staffId)
     if (!staff) return
+
+    // 주민번호에서 생년월일 계산
+    let birthDateFromRrn = ''
+    if (staff.resident_registration_number) {
+      try {
+        const decrypted = await decryptResidentNumber(staff.resident_registration_number)
+        if (decrypted) {
+          birthDateFromRrn = getBirthDateFromResidentNumber(decrypted)
+        }
+      } catch (error) {
+        console.error('Failed to decrypt resident number:', error)
+      }
+    }
 
     if (documentType === 'resignation') {
       setResignationData(prev => ({
@@ -348,7 +382,7 @@ export default function DocumentTemplates() {
         employeePhone: staff.phone || '',
         hireDate: staff.hire_date || '',
         employeeAddress: staff.address || '',
-        employeeBirthDate: staff.birth_date || ''
+        employeeBirthDate: birthDateFromRrn || staff.birth_date || ''
       }))
     } else if (documentType === 'recommended_resignation') {
       setRecommendedResignationData(prev => ({
@@ -363,6 +397,13 @@ export default function DocumentTemplates() {
         employeeName: staff.name || '',
         employeePosition: staff.position || translateRole(staff.role) || '',
         hireDate: staff.hire_date || ''
+      }))
+    } else if (documentType === 'welfare_payment') {
+      setWelfarePaymentData(prev => ({
+        ...prev,
+        employeeName: staff.name || '',
+        phone: staff.phone || '',
+        birthDate: birthDateFromRrn || staff.birth_date || ''
       }))
     }
   }
