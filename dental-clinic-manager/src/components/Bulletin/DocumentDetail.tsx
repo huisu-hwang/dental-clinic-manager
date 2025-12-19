@@ -8,7 +8,11 @@ import {
   Edit2,
   Trash2,
   User,
-  FileText
+  FileText,
+  Image,
+  FileSpreadsheet,
+  FileType,
+  ExternalLink
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { Document } from '@/types/bulletin'
@@ -46,6 +50,40 @@ export default function DocumentDetail({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
+  // 파일 확장자로 타입 판단
+  const getFileType = (fileName?: string): 'image' | 'pdf' | 'excel' | 'word' | 'other' => {
+    if (!fileName) return 'other'
+    const ext = fileName.split('.').pop()?.toLowerCase()
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext || '')) return 'image'
+    if (ext === 'pdf') return 'pdf'
+    if (['xls', 'xlsx', 'csv'].includes(ext || '')) return 'excel'
+    if (['doc', 'docx', 'hwp'].includes(ext || '')) return 'word'
+    return 'other'
+  }
+
+  // 파일 아이콘 선택
+  const getFileIcon = (fileName?: string) => {
+    const type = getFileType(fileName)
+    switch (type) {
+      case 'image':
+        return <Image className="w-5 h-5 text-green-500" />
+      case 'pdf':
+        return <FileText className="w-5 h-5 text-red-500" />
+      case 'excel':
+        return <FileSpreadsheet className="w-5 h-5 text-green-600" />
+      case 'word':
+        return <FileType className="w-5 h-5 text-blue-600" />
+      default:
+        return <FileText className="w-5 h-5 text-gray-500" />
+    }
+  }
+
+  // 미리보기 가능 여부
+  const canPreview = (fileName?: string) => {
+    const type = getFileType(fileName)
+    return type === 'image' || type === 'pdf'
+  }
+
   const getCategoryBadgeColor = (category: string) => {
     switch (category) {
       case 'manual':
@@ -60,6 +98,8 @@ export default function DocumentDetail({
         return 'bg-gray-100 text-gray-700'
     }
   }
+
+  const fileType = getFileType(document.file_name)
 
   return (
     <div className="space-y-6">
@@ -133,7 +173,7 @@ export default function DocumentDetail({
           {document.file_name && (
             <div className="mt-4 p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-2 text-gray-700">
-                <FileText className="w-4 h-4" />
+                {getFileIcon(document.file_name)}
                 <span className="font-medium">첨부파일</span>
               </div>
               <div className="mt-2 flex items-center gap-3">
@@ -142,19 +182,64 @@ export default function DocumentDetail({
                   <span className="text-xs text-gray-400">({formatFileSize(document.file_size)})</span>
                 )}
                 {document.file_url && (
-                  <Button
-                    variant="link"
-                    size="sm"
-                    onClick={onDownload}
-                    className="text-blue-600 hover:text-blue-700"
-                  >
-                    다운로드
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={onDownload}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      다운로드
+                    </Button>
+                    {canPreview(document.file_name) && (
+                      <a
+                        href={document.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        새 탭에서 열기
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
           )}
         </div>
+
+        {/* 파일 미리보기 영역 */}
+        {document.file_url && canPreview(document.file_name) && (
+          <div className="border-b border-gray-200">
+            <div className="p-3 bg-gray-100 border-b border-gray-200">
+              <p className="text-sm text-gray-600 font-medium flex items-center gap-2">
+                {getFileIcon(document.file_name)}
+                파일 미리보기
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50">
+              {fileType === 'image' && (
+                <div className="flex justify-center">
+                  <img
+                    src={document.file_url}
+                    alt={document.file_name || document.title}
+                    className="max-w-full max-h-[600px] object-contain rounded-lg shadow-sm"
+                  />
+                </div>
+              )}
+              {fileType === 'pdf' && (
+                <div className="bg-white rounded-lg overflow-hidden shadow-sm">
+                  <iframe
+                    src={document.file_url}
+                    className="w-full h-[600px] border-0"
+                    title="PDF 미리보기"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 본문 영역 */}
         {document.content && (
@@ -163,6 +248,14 @@ export default function DocumentDetail({
               className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap"
               dangerouslySetInnerHTML={{ __html: document.content }}
             />
+          </div>
+        )}
+
+        {/* 본문도 파일도 없는 경우 */}
+        {!document.content && !document.file_url && (
+          <div className="p-6 text-center text-gray-500">
+            <FileText className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+            <p>등록된 내용이 없습니다.</p>
           </div>
         )}
       </div>

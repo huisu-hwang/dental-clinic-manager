@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { ArrowLeft, Save, Upload, X, FileText } from 'lucide-react'
+import { ArrowLeft, Save, Upload, X, FileText, Image, FileSpreadsheet, FileType, Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { documentService } from '@/lib/bulletinService'
@@ -138,6 +138,37 @@ export default function DocumentForm({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
+  // 파일 확장자로 타입 판단
+  const getFileType = (fileName?: string): 'image' | 'pdf' | 'excel' | 'word' | 'other' => {
+    if (!fileName) return 'other'
+    const ext = fileName.split('.').pop()?.toLowerCase()
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext || '')) return 'image'
+    if (ext === 'pdf') return 'pdf'
+    if (['xls', 'xlsx', 'csv'].includes(ext || '')) return 'excel'
+    if (['doc', 'docx', 'hwp'].includes(ext || '')) return 'word'
+    return 'other'
+  }
+
+  // 파일 아이콘 선택
+  const getFileIcon = (fileName?: string) => {
+    const type = getFileType(fileName)
+    switch (type) {
+      case 'image':
+        return <Image className="w-5 h-5 text-green-500" />
+      case 'pdf':
+        return <FileText className="w-5 h-5 text-red-500" />
+      case 'excel':
+        return <FileSpreadsheet className="w-5 h-5 text-green-600" />
+      case 'word':
+        return <FileType className="w-5 h-5 text-blue-600" />
+      default:
+        return <FileText className="w-5 h-5 text-gray-500" />
+    }
+  }
+
+  // 이미지 파일인지 확인
+  const isImageFile = (fileName?: string) => getFileType(fileName) === 'image'
+
   return (
     <div className="space-y-6">
       {/* 헤더 */}
@@ -207,23 +238,71 @@ export default function DocumentForm({
             첨부파일
           </label>
           {formData.file_name ? (
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <FileText className="w-5 h-5 text-blue-500" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{formData.file_name}</p>
-                {formData.file_size && (
-                  <p className="text-xs text-gray-500">{formatFileSize(formData.file_size)}</p>
-                )}
+            <div className="space-y-3">
+              {/* 파일 정보 */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                {getFileIcon(formData.file_name)}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{formData.file_name}</p>
+                  {formData.file_size && (
+                    <p className="text-xs text-gray-500">{formatFileSize(formData.file_size)}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {formData.file_url && (
+                    <a
+                      href={formData.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors"
+                      title="다운로드"
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveFile}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleRemoveFile}
-                className="text-gray-400 hover:text-red-500"
-              >
-                <X className="w-4 h-4" />
-              </Button>
+
+              {/* 이미지 미리보기 */}
+              {formData.file_url && isImageFile(formData.file_name) && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <div className="p-2 bg-gray-100 border-b border-gray-200">
+                    <p className="text-xs text-gray-500 font-medium">미리보기</p>
+                  </div>
+                  <div className="p-4 flex justify-center">
+                    <img
+                      src={formData.file_url}
+                      alt={formData.file_name}
+                      className="max-w-full max-h-64 object-contain rounded"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* PDF 미리보기 안내 */}
+              {formData.file_url && getFileType(formData.file_name) === 'pdf' && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <div className="p-2 bg-gray-100 border-b border-gray-200">
+                    <p className="text-xs text-gray-500 font-medium">미리보기</p>
+                  </div>
+                  <div className="p-4">
+                    <iframe
+                      src={formData.file_url}
+                      className="w-full h-96 border-0 rounded"
+                      title="PDF 미리보기"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div
@@ -242,7 +321,7 @@ export default function DocumentForm({
                     클릭하여 파일을 선택하거나 드래그하세요
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    최대 10MB
+                    최대 10MB (이미지, PDF, 문서 파일)
                   </p>
                 </>
               )}
@@ -253,6 +332,7 @@ export default function DocumentForm({
             type="file"
             onChange={handleFileUpload}
             className="hidden"
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.hwp,.txt,.csv"
           />
         </div>
 
