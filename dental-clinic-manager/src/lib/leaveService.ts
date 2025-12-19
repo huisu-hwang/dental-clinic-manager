@@ -67,7 +67,8 @@ const getCurrentUser = (): { id: string; role: string; clinic_id: string; name?:
 }
 
 /**
- * 대한민국 근로기준법 기반 연차 계산
+ * 대한민국 근로기준법 기반 연차 계산 (기본 - DB 조회 없이)
+ * 1년 미만 직원의 경우 월별 만근 확인은 calculateAnnualLeaveDaysWithUnpaidCheck 함수 사용
  * @param hireDate 입사일
  * @param referenceDate 기준일 (기본값: 오늘)
  */
@@ -76,7 +77,7 @@ export function calculateAnnualLeaveDays(hireDate: Date, referenceDate: Date = n
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
   const yearsOfService = diffDays / 365
 
-  // 1년 미만: 월 1일 (최대 11일)
+  // 1년 미만: 월 1일 (최대 11일) - 기본 계산 (만근 여부 확인 없이)
   if (yearsOfService < 1) {
     const monthsWorked = Math.floor(diffDays / 30)
     return Math.min(monthsWorked, 11)
@@ -89,12 +90,123 @@ export function calculateAnnualLeaveDays(hireDate: Date, referenceDate: Date = n
 }
 
 /**
+ * 1년 미만 직원의 월별 만근 기준 연차 계산
+ * 무급휴가를 사용한 달은 연차가 발생하지 않음
+ * @param hireDate 입사일
+ * @param referenceDate 기준일 (기본값: 오늘)
+ * @param unpaidLeaveByMonth 월별 무급휴가 사용 기록 (key: 'YYYY-MM', value: 일수)
+ */
+export function calculateAnnualLeaveDaysWithUnpaidCheck(
+  hireDate: Date,
+  referenceDate: Date = new Date(),
+  unpaidLeaveByMonth: Record<string, number> = {}
+): number {
+  const diffTime = referenceDate.getTime() - hireDate.getTime()
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  const yearsOfService = diffDays / 365
+
+  // 1년 이상인 경우 기존 로직 사용
+  if (yearsOfService >= 1) {
+    const extraDays = Math.floor((yearsOfService - 1) / 2)
+    return Math.min(15 + extraDays, 25)
+  }
+
+  // 1년 미만: 각 월별로 만근 여부 확인
+  let earnedDays = 0
+  const hire = new Date(hireDate)
+  const ref = new Date(referenceDate)
+
+  // 입사일부터 현재까지 각 월을 순회
+  let checkDate = new Date(hire)
+
+  while (earnedDays < 11) { // 최대 11일
+    // 해당 월의 마지막 날 계산
+    const monthEnd = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0)
+
+    // 아직 해당 월이 완전히 지나지 않았으면 중단
+    if (monthEnd > ref) {
+      break
+    }
+
+    // 해당 월의 키 생성 (YYYY-MM)
+    const monthKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`
+
+    // 해당 월에 무급휴가 사용이 없으면 연차 1일 부여
+    if (!unpaidLeaveByMonth[monthKey] || unpaidLeaveByMonth[monthKey] === 0) {
+      earnedDays++
+    }
+
+    // 다음 달로 이동
+    checkDate = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 1)
+  }
+
+  return earnedDays
+}
+
+/**
  * 근속 연수 계산
  */
 export function calculateYearsOfService(hireDate: Date, referenceDate: Date = new Date()): number {
   const diffTime = referenceDate.getTime() - hireDate.getTime()
   const years = diffTime / (1000 * 60 * 60 * 24 * 365)
   return Math.round(years * 10) / 10 // 소수점 첫째 자리까지
+}
+
+/**
+ * 입사일 기준 현재 연차 기간 계산
+ * @param hireDate 입사일
+ * @param referenceDate 기준일 (기본값: 오늘)
+ * @returns { startDate: string, endDate: string, yearNumber: number }
+ *
+ * 예시: 입사일 2024-06-01, 기준일 2025-12-18
+ * - 1년차: 2024-06-01 ~ 2025-05-31
+ * - 2년차: 2025-06-01 ~ 2026-05-31 (현재 기간)
+ */
+export function calculateLeavePeriod(hireDate: Date, referenceDate: Date = new Date()): {
+  startDate: string
+  endDate: string
+  yearNumber: number
+} {
+  const hire = new Date(hireDate)
+  const ref = new Date(referenceDate)
+
+  // 연차 기간의 시작일 계산 (입사일 기준)
+  let periodStart = new Date(hire)
+  let yearNumber = 1
+
+  // 현재 날짜가 속한 연차 기간 찾기
+  while (true) {
+    const periodEnd = new Date(periodStart)
+    periodEnd.setFullYear(periodEnd.getFullYear() + 1)
+    periodEnd.setDate(periodEnd.getDate() - 1) // 1년 후 하루 전
+
+    if (ref <= periodEnd) {
+      // 현재 기간 찾음
+      return {
+        startDate: periodStart.toISOString().split('T')[0],
+        endDate: periodEnd.toISOString().split('T')[0],
+        yearNumber
+      }
+    }
+
+    // 다음 기간으로
+    periodStart.setFullYear(periodStart.getFullYear() + 1)
+    yearNumber++
+
+    // 무한 루프 방지 (최대 50년)
+    if (yearNumber > 50) break
+  }
+
+  // fallback
+  const endDate = new Date(periodStart)
+  endDate.setFullYear(endDate.getFullYear() + 1)
+  endDate.setDate(endDate.getDate() - 1)
+
+  return {
+    startDate: periodStart.toISOString().split('T')[0],
+    endDate: endDate.toISOString().split('T')[0],
+    yearNumber
+  }
 }
 
 /**
@@ -383,6 +495,7 @@ export const leaveService = {
   /**
    * 특정 직원의 연차 잔여 조회
    * - 항상 최신 데이터로 재계산하여 반환
+   * - 입사일 기준 연차 기간으로 조회
    */
   async getEmployeeBalance(userId: string, year: number = new Date().getFullYear()): Promise<{ data: EmployeeLeaveBalance | null; error: string | null }> {
     try {
@@ -392,16 +505,29 @@ export const leaveService = {
       const clinicId = getCurrentClinicId()
       if (!clinicId) throw new Error('Clinic not found')
 
+      // 사용자 입사일 조회하여 정확한 연차 기간 계산
+      const { data: user, error: userError } = await (supabase as any)
+        .from('users')
+        .select('hire_date, created_at')
+        .eq('id', userId)
+        .single()
+
+      if (userError) throw userError
+
+      const hireDate = user.hire_date ? new Date(user.hire_date) : new Date(user.created_at)
+      const leavePeriod = calculateLeavePeriod(hireDate)
+      const periodYear = new Date(leavePeriod.startDate).getFullYear()
+
       // 항상 최신 상태로 재계산
       await this.initializeBalance(userId, year)
 
-      // 재계산된 결과 조회
+      // 재계산된 결과 조회 (입사일 기준 연차 기간 연도로 조회)
       const { data: balance, error } = await (supabase as any)
         .from('employee_leave_balances')
         .select('*')
         .eq('user_id', userId)
         .eq('clinic_id', clinicId)
-        .eq('year', year)
+        .eq('year', periodYear)
         .single()
 
       if (error && error.code !== 'PGRST116') throw error
@@ -424,9 +550,11 @@ export const leaveService = {
 
   /**
    * 전체 직원의 연차 현황 조회
-   * - 모든 직원의 연차를 최신 상태로 재계산하여 반환
+   * - 모든 직원의 연차를 최신 상태로 재계산하여 반환 (입사일 기준 연차 기간)
+   * - 종류별 사용/예정 일수도 함께 반환
+   * - 각 직원별 현재 연차 기간 데이터만 조회 (중복 방지)
    */
-  async getAllEmployeeBalances(year: number = new Date().getFullYear()): Promise<{ data: (EmployeeLeaveBalance & { user_name?: string; user_role?: string })[]; error: string | null }> {
+  async getAllEmployeeBalances(year: number = new Date().getFullYear()): Promise<{ data: (EmployeeLeaveBalance & { user_name?: string; user_role?: string; used_by_type?: Record<string, number>; pending_by_type?: Record<string, number> })[]; error: string | null }> {
     try {
       const supabase = await ensureConnection()
       if (!supabase) throw new Error('Database connection failed')
@@ -434,42 +562,93 @@ export const leaveService = {
       const clinicId = getCurrentClinicId()
       if (!clinicId) throw new Error('Clinic not found')
 
-      // 모든 활성 직원 조회
+      // 모든 활성 직원 조회 (입사일 포함)
       const { data: allUsers, error: usersError } = await (supabase as any)
         .from('users')
-        .select('id')
+        .select('id, name, role, hire_date, created_at')
         .eq('clinic_id', clinicId)
         .eq('status', 'active')
 
       if (usersError) throw usersError
 
-      // 모든 직원의 연차 재계산
-      if (allUsers && allUsers.length > 0) {
-        await Promise.all(allUsers.map((user: any) => this.initializeBalance(user.id, year)))
+      if (!allUsers || allUsers.length === 0) {
+        return { data: [], error: null }
       }
 
-      // 최신 데이터 조회
-      const { data: balances, error } = await (supabase as any)
-        .from('employee_leave_balances')
-        .select(`
-          *,
-          users:user_id (name, role)
-        `)
-        .eq('clinic_id', clinicId)
-        .eq('year', year)
-        .order('remaining_days', { ascending: false })
+      // 각 직원의 현재 연차 기간 year 계산
+      const userPeriodYears: Record<string, number> = {}
+      for (const user of allUsers) {
+        const hireDate = user.hire_date ? new Date(user.hire_date) : new Date(user.created_at)
+        const leavePeriod = calculateLeavePeriod(hireDate)
+        userPeriodYears[user.id] = new Date(leavePeriod.startDate).getFullYear()
+      }
 
-      if (error) throw error
+      // 모든 직원의 연차 재계산 (입사일 기준)
+      await Promise.all(allUsers.map((user: any) => this.initializeBalance(user.id, year)))
 
-      // 사용자 정보 병합
-      const result = (balances || []).map((item: any) => ({
-        ...item,
-        user_name: item.users?.name,
-        user_role: item.users?.role,
-        users: undefined,
+      const today = new Date().toISOString().split('T')[0]
+
+      // 각 직원별로 현재 연차 기간 데이터만 조회
+      const result = await Promise.all(allUsers.map(async (user: any) => {
+        const periodYear = userPeriodYears[user.id]
+        const hireDate = user.hire_date ? new Date(user.hire_date) : new Date(user.created_at)
+        const leavePeriod = calculateLeavePeriod(hireDate)
+
+        // 해당 직원의 현재 연차 기간 balance 조회
+        const { data: balance } = await (supabase as any)
+          .from('employee_leave_balances')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('clinic_id', clinicId)
+          .eq('year', periodYear)
+          .single()
+
+        if (!balance) return null
+
+        // 해당 직원의 승인된 연차 내역 조회 (입사일 기준 연차 기간 내)
+        const { data: approvedRequests } = await (supabase as any)
+          .from('leave_requests')
+          .select('total_days, start_date, leave_types!inner(code, name, deduct_from_annual)')
+          .eq('user_id', user.id)
+          .eq('status', 'approved')
+          .gte('start_date', leavePeriod.startDate)
+          .lte('start_date', leavePeriod.endDate)
+
+        // 종류별 사용 완료 일수 (오늘 이전 시작)
+        const usedByType: Record<string, number> = {}
+        // 종류별 사용 예정 일수 (오늘 이후 시작)
+        const pendingByType: Record<string, number> = {}
+
+        for (const req of (approvedRequests || [])) {
+          const typeCode = req.leave_types?.code || 'unknown'
+          const days = req.total_days || 0
+
+          if (req.start_date <= today) {
+            // 사용 완료
+            usedByType[typeCode] = (usedByType[typeCode] || 0) + days
+          } else {
+            // 사용 예정
+            pendingByType[typeCode] = (pendingByType[typeCode] || 0) + days
+          }
+        }
+
+        return {
+          ...balance,
+          user_name: user.name,
+          user_role: user.role,
+          used_by_type: usedByType,
+          pending_by_type: pendingByType,
+          leave_period_start: leavePeriod.startDate,
+          leave_period_end: leavePeriod.endDate,
+        }
       }))
 
-      return { data: result, error: null }
+      // null 제거 및 잔여 연차 내림차순 정렬
+      const filteredResult = result
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+        .sort((a, b) => b.remaining_days - a.remaining_days)
+
+      return { data: filteredResult, error: null }
     } catch (error) {
       console.error('[leaveService.getAllEmployeeBalances] Error:', error)
       return { data: [], error: extractErrorMessage(error) }
@@ -478,6 +657,8 @@ export const leaveService = {
 
   /**
    * 연차 잔여 수동 초기화/계산
+   * - 입사일 기준 연차 기간으로 계산 (1월 1일~12월 31일 기준이 아님)
+   * - year 파라미터는 DB 저장용으로 사용 (현재 연차 기간의 시작 연도)
    */
   async initializeBalance(userId: string, year: number = new Date().getFullYear()): Promise<{ success: boolean; error: string | null }> {
     try {
@@ -497,30 +678,75 @@ export const leaveService = {
       if (userError) throw userError
 
       const hireDate = user.hire_date ? new Date(user.hire_date) : new Date(user.created_at)
-      const yearsOfService = calculateYearsOfService(hireDate)
-      const totalDays = calculateAnnualLeaveDays(hireDate)
+      const yearsOfService = calculateYearsOfService(hireDate) // DB 저장용 (반올림된 값)
 
-      // 이미 승인된 연차 조회 (날짜가 지난 것만 사용으로 처리)
+      // 1년 미만 판별용 정확한 근속 연수 계산 (반올림 없이)
+      const diffTime = new Date().getTime() - hireDate.getTime()
+      const exactYearsOfService = diffTime / (1000 * 60 * 60 * 24 * 365)
+
+      // 입사일 기준 현재 연차 기간 계산
+      const leavePeriod = calculateLeavePeriod(hireDate)
+      const periodStartDate = leavePeriod.startDate
+      const periodEndDate = leavePeriod.endDate
+      const periodYear = new Date(periodStartDate).getFullYear() // DB 저장용 연도
+
+      // 1년 미만 직원의 경우 월별 무급휴가 사용 여부 확인하여 연차 계산
+      let totalDays: number
+      if (exactYearsOfService < 1) {
+        // 무급휴가 타입 조회
+        const { data: unpaidTypeForCalc } = await (supabase as any)
+          .from('leave_types')
+          .select('id')
+          .eq('clinic_id', clinicId)
+          .eq('code', 'unpaid')
+          .single()
+
+        // 월별 무급휴가 사용 기록 조회
+        let unpaidLeaveByMonth: Record<string, number> = {}
+        if (unpaidTypeForCalc) {
+          const { data: unpaidRequests } = await (supabase as any)
+            .from('leave_requests')
+            .select('total_days, start_date')
+            .eq('user_id', userId)
+            .eq('leave_type_id', unpaidTypeForCalc.id)
+            .eq('status', 'approved')
+            .gte('start_date', periodStartDate)
+            .lte('start_date', periodEndDate)
+
+          // 월별로 무급휴가 일수 집계
+          for (const req of (unpaidRequests || [])) {
+            const startDate = new Date(req.start_date)
+            const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`
+            unpaidLeaveByMonth[monthKey] = (unpaidLeaveByMonth[monthKey] || 0) + (req.total_days || 0)
+          }
+        }
+
+        totalDays = calculateAnnualLeaveDaysWithUnpaidCheck(hireDate, new Date(), unpaidLeaveByMonth)
+      } else {
+        totalDays = calculateAnnualLeaveDays(hireDate)
+      }
+
+      // 이미 승인된 연차 조회 (연차 기간 내, 오늘 이전에 시작된 것만 사용으로 처리)
       const today = new Date().toISOString().split('T')[0]
       const { data: approved } = await (supabase as any)
         .from('leave_requests')
         .select('total_days, leave_types!inner(deduct_from_annual)')
         .eq('user_id', userId)
         .eq('status', 'approved')
-        .gte('start_date', `${year}-01-01`)
-        .lte('start_date', `${year}-12-31`)
+        .gte('start_date', periodStartDate)
+        .lte('start_date', periodEndDate)
         .lte('start_date', today)  // 오늘 이전에 시작된 연차만 사용으로
 
       const usedDays = (approved || [])
         .filter((r: any) => r.leave_types?.deduct_from_annual)
         .reduce((sum: number, r: any) => sum + r.total_days, 0)
 
-      // 수동 조정 연차 조회
+      // 수동 조정 연차 조회 (연차 기간 시작 연도 기준)
       const { data: adjustments } = await (supabase as any)
         .from('leave_adjustments')
         .select('adjustment_type, days')
         .eq('user_id', userId)
-        .eq('year', year)
+        .eq('year', periodYear)
 
       // 추가된 연차 (total_days에 더함)
       const addedDays = (adjustments || []).reduce((sum: number, adj: any) => {
@@ -534,15 +760,15 @@ export const leaveService = {
         return sum
       }, 0)
 
-      // 승인됐지만 아직 시작 날짜가 지나지 않은 연차 (대기로 표시)
+      // 승인됐지만 아직 시작 날짜가 지나지 않은 연차 (사용 예정으로 표시)
       // 주의: 승인 대기(status='pending')는 대기에 포함하지 않음
       const { data: approvedFuture } = await (supabase as any)
         .from('leave_requests')
         .select('total_days, leave_types!inner(deduct_from_annual)')
         .eq('user_id', userId)
         .eq('status', 'approved')
-        .gte('start_date', `${year}-01-01`)
-        .lte('start_date', `${year}-12-31`)
+        .gte('start_date', periodStartDate)
+        .lte('start_date', periodEndDate)
         .gt('start_date', today)  // 오늘 이후에 시작되는 연차
 
       const pendingDays = (approvedFuture || [])
@@ -557,7 +783,7 @@ export const leaveService = {
         .eq('code', 'family_event')
         .single()
 
-      // 승인된 경조사 일수 조회 (연도 내 전체)
+      // 승인된 경조사 일수 조회 (연차 기간 내 전체)
       let familyEventDays = 0
       if (familyEventType) {
         const { data: familyEventRequests } = await (supabase as any)
@@ -566,8 +792,8 @@ export const leaveService = {
           .eq('user_id', userId)
           .eq('leave_type_id', familyEventType.id)
           .eq('status', 'approved')
-          .gte('start_date', `${year}-01-01`)
-          .lte('start_date', `${year}-12-31`)
+          .gte('start_date', periodStartDate)
+          .lte('start_date', periodEndDate)
 
         familyEventDays = (familyEventRequests || []).reduce((sum: number, r: any) => sum + r.total_days, 0)
       }
@@ -580,20 +806,20 @@ export const leaveService = {
         .eq('code', 'unpaid')
         .single()
 
-      // 승인된 무급휴가 일수 조회 (연도 내 전체 - 현황 표시용)
+      // 승인된 무급휴가 일수 조회 (연차 기간 내 전체 - 현황 표시용)
       let unpaidTotalDays = 0
       // 미래 무급휴가 (remaining_days 계산용)
       let unpaidFutureDays = 0
       if (unpaidType) {
-        // 연도 내 전체 승인된 무급휴가
+        // 연차 기간 내 전체 승인된 무급휴가
         const { data: unpaidRequests } = await (supabase as any)
           .from('leave_requests')
           .select('total_days, start_date')
           .eq('user_id', userId)
           .eq('leave_type_id', unpaidType.id)
           .eq('status', 'approved')
-          .gte('start_date', `${year}-01-01`)
-          .lte('start_date', `${year}-12-31`)
+          .gte('start_date', periodStartDate)
+          .lte('start_date', periodEndDate)
 
         unpaidTotalDays = (unpaidRequests || []).reduce((sum: number, r: any) => sum + r.total_days, 0)
         // 오늘 이후의 무급휴가만 remaining_days에서 차감
@@ -607,13 +833,13 @@ export const leaveService = {
       // 잔여 연차 = 총 연차 - 사용 - 차감 - 대기 - 미래 무급휴가 (음수 가능)
       const remainingDays = finalTotalDays - usedDays - deductedDays - pendingDays - unpaidFutureDays
 
-      // Upsert
+      // Upsert (연차 기간 시작 연도 기준으로 저장)
       const { error } = await (supabase as any)
         .from('employee_leave_balances')
         .upsert({
           user_id: userId,
           clinic_id: clinicId,
-          year,
+          year: periodYear,
           total_days: finalTotalDays,
           used_days: usedDays + deductedDays,
           pending_days: pendingDays,
@@ -622,6 +848,8 @@ export const leaveService = {
           unpaid_days: unpaidTotalDays,        // 무급휴가 사용 일수
           years_of_service: yearsOfService,
           hire_date: hireDate.toISOString().split('T')[0],
+          leave_period_start: periodStartDate, // 연차 기간 시작일
+          leave_period_end: periodEndDate,     // 연차 기간 종료일
           last_calculated_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id,year'
@@ -630,7 +858,7 @@ export const leaveService = {
       if (error) throw error
 
       // 연차가 증가했을 때 전환 가능한 무급휴가를 연차로 자동 전환
-      await this.convertUnpaidToAnnual(userId, year)
+      await this.convertUnpaidToAnnual(userId, periodYear)
 
       return { success: true, error: null }
     } catch (error) {
