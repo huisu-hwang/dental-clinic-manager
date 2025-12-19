@@ -3,7 +3,7 @@
 -- Bulletin Board Storage Setup
 -- =====================================================
 
--- 버킷 생성 (이미 존재하면 무시)
+-- 버킷 생성 (이미 존재하면 업데이트)
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'bulletin-files',
@@ -32,28 +32,36 @@ ON CONFLICT (id) DO UPDATE SET
   public = true,
   file_size_limit = 10485760;
 
--- Storage 정책: 인증된 사용자는 자신의 클리닉 폴더에 업로드 가능
-CREATE POLICY "Authenticated users can upload bulletin files"
+-- 기존 정책 삭제 (있으면)
+DROP POLICY IF EXISTS "Authenticated users can upload bulletin files" ON storage.objects;
+DROP POLICY IF EXISTS "Anyone can view bulletin files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can delete bulletin files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can update bulletin files" ON storage.objects;
+DROP POLICY IF EXISTS "bulletin_files_insert" ON storage.objects;
+DROP POLICY IF EXISTS "bulletin_files_select" ON storage.objects;
+DROP POLICY IF EXISTS "bulletin_files_delete" ON storage.objects;
+DROP POLICY IF EXISTS "bulletin_files_update" ON storage.objects;
+
+-- Storage 정책: 모든 사용자가 업로드 가능 (public bucket)
+CREATE POLICY "bulletin_files_insert"
 ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (
-  bucket_id = 'bulletin-files'
-);
+TO public
+WITH CHECK (bucket_id = 'bulletin-files');
 
 -- Storage 정책: 모든 사용자가 파일 조회 가능 (public bucket)
-CREATE POLICY "Anyone can view bulletin files"
+CREATE POLICY "bulletin_files_select"
 ON storage.objects FOR SELECT
 TO public
 USING (bucket_id = 'bulletin-files');
 
--- Storage 정책: 인증된 사용자는 파일 삭제 가능
-CREATE POLICY "Authenticated users can delete bulletin files"
+-- Storage 정책: 모든 사용자가 파일 삭제 가능
+CREATE POLICY "bulletin_files_delete"
 ON storage.objects FOR DELETE
-TO authenticated
+TO public
 USING (bucket_id = 'bulletin-files');
 
--- Storage 정책: 인증된 사용자는 파일 업데이트 가능
-CREATE POLICY "Authenticated users can update bulletin files"
+-- Storage 정책: 모든 사용자가 파일 업데이트 가능
+CREATE POLICY "bulletin_files_update"
 ON storage.objects FOR UPDATE
-TO authenticated
+TO public
 USING (bucket_id = 'bulletin-files');
