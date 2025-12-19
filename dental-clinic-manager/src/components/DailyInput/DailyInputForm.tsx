@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw } from 'lucide-react'
+import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
@@ -55,6 +56,7 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
   const [hasExistingData, setHasExistingData] = useState(false)
   const [hasExternalUpdate, setHasExternalUpdate] = useState(false)  // 다른 사용자의 변경 감지
   const isSavingRef = useRef(false)  // 현재 저장 중인지 확인 (자신의 저장은 무시)
+  const router = useRouter()
   const isReadOnly = hasExistingData ? !canEdit : !canCreate
 
   // 폼 데이터 리셋
@@ -447,6 +449,98 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
     handleDateChange(today)
   }
 
+  // 저장 후 상담 상세 기록 페이지로 이동
+  const handleSaveAndNavigateToLogs = async () => {
+    // 입력된 데이터가 있는지 확인 (환자명이 있는 행이 하나라도 있으면)
+    const hasConsultData = consultRows.some(row => row.patient_name?.trim())
+    const hasGiftData = giftRows.some(row => row.patient_name?.trim())
+    const hasHappyCallData = happyCallRows.some(row => row.patient_name?.trim())
+    const hasOtherData = recallCount > 0 || recallBookingCount > 0 || recallBookingNames.trim() || specialNotes.trim()
+
+    const hasAnyData = hasConsultData || hasGiftData || hasHappyCallData || hasOtherData
+
+    if (hasAnyData && !isReadOnly) {
+      // 데이터가 있으면 저장 먼저 수행
+      setLoading(true)
+      isSavingRef.current = true
+      setHasExternalUpdate(false)
+
+      try {
+        if (USE_NEW_ARCHITECTURE) {
+          const filteredConsultLogs = consultRows.filter(row => row.patient_name?.trim())
+          const filteredGiftLogs = giftRows.filter(row => row.patient_name?.trim())
+          const filteredHappyCallLogs = happyCallRows.filter(row => row.patient_name?.trim())
+
+          const result = await saveDailyReport({
+            date: reportDate,
+            dailyReport: {
+              recall_count: recallCount,
+              recall_booking_count: recallBookingCount,
+              recall_booking_names: recallBookingNames,
+              special_notes: specialNotes
+            },
+            consultLogs: filteredConsultLogs.map(row => ({
+              date: reportDate,
+              patient_name: row.patient_name,
+              consult_content: row.consult_content || '',
+              consult_status: row.consult_status,
+              remarks: row.remarks || ''
+            })),
+            giftLogs: filteredGiftLogs.map(row => ({
+              date: reportDate,
+              patient_name: row.patient_name,
+              gift_type: row.gift_type || '',
+              quantity: row.quantity || 1,
+              naver_review: row.naver_review,
+              notes: row.notes || ''
+            })),
+            happyCallLogs: filteredHappyCallLogs.map(row => ({
+              date: reportDate,
+              patient_name: row.patient_name,
+              treatment: row.treatment || '',
+              notes: row.notes || ''
+            }))
+          })
+
+          if (!result.success) {
+            throw new Error(result.error || '저장에 실패했습니다.')
+          }
+
+          onSaveSuccess?.()
+        } else {
+          await onSaveReport({
+            date: reportDate,
+            consultRows,
+            giftRows,
+            happyCallRows,
+            recallCount,
+            recallBookingCount,
+            recallBookingNames,
+            specialNotes
+          })
+          onSaveSuccess?.()
+        }
+
+        setHasExistingData(true)
+      } catch (error) {
+        console.error('[DailyInputForm] Save before navigate error:', error)
+        const errorMessage = error instanceof Error ? error.message : '저장 중 오류가 발생했습니다.'
+        alert(errorMessage + ' 페이지 이동을 취소합니다.')
+        setLoading(false)
+        isSavingRef.current = false
+        return // 저장 실패 시 이동하지 않음
+      } finally {
+        setLoading(false)
+        setTimeout(() => {
+          isSavingRef.current = false
+        }, 2000)
+      }
+    }
+
+    // 상담 상세 기록 페이지로 이동 (해시로 섹션 지정)
+    router.push('/dashboard?tab=logs#consult-logs')
+  }
+
   // 섹션 헤더 컴포넌트
   const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
     <div className="flex items-center space-x-2 sm:space-x-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
@@ -534,7 +628,28 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
 
         {/* 상담 결과 */}
         <div>
-          <SectionHeader number={2} title="환자 상담 결과" icon={Users} />
+          <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
+                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </div>
+              <h3 className="text-sm sm:text-base font-semibold text-slate-800">
+                <span className="text-blue-600 mr-1">2.</span>
+                환자 상담 결과
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={handleSaveAndNavigateToLogs}
+              disabled={loading}
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+              title="현재 보고서를 저장하고 상담 상세 기록 페이지로 이동"
+            >
+              <span className="hidden sm:inline">상담 상세 기록</span>
+              <span className="sm:hidden">상세 기록</span>
+              <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </button>
+          </div>
           <ConsultTable
             consultRows={consultRows}
             onConsultRowsChange={setConsultRows}

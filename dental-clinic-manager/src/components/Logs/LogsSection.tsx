@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { FileText, MessageSquare, Gift, Package, ArrowRight, Check, Search, X } from 'lucide-react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog } from '@/types'
 import SpecialNotesHistory from './SpecialNotesHistory'
@@ -43,6 +43,32 @@ export default function LogsSection({
   const [giftSort, setGiftSort] = useState<'default' | 'type' | 'date'>('default')
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<number>>(new Set())
+
+  // 상담 상세 기록 섹션 참조
+  const consultLogsRef = useRef<HTMLDivElement>(null)
+
+  // URL 해시가 #consult-logs인 경우 해당 섹션으로 스크롤
+  useEffect(() => {
+    const handleHashScroll = () => {
+      if (typeof window !== 'undefined' && window.location.hash === '#consult-logs') {
+        // 약간의 지연 후 스크롤 (DOM 렌더링 완료 대기)
+        setTimeout(() => {
+          consultLogsRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          })
+          // 스크롤 후 해시 제거 (히스토리에 남지 않도록)
+          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+        }, 100)
+      }
+    }
+
+    handleHashScroll()
+
+    // hashchange 이벤트 리스너 (SPA 내 해시 변경 시)
+    window.addEventListener('hashchange', handleHashScroll)
+    return () => window.removeEventListener('hashchange', handleHashScroll)
+  }, [])
 
   const handleUpdateStatus = async (consultId: number) => {
     if (!onUpdateConsultStatus || updatingId !== null) return
@@ -171,7 +197,7 @@ export default function LogsSection({
         </div>
 
         {/* 상담 상세 기록 */}
-        <div>
+        <div ref={consultLogsRef} id="consult-logs" className="scroll-mt-20">
           <div className="flex flex-col gap-2 sm:gap-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
               <div className="flex items-center space-x-2 sm:space-x-3">
