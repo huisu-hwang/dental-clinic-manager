@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useMenuSettings } from '@/hooks/useMenuSettings'
 import type { Permission } from '@/types/permissions'
@@ -17,14 +17,19 @@ import {
   CalendarDays,
   Building2,
   FileText,
-  Megaphone
+  Megaphone,
+  ChevronDown,
+  Briefcase,
+  MessageSquare,
+  FolderOpen,
+  Settings
 } from 'lucide-react'
 
 interface TabNavigationProps {
   activeTab: string
   onTabChange: (tab: string) => void
-  onItemClick?: () => void  // 모바일에서 메뉴 닫기용
-  skipAutoRedirect?: boolean  // 자동 리다이렉트 방지 (관리 페이지 등에서 사용)
+  onItemClick?: () => void
+  skipAutoRedirect?: boolean
 }
 
 interface Tab {
@@ -33,6 +38,41 @@ interface Tab {
   icon: React.ElementType
   requiredPermissions?: Permission[]
 }
+
+interface MenuCategory {
+  id: string
+  label: string
+  icon: React.ElementType
+  items: string[]
+}
+
+// 카테고리 정의
+const menuCategories: MenuCategory[] = [
+  {
+    id: 'work',
+    label: '업무 관리',
+    icon: Briefcase,
+    items: ['daily-input', 'attendance', 'leave']
+  },
+  {
+    id: 'communication',
+    label: '소통 · 분석',
+    icon: MessageSquare,
+    items: ['bulletin', 'stats', 'logs']
+  },
+  {
+    id: 'documents',
+    label: '문서 · 자료',
+    icon: FolderOpen,
+    items: ['protocols', 'contracts', 'documents']
+  },
+  {
+    id: 'operations',
+    label: '운영 관리',
+    icon: Settings,
+    items: ['vendors', 'settings']
+  }
+]
 
 const defaultTabs: Tab[] = [
   { id: 'home', label: '대시보드', icon: Home },
@@ -50,7 +90,6 @@ const defaultTabs: Tab[] = [
   { id: 'guide', label: '사용 안내', icon: HelpCircle, requiredPermissions: ['guide_view'] }
 ]
 
-// 아이콘 매핑
 const iconMap: Record<string, React.ElementType> = {
   'home': Home,
   'daily-input': ClipboardList,
@@ -67,7 +106,6 @@ const iconMap: Record<string, React.ElementType> = {
   'guide': HelpCircle
 }
 
-// 권한 매핑
 const permissionsMap: Record<string, Permission[]> = {
   'home': [],
   'daily-input': ['daily_report_view'],
@@ -88,15 +126,36 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   const { hasPermission } = usePermissions()
   const { menuSettings, isLoading } = useMenuSettings()
 
-  // 메뉴 설정을 적용한 탭 목록 생성
+  // 활성 탭이 속한 카테고리 찾기
+  const getActiveCategoryId = (tabId: string): string | null => {
+    for (const category of menuCategories) {
+      if (category.items.includes(tabId)) {
+        return category.id
+      }
+    }
+    return null
+  }
+
+  // 초기 열린 카테고리 설정 (활성 탭이 속한 카테고리)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
+    const activeCategoryId = getActiveCategoryId(activeTab)
+    return activeCategoryId ? new Set([activeCategoryId]) : new Set()
+  })
+
+  // 활성 탭이 변경되면 해당 카테고리 자동으로 열기
+  useEffect(() => {
+    const activeCategoryId = getActiveCategoryId(activeTab)
+    if (activeCategoryId && !expandedCategories.has(activeCategoryId)) {
+      setExpandedCategories(prev => new Set([...prev, activeCategoryId]))
+    }
+  }, [activeTab])
+
   const tabs = useMemo(() => {
-    // 메뉴 설정에서 보이는 메뉴만 순서대로 정렬
     const visibleMenuIds = menuSettings
       .filter(menu => menu.visible)
       .sort((a, b) => a.order - b.order)
       .map(menu => menu.id)
 
-    // 탭 정보 생성
     return visibleMenuIds.map(id => {
       const defaultTab = defaultTabs.find(t => t.id === id)
       const menuSetting = menuSettings.find(m => m.id === id)
@@ -110,7 +169,6 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     })
   }, [menuSettings])
 
-  // 권한이 있는 탭만 필터링 (useMemo로 캐싱하여 불필요한 재계산 방지)
   const visibleTabs = useMemo(() =>
     tabs.filter(tab => {
       if (!tab.requiredPermissions || tab.requiredPermissions.length === 0) {
@@ -119,9 +177,18 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
       return tab.requiredPermissions.some(perm => hasPermission(perm))
     }), [tabs, hasPermission])
 
-  // 현재 선택된 탭이 권한이 없는 탭이면 첫 번째 탭으로 변경
-  // useEffect를 사용하여 렌더링 이후에 비동기적으로 처리 (렌더링 중 상태 변경 방지)
-  // skipAutoRedirect가 true면 자동 리다이렉트 하지 않음 (관리 페이지 등)
+  // 카테고리별로 보이는 탭 필터링
+  const getVisibleTabsForCategory = (categoryItems: string[]) => {
+    return categoryItems
+      .map(id => visibleTabs.find(tab => tab.id === id))
+      .filter((tab): tab is typeof visibleTabs[number] => tab !== undefined)
+  }
+
+  // 카테고리에 활성 탭이 있는지 확인
+  const categoryHasActiveTab = (categoryItems: string[]) => {
+    return categoryItems.includes(activeTab)
+  }
+
   useEffect(() => {
     if (skipAutoRedirect) return
     if (visibleTabs.length > 0 && !visibleTabs.find(tab => tab.id === activeTab)) {
@@ -131,20 +198,30 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
 
   const handleTabClick = (tabId: string) => {
     onTabChange(tabId)
-    // 모바일에서 메뉴 아이템 클릭 시 메뉴 닫기
     if (onItemClick) {
       onItemClick()
     }
   }
 
-  // 로딩 중일 때 스켈레톤 표시
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId)
+      } else {
+        newSet.add(categoryId)
+      }
+      return newSet
+    })
+  }
+
   if (isLoading) {
     return (
       <nav className="flex flex-col space-y-1 w-full">
-        {[...Array(6)].map((_, i) => (
+        {[...Array(5)].map((_, i) => (
           <div
             key={i}
-            className="flex items-center space-x-3 py-3 lg:py-2.5 px-4 lg:px-3 rounded-xl animate-pulse"
+            className="flex items-center space-x-3 py-2.5 px-3 rounded-lg animate-pulse"
           >
             <div className="w-5 h-5 bg-slate-200 rounded" />
             <div className="h-4 bg-slate-200 rounded w-20" />
@@ -154,29 +231,124 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     )
   }
 
-  return (
-    <nav className="flex flex-col space-y-1 w-full">
-      {visibleTabs.map(tab => {
-        const isActive = activeTab === tab.id
-        const Icon = tab.icon
+  // 홈과 가이드 탭 분리
+  const homeTab = visibleTabs.find(tab => tab.id === 'home')
+  const guideTab = visibleTabs.find(tab => tab.id === 'guide')
 
-        return (
+  return (
+    <nav className="flex flex-col h-full w-full">
+      {/* 상단 영역: 홈 + 카테고리들 */}
+      <div className="flex-1 space-y-1">
+        {/* 홈 버튼 */}
+        {homeTab && (
           <button
-            key={tab.id}
-            onClick={() => handleTabClick(tab.id)}
+            onClick={() => handleTabClick(homeTab.id)}
             className={`
-              group flex items-center space-x-3 py-3 lg:py-2.5 px-4 lg:px-3 rounded-xl text-sm font-medium transition-all duration-200 ease-in-out whitespace-nowrap relative
-              ${isActive
+              group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
+              ${activeTab === homeTab.id
                 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
               }
             `}
           >
-            <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span className="truncate">{tab.label}</span>
+            <Home className={`w-5 h-5 flex-shrink-0 ${activeTab === homeTab.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+            <span className="truncate">{homeTab.label}</span>
           </button>
-        )
-      })}
+        )}
+
+        {/* 구분선 */}
+        <div className="pt-2 pb-1">
+          <div className="h-px bg-slate-200" />
+        </div>
+
+        {/* 카테고리들 */}
+        {menuCategories.map(category => {
+          const categoryTabs = getVisibleTabsForCategory(category.items)
+          if (categoryTabs.length === 0) return null
+
+          const isExpanded = expandedCategories.has(category.id)
+          const hasActive = categoryHasActiveTab(category.items)
+          const CategoryIcon = category.icon
+
+          return (
+            <div key={category.id} className="space-y-0.5">
+              {/* 카테고리 헤더 */}
+              <button
+                onClick={() => toggleCategory(category.id)}
+                className={`
+                  group flex items-center justify-between w-full py-2 px-3 rounded-lg text-xs font-semibold uppercase tracking-wide transition-all duration-200
+                  ${hasActive && !isExpanded
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                  }
+                `}
+              >
+                <div className="flex items-center space-x-2">
+                  <CategoryIcon className="w-4 h-4" />
+                  <span>{category.label}</span>
+                  {hasActive && !isExpanded && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  )}
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {/* 카테고리 아이템들 */}
+              <div
+                className={`
+                  overflow-hidden transition-all duration-200 ease-in-out
+                  ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
+                `}
+              >
+                <div className="pl-2 space-y-0.5 pt-0.5">
+                  {categoryTabs.map(tab => {
+                    const isActive = activeTab === tab.id
+                    const Icon = tab.icon
+
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => handleTabClick(tab.id)}
+                        className={`
+                          group flex items-center space-x-3 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 w-full
+                          ${isActive
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/20'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                          }
+                        `}
+                      >
+                        <Icon className={`w-4.5 h-4.5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                        <span className="truncate">{tab.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 하단 영역: 사용 안내 */}
+      {guideTab && (
+        <div className="pt-2 border-t border-slate-200 mt-2">
+          <button
+            onClick={() => handleTabClick(guideTab.id)}
+            className={`
+              group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
+              ${activeTab === guideTab.id
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+              }
+            `}
+          >
+            <HelpCircle className={`w-5 h-5 flex-shrink-0 ${activeTab === guideTab.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+            <span className="truncate">{guideTab.label}</span>
+          </button>
+        </div>
+      )}
     </nav>
   )
 }
