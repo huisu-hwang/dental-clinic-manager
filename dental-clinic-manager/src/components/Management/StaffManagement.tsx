@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, UserPlus, Clock, Mail, Phone, MapPin, IdCard, Pencil, Settings, X, Check, Calendar } from 'lucide-react'
+import { Users, UserPlus, Clock, Mail, Phone, MapPin, IdCard, Pencil, Settings, X, Check, Calendar, UserX } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 import { authService } from '@/lib/authService'
 import { dataService } from '@/lib/dataService'
@@ -43,8 +43,9 @@ interface StaffManagementProps {
 }
 
 export default function StaffManagement({ currentUser }: StaffManagementProps) {
-  const [activeTab, setActiveTab] = useState<'staff' | 'requests' | 'invite'>('staff')
+  const [activeTab, setActiveTab] = useState<'staff' | 'resigned' | 'requests' | 'invite'>('staff')
   const [staff, setStaff] = useState<UserProfile[]>([])
+  const [resignedStaff, setResignedStaff] = useState<UserProfile[]>([])
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -83,6 +84,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   useEffect(() => {
     if (currentUser.clinic_id) {
       fetchStaff()
+      fetchResignedStaff()
       fetchJoinRequests()
     }
   }, [currentUser.clinic_id])
@@ -120,6 +122,28 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
           }
         }
         setDecryptedResidentNumbers(decrypted)
+      }
+    } catch (err) {
+      console.error('Error:', err)
+    }
+  }
+
+  const fetchResignedStaff = async () => {
+    const supabase = getSupabase()
+    if (!supabase || !currentUser.clinic_id) return
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('clinic_id', currentUser.clinic_id)
+        .eq('status', 'resigned') // 퇴사한 직원만 표시
+        .order('updated_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching resigned staff:', error)
+      } else {
+        setResignedStaff((data as UserProfile[] | null) ?? [])
       }
     } catch (err) {
       console.error('Error:', err)
@@ -315,12 +339,14 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
     const badges = {
       active: 'bg-green-100 text-green-800',
       pending: 'bg-yellow-100 text-yellow-800',
-      suspended: 'bg-red-100 text-red-800'
+      suspended: 'bg-red-100 text-red-800',
+      resigned: 'bg-slate-100 text-slate-800'
     }
     const labels = {
       active: '활성',
       pending: '대기',
-      suspended: '정지'
+      suspended: '정지',
+      resigned: '퇴사'
     }
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badges[status as keyof typeof badges] || 'bg-gray-100 text-gray-800'}`}>
@@ -337,6 +363,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       <div className="flex flex-wrap gap-2 pb-4 border-b border-slate-200">
         {[
           { id: 'staff', label: '직원 목록', icon: Users },
+          { id: 'resigned', label: `퇴사한 직원 (${resignedStaff.length})`, icon: UserX },
           { id: 'requests', label: `가입 요청 (${pendingRequests.length})`, icon: Clock, badge: pendingRequests.length > 0 },
           { id: 'invite', label: '직원 초대', icon: UserPlus }
         ].map((tab) => (
@@ -470,6 +497,69 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                       등록된 직원이 없습니다.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Resigned Staff Tab */}
+      {activeTab === 'resigned' && (
+        <div>
+          <SectionHeader number={1} title="퇴사한 직원 목록" icon={UserX} />
+          <div className="overflow-x-auto border border-slate-200 rounded-lg">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">직원</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">연락처</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">직급</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">상태</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {resignedStaff.map((member) => (
+                  <tr key={member.id} className="hover:bg-slate-50 bg-slate-50/50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-slate-500 font-semibold text-sm">
+                            {(member.name || ' ').charAt(0)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-600">{member.name || '이름 없음'}</p>
+                          <p className="text-xs text-slate-400">{member.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-slate-500 space-y-0.5">
+                        {member.phone && (
+                          <div className="flex items-center text-xs">
+                            <Phone className="w-3 h-3 mr-1" />
+                            {member.phone}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600">
+                        {getRoleLabel(member.role || '')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {getStatusBadge(member.status || '')}
+                    </td>
+                  </tr>
+                ))}
+                {resignedStaff.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                      퇴사한 직원이 없습니다.
                     </td>
                   </tr>
                 )}
