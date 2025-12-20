@@ -13,6 +13,22 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 // Vercel Cron Job용 인증
 const CRON_SECRET = process.env.CRON_SECRET
 
+interface DocumentSubmission {
+  id: string
+  clinic_id: string
+  submitted_by: string
+  target_employee_id: string | null
+  document_type: string
+  document_data: Record<string, unknown>
+  status: string
+}
+
+interface UserInfo {
+  id: string
+  name: string
+  status: string
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Vercel Cron 인증 확인 (production 환경에서만)
@@ -38,18 +54,10 @@ export async function GET(request: NextRequest) {
     const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD 형식
     console.log(`[Cron process-resignations] Processing resignations for date: ${today}`)
 
-    // 1. 승인된 사직서에서 퇴사일이 오늘 이전인 문서 조회
+    // 1. 승인된 사직서 조회
     const { data: resignations, error: resignationError } = await supabaseAdmin
       .from('document_submissions')
-      .select(`
-        id,
-        clinic_id,
-        submitted_by,
-        document_type,
-        document_data,
-        status,
-        submitter:users!document_submissions_submitted_by_fkey(id, name, status)
-      `)
+      .select('id, clinic_id, submitted_by, target_employee_id, document_type, document_data, status')
       .eq('document_type', 'resignation')
       .eq('status', 'approved')
 
@@ -61,18 +69,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 2. 승인된 권고사직서에서 예정 퇴직일이 오늘 이전인 문서 조회
+    // 2. 승인된 권고사직서 조회
     const { data: recommendedResignations, error: recommendedError } = await supabaseAdmin
       .from('document_submissions')
-      .select(`
-        id,
-        clinic_id,
-        target_employee_id,
-        document_type,
-        document_data,
-        status,
-        target_employee:users!document_submissions_target_employee_id_fkey(id, name, status)
-      `)
+      .select('id, clinic_id, submitted_by, target_employee_id, document_type, document_data, status')
       .eq('document_type', 'recommended_resignation')
       .eq('status', 'approved')
 
@@ -84,18 +84,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 3. 승인된 해고통보서에서 해고일이 오늘 이전인 문서 조회
+    // 3. 승인된 해고통보서 조회
     const { data: terminations, error: terminationError } = await supabaseAdmin
       .from('document_submissions')
-      .select(`
-        id,
-        clinic_id,
-        target_employee_id,
-        document_type,
-        document_data,
-        status,
-        target_employee:users!document_submissions_target_employee_id_fkey(id, name, status)
-      `)
+      .select('id, clinic_id, submitted_by, target_employee_id, document_type, document_data, status')
       .eq('document_type', 'termination_notice')
       .eq('status', 'approved')
 
@@ -110,8 +102,20 @@ export async function GET(request: NextRequest) {
     const processedEmployees: { id: string; name: string; type: string; resignationDate: string }[] = []
     const errors: string[] = []
 
+    // 사용자 정보 조회 헬퍼 함수
+    async function getUserInfo(userId: string): Promise<UserInfo | null> {
+      const { data, error } = await supabaseAdmin
+        .from('users')
+        .select('id, name, status')
+        .eq('id', userId)
+        .single()
+
+      if (error || !data) return null
+      return data as UserInfo
+    }
+
     // 사직서 처리 - 직원이 직접 제출한 경우 (submitted_by가 퇴사 대상)
-    for (const doc of resignations || []) {
+    for (const doc of (resignations as DocumentSubmission[]) || []) {
       const documentData = doc.document_data as { resignationDate?: string }
       const resignationDate = documentData?.resignationDate
 
@@ -119,7 +123,7 @@ export async function GET(request: NextRequest) {
 
       // 퇴사일이 오늘 이전인지 확인
       if (resignationDate <= today) {
-        const submitter = doc.submitter as { id: string; name: string; status: string } | null
+        const submitter = await getUserInfo(doc.submitted_by)
 
         // 이미 resigned 상태이거나 active가 아닌 경우 스킵
         if (!submitter || submitter.status !== 'active') continue
@@ -149,7 +153,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 권고사직서 처리 - 대상 직원(target_employee_id)이 퇴사 대상
-    for (const doc of recommendedResignations || []) {
+    for (const doc of (recommendedResignations as DocumentSubmission[]) || []) {
       const documentData = doc.document_data as { expectedResignationDate?: string }
       const expectedResignationDate = documentData?.expectedResignationDate
 
@@ -157,7 +161,7 @@ export async function GET(request: NextRequest) {
 
       // 예정 퇴직일이 오늘 이전인지 확인
       if (expectedResignationDate <= today) {
-        const targetEmployee = doc.target_employee as { id: string; name: string; status: string } | null
+        const targetEmployee = await getUserInfo(doc.target_employee_id)
 
         // 이미 resigned 상태이거나 active가 아닌 경우 스킵
         if (!targetEmployee || targetEmployee.status !== 'active') continue
@@ -187,7 +191,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 해고통보서 처리 - 대상 직원(target_employee_id)이 해고 대상
-    for (const doc of terminations || []) {
+    for (const doc of (terminations as DocumentSubmission[]) || []) {
       const documentData = doc.document_data as { terminationDate?: string }
       const terminationDate = documentData?.terminationDate
 
@@ -195,7 +199,7 @@ export async function GET(request: NextRequest) {
 
       // 해고일이 오늘 이전인지 확인
       if (terminationDate <= today) {
-        const targetEmployee = doc.target_employee as { id: string; name: string; status: string } | null
+        const targetEmployee = await getUserInfo(doc.target_employee_id)
 
         // 이미 resigned 상태이거나 active가 아닌 경우 스킵
         if (!targetEmployee || targetEmployee.status !== 'active') continue
