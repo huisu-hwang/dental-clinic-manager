@@ -1186,7 +1186,7 @@ export default function DocumentTemplates() {
             <h3 className="text-lg font-semibold text-slate-800 mb-4 print:hidden">미리보기</h3>
             <div
               ref={documentRef}
-              className="bg-white p-8 border border-slate-200 rounded-lg print:border-none print:p-0"
+              className="bg-white p-8 border border-slate-200 rounded-lg print:border-none print:p-0 document-print-area"
               style={{ minHeight: '800px' }}
             >
               {documentType === 'resignation' && (
