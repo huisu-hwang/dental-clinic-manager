@@ -769,9 +769,9 @@ export default function DocumentTemplates() {
                     <div>
                       <p className="font-medium text-slate-800">
                         {getDocumentTypeLabel(doc.document_type)}
-                        {doc.target_employee && (
-                          <span className="text-slate-500 ml-2">→ {doc.target_employee.name}</span>
-                        )}
+                        <span className="text-slate-500 ml-2">
+                          → {doc.target_employee ? doc.target_employee.name : '원장'}
+                        </span>
                       </p>
                       <p className="text-sm text-slate-500">
                         {new Date(doc.created_at).toLocaleDateString('ko-KR')}
