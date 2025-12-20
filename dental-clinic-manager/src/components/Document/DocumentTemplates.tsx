@@ -489,9 +489,66 @@ export default function DocumentTemplates() {
     }
   }
 
-  // 프린트
-  const handlePrint = () => {
-    window.print()
+  // 프린트 - PDF 생성 후 인쇄 (PDF와 동일한 모양으로 출력)
+  const handlePrint = async () => {
+    if (!documentRef.current || isPdfGenerating) return
+
+    setIsPdfGenerating(true)
+    try {
+      const imgData = await toPng(documentRef.current, {
+        quality: 0.95,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff'
+      })
+
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+      })
+
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      const margin = 10
+
+      const img = new Image()
+      img.src = imgData
+      await new Promise((resolve) => { img.onload = resolve })
+
+      const imgWidth = img.width
+      const imgHeight = img.height
+
+      const availableWidth = pdfWidth - (margin * 2)
+      const availableHeight = pdfHeight - (margin * 2)
+
+      const widthRatio = availableWidth / imgWidth
+      const heightRatio = availableHeight / imgHeight
+      const scale = Math.min(widthRatio, heightRatio)
+
+      const scaledWidth = imgWidth * scale
+      const scaledHeight = imgHeight * scale
+
+      const xOffset = margin + (availableWidth - scaledWidth) / 2
+      const yOffset = margin
+
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, scaledWidth, scaledHeight)
+
+      // PDF를 Blob URL로 변환하여 새 창에서 인쇄
+      const pdfBlob = pdf.output('blob')
+      const pdfUrl = URL.createObjectURL(pdfBlob)
+      const printWindow = window.open(pdfUrl, '_blank')
+
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print()
+        }
+      }
+    } catch (error) {
+      console.error('인쇄 준비 중 오류 발생:', error)
+      alert('인쇄를 준비하는 데 실패했습니다.')
+    } finally {
+      setIsPdfGenerating(false)
+    }
   }
 
   // 날짜 포맷팅
