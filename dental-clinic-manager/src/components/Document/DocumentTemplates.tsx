@@ -415,7 +415,7 @@ export default function DocumentTemplates() {
     }
   }
 
-  // PDF 다운로드
+  // PDF 다운로드 - 한 페이지에 맞게 출력
   const handleDownloadPdf = async () => {
     if (!documentRef.current || isPdfGenerating) return
 
@@ -435,6 +435,7 @@ export default function DocumentTemplates() {
 
       const pdfWidth = pdf.internal.pageSize.getWidth()
       const pdfHeight = pdf.internal.pageSize.getHeight()
+      const margin = 10 // 여백 10mm
 
       const img = new Image()
       img.src = imgData
@@ -442,22 +443,24 @@ export default function DocumentTemplates() {
 
       const imgWidth = img.width
       const imgHeight = img.height
-      const ratio = imgWidth / imgHeight
-      const width = pdfWidth - 20
-      const height = width / ratio
 
-      let position = 10
-      let heightLeft = height
+      // 사용 가능한 영역 계산
+      const availableWidth = pdfWidth - (margin * 2)
+      const availableHeight = pdfHeight - (margin * 2)
 
-      pdf.addImage(imgData, 'PNG', 10, position, width, height)
-      heightLeft -= (pdfHeight - 20)
+      // 이미지를 한 페이지에 맞게 스케일링
+      const widthRatio = availableWidth / imgWidth
+      const heightRatio = availableHeight / imgHeight
+      const scale = Math.min(widthRatio, heightRatio)
 
-      while (heightLeft > 0) {
-        position = heightLeft - height + 10
-        pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 10, position, width, height)
-        heightLeft -= pdfHeight
-      }
+      const scaledWidth = imgWidth * scale
+      const scaledHeight = imgHeight * scale
+
+      // 이미지를 페이지 중앙에 배치
+      const xOffset = margin + (availableWidth - scaledWidth) / 2
+      const yOffset = margin
+
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, scaledWidth, scaledHeight)
 
       const getFileName = () => {
         switch (documentType) {
@@ -469,6 +472,8 @@ export default function DocumentTemplates() {
             return `권고사직서_${recommendedResignationData.employeeName || '문서'}.pdf`
           case 'termination_notice':
             return `해고통보서_${terminationNoticeData.employeeName || '문서'}.pdf`
+          case 'welfare_payment':
+            return `복지비지급확인서_${welfarePaymentData.employeeName || '문서'}.pdf`
           default:
             return '문서.pdf'
         }
