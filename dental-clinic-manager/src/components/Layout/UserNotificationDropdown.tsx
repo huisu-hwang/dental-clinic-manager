@@ -14,6 +14,7 @@ import {
   DocumentMinusIcon,
   CheckIcon,
   TrashIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline'
 import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid'
 import type { UserNotification, UserNotificationType } from '@/types/notification'
@@ -30,6 +31,11 @@ const NotificationTypeIcons: Record<UserNotificationType, React.ComponentType<{ 
   contract_signed: DocumentCheckIcon,
   contract_completed: DocumentTextIcon,
   contract_cancelled: DocumentMinusIcon,
+  document_resignation: DocumentTextIcon,
+  document_approved: CheckCircleIcon,
+  document_rejected: XCircleIcon,
+  document: DocumentTextIcon,
+  important: ExclamationCircleIcon,
   system: BellIcon,
 }
 

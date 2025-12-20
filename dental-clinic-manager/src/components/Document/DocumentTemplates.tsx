@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toPng } from 'html-to-image'
 import { jsPDF } from 'jspdf'
 import { useAuth } from '@/contexts/AuthContext'
@@ -79,6 +80,7 @@ interface StaffMember {
 
 export default function DocumentTemplates() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
   const [documentType, setDocumentType] = useState<DocumentType>('resignation')
   const [isPdfGenerating, setIsPdfGenerating] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
@@ -97,6 +99,16 @@ export default function DocumentTemplates() {
 
   // 원장인지 확인
   const isOwner = user?.role === 'owner'
+
+  // URL 파라미터에서 view 값을 확인하여 탭 전환 (알림 클릭 시 결재 화면으로 이동)
+  useEffect(() => {
+    const view = searchParams.get('view')
+    if (view === 'received') {
+      setActiveTab('received')
+    } else if (view === 'sent') {
+      setActiveTab('sent')
+    }
+  }, [searchParams])
 
   // 사직서 데이터
   const [resignationData, setResignationData] = useState<ResignationData>(
@@ -959,8 +971,8 @@ export default function DocumentTemplates() {
             {DocumentTypeLabels[documentType]} 정보 입력
           </h3>
 
-          {/* 직원 선택 - 원장만 다른 직원 선택 가능 */}
-          {isOwner && staffList.length > 0 && (
+          {/* 직원 선택 - 원장만 다른 직원 선택 가능 (사직서는 본인 작성이므로 제외) */}
+          {isOwner && staffList.length > 0 && documentType !== 'resignation' && (
             <div className="mb-6 p-4 bg-blue-50 rounded-lg">
               <label className="block text-sm font-medium text-blue-800 mb-2">
                 <Users className="w-4 h-4 inline-block mr-1" />
@@ -1294,7 +1306,7 @@ export default function DocumentTemplates() {
   )
 }
 
-// 사직서 입력 폼
+// 사직서 입력 폼 (본인 정보는 자동 입력되고 읽기 전용)
 function ResignationForm({
   data,
   onChange
@@ -1308,15 +1320,21 @@ function ResignationForm({
 
   return (
     <div className="space-y-4">
+      {/* 본인 정보 안내 */}
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-700">
+          본인의 정보가 자동으로 입력되었습니다. 수정이 필요한 경우 인사담당자에게 문의하세요.
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">성명</label>
           <input
             type="text"
             value={data.employeeName}
-            onChange={(e) => handleChange('employeeName', e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="홍길동"
+            disabled
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-700 cursor-not-allowed"
           />
         </div>
         <div>
@@ -1324,9 +1342,8 @@ function ResignationForm({
           <input
             type="text"
             value={data.employeePosition}
-            onChange={(e) => handleChange('employeePosition', e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="치위생사"
+            disabled
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-700 cursor-not-allowed"
           />
         </div>
       </div>
@@ -1336,9 +1353,8 @@ function ResignationForm({
         <input
           type="text"
           value={data.department}
-          onChange={(e) => handleChange('department', e.target.value)}
-          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="진료실"
+          disabled
+          className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-700 cursor-not-allowed"
         />
       </div>
 
@@ -1348,8 +1364,8 @@ function ResignationForm({
           <input
             type="date"
             value={data.hireDate}
-            onChange={(e) => handleChange('hireDate', e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-700 cursor-not-allowed"
           />
         </div>
         <div>
