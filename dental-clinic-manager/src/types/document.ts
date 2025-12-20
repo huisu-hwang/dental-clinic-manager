@@ -16,7 +16,8 @@ export const DocumentTypeLabels: Record<DocumentType, string> = {
 }
 
 // 원장 전용 문서 타입 (직원은 작성 불가)
-export const OwnerOnlyDocumentTypes: DocumentType[] = ['recommended_resignation', 'termination_notice']
+// 권고사직서, 해고통보서, 복지비 지급 확인서는 원장이 직원에게 발급하는 문서
+export const OwnerOnlyDocumentTypes: DocumentType[] = ['recommended_resignation', 'termination_notice', 'welfare_payment']
 
 // 사직서 데이터
 export interface ResignationData {

@@ -156,8 +156,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 권고사직서/해고통보서는 원장만 작성 가능
-    const ownerOnlyTypes = ['recommended_resignation', 'termination_notice']
+    // 권고사직서/해고통보서/복지비 지급 확인서는 원장만 작성 가능
+    // 이 문서들은 원장이 직원에게 발급하는 문서
+    const ownerOnlyTypes = ['recommended_resignation', 'termination_notice', 'welfare_payment']
     if (ownerOnlyTypes.includes(documentType) && user.role !== 'owner') {
       return NextResponse.json(
         { error: 'Only owner can create this document type' },
