@@ -251,3 +251,215 @@ export async function testPhoneConnection(settings: PhoneDialSettings): Promise<
     }
   }
 }
+
+// ========================================
+// 네트워크 자동 감지 기능
+// ========================================
+
+/**
+ * 네트워크 정보 타입
+ */
+export interface NetworkInfo {
+  localIP: string | null
+  subnet: string | null
+  suggestedIPs: string[]
+  commonPorts: number[]
+}
+
+/**
+ * WebRTC를 사용하여 로컬 IP 주소 감지
+ */
+export async function detectLocalIP(): Promise<string | null> {
+  if (typeof window === 'undefined' || !window.RTCPeerConnection) {
+    return null
+  }
+
+  return new Promise((resolve) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [] // STUN 서버 없이 로컬 후보만 수집
+    })
+
+    const ips: string[] = []
+    let resolved = false
+
+    pc.onicecandidate = (event) => {
+      if (resolved) return
+
+      if (event.candidate) {
+        const candidate = event.candidate.candidate
+        // IP 주소 추출 (IPv4)
+        const ipMatch = candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/)
+        if (ipMatch) {
+          const ip = ipMatch[1]
+          // 로컬 네트워크 IP만 수집 (10.x.x.x, 172.16-31.x.x, 192.168.x.x)
+          if (isPrivateIP(ip) && !ips.includes(ip)) {
+            ips.push(ip)
+          }
+        }
+      } else {
+        // 모든 후보 수집 완료
+        resolved = true
+        pc.close()
+        // 192.168.x.x 또는 10.x.x.x 우선
+        const preferredIP = ips.find(ip => ip.startsWith('192.168.')) ||
+                           ips.find(ip => ip.startsWith('10.')) ||
+                           ips[0] || null
+        resolve(preferredIP)
+      }
+    }
+
+    // 데이터 채널 생성하여 ICE 수집 시작
+    pc.createDataChannel('')
+    pc.createOffer()
+      .then(offer => pc.setLocalDescription(offer))
+      .catch(() => {
+        resolved = true
+        pc.close()
+        resolve(null)
+      })
+
+    // 3초 타임아웃
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        pc.close()
+        const preferredIP = ips.find(ip => ip.startsWith('192.168.')) ||
+                           ips.find(ip => ip.startsWith('10.')) ||
+                           ips[0] || null
+        resolve(preferredIP)
+      }
+    }, 3000)
+  })
+}
+
+/**
+ * 사설 IP 주소인지 확인
+ */
+function isPrivateIP(ip: string): boolean {
+  const parts = ip.split('.').map(Number)
+  if (parts.length !== 4) return false
+
+  // 10.0.0.0 - 10.255.255.255
+  if (parts[0] === 10) return true
+
+  // 172.16.0.0 - 172.31.255.255
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true
+
+  // 192.168.0.0 - 192.168.255.255
+  if (parts[0] === 192 && parts[1] === 168) return true
+
+  return false
+}
+
+/**
+ * IP 주소에서 서브넷 추출 (예: 192.168.1.100 -> 192.168.1)
+ */
+function getSubnet(ip: string): string {
+  const parts = ip.split('.')
+  return parts.slice(0, 3).join('.')
+}
+
+/**
+ * 서브넷 기반으로 일반적인 기기 IP 주소 목록 생성
+ */
+function generateSuggestedIPs(subnet: string): string[] {
+  const suggestions: string[] = []
+
+  // 일반적인 IP 전화기/네트워크 기기 주소
+  const commonEndings = [
+    1,    // 게이트웨이 (라우터)
+    2, 3, 4, 5,  // 초기 할당 주소
+    10, 11, 12,  // 고정 IP 대역
+    100, 101, 102, 103, 104, 105, // DHCP 시작 대역
+    200, 201, 202, // 고정 기기 대역
+    254   // 보조 게이트웨이
+  ]
+
+  for (const ending of commonEndings) {
+    suggestions.push(`${subnet}.${ending}`)
+  }
+
+  return suggestions
+}
+
+/**
+ * 일반적인 IP 전화기 포트 목록
+ */
+const COMMON_PHONE_PORTS = [80, 8080, 443, 8443, 5060, 5061]
+
+/**
+ * 네트워크 정보 감지
+ */
+export async function detectNetworkInfo(): Promise<NetworkInfo> {
+  const localIP = await detectLocalIP()
+
+  if (!localIP) {
+    return {
+      localIP: null,
+      subnet: null,
+      suggestedIPs: [],
+      commonPorts: COMMON_PHONE_PORTS
+    }
+  }
+
+  const subnet = getSubnet(localIP)
+  const suggestedIPs = generateSuggestedIPs(subnet)
+
+  return {
+    localIP,
+    subnet,
+    suggestedIPs,
+    commonPorts: COMMON_PHONE_PORTS
+  }
+}
+
+/**
+ * 특정 IP:포트로 연결 가능한지 빠르게 테스트
+ * no-cors 모드로 요청하므로 실제 응답 확인은 불가하지만, 연결 시도는 가능
+ */
+export async function quickTestConnection(host: string, port: number): Promise<boolean> {
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 2000) // 2초 타임아웃
+
+    await fetch(`http://${host}:${port}/`, {
+      method: 'HEAD',
+      mode: 'no-cors',
+      signal: controller.signal
+    })
+
+    clearTimeout(timeoutId)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 여러 IP 주소에 대해 연결 테스트 (IP 전화기 검색)
+ */
+export async function scanForPhones(
+  ips: string[],
+  ports: number[] = [80],
+  onProgress?: (current: number, total: number, found: string[]) => void
+): Promise<string[]> {
+  const foundDevices: string[] = []
+  const total = ips.length * ports.length
+  let current = 0
+
+  for (const ip of ips) {
+    for (const port of ports) {
+      current++
+      const isReachable = await quickTestConnection(ip, port)
+      if (isReachable) {
+        const device = port === 80 ? ip : `${ip}:${port}`
+        if (!foundDevices.includes(device)) {
+          foundDevices.push(device)
+        }
+      }
+      onProgress?.(current, total, foundDevices)
+    }
+  }
+
+  return foundDevices
+}

@@ -9,7 +9,10 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
-  ChevronDown
+  ChevronDown,
+  Search,
+  Loader2,
+  Monitor
 } from 'lucide-react'
 import {
   PhoneDialSettings,
@@ -21,7 +24,10 @@ import {
   savePhoneDialSettings,
   loadPhoneDialSettings,
   testPhoneConnection,
-  dialPhone
+  dialPhone,
+  detectNetworkInfo,
+  scanForPhones,
+  NetworkInfo
 } from '@/utils/phoneDialer'
 
 interface PhoneDialSettingsModalProps {
@@ -41,21 +47,123 @@ export default function PhoneDialSettingsModal({
   const [selectedPreset, setSelectedPreset] = useState<string>('')
   const [showAdvanced, setShowAdvanced] = useState(false)
 
+  // 네트워크 자동 감지 상태
+  const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null)
+  const [detectingNetwork, setDetectingNetwork] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [scanProgress, setScanProgress] = useState({ current: 0, total: 0 })
+  const [foundDevices, setFoundDevices] = useState<string[]>([])
+
   // 설정 불러오기
   useEffect(() => {
     if (isOpen) {
       const loaded = loadPhoneDialSettings()
       setSettings(loaded)
       setTestResult(null)
+      setNetworkInfo(null)
+      setFoundDevices([])
     }
   }, [isOpen])
+
+  // 네트워크 자동 감지
+  const handleDetectNetwork = async () => {
+    setDetectingNetwork(true)
+    setTestResult(null)
+
+    try {
+      const info = await detectNetworkInfo()
+      setNetworkInfo(info)
+
+      if (info.localIP) {
+        setTestResult({
+          success: true,
+          message: `내 IP: ${info.localIP} (서브넷: ${info.subnet}.x)`
+        })
+      } else {
+        setTestResult({
+          success: false,
+          message: '네트워크 정보를 감지할 수 없습니다.'
+        })
+      }
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: '네트워크 감지 중 오류가 발생했습니다.'
+      })
+    } finally {
+      setDetectingNetwork(false)
+    }
+  }
+
+  // IP 전화기 검색
+  const handleScanDevices = async () => {
+    if (!networkInfo?.suggestedIPs.length) {
+      setTestResult({
+        success: false,
+        message: '먼저 네트워크 감지를 실행해주세요.'
+      })
+      return
+    }
+
+    setScanning(true)
+    setFoundDevices([])
+    setScanProgress({ current: 0, total: networkInfo.suggestedIPs.length })
+
+    try {
+      const found = await scanForPhones(
+        networkInfo.suggestedIPs,
+        [80],
+        (current, total, devices) => {
+          setScanProgress({ current, total })
+          setFoundDevices([...devices])
+        }
+      )
+
+      if (found.length > 0) {
+        setTestResult({
+          success: true,
+          message: `${found.length}개의 기기를 발견했습니다.`
+        })
+      } else {
+        setTestResult({
+          success: false,
+          message: '응답하는 기기를 찾지 못했습니다.'
+        })
+      }
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: '기기 검색 중 오류가 발생했습니다.'
+      })
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  // 발견된 기기 선택
+  const selectDevice = (device: string) => {
+    const [host, portStr] = device.includes(':') ? device.split(':') : [device, '80']
+    const port = parseInt(portStr) || 80
+
+    setSettings(prev => ({
+      ...prev,
+      httpSettings: {
+        ...prev.httpSettings!,
+        host,
+        port
+      }
+    }))
+    setTestResult({
+      success: true,
+      message: `${device}가 선택되었습니다.`
+    })
+  }
 
   // 프로토콜 변경
   const handleProtocolChange = (protocol: PhoneDialProtocol) => {
     setSettings(prev => ({
       ...prev,
       protocol,
-      // HTTP 선택 시 기본 httpSettings 설정
       httpSettings: protocol === 'http' ? {
         host: prev.httpSettings?.host || '',
         port: prev.httpSettings?.port || 80,
@@ -176,6 +284,88 @@ export default function PhoneDialSettingsModal({
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <Settings className="w-4 h-4" />
                 IP 전화기 설정
+              </div>
+
+              {/* 네트워크 자동 감지 */}
+              <div className="p-3 bg-white rounded-lg border border-slate-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Monitor className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-slate-700">네트워크 자동 감지</span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-2">
+                  <button
+                    onClick={handleDetectNetwork}
+                    disabled={detectingNetwork}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs rounded-lg transition-colors"
+                  >
+                    {detectingNetwork ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Wifi className="w-3.5 h-3.5" />
+                    )}
+                    {detectingNetwork ? '감지 중...' : '네트워크 감지'}
+                  </button>
+
+                  {networkInfo?.localIP && (
+                    <button
+                      onClick={handleScanDevices}
+                      disabled={scanning}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-xs rounded-lg transition-colors"
+                    >
+                      {scanning ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Search className="w-3.5 h-3.5" />
+                      )}
+                      {scanning ? `검색 중 (${scanProgress.current}/${scanProgress.total})` : '기기 검색'}
+                    </button>
+                  )}
+                </div>
+
+                {/* 네트워크 정보 */}
+                {networkInfo?.localIP && (
+                  <div className="text-xs text-slate-500">
+                    내 IP: <span className="font-mono">{networkInfo.localIP}</span>
+                  </div>
+                )}
+
+                {/* 발견된 기기 목록 */}
+                {foundDevices.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {foundDevices.map((device, index) => (
+                      <button
+                        key={index}
+                        onClick={() => selectDevice(device)}
+                        className={`px-2 py-1 text-xs rounded border transition-colors ${
+                          settings.httpSettings?.host === device.split(':')[0]
+                            ? 'bg-blue-100 border-blue-500 text-blue-700'
+                            : 'bg-white border-slate-300 text-slate-700 hover:border-blue-400'
+                        }`}
+                      >
+                        {device}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* 일반적인 IP 주소 제안 */}
+                {networkInfo?.suggestedIPs && networkInfo.suggestedIPs.length > 0 && !scanning && foundDevices.length === 0 && (
+                  <div className="mt-2">
+                    <div className="text-xs text-slate-500 mb-1">일반적인 IP:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {networkInfo.suggestedIPs.slice(0, 5).map((ip, index) => (
+                        <button
+                          key={index}
+                          onClick={() => selectDevice(ip)}
+                          className="px-1.5 py-0.5 text-xs rounded border border-slate-300 text-slate-600 hover:border-blue-400 transition-colors"
+                        >
+                          {ip}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 프리셋 선택 */}
@@ -406,7 +596,7 @@ export default function PhoneDialSettingsModal({
                   <li><strong>기본 전화:</strong> 스마트폰이나 소프트폰 앱 사용</li>
                   <li><strong>Skype:</strong> Skype 앱이 설치된 경우</li>
                   <li><strong>SIP:</strong> SIP 클라이언트 앱 사용</li>
-                  <li><strong>IP 전화기:</strong> 네트워크 연결된 IP 전화기</li>
+                  <li><strong>IP 전화기:</strong> 네트워크 감지 → 기기 검색</li>
                 </ul>
               </div>
             </div>
