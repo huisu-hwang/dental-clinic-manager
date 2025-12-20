@@ -287,7 +287,7 @@ export interface WelfarePaymentData {
   clinicName: string
 
   // 지급 정보
-  paymentMethod: 'cash' | 'transfer'
+  paymentMethod: 'cash' | 'transfer' | 'hospital_card'
   accountNumber?: string
   accountHolder?: string
   bankName?: string
