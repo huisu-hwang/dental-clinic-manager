@@ -51,9 +51,9 @@ const defaultTabs: Tab[] = [
   { id: 'daily-input', label: '일일보고서', icon: ClipboardList, requiredPermissions: ['daily_report_view'], categoryId: 'work' },
   { id: 'attendance', label: '출근 관리', icon: Clock, requiredPermissions: ['attendance_check_in', 'attendance_view_own'], categoryId: 'work' },
   { id: 'leave', label: '연차 관리', icon: CalendarDays, requiredPermissions: ['leave_request_view_own', 'leave_balance_view_own'], categoryId: 'work' },
-  { id: 'bulletin', label: '병원 게시판', icon: Megaphone, categoryId: 'communication' },
-  { id: 'stats', label: '통계', icon: BarChart3, requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'], categoryId: 'communication' },
-  { id: 'logs', label: '상세 기록', icon: History, requiredPermissions: ['logs_view'], categoryId: 'communication' },
+  { id: 'stats', label: '통계', icon: BarChart3, requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'], categoryId: 'work' },
+  { id: 'logs', label: '상세 기록', icon: History, requiredPermissions: ['logs_view'], categoryId: 'work' },
+  { id: 'bulletin', label: '병원 게시판', icon: Megaphone },
   { id: 'protocols', label: '진료 프로토콜', icon: BookOpen, requiredPermissions: ['protocol_view'], categoryId: 'documents' },
   { id: 'vendors', label: '업체 연락처', icon: Building2, requiredPermissions: ['vendor_contacts_view'], categoryId: 'operations' },
   { id: 'contracts', label: '근로계약서', icon: FileSignature, requiredPermissions: ['contract_view'], categoryId: 'documents' },
@@ -222,13 +222,14 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     )
   }
 
-  // 홈과 가이드 탭 분리 (카테고리가 없는 메뉴)
+  // 독립 메뉴 분리 (카테고리가 없는 메뉴)
   const homeTab = visibleTabs.find(tab => tab.id === 'home')
+  const bulletinTab = visibleTabs.find(tab => tab.id === 'bulletin')
   const guideTab = visibleTabs.find(tab => tab.id === 'guide')
 
   return (
     <nav className="flex flex-col h-full w-full">
-      {/* 상단 영역: 홈 + 카테고리들 */}
+      {/* 상단 영역: 홈 + 게시판 + 카테고리들 */}
       <div className="flex-1 space-y-1">
         {/* 홈 버튼 */}
         {homeTab && (
@@ -244,6 +245,23 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
           >
             <Home className={`w-5 h-5 flex-shrink-0 ${activeTab === homeTab.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
             <span className="truncate">{homeTab.label}</span>
+          </button>
+        )}
+
+        {/* 병원 게시판 */}
+        {bulletinTab && (
+          <button
+            onClick={() => handleTabClick(bulletinTab.id)}
+            className={`
+              group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
+              ${activeTab === bulletinTab.id
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+              }
+            `}
+          >
+            <Megaphone className={`w-5 h-5 flex-shrink-0 ${activeTab === bulletinTab.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+            <span className="truncate">{bulletinTab.label}</span>
           </button>
         )}
 

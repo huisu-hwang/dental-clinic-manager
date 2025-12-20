@@ -35,9 +35,8 @@ export interface ClinicMenuSettings {
 // 기본 카테고리 목록
 export const DEFAULT_CATEGORIES: MenuCategorySetting[] = [
   { id: 'work', label: '업무 관리', icon: 'Briefcase', order: 0, visible: true },
-  { id: 'communication', label: '소통 · 분석', icon: 'MessageSquare', order: 1, visible: true },
-  { id: 'documents', label: '문서 · 자료', icon: 'FolderOpen', order: 2, visible: true },
-  { id: 'operations', label: '운영 관리', icon: 'Settings', order: 3, visible: true }
+  { id: 'documents', label: '문서 · 자료', icon: 'FolderOpen', order: 1, visible: true },
+  { id: 'operations', label: '운영 관리', icon: 'Settings', order: 2, visible: true }
 ]
 
 // 기본 메뉴 목록 (TabNavigation.tsx의 tabs와 동일한 순서)
@@ -46,9 +45,9 @@ export const DEFAULT_MENU_ITEMS: MenuItemSetting[] = [
   { id: 'daily-input', label: '일일보고서', visible: true, order: 1, categoryId: 'work' },
   { id: 'attendance', label: '출근 관리', visible: true, order: 2, categoryId: 'work' },
   { id: 'leave', label: '연차 관리', visible: true, order: 3, categoryId: 'work' },
-  { id: 'bulletin', label: '병원 게시판', visible: true, order: 4, categoryId: 'communication' },
-  { id: 'stats', label: '통계', visible: true, order: 5, categoryId: 'communication' },
-  { id: 'logs', label: '상세 기록', visible: true, order: 6, categoryId: 'communication' },
+  { id: 'stats', label: '통계', visible: true, order: 4, categoryId: 'work' },
+  { id: 'logs', label: '상세 기록', visible: true, order: 5, categoryId: 'work' },
+  { id: 'bulletin', label: '병원 게시판', visible: true, order: 6 },
   { id: 'protocols', label: '진료 프로토콜', visible: true, order: 7, categoryId: 'documents' },
   { id: 'contracts', label: '근로계약서', visible: true, order: 8, categoryId: 'documents' },
   { id: 'documents', label: '문서 양식', visible: true, order: 9, categoryId: 'documents' },
