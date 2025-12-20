@@ -1823,13 +1823,13 @@ function EmploymentCertificatePreview({
         <table className="w-full border-collapse border border-slate-300">
           <tbody>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">성 명</td>
-              <td className="py-3 px-4 border border-slate-300">{data.employeeName || '　'}</td>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">생년월일</td>
-              <td className="py-3 px-4 border border-slate-300">{formatDate(data.employeeBirthDate || '') || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">성 명</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{data.employeeName || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">생년월일</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{formatDate(data.employeeBirthDate || '') || '　'}</td>
             </tr>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">주 소</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">주 소</td>
               <td className="py-3 px-4 border border-slate-300" colSpan={3}>{data.employeeAddress || '　'}</td>
             </tr>
           </tbody>
@@ -1842,14 +1842,14 @@ function EmploymentCertificatePreview({
         <table className="w-full border-collapse border border-slate-300">
           <tbody>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">소 속</td>
-              <td className="py-3 px-4 border border-slate-300">{data.department || '　'}</td>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">직 급</td>
-              <td className="py-3 px-4 border border-slate-300">{translateRole(data.position) || data.position || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">소 속</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{data.department || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">직 급</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{translateRole(data.position) || data.position || '　'}</td>
             </tr>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">재직기간</td>
-              <td className="py-3 px-4 border border-slate-300" colSpan={3}>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">재직기간</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap" colSpan={3}>
                 {formatDate(data.hireDate) || '____년 __월 __일'} ~{' '}
                 {data.currentlyEmployed
                   ? '현재'
@@ -1866,22 +1866,22 @@ function EmploymentCertificatePreview({
         <table className="w-full border-collapse border border-slate-300">
           <tbody>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">회사명</td>
-              <td className="py-3 px-4 border border-slate-300">{data.clinicName || '　'}</td>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">대표자</td>
-              <td className="py-3 px-4 border border-slate-300">{data.representativeName || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">회사명</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{data.clinicName || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">대표자</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{data.representativeName || '　'}</td>
             </tr>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">사업자번호</td>
-              <td className="py-3 px-4 border border-slate-300" colSpan={3}>{data.businessNumber || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">사업자번호</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap" colSpan={3}>{data.businessNumber || '　'}</td>
             </tr>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">소재지</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">소재지</td>
               <td className="py-3 px-4 border border-slate-300" colSpan={3}>{data.clinicAddress || '　'}</td>
             </tr>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">전화번호</td>
-              <td className="py-3 px-4 border border-slate-300" colSpan={3}>{data.clinicPhone || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">전화번호</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap" colSpan={3}>{data.clinicPhone || '　'}</td>
             </tr>
           </tbody>
         </table>
@@ -1892,7 +1892,7 @@ function EmploymentCertificatePreview({
         <table className="w-full border-collapse border border-slate-300">
           <tbody>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">용 도</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">용 도</td>
               <td className="py-3 px-4 border border-slate-300">{data.purpose || '　'}</td>
             </tr>
           </tbody>
@@ -2391,16 +2391,16 @@ function RecommendedResignationPreview({
         <table className="w-full border-collapse border border-slate-300">
           <tbody>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">성 명</td>
-              <td className="py-3 px-4 border border-slate-300">{data.employeeName || '　'}</td>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">직 급</td>
-              <td className="py-3 px-4 border border-slate-300">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">성 명</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{data.employeeName || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">직 급</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
             </tr>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">부 서</td>
-              <td className="py-3 px-4 border border-slate-300">{data.department || '　'}</td>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">입사일</td>
-              <td className="py-3 px-4 border border-slate-300">{formatDate(data.hireDate) || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">부 서</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{data.department || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">입사일</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{formatDate(data.hireDate) || '　'}</td>
             </tr>
           </tbody>
         </table>
@@ -2412,18 +2412,18 @@ function RecommendedResignationPreview({
         <table className="w-full border-collapse border border-slate-300">
           <tbody>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">권고일</td>
-              <td className="py-3 px-4 border border-slate-300">{formatDate(data.recommendedDate) || '　'}</td>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">예정 퇴직일</td>
-              <td className="py-3 px-4 border border-slate-300">{formatDate(data.expectedResignationDate) || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">권고일</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{formatDate(data.recommendedDate) || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">예정 퇴직일</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{formatDate(data.expectedResignationDate) || '　'}</td>
             </tr>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">사 유</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">사 유</td>
               <td className="py-3 px-4 border border-slate-300" colSpan={3}>{data.reason || '　'}</td>
             </tr>
             {data.detailedReason && (
               <tr>
-                <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">상세 사유</td>
+                <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">상세 사유</td>
                 <td className="py-3 px-4 border border-slate-300" colSpan={3}>{data.detailedReason}</td>
               </tr>
             )}
@@ -2439,19 +2439,19 @@ function RecommendedResignationPreview({
             <tbody>
               {data.severancePay && (
                 <tr>
-                  <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">퇴직금</td>
+                  <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">퇴직금</td>
                   <td className="py-3 px-4 border border-slate-300">{data.severancePay}</td>
                 </tr>
               )}
               {data.additionalCompensation && (
                 <tr>
-                  <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">추가 위로금</td>
+                  <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">추가 위로금</td>
                   <td className="py-3 px-4 border border-slate-300">{data.additionalCompensation}</td>
                 </tr>
               )}
               {data.otherConditions && (
                 <tr>
-                  <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">기타 조건</td>
+                  <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">기타 조건</td>
                   <td className="py-3 px-4 border border-slate-300">{data.otherConditions}</td>
                 </tr>
               )}
@@ -2532,16 +2532,16 @@ function TerminationNoticePreview({
         <table className="w-full border-collapse border border-slate-300">
           <tbody>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">성 명</td>
-              <td className="py-3 px-4 border border-slate-300">{data.employeeName || '　'}</td>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">직 급</td>
-              <td className="py-3 px-4 border border-slate-300">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">성 명</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{data.employeeName || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">직 급</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
             </tr>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">부 서</td>
-              <td className="py-3 px-4 border border-slate-300">{data.department || '　'}</td>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">입사일</td>
-              <td className="py-3 px-4 border border-slate-300">{formatDate(data.hireDate) || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">부 서</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{data.department || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">입사일</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{formatDate(data.hireDate) || '　'}</td>
             </tr>
           </tbody>
         </table>
@@ -2553,13 +2553,13 @@ function TerminationNoticePreview({
         <table className="w-full border-collapse border border-slate-300">
           <tbody>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">통보일</td>
-              <td className="py-3 px-4 border border-slate-300">{formatDate(data.noticeDate) || '　'}</td>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28">해고일</td>
-              <td className="py-3 px-4 border border-slate-300 font-semibold text-red-600">{formatDate(data.terminationDate) || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">통보일</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">{formatDate(data.noticeDate) || '　'}</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-28 whitespace-nowrap">해고일</td>
+              <td className="py-3 px-4 border border-slate-300 font-semibold text-red-600 whitespace-nowrap">{formatDate(data.terminationDate) || '　'}</td>
             </tr>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">해고 사유</td>
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">해고 사유</td>
               <td className="py-3 px-4 border border-slate-300" colSpan={3}>{data.reason || '　'}</td>
             </tr>
           </tbody>
@@ -2580,14 +2580,14 @@ function TerminationNoticePreview({
         <table className="w-full border-collapse border border-slate-300">
           <tbody>
             <tr>
-              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-36">해고예고 여부</td>
-              <td className="py-3 px-4 border border-slate-300">
+              <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 w-36 whitespace-nowrap">해고예고 여부</td>
+              <td className="py-3 px-4 border border-slate-300 whitespace-nowrap">
                 {data.advanceNotice ? '30일 전 예고 완료' : '30일 전 예고 미완료'}
               </td>
             </tr>
             {!data.advanceNotice && data.severancePayInLieu && (
               <tr>
-                <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300">해고예고수당</td>
+                <td className="py-3 px-4 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">해고예고수당</td>
                 <td className="py-3 px-4 border border-slate-300">{data.severancePayInLieu}</td>
               </tr>
             )}
