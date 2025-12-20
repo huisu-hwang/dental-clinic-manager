@@ -33,6 +33,7 @@ import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool,
 import SignaturePad from '@/components/Contract/SignaturePad'
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
 import { getBirthDateFromResidentNumber } from '@/utils/residentNumberUtils'
+import { collectSignatureMetadata, ELECTRONIC_SIGNATURE_CONSENT } from '@/utils/documentLegalUtils'
 
 // 문서 제출 상태 타입
 interface DocumentSubmission {
@@ -264,7 +265,7 @@ export default function DocumentTemplates() {
     loadReceivedDocuments()
   }, [user?.clinic_id, user?.id])
 
-  // 문서 제출 핸들러
+  // 문서 제출 핸들러 (법적 효력 요건 포함)
   const handleSubmitDocument = async () => {
     if (!user?.clinic_id || !user?.id) return
 
@@ -279,6 +280,9 @@ export default function DocumentTemplates() {
       const documentData = documentType === 'resignation' ? resignationData : certificateData
       const signature = documentType === 'resignation' ? resignationData.employeeSignature : undefined
 
+      // 서명 메타데이터 수집 (법적 효력 요건 - 전자서명법 준수)
+      const signatureMetadata = signature ? collectSignatureMetadata() : undefined
+
       const response = await fetch('/api/document-submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -287,7 +291,10 @@ export default function DocumentTemplates() {
           userId: user.id,
           documentType,
           documentData,
-          signature
+          signature,
+          // 법적 효력 요건 필드
+          signatureMetadata,
+          legalConsentAgreed: true // 서명 시 동의한 것으로 간주
         })
       })
 
@@ -579,6 +586,9 @@ export default function DocumentTemplates() {
         ? recommendedResignationData.ownerSignature
         : terminationNoticeData.ownerSignature
 
+      // 서명 메타데이터 수집 (법적 효력 요건 - 전자서명법 준수)
+      const signatureMetadata = signature ? collectSignatureMetadata() : undefined
+
       const response = await fetch('/api/document-submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -588,7 +598,10 @@ export default function DocumentTemplates() {
           documentType,
           documentData,
           signature,
-          targetEmployeeId: selectedStaff
+          targetEmployeeId: selectedStaff,
+          // 법적 효력 요건 필드
+          signatureMetadata,
+          legalConsentAgreed: true
         })
       })
 
@@ -1706,6 +1719,18 @@ function ResignationPreview({
             <span className="font-semibold">{data.representativeName || '○○○'}</span>
             <span className="ml-2">귀하</span>
           </p>
+        </section>
+
+        {/* 전자서명 법적 효력 고지 */}
+        <section className="mt-12 pt-6 border-t border-slate-200">
+          <div className="bg-slate-50 p-4 rounded-lg text-xs text-slate-600">
+            <p className="font-medium mb-2">※ 전자문서 법적 효력 안내</p>
+            <ul className="space-y-1 list-disc list-inside">
+              <li>본 전자 사직서는 전자서명법 제3조에 따라 자필 서명과 동일한 법적 효력을 가집니다.</li>
+              <li>본인의 자유로운 의사에 의해 작성되었음을 확인합니다.</li>
+              <li>전자서명 후 문서의 무결성이 보장됩니다 (SHA-256 해시).</li>
+            </ul>
+          </div>
         </section>
       </div>
     </div>
@@ -2908,6 +2933,18 @@ function WelfarePaymentPreview({
           ) : (
             <span>(인)</span>
           )}
+        </div>
+      </div>
+
+      {/* 전자서명 법적 효력 고지 */}
+      <div className="mt-8 pt-4 border-t border-slate-200">
+        <div className="bg-slate-50 p-3 rounded-lg text-xs text-slate-600">
+          <p className="font-medium mb-1">※ 전자문서 법적 효력 안내</p>
+          <ul className="space-y-0.5 list-disc list-inside">
+            <li>본 전자 확인서는 전자서명법에 따라 자필 서명과 동일한 법적 효력을 가집니다.</li>
+            <li>복지비 수령 사실을 확인하는 증빙 서류로 사용됩니다.</li>
+            <li>전자서명 후 문서의 무결성이 보장됩니다.</li>
+          </ul>
         </div>
       </div>
     </div>

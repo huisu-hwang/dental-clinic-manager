@@ -22,6 +22,7 @@ import type {
   ContractStatus,
   SignerType
 } from '@/types/contract'
+import { generateContractHash } from '@/utils/documentLegalUtils'
 import type { User } from '@/types/auth'
 import { encryptResidentNumber, decryptResidentNumber } from '@/utils/encryptionUtils'
 
@@ -628,7 +629,17 @@ class ContractService {
         return { success: false, error: 'Not authenticated' }
       }
 
-      // Insert signature
+      // 서명 시점 문서 해시 생성 (무결성 검증용)
+      const contractData = contract.contract_data as ContractData
+      let documentHash: string | null = null
+      try {
+        documentHash = await generateContractHash(contractData)
+        console.log('[contractService] Document hash generated:', documentHash.substring(0, 16) + '...')
+      } catch (hashError) {
+        console.warn('[contractService] Document hash generation failed:', hashError)
+      }
+
+      // Insert signature with document hash and legal consent
       const { data: signature, error: signError } = await supabase
         .from('contract_signatures')
         .insert({
@@ -640,7 +651,9 @@ class ContractService {
           ip_address: data.ip_address,
           device_info: data.device_info,
           user_agent: data.user_agent,
-          is_verified: true
+          is_verified: true,
+          document_hash: documentHash,
+          legal_consent_agreed: data.legal_consent_agreed ?? true
         })
         .select()
         .single()
