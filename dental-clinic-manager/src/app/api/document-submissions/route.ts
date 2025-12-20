@@ -249,29 +249,39 @@ export async function POST(request: NextRequest) {
         }
       }
     } else if (!ownerOnlyTypes.includes(documentType)) {
-      // 기존 사직서/재직증명서: 원장에게 알림
+      // 사직서/재직증명서: 대표 원장에게 개인 알림 발송
       const documentTypeLabel = documentType === 'resignation' ? '사직서' : '재직증명서'
-      const targetRoles = documentType === 'resignation'
-        ? ['owner', 'manager'] // 사직서: 원장, 실장
-        : ['owner'] // 재직증명서: 원장만
 
-      await supabaseAdmin
-        .from('clinic_notifications')
-        .insert({
+      // 대표 원장(owner) 찾기
+      const { data: owners, error: ownerError } = await supabaseAdmin
+        .from('users')
+        .select('id, name')
+        .eq('clinic_id', clinicId)
+        .eq('role', 'owner')
+        .eq('status', 'active')
+
+      if (!ownerError && owners && owners.length > 0) {
+        // 사직서 제출 시 각 대표 원장에게 개인 알림 발송
+        const notificationInserts = owners.map((owner: { id: string; name: string }) => ({
           clinic_id: clinicId,
-          created_by: userId,
+          user_id: owner.id,
+          type: documentType === 'resignation' ? 'document_resignation' : 'document',
           title: `${documentTypeLabel} 제출 - ${user.name}`,
-          content: `${user.name}님이 ${documentTypeLabel}를 제출했습니다. 확인이 필요합니다.`,
-          category: 'important',
-          target_roles: targetRoles,
-          recurrence_type: 'none',
-          start_date: today,
-          is_active: true,
-          priority: 1,
+          content: `${user.name}님이 ${documentTypeLabel}를 제출했습니다. 확인 후 승인 또는 반려 처리가 필요합니다.`,
+          link: '/dashboard?tab=documents&view=received',  // 결재 화면(받은 문서)으로 바로 이동
+          reference_type: 'document_submission',
+          reference_id: submission.id,
+          is_read: false,
+          created_by: userId,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          metadata: { document_submission_id: submission.id }
-        })
+        }))
+
+        await supabaseAdmin
+          .from('user_notifications')
+          .insert(notificationInserts)
+
+        console.log(`[API document-submissions] Sent personal notification to ${owners.length} owner(s) for ${documentTypeLabel}`)
+      }
     }
 
     return NextResponse.json({ data: submission, success: true })

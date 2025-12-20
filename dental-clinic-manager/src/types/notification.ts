@@ -299,6 +299,11 @@ export type UserNotificationType =
   | 'contract_signed'             // 계약서 서명 완료 (양측에게)
   | 'contract_completed'          // 계약서 완료 (양측에게)
   | 'contract_cancelled'          // 계약서 취소 (양측에게)
+  | 'document_resignation'        // 사직서 제출됨 (원장에게)
+  | 'document_approved'           // 문서 승인됨 (신청자에게)
+  | 'document_rejected'           // 문서 반려됨 (신청자에게)
+  | 'document'                    // 일반 문서 알림
+  | 'important'                   // 중요 알림
   | 'system'                      // 시스템 알림
 
 // 사용자 알림 타입 라벨
@@ -311,6 +316,11 @@ export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string>
   contract_signed: '서명 완료',
   contract_completed: '계약 완료',
   contract_cancelled: '계약 취소',
+  document_resignation: '사직서 제출',
+  document_approved: '문서 승인',
+  document_rejected: '문서 반려',
+  document: '문서 알림',
+  important: '중요 알림',
   system: '시스템 알림'
 }
 
@@ -324,6 +334,11 @@ export const USER_NOTIFICATION_TYPE_ICONS: Record<UserNotificationType, string> 
   contract_signed: 'document-check',
   contract_completed: 'document-text',
   contract_cancelled: 'document-minus',
+  document_resignation: 'document-text',
+  document_approved: 'check-circle',
+  document_rejected: 'x-circle',
+  document: 'document-text',
+  important: 'exclamation-circle',
   system: 'bell'
 }
 
@@ -337,6 +352,11 @@ export const USER_NOTIFICATION_TYPE_COLORS: Record<UserNotificationType, { icon:
   contract_signed: { icon: 'text-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700' },
   contract_completed: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
   contract_cancelled: { icon: 'text-gray-500', bg: 'bg-gray-50', text: 'text-gray-700' },
+  document_resignation: { icon: 'text-orange-500', bg: 'bg-orange-50', text: 'text-orange-700' },
+  document_approved: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
+  document_rejected: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
+  document: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' },
+  important: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
   system: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' }
 }
 
