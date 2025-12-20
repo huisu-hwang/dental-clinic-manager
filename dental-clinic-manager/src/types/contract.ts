@@ -183,6 +183,8 @@ export interface ContractSignature {
   device_info?: string | null
   user_agent?: string | null
   is_verified: boolean
+  document_hash?: string | null // 서명 시점 문서 해시 (SHA-256) - 무결성 검증용
+  legal_consent_agreed?: boolean // 전자서명 법적 효력 동의 여부
 
   // Relations
   signer?: {
@@ -265,6 +267,8 @@ export interface ContractSigningData {
   ip_address?: string
   device_info?: string
   user_agent?: string
+  document_hash?: string // 서명 시점 문서 해시 (SHA-256)
+  legal_consent_agreed?: boolean // 전자서명 법적 효력 동의 여부
 }
 
 // =====================================================================

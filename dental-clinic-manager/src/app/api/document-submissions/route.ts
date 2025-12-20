@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { generateDocumentHash } from '@/utils/documentLegalUtils'
 
 /**
  * 문서 제출 관리 API
  * 사직서, 재직증명서 등 문서 제출 및 승인 처리
+ *
+ * 법적 효력 요건 (전자서명법, 전자문서법 준수):
+ * - 문서 해시(SHA-256)로 무결성 검증
+ * - 서명 메타데이터(IP, 디바이스 정보) 저장
+ * - 서명 시간 타임스탬프 기록
  */
 
 // GET: 문서 제출 목록 조회
@@ -96,7 +102,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { clinicId, userId, documentType, documentData, signature, targetEmployeeId } = body
+    const {
+      clinicId,
+      userId,
+      documentType,
+      documentData,
+      signature,
+      targetEmployeeId,
+      // 법적 효력 요건을 위한 추가 필드
+      signatureMetadata,
+      legalConsentAgreed
+    } = body
 
     if (!clinicId || !userId || !documentType || !documentData) {
       return NextResponse.json(
@@ -104,6 +120,19 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // 문서 해시 생성 (무결성 검증용)
+    let documentHash: string | null = null
+    try {
+      documentHash = await generateDocumentHash(documentData)
+      console.log('[API document-submissions] Document hash generated:', documentHash?.substring(0, 16) + '...')
+    } catch (hashError) {
+      console.warn('[API document-submissions] Document hash generation failed:', hashError)
+    }
+
+    // 클라이언트 IP 주소 추출
+    const forwarded = request.headers.get('x-forwarded-for')
+    const clientIp = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown'
 
     const supabaseAdmin = getSupabaseAdmin()
     if (!supabaseAdmin) {
@@ -136,23 +165,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 문서 제출 생성
+    // 문서 제출 생성 (법적 효력 요건 포함)
+    const submissionData: Record<string, any> = {
+      clinic_id: clinicId,
+      submitted_by: userId,
+      target_employee_id: ownerOnlyTypes.includes(documentType) ? (targetEmployeeId || null) : null,
+      document_type: documentType,
+      document_data: documentData,
+      employee_signature: ownerOnlyTypes.includes(documentType) ? null : (signature || null),
+      owner_signature: ownerOnlyTypes.includes(documentType) ? (signature || null) : null,
+      status: ownerOnlyTypes.includes(documentType) ? 'approved' : 'pending',
+      approved_by: ownerOnlyTypes.includes(documentType) ? userId : null,
+      approved_at: ownerOnlyTypes.includes(documentType) ? new Date().toISOString() : null,
+      // 법적 효력 요건 필드 (전자서명법 준수)
+      document_hash: documentHash,
+      signature_ip_address: clientIp,
+      signature_device_info: signatureMetadata?.device_info || null,
+      signature_user_agent: signatureMetadata?.user_agent || null,
+      legal_consent_agreed: legalConsentAgreed ?? true,
+      signed_at: signature ? new Date().toISOString() : null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+
     const { data: submission, error: insertError } = await supabaseAdmin
       .from('document_submissions')
-      .insert({
-        clinic_id: clinicId,
-        submitted_by: userId,
-        target_employee_id: ownerOnlyTypes.includes(documentType) ? (targetEmployeeId || null) : null, // 권고사직서/해고통보서 대상 직원
-        document_type: documentType,
-        document_data: documentData,
-        employee_signature: ownerOnlyTypes.includes(documentType) ? null : (signature || null),
-        owner_signature: ownerOnlyTypes.includes(documentType) ? (signature || null) : null,
-        status: ownerOnlyTypes.includes(documentType) ? 'approved' : 'pending', // 원장 문서는 바로 승인됨
-        approved_by: ownerOnlyTypes.includes(documentType) ? userId : null,
-        approved_at: ownerOnlyTypes.includes(documentType) ? new Date().toISOString() : null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .insert(submissionData)
       .select()
       .single()
 

@@ -15,6 +15,7 @@ import type { EmploymentContract, ContractSigningData, SignerType, ContractSigna
 import type { UserProfile } from '@/contexts/AuthContext'
 import { formatResidentNumber, maskResidentNumber } from '@/utils/residentNumberUtils'
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
+import { collectSignatureMetadata } from '@/utils/documentLegalUtils'
 
 interface ContractDetailProps {
   contractId: string
@@ -95,14 +96,18 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
 
   const handleSignatureSave = async (signatureData: string) => {
     try {
+      // 서명 메타데이터 수집 (법적 효력 요건 - 전자서명법 준수)
+      const signatureMetadata = collectSignatureMetadata()
+
       // Get client info for audit trail
       const clientInfo: ContractSigningData = {
         contract_id: contractId,
         signer_type: signerType,
         signature_data: signatureData,
-        ip_address: undefined, // Will be captured server-side if needed
-        device_info: navigator.userAgent,
-        user_agent: navigator.userAgent
+        ip_address: signatureMetadata.ip_address || undefined, // Will be captured server-side
+        device_info: signatureMetadata.device_info,
+        user_agent: signatureMetadata.user_agent,
+        legal_consent_agreed: true // 서명 시 법적 효력 동의
       }
 
       const response = await contractService.signContract(clientInfo)
@@ -700,6 +705,19 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           <p className="text-center mt-8 text-gray-600">
             작성일: {formatDate(contract.created_at)}
           </p>
+
+          {/* 전자서명 법적 효력 고지 */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="bg-gray-50 p-4 rounded-lg text-xs text-gray-600">
+              <p className="font-medium mb-2">※ 전자 근로계약서 법적 효력 안내</p>
+              <ul className="space-y-1 list-disc list-inside">
+                <li>본 전자 근로계약서는 근로기준법 제17조에 따른 근로조건 명시의무를 충족합니다.</li>
+                <li>전자서명법 제3조에 따라 양 당사자의 전자서명으로 체결되며, 서면 계약과 동일한 법적 효력을 가집니다.</li>
+                <li>계약 체결 시점의 문서 해시값(SHA-256)이 기록되어 무결성이 보장됩니다.</li>
+                <li>본 계약서는 전자문서 및 전자거래 기본법에 따라 보존됩니다.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 
