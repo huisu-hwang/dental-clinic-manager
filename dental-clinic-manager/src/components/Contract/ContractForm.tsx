@@ -69,7 +69,9 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
           employee_name: selectedEmployee.name,
           employee_address: selectedEmployee.address || '',
           employee_phone: selectedEmployee.phone || '',
-          employee_resident_number: decryptedResidentNumber || ''
+          employee_resident_number: decryptedResidentNumber || '',
+          // 직원의 입사일이 있으면 계약 시작일에 자동 입력
+          ...(selectedEmployee.hire_date && { employment_period_start: selectedEmployee.hire_date })
         }))
 
         // 2. 직원의 근무 스케줄 조회
@@ -287,6 +289,13 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         {/* Contract Period */}
         <div className="border border-gray-200 p-4 rounded-lg">
           <h3 className="text-lg font-semibold mb-3">근로 기간</h3>
+          {selectedEmployee?.hire_date && formData.employment_period_start === selectedEmployee.hire_date && (
+            <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-700">
+                직원의 입사일({selectedEmployee.hire_date})이 계약 시작일에 자동으로 입력되었습니다.
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -596,9 +605,12 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       </form>
 
       {/* Info Notice */}
-      <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+      <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-2">
         <p className="text-sm text-yellow-800">
           <span className="font-semibold">📝 안내:</span> 근로계약서 생성 후 원장과 근로자가 각각 서명해야 계약이 완료됩니다.
+        </p>
+        <p className="text-sm text-yellow-800">
+          <span className="font-semibold">📅 입사일 연동:</span> 계약 완료 시 계약 시작일이 직원의 입사일로 자동 설정됩니다.
         </p>
       </div>
     </div>
