@@ -257,6 +257,20 @@ class ContractService {
         return { success: false, error: insertError.message }
       }
 
+      // 계약서 생성 시 계약 시작일을 직원의 입사일로 자동 설정
+      if (contractData.employment_period_start && data.employee_user_id) {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ hire_date: contractData.employment_period_start })
+          .eq('id', data.employee_user_id)
+
+        if (updateError) {
+          console.warn('[contractService] Failed to update hire_date:', updateError)
+        } else {
+          console.log(`[contractService] Updated hire_date for user ${data.employee_user_id} to ${contractData.employment_period_start}`)
+        }
+      }
+
       return { success: true, contract: contract as EmploymentContract }
     } catch (error) {
       console.error('Create contract error:', error)
