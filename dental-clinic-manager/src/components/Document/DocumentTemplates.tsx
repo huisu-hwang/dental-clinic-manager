@@ -2656,6 +2656,17 @@ function WelfarePaymentForm({
             />
             계좌이체
           </label>
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="hospital_card"
+              checked={data.paymentMethod === 'hospital_card'}
+              onChange={(e) => handleChange('paymentMethod', e.target.value)}
+              className="mr-2"
+            />
+            병원카드
+          </label>
         </div>
       </div>
 
@@ -2794,7 +2805,8 @@ function WelfarePaymentPreview({
             <td className="py-3 px-4 bg-slate-100 font-medium border border-slate-400 text-center">지급방법</td>
             <td className="py-3 px-4 border border-slate-400">
               <span className="mr-4">{data.paymentMethod === 'cash' ? '◉' : '○'} 현금</span>
-              <span>{data.paymentMethod === 'transfer' ? '◉' : '○'} 계좌이체</span>
+              <span className="mr-4">{data.paymentMethod === 'transfer' ? '◉' : '○'} 계좌이체</span>
+              <span>{data.paymentMethod === 'hospital_card' ? '◉' : '○'} 병원카드</span>
             </td>
           </tr>
           {data.paymentMethod === 'transfer' && (
