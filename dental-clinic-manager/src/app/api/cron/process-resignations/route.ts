@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
 
     // 사용자 정보 조회 헬퍼 함수
     async function getUserInfo(userId: string): Promise<UserInfo | null> {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin!
         .from('users')
         .select('id, name, status')
         .eq('id', userId)
