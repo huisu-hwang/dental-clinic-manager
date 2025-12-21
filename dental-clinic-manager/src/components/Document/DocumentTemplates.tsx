@@ -30,7 +30,7 @@ import {
   getDefaultTerminationNoticeData,
   getDefaultWelfarePaymentData
 } from '@/types/document'
-import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool, Send, CheckCircle, Clock, XCircle, List } from 'lucide-react'
+import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool, Send, CheckCircle, Clock, XCircle, List, Archive, FolderOpen } from 'lucide-react'
 import SignaturePad from '@/components/Contract/SignaturePad'
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
 import { getBirthDateFromResidentNumber } from '@/utils/residentNumberUtils'
@@ -46,6 +46,7 @@ interface DocumentSubmission {
   status: 'pending' | 'approved' | 'rejected'
   reject_reason?: string
   created_at: string
+  signed_at?: string
   submitted_by?: string
   target_employee_id?: string
   submitter?: { id: string; name: string; role: string }
@@ -93,7 +94,8 @@ export default function DocumentTemplates() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sentDocuments, setSentDocuments] = useState<DocumentSubmission[]>([]) // 보낸 문서
   const [receivedDocuments, setReceivedDocuments] = useState<DocumentSubmission[]>([]) // 받은 문서
-  const [activeTab, setActiveTab] = useState<'form' | 'sent' | 'received'>('form') // 현재 탭
+  const [activeTab, setActiveTab] = useState<'form' | 'sent' | 'received' | 'archive'>('form') // 현재 탭
+  const [archivedDocuments, setArchivedDocuments] = useState<DocumentSubmission[]>([]) // 보관함 문서
   const [selectedDocument, setSelectedDocument] = useState<DocumentSubmission | null>(null) // 선택된 문서
   const documentRef = useRef<HTMLDivElement>(null)
   const searchParams = useSearchParams()
@@ -108,6 +110,8 @@ export default function DocumentTemplates() {
       setActiveTab('received')
     } else if (view === 'sent') {
       setActiveTab('sent')
+    } else if (view === 'archive') {
+      setActiveTab('archive')
     }
   }, [searchParams])
 
@@ -272,10 +276,45 @@ export default function DocumentTemplates() {
     }
   }
 
+  // 보관함 문서 목록 로드 (완료된 문서: 승인됨 + 양쪽 서명 완료)
+  const loadArchivedDocuments = async () => {
+    if (!user?.clinic_id || !user?.id) return
+    try {
+      // 보관함: 내가 보낸 문서 + 내가 받은 문서 중 완료된 것들
+      const response = await fetch(
+        `/api/document-submissions?clinicId=${user.clinic_id}&userId=${user.id}`
+      )
+      const result = await response.json()
+      if (result.data) {
+        // 완료된 문서만 필터링 (approved 상태이고 양쪽 서명이 있는 문서)
+        const completed = result.data.filter((doc: DocumentSubmission) => {
+          if (doc.status !== 'approved') return false
+          // 사직서/재직증명서: employee_signature와 owner_signature 모두 있어야 함
+          if (doc.document_type === 'resignation' || doc.document_type === 'employment_certificate') {
+            return doc.employee_signature && doc.owner_signature
+          }
+          // 권고사직서/해고통보서: owner_signature만 있으면 됨 (직원 서명 불필요)
+          if (doc.document_type === 'recommended_resignation' || doc.document_type === 'termination_notice') {
+            return doc.owner_signature
+          }
+          // 복지비 지급 확인서: 양쪽 서명 모두 있어야 함
+          if (doc.document_type === 'welfare_payment') {
+            return doc.owner_signature && doc.employee_signature
+          }
+          return false
+        })
+        setArchivedDocuments(completed)
+      }
+    } catch (error) {
+      console.error('Failed to load archived documents:', error)
+    }
+  }
+
   // 문서 목록 로드
   useEffect(() => {
     loadSentDocuments()
     loadReceivedDocuments()
+    loadArchivedDocuments()
   }, [user?.clinic_id, user?.id])
 
   // 문서 제출 핸들러 (법적 효력 요건 포함)
@@ -574,10 +613,23 @@ export default function DocumentTemplates() {
 
       const result = await response.json()
       if (result.success) {
-        alert('서명이 완료되었습니다.')
-        loadReceivedDocuments()
+        // 서명 완료된 문서 데이터 업데이트
+        const signedDocument = {
+          ...selectedDocument,
+          employee_signature: signatureData,
+          signed_at: new Date().toISOString()
+        }
         setShowEmployeeSignatureModal(false)
-        setSelectedDocument(null)
+
+        // 완료 메시지와 함께 문서 보기
+        alert('작성이 완료되어 원장에게 제출되었습니다.')
+
+        // 완성된 문서를 미리보기로 표시
+        handleViewDocument(signedDocument)
+
+        // 문서 목록 새로고침
+        loadReceivedDocuments()
+        loadArchivedDocuments()
       } else {
         alert(`서명 실패: ${result.error}`)
       }
@@ -803,6 +855,22 @@ export default function DocumentTemplates() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('archive')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'archive'
+              ? 'text-blue-600 border-blue-600'
+              : 'text-slate-500 border-transparent hover:text-slate-700'
+          }`}
+        >
+          <Archive className="w-4 h-4 inline-block mr-2" />
+          보관함
+          {archivedDocuments.length > 0 && (
+            <span className="ml-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+              {archivedDocuments.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* 보낸 문서 목록 */}
@@ -998,6 +1066,81 @@ export default function DocumentTemplates() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 보관함 */}
+      {activeTab === 'archive' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 print:hidden">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">
+            <Archive className="w-5 h-5 inline-block mr-2" />
+            문서 보관함
+          </h3>
+          <p className="text-sm text-slate-500 mb-6">완료된 문서가 카테고리별로 정리되어 있습니다.</p>
+
+          {archivedDocuments.length === 0 ? (
+            <p className="text-slate-500 text-center py-8">보관된 문서가 없습니다.</p>
+          ) : (
+            <div className="space-y-6">
+              {/* 카테고리별 문서 정리 */}
+              {[
+                { type: 'resignation', label: '사직서', icon: '📝', color: 'blue' },
+                { type: 'employment_certificate', label: '재직증명서', icon: '📄', color: 'green' },
+                { type: 'recommended_resignation', label: '권고사직서', icon: '⚠️', color: 'amber' },
+                { type: 'termination_notice', label: '해고통보서', icon: '🚫', color: 'red' },
+                { type: 'welfare_payment', label: '복지비 지급 확인서', icon: '💰', color: 'emerald' }
+              ].map(category => {
+                const categoryDocs = archivedDocuments.filter(doc => doc.document_type === category.type)
+                if (categoryDocs.length === 0) return null
+
+                return (
+                  <div key={category.type} className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className={`px-4 py-3 bg-${category.color}-50 border-b border-slate-200`}>
+                      <h4 className="font-medium text-slate-800">
+                        <span className="mr-2">{category.icon}</span>
+                        {category.label}
+                        <span className="ml-2 text-sm text-slate-500">({categoryDocs.length}건)</span>
+                      </h4>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {categoryDocs.map(doc => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-100 rounded-full">
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-slate-800">
+                                {doc.target_employee?.name || doc.submitter?.name || '알 수 없음'}
+                                <span className="text-slate-400 mx-2">|</span>
+                                <span className="text-slate-500 text-sm">
+                                  {new Date(doc.created_at).toLocaleDateString('ko-KR')}
+                                </span>
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {doc.submitter?.name === user?.name ? '내가 발송' : `${doc.submitter?.name}님이 발송`}
+                                {doc.signed_at && ` • 서명완료: ${new Date(doc.signed_at).toLocaleDateString('ko-KR')}`}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleViewDocument(doc)}
+                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                          >
+                            <FolderOpen className="w-3 h-3 inline-block mr-1" />
+                            열기
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

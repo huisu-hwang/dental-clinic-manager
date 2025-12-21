@@ -375,7 +375,7 @@ export async function PATCH(request: NextRequest) {
       // 해당 문서의 대상 직원인지 확인
       const { data: submission, error: subError } = await supabaseAdmin
         .from('document_submissions')
-        .select('target_employee_id, document_type')
+        .select('target_employee_id, document_type, submitted_by')
         .eq('id', submissionId)
         .eq('clinic_id', clinicId)
         .single()
@@ -397,6 +397,24 @@ export async function PATCH(request: NextRequest) {
 
       updateData.employee_signature = employeeSignature
       updateData.signed_at = new Date().toISOString()
+
+      // 직원 서명 완료 후 원장에게 알림 발송
+      if (submission.document_type === 'welfare_payment') {
+        await supabaseAdmin
+          .from('user_notifications')
+          .insert({
+            clinic_id: clinicId,
+            user_id: submission.submitted_by, // 문서 작성자(원장)에게 알림
+            type: 'document',
+            title: '복지비 지급 확인서 서명 완료',
+            content: `${user.name}님이 복지비 지급 확인서에 서명을 완료했습니다.`,
+            link: '/dashboard?tab=documents&view=archive',
+            reference_type: 'document_submission',
+            reference_id: submissionId,
+            created_by: userId,
+            created_at: new Date().toISOString(),
+          })
+      }
     }
 
     const { data, error: updateError } = await supabaseAdmin
