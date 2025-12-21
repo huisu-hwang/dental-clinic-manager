@@ -2953,6 +2953,9 @@ function WelfarePaymentPreview({
           </p>
           <div className="flex justify-end items-center gap-2 mt-1 text-[10px]">
             <span>동의자</span>
+            <span className="inline-block w-20 border-b border-slate-400 text-center">
+              {data.employeeName || '　'}
+            </span>
             {data.applicantSignature ? (
               <img
                 src={data.applicantSignature}
@@ -2960,9 +2963,8 @@ function WelfarePaymentPreview({
                 className="h-5"
               />
             ) : (
-              <span className="inline-block w-16 border-b border-slate-400"></span>
+              <span>(인)</span>
             )}
-            <span>(인)</span>
           </div>
         </div>
 
