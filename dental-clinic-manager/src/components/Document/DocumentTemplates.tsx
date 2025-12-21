@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toPng } from 'html-to-image'
 import { jsPDF } from 'jspdf'
 import { useAuth } from '@/contexts/AuthContext'
@@ -87,16 +88,28 @@ export default function DocumentTemplates() {
   const [loadingStaff, setLoadingStaff] = useState(false)
   const [showSignatureModal, setShowSignatureModal] = useState(false)
   const [showOwnerSignatureModal, setShowOwnerSignatureModal] = useState(false)
-  const [showOwnerDocumentSignatureModal, setShowOwnerDocumentSignatureModal] = useState(false) // 권고사직서/해고통보서용
+  const [showOwnerDocumentSignatureModal, setShowOwnerDocumentSignatureModal] = useState(false) // 권고사직서/해고통보서/복지비 지급 확인서용
+  const [showEmployeeSignatureModal, setShowEmployeeSignatureModal] = useState(false) // 직원 서명용 (복지비 지급 확인서)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sentDocuments, setSentDocuments] = useState<DocumentSubmission[]>([]) // 보낸 문서
   const [receivedDocuments, setReceivedDocuments] = useState<DocumentSubmission[]>([]) // 받은 문서
   const [activeTab, setActiveTab] = useState<'form' | 'sent' | 'received'>('form') // 현재 탭
   const [selectedDocument, setSelectedDocument] = useState<DocumentSubmission | null>(null) // 선택된 문서
   const documentRef = useRef<HTMLDivElement>(null)
+  const searchParams = useSearchParams()
 
   // 원장인지 확인
   const isOwner = user?.role === 'owner'
+
+  // URL 파라미터로 탭 설정 (알림 클릭 시)
+  useEffect(() => {
+    const view = searchParams.get('view')
+    if (view === 'received') {
+      setActiveTab('received')
+    } else if (view === 'sent') {
+      setActiveTab('sent')
+    }
+  }, [searchParams])
 
   // 사직서 데이터
   const [resignationData, setResignationData] = useState<ResignationData>(
@@ -536,10 +549,42 @@ export default function DocumentTemplates() {
     setShowOwnerDocumentSignatureModal(false)
   }
 
-  // 복지비 지급 확인서 서명 저장 핸들러
+  // 복지비 지급 확인서 서명 저장 핸들러 (원장 발송 시)
   const handleWelfarePaymentSignature = (signatureData: string) => {
     setWelfarePaymentData(prev => ({ ...prev, confirmSignature: signatureData }))
     setShowOwnerDocumentSignatureModal(false)
+  }
+
+  // 직원의 복지비 지급 확인서 서명 핸들러 (받은 문서에서)
+  const handleEmployeeWelfareSignature = async (signatureData: string) => {
+    if (!user?.clinic_id || !user?.id || !selectedDocument) return
+
+    try {
+      const response = await fetch('/api/document-submissions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinicId: user.clinic_id,
+          userId: user.id,
+          submissionId: selectedDocument.id,
+          action: 'employee_sign',
+          employeeSignature: signatureData
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        alert('서명이 완료되었습니다.')
+        loadReceivedDocuments()
+        setShowEmployeeSignatureModal(false)
+        setSelectedDocument(null)
+      } else {
+        alert(`서명 실패: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Employee sign error:', error)
+      alert('서명 중 오류가 발생했습니다.')
+    }
   }
 
   // 권고사직서/해고통보서/복지비 지급 확인서 서명 삭제 핸들러
@@ -872,7 +917,7 @@ export default function DocumentTemplates() {
                            doc.status === 'approved' ? '처리완료' : '반려됨'}
                         </span>
                       </p>
-                      {/* 권고사직서/해고통보서 안내 메시지 */}
+                      {/* 권고사직서/해고통보서/복지비 지급 확인서 안내 메시지 */}
                       {!isOwner && doc.status === 'approved' && (
                         <p className="text-sm mt-1">
                           {doc.document_type === 'recommended_resignation' && (
@@ -880,6 +925,12 @@ export default function DocumentTemplates() {
                           )}
                           {doc.document_type === 'termination_notice' && (
                             <span className="text-red-600">※ 해고통보서입니다. 내용을 확인해 주세요.</span>
+                          )}
+                          {doc.document_type === 'welfare_payment' && !doc.employee_signature && (
+                            <span className="text-green-600">※ 복지비 지급 확인서입니다. 내용을 확인하시고 서명해 주세요.</span>
+                          )}
+                          {doc.document_type === 'welfare_payment' && doc.employee_signature && (
+                            <span className="text-blue-600">✓ 서명이 완료되었습니다.</span>
                           )}
                         </p>
                       )}
@@ -892,6 +943,19 @@ export default function DocumentTemplates() {
                     >
                       상세보기
                     </button>
+                    {/* 직원의 복지비 지급 확인서 서명 버튼 */}
+                    {!isOwner && doc.document_type === 'welfare_payment' && doc.status === 'approved' && !doc.employee_signature && (
+                      <button
+                        onClick={() => {
+                          setSelectedDocument(doc)
+                          setShowEmployeeSignatureModal(true)
+                        }}
+                        className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                      >
+                        <PenTool className="w-3 h-3 inline-block mr-1" />
+                        서명하기
+                      </button>
+                    )}
                     {/* 원장의 승인/반려 버튼 */}
                     {isOwner && doc.status === 'pending' && (
                       <>
@@ -1365,6 +1429,34 @@ export default function DocumentTemplates() {
                   : handleWelfarePaymentSignature
               }
               onCancel={() => setShowOwnerDocumentSignatureModal(false)}
+              width={450}
+              height={180}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 직원 서명 모달 (복지비 지급 확인서 수령 서명용) */}
+      {showEmployeeSignatureModal && selectedDocument && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowEmployeeSignatureModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
+              복지비 지급 확인서 수령 서명
+            </h3>
+            <p className="text-sm text-slate-600 mb-4">
+              복지비 지급 확인서를 확인하였으며, 지급 내용에 동의합니다.
+              <br />
+              서명을 완료하면 수령 확인이 완료됩니다.
+            </p>
+            <SignaturePad
+              onSave={handleEmployeeWelfareSignature}
+              onCancel={() => setShowEmployeeSignatureModal(false)}
               width={450}
               height={180}
             />

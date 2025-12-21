@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
               type: 'document',
               title: '권고사직서가 발송되었습니다',
               content: `원장님이 권고사직서를 발송하였습니다. 내용을 확인하시고, 동의하시는 경우 사직서를 작성하여 제출해 주세요.`,
-              link: '/dashboard?tab=documents',
+              link: '/dashboard?tab=documents&view=received',
               reference_type: 'document_submission',
               reference_id: submission.id,
               created_by: userId,
@@ -241,7 +241,23 @@ export async function POST(request: NextRequest) {
               type: 'important',
               title: '해고통보서가 발송되었습니다',
               content: `해고통보서가 발송되었습니다. 문서 양식 메뉴에서 상세 내용을 확인하시기 바랍니다.`,
-              link: '/dashboard?tab=documents',
+              link: '/dashboard?tab=documents&view=received',
+              reference_type: 'document_submission',
+              reference_id: submission.id,
+              created_by: userId,
+              created_at: new Date().toISOString(),
+            })
+        } else if (documentType === 'welfare_payment') {
+          // 복지비 지급 확인서: 확인 및 서명 요청 알림
+          await supabaseAdmin
+            .from('user_notifications')
+            .insert({
+              clinic_id: clinicId,
+              user_id: targetEmployeeId,
+              type: 'document',
+              title: '복지비 지급 확인서가 발송되었습니다',
+              content: `복지비 지급 확인서가 발송되었습니다. 내용을 확인하시고 서명해 주세요.`,
+              link: '/dashboard?tab=documents&view=received',
               reference_type: 'document_submission',
               reference_id: submission.id,
               created_by: userId,
@@ -286,11 +302,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH: 문서 승인/반려 또는 원장 서명
+// PATCH: 문서 승인/반려, 원장 서명, 직원 서명
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { clinicId, userId, submissionId, action, ownerSignature, rejectReason } = body
+    const { clinicId, userId, submissionId, action, ownerSignature, employeeSignature, rejectReason } = body
 
     if (!clinicId || !userId || !submissionId || !action) {
       return NextResponse.json(
@@ -354,6 +370,33 @@ export async function PATCH(request: NextRequest) {
         )
       }
       updateData.owner_signature = ownerSignature
+    } else if (action === 'employee_sign') {
+      // 직원 서명 추가 (복지비 지급 확인서 등)
+      // 해당 문서의 대상 직원인지 확인
+      const { data: submission, error: subError } = await supabaseAdmin
+        .from('document_submissions')
+        .select('target_employee_id, document_type')
+        .eq('id', submissionId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (subError || !submission) {
+        return NextResponse.json(
+          { error: 'Document not found' },
+          { status: 404 }
+        )
+      }
+
+      // 대상 직원만 서명 가능
+      if (submission.target_employee_id !== userId) {
+        return NextResponse.json(
+          { error: 'Only target employee can sign this document' },
+          { status: 403 }
+        )
+      }
+
+      updateData.employee_signature = employeeSignature
+      updateData.signed_at = new Date().toISOString()
     }
 
     const { data, error: updateError } = await supabaseAdmin
