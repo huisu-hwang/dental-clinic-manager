@@ -263,7 +263,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                 }
               }
               .animate-fade-slide-up {
-                animation: fadeSlideUp 0.8s ease-out forwards;
+                animation: fadeSlideUp 1.2s ease-out forwards;
                 opacity: 0;
               }
               .animate-draw-line {
