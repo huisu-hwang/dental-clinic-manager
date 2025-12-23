@@ -51,19 +51,7 @@ export default function DashboardPage() {
   const canManageQR = hasPermission('qr_code_manage')
 
   // URL 쿼리 파라미터에서 활성 탭 읽기
-  // 클라이언트 사이드에서 URL에서 직접 탭 값 확인
-  // (searchParams가 라우터 네비게이션 후 즉시 업데이트되지 않는 문제 해결)
-  const getActiveTab = (): string => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search)
-      const urlTab = urlParams.get('tab')
-      if (urlTab) {
-        return urlTab
-      }
-    }
-    return searchParams.get('tab') || 'home'
-  }
-  const activeTab = getActiveTab()
+  const activeTab = searchParams.get('tab') || 'home'
   const [statsSubTab, setStatsSubTab] = useState<'weekly' | 'monthly' | 'annual'>('weekly')
   const [attendanceSubTab, setAttendanceSubTab] = useState<'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'>('checkin')
   const [dbStatus, setDbStatus] = useState<'connected' | 'connecting' | 'error'>('connecting')
