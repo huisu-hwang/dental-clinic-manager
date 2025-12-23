@@ -863,15 +863,29 @@ export default function MenuSettings() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  // 상단 고정 메뉴 (visible=true, categoryId=undefined, fixedPosition='top')
+  // 상단 고정 메뉴 (fixedPosition='top' 또는 categoryId 없고 fixedPosition 없는 일반 메뉴 - guide 제외)
   const topFixedMenus = useMemo(() =>
-    menuItems.filter(m => m.visible && !m.categoryId && m.fixedPosition === 'top').sort((a, b) => a.order - b.order),
+    menuItems.filter(m => {
+      if (!m.visible) return false
+      // 명시적으로 top으로 설정된 메뉴
+      if (m.fixedPosition === 'top') return true
+      // categoryId가 없고 fixedPosition이 없으면 기본적으로 상단에 표시 (guide 제외)
+      if (!m.categoryId && !m.fixedPosition && m.id !== 'guide') return true
+      return false
+    }).sort((a, b) => a.order - b.order),
     [menuItems]
   )
 
-  // 하단 고정 메뉴 (visible=true, categoryId=undefined, fixedPosition='bottom')
+  // 하단 고정 메뉴 (fixedPosition='bottom' 또는 guide 메뉴)
   const bottomFixedMenus = useMemo(() =>
-    menuItems.filter(m => m.visible && !m.categoryId && m.fixedPosition === 'bottom').sort((a, b) => a.order - b.order),
+    menuItems.filter(m => {
+      if (!m.visible) return false
+      // 명시적으로 bottom으로 설정된 메뉴
+      if (m.fixedPosition === 'bottom') return true
+      // guide는 기본적으로 하단에 표시
+      if (!m.categoryId && !m.fixedPosition && m.id === 'guide') return true
+      return false
+    }).sort((a, b) => a.order - b.order),
     [menuItems]
   )
 
@@ -1565,8 +1579,10 @@ export default function MenuSettings() {
           </div>
 
           {/* 우측: 미사용 메뉴 (플로팅 패널) */}
-          <div className="lg:self-start lg:sticky lg:top-4 lg:max-h-[calc(100vh-120px)]">
-            <UnusedMenuPanel unusedMenus={unusedMenus} />
+          <div className="lg:self-start lg:sticky lg:top-20 z-10">
+            <div className="shadow-lg rounded-xl">
+              <UnusedMenuPanel unusedMenus={unusedMenus} />
+            </div>
           </div>
         </div>
 
