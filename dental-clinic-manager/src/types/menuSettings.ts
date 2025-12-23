@@ -10,6 +10,7 @@ export interface MenuItemSetting {
   visible: boolean      // 표시 여부
   order: number         // 표시 순서 (0부터 시작)
   categoryId?: string   // 소속 카테고리 ID (없으면 고정 메뉴)
+  fixedPosition?: 'top' | 'bottom'  // 고정 메뉴 위치 (상단/하단)
 }
 
 // 카테고리 설정

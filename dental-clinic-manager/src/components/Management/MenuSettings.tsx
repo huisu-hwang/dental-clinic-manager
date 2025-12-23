@@ -81,7 +81,8 @@ import {
   ChevronRight,
   Info,
   EyeOff,
-  LayoutList,
+  ArrowUpToLine,
+  ArrowDownToLine,
 } from 'lucide-react'
 import type { MenuItemSetting, MenuCategorySetting } from '@/types/menuSettings'
 import { DEFAULT_MENU_ITEMS, DEFAULT_CATEGORIES, AVAILABLE_CATEGORY_ICONS, createNewCategory } from '@/types/menuSettings'
@@ -231,9 +232,10 @@ function SortableMenuInCategory({
   )
 }
 
-// 독립 메뉴 아이템 (독립 메뉴 영역 내)
-interface SortableStandaloneMenuProps {
+// 고정 메뉴 아이템 (상단/하단 고정 영역 내)
+interface SortableFixedMenuProps {
   item: MenuItemSetting
+  position: 'top' | 'bottom'
   index: number
   totalCount: number
   onMoveUp: () => void
@@ -242,15 +244,16 @@ interface SortableStandaloneMenuProps {
   isAnimating?: 'up' | 'down' | null
 }
 
-function SortableStandaloneMenu({
+function SortableFixedMenu({
   item,
+  position,
   index,
   totalCount,
   onMoveUp,
   onMoveDown,
   onRemove,
   isAnimating,
-}: SortableStandaloneMenuProps) {
+}: SortableFixedMenuProps) {
   const {
     attributes,
     listeners,
@@ -258,7 +261,7 @@ function SortableStandaloneMenu({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: `standalone-${item.id}`, data: { type: 'standalone-menu', item } })
+  } = useSortable({ id: `fixed-${position}-${item.id}`, data: { type: 'fixed-menu', item, position } })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -267,6 +270,7 @@ function SortableStandaloneMenu({
   }
 
   const Icon = menuIcons[item.id] || HelpCircle
+  const isTop = position === 'top'
 
   return (
     <div
@@ -274,7 +278,9 @@ function SortableStandaloneMenu({
       style={style}
       className={`
         flex items-center gap-2 p-2.5 rounded-lg border-2 transition-all
-        ${isDragging ? 'shadow-lg ring-2 ring-emerald-400 border-emerald-400 bg-emerald-50' : 'border-emerald-200 bg-white hover:border-emerald-300'}
+        ${isDragging
+          ? `shadow-lg ring-2 ${isTop ? 'ring-emerald-400 border-emerald-400 bg-emerald-50' : 'ring-purple-400 border-purple-400 bg-purple-50'}`
+          : `${isTop ? 'border-emerald-200 bg-white hover:border-emerald-300' : 'border-purple-200 bg-white hover:border-purple-300'}`}
         ${isAnimating === 'up' ? 'animate-bounce-up' : ''}
         ${isAnimating === 'down' ? 'animate-bounce-down' : ''}
       `}
@@ -286,7 +292,7 @@ function SortableStandaloneMenu({
       >
         <GripVertical className="w-4 h-4" />
       </button>
-      <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-100 text-emerald-600">
+      <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${isTop ? 'bg-emerald-100 text-emerald-600' : 'bg-purple-100 text-purple-600'}`}>
         <Icon className="w-4 h-4" />
       </div>
       <span className="flex-1 text-sm font-medium text-slate-700 truncate">{item.label}</span>
@@ -487,8 +493,9 @@ function SortableCategoryWithMenus({
   )
 }
 
-// 독립 메뉴 영역 (드롭 가능)
-interface StandaloneMenuSectionProps {
+// 고정 메뉴 영역 (상단/하단)
+interface FixedMenuSectionProps {
+  position: 'top' | 'bottom'
   menuItems: MenuItemSetting[]
   onMenuMoveUp: (menuId: string) => void
   onMenuMoveDown: (menuId: string) => void
@@ -497,32 +504,42 @@ interface StandaloneMenuSectionProps {
   animatingDirection?: 'up' | 'down' | null
 }
 
-function StandaloneMenuSection({
+function FixedMenuSection({
+  position,
   menuItems,
   onMenuMoveUp,
   onMenuMoveDown,
   onMenuRemove,
   animatingMenuId,
   animatingDirection,
-}: StandaloneMenuSectionProps) {
+}: FixedMenuSectionProps) {
   const { setNodeRef, isOver } = useDroppable({
-    id: 'drop-standalone',
-    data: { type: 'standalone-drop' }
+    id: `drop-fixed-${position}`,
+    data: { type: 'fixed-drop', position }
   })
+
+  const isTop = position === 'top'
+  const Icon = isTop ? ArrowUpToLine : ArrowDownToLine
 
   return (
     <div
       ref={setNodeRef}
       className={`
         rounded-xl border-2 overflow-hidden transition-all
-        ${isOver ? 'border-emerald-400 bg-emerald-50/50' : 'border-emerald-200 bg-emerald-50/30'}
+        ${isOver
+          ? `${isTop ? 'border-emerald-400 bg-emerald-50/50' : 'border-purple-400 bg-purple-50/50'}`
+          : `${isTop ? 'border-emerald-200 bg-emerald-50/30' : 'border-purple-200 bg-purple-50/30'}`}
       `}
     >
-      <div className="flex items-center gap-2 px-4 py-3 bg-emerald-100/50 border-b border-emerald-200">
-        <LayoutList className="w-5 h-5 text-emerald-600" />
+      <div className={`flex items-center gap-2 px-4 py-3 border-b ${isTop ? 'bg-emerald-100/50 border-emerald-200' : 'bg-purple-100/50 border-purple-200'}`}>
+        <Icon className={`w-5 h-5 ${isTop ? 'text-emerald-600' : 'text-purple-600'}`} />
         <div className="flex-1">
-          <h4 className="text-sm font-semibold text-emerald-800">독립 메뉴</h4>
-          <p className="text-xs text-emerald-600">카테고리 없이 단독으로 표시되는 메뉴</p>
+          <h4 className={`text-sm font-semibold ${isTop ? 'text-emerald-800' : 'text-purple-800'}`}>
+            {isTop ? '상단 고정 메뉴' : '하단 고정 메뉴'}
+          </h4>
+          <p className={`text-xs ${isTop ? 'text-emerald-600' : 'text-purple-600'}`}>
+            {isTop ? '카테고리 위에 표시되는 메뉴' : '카테고리 아래에 표시되는 메뉴'}
+          </p>
         </div>
       </div>
 
@@ -530,16 +547,19 @@ function StandaloneMenuSection({
         {menuItems.length === 0 ? (
           <div className={`
             p-4 rounded-lg border-2 border-dashed text-center transition-colors
-            ${isOver ? 'border-emerald-400 bg-emerald-50 text-emerald-600' : 'border-emerald-200 text-emerald-500'}
+            ${isOver
+              ? `${isTop ? 'border-emerald-400 bg-emerald-50 text-emerald-600' : 'border-purple-400 bg-purple-50 text-purple-600'}`
+              : `${isTop ? 'border-emerald-200 text-emerald-500' : 'border-purple-200 text-purple-500'}`}
           `}>
-            <p className="text-sm">미사용 메뉴를 여기로 드래그하면 독립 메뉴가 됩니다</p>
+            <p className="text-sm">미사용 메뉴를 여기로 드래그하세요</p>
           </div>
         ) : (
-          <SortableContext items={menuItems.map(m => `standalone-${m.id}`)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={menuItems.map(m => `fixed-${position}-${m.id}`)} strategy={verticalListSortingStrategy}>
             {menuItems.map((item, idx) => (
-              <SortableStandaloneMenu
+              <SortableFixedMenu
                 key={item.id}
                 item={item}
+                position={position}
                 index={idx}
                 totalCount={menuItems.length}
                 onMoveUp={() => onMenuMoveUp(item.id)}
@@ -726,9 +746,15 @@ export default function MenuSettings() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  // 독립 메뉴 (visible=true, categoryId=undefined)
-  const standaloneMenus = useMemo(() =>
-    menuItems.filter(m => m.visible && !m.categoryId).sort((a, b) => a.order - b.order),
+  // 상단 고정 메뉴 (visible=true, categoryId=undefined, fixedPosition='top')
+  const topFixedMenus = useMemo(() =>
+    menuItems.filter(m => m.visible && !m.categoryId && m.fixedPosition === 'top').sort((a, b) => a.order - b.order),
+    [menuItems]
+  )
+
+  // 하단 고정 메뉴 (visible=true, categoryId=undefined, fixedPosition='bottom')
+  const bottomFixedMenus = useMemo(() =>
+    menuItems.filter(m => m.visible && !m.categoryId && m.fixedPosition === 'bottom').sort((a, b) => a.order - b.order),
     [menuItems]
   )
 
@@ -800,6 +826,26 @@ export default function MenuSettings() {
     }, 200)
   }
 
+  // 메뉴 이동 유틸리티 함수
+  const moveMenuTo = useCallback((menuId: string, target: { type: 'category', categoryId: string } | { type: 'fixed', position: 'top' | 'bottom' }) => {
+    setMenuItems(prev => {
+      if (target.type === 'category') {
+        const categoryMenus = prev.filter(m => m.categoryId === target.categoryId && m.visible)
+        const maxOrder = categoryMenus.length > 0 ? Math.max(...categoryMenus.map(m => m.order)) + 1 : 0
+        return prev.map(m =>
+          m.id === menuId ? { ...m, categoryId: target.categoryId, visible: true, fixedPosition: undefined, order: maxOrder } : m
+        )
+      } else {
+        const fixedMenus = prev.filter(m => m.visible && !m.categoryId && m.fixedPosition === target.position)
+        const maxOrder = fixedMenus.length > 0 ? Math.max(...fixedMenus.map(m => m.order)) + 1 : 0
+        return prev.map(m =>
+          m.id === menuId ? { ...m, categoryId: undefined, visible: true, fixedPosition: target.position, order: maxOrder } : m
+        )
+      }
+    })
+    setSuccess('')
+  }, [])
+
   // 카테고리 순서 이동
   const moveCategoryUp = (index: number) => {
     if (index === 0) return
@@ -835,7 +881,7 @@ export default function MenuSettings() {
     if (!confirm(`"${category.label}" 카테고리를 삭제하시겠습니까?\n\n해당 카테고리에 속한 메뉴는 미사용 메뉴로 이동됩니다.`)) return
 
     setMenuItems(prev => prev.map(m =>
-      m.categoryId === categoryId ? { ...m, categoryId: undefined, visible: false } : m
+      m.categoryId === categoryId ? { ...m, categoryId: undefined, visible: false, fixedPosition: undefined } : m
     ))
     setCategories(prev => prev.filter(c => c.id !== categoryId))
     setExpandedCategories(prev => {
@@ -927,25 +973,25 @@ export default function MenuSettings() {
 
   const removeMenuFromCategory = (menuId: string) => {
     setMenuItems(prev => prev.map(m =>
-      m.id === menuId ? { ...m, categoryId: undefined, visible: false } : m
+      m.id === menuId ? { ...m, categoryId: undefined, visible: false, fixedPosition: undefined } : m
     ))
     setSuccess('')
   }
 
-  // 독립 메뉴 핸들러
-  const moveStandaloneMenuUp = (menuId: string) => {
+  // 고정 메뉴 핸들러
+  const moveFixedMenuUp = (menuId: string, position: 'top' | 'bottom') => {
     setMenuItems(prev => {
-      const standaloneList = prev
-        .filter(m => m.visible && !m.categoryId)
+      const fixedList = prev
+        .filter(m => m.visible && !m.categoryId && m.fixedPosition === position)
         .sort((a, b) => a.order - b.order)
 
-      const idx = standaloneList.findIndex(m => m.id === menuId)
+      const idx = fixedList.findIndex(m => m.id === menuId)
       if (idx <= 0) return prev
 
       triggerMenuAnimation(menuId, 'up')
 
-      const item = standaloneList[idx]
-      const prevItem = standaloneList[idx - 1]
+      const item = fixedList[idx]
+      const prevItem = fixedList[idx - 1]
       const tempOrder = item.order
       return prev.map(m => {
         if (m.id === menuId) return { ...m, order: prevItem.order }
@@ -956,19 +1002,19 @@ export default function MenuSettings() {
     setSuccess('')
   }
 
-  const moveStandaloneMenuDown = (menuId: string) => {
+  const moveFixedMenuDown = (menuId: string, position: 'top' | 'bottom') => {
     setMenuItems(prev => {
-      const standaloneList = prev
-        .filter(m => m.visible && !m.categoryId)
+      const fixedList = prev
+        .filter(m => m.visible && !m.categoryId && m.fixedPosition === position)
         .sort((a, b) => a.order - b.order)
 
-      const idx = standaloneList.findIndex(m => m.id === menuId)
-      if (idx === -1 || idx === standaloneList.length - 1) return prev
+      const idx = fixedList.findIndex(m => m.id === menuId)
+      if (idx === -1 || idx === fixedList.length - 1) return prev
 
       triggerMenuAnimation(menuId, 'down')
 
-      const item = standaloneList[idx]
-      const nextItem = standaloneList[idx + 1]
+      const item = fixedList[idx]
+      const nextItem = fixedList[idx + 1]
       const tempOrder = item.order
       return prev.map(m => {
         if (m.id === menuId) return { ...m, order: nextItem.order }
@@ -979,9 +1025,9 @@ export default function MenuSettings() {
     setSuccess('')
   }
 
-  const removeStandaloneMenu = (menuId: string) => {
+  const removeFixedMenu = (menuId: string) => {
     setMenuItems(prev => prev.map(m =>
-      m.id === menuId ? { ...m, visible: false } : m
+      m.id === menuId ? { ...m, visible: false, fixedPosition: undefined } : m
     ))
     setSuccess('')
   }
@@ -1002,26 +1048,22 @@ export default function MenuSettings() {
     const activeData = active.data.current
     const overData = over.data.current
 
-    // 독립 메뉴 영역으로 드롭
-    if (overData?.type === 'standalone-drop') {
+    // 고정 메뉴 영역으로 드롭 (상단/하단)
+    if (overData?.type === 'fixed-drop') {
+      const position = overData.position as 'top' | 'bottom'
+
       if (activeData?.type === 'unused-menu') {
         const menuItem = activeData.item as MenuItemSetting
-        const maxOrder = standaloneMenus.length > 0
-          ? Math.max(...standaloneMenus.map(m => m.order)) + 1
-          : 0
-        setMenuItems(prev => prev.map(m =>
-          m.id === menuItem.id ? { ...m, visible: true, categoryId: undefined, order: maxOrder } : m
-        ))
+        moveMenuTo(menuItem.id, { type: 'fixed', position })
       } else if (activeData?.type === 'category-menu') {
         const menuItem = activeData.item as MenuItemSetting
-        const maxOrder = standaloneMenus.length > 0
-          ? Math.max(...standaloneMenus.map(m => m.order)) + 1
-          : 0
-        setMenuItems(prev => prev.map(m =>
-          m.id === menuItem.id ? { ...m, visible: true, categoryId: undefined, order: maxOrder } : m
-        ))
+        moveMenuTo(menuItem.id, { type: 'fixed', position })
+      } else if (activeData?.type === 'fixed-menu') {
+        const menuItem = activeData.item as MenuItemSetting
+        if (activeData.position !== position) {
+          moveMenuTo(menuItem.id, { type: 'fixed', position })
+        }
       }
-      setSuccess('')
       return
     }
 
@@ -1029,19 +1071,17 @@ export default function MenuSettings() {
     if (overData?.type === 'category-drop') {
       const targetCategoryId = overData.categoryId
 
-      if (activeData?.type === 'unused-menu' || activeData?.type === 'standalone-menu' || activeData?.type === 'category-menu') {
+      if (activeData?.type === 'unused-menu' || activeData?.type === 'fixed-menu' || activeData?.type === 'category-menu') {
         const menuItem = activeData.item as MenuItemSetting
-        const categoryMenus = menuItems.filter(m => m.categoryId === targetCategoryId && m.visible)
-        const maxOrder = categoryMenus.length > 0
-          ? Math.max(...categoryMenus.map(m => m.order)) + 1
-          : 0
 
-        setMenuItems(prev => prev.map(m =>
-          m.id === menuItem.id ? { ...m, categoryId: targetCategoryId, visible: true, order: maxOrder } : m
-        ))
+        // 같은 카테고리로의 이동은 무시
+        if (activeData?.type === 'category-menu' && menuItem.categoryId === targetCategoryId) {
+          return
+        }
+
+        moveMenuTo(menuItem.id, { type: 'category', categoryId: targetCategoryId })
         setExpandedCategories(prev => new Set([...prev, targetCategoryId]))
       }
-      setSuccess('')
       return
     }
 
@@ -1089,22 +1129,29 @@ export default function MenuSettings() {
       return
     }
 
-    // 독립 메뉴 간 순서 변경
-    if (activeId.startsWith('standalone-') && overId.startsWith('standalone-')) {
-      const activeMenuId = activeId.replace('standalone-', '')
-      const overMenuId = overId.replace('standalone-', '')
+    // 고정 메뉴 간 순서 변경 (같은 위치 내)
+    if (activeId.startsWith('fixed-') && overId.startsWith('fixed-')) {
+      const activeMatch = activeId.match(/^fixed-(top|bottom)-(.+)$/)
+      const overMatch = overId.match(/^fixed-(top|bottom)-(.+)$/)
 
-      const activeIdx = standaloneMenus.findIndex(m => m.id === activeMenuId)
-      const overIdx = standaloneMenus.findIndex(m => m.id === overMenuId)
+      if (activeMatch && overMatch && activeMatch[1] === overMatch[1]) {
+        const position = activeMatch[1] as 'top' | 'bottom'
+        const activeMenuId = activeMatch[2]
+        const overMenuId = overMatch[2]
 
-      if (activeIdx !== -1 && overIdx !== -1 && activeIdx !== overIdx) {
-        const reordered = arrayMove(standaloneMenus, activeIdx, overIdx)
-        setMenuItems(prev => {
-          const otherMenus = prev.filter(m => m.categoryId || !m.visible)
-          const updatedStandaloneMenus = reordered.map((m, idx) => ({ ...m, order: idx }))
-          return [...otherMenus, ...updatedStandaloneMenus]
-        })
-        setSuccess('')
+        const fixedList = position === 'top' ? topFixedMenus : bottomFixedMenus
+        const activeIdx = fixedList.findIndex(m => m.id === activeMenuId)
+        const overIdx = fixedList.findIndex(m => m.id === overMenuId)
+
+        if (activeIdx !== -1 && overIdx !== -1 && activeIdx !== overIdx) {
+          const reordered = arrayMove(fixedList, activeIdx, overIdx)
+          setMenuItems(prev => {
+            const otherMenus = prev.filter(m => m.categoryId || !m.visible || m.fixedPosition !== position)
+            const updatedFixedMenus = reordered.map((m, idx) => ({ ...m, order: idx }))
+            return [...otherMenus, ...updatedFixedMenus]
+          })
+          setSuccess('')
+        }
       }
     }
   }
@@ -1183,9 +1230,12 @@ export default function MenuSettings() {
       const menuId = activeId.replace('unused-', '')
       return { type: 'menu', data: menuItems.find(m => m.id === menuId) }
     }
-    if (activeId.startsWith('standalone-')) {
-      const menuId = activeId.replace('standalone-', '')
-      return { type: 'menu', data: menuItems.find(m => m.id === menuId) }
+    if (activeId.startsWith('fixed-')) {
+      const match = activeId.match(/^fixed-(top|bottom)-(.+)$/)
+      if (match) {
+        const menuId = match[2]
+        return { type: 'menu', data: menuItems.find(m => m.id === menuId) }
+      }
     }
     if (activeId.startsWith('cat-menu-')) {
       const menuId = activeId.replace('cat-menu-', '')
@@ -1247,8 +1297,9 @@ export default function MenuSettings() {
           <div>
             <h4 className="font-semibold text-blue-800 mb-1">나만의 메뉴 설정</h4>
             <ul className="text-sm text-blue-700 space-y-0.5">
+              <li>• <strong>상단 고정 메뉴</strong>: 카테고리 위에 항상 표시됩니다</li>
               <li>• <strong>카테고리</strong>: 메뉴를 그룹으로 묶어서 표시합니다</li>
-              <li>• <strong>독립 메뉴</strong>: 카테고리 없이 단독으로 표시됩니다</li>
+              <li>• <strong>하단 고정 메뉴</strong>: 카테고리 아래에 항상 표시됩니다</li>
               <li>• <strong>미사용 메뉴</strong>: 사이드바에 표시되지 않습니다</li>
             </ul>
           </div>
@@ -1286,6 +1337,17 @@ export default function MenuSettings() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 좌측: 사이드바 구성 */}
           <div className="lg:col-span-2 space-y-4">
+            {/* 상단 고정 메뉴 영역 */}
+            <FixedMenuSection
+              position="top"
+              menuItems={topFixedMenus}
+              onMenuMoveUp={(menuId) => moveFixedMenuUp(menuId, 'top')}
+              onMenuMoveDown={(menuId) => moveFixedMenuDown(menuId, 'top')}
+              onMenuRemove={removeFixedMenu}
+              animatingMenuId={animatingMenuId}
+              animatingDirection={animatingDirection}
+            />
+
             {/* 카테고리 영역 */}
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
               <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
@@ -1342,12 +1404,13 @@ export default function MenuSettings() {
               </div>
             </div>
 
-            {/* 독립 메뉴 영역 */}
-            <StandaloneMenuSection
-              menuItems={standaloneMenus}
-              onMenuMoveUp={moveStandaloneMenuUp}
-              onMenuMoveDown={moveStandaloneMenuDown}
-              onMenuRemove={removeStandaloneMenu}
+            {/* 하단 고정 메뉴 영역 */}
+            <FixedMenuSection
+              position="bottom"
+              menuItems={bottomFixedMenus}
+              onMenuMoveUp={(menuId) => moveFixedMenuUp(menuId, 'bottom')}
+              onMenuMoveDown={(menuId) => moveFixedMenuDown(menuId, 'bottom')}
+              onMenuRemove={removeFixedMenu}
               animatingMenuId={animatingMenuId}
               animatingDirection={animatingDirection}
             />
@@ -1367,7 +1430,7 @@ export default function MenuSettings() {
                 <div className="flex items-start gap-2">
                   <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-700">
-                    좌측 카테고리 또는 독립 메뉴 영역으로 드래그하세요. 여기에 있는 메뉴는 사이드바에 표시되지 않습니다.
+                    좌측 카테고리 또는 고정 메뉴 영역으로 드래그하세요. 여기에 있는 메뉴는 사이드바에 표시되지 않습니다.
                   </p>
                 </div>
               </div>
