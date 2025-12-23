@@ -218,15 +218,15 @@ export async function saveDailyReport(formData: {
 
       // special_notes는 special_notes_history 테이블에만 저장하므로 RPC 페이로드에서 제외
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { special_notes: _specialNotes, ...dailyReportWithoutSpecialNotes } = formData.dailyReport || {}
+      const { special_notes: _specialNotes, date: _date, ...dailyReportWithoutSpecialNotes } = formData.dailyReport || {}
 
       const rpcPromise = supabase.rpc('save_daily_report_v2', {
         p_clinic_id: userProfile.clinic_id,
         p_date: formData.date,
         p_daily_report: {
           ...dailyReportWithoutSpecialNotes,
-          clinic_id: userProfile.clinic_id,
-          date: formData.date
+          clinic_id: userProfile.clinic_id
+          // date 필드는 p_date로 별도 전달되므로 제거 (TEXT -> DATE 타입 충돌 방지)
         },
         p_consult_logs: formData.consultLogs,
         p_gift_logs: formData.giftLogs,
