@@ -958,17 +958,19 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
               <span className="font-semibold text-slate-800">{resigningStaff.name}</span>님을 퇴사 처리하시겠습니까?
               <br />
               <span className="text-xs text-slate-500 mt-1 block">
-                퇴사 처리된 직원은 시스템에 로그인할 수 없습니다.
+                퇴사 처리된 직원은 이 병원의 시스템에 접근할 수 없습니다.
               </span>
             </p>
             <div className="flex space-x-3">
               <button
+                type="button"
                 onClick={() => setResigningStaff(null)}
                 className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 취소
               </button>
               <button
+                type="button"
                 onClick={handleResignUser}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
@@ -996,12 +998,14 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
             </p>
             <div className="flex space-x-3">
               <button
+                type="button"
                 onClick={() => setRehiringStaff(null)}
                 className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 취소
               </button>
               <button
+                type="button"
                 onClick={handleRehireUser}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
               >
