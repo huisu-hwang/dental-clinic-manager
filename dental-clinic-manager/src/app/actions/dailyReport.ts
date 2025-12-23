@@ -322,97 +322,120 @@ export async function saveDailyReport(formData: {
     // 7. 현금 출납 기록 저장
     // ============================================================
 
+    let cashLedgerError: string | null = null
+
     if (formData.cashLedger) {
-      try {
-        console.log('[saveDailyReport] Saving cash ledger...')
+      // 현금 출납 데이터가 비어있지 않은 경우에만 저장
+      const hasCarriedForward = formData.cashLedger.carried_forward && formData.cashLedger.carried_forward.length > 0
+      const hasClosingBalance = formData.cashLedger.closing_balance && formData.cashLedger.closing_balance.length > 0
 
-        const today = new Date().toISOString().split('T')[0]
-        const isPastDateEdit = formData.date < today
-
-        // 기존 데이터 확인
-        const { data: existingLedger } = await supabase
-          .from('cash_ledger')
-          .select('id')
-          .eq('clinic_id', userProfile.clinic_id)
-          .eq('date', formData.date)
-          .maybeSingle()
-
-        const cashLedgerData = {
-          clinic_id: userProfile.clinic_id,
-          date: formData.date,
-          carried_forward: formData.cashLedger.carried_forward,
-          carried_forward_total: formData.cashLedger.carried_forward_total,
-          closing_balance: formData.cashLedger.closing_balance,
-          closing_balance_total: formData.cashLedger.closing_balance_total,
-          updated_at: new Date().toISOString()
-        }
-
-        if (existingLedger) {
-          // 업데이트
-          const { error: updateError } = await supabase
-            .from('cash_ledger')
-            .update(cashLedgerData)
-            .eq('id', existingLedger.id)
-
-          if (updateError) {
-            console.error('[saveDailyReport] Failed to update cash ledger:', updateError)
-          } else {
-            console.log('[saveDailyReport] Cash ledger updated')
-          }
-        } else {
-          // 새로 삽입
-          const { error: insertError } = await supabase
-            .from('cash_ledger')
-            .insert(cashLedgerData)
-
-          if (insertError) {
-            console.error('[saveDailyReport] Failed to insert cash ledger:', insertError)
-          } else {
-            console.log('[saveDailyReport] Cash ledger inserted')
-          }
-        }
-
-        // 현금 출납 히스토리 저장 (전일 이월액)
-        const { error: cfHistoryError } = await supabase
-          .from('cash_ledger_history')
-          .insert({
-            clinic_id: userProfile.clinic_id,
-            report_date: formData.date,
-            ledger_type: 'carried_forward',
-            items: formData.cashLedger.carried_forward,
-            total_amount: formData.cashLedger.carried_forward_total,
-            author_id: user.id,
-            author_name: userProfile.name || '알 수 없음',
-            is_past_date_edit: isPastDateEdit,
-            edited_at: new Date().toISOString()
+      if (hasCarriedForward || hasClosingBalance) {
+        try {
+          console.log('[saveDailyReport] Saving cash ledger...', {
+            carried_forward: formData.cashLedger.carried_forward,
+            closing_balance: formData.cashLedger.closing_balance
           })
 
-        if (cfHistoryError) {
-          console.error('[saveDailyReport] Failed to save carried_forward history:', cfHistoryError)
+          const today = new Date().toISOString().split('T')[0]
+          const isPastDateEdit = formData.date < today
+
+          // 기존 데이터 확인
+          const { data: existingLedger, error: selectError } = await supabase
+            .from('cash_ledger')
+            .select('id')
+            .eq('clinic_id', userProfile.clinic_id)
+            .eq('date', formData.date)
+            .maybeSingle()
+
+          if (selectError) {
+            // 테이블이 없는 경우 에러 발생
+            console.error('[saveDailyReport] Failed to check existing cash ledger:', selectError)
+            cashLedgerError = `현금 출납 테이블 조회 실패: ${selectError.message}. 마이그레이션을 실행했는지 확인해주세요.`
+          } else {
+            const cashLedgerData = {
+              clinic_id: userProfile.clinic_id,
+              date: formData.date,
+              carried_forward: formData.cashLedger.carried_forward,
+              carried_forward_total: formData.cashLedger.carried_forward_total,
+              closing_balance: formData.cashLedger.closing_balance,
+              closing_balance_total: formData.cashLedger.closing_balance_total,
+              updated_at: new Date().toISOString()
+            }
+
+            if (existingLedger) {
+              // 업데이트
+              const { error: updateError } = await supabase
+                .from('cash_ledger')
+                .update(cashLedgerData)
+                .eq('id', existingLedger.id)
+
+              if (updateError) {
+                console.error('[saveDailyReport] Failed to update cash ledger:', updateError)
+                cashLedgerError = `현금 출납 업데이트 실패: ${updateError.message}`
+              } else {
+                console.log('[saveDailyReport] Cash ledger updated successfully')
+              }
+            } else {
+              // 새로 삽입
+              const { error: insertError } = await supabase
+                .from('cash_ledger')
+                .insert(cashLedgerData)
+
+              if (insertError) {
+                console.error('[saveDailyReport] Failed to insert cash ledger:', insertError)
+                cashLedgerError = `현금 출납 저장 실패: ${insertError.message}`
+              } else {
+                console.log('[saveDailyReport] Cash ledger inserted successfully')
+              }
+            }
+
+            // 현금 출납 저장 성공 시에만 히스토리 저장
+            if (!cashLedgerError) {
+              // 현금 출납 히스토리 저장 (전일 이월액)
+              const { error: cfHistoryError } = await supabase
+                .from('cash_ledger_history')
+                .insert({
+                  clinic_id: userProfile.clinic_id,
+                  report_date: formData.date,
+                  ledger_type: 'carried_forward',
+                  items: formData.cashLedger.carried_forward,
+                  total_amount: formData.cashLedger.carried_forward_total,
+                  author_id: user.id,
+                  author_name: userProfile.name || '알 수 없음',
+                  is_past_date_edit: isPastDateEdit,
+                  edited_at: new Date().toISOString()
+                })
+
+              if (cfHistoryError) {
+                console.error('[saveDailyReport] Failed to save carried_forward history:', cfHistoryError)
+              }
+
+              // 현금 출납 히스토리 저장 (금일 잔액)
+              const { error: cbHistoryError } = await supabase
+                .from('cash_ledger_history')
+                .insert({
+                  clinic_id: userProfile.clinic_id,
+                  report_date: formData.date,
+                  ledger_type: 'closing_balance',
+                  items: formData.cashLedger.closing_balance,
+                  total_amount: formData.cashLedger.closing_balance_total,
+                  author_id: user.id,
+                  author_name: userProfile.name || '알 수 없음',
+                  is_past_date_edit: isPastDateEdit,
+                  edited_at: new Date().toISOString()
+                })
+
+              if (cbHistoryError) {
+                console.error('[saveDailyReport] Failed to save closing_balance history:', cbHistoryError)
+              }
+
+              console.log(`[saveDailyReport] Cash ledger history saved (isPastDateEdit: ${isPastDateEdit})`)
+            }
+          }
+        } catch (err: any) {
+          console.error('[saveDailyReport] Error saving cash ledger:', err)
+          cashLedgerError = `현금 출납 저장 중 오류: ${err.message}`
         }
-
-        // 현금 출납 히스토리 저장 (금일 잔액)
-        const { error: cbHistoryError } = await supabase
-          .from('cash_ledger_history')
-          .insert({
-            clinic_id: userProfile.clinic_id,
-            report_date: formData.date,
-            ledger_type: 'closing_balance',
-            items: formData.cashLedger.closing_balance,
-            total_amount: formData.cashLedger.closing_balance_total,
-            author_id: user.id,
-            author_name: userProfile.name || '알 수 없음',
-            is_past_date_edit: isPastDateEdit,
-            edited_at: new Date().toISOString()
-          })
-
-        if (cbHistoryError) {
-          console.error('[saveDailyReport] Failed to save closing_balance history:', cbHistoryError)
-        }
-
-        console.log(`[saveDailyReport] Cash ledger history saved (isPastDateEdit: ${isPastDateEdit})`)
-      } catch (cashLedgerError) {
-        console.error('[saveDailyReport] Error saving cash ledger:', cashLedgerError)
       }
     }
 
@@ -480,6 +503,18 @@ export async function saveDailyReport(formData: {
 
     // 캐시 무효화 (dashboard 페이지 재검증)
     revalidatePath('/dashboard')
+
+    // 현금 출납 에러가 있으면 경고로 포함
+    if (cashLedgerError) {
+      return {
+        success: true,
+        warning: cashLedgerError,
+        executionTime: totalElapsed,
+        authRetries: authRetryCount,
+        rpcRetries: retryCount,
+        details: rpcData
+      }
+    }
 
     return {
       success: true,

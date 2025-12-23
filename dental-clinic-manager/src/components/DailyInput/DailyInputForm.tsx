@@ -470,7 +470,13 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
         }
 
         console.log('[DailyInputForm] Server Action succeeded:', result)
-        alert('보고서가 성공적으로 저장되었습니다.')
+
+        // 현금 출납 저장 경고가 있으면 표시
+        if ((result as any).warning) {
+          alert(`보고서가 저장되었지만, 일부 문제가 발생했습니다:\n\n${(result as any).warning}`)
+        } else {
+          alert('보고서가 성공적으로 저장되었습니다.')
+        }
         // 저장 성공 후 부모에게 알려서 데이터 새로고침
         onSaveSuccess?.()
       } else {
@@ -571,6 +577,11 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
 
           if (!result.success) {
             throw new Error(result.error || '저장에 실패했습니다.')
+          }
+
+          // 현금 출납 저장 경고가 있으면 표시
+          if ((result as any).warning) {
+            alert(`저장 중 일부 문제가 발생했습니다:\n\n${(result as any).warning}`)
           }
 
           onSaveSuccess?.()
