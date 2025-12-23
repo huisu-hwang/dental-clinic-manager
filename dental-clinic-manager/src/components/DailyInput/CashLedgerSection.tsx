@@ -1,37 +1,35 @@
 'use client'
 
-import { useMemo } from 'react'
-import type { CashDenominations } from '@/types'
+import { useMemo, useState } from 'react'
+import { Plus, X } from 'lucide-react'
 
-// 화폐 종류 정의
-const DENOMINATIONS = [
-  { key: 'bill_50000', label: '5만원권', value: 50000, type: 'bill' },
-  { key: 'bill_10000', label: '1만원권', value: 10000, type: 'bill' },
-  { key: 'bill_5000', label: '5천원권', value: 5000, type: 'bill' },
-  { key: 'bill_1000', label: '1천원권', value: 1000, type: 'bill' },
-  { key: 'coin_500', label: '500원', value: 500, type: 'coin' },
-  { key: 'coin_100', label: '100원', value: 100, type: 'coin' },
-  { key: 'coin_50', label: '50원', value: 50, type: 'coin' },
-  { key: 'coin_10', label: '10원', value: 10, type: 'coin' },
-] as const
+// 기본 화폐 종류 (50원, 10원 제외)
+const DEFAULT_DENOMINATION_OPTIONS = [
+  { label: '5만원권', value: 50000 },
+  { label: '1만원권', value: 10000 },
+  { label: '5천원권', value: 5000 },
+  { label: '1천원권', value: 1000 },
+  { label: '500원', value: 500 },
+  { label: '100원', value: 100 },
+]
 
-// 기본 화폐 데이터
-export const DEFAULT_DENOMINATIONS: CashDenominations = {
-  bill_50000: 0,
-  bill_10000: 0,
-  bill_5000: 0,
-  bill_1000: 0,
-  coin_500: 0,
-  coin_100: 0,
-  coin_50: 0,
-  coin_10: 0,
+// 현금 항목 타입
+export interface CashItem {
+  id: string
+  label: string
+  value: number
+  count: number
 }
 
+// 현금 데이터 타입 (배열 형태)
+export type CashData = CashItem[]
+
+// 기본 빈 데이터
+export const DEFAULT_CASH_DATA: CashData = []
+
 // 총액 계산 함수
-export function calculateTotal(denominations: CashDenominations): number {
-  return DENOMINATIONS.reduce((sum, denom) => {
-    return sum + (denominations[denom.key as keyof CashDenominations] || 0) * denom.value
-  }, 0)
+export function calculateTotal(items: CashData): number {
+  return items.reduce((sum, item) => sum + item.value * item.count, 0)
 }
 
 // 숫자 포맷팅
@@ -39,60 +37,64 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(amount)
 }
 
-interface CashInputRowProps {
-  label: string
-  value: number
-  onChange: (value: number) => void
-  unitValue: number
-  isReadOnly: boolean
-  type: 'bill' | 'coin'
-}
-
-function CashInputRow({ label, value, onChange, unitValue, isReadOnly, type }: CashInputRowProps) {
-  const subtotal = value * unitValue
-
-  return (
-    <div className="flex items-center gap-2 sm:gap-3">
-      <span className={`text-xs sm:text-sm w-16 sm:w-20 ${type === 'bill' ? 'text-green-700' : 'text-amber-700'}`}>
-        {label}
-      </span>
-      <input
-        type="number"
-        min="0"
-        value={value}
-        onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
-        className="w-16 sm:w-20 px-2 py-1.5 text-right text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        readOnly={isReadOnly}
-      />
-      <span className="text-slate-400 text-xs">×</span>
-      <span className="text-slate-500 text-xs sm:text-sm w-12 sm:w-14 text-right">
-        {formatCurrency(unitValue)}
-      </span>
-      <span className="text-slate-400 text-xs">=</span>
-      <span className="text-sm font-medium text-slate-700 w-20 sm:w-24 text-right">
-        {formatCurrency(subtotal)}원
-      </span>
-    </div>
-  )
+// ID 생성
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 9)
 }
 
 interface CashCardProps {
   title: string
   subtitle: string
-  denominations: CashDenominations
-  onChange: (denominations: CashDenominations) => void
+  items: CashData
+  onChange: (items: CashData) => void
   isReadOnly: boolean
   cardColor: 'blue' | 'green'
 }
 
-function CashCard({ title, subtitle, denominations, onChange, isReadOnly, cardColor }: CashCardProps) {
-  const total = useMemo(() => calculateTotal(denominations), [denominations])
+function CashCard({ title, subtitle, items, onChange, isReadOnly, cardColor }: CashCardProps) {
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newLabel, setNewLabel] = useState('')
+  const [newValue, setNewValue] = useState('')
 
-  const handleChange = (key: keyof CashDenominations, value: number) => {
-    onChange({
-      ...denominations,
-      [key]: value,
-    })
+  const total = useMemo(() => calculateTotal(items), [items])
+
+  const handleCountChange = (id: string, count: number) => {
+    onChange(items.map(item =>
+      item.id === id ? { ...item, count: Math.max(0, count) } : item
+    ))
+  }
+
+  const handleRemoveItem = (id: string) => {
+    onChange(items.filter(item => item.id !== id))
+  }
+
+  const handleAddPreset = (preset: { label: string; value: number }) => {
+    // 이미 있는 화폐인지 확인
+    const exists = items.some(item => item.value === preset.value)
+    if (exists) return
+
+    onChange([...items, {
+      id: generateId(),
+      label: preset.label,
+      value: preset.value,
+      count: 0
+    }])
+  }
+
+  const handleAddCustom = () => {
+    if (!newLabel.trim() || !newValue) return
+    const value = parseInt(newValue)
+    if (isNaN(value) || value <= 0) return
+
+    onChange([...items, {
+      id: generateId(),
+      label: newLabel.trim(),
+      value,
+      count: 0
+    }])
+    setNewLabel('')
+    setNewValue('')
+    setShowAddForm(false)
   }
 
   const bgClass = cardColor === 'blue' ? 'bg-blue-50' : 'bg-green-50'
@@ -100,6 +102,12 @@ function CashCard({ title, subtitle, denominations, onChange, isReadOnly, cardCo
   const headerBgClass = cardColor === 'blue' ? 'bg-blue-100' : 'bg-green-100'
   const titleClass = cardColor === 'blue' ? 'text-blue-800' : 'text-green-800'
   const subtitleClass = cardColor === 'blue' ? 'text-blue-600' : 'text-green-600'
+  const buttonClass = cardColor === 'blue' ? 'text-blue-600 hover:bg-blue-100' : 'text-green-600 hover:bg-green-100'
+
+  // 아직 추가되지 않은 기본 화폐 목록
+  const availablePresets = DEFAULT_DENOMINATION_OPTIONS.filter(
+    preset => !items.some(item => item.value === preset.value)
+  )
 
   return (
     <div className={`rounded-lg border ${borderClass} ${bgClass} overflow-hidden`}>
@@ -110,41 +118,103 @@ function CashCard({ title, subtitle, denominations, onChange, isReadOnly, cardCo
       </div>
 
       {/* 화폐 입력 영역 */}
-      <div className="p-3 sm:p-4 space-y-2">
-        {/* 지폐 */}
-        <div className="space-y-1.5">
-          <span className="text-xs font-medium text-green-600 uppercase tracking-wide">지폐</span>
-          {DENOMINATIONS.filter(d => d.type === 'bill').map((denom) => (
-            <CashInputRow
-              key={denom.key}
-              label={denom.label}
-              value={denominations[denom.key as keyof CashDenominations]}
-              onChange={(value) => handleChange(denom.key as keyof CashDenominations, value)}
-              unitValue={denom.value}
-              isReadOnly={isReadOnly}
-              type="bill"
-            />
-          ))}
-        </div>
+      <div className="p-3 sm:p-4">
+        {items.length === 0 ? (
+          <p className="text-sm text-slate-500 text-center py-2">화폐를 추가해주세요</p>
+        ) : (
+          <div className="space-y-2">
+            {items.sort((a, b) => b.value - a.value).map((item) => (
+              <div key={item.id} className="flex items-center gap-2">
+                <span className="text-sm text-slate-700 flex-1 min-w-0 truncate">
+                  {item.label}
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  value={item.count || ''}
+                  placeholder="0"
+                  onChange={(e) => handleCountChange(item.id, parseInt(e.target.value) || 0)}
+                  className="w-16 sm:w-20 px-2 py-1.5 text-right text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  readOnly={isReadOnly}
+                />
+                <span className="text-xs text-slate-500 w-6">개</span>
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveItem(item.id)}
+                    className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
-        {/* 구분선 */}
-        <div className="border-t border-slate-200 my-2" />
+        {/* 화폐 추가 영역 */}
+        {!isReadOnly && (
+          <div className="mt-3 pt-3 border-t border-slate-200">
+            {/* 기본 화폐 빠른 추가 */}
+            {availablePresets.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {availablePresets.map((preset) => (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => handleAddPreset(preset)}
+                    className={`px-2 py-1 text-xs rounded-md border border-current ${buttonClass} transition-colors`}
+                  >
+                    + {preset.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
-        {/* 동전 */}
-        <div className="space-y-1.5">
-          <span className="text-xs font-medium text-amber-600 uppercase tracking-wide">동전</span>
-          {DENOMINATIONS.filter(d => d.type === 'coin').map((denom) => (
-            <CashInputRow
-              key={denom.key}
-              label={denom.label}
-              value={denominations[denom.key as keyof CashDenominations]}
-              onChange={(value) => handleChange(denom.key as keyof CashDenominations, value)}
-              unitValue={denom.value}
-              isReadOnly={isReadOnly}
-              type="coin"
-            />
-          ))}
-        </div>
+            {/* 사용자 정의 화폐 추가 */}
+            {showAddForm ? (
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="text"
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  placeholder="명칭"
+                  className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-slate-300 rounded-md"
+                />
+                <input
+                  type="number"
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  placeholder="단위(원)"
+                  className="w-24 px-2 py-1.5 text-sm border border-slate-300 rounded-md"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustom}
+                  className="px-2 py-1.5 text-sm bg-slate-600 text-white rounded-md hover:bg-slate-700"
+                >
+                  추가
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowAddForm(false); setNewLabel(''); setNewValue(''); }}
+                  className="p-1.5 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAddForm(true)}
+                className={`flex items-center gap-1 text-xs ${buttonClass} px-2 py-1 rounded-md transition-colors`}
+              >
+                <Plus className="w-3 h-3" />
+                직접 입력
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 합계 */}
@@ -161,10 +231,10 @@ function CashCard({ title, subtitle, denominations, onChange, isReadOnly, cardCo
 }
 
 interface CashLedgerSectionProps {
-  carriedForward: CashDenominations
-  closingBalance: CashDenominations
-  onCarriedForwardChange: (denominations: CashDenominations) => void
-  onClosingBalanceChange: (denominations: CashDenominations) => void
+  carriedForward: CashData
+  closingBalance: CashData
+  onCarriedForwardChange: (items: CashData) => void
+  onClosingBalanceChange: (items: CashData) => void
   isReadOnly: boolean
 }
 
@@ -215,7 +285,7 @@ export default function CashLedgerSection({
         <CashCard
           title="전일 이월액"
           subtitle="전날에서 넘겨받은 현금"
-          denominations={carriedForward}
+          items={carriedForward}
           onChange={onCarriedForwardChange}
           isReadOnly={isReadOnly}
           cardColor="blue"
@@ -223,7 +293,7 @@ export default function CashLedgerSection({
         <CashCard
           title="금일 잔액"
           subtitle="오늘 남은 현금"
-          denominations={closingBalance}
+          items={closingBalance}
           onChange={onClosingBalanceChange}
           isReadOnly={isReadOnly}
           cardColor="green"

@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
-import CashLedgerSection, { DEFAULT_DENOMINATIONS, calculateTotal } from './CashLedgerSection'
+import CashLedgerSection, { DEFAULT_CASH_DATA, calculateTotal, type CashData } from './CashLedgerSection'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
 import { saveDailyReport } from '@/app/actions/dailyReport'
 import { createClient } from '@/lib/supabase/client'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftLog, CashDenominations } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftLog } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
 
 // Feature Flag: 신규 아키텍처 사용 여부
@@ -53,8 +53,8 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
   const [recallBookingCount, setRecallBookingCount] = useState(0)
   const [recallBookingNames, setRecallBookingNames] = useState('')
   const [specialNotes, setSpecialNotes] = useState('')
-  const [carriedForward, setCarriedForward] = useState<CashDenominations>(DEFAULT_DENOMINATIONS)
-  const [closingBalance, setClosingBalance] = useState<CashDenominations>(DEFAULT_DENOMINATIONS)
+  const [carriedForward, setCarriedForward] = useState<CashData>(DEFAULT_CASH_DATA)
+  const [closingBalance, setClosingBalance] = useState<CashData>(DEFAULT_CASH_DATA)
   const [loading, setLoading] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
   const [hasExternalUpdate, setHasExternalUpdate] = useState(false)  // 다른 사용자의 변경 감지
@@ -71,8 +71,8 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
     setRecallBookingCount(0)
     setRecallBookingNames('')
     setSpecialNotes('')
-    setCarriedForward(DEFAULT_DENOMINATIONS)
-    setClosingBalance(DEFAULT_DENOMINATIONS)
+    setCarriedForward(DEFAULT_CASH_DATA)
+    setClosingBalance(DEFAULT_CASH_DATA)
   }, [])
 
   // 날짜별 데이터 로드
@@ -161,19 +161,19 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
         // 현금 출납 데이터 로드
         const cashLedger = result.data.cashLedger
         if (cashLedger) {
-          if (cashLedger.carried_forward) {
+          if (Array.isArray(cashLedger.carried_forward)) {
             setCarriedForward(cashLedger.carried_forward)
           } else {
-            setCarriedForward(DEFAULT_DENOMINATIONS)
+            setCarriedForward(DEFAULT_CASH_DATA)
           }
-          if (cashLedger.closing_balance) {
+          if (Array.isArray(cashLedger.closing_balance)) {
             setClosingBalance(cashLedger.closing_balance)
           } else {
-            setClosingBalance(DEFAULT_DENOMINATIONS)
+            setClosingBalance(DEFAULT_CASH_DATA)
           }
         } else {
-          setCarriedForward(DEFAULT_DENOMINATIONS)
-          setClosingBalance(DEFAULT_DENOMINATIONS)
+          setCarriedForward(DEFAULT_CASH_DATA)
+          setClosingBalance(DEFAULT_CASH_DATA)
         }
 
         setHasExistingData(true)

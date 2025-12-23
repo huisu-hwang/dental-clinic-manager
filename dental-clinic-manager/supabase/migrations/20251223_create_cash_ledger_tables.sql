@@ -9,30 +9,12 @@ CREATE TABLE IF NOT EXISTS cash_ledger (
   clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
   date DATE NOT NULL,
 
-  -- 전일 이월액 (화폐 종류별 갯수)
-  carried_forward JSONB NOT NULL DEFAULT '{
-    "bill_50000": 0,
-    "bill_10000": 0,
-    "bill_5000": 0,
-    "bill_1000": 0,
-    "coin_500": 0,
-    "coin_100": 0,
-    "coin_50": 0,
-    "coin_10": 0
-  }'::jsonb,
+  -- 전일 이월액 (배열 형태: [{id, label, value, count}, ...])
+  carried_forward JSONB NOT NULL DEFAULT '[]'::jsonb,
   carried_forward_total BIGINT NOT NULL DEFAULT 0,
 
-  -- 금일 잔액 (화폐 종류별 갯수)
-  closing_balance JSONB NOT NULL DEFAULT '{
-    "bill_50000": 0,
-    "bill_10000": 0,
-    "bill_5000": 0,
-    "bill_1000": 0,
-    "coin_500": 0,
-    "coin_100": 0,
-    "coin_50": 0,
-    "coin_10": 0
-  }'::jsonb,
+  -- 금일 잔액 (배열 형태: [{id, label, value, count}, ...])
+  closing_balance JSONB NOT NULL DEFAULT '[]'::jsonb,
   closing_balance_total BIGINT NOT NULL DEFAULT 0,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -51,17 +33,8 @@ CREATE TABLE IF NOT EXISTS cash_ledger_history (
   -- 기록 유형: 전일 이월액 또는 금일 잔액
   ledger_type TEXT NOT NULL CHECK (ledger_type IN ('carried_forward', 'closing_balance')),
 
-  -- 화폐 종류별 갯수
-  denominations JSONB NOT NULL DEFAULT '{
-    "bill_50000": 0,
-    "bill_10000": 0,
-    "bill_5000": 0,
-    "bill_1000": 0,
-    "coin_500": 0,
-    "coin_100": 0,
-    "coin_50": 0,
-    "coin_10": 0
-  }'::jsonb,
+  -- 화폐 항목들 (배열 형태: [{id, label, value, count}, ...])
+  items JSONB NOT NULL DEFAULT '[]'::jsonb,
   total_amount BIGINT NOT NULL DEFAULT 0,
 
   -- 작성자 정보

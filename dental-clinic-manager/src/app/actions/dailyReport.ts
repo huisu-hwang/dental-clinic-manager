@@ -43,9 +43,9 @@ export async function saveDailyReport(formData: {
   giftLogs: any[]
   happyCallLogs: any[]
   cashLedger?: {
-    carried_forward: any
+    carried_forward: Array<{ id: string; label: string; value: number; count: number }>
     carried_forward_total: number
-    closing_balance: any
+    closing_balance: Array<{ id: string; label: string; value: number; count: number }>
     closing_balance_total: number
   }
 }) {
@@ -379,7 +379,7 @@ export async function saveDailyReport(formData: {
             clinic_id: userProfile.clinic_id,
             report_date: formData.date,
             ledger_type: 'carried_forward',
-            denominations: formData.cashLedger.carried_forward,
+            items: formData.cashLedger.carried_forward,
             total_amount: formData.cashLedger.carried_forward_total,
             author_id: user.id,
             author_name: userProfile.name || '알 수 없음',
@@ -398,7 +398,7 @@ export async function saveDailyReport(formData: {
             clinic_id: userProfile.clinic_id,
             report_date: formData.date,
             ledger_type: 'closing_balance',
-            denominations: formData.cashLedger.closing_balance,
+            items: formData.cashLedger.closing_balance,
             total_amount: formData.cashLedger.closing_balance_total,
             author_id: user.id,
             author_name: userProfile.name || '알 수 없음',

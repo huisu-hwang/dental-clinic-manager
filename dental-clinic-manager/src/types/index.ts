@@ -75,17 +75,16 @@ export interface SpecialNotesHistory {
 // Cash Ledger Types (현금 출납 기록)
 // ========================================
 
-// 화폐 종류별 갯수
-export interface CashDenominations {
-  bill_50000: number;  // 5만원권
-  bill_10000: number;  // 1만원권
-  bill_5000: number;   // 5천원권
-  bill_1000: number;   // 1천원권
-  coin_500: number;    // 500원
-  coin_100: number;    // 100원
-  coin_50: number;     // 50원
-  coin_10: number;     // 10원
+// 현금 항목 타입
+export interface CashItem {
+  id: string
+  label: string
+  value: number
+  count: number
 }
+
+// 현금 데이터 타입 (배열 형태)
+export type CashData = CashItem[]
 
 // 현금 출납 기록
 export interface CashLedger {
@@ -93,10 +92,10 @@ export interface CashLedger {
   clinic_id: string;
   date: string;
   // 전일 이월액
-  carried_forward: CashDenominations;
+  carried_forward: CashData;
   carried_forward_total: number;
   // 금일 잔액
-  closing_balance: CashDenominations;
+  closing_balance: CashData;
   closing_balance_total: number;
   created_at?: string;
   updated_at?: string;
@@ -108,19 +107,13 @@ export interface CashLedgerHistory {
   clinic_id: string;
   report_date: string;
   ledger_type: 'carried_forward' | 'closing_balance';
-  denominations: CashDenominations;
+  items: CashData;
   total_amount: number;
   author_id?: string | null;
   author_name: string;
   is_past_date_edit: boolean;
   edited_at: string;
   created_at: string;
-}
-
-// UI용 현금 출납 데이터
-export interface CashLedgerRowData {
-  carried_forward: CashDenominations;
-  closing_balance: CashDenominations;
 }
 
 export interface Stats {
