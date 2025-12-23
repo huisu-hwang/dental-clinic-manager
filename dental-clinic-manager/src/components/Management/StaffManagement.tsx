@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Users, UserPlus, Clock, Mail, Phone, MapPin, IdCard, Pencil, Settings, X, Check, Calendar, UserX, UserCheck } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 import { authService } from '@/lib/authService'
@@ -275,12 +276,22 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   }
 
   const handleResignUser = async () => {
-    if (!resigningStaff) return
+    console.log('[handleResignUser] 함수 호출됨, resigningStaff:', resigningStaff)
+
+    if (!resigningStaff) {
+      console.error('[handleResignUser] resigningStaff가 null입니다')
+      return
+    }
 
     const supabase = getSupabase()
-    if (!supabase) return
+    if (!supabase) {
+      console.error('[handleResignUser] Supabase 클라이언트가 null입니다')
+      setError('데이터베이스 연결에 실패했습니다.')
+      return
+    }
 
     try {
+      console.log('[handleResignUser] Supabase 업데이트 시도:', resigningStaff.id)
       const { error } = await (supabase as any)
         .from('users')
         .update({
@@ -290,14 +301,17 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
         .eq('id', resigningStaff.id)
 
       if (error) {
+        console.error('[handleResignUser] Supabase 에러:', error)
         setError('퇴사 처리에 실패했습니다.')
       } else {
+        console.log('[handleResignUser] 퇴사 처리 성공')
         setSuccess(`${resigningStaff.name}님의 퇴사 처리가 완료되었습니다.`)
         setResigningStaff(null)
         fetchStaff()
         fetchResignedStaff()
       }
     } catch (err) {
+      console.error('[handleResignUser] 예외 발생:', err)
       setError('퇴사 처리 중 오류가 발생했습니다.')
     }
   }
@@ -946,15 +960,23 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
         </div>
       )}
 
-      {/* 퇴사 처리 확인 모달 */}
-      {resigningStaff && (
+      {/* 퇴사 처리 확인 모달 - Portal로 body에 직접 렌더링 */}
+      {resigningStaff && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4"
-          onClick={() => setResigningStaff(null)}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
+          style={{ zIndex: 99999 }}
+          onClick={() => {
+            console.log('[퇴사모달] 배경 클릭됨')
+            setResigningStaff(null)
+          }}
         >
           <div
             className="bg-white rounded-lg p-6 max-w-sm w-full relative"
-            onClick={(e) => e.stopPropagation()}
+            style={{ zIndex: 100000 }}
+            onClick={(e) => {
+              console.log('[퇴사모달] 내부 콘텐츠 클릭됨')
+              e.stopPropagation()
+            }}
           >
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
               <UserX className="w-6 h-6 text-red-600" />
@@ -970,36 +992,53 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
             <div className="flex space-x-3">
               <button
                 type="button"
-                onClick={() => setResigningStaff(null)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                onClick={(e) => {
+                  console.log('[퇴사모달] 취소 버튼 클릭됨')
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setResigningStaff(null)
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                style={{ pointerEvents: 'auto' }}
               >
                 취소
               </button>
               <button
                 type="button"
                 onClick={(e) => {
+                  console.log('[퇴사모달] 퇴사 처리 버튼 클릭됨')
                   e.preventDefault()
                   e.stopPropagation()
                   handleResignUser()
                 }}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+                style={{ pointerEvents: 'auto' }}
               >
                 퇴사 처리
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* 재입사 처리 확인 모달 */}
-      {rehiringStaff && (
+      {/* 재입사 처리 확인 모달 - Portal로 body에 직접 렌더링 */}
+      {rehiringStaff && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4"
-          onClick={() => setRehiringStaff(null)}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
+          style={{ zIndex: 99999 }}
+          onClick={() => {
+            console.log('[재입사모달] 배경 클릭됨')
+            setRehiringStaff(null)
+          }}
         >
           <div
             className="bg-white rounded-lg p-6 max-w-sm w-full relative"
-            onClick={(e) => e.stopPropagation()}
+            style={{ zIndex: 100000 }}
+            onClick={(e) => {
+              console.log('[재입사모달] 내부 콘텐츠 클릭됨')
+              e.stopPropagation()
+            }}
           >
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mx-auto mb-4">
               <UserCheck className="w-6 h-6 text-green-600" />
@@ -1015,25 +1054,34 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
             <div className="flex space-x-3">
               <button
                 type="button"
-                onClick={() => setRehiringStaff(null)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                onClick={(e) => {
+                  console.log('[재입사모달] 취소 버튼 클릭됨')
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setRehiringStaff(null)
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                style={{ pointerEvents: 'auto' }}
               >
                 취소
               </button>
               <button
                 type="button"
                 onClick={(e) => {
+                  console.log('[재입사모달] 재입사 처리 버튼 클릭됨')
                   e.preventDefault()
                   e.stopPropagation()
                   handleRehireUser()
                 }}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+                style={{ pointerEvents: 'auto' }}
               >
                 재입사 처리
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
