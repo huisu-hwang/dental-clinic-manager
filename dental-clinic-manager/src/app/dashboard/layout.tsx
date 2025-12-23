@@ -22,6 +22,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     type: 'success' | 'error' | 'warning' | 'info'
   }>({ show: false, message: '', type: 'info' })
 
+  // 활성 탭 상태 관리 (클릭 즉시 UI 반영을 위해 로컬 상태 사용)
+  const getInitialTab = (): string => {
+    if (pathname.startsWith('/dashboard/contracts')) return 'contracts'
+    if (pathname.startsWith('/attendance')) return 'attendance'
+    return searchParams.get('tab') || 'home'
+  }
+  const [activeTab, setActiveTab] = useState<string>(getInitialTab)
+
   // 헤더 알림 가져오기
   const { notifications, dismissNotification } = useClinicNotifications({
     clinicId: user?.clinic_id,
@@ -67,31 +75,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setToast({ show: true, message, type })
   }
 
-  // URL 기반 활성 탭 결정
-  const getActiveTab = (): string => {
-    // Contracts 페이지
-    if (pathname.startsWith('/dashboard/contracts')) {
-      return 'contracts'
-    }
-
-    // Attendance 페이지 (현재 /attendance)
-    if (pathname.startsWith('/attendance')) {
-      return 'attendance'
-    }
-
-
-    // Dashboard 페이지 내 쿼리 파라미터 기반 탭
-    const tab = searchParams.get('tab')
-    if (tab) {
-      return tab
-    }
-
-    // 기본값: home (대시보드 홈)
-    return 'home'
-  }
-
   // 탭 변경 핸들러
   const handleTabChange = (tab: string) => {
+    // 먼저 로컬 상태 업데이트 (즉시 UI 반영)
+    setActiveTab(tab)
+
+    // 그 다음 URL 업데이트
     if (tab === 'contracts') {
       router.push('/dashboard/contracts')
     } else if (tab === 'attendance') {
@@ -175,7 +164,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         `}
       >
         <TabNavigation
-          activeTab={getActiveTab()}
+          activeTab={activeTab}
           onTabChange={handleTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
           skipAutoRedirect={true}
