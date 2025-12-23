@@ -18,13 +18,13 @@ import Toast from '@/components/ui/Toast'
 
 // 서브 탭 설정
 const subTabs = [
+  { id: 'menu', label: '메뉴 설정', icon: Cog, permissions: [] }, // 모든 사용자 접근 가능
   { id: 'staff', label: '직원 관리', icon: Users, permissions: ['staff_view', 'staff_manage'] },
   { id: 'leave', label: '연차 관리', icon: Calendar, permissions: ['leave_request_view_own', 'leave_request_view_all', 'leave_balance_view_own'] },
   { id: 'branches', label: '지점 관리', icon: Building2, permissions: ['clinic_settings'] },
   { id: 'clinic', label: '병원 설정', icon: Building, permissions: ['clinic_settings'] },
   { id: 'protocols', label: '프로토콜 관리', icon: FileText, permissions: ['protocol_view', 'protocol_create', 'protocol_edit'] },
   { id: 'analytics', label: '통계 분석', icon: BarChart3, permissions: ['stats_monthly_view', 'stats_annual_view'] },
-  { id: 'system', label: '시스템 설정', icon: Cog, permissions: ['clinic_settings'] },
 ] as const
 
 export default function ManagementPage() {
@@ -36,7 +36,7 @@ export default function ManagementPage() {
   // URL 파라미터에서 탭 정보 읽기 (연차 승인 알림 클릭 시 바로 이동을 위해)
   const tabFromUrl = searchParams.get('tab')
   const subtabFromUrl = searchParams.get('subtab')
-  const [activeTab, setActiveTab] = useState(tabFromUrl || 'staff')
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'menu')
   const [showProfile, setShowProfile] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [permissionsLoaded, setPermissionsLoaded] = useState(false)
@@ -115,29 +115,16 @@ export default function ManagementPage() {
       return
     }
 
-    // 권한이 전혀 없으면 리디렉션
-    if (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols && !canAccessLeave) {
-      router.push('/dashboard')
-      return
-    }
-
-    // 현재 탭에 권한이 없으면 권한이 있는 탭으로 변경
+    // 메뉴 설정 탭은 모든 사용자 접근 가능하므로 리디렉션 하지 않음
+    // 다른 탭에 권한이 없으면 메뉴 설정 탭으로 이동
     if (activeTab === 'staff' && !canAccessStaffManagement) {
-      if (canAccessLeave) setActiveTab('leave')
-      else if (canAccessClinicSettings) setActiveTab('clinic')
-      else if (canAccessProtocols) setActiveTab('protocols')
+      setActiveTab('menu')
     } else if (activeTab === 'clinic' && !canAccessClinicSettings) {
-      if (canAccessStaffManagement) setActiveTab('staff')
-      else if (canAccessLeave) setActiveTab('leave')
-      else if (canAccessProtocols) setActiveTab('protocols')
+      setActiveTab('menu')
     } else if (activeTab === 'protocols' && !canAccessProtocols) {
-      if (canAccessStaffManagement) setActiveTab('staff')
-      else if (canAccessLeave) setActiveTab('leave')
-      else if (canAccessClinicSettings) setActiveTab('clinic')
+      setActiveTab('menu')
     } else if (activeTab === 'leave' && !canAccessLeave) {
-      if (canAccessStaffManagement) setActiveTab('staff')
-      else if (canAccessClinicSettings) setActiveTab('clinic')
-      else if (canAccessProtocols) setActiveTab('protocols')
+      setActiveTab('menu')
     }
   }, [authLoading, permissionsLoaded, user, canAccessStaffManagement, canAccessClinicSettings, canAccessProtocols, canAccessLeave, activeTab, router])
 
@@ -153,14 +140,14 @@ export default function ManagementPage() {
     )
   }
 
-  if (!user || (!canAccessStaffManagement && !canAccessClinicSettings && !canAccessProtocols && !canAccessLeave)) {
+  if (!user) {
     return (
       <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center px-4">
         <div className="text-center">
           <div className="bg-white p-6 sm:p-8 rounded-lg shadow-sm border border-slate-200">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4">접근 권한이 없습니다</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4">로그인이 필요합니다</h1>
             <p className="text-slate-600 mb-6">
-              관리 페이지에 접근할 권한이 없습니다.
+              이 페이지에 접근하려면 로그인이 필요합니다.
             </p>
             <button
               onClick={() => router.push('/dashboard')}
@@ -238,9 +225,9 @@ export default function ManagementPage() {
             <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
               <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
                 {subTabs.map((tab) => {
-                  const hasTabPermission = tab.permissions.some(p => hasPermission(p as any))
+                  // 메뉴 설정 탭은 모든 사용자 접근 가능 (permissions가 빈 배열)
+                  const hasTabPermission = tab.permissions.length === 0 || tab.permissions.some(p => hasPermission(p as any))
                   if (!hasTabPermission) return null
-                  if (tab.id === 'system' && user.role !== 'owner') return null
 
                   const Icon = tab.icon
                   return (
@@ -297,17 +284,9 @@ export default function ManagementPage() {
                   </div>
                 )}
 
-                {/* System Settings Tab - 메뉴 커스터마이징 (대표 원장만) */}
-                {activeTab === 'system' && user.role === 'owner' && user.clinic_id && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-800 mb-2">메뉴 커스터마이징</h3>
-                      <p className="text-sm text-slate-600 mb-4">
-                        좌측 메뉴의 표시 여부와 순서를 설정할 수 있습니다. 이 설정은 병원의 모든 직원에게 적용됩니다.
-                      </p>
-                    </div>
-                    <MenuSettings clinicId={user.clinic_id} />
-                  </div>
+                {/* Menu Settings Tab - 모든 사용자 접근 가능 */}
+                {activeTab === 'menu' && (
+                  <MenuSettings />
                 )}
               </div>
             </div>

@@ -1,6 +1,6 @@
 /**
  * 메뉴 설정 타입 정의
- * 대표 원장이 좌측 탭 메뉴의 표시 여부와 순서를 설정할 수 있도록 함
+ * 모든 사용자가 자신만의 좌측 탭 메뉴 설정을 관리할 수 있음
  */
 
 // 메뉴 아이템 설정
@@ -9,7 +9,8 @@ export interface MenuItemSetting {
   label: string         // 표시 이름
   visible: boolean      // 표시 여부
   order: number         // 표시 순서 (0부터 시작)
-  categoryId?: string   // 소속 카테고리 ID (없으면 기본 카테고리)
+  categoryId?: string   // 소속 카테고리 ID (없으면 고정 메뉴)
+  fixedPosition?: 'top' | 'bottom'  // 고정 메뉴 위치 (상단/하단)
 }
 
 // 카테고리 설정
@@ -20,6 +21,7 @@ export interface MenuCategorySetting {
   order: number         // 표시 순서
   visible: boolean      // 표시 여부
   collapsed?: boolean   // 기본 접힘 상태
+  isCustom?: boolean    // 사용자가 추가한 커스텀 카테고리 여부
 }
 
 // 병원별 메뉴 설정
@@ -29,6 +31,14 @@ export interface ClinicMenuSettings {
   settings: MenuItemSetting[]
   categories?: MenuCategorySetting[]
   created_at?: string
+  updated_at?: string
+}
+
+// 사용자별 메뉴 설정
+export interface UserMenuSettings {
+  user_id: string
+  settings: MenuItemSetting[]
+  categories: MenuCategorySetting[]
   updated_at?: string
 }
 
@@ -59,8 +69,8 @@ export const DEFAULT_MENU_ITEMS: MenuItemSetting[] = [
 // 메뉴 ID 목록 (유효성 검사용)
 export const VALID_MENU_IDS = DEFAULT_MENU_ITEMS.map(item => item.id)
 
-// 카테고리 ID 목록 (유효성 검사용)
-export const VALID_CATEGORY_IDS = DEFAULT_CATEGORIES.map(cat => cat.id)
+// 기본 카테고리 ID 목록 (유효성 검사용)
+export const DEFAULT_CATEGORY_IDS = DEFAULT_CATEGORIES.map(cat => cat.id)
 
 // 사용 가능한 카테고리 아이콘 목록
 export const AVAILABLE_CATEGORY_ICONS = [
@@ -75,7 +85,29 @@ export const AVAILABLE_CATEGORY_ICONS = [
   'Heart',
   'Building2',
   'Clipboard',
-  'Star'
+  'Star',
+  'Bell',
+  'Bookmark',
+  'Box',
+  'Coffee',
+  'Flag',
+  'Gift',
+  'Globe',
+  'Home',
+  'Layers',
+  'Layout',
+  'List',
+  'Mail',
+  'Map',
+  'Monitor',
+  'Package',
+  'Palette',
+  'Phone',
+  'Scissors',
+  'Shield',
+  'Target',
+  'Truck',
+  'Zap'
 ] as const
 
 // 메뉴 설정 유효성 검사
@@ -86,17 +118,24 @@ export function validateMenuSettings(settings: MenuItemSetting[]): boolean {
 }
 
 // 메뉴 설정 정규화 (새로운 메뉴가 추가되었을 때 기본값으로 병합)
-export function normalizeMenuSettings(settings: MenuItemSetting[]): MenuItemSetting[] {
+export function normalizeMenuSettings(settings: MenuItemSetting[], categories: MenuCategorySetting[]): MenuItemSetting[] {
   const existingIds = new Set(settings.map(s => s.id))
+  const validCategoryIds = new Set(categories.map(c => c.id))
 
-  // 더 이상 존재하지 않는 메뉴 제거
-  let validSettings = settings.filter(s => VALID_MENU_IDS.includes(s.id))
+  // 더 이상 존재하지 않는 메뉴 제거 및 유효하지 않은 카테고리 ID 정리
+  let validSettings = settings
+    .filter(s => VALID_MENU_IDS.includes(s.id))
+    .map(s => ({
+      ...s,
+      // 카테고리가 존재하지 않으면 카테고리 해제
+      categoryId: s.categoryId && validCategoryIds.has(s.categoryId) ? s.categoryId : undefined
+    }))
 
-  // 'home' 메뉴가 없으면 맨 앞에 추가하고 기존 메뉴 order를 1씩 증가
+  // 'home' 메뉴가 없으면 맨 앞에 추가
   if (!existingIds.has('home')) {
     validSettings = validSettings.map(s => ({ ...s, order: s.order + 1 }))
     const homeItem = DEFAULT_MENU_ITEMS.find(item => item.id === 'home')!
-    validSettings.unshift({ ...homeItem, order: 0 })
+    validSettings.unshift({ ...homeItem, order: 0, categoryId: homeItem.categoryId })
   }
 
   // 나머지 새 메뉴는 맨 뒤에 추가
@@ -106,7 +145,9 @@ export function normalizeMenuSettings(settings: MenuItemSetting[]): MenuItemSett
     .filter(item => !updatedIds.has(item.id))
     .map((item, index) => ({
       ...item,
-      order: maxOrder + index + 1
+      order: maxOrder + index + 1,
+      // 기본 카테고리가 있고 유효하면 유지, 아니면 해제
+      categoryId: item.categoryId && validCategoryIds.has(item.categoryId) ? item.categoryId : undefined
     }))
 
   return [...validSettings, ...newItems].sort((a, b) => a.order - b.order)
@@ -118,19 +159,23 @@ export function normalizeCategorySettings(categories: MenuCategorySetting[] | un
     return [...DEFAULT_CATEGORIES]
   }
 
-  const existingIds = new Set(categories.map(c => c.id))
+  // 기존 카테고리 유지 (커스텀 카테고리 포함)
+  return categories.sort((a, b) => a.order - b.order)
+}
 
-  // 기존 카테고리 중 유효한 것만 유지
-  let validCategories = categories.filter(c => VALID_CATEGORY_IDS.includes(c.id))
+// 고유한 카테고리 ID 생성
+export function generateCategoryId(): string {
+  return `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
 
-  // 누락된 기본 카테고리 추가
-  const maxOrder = Math.max(...validCategories.map(c => c.order), -1)
-  const missingCategories = DEFAULT_CATEGORIES
-    .filter(c => !existingIds.has(c.id))
-    .map((c, index) => ({
-      ...c,
-      order: maxOrder + index + 1
-    }))
-
-  return [...validCategories, ...missingCategories].sort((a, b) => a.order - b.order)
+// 새 카테고리 생성
+export function createNewCategory(label: string, order: number): MenuCategorySetting {
+  return {
+    id: generateCategoryId(),
+    label,
+    icon: 'FolderOpen',
+    order,
+    visible: true,
+    isCustom: true
+  }
 }
