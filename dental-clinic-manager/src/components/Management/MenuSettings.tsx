@@ -1578,8 +1578,8 @@ export default function MenuSettings() {
             />
           </div>
 
-          {/* 우측: 미사용 메뉴 (플로팅 패널) */}
-          <div className="lg:self-start lg:sticky lg:top-0">
+          {/* 우측: 미사용 메뉴 */}
+          <div className="lg:self-start">
             <div className="shadow-lg rounded-xl">
               <UnusedMenuPanel unusedMenus={unusedMenus} />
             </div>
