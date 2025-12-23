@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { FileText, MessageSquare, Gift, Package, ArrowRight, Check, Search, X } from 'lucide-react'
+import { FileText, MessageSquare, Gift, Package, ArrowRight, Check, Search, X, Banknote } from 'lucide-react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog } from '@/types'
 import SpecialNotesHistory from './SpecialNotesHistory'
+import CashLedgerHistory from './CashLedgerHistory'
 
 interface LogsSectionProps {
   dailyReports: DailyReport[]
@@ -458,6 +459,12 @@ export default function LogsSection({
         <div>
           <SectionHeader number={5} title="기타 특이사항 기록" icon={FileText} />
           <SpecialNotesHistory />
+        </div>
+
+        {/* 현금 출납 기록 */}
+        <div>
+          <SectionHeader number={6} title="현금 출납 기록" icon={Banknote} />
+          <CashLedgerHistory />
         </div>
       </div>
     </div>

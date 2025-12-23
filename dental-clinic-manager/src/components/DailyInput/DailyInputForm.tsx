@@ -180,6 +180,17 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
       } else {
         resetFormData()
         setHasExistingData(false)
+
+        // hasData가 false여도 cashLedger 템플릿이 있으면 적용
+        const cashLedger = result.data.cashLedger
+        if (cashLedger) {
+          if (Array.isArray(cashLedger.carried_forward)) {
+            setCarriedForward(cashLedger.carried_forward)
+          }
+          if (Array.isArray(cashLedger.closing_balance)) {
+            setClosingBalance(cashLedger.closing_balance)
+          }
+        }
       }
     } catch (error) {
       console.error('[DailyInputForm] 데이터 로드 실패:', error)
