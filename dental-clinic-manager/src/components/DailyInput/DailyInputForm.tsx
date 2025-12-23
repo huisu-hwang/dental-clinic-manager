@@ -436,14 +436,13 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
             special_notes: specialNotes
           },
           consultLogs: filteredConsultLogs.map(row => ({
-            date: reportDate,
+            // date는 p_date로 별도 전달되므로 제거 (TEXT -> DATE 타입 충돌 방지)
             patient_name: row.patient_name,
             consult_content: row.consult_content || '',
             consult_status: row.consult_status,
             remarks: row.remarks || ''
           })),
           giftLogs: filteredGiftLogs.map(row => ({
-            date: reportDate,
             patient_name: row.patient_name,
             gift_type: row.gift_type || '',
             quantity: row.quantity || 1,
@@ -451,7 +450,6 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
             notes: row.notes || ''
           })),
           happyCallLogs: filteredHappyCallLogs.map(row => ({
-            date: reportDate,
             patient_name: row.patient_name,
             treatment: row.treatment || '',
             notes: row.notes || ''
@@ -547,14 +545,12 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
               special_notes: specialNotes
             },
             consultLogs: filteredConsultLogs.map(row => ({
-              date: reportDate,
               patient_name: row.patient_name,
               consult_content: row.consult_content || '',
               consult_status: row.consult_status,
               remarks: row.remarks || ''
             })),
             giftLogs: filteredGiftLogs.map(row => ({
-              date: reportDate,
               patient_name: row.patient_name,
               gift_type: row.gift_type || '',
               quantity: row.quantity || 1,
@@ -562,7 +558,6 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
               notes: row.notes || ''
             })),
             happyCallLogs: filteredHappyCallLogs.map(row => ({
-              date: reportDate,
               patient_name: row.patient_name,
               treatment: row.treatment || '',
               notes: row.notes || ''
