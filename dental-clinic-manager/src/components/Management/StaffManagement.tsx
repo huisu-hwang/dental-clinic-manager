@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, UserPlus, Clock, Mail, Phone, MapPin, IdCard, Pencil, Settings, X, Check, Calendar, UserX } from 'lucide-react'
+import { Users, UserPlus, Clock, Mail, Phone, MapPin, IdCard, Pencil, Settings, X, Check, Calendar, UserX, UserCheck } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 import { authService } from '@/lib/authService'
 import { dataService } from '@/lib/dataService'
@@ -73,6 +73,9 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
   // 퇴사 처리 모달 상태
   const [resigningStaff, setResigningStaff] = useState<UserProfile | null>(null)
+
+  // 재입사 처리 모달 상태
+  const [rehiringStaff, setRehiringStaff] = useState<UserProfile | null>(null)
 
   // 주민번호 마스킹 함수
   const maskResidentNumber = (rrn: string) => {
@@ -296,6 +299,34 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       }
     } catch (err) {
       setError('퇴사 처리 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleRehireUser = async () => {
+    if (!rehiringStaff) return
+
+    const supabase = getSupabase()
+    if (!supabase) return
+
+    try {
+      const { error } = await (supabase as any)
+        .from('users')
+        .update({
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rehiringStaff.id)
+
+      if (error) {
+        setError('재입사 처리에 실패했습니다.')
+      } else {
+        setSuccess(`${rehiringStaff.name}님의 재입사 처리가 완료되었습니다.`)
+        setRehiringStaff(null)
+        fetchStaff()
+        fetchResignedStaff()
+      }
+    } catch (err) {
+      setError('재입사 처리 중 오류가 발생했습니다.')
     }
   }
 
@@ -556,6 +587,9 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">연락처</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">직급</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">상태</th>
+                  {currentUser.role === 'owner' && (
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">관리</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -592,6 +626,17 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                     <td className="px-4 py-3">
                       {getStatusBadge(member.status || '')}
                     </td>
+                    {currentUser.role === 'owner' && (
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => setRehiringStaff(member)}
+                          className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="재입사 처리"
+                        >
+                          <UserCheck className="w-4 h-4" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {resignedStaff.length === 0 && (
@@ -928,6 +973,39 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
                 퇴사 처리
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 재입사 처리 확인 모달 */}
+      {rehiringStaff && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mx-auto mb-4">
+              <UserCheck className="w-6 h-6 text-green-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 text-center mb-2">재입사 처리 확인</h3>
+            <p className="text-sm text-slate-600 text-center mb-6">
+              <span className="font-semibold text-slate-800">{rehiringStaff.name}</span>님을 재입사 처리하시겠습니까?
+              <br />
+              <span className="text-xs text-slate-500 mt-1 block">
+                재입사 처리된 직원은 시스템에 다시 로그인할 수 있습니다.
+              </span>
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setRehiringStaff(null)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleRehireUser}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                재입사 처리
               </button>
             </div>
           </div>
