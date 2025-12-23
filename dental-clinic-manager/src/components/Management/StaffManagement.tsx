@@ -948,8 +948,14 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
       {/* 퇴사 처리 확인 모달 */}
       {resigningStaff && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4"
+          onClick={() => setResigningStaff(null)}
+        >
+          <div
+            className="bg-white rounded-lg p-6 max-w-sm w-full relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
               <UserX className="w-6 h-6 text-red-600" />
             </div>
@@ -971,7 +977,11 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
               </button>
               <button
                 type="button"
-                onClick={handleResignUser}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleResignUser()
+                }}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
                 퇴사 처리
@@ -983,8 +993,14 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
       {/* 재입사 처리 확인 모달 */}
       {rehiringStaff && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4"
+          onClick={() => setRehiringStaff(null)}
+        >
+          <div
+            className="bg-white rounded-lg p-6 max-w-sm w-full relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mx-auto mb-4">
               <UserCheck className="w-6 h-6 text-green-600" />
             </div>
@@ -993,7 +1009,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
               <span className="font-semibold text-slate-800">{rehiringStaff.name}</span>님을 재입사 처리하시겠습니까?
               <br />
               <span className="text-xs text-slate-500 mt-1 block">
-                재입사 처리된 직원은 시스템에 다시 로그인할 수 있습니다.
+                재입사 처리된 직원은 이 병원의 시스템에 다시 접근할 수 있습니다.
               </span>
             </p>
             <div className="flex space-x-3">
@@ -1006,7 +1022,11 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
               </button>
               <button
                 type="button"
-                onClick={handleRehireUser}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleRehireUser()
+                }}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
               >
                 재입사 처리
