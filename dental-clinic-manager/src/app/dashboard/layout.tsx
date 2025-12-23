@@ -63,8 +63,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return 'attendance'
     }
 
+    // 클라이언트 사이드에서 URL에서 직접 탭 값 확인
+    // (searchParams가 라우터 네비게이션 후 즉시 업데이트되지 않는 문제 해결)
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlTab = urlParams.get('tab')
+      if (urlTab) {
+        return urlTab
+      }
+    }
 
-    // Dashboard 페이지 내 쿼리 파라미터 기반 탭
+    // Dashboard 페이지 내 쿼리 파라미터 기반 탭 (SSR fallback)
     const tab = searchParams.get('tab')
     if (tab) {
       return tab
