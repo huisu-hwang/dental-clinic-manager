@@ -28,7 +28,27 @@ import {
   Calendar,
   Heart,
   Clipboard,
-  Star
+  Star,
+  Bell,
+  Bookmark,
+  Box,
+  Coffee,
+  Flag,
+  Gift,
+  Globe,
+  Layers,
+  Layout,
+  List,
+  Mail,
+  Map,
+  Monitor,
+  Palette,
+  Phone,
+  Scissors,
+  Shield,
+  Target,
+  Truck,
+  Zap
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -44,23 +64,8 @@ interface Tab {
   icon: React.ElementType
   requiredPermissions?: Permission[]
   categoryId?: string
+  fixedPosition?: 'top' | 'bottom'
 }
-
-const defaultTabs: Tab[] = [
-  { id: 'home', label: '대시보드', icon: Home },
-  { id: 'daily-input', label: '일일보고서', icon: ClipboardList, requiredPermissions: ['daily_report_view'], categoryId: 'work' },
-  { id: 'attendance', label: '출근 관리', icon: Clock, requiredPermissions: ['attendance_check_in', 'attendance_view_own'], categoryId: 'work' },
-  { id: 'leave', label: '연차 관리', icon: CalendarDays, requiredPermissions: ['leave_request_view_own', 'leave_balance_view_own'], categoryId: 'work' },
-  { id: 'stats', label: '통계', icon: BarChart3, requiredPermissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'], categoryId: 'work' },
-  { id: 'logs', label: '상세 기록', icon: History, requiredPermissions: ['logs_view'], categoryId: 'work' },
-  { id: 'bulletin', label: '병원 게시판', icon: Megaphone },
-  { id: 'protocols', label: '진료 프로토콜', icon: BookOpen, requiredPermissions: ['protocol_view'], categoryId: 'documents' },
-  { id: 'vendors', label: '업체 연락처', icon: Building2, requiredPermissions: ['vendor_contacts_view'], categoryId: 'operations' },
-  { id: 'contracts', label: '근로계약서', icon: FileSignature, requiredPermissions: ['contract_view'], categoryId: 'documents' },
-  { id: 'documents', label: '문서 양식', icon: FileText, requiredPermissions: ['contract_view'], categoryId: 'documents' },
-  { id: 'settings', label: '재고 관리', icon: Package, requiredPermissions: ['inventory_view'], categoryId: 'operations' },
-  { id: 'guide', label: '사용 안내', icon: HelpCircle, requiredPermissions: ['guide_view'] }
-]
 
 const iconMap: Record<string, React.ElementType> = {
   'home': Home,
@@ -78,7 +83,7 @@ const iconMap: Record<string, React.ElementType> = {
   'guide': HelpCircle
 }
 
-// 카테고리 아이콘 매핑
+// 카테고리 아이콘 매핑 - 모든 AVAILABLE_CATEGORY_ICONS 포함
 const categoryIconMap: Record<string, React.ElementType> = {
   'Briefcase': Briefcase,
   'MessageSquare': MessageSquare,
@@ -91,7 +96,29 @@ const categoryIconMap: Record<string, React.ElementType> = {
   'Heart': Heart,
   'Building2': Building2,
   'Clipboard': Clipboard,
-  'Star': Star
+  'Star': Star,
+  'Bell': Bell,
+  'Bookmark': Bookmark,
+  'Box': Box,
+  'Coffee': Coffee,
+  'Flag': Flag,
+  'Gift': Gift,
+  'Globe': Globe,
+  'Home': Home,
+  'Layers': Layers,
+  'Layout': Layout,
+  'List': List,
+  'Mail': Mail,
+  'Map': Map,
+  'Monitor': Monitor,
+  'Package': Package,
+  'Palette': Palette,
+  'Phone': Phone,
+  'Scissors': Scissors,
+  'Shield': Shield,
+  'Target': Target,
+  'Truck': Truck,
+  'Zap': Zap
 }
 
 const permissionsMap: Record<string, Permission[]> = {
@@ -134,26 +161,22 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     }
   }, [activeTab, menuSettings])
 
+  // 탭 데이터 생성 (메뉴 설정 기반)
   const tabs = useMemo(() => {
-    const visibleMenuIds = menuSettings
+    return menuSettings
       .filter(menu => menu.visible)
       .sort((a, b) => a.order - b.order)
-      .map(menu => menu.id)
-
-    return visibleMenuIds.map(id => {
-      const defaultTab = defaultTabs.find(t => t.id === id)
-      const menuSetting = menuSettings.find(m => m.id === id)
-
-      return {
-        id,
-        label: menuSetting?.label || defaultTab?.label || id,
-        icon: iconMap[id] || HelpCircle,
-        requiredPermissions: permissionsMap[id] || [],
-        categoryId: menuSetting?.categoryId || defaultTab?.categoryId
-      }
-    })
+      .map(menu => ({
+        id: menu.id,
+        label: menu.label,
+        icon: iconMap[menu.id] || HelpCircle,
+        requiredPermissions: permissionsMap[menu.id] || [],
+        categoryId: menu.categoryId,
+        fixedPosition: menu.fixedPosition
+      }))
   }, [menuSettings])
 
+  // 권한에 따른 보이는 탭 필터링
   const visibleTabs = useMemo(() =>
     tabs.filter(tab => {
       if (!tab.requiredPermissions || tab.requiredPermissions.length === 0) {
@@ -161,6 +184,29 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
       }
       return tab.requiredPermissions.some(perm => hasPermission(perm))
     }), [tabs, hasPermission])
+
+  // 상단 고정 메뉴 (fixedPosition === 'top' 또는 categoryId가 없고 fixedPosition이 없는 기존 메뉴)
+  const topFixedMenus = useMemo(() => {
+    return visibleTabs.filter(tab => {
+      // 명시적으로 top으로 설정된 메뉴
+      if (tab.fixedPosition === 'top') return true
+      // categoryId가 없고 fixedPosition이 없으면 기본적으로 상단에 표시 (기존 호환성)
+      // 단, guide는 하단에 표시하기 위해 제외
+      if (!tab.categoryId && !tab.fixedPosition && tab.id !== 'guide') return true
+      return false
+    })
+  }, [visibleTabs])
+
+  // 하단 고정 메뉴 (fixedPosition === 'bottom')
+  const bottomFixedMenus = useMemo(() => {
+    return visibleTabs.filter(tab => {
+      // 명시적으로 bottom으로 설정된 메뉴
+      if (tab.fixedPosition === 'bottom') return true
+      // guide는 기본적으로 하단에 표시 (기존 호환성)
+      if (!tab.categoryId && !tab.fixedPosition && tab.id === 'guide') return true
+      return false
+    })
+  }, [visibleTabs])
 
   // 카테고리별로 보이는 탭 필터링
   const getVisibleTabsForCategory = (categoryId: string) => {
@@ -222,53 +268,62 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     )
   }
 
-  // 독립 메뉴 분리 (카테고리가 없는 메뉴)
-  const homeTab = visibleTabs.find(tab => tab.id === 'home')
-  const bulletinTab = visibleTabs.find(tab => tab.id === 'bulletin')
-  const guideTab = visibleTabs.find(tab => tab.id === 'guide')
+  // 메뉴 버튼 렌더링 컴포넌트
+  const renderMenuButton = (tab: Tab, isCompact: boolean = false) => {
+    const isActive = activeTab === tab.id
+    const Icon = tab.icon
+
+    return (
+      <button
+        key={tab.id}
+        onClick={() => handleTabClick(tab.id)}
+        className={`
+          group flex items-center space-x-${isCompact ? '2.5' : '3'} py-${isCompact ? '1.5' : '2.5'} px-3 rounded-${isCompact ? 'lg' : 'xl'} text-${isCompact ? '[13px]' : 'sm'} font-medium transition-all duration-200 w-full
+          ${isActive
+            ? `bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-${isCompact ? 'sm' : 'md'} shadow-blue-500/${isCompact ? '20' : '25'}`
+            : `text-slate-${isCompact ? '500' : '600'} hover:bg-slate-100 hover:text-slate-${isCompact ? '700' : '800'}`
+          }
+        `}
+      >
+        <Icon className={`w-${isCompact ? '4' : '5'} h-${isCompact ? '4' : '5'} flex-shrink-0 ${isActive ? 'text-white' : `text-slate-400 group-hover:text-slate-${isCompact ? '500' : '600'}`}`} />
+        <span className="truncate">{tab.label}</span>
+      </button>
+    )
+  }
 
   return (
     <nav className="flex flex-col h-full w-full">
-      {/* 상단 영역: 홈 + 게시판 + 카테고리들 */}
+      {/* 상단 영역: 상단 고정 메뉴들 */}
       <div className="flex-1 space-y-1">
-        {/* 홈 버튼 */}
-        {homeTab && (
-          <button
-            onClick={() => handleTabClick(homeTab.id)}
-            className={`
-              group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
-              ${activeTab === homeTab.id
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
-              }
-            `}
-          >
-            <Home className={`w-5 h-5 flex-shrink-0 ${activeTab === homeTab.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span className="truncate">{homeTab.label}</span>
-          </button>
-        )}
+        {/* 상단 고정 메뉴들 */}
+        {topFixedMenus.map(tab => {
+          const isActive = activeTab === tab.id
+          const Icon = tab.icon
 
-        {/* 병원 게시판 */}
-        {bulletinTab && (
-          <button
-            onClick={() => handleTabClick(bulletinTab.id)}
-            className={`
-              group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
-              ${activeTab === bulletinTab.id
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
-              }
-            `}
-          >
-            <Megaphone className={`w-5 h-5 flex-shrink-0 ${activeTab === bulletinTab.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span className="truncate">{bulletinTab.label}</span>
-          </button>
-        )}
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab.id)}
+              className={`
+                group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
+                ${isActive
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                }
+              `}
+            >
+              <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+              <span className="truncate">{tab.label}</span>
+            </button>
+          )
+        })}
 
-        {/* 구분선 */}
-        <div className="pt-2 pb-1">
-          <div className="h-px bg-slate-200" />
-        </div>
+        {/* 구분선 (상단 고정 메뉴가 있고 카테고리가 있을 때만) */}
+        {topFixedMenus.length > 0 && visibleCategories.length > 0 && (
+          <div className="pt-2 pb-1">
+            <div className="h-px bg-slate-200" />
+          </div>
+        )}
 
         {/* 카테고리들 */}
         {visibleCategories.map(category => {
@@ -340,22 +395,30 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
         })}
       </div>
 
-      {/* 하단 영역: 사용 안내 */}
-      {guideTab && (
-        <div className="pt-2 border-t border-slate-200 mt-2">
-          <button
-            onClick={() => handleTabClick(guideTab.id)}
-            className={`
-              group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
-              ${activeTab === guideTab.id
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
-              }
-            `}
-          >
-            <HelpCircle className={`w-5 h-5 flex-shrink-0 ${activeTab === guideTab.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span className="truncate">{guideTab.label}</span>
-          </button>
+      {/* 하단 영역: 하단 고정 메뉴들 */}
+      {bottomFixedMenus.length > 0 && (
+        <div className="pt-2 border-t border-slate-200 mt-2 space-y-1">
+          {bottomFixedMenus.map(tab => {
+            const isActive = activeTab === tab.id
+            const Icon = tab.icon
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabClick(tab.id)}
+                className={`
+                  group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
+                  ${isActive
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                  }
+                `}
+              >
+                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                <span className="truncate">{tab.label}</span>
+              </button>
+            )
+          })}
         </div>
       )}
     </nav>
