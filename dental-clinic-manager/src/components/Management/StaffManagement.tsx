@@ -71,6 +71,9 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
     role: 'staff' as 'vice_director' | 'manager' | 'team_leader' | 'staff'
   })
 
+  // 퇴사 처리 모달 상태
+  const [resigningStaff, setResigningStaff] = useState<UserProfile | null>(null)
+
   // 주민번호 마스킹 함수
   const maskResidentNumber = (rrn: string) => {
     if (!rrn) return ''
@@ -265,6 +268,34 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       }
     } catch (err) {
       setError('사용자 정지 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleResignUser = async () => {
+    if (!resigningStaff) return
+
+    const supabase = getSupabase()
+    if (!supabase) return
+
+    try {
+      const { error } = await (supabase as any)
+        .from('users')
+        .update({
+          status: 'resigned',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', resigningStaff.id)
+
+      if (error) {
+        setError('퇴사 처리에 실패했습니다.')
+      } else {
+        setSuccess(`${resigningStaff.name}님의 퇴사 처리가 완료되었습니다.`)
+        setResigningStaff(null)
+        fetchStaff()
+        fetchResignedStaff()
+      }
+    } catch (err) {
+      setError('퇴사 처리 중 오류가 발생했습니다.')
     }
   }
 
@@ -483,10 +514,17 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                           </button>
                           <button
                             onClick={() => handleSuspendUser(member.id)}
-                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                             title="사용자 정지"
                           >
                             <X className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setResigningStaff(member)}
+                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="퇴사 처리"
+                          >
+                            <UserX className="w-4 h-4" />
                           </button>
                         </div>
                       )}
@@ -859,6 +897,39 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 퇴사 처리 확인 모달 */}
+      {resigningStaff && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+              <UserX className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 text-center mb-2">퇴사 처리 확인</h3>
+            <p className="text-sm text-slate-600 text-center mb-6">
+              <span className="font-semibold text-slate-800">{resigningStaff.name}</span>님을 퇴사 처리하시겠습니까?
+              <br />
+              <span className="text-xs text-slate-500 mt-1 block">
+                퇴사 처리된 직원은 시스템에 로그인할 수 없습니다.
+              </span>
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setResigningStaff(null)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleResignUser}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                퇴사 처리
+              </button>
+            </div>
           </div>
         </div>
       )}
