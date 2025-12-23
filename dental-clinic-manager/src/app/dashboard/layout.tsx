@@ -10,7 +10,7 @@ import Toast from '@/components/ui/Toast'
 import { useClinicNotifications } from '@/hooks/useClinicNotifications'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, updateUser } = useAuth()
+  const { user, logout, updateUser, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -29,6 +29,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     userRole: user?.role,
     enabled: !!user?.clinic_id
   })
+
+  // 사용자 상태 체크 - 퇴사자, 승인대기, 거절된 사용자 리다이렉트
+  useEffect(() => {
+    if (!loading && user) {
+      if (user.status === 'resigned') {
+        console.log('[DashboardLayout] User is resigned, redirecting to /resigned')
+        router.replace('/resigned')
+        return
+      }
+      if (user.status === 'pending' || user.status === 'rejected') {
+        console.log('[DashboardLayout] User is pending/rejected, redirecting to /pending-approval')
+        router.replace('/pending-approval')
+        return
+      }
+    }
+  }, [user, loading, router])
 
   // 페이지 변경 시 모바일 메뉴 닫기
   useEffect(() => {
@@ -105,6 +121,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } else {
       router.push('/dashboard')
     }
+  }
+
+  // 퇴사자/승인대기/거절된 사용자는 대시보드를 렌더링하지 않음
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
+
+  if (!user || user.status === 'resigned' || user.status === 'pending' || user.status === 'rejected') {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    )
   }
 
   return (

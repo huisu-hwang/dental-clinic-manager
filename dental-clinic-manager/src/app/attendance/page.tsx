@@ -28,10 +28,26 @@ const subTabs = [
 
 export default function AttendancePage() {
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const { user, logout, loading } = useAuth()
   const { hasPermission } = usePermissions()
   const [activeTab, setActiveTab] = useState<TabType>('checkin')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  // 사용자 상태 체크 - 퇴사자, 승인대기, 거절된 사용자 리다이렉트
+  useEffect(() => {
+    if (!loading && user) {
+      if (user.status === 'resigned') {
+        console.log('[AttendancePage] User is resigned, redirecting to /resigned')
+        router.replace('/resigned')
+        return
+      }
+      if (user.status === 'pending' || user.status === 'rejected') {
+        console.log('[AttendancePage] User is pending/rejected, redirecting to /pending-approval')
+        router.replace('/pending-approval')
+        return
+      }
+    }
+  }, [user, loading, router])
 
   // 모바일 메뉴가 열려 있을 때 스크롤 방지
   useEffect(() => {
@@ -69,7 +85,8 @@ export default function AttendancePage() {
   const canViewTeam = hasPermission('attendance_view_all')
   const canManageQR = hasPermission('qr_code_manage')
 
-  if (!user) {
+  // 로딩 중이거나 권한 없는 사용자는 로딩 표시
+  if (loading || !user || user.status === 'resigned' || user.status === 'pending' || user.status === 'rejected') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
