@@ -541,6 +541,7 @@ export const dataService = {
 
       // cash_ledger 조회 (현금 출납 기록)
       let cashLedgerResult: { data: any; error: any } | null = null;
+      let cashLedgerTemplate: any = null;
       try {
         cashLedgerResult = await supabase
           .from('cash_ledger')
@@ -549,6 +550,30 @@ export const dataService = {
           .eq('date', targetDate)
           .maybeSingle();
         console.log('[DataService] cash_ledger fetched:', cashLedgerResult?.data ? 'found' : 'not found');
+
+        // 해당 날짜에 데이터가 없으면 가장 최근 기록을 템플릿으로 가져옴
+        if (!cashLedgerResult?.data) {
+          const templateResult = await supabase
+            .from('cash_ledger')
+            .select('carried_forward, closing_balance')
+            .eq('clinic_id', targetClinicId)
+            .lt('date', targetDate)
+            .order('date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (templateResult?.data) {
+            // 이전 날짜의 closing_balance를 오늘의 carried_forward로 사용
+            // count는 그대로 유지 (이전 금일 잔액이 오늘의 전일 이월액이 됨)
+            const prevClosingBalance = templateResult.data.closing_balance || [];
+            cashLedgerTemplate = {
+              carried_forward: prevClosingBalance,
+              closing_balance: prevClosingBalance.map((item: any) => ({ ...item, count: 0 })),
+              isTemplate: true
+            };
+            console.log('[DataService] cash_ledger template from previous date loaded');
+          }
+        }
       } catch (err) {
         console.warn('[DataService] Error fetching cash_ledger (table might not exist):', err);
         cashLedgerResult = { data: null, error: err };
@@ -624,7 +649,7 @@ export const dataService = {
           consultLogs: normalizedConsultLogs,
           giftLogs: normalizedGiftLogs,
           happyCallLogs: normalizedHappyCallLogs,
-          cashLedger: cashLedgerResult?.data || null,
+          cashLedger: cashLedgerResult?.data || cashLedgerTemplate || null,
           hasData
         }
       }
