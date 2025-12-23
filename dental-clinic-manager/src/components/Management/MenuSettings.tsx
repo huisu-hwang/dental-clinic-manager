@@ -628,6 +628,65 @@ function DraggableUnusedMenu({ item }: DraggableUnusedMenuProps) {
   )
 }
 
+// 미사용 메뉴 패널 (드롭 가능)
+interface UnusedMenuPanelProps {
+  unusedMenus: MenuItemSetting[]
+}
+
+function UnusedMenuPanel({ unusedMenus }: UnusedMenuPanelProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'drop-unused',
+    data: { type: 'unused-drop' }
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`
+        bg-white border-2 rounded-xl overflow-hidden transition-all
+        ${isOver ? 'border-amber-400 ring-2 ring-amber-300 shadow-lg' : 'border-slate-200'}
+      `}
+    >
+      <div className={`px-4 py-3 border-b transition-colors ${isOver ? 'bg-amber-100 border-amber-200' : 'bg-amber-50 border-amber-200'}`}>
+        <div className="flex items-center gap-2">
+          <EyeOff className="w-5 h-5 text-amber-600" />
+          <h3 className="font-semibold text-amber-800">미사용 메뉴</h3>
+        </div>
+      </div>
+
+      <div className={`px-4 py-3 border-b transition-colors ${isOver ? 'bg-amber-100/50 border-amber-200' : 'bg-amber-50/50 border-amber-100'}`}>
+        <div className="flex items-start gap-2">
+          <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700">
+            사용하지 않을 메뉴를 여기로 드래그하세요. 사이드바에 표시되지 않습니다.
+          </p>
+        </div>
+      </div>
+
+      <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto min-h-[100px]">
+        {isOver && unusedMenus.length === 0 && (
+          <div className="p-4 rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 text-center">
+            <p className="text-sm text-amber-600 font-medium">여기에 놓으세요</p>
+          </div>
+        )}
+
+        <SortableContext items={unusedMenus.map(m => `unused-${m.id}`)} strategy={verticalListSortingStrategy}>
+          {unusedMenus.map((item) => (
+            <DraggableUnusedMenu key={item.id} item={item} />
+          ))}
+        </SortableContext>
+
+        {unusedMenus.length === 0 && !isOver && (
+          <div className="text-center py-8 text-slate-400">
+            <Check className="w-10 h-10 mx-auto mb-2 text-green-500" />
+            <p className="text-sm font-medium text-green-600">모든 메뉴가 사용 중입니다!</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // 카테고리 편집 모달
 interface EditCategoryModalProps {
   category: MenuCategorySetting | null
@@ -733,6 +792,14 @@ const customCollisionDetection: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args)
 
   if (pointerCollisions.length > 0) {
+    // drop-unused를 최우선 (미사용 메뉴로의 드롭)
+    const unusedDropCollision = pointerCollisions.find(c =>
+      String(c.id) === 'drop-unused'
+    )
+    if (unusedDropCollision) {
+      return [unusedDropCollision]
+    }
+
     // drop- 으로 시작하는 droppable 우선
     const dropCollision = pointerCollisions.find(c =>
       String(c.id).startsWith('drop-')
@@ -746,6 +813,14 @@ const customCollisionDetection: CollisionDetection = (args) => {
   // pointerWithin이 감지하지 못하면 rectIntersection 시도
   const rectCollisions = rectIntersection(args)
   if (rectCollisions.length > 0) {
+    // drop-unused 우선
+    const unusedDropCollision = rectCollisions.find(c =>
+      String(c.id) === 'drop-unused'
+    )
+    if (unusedDropCollision) {
+      return [unusedDropCollision]
+    }
+
     const dropCollision = rectCollisions.find(c =>
       String(c.id).startsWith('drop-')
     )
@@ -1093,6 +1168,19 @@ export default function MenuSettings() {
     const overId = over.id as string
     const activeData = active.data.current
     const overData = over.data.current
+
+    // 미사용 메뉴 영역으로 드롭
+    if (overData?.type === 'unused-drop' || overId === 'drop-unused') {
+      console.log('[DnD] Dropping to unused area')
+      if (activeData?.type === 'category-menu' || activeData?.type === 'fixed-menu') {
+        const menuItem = activeData.item as MenuItemSetting
+        setMenuItems(prev => prev.map(m =>
+          m.id === menuItem.id ? { ...m, categoryId: undefined, visible: false, fixedPosition: undefined } : m
+        ))
+        setSuccess('')
+      }
+      return
+    }
 
     // 고정 메뉴 영역으로 드롭 (상단/하단)
     if (overData?.type === 'fixed-drop' || overId.startsWith('drop-fixed-')) {
@@ -1476,40 +1564,9 @@ export default function MenuSettings() {
             />
           </div>
 
-          {/* 우측: 미사용 메뉴 (Sticky) */}
-          <div className="lg:self-start lg:sticky lg:top-4">
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-              <div className="bg-amber-50 px-4 py-3 border-b border-amber-200">
-                <div className="flex items-center gap-2">
-                  <EyeOff className="w-5 h-5 text-amber-600" />
-                  <h3 className="font-semibold text-amber-800">미사용 메뉴</h3>
-                </div>
-              </div>
-
-              <div className="px-4 py-3 bg-amber-50/50 border-b border-amber-100">
-                <div className="flex items-start gap-2">
-                  <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-700">
-                    좌측 카테고리 또는 고정 메뉴 영역으로 드래그하세요. 여기에 있는 메뉴는 사이드바에 표시되지 않습니다.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto">
-                <SortableContext items={unusedMenus.map(m => `unused-${m.id}`)} strategy={verticalListSortingStrategy}>
-                  {unusedMenus.map((item) => (
-                    <DraggableUnusedMenu key={item.id} item={item} />
-                  ))}
-                </SortableContext>
-
-                {unusedMenus.length === 0 && (
-                  <div className="text-center py-8 text-slate-400">
-                    <Check className="w-10 h-10 mx-auto mb-2 text-green-500" />
-                    <p className="text-sm font-medium text-green-600">모든 메뉴가 사용 중입니다!</p>
-                  </div>
-                )}
-              </div>
-            </div>
+          {/* 우측: 미사용 메뉴 (플로팅 패널) */}
+          <div className="lg:self-start lg:sticky lg:top-4 lg:max-h-[calc(100vh-120px)]">
+            <UnusedMenuPanel unusedMenus={unusedMenus} />
           </div>
         </div>
 
