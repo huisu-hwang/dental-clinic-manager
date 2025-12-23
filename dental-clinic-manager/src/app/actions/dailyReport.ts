@@ -324,10 +324,20 @@ export async function saveDailyReport(formData: {
 
     let cashLedgerError: string | null = null
 
+    console.log('[saveDailyReport] cashLedger data received:', {
+      hasCashLedger: !!formData.cashLedger,
+      carriedForward: formData.cashLedger?.carried_forward,
+      closingBalance: formData.cashLedger?.closing_balance,
+      carriedForwardLength: formData.cashLedger?.carried_forward?.length,
+      closingBalanceLength: formData.cashLedger?.closing_balance?.length
+    })
+
     if (formData.cashLedger) {
       // 현금 출납 데이터가 비어있지 않은 경우에만 저장
       const hasCarriedForward = formData.cashLedger.carried_forward && formData.cashLedger.carried_forward.length > 0
       const hasClosingBalance = formData.cashLedger.closing_balance && formData.cashLedger.closing_balance.length > 0
+
+      console.log('[saveDailyReport] cashLedger check:', { hasCarriedForward, hasClosingBalance })
 
       if (hasCarriedForward || hasClosingBalance) {
         try {
