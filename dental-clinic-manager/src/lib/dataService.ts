@@ -423,6 +423,7 @@ export const dataService = {
           consultLogs: [],
           giftLogs: [],
           happyCallLogs: [],
+          cashLedger: null,
           hasData: false
         }
       }
@@ -444,6 +445,7 @@ export const dataService = {
             consultLogs: [],
             giftLogs: [],
             happyCallLogs: [],
+            cashLedger: null,
             hasData: false
           }
         }
@@ -537,6 +539,21 @@ export const dataService = {
         console.warn('[DataService] Error fetching special_notes_history:', err);
       }
 
+      // cash_ledger 조회 (현금 출납 기록)
+      let cashLedgerResult: { data: any; error: any } | null = null;
+      try {
+        cashLedgerResult = await supabase
+          .from('cash_ledger')
+          .select('*')
+          .eq('clinic_id', targetClinicId)
+          .eq('date', targetDate)
+          .maybeSingle();
+        console.log('[DataService] cash_ledger fetched:', cashLedgerResult?.data ? 'found' : 'not found');
+      } catch (err) {
+        console.warn('[DataService] Error fetching cash_ledger (table might not exist):', err);
+        cashLedgerResult = { data: null, error: err };
+      }
+
       const { normalized: normalizedDailyReport, missingIds: dailyIdsToBackfill } = ensureClinicIds(
         dailyReportResult?.data ? [dailyReportResult.data as DailyReport] : [],
         targetClinicId
@@ -569,12 +586,14 @@ export const dataService = {
 
       // special_notes_history에서 가져온 값이 있으면 dailyReport에 설정
       const hasSpecialNotes = latestSpecialNote !== null
+      const hasCashLedger = cashLedgerResult?.data !== null
       const hasData =
         normalizedDailyReport.length > 0 ||
         normalizedConsultLogs.length > 0 ||
         normalizedGiftLogs.length > 0 ||
         normalizedHappyCallLogs.length > 0 ||
-        hasSpecialNotes
+        hasSpecialNotes ||
+        hasCashLedger
       console.log('[DataService] Data fetch complete. Has data:', hasData)
 
       // dailyReport 객체 생성 (special_notes는 special_notes_history에서 가져옴)
@@ -605,6 +624,7 @@ export const dataService = {
           consultLogs: normalizedConsultLogs,
           giftLogs: normalizedGiftLogs,
           happyCallLogs: normalizedHappyCallLogs,
+          cashLedger: cashLedgerResult?.data || null,
           hasData
         }
       }
@@ -618,6 +638,7 @@ export const dataService = {
           consultLogs: [],
           giftLogs: [],
           happyCallLogs: [],
+          cashLedger: null,
           hasData: false
         }
       }

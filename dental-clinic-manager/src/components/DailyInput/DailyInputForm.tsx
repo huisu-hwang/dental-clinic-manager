@@ -1,16 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink } from 'lucide-react'
+import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink, Banknote } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
+import CashLedgerSection, { DEFAULT_DENOMINATIONS, calculateTotal } from './CashLedgerSection'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
 import { saveDailyReport } from '@/app/actions/dailyReport'
 import { createClient } from '@/lib/supabase/client'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftLog } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftLog, CashDenominations } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
 
 // Feature Flag: 신규 아키텍처 사용 여부
@@ -52,6 +53,8 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
   const [recallBookingCount, setRecallBookingCount] = useState(0)
   const [recallBookingNames, setRecallBookingNames] = useState('')
   const [specialNotes, setSpecialNotes] = useState('')
+  const [carriedForward, setCarriedForward] = useState<CashDenominations>(DEFAULT_DENOMINATIONS)
+  const [closingBalance, setClosingBalance] = useState<CashDenominations>(DEFAULT_DENOMINATIONS)
   const [loading, setLoading] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
   const [hasExternalUpdate, setHasExternalUpdate] = useState(false)  // 다른 사용자의 변경 감지
@@ -68,6 +71,8 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
     setRecallBookingCount(0)
     setRecallBookingNames('')
     setSpecialNotes('')
+    setCarriedForward(DEFAULT_DENOMINATIONS)
+    setClosingBalance(DEFAULT_DENOMINATIONS)
   }, [])
 
   // 날짜별 데이터 로드
@@ -151,6 +156,24 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
           })))
         } else {
           setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
+        }
+
+        // 현금 출납 데이터 로드
+        const cashLedger = result.data.cashLedger
+        if (cashLedger) {
+          if (cashLedger.carried_forward) {
+            setCarriedForward(cashLedger.carried_forward)
+          } else {
+            setCarriedForward(DEFAULT_DENOMINATIONS)
+          }
+          if (cashLedger.closing_balance) {
+            setClosingBalance(cashLedger.closing_balance)
+          } else {
+            setClosingBalance(DEFAULT_DENOMINATIONS)
+          }
+        } else {
+          setCarriedForward(DEFAULT_DENOMINATIONS)
+          setClosingBalance(DEFAULT_DENOMINATIONS)
         }
 
         setHasExistingData(true)
@@ -324,6 +347,27 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cash_ledger',
+          filter: `clinic_id=eq.${currentUser.clinic_id}`
+        },
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (isSavingRef.current) return
+
+          const newRecord = payload.new as { date?: string } | null
+          const oldRecord = payload.old as { date?: string } | null
+          const changedDate = newRecord?.date || oldRecord?.date
+
+          if (changedDate === reportDate) {
+            console.log('[DailyInputForm] External update detected for cash_ledger')
+            setHasExternalUpdate(true)
+          }
+        }
+      )
       .subscribe((status: string, err?: Error) => {
         if (status === 'SUBSCRIBED') {
           console.log('[DailyInputForm] Realtime subscription active')
@@ -400,7 +444,13 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
             patient_name: row.patient_name,
             treatment: row.treatment || '',
             notes: row.notes || ''
-          }))
+          })),
+          cashLedger: {
+            carried_forward: carriedForward,
+            carried_forward_total: calculateTotal(carriedForward),
+            closing_balance: closingBalance,
+            closing_balance_total: calculateTotal(closingBalance)
+          }
         })
 
         if (!result.success) {
@@ -499,7 +549,13 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
               patient_name: row.patient_name,
               treatment: row.treatment || '',
               notes: row.notes || ''
-            }))
+            })),
+            cashLedger: {
+              carried_forward: carriedForward,
+              carried_forward_total: calculateTotal(carriedForward),
+              closing_balance: closingBalance,
+              closing_balance_total: calculateTotal(closingBalance)
+            }
           })
 
           if (!result.success) {
@@ -721,9 +777,21 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
           />
         </div>
 
+        {/* 현금 출납 기록 */}
+        <div>
+          <SectionHeader number={6} title="현금 출납 기록" icon={Banknote} />
+          <CashLedgerSection
+            carriedForward={carriedForward}
+            closingBalance={closingBalance}
+            onCarriedForwardChange={setCarriedForward}
+            onClosingBalanceChange={setClosingBalance}
+            isReadOnly={isReadOnly}
+          />
+        </div>
+
         {/* 기타 특이사항 */}
         <div>
-          <SectionHeader number={6} title="기타 특이사항" icon={FileText} />
+          <SectionHeader number={7} title="기타 특이사항" icon={FileText} />
           <div>
             <textarea
               id="special-notes"
