@@ -14,8 +14,8 @@ import { createClient } from '@/lib/supabase/client'
 import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftLog } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
 
-// Feature Flag: 신규 아키텍처 사용 여부
-const USE_NEW_ARCHITECTURE = process.env.NEXT_PUBLIC_USE_NEW_DAILY_REPORT === 'true'
+// Feature Flag: 신규 아키텍처 사용 여부 (기본값: true)
+const USE_NEW_ARCHITECTURE = process.env.NEXT_PUBLIC_USE_NEW_DAILY_REPORT !== 'false'
 
 interface DailyInputFormProps {
   giftInventory: GiftInventory[]
