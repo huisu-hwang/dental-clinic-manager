@@ -96,6 +96,7 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname === '/signup' ||
     request.nextUrl.pathname === '/pending-approval' ||
+    request.nextUrl.pathname === '/resigned' ||
     request.nextUrl.pathname === '/update-password' ||
     request.nextUrl.pathname.startsWith('/test') ||
     request.nextUrl.pathname.startsWith('/auth') ||

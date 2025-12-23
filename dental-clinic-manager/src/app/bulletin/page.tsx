@@ -73,10 +73,23 @@ export default function BulletinPage() {
     else router.push('/dashboard')
   }
 
-  // 인증 확인
+  // 인증 확인 및 사용자 상태 체크
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/')
+    }
+    // 퇴사자, 승인대기, 거절된 사용자 리다이렉트
+    if (!authLoading && user) {
+      if (user.status === 'resigned') {
+        console.log('[BulletinPage] User is resigned, redirecting to /resigned')
+        router.replace('/resigned')
+        return
+      }
+      if (user.status === 'pending' || user.status === 'rejected') {
+        console.log('[BulletinPage] User is pending/rejected, redirecting to /pending-approval')
+        router.replace('/pending-approval')
+        return
+      }
     }
   }, [authLoading, user, router])
 
@@ -94,8 +107,16 @@ export default function BulletinPage() {
     )
   }
 
-  if (!user) {
-    return null
+  // 권한 없는 사용자는 로딩 표시 (리다이렉트 대기)
+  if (!user || user.status === 'resigned' || user.status === 'pending' || user.status === 'rejected') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

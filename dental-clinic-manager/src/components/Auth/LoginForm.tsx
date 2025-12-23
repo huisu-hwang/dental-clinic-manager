@@ -196,7 +196,16 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         return
       }
 
-      // 6. AuthContext에 완전한 사용자 정보로 로그인 처리 (status='active'만 통과)
+      // 6. 퇴사한 사용자 체크 - 로그인은 허용하되 퇴사 안내 페이지로 이동
+      if (result.data.status === 'resigned') {
+        console.warn('[LoginForm] User has resigned, keeping session and redirecting to resigned page:', result.data.id)
+        login(formData.email, result.data)
+        setLoading(false)
+        router.push('/resigned')
+        return
+      }
+
+      // 7. AuthContext에 완전한 사용자 정보로 로그인 처리 (status='active'만 통과)
       console.log('[LoginForm] Logging in with profile:', result.data)
       login(formData.email, result.data) // email로 변경
 

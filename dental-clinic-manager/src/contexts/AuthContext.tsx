@@ -16,7 +16,7 @@ export interface UserProfile {
   email?: string
   name?: string
   role?: string
-  status?: 'pending' | 'active' | 'rejected'
+  status?: 'pending' | 'active' | 'rejected' | 'resigned'
   permissions?: Permission[]
   clinic_id?: string
   [key: string]: any
@@ -180,6 +180,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   return
                 }
 
+                // 퇴사한 사용자는 resigned 페이지로 이동 (세션 유지, 다른 병원 가입 가능)
+                if (result.data.status === 'resigned') {
+                  console.warn('[AuthContext] User has resigned - restricting clinic access')
+
+                  setUser(result.data)
+
+                  if (window.location.pathname !== '/resigned') {
+                    console.log('[AuthContext] Redirecting to /resigned')
+                    router.push('/resigned')
+                  }
+
+                  setLoading(false)
+                  return
+                }
+
                 // 소속 병원이 중지된 경우 로그아웃
                 if (result.data.clinic?.status === 'suspended') {
                   alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
@@ -244,6 +259,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                       // 세션 유지 (signOut 제거) - 사용자가 안내 페이지를 볼 수 있도록
                       if (window.location.pathname !== '/pending-approval') {
                         router.push('/pending-approval')
+                      }
+                      return
+                    }
+
+                    // 퇴사한 사용자 체크 (세션 유지, 다른 병원 가입 가능)
+                    if (result.data.status === 'resigned') {
+                      console.warn('[AuthContext] SIGNED_IN event - User has resigned')
+
+                      setUser(result.data)
+
+                      if (window.location.pathname !== '/resigned') {
+                        router.push('/resigned')
                       }
                       return
                     }
