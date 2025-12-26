@@ -218,40 +218,19 @@ export async function saveDailyReport(formData: {
 
       // special_notes는 special_notes_history 테이블에만 저장하므로 RPC 페이로드에서 제외
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { special_notes: _specialNotes, date: _date, ...dailyReportWithoutSpecialNotes } = formData.dailyReport || {}
-
-      // 모든 로그에서 date 필드 제거 (TEXT -> DATE 타입 충돌 방지)
-      // RPC 함수가 p_date 파라미터로 날짜를 받아 각 테이블에 삽입함
-      const sanitizedConsultLogs = (formData.consultLogs || []).map((log: any) => {
-        const { date: _d, ...rest } = log
-        return rest
-      })
-      const sanitizedGiftLogs = (formData.giftLogs || []).map((log: any) => {
-        const { date: _d, ...rest } = log
-        return rest
-      })
-      const sanitizedHappyCallLogs = (formData.happyCallLogs || []).map((log: any) => {
-        const { date: _d, ...rest } = log
-        return rest
-      })
-
-      console.log('[saveDailyReport] Sanitized logs (date fields removed):', {
-        consultLogs: sanitizedConsultLogs.length,
-        giftLogs: sanitizedGiftLogs.length,
-        happyCallLogs: sanitizedHappyCallLogs.length
-      })
+      const { special_notes: _specialNotes, ...dailyReportWithoutSpecialNotes } = formData.dailyReport || {}
 
       const rpcPromise = supabase.rpc('save_daily_report_v2', {
         p_clinic_id: userProfile.clinic_id,
         p_date: formData.date,
         p_daily_report: {
           ...dailyReportWithoutSpecialNotes,
-          clinic_id: userProfile.clinic_id
-          // date 필드는 p_date로 별도 전달되므로 제거 (TEXT -> DATE 타입 충돌 방지)
+          clinic_id: userProfile.clinic_id,
+          date: formData.date
         },
-        p_consult_logs: sanitizedConsultLogs,
-        p_gift_logs: sanitizedGiftLogs,
-        p_happy_call_logs: sanitizedHappyCallLogs
+        p_consult_logs: formData.consultLogs || [],
+        p_gift_logs: formData.giftLogs || [],
+        p_happy_call_logs: formData.happyCallLogs || []
       })
 
       const rpcTimeout = new Promise<never>((_, reject) =>

@@ -1,10 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { useMemo } from 'react'
 
-// 기본 화폐 종류 (50원, 10원 제외)
-const DEFAULT_DENOMINATION_OPTIONS = [
+// 고정 화폐 종류 (변경 불가)
+const FIXED_DENOMINATIONS = [
   { label: '5만원권', value: 50000 },
   { label: '1만원권', value: 10000 },
   { label: '5천원권', value: 5000 },
@@ -24,8 +23,13 @@ export interface CashItem {
 // 현금 데이터 타입 (배열 형태)
 export type CashData = CashItem[]
 
-// 기본 빈 데이터
-export const DEFAULT_CASH_DATA: CashData = []
+// 기본 데이터 (모든 화폐 종류, 개수 0)
+export const DEFAULT_CASH_DATA: CashData = FIXED_DENOMINATIONS.map((d, index) => ({
+  id: `fixed-${index}`,
+  label: d.label,
+  value: d.value,
+  count: 0
+}))
 
 // 총액 계산 함수
 export function calculateTotal(items: CashData): number {
@@ -37,9 +41,17 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(amount)
 }
 
-// ID 생성
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 9)
+// 저장된 데이터를 고정 화폐 형식으로 정규화
+function normalizeToFixed(items: CashData): CashData {
+  return FIXED_DENOMINATIONS.map((d, index) => {
+    const existing = items.find(item => item.value === d.value)
+    return {
+      id: `fixed-${index}`,
+      label: d.label,
+      value: d.value,
+      count: existing?.count || 0
+    }
+  })
 }
 
 interface CashCardProps {
@@ -52,49 +64,15 @@ interface CashCardProps {
 }
 
 function CashCard({ title, subtitle, items, onChange, isReadOnly, cardColor }: CashCardProps) {
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newLabel, setNewLabel] = useState('')
-  const [newValue, setNewValue] = useState('')
+  // 항상 고정 화폐로 정규화
+  const normalizedItems = useMemo(() => normalizeToFixed(items), [items])
+  const total = useMemo(() => calculateTotal(normalizedItems), [normalizedItems])
 
-  const total = useMemo(() => calculateTotal(items), [items])
-
-  const handleCountChange = (id: string, count: number) => {
-    onChange(items.map(item =>
-      item.id === id ? { ...item, count: Math.max(0, count) } : item
-    ))
-  }
-
-  const handleRemoveItem = (id: string) => {
-    onChange(items.filter(item => item.id !== id))
-  }
-
-  const handleAddPreset = (preset: { label: string; value: number }) => {
-    // 이미 있는 화폐인지 확인
-    const exists = items.some(item => item.value === preset.value)
-    if (exists) return
-
-    onChange([...items, {
-      id: generateId(),
-      label: preset.label,
-      value: preset.value,
-      count: 0
-    }])
-  }
-
-  const handleAddCustom = () => {
-    if (!newLabel.trim() || !newValue) return
-    const value = parseInt(newValue)
-    if (isNaN(value) || value <= 0) return
-
-    onChange([...items, {
-      id: generateId(),
-      label: newLabel.trim(),
-      value,
-      count: 0
-    }])
-    setNewLabel('')
-    setNewValue('')
-    setShowAddForm(false)
+  const handleCountChange = (value: number, count: number) => {
+    const updated = normalizedItems.map(item =>
+      item.value === value ? { ...item, count: Math.max(0, count) } : item
+    )
+    onChange(updated)
   }
 
   const bgClass = cardColor === 'blue' ? 'bg-blue-50' : 'bg-green-50'
@@ -102,12 +80,6 @@ function CashCard({ title, subtitle, items, onChange, isReadOnly, cardColor }: C
   const headerBgClass = cardColor === 'blue' ? 'bg-blue-100' : 'bg-green-100'
   const titleClass = cardColor === 'blue' ? 'text-blue-800' : 'text-green-800'
   const subtitleClass = cardColor === 'blue' ? 'text-blue-600' : 'text-green-600'
-  const buttonClass = cardColor === 'blue' ? 'text-blue-600 hover:bg-blue-100' : 'text-green-600 hover:bg-green-100'
-
-  // 아직 추가되지 않은 기본 화폐 목록
-  const availablePresets = DEFAULT_DENOMINATION_OPTIONS.filter(
-    preset => !items.some(item => item.value === preset.value)
-  )
 
   return (
     <div className={`rounded-lg border ${borderClass} ${bgClass} overflow-hidden`}>
@@ -119,102 +91,28 @@ function CashCard({ title, subtitle, items, onChange, isReadOnly, cardColor }: C
 
       {/* 화폐 입력 영역 */}
       <div className="p-3 sm:p-4">
-        {items.length === 0 ? (
-          <p className="text-sm text-slate-500 text-center py-2">화폐를 추가해주세요</p>
-        ) : (
-          <div className="space-y-2">
-            {items.sort((a, b) => b.value - a.value).map((item) => (
-              <div key={item.id} className="flex items-center gap-2">
-                <span className="text-sm text-slate-700 flex-1 min-w-0 truncate">
-                  {item.label}
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  value={item.count || ''}
-                  placeholder="0"
-                  onChange={(e) => handleCountChange(item.id, parseInt(e.target.value) || 0)}
-                  className="w-16 sm:w-20 px-2 py-1.5 text-right text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  readOnly={isReadOnly}
-                />
-                <span className="text-xs text-slate-500 w-6">개</span>
-                {!isReadOnly && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(item.id)}
-                    className="p-1 text-slate-400 hover:text-red-500 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 화폐 추가 영역 */}
-        {!isReadOnly && (
-          <div className="mt-3 pt-3 border-t border-slate-200">
-            {/* 기본 화폐 빠른 추가 */}
-            {availablePresets.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {availablePresets.map((preset) => (
-                  <button
-                    key={preset.value}
-                    type="button"
-                    onClick={() => handleAddPreset(preset)}
-                    className={`px-2 py-1 text-xs rounded-md border border-current ${buttonClass} transition-colors`}
-                  >
-                    + {preset.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* 사용자 정의 화폐 추가 */}
-            {showAddForm ? (
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="text"
-                  value={newLabel}
-                  onChange={(e) => setNewLabel(e.target.value)}
-                  placeholder="명칭"
-                  className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-slate-300 rounded-md"
-                />
-                <input
-                  type="number"
-                  value={newValue}
-                  onChange={(e) => setNewValue(e.target.value)}
-                  placeholder="단위(원)"
-                  className="w-24 px-2 py-1.5 text-sm border border-slate-300 rounded-md"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddCustom}
-                  className="px-2 py-1.5 text-sm bg-slate-600 text-white rounded-md hover:bg-slate-700"
-                >
-                  추가
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowAddForm(false); setNewLabel(''); setNewValue(''); }}
-                  className="p-1.5 text-slate-400 hover:text-slate-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowAddForm(true)}
-                className={`flex items-center gap-1 text-xs ${buttonClass} px-2 py-1 rounded-md transition-colors`}
-              >
-                <Plus className="w-3 h-3" />
-                직접 입력
-              </button>
-            )}
-          </div>
-        )}
+        <div className="space-y-2">
+          {normalizedItems.map((item) => (
+            <div key={item.id} className="flex items-center gap-2">
+              <span className="text-sm text-slate-700 w-20 sm:w-24">
+                {item.label}
+              </span>
+              <input
+                type="number"
+                min="0"
+                value={item.count || ''}
+                placeholder="0"
+                onChange={(e) => handleCountChange(item.value, parseInt(e.target.value) || 0)}
+                className="w-16 sm:w-20 px-2 py-1.5 text-right text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                readOnly={isReadOnly}
+              />
+              <span className="text-xs text-slate-500 w-6">개</span>
+              <span className="text-xs text-slate-400 flex-1 text-right">
+                {item.count > 0 && `= ${formatCurrency(item.value * item.count)}원`}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* 합계 */}
@@ -245,8 +143,8 @@ export default function CashLedgerSection({
   onClosingBalanceChange,
   isReadOnly,
 }: CashLedgerSectionProps) {
-  const carriedForwardTotal = useMemo(() => calculateTotal(carriedForward), [carriedForward])
-  const closingBalanceTotal = useMemo(() => calculateTotal(closingBalance), [closingBalance])
+  const carriedForwardTotal = useMemo(() => calculateTotal(normalizeToFixed(carriedForward)), [carriedForward])
+  const closingBalanceTotal = useMemo(() => calculateTotal(normalizeToFixed(closingBalance)), [closingBalance])
   const difference = closingBalanceTotal - carriedForwardTotal
 
   return (

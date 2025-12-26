@@ -436,13 +436,14 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
             special_notes: specialNotes
           },
           consultLogs: filteredConsultLogs.map(row => ({
-            // date는 p_date로 별도 전달되므로 제거 (TEXT -> DATE 타입 충돌 방지)
+            date: reportDate,
             patient_name: row.patient_name,
             consult_content: row.consult_content || '',
             consult_status: row.consult_status,
             remarks: row.remarks || ''
           })),
           giftLogs: filteredGiftLogs.map(row => ({
+            date: reportDate,
             patient_name: row.patient_name,
             gift_type: row.gift_type || '',
             quantity: row.quantity || 1,
@@ -450,6 +451,7 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
             notes: row.notes || ''
           })),
           happyCallLogs: filteredHappyCallLogs.map(row => ({
+            date: reportDate,
             patient_name: row.patient_name,
             treatment: row.treatment || '',
             notes: row.notes || ''
@@ -545,12 +547,14 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
               special_notes: specialNotes
             },
             consultLogs: filteredConsultLogs.map(row => ({
+              date: reportDate,
               patient_name: row.patient_name,
               consult_content: row.consult_content || '',
               consult_status: row.consult_status,
               remarks: row.remarks || ''
             })),
             giftLogs: filteredGiftLogs.map(row => ({
+              date: reportDate,
               patient_name: row.patient_name,
               gift_type: row.gift_type || '',
               quantity: row.quantity || 1,
@@ -558,6 +562,7 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
               notes: row.notes || ''
             })),
             happyCallLogs: filteredHappyCallLogs.map(row => ({
+              date: reportDate,
               patient_name: row.patient_name,
               treatment: row.treatment || '',
               notes: row.notes || ''
@@ -572,11 +577,6 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
 
           if (!result.success) {
             throw new Error(result.error || '저장에 실패했습니다.')
-          }
-
-          // 현금 출납 저장 경고가 있으면 표시
-          if ((result as any).warning) {
-            alert(`저장 중 일부 문제가 발생했습니다:\n\n${(result as any).warning}`)
           }
 
           onSaveSuccess?.()
