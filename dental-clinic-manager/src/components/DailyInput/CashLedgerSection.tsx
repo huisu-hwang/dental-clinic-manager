@@ -32,7 +32,8 @@ export const DEFAULT_CASH_DATA: CashData = FIXED_DENOMINATIONS.map((d, index) =>
 }))
 
 // 총액 계산 함수
-export function calculateTotal(items: CashData): number {
+export function calculateTotal(items: CashData | undefined | null): number {
+  if (!Array.isArray(items)) return 0
   return items.reduce((sum, item) => sum + item.value * item.count, 0)
 }
 
@@ -42,9 +43,10 @@ function formatCurrency(amount: number): string {
 }
 
 // 저장된 데이터를 고정 화폐 형식으로 정규화
-function normalizeToFixed(items: CashData): CashData {
+function normalizeToFixed(items: CashData | undefined | null): CashData {
+  const safeItems = Array.isArray(items) ? items : []
   return FIXED_DENOMINATIONS.map((d, index) => {
-    const existing = items.find(item => item.value === d.value)
+    const existing = safeItems.find(item => item.value === d.value)
     return {
       id: `fixed-${index}`,
       label: d.label,
