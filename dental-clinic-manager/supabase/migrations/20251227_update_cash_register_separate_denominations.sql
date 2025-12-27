@@ -228,6 +228,14 @@ GRANT EXECUTE ON FUNCTION save_daily_report_v2(UUID, TEXT, JSONB, JSONB, JSONB, 
 -- 4. Add updated_at trigger
 -- ====================
 
+CREATE OR REPLACE FUNCTION update_cash_register_logs_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 DROP TRIGGER IF EXISTS update_cash_register_logs_updated_at_trigger ON cash_register_logs;
 
 CREATE TRIGGER update_cash_register_logs_updated_at_trigger
