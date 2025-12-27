@@ -425,6 +425,7 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
     try {
       if (USE_NEW_ARCHITECTURE) {
         console.log('[DailyInputForm] Calling Server Action...')
+        console.log('[DailyInputForm] cashRegisterData before save:', JSON.stringify(cashRegisterData))
 
         const filteredConsultLogs = consultRows.filter(row => row.patient_name?.trim())
         const filteredGiftLogs = giftRows.filter(row => row.patient_name?.trim())
