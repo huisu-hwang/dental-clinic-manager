@@ -224,6 +224,7 @@ export async function saveDailyReport(formData: {
     const callRpc = async () => {
       const rpcStartTime = Date.now()
       console.log('[saveDailyReport] Calling RPC function...')
+      console.log('[saveDailyReport] cashRegister data:', JSON.stringify(formData.cashRegister))
 
       // special_notes는 special_notes_history 테이블에만 저장하므로 RPC 페이로드에서 제외
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -283,6 +284,9 @@ export async function saveDailyReport(formData: {
     }
 
     const { data: rpcData, error: rpcError } = rpcResult
+
+    console.log('[saveDailyReport] RPC result:', JSON.stringify(rpcData))
+    console.log('[saveDailyReport] cash_register_saved:', rpcData?.cash_register_saved)
 
     if (rpcError) {
       console.error('[saveDailyReport] RPC error:', rpcError)
