@@ -125,21 +125,26 @@ export interface CashRegisterLog {
   date: string;
   clinic_id?: string | null;
 
-  // 화폐별 개수
-  bill_50000: number;    // 5만원권
-  bill_10000: number;    // 1만원권
-  bill_5000: number;     // 5천원권
-  bill_1000: number;     // 1천원권
-  coin_500: number;      // 500원 동전
-  coin_100: number;      // 100원 동전
+  // 전일 이월액 - 화폐별 개수
+  prev_bill_50000: number;    // 전일 5만원권
+  prev_bill_10000: number;    // 전일 1만원권
+  prev_bill_5000: number;     // 전일 5천원권
+  prev_bill_1000: number;     // 전일 1천원권
+  prev_coin_500: number;      // 전일 500원 동전
+  prev_coin_100: number;      // 전일 100원 동전
+  previous_balance: number;   // 전일 이월액 총액 (자동 계산)
 
-  // 계산된 총액
-  total_cash: number;    // 화폐 개수로 계산된 현금 총액
+  // 금일 잔액 - 화폐별 개수
+  curr_bill_50000: number;    // 금일 5만원권
+  curr_bill_10000: number;    // 금일 1만원권
+  curr_bill_5000: number;     // 금일 5천원권
+  curr_bill_1000: number;     // 금일 1천원권
+  curr_coin_500: number;      // 금일 500원 동전
+  curr_coin_100: number;      // 금일 100원 동전
+  current_balance: number;    // 금일 잔액 총액 (자동 계산)
 
-  // 이월액 및 잔액
-  previous_balance: number;   // 전일 이월액
-  current_balance: number;    // 금일 잔액
-  balance_difference: number; // 차액 (current_balance - (previous_balance + total_cash))
+  // 차액
+  balance_difference: number; // 차액 (current_balance - previous_balance)
 
   // 비고
   notes?: string;
@@ -149,17 +154,21 @@ export interface CashRegisterLog {
 }
 
 export interface CashRegisterRowData {
-  // 화폐별 개수
-  bill_50000: number;
-  bill_10000: number;
-  bill_5000: number;
-  bill_1000: number;
-  coin_500: number;
-  coin_100: number;
+  // 전일 이월액 - 화폐별 개수
+  prev_bill_50000: number;
+  prev_bill_10000: number;
+  prev_bill_5000: number;
+  prev_bill_1000: number;
+  prev_coin_500: number;
+  prev_coin_100: number;
 
-  // 이월액 및 잔액
-  previous_balance: number;
-  current_balance: number;
+  // 금일 잔액 - 화폐별 개수
+  curr_bill_50000: number;
+  curr_bill_10000: number;
+  curr_bill_5000: number;
+  curr_bill_1000: number;
+  curr_coin_500: number;
+  curr_coin_100: number;
 
   // 비고
   notes: string;

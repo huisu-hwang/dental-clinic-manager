@@ -50,8 +50,9 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
     { patient_name: '', treatment: '', notes: '' }
   ])
   const [cashRegisterData, setCashRegisterData] = useState<CashRegisterRowData>({
-    bill_50000: 0, bill_10000: 0, bill_5000: 0, bill_1000: 0, coin_500: 0, coin_100: 0,
-    previous_balance: 0, current_balance: 0, notes: ''
+    prev_bill_50000: 0, prev_bill_10000: 0, prev_bill_5000: 0, prev_bill_1000: 0, prev_coin_500: 0, prev_coin_100: 0,
+    curr_bill_50000: 0, curr_bill_10000: 0, curr_bill_5000: 0, curr_bill_1000: 0, curr_coin_500: 0, curr_coin_100: 0,
+    notes: ''
   })
   const [recallCount, setRecallCount] = useState(0)
   const [recallBookingCount, setRecallBookingCount] = useState(0)
@@ -70,8 +71,9 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
     setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
     setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
     setCashRegisterData({
-      bill_50000: 0, bill_10000: 0, bill_5000: 0, bill_1000: 0, coin_500: 0, coin_100: 0,
-      previous_balance: 0, current_balance: 0, notes: ''
+      prev_bill_50000: 0, prev_bill_10000: 0, prev_bill_5000: 0, prev_bill_1000: 0, prev_coin_500: 0, prev_coin_100: 0,
+      curr_bill_50000: 0, curr_bill_10000: 0, curr_bill_5000: 0, curr_bill_1000: 0, curr_coin_500: 0, curr_coin_100: 0,
+      notes: ''
     })
     setRecallCount(0)
     setRecallBookingCount(0)
@@ -166,20 +168,25 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
         const cashRegisterLog = result.data.cashRegisterLog
         if (cashRegisterLog) {
           setCashRegisterData({
-            bill_50000: cashRegisterLog.bill_50000 || 0,
-            bill_10000: cashRegisterLog.bill_10000 || 0,
-            bill_5000: cashRegisterLog.bill_5000 || 0,
-            bill_1000: cashRegisterLog.bill_1000 || 0,
-            coin_500: cashRegisterLog.coin_500 || 0,
-            coin_100: cashRegisterLog.coin_100 || 0,
-            previous_balance: cashRegisterLog.previous_balance || 0,
-            current_balance: cashRegisterLog.current_balance || 0,
+            prev_bill_50000: cashRegisterLog.prev_bill_50000 || 0,
+            prev_bill_10000: cashRegisterLog.prev_bill_10000 || 0,
+            prev_bill_5000: cashRegisterLog.prev_bill_5000 || 0,
+            prev_bill_1000: cashRegisterLog.prev_bill_1000 || 0,
+            prev_coin_500: cashRegisterLog.prev_coin_500 || 0,
+            prev_coin_100: cashRegisterLog.prev_coin_100 || 0,
+            curr_bill_50000: cashRegisterLog.curr_bill_50000 || 0,
+            curr_bill_10000: cashRegisterLog.curr_bill_10000 || 0,
+            curr_bill_5000: cashRegisterLog.curr_bill_5000 || 0,
+            curr_bill_1000: cashRegisterLog.curr_bill_1000 || 0,
+            curr_coin_500: cashRegisterLog.curr_coin_500 || 0,
+            curr_coin_100: cashRegisterLog.curr_coin_100 || 0,
             notes: cashRegisterLog.notes || ''
           })
         } else {
           setCashRegisterData({
-            bill_50000: 0, bill_10000: 0, bill_5000: 0, bill_1000: 0, coin_500: 0, coin_100: 0,
-            previous_balance: 0, current_balance: 0, notes: ''
+            prev_bill_50000: 0, prev_bill_10000: 0, prev_bill_5000: 0, prev_bill_1000: 0, prev_coin_500: 0, prev_coin_100: 0,
+            curr_bill_50000: 0, curr_bill_10000: 0, curr_bill_5000: 0, curr_bill_1000: 0, curr_coin_500: 0, curr_coin_100: 0,
+            notes: ''
           })
         }
 
@@ -453,14 +460,18 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
             notes: row.notes || ''
           })),
           cashRegister: {
-            bill_50000: cashRegisterData.bill_50000,
-            bill_10000: cashRegisterData.bill_10000,
-            bill_5000: cashRegisterData.bill_5000,
-            bill_1000: cashRegisterData.bill_1000,
-            coin_500: cashRegisterData.coin_500,
-            coin_100: cashRegisterData.coin_100,
-            previous_balance: cashRegisterData.previous_balance,
-            current_balance: cashRegisterData.current_balance,
+            prev_bill_50000: cashRegisterData.prev_bill_50000,
+            prev_bill_10000: cashRegisterData.prev_bill_10000,
+            prev_bill_5000: cashRegisterData.prev_bill_5000,
+            prev_bill_1000: cashRegisterData.prev_bill_1000,
+            prev_coin_500: cashRegisterData.prev_coin_500,
+            prev_coin_100: cashRegisterData.prev_coin_100,
+            curr_bill_50000: cashRegisterData.curr_bill_50000,
+            curr_bill_10000: cashRegisterData.curr_bill_10000,
+            curr_bill_5000: cashRegisterData.curr_bill_5000,
+            curr_bill_1000: cashRegisterData.curr_bill_1000,
+            curr_coin_500: cashRegisterData.curr_coin_500,
+            curr_coin_100: cashRegisterData.curr_coin_100,
             notes: cashRegisterData.notes
           }
         })
@@ -563,14 +574,18 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
               notes: row.notes || ''
             })),
             cashRegister: {
-              bill_50000: cashRegisterData.bill_50000,
-              bill_10000: cashRegisterData.bill_10000,
-              bill_5000: cashRegisterData.bill_5000,
-              bill_1000: cashRegisterData.bill_1000,
-              coin_500: cashRegisterData.coin_500,
-              coin_100: cashRegisterData.coin_100,
-              previous_balance: cashRegisterData.previous_balance,
-              current_balance: cashRegisterData.current_balance,
+              prev_bill_50000: cashRegisterData.prev_bill_50000,
+              prev_bill_10000: cashRegisterData.prev_bill_10000,
+              prev_bill_5000: cashRegisterData.prev_bill_5000,
+              prev_bill_1000: cashRegisterData.prev_bill_1000,
+              prev_coin_500: cashRegisterData.prev_coin_500,
+              prev_coin_100: cashRegisterData.prev_coin_100,
+              curr_bill_50000: cashRegisterData.curr_bill_50000,
+              curr_bill_10000: cashRegisterData.curr_bill_10000,
+              curr_bill_5000: cashRegisterData.curr_bill_5000,
+              curr_bill_1000: cashRegisterData.curr_bill_1000,
+              curr_coin_500: cashRegisterData.curr_coin_500,
+              curr_coin_100: cashRegisterData.curr_coin_100,
               notes: cashRegisterData.notes
             }
           })

@@ -43,14 +43,18 @@ export async function saveDailyReport(formData: {
   giftLogs: any[]
   happyCallLogs: any[]
   cashRegister?: {
-    bill_50000: number
-    bill_10000: number
-    bill_5000: number
-    bill_1000: number
-    coin_500: number
-    coin_100: number
-    previous_balance: number
-    current_balance: number
+    prev_bill_50000: number
+    prev_bill_10000: number
+    prev_bill_5000: number
+    prev_bill_1000: number
+    prev_coin_500: number
+    prev_coin_100: number
+    curr_bill_50000: number
+    curr_bill_10000: number
+    curr_bill_5000: number
+    curr_bill_1000: number
+    curr_coin_500: number
+    curr_coin_100: number
     notes: string
   }
 }) {
