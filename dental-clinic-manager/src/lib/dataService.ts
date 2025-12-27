@@ -423,6 +423,7 @@ export const dataService = {
           consultLogs: [],
           giftLogs: [],
           happyCallLogs: [],
+          cashRegisterLog: null,
           hasData: false
         }
       }
@@ -444,6 +445,7 @@ export const dataService = {
             consultLogs: [],
             giftLogs: [],
             happyCallLogs: [],
+            cashRegisterLog: null,
             hasData: false
           }
         }
@@ -517,6 +519,22 @@ export const dataService = {
         happyCallLogsResult = { data: [], error: err };
       }
 
+      // cash_register_logs 조회 (테이블이 없을 수 있음)
+      let cashRegisterLogResult;
+      try {
+        cashRegisterLogResult = await applyClinicFilter(
+          supabase
+            .from('cash_register_logs')
+            .select('*')
+            .eq('date', targetDate),
+          targetClinicId
+        ).maybeSingle();
+        console.log('[DataService] cash_register_logs fetched:', cashRegisterLogResult?.data ? 'found' : 'not found');
+      } catch (err) {
+        console.warn('[DataService] Error fetching cash_register_logs (table might not exist):', err);
+        cashRegisterLogResult = { data: null, error: err };
+      }
+
       // special_notes_history에서 해당 날짜의 최신 특이사항 조회
       let latestSpecialNote: { content: string; author_name: string } | null = null;
       try {
@@ -569,12 +587,14 @@ export const dataService = {
 
       // special_notes_history에서 가져온 값이 있으면 dailyReport에 설정
       const hasSpecialNotes = latestSpecialNote !== null
+      const hasCashRegisterData = cashRegisterLogResult?.data !== null
       const hasData =
         normalizedDailyReport.length > 0 ||
         normalizedConsultLogs.length > 0 ||
         normalizedGiftLogs.length > 0 ||
         normalizedHappyCallLogs.length > 0 ||
-        hasSpecialNotes
+        hasSpecialNotes ||
+        hasCashRegisterData
       console.log('[DataService] Data fetch complete. Has data:', hasData)
 
       // dailyReport 객체 생성 (special_notes는 special_notes_history에서 가져옴)
@@ -605,6 +625,7 @@ export const dataService = {
           consultLogs: normalizedConsultLogs,
           giftLogs: normalizedGiftLogs,
           happyCallLogs: normalizedHappyCallLogs,
+          cashRegisterLog: cashRegisterLogResult?.data || null,
           hasData
         }
       }
@@ -618,6 +639,7 @@ export const dataService = {
           consultLogs: [],
           giftLogs: [],
           happyCallLogs: [],
+          cashRegisterLog: null,
           hasData: false
         }
       }

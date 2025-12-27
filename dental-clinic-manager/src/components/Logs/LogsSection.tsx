@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { FileText, MessageSquare, Gift, Package, ArrowRight, Check, Search, X } from 'lucide-react'
-import type { DailyReport, ConsultLog, GiftLog, InventoryLog } from '@/types'
+import { FileText, MessageSquare, Gift, Package, ArrowRight, Check, Search, X, Banknote } from 'lucide-react'
+import type { DailyReport, ConsultLog, GiftLog, InventoryLog, CashRegisterLog } from '@/types'
 import SpecialNotesHistory from './SpecialNotesHistory'
 
 interface LogsSectionProps {
@@ -10,6 +10,7 @@ interface LogsSectionProps {
   consultLogs: ConsultLog[]
   giftLogs: GiftLog[]
   inventoryLogs: InventoryLog[]
+  cashRegisterLogs: CashRegisterLog[]
   onDeleteReport: (date: string) => void
   onRecalculateStats?: (date: string) => void
   onUpdateConsultStatus?: (consultId: number) => Promise<{ success?: boolean; error?: string }>
@@ -33,6 +34,7 @@ export default function LogsSection({
   consultLogs,
   giftLogs,
   inventoryLogs,
+  cashRegisterLogs,
   onDeleteReport,
   onRecalculateStats,
   onUpdateConsultStatus,
@@ -454,9 +456,77 @@ export default function LogsSection({
           </div>
         </div>
 
+        {/* 현금 출납 기록 */}
+        <div>
+          <SectionHeader number={5} title="현금 출납 기록" icon={Banknote} />
+          <div className="border border-slate-200 rounded-lg overflow-hidden overflow-x-auto">
+            <div className="max-h-96 overflow-y-auto">
+              <table className="w-full text-xs sm:text-sm text-left min-w-[900px]">
+                <thead className="bg-slate-50 text-slate-800 sticky top-0 z-10">
+                  <tr>
+                    <th className="p-2 sm:p-3 font-medium whitespace-nowrap">날짜</th>
+                    <th className="p-2 sm:p-3 font-medium text-center whitespace-nowrap">5만원</th>
+                    <th className="p-2 sm:p-3 font-medium text-center whitespace-nowrap">1만원</th>
+                    <th className="p-2 sm:p-3 font-medium text-center whitespace-nowrap">5천원</th>
+                    <th className="p-2 sm:p-3 font-medium text-center whitespace-nowrap">1천원</th>
+                    <th className="p-2 sm:p-3 font-medium text-center whitespace-nowrap">500원</th>
+                    <th className="p-2 sm:p-3 font-medium text-center whitespace-nowrap">100원</th>
+                    <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap">현금 총액</th>
+                    <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap">전일 이월</th>
+                    <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap">금일 잔액</th>
+                    <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap">차액</th>
+                    <th className="p-2 sm:p-3 font-medium">비고</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cashRegisterLogs.map(log => {
+                    const difference = log.balance_difference
+                    return (
+                      <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="p-2 sm:p-3 whitespace-nowrap">{log.date}</td>
+                        <td className="p-2 sm:p-3 text-center font-mono">{log.bill_50000 || 0}</td>
+                        <td className="p-2 sm:p-3 text-center font-mono">{log.bill_10000 || 0}</td>
+                        <td className="p-2 sm:p-3 text-center font-mono">{log.bill_5000 || 0}</td>
+                        <td className="p-2 sm:p-3 text-center font-mono">{log.bill_1000 || 0}</td>
+                        <td className="p-2 sm:p-3 text-center font-mono">{log.coin_500 || 0}</td>
+                        <td className="p-2 sm:p-3 text-center font-mono">{log.coin_100 || 0}</td>
+                        <td className="p-2 sm:p-3 text-right font-mono whitespace-nowrap">
+                          {new Intl.NumberFormat('ko-KR').format(log.total_cash || 0)}원
+                        </td>
+                        <td className="p-2 sm:p-3 text-right font-mono whitespace-nowrap">
+                          {new Intl.NumberFormat('ko-KR').format(log.previous_balance || 0)}원
+                        </td>
+                        <td className="p-2 sm:p-3 text-right font-mono whitespace-nowrap">
+                          {new Intl.NumberFormat('ko-KR').format(log.current_balance || 0)}원
+                        </td>
+                        <td className={`p-2 sm:p-3 text-right font-mono whitespace-nowrap ${
+                          difference > 0 ? 'text-green-600' :
+                          difference < 0 ? 'text-red-600' : 'text-slate-600'
+                        }`}>
+                          {difference > 0 ? '+' : ''}{new Intl.NumberFormat('ko-KR').format(difference)}원
+                        </td>
+                        <td className="p-2 sm:p-3 max-w-[200px] truncate" title={log.notes || ''}>
+                          {log.notes || '-'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {cashRegisterLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={12} className="p-4 text-center text-slate-500">
+                        현금 출납 기록이 없습니다.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         {/* 기타 특이사항 기록 */}
         <div>
-          <SectionHeader number={5} title="기타 특이사항 기록" icon={FileText} />
+          <SectionHeader number={6} title="기타 특이사항 기록" icon={FileText} />
           <SpecialNotesHistory />
         </div>
       </div>

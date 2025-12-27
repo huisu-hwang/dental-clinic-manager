@@ -110,6 +110,62 @@ export interface HappyCallRowData {
 }
 
 // ========================================
+// Cash Register (현금 출납) Types
+// ========================================
+
+// 화폐 단위 정의 (5만원권부터 100원까지)
+export interface CurrencyDenomination {
+  denomination: number;  // 화폐 단위 (50000, 10000, 5000, 1000, 500, 100)
+  count: number;         // 개수
+  amount: number;        // 해당 화폐의 총액 (denomination * count)
+}
+
+export interface CashRegisterLog {
+  id?: number;
+  date: string;
+  clinic_id?: string | null;
+
+  // 화폐별 개수
+  bill_50000: number;    // 5만원권
+  bill_10000: number;    // 1만원권
+  bill_5000: number;     // 5천원권
+  bill_1000: number;     // 1천원권
+  coin_500: number;      // 500원 동전
+  coin_100: number;      // 100원 동전
+
+  // 계산된 총액
+  total_cash: number;    // 화폐 개수로 계산된 현금 총액
+
+  // 이월액 및 잔액
+  previous_balance: number;   // 전일 이월액
+  current_balance: number;    // 금일 잔액
+  balance_difference: number; // 차액 (current_balance - (previous_balance + total_cash))
+
+  // 비고
+  notes?: string;
+
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CashRegisterRowData {
+  // 화폐별 개수
+  bill_50000: number;
+  bill_10000: number;
+  bill_5000: number;
+  bill_1000: number;
+  coin_500: number;
+  coin_100: number;
+
+  // 이월액 및 잔액
+  previous_balance: number;
+  current_balance: number;
+
+  // 비고
+  notes: string;
+}
+
+// ========================================
 // Protocol Management Types
 // ========================================
 

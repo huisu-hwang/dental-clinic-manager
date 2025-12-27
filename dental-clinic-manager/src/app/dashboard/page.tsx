@@ -78,6 +78,7 @@ export default function DashboardPage() {
     giftLogs,
     giftInventory,
     inventoryLogs,
+    cashRegisterLogs,
     loading,
     error,
     refetch,
@@ -606,6 +607,7 @@ export default function DashboardPage() {
               consultLogs={consultLogs}
               giftLogs={giftLogs}
               inventoryLogs={inventoryLogs}
+              cashRegisterLogs={cashRegisterLogs}
               onDeleteReport={handleDeleteReport}
               onRecalculateStats={handleRecalculateStats}
               onUpdateConsultStatus={handleUpdateConsultStatus}

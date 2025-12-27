@@ -42,6 +42,17 @@ export async function saveDailyReport(formData: {
   consultLogs: any[]
   giftLogs: any[]
   happyCallLogs: any[]
+  cashRegister?: {
+    bill_50000: number
+    bill_10000: number
+    bill_5000: number
+    bill_1000: number
+    coin_500: number
+    coin_100: number
+    previous_balance: number
+    current_balance: number
+    notes: string
+  }
 }) {
   const startTime = Date.now()
   console.log('[saveDailyReport] Start:', { date: formData.date, timestamp: new Date().toISOString() })
@@ -224,7 +235,8 @@ export async function saveDailyReport(formData: {
         },
         p_consult_logs: formData.consultLogs,
         p_gift_logs: formData.giftLogs,
-        p_happy_call_logs: formData.happyCallLogs
+        p_happy_call_logs: formData.happyCallLogs,
+        p_cash_register: formData.cashRegister || null
       })
 
       const rpcTimeout = new Promise<never>((_, reject) =>
