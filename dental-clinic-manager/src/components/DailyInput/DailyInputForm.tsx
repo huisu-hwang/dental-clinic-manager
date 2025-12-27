@@ -1,16 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink } from 'lucide-react'
+import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink, Banknote } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
+import CashRegisterTable from './CashRegisterTable'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
 import { saveDailyReport } from '@/app/actions/dailyReport'
 import { createClient } from '@/lib/supabase/client'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftLog } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, CashRegisterRowData, GiftInventory, GiftLog } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
 
 // Feature Flag: 신규 아키텍처 사용 여부
@@ -29,6 +30,7 @@ interface DailyInputFormProps {
     recallBookingCount: number
     recallBookingNames: string
     specialNotes: string
+    cashRegisterData?: CashRegisterRowData
   }) => void
   onSaveSuccess?: () => void  // 저장 성공 후 콜백 (데이터 새로고침용)
   onGiftRowsChange?: (date: string, giftRows: GiftRowData[]) => void  // 선물 데이터 변경 시 콜백
@@ -48,6 +50,11 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
   const [happyCallRows, setHappyCallRows] = useState<HappyCallRowData[]>([
     { patient_name: '', treatment: '', notes: '' }
   ])
+  const [cashRegisterData, setCashRegisterData] = useState<CashRegisterRowData>({
+    prev_bill_50000: 0, prev_bill_10000: 0, prev_bill_5000: 0, prev_bill_1000: 0, prev_coin_500: 0, prev_coin_100: 0,
+    curr_bill_50000: 0, curr_bill_10000: 0, curr_bill_5000: 0, curr_bill_1000: 0, curr_coin_500: 0, curr_coin_100: 0,
+    notes: ''
+  })
   const [recallCount, setRecallCount] = useState(0)
   const [recallBookingCount, setRecallBookingCount] = useState(0)
   const [recallBookingNames, setRecallBookingNames] = useState('')
@@ -64,6 +71,11 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
     setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
     setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
     setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
+    setCashRegisterData({
+      prev_bill_50000: 0, prev_bill_10000: 0, prev_bill_5000: 0, prev_bill_1000: 0, prev_coin_500: 0, prev_coin_100: 0,
+      curr_bill_50000: 0, curr_bill_10000: 0, curr_bill_5000: 0, curr_bill_1000: 0, curr_coin_500: 0, curr_coin_100: 0,
+      notes: ''
+    })
     setRecallCount(0)
     setRecallBookingCount(0)
     setRecallBookingNames('')
@@ -151,6 +163,32 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
           })))
         } else {
           setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
+        }
+
+        // 현금 출납 데이터 로드
+        const cashRegisterLog = result.data.cashRegisterLog
+        if (cashRegisterLog) {
+          setCashRegisterData({
+            prev_bill_50000: cashRegisterLog.prev_bill_50000 || 0,
+            prev_bill_10000: cashRegisterLog.prev_bill_10000 || 0,
+            prev_bill_5000: cashRegisterLog.prev_bill_5000 || 0,
+            prev_bill_1000: cashRegisterLog.prev_bill_1000 || 0,
+            prev_coin_500: cashRegisterLog.prev_coin_500 || 0,
+            prev_coin_100: cashRegisterLog.prev_coin_100 || 0,
+            curr_bill_50000: cashRegisterLog.curr_bill_50000 || 0,
+            curr_bill_10000: cashRegisterLog.curr_bill_10000 || 0,
+            curr_bill_5000: cashRegisterLog.curr_bill_5000 || 0,
+            curr_bill_1000: cashRegisterLog.curr_bill_1000 || 0,
+            curr_coin_500: cashRegisterLog.curr_coin_500 || 0,
+            curr_coin_100: cashRegisterLog.curr_coin_100 || 0,
+            notes: cashRegisterLog.notes || ''
+          })
+        } else {
+          setCashRegisterData({
+            prev_bill_50000: 0, prev_bill_10000: 0, prev_bill_5000: 0, prev_bill_1000: 0, prev_coin_500: 0, prev_coin_100: 0,
+            curr_bill_50000: 0, curr_bill_10000: 0, curr_bill_5000: 0, curr_bill_1000: 0, curr_coin_500: 0, curr_coin_100: 0,
+            notes: ''
+          })
         }
 
         setHasExistingData(true)
@@ -324,6 +362,27 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cash_register_logs',
+          filter: `clinic_id=eq.${currentUser.clinic_id}`
+        },
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (isSavingRef.current) return
+
+          const newRecord = payload.new as { date?: string } | null
+          const oldRecord = payload.old as { date?: string } | null
+          const changedDate = newRecord?.date || oldRecord?.date
+
+          if (changedDate === reportDate) {
+            console.log('[DailyInputForm] External update detected for cash_register_logs')
+            setHasExternalUpdate(true)
+          }
+        }
+      )
       .subscribe((status: string, err?: Error) => {
         if (status === 'SUBSCRIBED') {
           console.log('[DailyInputForm] Realtime subscription active')
@@ -367,6 +426,7 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
     try {
       if (USE_NEW_ARCHITECTURE) {
         console.log('[DailyInputForm] Calling Server Action...')
+        console.log('[DailyInputForm] cashRegisterData before save:', JSON.stringify(cashRegisterData))
 
         const filteredConsultLogs = consultRows.filter(row => row.patient_name?.trim())
         const filteredGiftLogs = giftRows.filter(row => row.patient_name?.trim())
@@ -400,7 +460,22 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
             patient_name: row.patient_name,
             treatment: row.treatment || '',
             notes: row.notes || ''
-          }))
+          })),
+          cashRegister: {
+            prev_bill_50000: cashRegisterData.prev_bill_50000,
+            prev_bill_10000: cashRegisterData.prev_bill_10000,
+            prev_bill_5000: cashRegisterData.prev_bill_5000,
+            prev_bill_1000: cashRegisterData.prev_bill_1000,
+            prev_coin_500: cashRegisterData.prev_coin_500,
+            prev_coin_100: cashRegisterData.prev_coin_100,
+            curr_bill_50000: cashRegisterData.curr_bill_50000,
+            curr_bill_10000: cashRegisterData.curr_bill_10000,
+            curr_bill_5000: cashRegisterData.curr_bill_5000,
+            curr_bill_1000: cashRegisterData.curr_bill_1000,
+            curr_coin_500: cashRegisterData.curr_coin_500,
+            curr_coin_100: cashRegisterData.curr_coin_100,
+            notes: cashRegisterData.notes
+          }
         })
 
         if (!result.success) {
@@ -414,6 +489,7 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
         onSaveSuccess?.()
       } else {
         console.log('[DailyInputForm] Using legacy onSaveReport...')
+        console.log('[DailyInputForm] cashRegisterData:', JSON.stringify(cashRegisterData))
 
         await onSaveReport({
           date: reportDate,
@@ -423,7 +499,8 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
           recallCount,
           recallBookingCount,
           recallBookingNames,
-          specialNotes
+          specialNotes,
+          cashRegisterData
         })
         // 레거시 아키텍처에서도 저장 성공 후 부모에게 알려서 데이터 새로고침
         onSaveSuccess?.()
@@ -499,7 +576,22 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
               patient_name: row.patient_name,
               treatment: row.treatment || '',
               notes: row.notes || ''
-            }))
+            })),
+            cashRegister: {
+              prev_bill_50000: cashRegisterData.prev_bill_50000,
+              prev_bill_10000: cashRegisterData.prev_bill_10000,
+              prev_bill_5000: cashRegisterData.prev_bill_5000,
+              prev_bill_1000: cashRegisterData.prev_bill_1000,
+              prev_coin_500: cashRegisterData.prev_coin_500,
+              prev_coin_100: cashRegisterData.prev_coin_100,
+              curr_bill_50000: cashRegisterData.curr_bill_50000,
+              curr_bill_10000: cashRegisterData.curr_bill_10000,
+              curr_bill_5000: cashRegisterData.curr_bill_5000,
+              curr_bill_1000: cashRegisterData.curr_bill_1000,
+              curr_coin_500: cashRegisterData.curr_coin_500,
+              curr_coin_100: cashRegisterData.curr_coin_100,
+              notes: cashRegisterData.notes
+            }
           })
 
           if (!result.success) {
@@ -721,9 +813,19 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
           />
         </div>
 
+        {/* 일일 현금 출납 */}
+        <div>
+          <SectionHeader number={6} title="일일 현금 출납" icon={Banknote} />
+          <CashRegisterTable
+            cashRegisterData={cashRegisterData}
+            onCashRegisterDataChange={setCashRegisterData}
+            isReadOnly={isReadOnly}
+          />
+        </div>
+
         {/* 기타 특이사항 */}
         <div>
-          <SectionHeader number={6} title="기타 특이사항" icon={FileText} />
+          <SectionHeader number={7} title="기타 특이사항" icon={FileText} />
           <div>
             <textarea
               id="special-notes"

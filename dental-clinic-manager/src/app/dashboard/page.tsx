@@ -30,7 +30,7 @@ import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
 import { getStatsForDateRange } from '@/utils/statsUtils'
 import { inspectDatabase } from '@/utils/dbInspector'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog, CashRegisterRowData } from '@/types'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
@@ -78,6 +78,7 @@ export default function DashboardPage() {
     giftLogs,
     giftInventory,
     inventoryLogs,
+    cashRegisterLogs,
     loading,
     error,
     refetch,
@@ -128,6 +129,7 @@ export default function DashboardPage() {
     recallBookingCount: number
     recallBookingNames: string
     specialNotes: string
+    cashRegisterData?: CashRegisterRowData
   }) => {
     if (!canCreateReport && !canEditReport) {
       showToast('보고서를 저장할 권한이 없습니다.', 'error')
@@ -606,6 +608,7 @@ export default function DashboardPage() {
               consultLogs={consultLogs}
               giftLogs={giftLogs}
               inventoryLogs={inventoryLogs}
+              cashRegisterLogs={cashRegisterLogs}
               onDeleteReport={handleDeleteReport}
               onRecalculateStats={handleRecalculateStats}
               onUpdateConsultStatus={handleUpdateConsultStatus}
