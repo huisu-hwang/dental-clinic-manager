@@ -64,6 +64,7 @@ export const DEFAULT_MENU_ITEMS: MenuItemSetting[] = [
   { id: 'vendors', label: '업체 연락처', visible: true, order: 10, categoryId: 'operations' },
   { id: 'settings', label: '재고 관리', visible: true, order: 11, categoryId: 'operations' },
   { id: 'guide', label: '사용 안내', visible: true, order: 12 },
+  { id: 'menu-settings', label: '메뉴 설정', visible: true, order: 13, fixedPosition: 'bottom' },
 ]
 
 // 메뉴 ID 목록 (유효성 검사용)

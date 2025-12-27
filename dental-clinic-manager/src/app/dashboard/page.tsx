@@ -12,6 +12,7 @@ import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
 import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 } from 'lucide-react'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
+import MenuSettings from '@/components/Management/MenuSettings'
 import LeaveManagement from '@/components/Leave/LeaveManagement'
 import VendorContactManagement from '@/components/Vendor/VendorContactManagement'
 import DocumentTemplates from '@/components/Document/DocumentTemplates'
@@ -719,6 +720,11 @@ export default function DashboardPage() {
                  </div>
               </footer>
             </div>
+          )}
+
+          {/* 메뉴 설정 */}
+          {activeTab === 'menu-settings' && (
+            <MenuSettings />
           )}
 
       <Toast
