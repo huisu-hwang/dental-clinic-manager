@@ -107,6 +107,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/dashboard?tab=documents')
     } else if (tab === 'guide') {
       router.push('/dashboard?tab=guide')
+    } else if (tab === 'menu-settings') {
+      router.push('/dashboard?tab=menu-settings')
     } else {
       router.push('/dashboard')
     }
