@@ -47,6 +47,8 @@ interface DocumentSubmission {
   reject_reason?: string
   created_at: string
   signed_at?: string
+  acknowledged_at?: string
+  acknowledged_by?: string
   submitted_by?: string
   target_employee_id?: string
   submitter?: { id: string; name: string; role: string }
@@ -639,6 +641,43 @@ export default function DocumentTemplates() {
     }
   }
 
+  // 권고사직서/해고통보서 확인 핸들러 (직원이 문서 내용 확인)
+  const handleAcknowledgeDocument = async (doc: DocumentSubmission) => {
+    if (!user?.clinic_id || !user?.id) return
+
+    const documentTypeLabel = doc.document_type === 'recommended_resignation' ? '권고사직서' : '해고통보서'
+
+    // 먼저 문서 내용을 보여주고 확인 여부를 물음
+    if (!confirm(`${documentTypeLabel}의 내용을 확인하셨습니까?\n\n확인 버튼을 누르시면 원장에게 확인 완료 알림이 전송됩니다.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/document-submissions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinicId: user.clinic_id,
+          userId: user.id,
+          submissionId: doc.id,
+          action: 'acknowledge'
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        alert(`${documentTypeLabel}를 확인하였습니다.\n원장에게 확인 알림이 전송되었습니다.`)
+        loadReceivedDocuments()
+        loadArchivedDocuments()
+      } else {
+        alert(`확인 실패: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Acknowledge error:', error)
+      alert('문서 확인 중 오류가 발생했습니다.')
+    }
+  }
+
   // 권고사직서/해고통보서/복지비 지급 확인서 서명 삭제 핸들러
   const handleOwnerDocumentSignatureDelete = () => {
     if (confirm('서명을 삭제하시겠습니까?')) {
@@ -988,11 +1027,17 @@ export default function DocumentTemplates() {
                       {/* 권고사직서/해고통보서/복지비 지급 확인서 안내 메시지 */}
                       {!isOwner && doc.status === 'approved' && (
                         <p className="text-sm mt-1">
-                          {doc.document_type === 'recommended_resignation' && (
-                            <span className="text-orange-600">※ 권고사직에 동의하시면 사직서를 작성하여 제출해 주세요.</span>
+                          {doc.document_type === 'recommended_resignation' && !doc.acknowledged_at && (
+                            <span className="text-orange-600">※ 권고사직서입니다. 내용을 확인해 주세요.</span>
                           )}
-                          {doc.document_type === 'termination_notice' && (
+                          {doc.document_type === 'recommended_resignation' && doc.acknowledged_at && (
+                            <span className="text-blue-600">✓ 확인 완료 ({new Date(doc.acknowledged_at).toLocaleDateString('ko-KR')}) - 동의하시면 사직서를 작성해 주세요.</span>
+                          )}
+                          {doc.document_type === 'termination_notice' && !doc.acknowledged_at && (
                             <span className="text-red-600">※ 해고통보서입니다. 내용을 확인해 주세요.</span>
+                          )}
+                          {doc.document_type === 'termination_notice' && doc.acknowledged_at && (
+                            <span className="text-blue-600">✓ 확인 완료 ({new Date(doc.acknowledged_at).toLocaleDateString('ko-KR')})</span>
                           )}
                           {doc.document_type === 'welfare_payment' && !doc.employee_signature && (
                             <span className="text-green-600">※ 복지비 지급 확인서입니다. 내용을 확인하시고 서명해 주세요.</span>
@@ -1011,6 +1056,20 @@ export default function DocumentTemplates() {
                     >
                       상세보기
                     </button>
+                    {/* 직원의 권고사직서/해고통보서 확인 버튼 */}
+                    {!isOwner && (doc.document_type === 'recommended_resignation' || doc.document_type === 'termination_notice') && doc.status === 'approved' && !doc.acknowledged_at && (
+                      <button
+                        onClick={() => handleAcknowledgeDocument(doc)}
+                        className={`px-3 py-1.5 text-white rounded-lg text-sm ${
+                          doc.document_type === 'recommended_resignation'
+                            ? 'bg-orange-600 hover:bg-orange-700'
+                            : 'bg-red-600 hover:bg-red-700'
+                        }`}
+                      >
+                        <CheckCircle className="w-3 h-3 inline-block mr-1" />
+                        확인하기
+                      </button>
+                    )}
                     {/* 직원의 복지비 지급 확인서 서명 버튼 */}
                     {!isOwner && doc.document_type === 'welfare_payment' && doc.status === 'approved' && !doc.employee_signature && (
                       <button

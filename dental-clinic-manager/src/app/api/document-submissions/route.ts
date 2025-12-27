@@ -415,6 +415,57 @@ export async function PATCH(request: NextRequest) {
             created_at: new Date().toISOString(),
           })
       }
+    } else if (action === 'acknowledge') {
+      // 권고사직서/해고통보서 확인 (직원이 문서 내용을 확인했음을 표시)
+      const { data: submission, error: subError } = await supabaseAdmin
+        .from('document_submissions')
+        .select('target_employee_id, document_type, submitted_by')
+        .eq('id', submissionId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (subError || !submission) {
+        return NextResponse.json(
+          { error: 'Document not found' },
+          { status: 404 }
+        )
+      }
+
+      // 대상 직원만 확인 가능
+      if (submission.target_employee_id !== userId) {
+        return NextResponse.json(
+          { error: 'Only target employee can acknowledge this document' },
+          { status: 403 }
+        )
+      }
+
+      // 권고사직서/해고통보서만 확인 가능
+      if (!['recommended_resignation', 'termination_notice'].includes(submission.document_type)) {
+        return NextResponse.json(
+          { error: 'This document type does not require acknowledgement' },
+          { status: 400 }
+        )
+      }
+
+      updateData.acknowledged_at = new Date().toISOString()
+      updateData.acknowledged_by = userId
+
+      // 확인 후 원장에게 알림 발송
+      const documentTypeLabel = submission.document_type === 'recommended_resignation' ? '권고사직서' : '해고통보서'
+      await supabaseAdmin
+        .from('user_notifications')
+        .insert({
+          clinic_id: clinicId,
+          user_id: submission.submitted_by, // 문서 작성자(원장)에게 알림
+          type: 'document',
+          title: `${documentTypeLabel} 확인 완료`,
+          content: `${user.name}님이 ${documentTypeLabel}를 확인하였습니다.`,
+          link: '/dashboard?tab=documents&view=archive',
+          reference_type: 'document_submission',
+          reference_id: submissionId,
+          created_by: userId,
+          created_at: new Date().toISOString(),
+        })
     }
 
     const { data, error: updateError } = await supabaseAdmin
