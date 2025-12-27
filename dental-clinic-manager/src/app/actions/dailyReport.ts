@@ -333,7 +333,84 @@ export async function saveDailyReport(formData: {
     }
 
     // ============================================================
-    // 7. 선물 재고 업데이트 (gift_logs 기반)
+    // 7. 현금 출납 기록 직접 저장 (RPC 우회)
+    // ============================================================
+
+    if (formData.cashRegister) {
+      try {
+        console.log('[saveDailyReport] Saving cash register log directly...')
+        console.log('[saveDailyReport] Cash register data:', JSON.stringify(formData.cashRegister))
+
+        // 전일 이월액 총액 계산
+        const previousBalance =
+          (formData.cashRegister.prev_bill_50000 || 0) * 50000 +
+          (formData.cashRegister.prev_bill_10000 || 0) * 10000 +
+          (formData.cashRegister.prev_bill_5000 || 0) * 5000 +
+          (formData.cashRegister.prev_bill_1000 || 0) * 1000 +
+          (formData.cashRegister.prev_coin_500 || 0) * 500 +
+          (formData.cashRegister.prev_coin_100 || 0) * 100
+
+        // 금일 잔액 총액 계산
+        const currentBalance =
+          (formData.cashRegister.curr_bill_50000 || 0) * 50000 +
+          (formData.cashRegister.curr_bill_10000 || 0) * 10000 +
+          (formData.cashRegister.curr_bill_5000 || 0) * 5000 +
+          (formData.cashRegister.curr_bill_1000 || 0) * 1000 +
+          (formData.cashRegister.curr_coin_500 || 0) * 500 +
+          (formData.cashRegister.curr_coin_100 || 0) * 100
+
+        const balanceDifference = currentBalance - previousBalance
+
+        // 기존 레코드 삭제
+        const { error: deleteError } = await supabase
+          .from('cash_register_logs')
+          .delete()
+          .eq('clinic_id', userProfile.clinic_id)
+          .eq('date', formData.date)
+
+        if (deleteError) {
+          console.warn('[saveDailyReport] Delete cash register error (may not exist):', deleteError)
+        }
+
+        // 새 레코드 삽입
+        const { error: insertError } = await supabase
+          .from('cash_register_logs')
+          .insert({
+            date: formData.date,
+            clinic_id: userProfile.clinic_id,
+            prev_bill_50000: formData.cashRegister.prev_bill_50000 || 0,
+            prev_bill_10000: formData.cashRegister.prev_bill_10000 || 0,
+            prev_bill_5000: formData.cashRegister.prev_bill_5000 || 0,
+            prev_bill_1000: formData.cashRegister.prev_bill_1000 || 0,
+            prev_coin_500: formData.cashRegister.prev_coin_500 || 0,
+            prev_coin_100: formData.cashRegister.prev_coin_100 || 0,
+            previous_balance: previousBalance,
+            curr_bill_50000: formData.cashRegister.curr_bill_50000 || 0,
+            curr_bill_10000: formData.cashRegister.curr_bill_10000 || 0,
+            curr_bill_5000: formData.cashRegister.curr_bill_5000 || 0,
+            curr_bill_1000: formData.cashRegister.curr_bill_1000 || 0,
+            curr_coin_500: formData.cashRegister.curr_coin_500 || 0,
+            curr_coin_100: formData.cashRegister.curr_coin_100 || 0,
+            current_balance: currentBalance,
+            balance_difference: balanceDifference,
+            notes: formData.cashRegister.notes || ''
+          })
+
+        if (insertError) {
+          console.error('[saveDailyReport] Insert cash register error:', insertError)
+        } else {
+          console.log('[saveDailyReport] Cash register log saved successfully')
+          console.log('[saveDailyReport] Previous balance:', previousBalance, 'Current balance:', currentBalance)
+        }
+      } catch (cashRegisterError) {
+        console.error('[saveDailyReport] Error saving cash register:', cashRegisterError)
+      }
+    } else {
+      console.log('[saveDailyReport] No cash register data to save')
+    }
+
+    // ============================================================
+    // 8. 선물 재고 업데이트 (gift_logs 기반)
     // ============================================================
 
     try {
