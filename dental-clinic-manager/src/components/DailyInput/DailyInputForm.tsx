@@ -30,6 +30,7 @@ interface DailyInputFormProps {
     recallBookingCount: number
     recallBookingNames: string
     specialNotes: string
+    cashRegisterData?: CashRegisterRowData
   }) => void
   onSaveSuccess?: () => void  // 저장 성공 후 콜백 (데이터 새로고침용)
   onGiftRowsChange?: (date: string, giftRows: GiftRowData[]) => void  // 선물 데이터 변경 시 콜백
@@ -488,6 +489,7 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
         onSaveSuccess?.()
       } else {
         console.log('[DailyInputForm] Using legacy onSaveReport...')
+        console.log('[DailyInputForm] cashRegisterData:', JSON.stringify(cashRegisterData))
 
         await onSaveReport({
           date: reportDate,
@@ -497,7 +499,8 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
           recallCount,
           recallBookingCount,
           recallBookingNames,
-          specialNotes
+          specialNotes,
+          cashRegisterData
         })
         // 레거시 아키텍처에서도 저장 성공 후 부모에게 알려서 데이터 새로고침
         onSaveSuccess?.()

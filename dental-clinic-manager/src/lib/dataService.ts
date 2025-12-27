@@ -1,7 +1,7 @@
 import { createClient } from './supabase/client'
 import { ensureConnection } from './supabase/connectionCheck'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData, CashRegisterRowData } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
@@ -654,6 +654,7 @@ export const dataService = {
     recallBookingCount: number
     recallBookingNames: string
     specialNotes: string
+    cashRegisterData?: CashRegisterRowData
   }) {
     const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
@@ -666,7 +667,8 @@ export const dataService = {
       recallCount,
       recallBookingCount,
       recallBookingNames,
-      specialNotes
+      specialNotes,
+      cashRegisterData
     } = data
 
     try {
@@ -698,6 +700,7 @@ export const dataService = {
             applyClinicFilter(supabase.from('consult_logs').delete().eq('date', date), clinicId),
             applyClinicFilter(supabase.from('gift_logs').delete().eq('date', date), clinicId),
             applyClinicFilter(supabase.from('happy_call_logs').delete().eq('date', date), clinicId),
+            applyClinicFilter(supabase.from('cash_register_logs').delete().eq('date', date), clinicId),
             supabase.from('daily_reports').delete().eq('id', report.id)
           ])
         }
@@ -757,7 +760,61 @@ export const dataService = {
         if (error) throw new Error(`해피콜 기록 저장 실패: ${error.message}`)
       }
 
-      // --- 5. 특이사항 히스토리 저장 ---
+      // --- 5. 현금 출납 기록 저장 ---
+      if (cashRegisterData) {
+        console.log('[DataService] Saving cash register log:', JSON.stringify(cashRegisterData))
+
+        // 전일 이월액 총액 계산
+        const previousBalance =
+          (cashRegisterData.prev_bill_50000 || 0) * 50000 +
+          (cashRegisterData.prev_bill_10000 || 0) * 10000 +
+          (cashRegisterData.prev_bill_5000 || 0) * 5000 +
+          (cashRegisterData.prev_bill_1000 || 0) * 1000 +
+          (cashRegisterData.prev_coin_500 || 0) * 500 +
+          (cashRegisterData.prev_coin_100 || 0) * 100
+
+        // 금일 잔액 총액 계산
+        const currentBalance =
+          (cashRegisterData.curr_bill_50000 || 0) * 50000 +
+          (cashRegisterData.curr_bill_10000 || 0) * 10000 +
+          (cashRegisterData.curr_bill_5000 || 0) * 5000 +
+          (cashRegisterData.curr_bill_1000 || 0) * 1000 +
+          (cashRegisterData.curr_coin_500 || 0) * 500 +
+          (cashRegisterData.curr_coin_100 || 0) * 100
+
+        const balanceDifference = currentBalance - previousBalance
+
+        const cashRegisterRecord = {
+          clinic_id: clinicId,
+          date,
+          prev_bill_50000: cashRegisterData.prev_bill_50000 || 0,
+          prev_bill_10000: cashRegisterData.prev_bill_10000 || 0,
+          prev_bill_5000: cashRegisterData.prev_bill_5000 || 0,
+          prev_bill_1000: cashRegisterData.prev_bill_1000 || 0,
+          prev_coin_500: cashRegisterData.prev_coin_500 || 0,
+          prev_coin_100: cashRegisterData.prev_coin_100 || 0,
+          previous_balance: previousBalance,
+          curr_bill_50000: cashRegisterData.curr_bill_50000 || 0,
+          curr_bill_10000: cashRegisterData.curr_bill_10000 || 0,
+          curr_bill_5000: cashRegisterData.curr_bill_5000 || 0,
+          curr_bill_1000: cashRegisterData.curr_bill_1000 || 0,
+          curr_coin_500: cashRegisterData.curr_coin_500 || 0,
+          curr_coin_100: cashRegisterData.curr_coin_100 || 0,
+          current_balance: currentBalance,
+          balance_difference: balanceDifference,
+          notes: cashRegisterData.notes || ''
+        }
+
+        const { error } = await supabase.from('cash_register_logs').insert([cashRegisterRecord] as any)
+        if (error) {
+          console.error('[DataService] Cash register log save failed:', error)
+          // 현금 출납 기록 저장 실패는 전체 저장을 실패시키지 않음
+        } else {
+          console.log('[DataService] Cash register log saved successfully')
+        }
+      }
+
+      // --- 6. 특이사항 히스토리 저장 ---
       const trimmedSpecialNotes = specialNotes?.trim()
       if (trimmedSpecialNotes) {
         try {
