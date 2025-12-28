@@ -87,6 +87,7 @@ export default function ManagementPage() {
     else if (tab === 'protocols') router.push('/dashboard?tab=protocols')
     else if (tab === 'vendors') router.push('/dashboard?tab=vendors')
     else if (tab === 'guide') router.push('/dashboard?tab=guide')
+    else if (tab === 'menu-settings') router.push('/dashboard?tab=menu-settings')
     else router.push('/dashboard')
   }
 

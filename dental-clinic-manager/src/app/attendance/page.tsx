@@ -74,6 +74,7 @@ export default function AttendancePage() {
     else if (tab === 'vendors') router.push('/dashboard?tab=vendors')
     else if (tab === 'settings') router.push('/dashboard?tab=settings')
     else if (tab === 'guide') router.push('/dashboard?tab=guide')
+    else if (tab === 'menu-settings') router.push('/dashboard?tab=menu-settings')
     else router.push('/dashboard')
   }
 
