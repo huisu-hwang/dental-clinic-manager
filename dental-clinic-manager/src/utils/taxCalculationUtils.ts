@@ -625,12 +625,12 @@ export function calculateIncomeTax(params: TaxLookupParams): number {
 }
 
 /**
- * 지방소득세 계산 (소득세의 10%)
+ * 지방소득세 계산 (소득세의 10%, 1원 미만 버림)
  * @param incomeTax 소득세 금액
  * @returns 지방소득세 금액 (원)
  */
 export function calculateLocalIncomeTax(incomeTax: number): number {
-  return Math.round(incomeTax * 0.1)
+  return Math.floor(incomeTax * 0.1)
 }
 
 /**
@@ -657,7 +657,7 @@ export function calculateTotalTax(params: TaxLookupParams): {
 
 /**
  * 세후 실수령액에서 세전 급여를 역산
- * 이진 탐색 방식 사용
+ * 이진 탐색 방식 사용 (1원 단위 정확도)
  */
 export function calculateGrossFromNet(
   targetNetPay: number,
@@ -676,10 +676,11 @@ export function calculateGrossFromNet(
   // 초기 추정값 설정
   let low = targetNetPay
   let high = targetNetPay * 2
-  let result = targetNetPay + insuranceDeductions + otherDeductions
+  let bestResult = targetNetPay + insuranceDeductions + otherDeductions
+  let bestDiff = Infinity
 
   // 이진 탐색으로 세전 급여 찾기
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 100; i++) {
     const mid = Math.floor((low + high) / 2)
 
     // 과세 소득 계산 (비과세 제외)
@@ -697,9 +698,21 @@ export function calculateGrossFromNet(
 
     // 실수령액
     const netPay = mid - totalDeduction
+    const diff = netPay - targetNetPay
 
-    if (Math.abs(netPay - targetNetPay) < 10) {
-      result = mid
+    // 가장 가까운 결과 저장 (실수령액이 목표보다 크거나 같은 경우 중 최소)
+    if (diff >= 0 && diff < bestDiff) {
+      bestDiff = diff
+      bestResult = mid
+    }
+
+    // 정확히 일치하면 종료
+    if (diff === 0) {
+      break
+    }
+
+    // 이진 탐색 범위 축소
+    if (low >= high - 1) {
       break
     }
 
@@ -708,12 +721,28 @@ export function calculateGrossFromNet(
     } else {
       high = mid
     }
+  }
 
-    result = mid
+  // 미세 조정: bestResult 주변에서 정확한 값 찾기
+  for (let adjust = -5; adjust <= 5; adjust++) {
+    const candidate = bestResult + adjust
+    const taxableIncome = candidate - nonTaxableAmount
+    const { incomeTax, localIncomeTax } = calculateTotalTax({
+      monthlyIncome: taxableIncome,
+      familyCount,
+      childCount
+    })
+    const totalDeduction = insuranceDeductions + incomeTax + localIncomeTax + otherDeductions
+    const netPay = candidate - totalDeduction
+
+    if (netPay === targetNetPay) {
+      bestResult = candidate
+      break
+    }
   }
 
   // 최종 결과 계산
-  const taxableIncome = result - nonTaxableAmount
+  const taxableIncome = bestResult - nonTaxableAmount
   const { incomeTax, localIncomeTax } = calculateTotalTax({
     monthlyIncome: taxableIncome,
     familyCount,
@@ -722,8 +751,8 @@ export function calculateGrossFromNet(
   const totalDeduction = insuranceDeductions + incomeTax + localIncomeTax + otherDeductions
 
   return {
-    grossPay: result,
-    baseSalary: result - nonTaxableAmount,
+    grossPay: bestResult,
+    baseSalary: bestResult - nonTaxableAmount,
     incomeTax,
     localIncomeTax,
     totalDeduction
