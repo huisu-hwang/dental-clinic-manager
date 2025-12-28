@@ -498,13 +498,13 @@ export async function getPayrollStatements(
     const result = await response.json()
 
     if (result.success && result.data) {
-      // snake_case를 camelCase로 변환
+      // snake_case를 camelCase로 변환 (기존 테이블 컬럼명에 맞춤)
       const statements = result.data.map((item: Record<string, unknown>) => ({
         id: item.id,
         clinicId: item.clinic_id,
-        employeeId: item.employee_id,
-        statementYear: item.statement_year,
-        statementMonth: item.statement_month,
+        employeeId: item.user_id,
+        statementYear: item.year,
+        statementMonth: item.month,
         paymentDate: item.payment_date,
         employeeName: item.employee_name,
         employeeResidentNumber: item.employee_resident_number,

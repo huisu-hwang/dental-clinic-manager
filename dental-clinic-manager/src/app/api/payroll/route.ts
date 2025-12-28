@@ -79,9 +79,9 @@ export async function POST(request: NextRequest) {
       .from('payroll_statements')
       .select('id')
       .eq('clinic_id', clinicId)
-      .eq('employee_id', employeeId)
-      .eq('statement_year', statementYear)
-      .eq('statement_month', statementMonth)
+      .eq('user_id', employeeId)
+      .eq('year', statementYear)
+      .eq('month', statementMonth)
       .maybeSingle()
 
     if (checkError) {
@@ -90,9 +90,9 @@ export async function POST(request: NextRequest) {
 
     const payrollData = {
       clinic_id: clinicId,
-      employee_id: employeeId,
-      statement_year: statementYear,
-      statement_month: statementMonth,
+      user_id: employeeId,
+      year: statementYear,
+      month: statementMonth,
       payment_date: paymentDate,
       employee_name: employeeName,
       employee_resident_number: employeeResidentNumber,
@@ -193,17 +193,17 @@ export async function GET(request: NextRequest) {
       .from('payroll_statements')
       .select('*')
       .eq('clinic_id', clinicId)
-      .order('statement_year', { ascending: false })
-      .order('statement_month', { ascending: false })
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
 
     if (employeeId) {
-      query = query.eq('employee_id', employeeId)
+      query = query.eq('user_id', employeeId)
     }
     if (year) {
-      query = query.eq('statement_year', parseInt(year))
+      query = query.eq('year', parseInt(year))
     }
     if (month) {
-      query = query.eq('statement_month', parseInt(month))
+      query = query.eq('month', parseInt(month))
     }
 
     const { data, error } = await query
