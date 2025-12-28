@@ -625,12 +625,12 @@ export function calculateIncomeTax(params: TaxLookupParams): number {
 }
 
 /**
- * 지방소득세 계산 (소득세의 10%, 1원 미만 버림)
+ * 지방소득세 계산 (소득세의 10%, 10원 미만 버림)
  * @param incomeTax 소득세 금액
  * @returns 지방소득세 금액 (원)
  */
 export function calculateLocalIncomeTax(incomeTax: number): number {
-  return Math.floor(incomeTax * 0.1)
+  return Math.floor(incomeTax * 0.1 / 10) * 10
 }
 
 /**
