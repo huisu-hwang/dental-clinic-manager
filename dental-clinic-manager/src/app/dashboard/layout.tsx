@@ -8,6 +8,7 @@ import TabNavigation from '@/components/Layout/TabNavigation'
 import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/ui/Toast'
 import { useClinicNotifications } from '@/hooks/useClinicNotifications'
+import { getTabRoute } from '@/utils/tabRouting'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, updateUser, loading } = useAuth()
@@ -80,38 +81,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // 먼저 로컬 상태 업데이트 (즉시 UI 반영)
     setActiveTab(tab)
 
-    // 그 다음 URL 업데이트
-    if (tab === 'contracts') {
-      router.push('/dashboard/contracts')
-    } else if (tab === 'attendance') {
-      router.push('/attendance')
-    } else if (tab === 'bulletin') {
-      router.push('/bulletin')
-    } else if (tab === 'leave') {
-      router.push('/dashboard?tab=leave')
-    } else if (tab === 'settings') {
-      router.push('/dashboard?tab=settings')
-    } else if (tab === 'home') {
-      router.push('/dashboard')
-    } else if (tab === 'daily-input') {
-      router.push('/dashboard?tab=daily-input')
-    } else if (tab === 'stats') {
-      router.push('/dashboard?tab=stats')
-    } else if (tab === 'logs') {
-      router.push('/dashboard?tab=logs')
-    } else if (tab === 'protocols') {
-      router.push('/dashboard?tab=protocols')
-    } else if (tab === 'vendors') {
-      router.push('/dashboard?tab=vendors')
-    } else if (tab === 'documents') {
-      router.push('/dashboard?tab=documents')
-    } else if (tab === 'guide') {
-      router.push('/dashboard?tab=guide')
-    } else if (tab === 'menu-settings') {
-      router.push('/dashboard?tab=menu-settings')
-    } else {
-      router.push('/dashboard')
-    }
+    // 중앙 집중식 라우팅 유틸리티 사용
+    router.push(getTabRoute(tab))
   }
 
   // 퇴사자/승인대기/거절된 사용자는 대시보드를 렌더링하지 않음
