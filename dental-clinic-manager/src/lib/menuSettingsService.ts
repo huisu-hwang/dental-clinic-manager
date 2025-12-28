@@ -5,7 +5,7 @@
 
 import { createClient } from './supabase/client'
 import type { MenuItemSetting, MenuCategorySetting, UserMenuSettings } from '@/types/menuSettings'
-import { DEFAULT_MENU_ITEMS, DEFAULT_CATEGORIES, normalizeCategorySettings } from '@/types/menuSettings'
+import { DEFAULT_MENU_ITEMS, DEFAULT_CATEGORIES, normalizeCategorySettings, normalizeMenuSettings } from '@/types/menuSettings'
 
 // 메뉴 설정을 localStorage에 캐시하는 키
 const USER_MENU_SETTINGS_CACHE_KEY = 'dental_user_menu_settings'
@@ -148,6 +148,24 @@ export async function getUserMenuSettings(
       const cached = getCachedUserMenuSettings(userId)
       if (cached) {
         console.log('[menuSettingsService] Using cached user menu settings')
+
+        // 새로운 메뉴가 추가되었을 수 있으므로 정규화 수행
+        const normalizedCategories = normalizeCategorySettings(cached.categories)
+        const normalizedSettings = normalizeMenuSettings(cached.settings, normalizedCategories)
+
+        // 정규화된 설정이 캐시와 다르면 캐시 업데이트
+        if (normalizedSettings.length !== cached.settings.length) {
+          console.log('[menuSettingsService] New menu items detected, updating cache')
+          const updatedCache: UserMenuSettings = {
+            ...cached,
+            settings: normalizedSettings,
+            categories: normalizedCategories,
+            updated_at: new Date().toISOString()
+          }
+          setCachedUserMenuSettings(userId, updatedCache)
+          return { success: true, data: updatedCache }
+        }
+
         return { success: true, data: cached }
       }
     }
