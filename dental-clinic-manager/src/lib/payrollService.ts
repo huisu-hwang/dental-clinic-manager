@@ -442,3 +442,132 @@ export function generateYearMonthOptions(yearsBack: number = 2): {
 
   return options
 }
+
+// =====================================================================
+// 급여 명세서 저장/조회/삭제 함수
+// =====================================================================
+
+/**
+ * 급여 명세서 저장 (API 호출)
+ */
+export async function savePayrollStatement(
+  statement: PayrollStatement,
+  createdBy: string
+): Promise<{ success: boolean; data?: PayrollStatement; message?: string; error?: string }> {
+  try {
+    const response = await fetch('/api/payroll', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...statement,
+        createdBy
+      }),
+    })
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error('Error saving payroll statement:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '저장 중 오류가 발생했습니다.'
+    }
+  }
+}
+
+/**
+ * 급여 명세서 목록 조회
+ */
+export async function getPayrollStatements(
+  clinicId: string,
+  filters?: {
+    employeeId?: string
+    year?: number
+    month?: number
+  }
+): Promise<{ success: boolean; data?: PayrollStatement[]; error?: string }> {
+  try {
+    const params = new URLSearchParams({ clinicId })
+    if (filters?.employeeId) params.append('employeeId', filters.employeeId)
+    if (filters?.year) params.append('year', filters.year.toString())
+    if (filters?.month) params.append('month', filters.month.toString())
+
+    const response = await fetch(`/api/payroll?${params.toString()}`)
+    const result = await response.json()
+
+    if (result.success && result.data) {
+      // snake_case를 camelCase로 변환
+      const statements = result.data.map((item: Record<string, unknown>) => ({
+        id: item.id,
+        clinicId: item.clinic_id,
+        employeeId: item.employee_id,
+        statementYear: item.statement_year,
+        statementMonth: item.statement_month,
+        paymentDate: item.payment_date,
+        employeeName: item.employee_name,
+        employeeResidentNumber: item.employee_resident_number,
+        hireDate: item.hire_date,
+        salaryType: item.salary_type,
+        payments: item.payments,
+        totalPayment: item.total_payment,
+        deductions: item.deductions,
+        totalDeduction: item.total_deduction,
+        netPay: item.net_pay,
+        nonTaxableTotal: item.non_taxable_total,
+        workInfo: item.work_info,
+        insuranceSettings: item.insurance_settings,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        createdBy: item.created_by
+      }))
+      return { success: true, data: statements }
+    }
+
+    return result
+  } catch (error) {
+    console.error('Error fetching payroll statements:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '조회 중 오류가 발생했습니다.'
+    }
+  }
+}
+
+/**
+ * 특정 직원의 특정 연월 급여 명세서 조회
+ */
+export async function getPayrollStatement(
+  clinicId: string,
+  employeeId: string,
+  year: number,
+  month: number
+): Promise<PayrollStatement | null> {
+  const result = await getPayrollStatements(clinicId, { employeeId, year, month })
+  if (result.success && result.data && result.data.length > 0) {
+    return result.data[0]
+  }
+  return null
+}
+
+/**
+ * 급여 명세서 삭제
+ */
+export async function deletePayrollStatement(
+  id: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const response = await fetch(`/api/payroll?id=${id}`, {
+      method: 'DELETE',
+    })
+
+    return await response.json()
+  } catch (error) {
+    console.error('Error deleting payroll statement:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '삭제 중 오류가 발생했습니다.'
+    }
+  }
+}

@@ -11,7 +11,8 @@ import {
   extractSalaryInfoFromContract,
   getEstimatedInsurance,
   generateYearMonthOptions,
-  calculatePaymentDate
+  calculatePaymentDate,
+  savePayrollStatement
 } from '@/lib/payrollService'
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import PayrollPreview from './PayrollPreview'
@@ -35,6 +36,8 @@ export default function PayrollForm() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [showPreview, setShowPreview] = useState(false)
   const [loadingContract, setLoadingContract] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const yearMonthOptions = useMemo(() => generateYearMonthOptions(2), [])
 
@@ -165,6 +168,59 @@ export default function PayrollForm() {
   const handlePreview = () => {
     if (calculationResult && selectedEmployee) {
       setShowPreview(true)
+    }
+  }
+
+  // 명세서 저장
+  const handleSave = async () => {
+    if (!calculationResult || !selectedEmployee || !user) {
+      setSaveMessage({ type: 'error', text: '저장할 수 없습니다. 직원과 급여 정보를 확인해주세요.' })
+      return
+    }
+
+    setSaving(true)
+    setSaveMessage(null)
+
+    try {
+      const statement = {
+        clinicId: user.clinic_id || '',
+        employeeId: selectedEmployee.id,
+        statementYear: formState.selectedYear,
+        statementMonth: formState.selectedMonth,
+        paymentDate: calculatePaymentDate(formState.selectedYear, formState.selectedMonth, 25),
+        employeeName: selectedEmployee.name,
+        employeeResidentNumber: selectedEmployee.resident_registration_number,
+        hireDate: selectedEmployee.hire_date,
+        salaryType: formState.salaryType,
+        payments: calculationResult.payments,
+        totalPayment: calculationResult.totalPayment,
+        deductions: calculationResult.deductions,
+        totalDeduction: calculationResult.totalDeduction,
+        netPay: calculationResult.netPay,
+        nonTaxableTotal: calculationResult.nonTaxableTotal,
+        workInfo: {
+          workDays: formState.workDays || undefined,
+          totalWorkHours: formState.totalWorkHours || undefined,
+          overtimeHours: formState.overtimeHours || undefined,
+          nightWorkHours: formState.nightWorkHours || undefined,
+          holidayWorkHours: formState.holidayWorkHours || undefined,
+          hourlyRate: formState.hourlyRate || undefined,
+          familyCount: formState.familyCount
+        }
+      }
+
+      const result = await savePayrollStatement(statement, user.id)
+
+      if (result.success) {
+        setSaveMessage({ type: 'success', text: result.message || '급여 명세서가 저장되었습니다.' })
+      } else {
+        setSaveMessage({ type: 'error', text: result.error || '저장에 실패했습니다.' })
+      }
+    } catch (error) {
+      console.error('Error saving payroll:', error)
+      setSaveMessage({ type: 'error', text: '저장 중 오류가 발생했습니다.' })
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -645,8 +701,27 @@ export default function PayrollForm() {
             </div>
           </div>
 
+          {/* 저장 메시지 */}
+          {saveMessage && (
+            <div className={`mt-4 p-3 rounded-md ${
+              saveMessage.type === 'success'
+                ? 'bg-green-50 border border-green-200 text-green-700'
+                : 'bg-red-50 border border-red-200 text-red-700'
+            }`}>
+              {saveMessage.text}
+            </div>
+          )}
+
           {/* 버튼 */}
           <div className="mt-6 flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? '저장 중...' : '저장'}
+            </button>
             <button
               type="button"
               onClick={handlePreview}
