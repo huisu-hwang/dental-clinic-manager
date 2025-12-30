@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { PayrollFormState, PayrollCalculationResult, SalaryType, EmployeeSalaryInfo } from '@/types/payroll'
 import { DEFAULT_PAYROLL_FORM_STATE } from '@/types/payroll'
@@ -12,7 +12,8 @@ import {
   getEstimatedInsurance,
   generateYearMonthOptions,
   calculatePaymentDate,
-  savePayrollStatement
+  savePayrollStatement,
+  getPayrollStatement
 } from '@/lib/payrollService'
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import PayrollPreview from './PayrollPreview'
@@ -38,8 +39,15 @@ export default function PayrollForm() {
   const [loadingContract, setLoadingContract] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [hasSavedData, setHasSavedData] = useState(false)
+  const skipRecalculation = useRef(false)
 
   const yearMonthOptions = useMemo(() => generateYearMonthOptions(2), [])
+
+  // 권한 체크: 원장(owner)인지 확인
+  const isOwner = user?.role === 'owner'
+  // 읽기 전용 모드: 직원이 본인의 명세서를 볼 때
+  const isReadOnly = !isOwner && formState.selectedEmployeeId === user?.id
 
   // 직원 목록 로드
   useEffect(() => {
@@ -49,7 +57,18 @@ export default function PayrollForm() {
       setLoading(true)
       try {
         const data = await getEmployeesForPayroll(user.clinic_id)
-        setEmployees(data)
+
+        // 원장이 아닌 경우 본인만 표시
+        if (user.role !== 'owner') {
+          const selfOnly = data.filter(emp => emp.id === user.id)
+          setEmployees(selfOnly)
+          // 본인 자동 선택
+          if (selfOnly.length > 0) {
+            setFormState(prev => ({ ...prev, selectedEmployeeId: user.id }))
+          }
+        } else {
+          setEmployees(data)
+        }
       } catch (error) {
         console.error('Error loading employees:', error)
       } finally {
@@ -58,13 +77,14 @@ export default function PayrollForm() {
     }
 
     loadEmployees()
-  }, [user?.clinic_id])
+  }, [user?.clinic_id, user?.role, user?.id])
 
-  // 직원 선택 시 계약서 정보 로드
+  // 직원 선택 시 저장된 급여명세서 또는 계약서 정보 로드
   useEffect(() => {
-    async function loadContractInfo() {
+    async function loadPayrollOrContractInfo() {
       if (!formState.selectedEmployeeId || !user?.clinic_id) {
         setSelectedEmployee(null)
+        setHasSavedData(false)
         return
       }
 
@@ -73,58 +93,112 @@ export default function PayrollForm() {
 
       setSelectedEmployee(employee)
       setLoadingContract(true)
+      setSaveMessage(null)
 
       try {
-        // 계약서 정보 로드
-        const contract = await getEmployeeContract(formState.selectedEmployeeId, user.clinic_id)
+        // 1. 먼저 저장된 급여명세서 확인
+        const savedPayroll = await getPayrollStatement(
+          user.clinic_id,
+          formState.selectedEmployeeId,
+          formState.selectedYear,
+          formState.selectedMonth
+        )
 
-        if (contract) {
-          // 계약서에서 급여 정보 추출
-          const salaryInfo = extractSalaryInfoFromContract(contract, {
-            id: employee.id,
-            name: employee.name,
-            resident_registration_number: employee.resident_registration_number,
-            hire_date: employee.hire_date
-          })
-
-          // 4대보험 추정치 계산
-          const estimatedInsurance = getEstimatedInsurance(salaryInfo.baseSalary)
+        if (savedPayroll) {
+          // 저장된 데이터가 있으면 그 값을 사용 (재계산 없이 그대로 표시)
+          setHasSavedData(true)
+          const payments = savedPayroll.payments || {}
+          const deductions = savedPayroll.deductions || {}
 
           // 폼 상태 업데이트
           setFormState(prev => ({
             ...prev,
-            salaryType: salaryInfo.salaryType,
-            targetAmount: salaryInfo.baseSalary,
-            baseSalary: salaryInfo.baseSalary,
-            mealAllowance: salaryInfo.mealAllowance || 200000,
-            nationalPension: estimatedInsurance.nationalPension,
-            healthInsurance: estimatedInsurance.healthInsurance,
-            longTermCare: estimatedInsurance.longTermCare,
-            employmentInsurance: estimatedInsurance.employmentInsurance,
-            familyCount: salaryInfo.familyCount,
-            childCount: salaryInfo.childCount
+            salaryType: savedPayroll.salaryType || 'net',
+            targetAmount: savedPayroll.netPay || 0,
+            baseSalary: payments.baseSalary || 0,
+            bonus: payments.bonus || 0,
+            mealAllowance: payments.mealAllowance || 0,
+            vehicleAllowance: payments.vehicleAllowance || 0,
+            annualLeaveAllowance: payments.annualLeaveAllowance || 0,
+            overtimePay: payments.overtimePay || 0,
+            nationalPension: deductions.nationalPension || 0,
+            healthInsurance: deductions.healthInsurance || 0,
+            longTermCare: deductions.longTermCare || 0,
+            employmentInsurance: deductions.employmentInsurance || 0,
+            otherDeductions: deductions.otherDeductions || 0,
+            familyCount: savedPayroll.workInfo?.familyCount || 1,
+            childCount: savedPayroll.workInfo?.childCount || 0,
+            workDays: savedPayroll.workInfo?.workDays || 0,
+            totalWorkHours: savedPayroll.workInfo?.totalWorkHours || 0,
+            overtimeHours: savedPayroll.workInfo?.overtimeHours || 0
           }))
+
+          // 저장된 계산 결과 직접 설정 (재계산 방지)
+          skipRecalculation.current = true
+          setCalculationResult({
+            payments: savedPayroll.payments,
+            totalPayment: savedPayroll.totalPayment,
+            deductions: savedPayroll.deductions,
+            totalDeduction: savedPayroll.totalDeduction,
+            netPay: savedPayroll.netPay,
+            nonTaxableTotal: savedPayroll.nonTaxableTotal,
+            taxableIncome: savedPayroll.totalPayment - savedPayroll.nonTaxableTotal
+          })
         } else {
-          // 계약서 없으면 초기화
-          setFormState(prev => ({
-            ...DEFAULT_PAYROLL_FORM_STATE,
-            selectedEmployeeId: prev.selectedEmployeeId,
-            selectedYear: prev.selectedYear,
-            selectedMonth: prev.selectedMonth
-          }))
+          // 2. 저장된 데이터가 없으면 계약서 정보 로드
+          setHasSavedData(false)
+          const contract = await getEmployeeContract(formState.selectedEmployeeId, user.clinic_id)
+
+          if (contract) {
+            const salaryInfo = extractSalaryInfoFromContract(contract, {
+              id: employee.id,
+              name: employee.name,
+              resident_registration_number: employee.resident_registration_number,
+              hire_date: employee.hire_date
+            })
+
+            const estimatedInsurance = getEstimatedInsurance(salaryInfo.baseSalary)
+
+            setFormState(prev => ({
+              ...prev,
+              salaryType: salaryInfo.salaryType,
+              targetAmount: salaryInfo.baseSalary,
+              baseSalary: salaryInfo.baseSalary,
+              mealAllowance: salaryInfo.mealAllowance || 200000,
+              nationalPension: estimatedInsurance.nationalPension,
+              healthInsurance: estimatedInsurance.healthInsurance,
+              longTermCare: estimatedInsurance.longTermCare,
+              employmentInsurance: estimatedInsurance.employmentInsurance,
+              familyCount: salaryInfo.familyCount,
+              childCount: salaryInfo.childCount
+            }))
+          } else {
+            setFormState(prev => ({
+              ...DEFAULT_PAYROLL_FORM_STATE,
+              selectedEmployeeId: prev.selectedEmployeeId,
+              selectedYear: prev.selectedYear,
+              selectedMonth: prev.selectedMonth
+            }))
+          }
         }
       } catch (error) {
-        console.error('Error loading contract:', error)
+        console.error('Error loading payroll/contract:', error)
       } finally {
         setLoadingContract(false)
       }
     }
 
-    loadContractInfo()
-  }, [formState.selectedEmployeeId, user?.clinic_id, employees])
+    loadPayrollOrContractInfo()
+  }, [formState.selectedEmployeeId, formState.selectedYear, formState.selectedMonth, user?.clinic_id, employees])
 
   // 폼 값 변경 시 자동 계산
   useEffect(() => {
+    // 저장된 데이터를 로드했을 때는 재계산 건너뛰기
+    if (skipRecalculation.current) {
+      skipRecalculation.current = false
+      return
+    }
+
     if (formState.targetAmount > 0 || formState.baseSalary > 0) {
       const result = calculatePayrollFromFormState(formState)
       setCalculationResult(result)
@@ -135,6 +209,10 @@ export default function PayrollForm() {
 
   // 폼 필드 변경 핸들러
   const handleFieldChange = (field: keyof PayrollFormState, value: any) => {
+    // 사용자가 값을 변경하면 저장된 데이터 표시 해제
+    if (hasSavedData) {
+      setHasSavedData(false)
+    }
     setFormState(prev => ({ ...prev, [field]: value }))
   }
 
@@ -336,11 +414,20 @@ export default function PayrollForm() {
       {/* 급여 입력 */}
       {formState.selectedEmployeeId && (
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          {/* 직원용 읽기 전용 안내 */}
+          {!isOwner && (
+            <div className="mb-4 p-3 bg-slate-100 border border-slate-300 rounded-md">
+              <p className="text-sm text-slate-600">
+                📋 급여 명세서 조회 모드입니다. 수정은 원장님만 가능합니다.
+              </p>
+            </div>
+          )}
+
           <h3 className="text-lg font-semibold text-slate-800 mb-4">
             {formState.salaryType === 'net' ? '세후 급여 입력' : '세전 급여 입력'}
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <fieldset disabled={!isOwner} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* 왼쪽: 지급 항목 */}
             <div className="space-y-4">
               <h4 className="font-medium text-slate-700 border-b pb-2">지급 항목</h4>
@@ -584,7 +671,7 @@ export default function PayrollForm() {
                 </div>
               </div>
             </div>
-          </div>
+          </fieldset>
         </div>
       )}
 
@@ -701,6 +788,15 @@ export default function PayrollForm() {
             </div>
           </div>
 
+          {/* 데이터 상태 표시 */}
+          {hasSavedData && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-700">
+                ✓ 저장된 급여명세서를 불러왔습니다. ({formState.selectedYear}년 {formState.selectedMonth}월)
+              </p>
+            </div>
+          )}
+
           {/* 저장 메시지 */}
           {saveMessage && (
             <div className={`mt-4 p-3 rounded-md ${
@@ -714,14 +810,17 @@ export default function PayrollForm() {
 
           {/* 버튼 */}
           <div className="mt-6 flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saving ? '저장 중...' : '저장'}
-            </button>
+            {/* 원장만 저장 가능 */}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? '저장 중...' : '저장'}
+              </button>
+            )}
             <button
               type="button"
               onClick={handlePreview}
