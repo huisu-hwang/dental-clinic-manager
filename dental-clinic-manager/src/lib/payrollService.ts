@@ -502,9 +502,9 @@ export async function getPayrollStatements(
       const statements = result.data.map((item: Record<string, unknown>) => ({
         id: item.id,
         clinicId: item.clinic_id,
-        employeeId: item.user_id,
-        statementYear: item.year,
-        statementMonth: item.month,
+        employeeId: item.employee_user_id,
+        statementYear: item.payment_year,
+        statementMonth: item.payment_month,
         paymentDate: item.payment_date,
         employeeName: item.employee_name,
         employeeResidentNumber: item.employee_resident_number,
