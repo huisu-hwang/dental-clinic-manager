@@ -260,6 +260,26 @@ export default function PayrollForm() {
     setSaveMessage(null)
 
     try {
+      // 사용자가 입력한 값을 직접 사용 (재계산으로 인한 값 변경 방지)
+      const payments = {
+        baseSalary: calculationResult.payments.baseSalary, // 계산된 기본급
+        bonus: formState.bonus > 0 ? formState.bonus : undefined,
+        mealAllowance: formState.mealAllowance > 0 ? formState.mealAllowance : undefined,
+        vehicleAllowance: formState.vehicleAllowance > 0 ? formState.vehicleAllowance : undefined,
+        annualLeaveAllowance: formState.annualLeaveAllowance > 0 ? formState.annualLeaveAllowance : undefined,
+        overtimePay: formState.overtimePay > 0 ? formState.overtimePay : undefined,
+      }
+
+      const deductions = {
+        nationalPension: formState.nationalPension,
+        healthInsurance: formState.healthInsurance,
+        longTermCare: formState.longTermCare,
+        employmentInsurance: formState.employmentInsurance,
+        incomeTax: calculationResult.deductions.incomeTax, // 계산된 소득세
+        localIncomeTax: calculationResult.deductions.localIncomeTax, // 계산된 지방소득세
+        otherDeductions: formState.otherDeductions > 0 ? formState.otherDeductions : undefined,
+      }
+
       const statement = {
         clinicId: user.clinic_id || '',
         employeeId: selectedEmployee.id,
@@ -270,9 +290,9 @@ export default function PayrollForm() {
         employeeResidentNumber: selectedEmployee.resident_registration_number,
         hireDate: selectedEmployee.hire_date,
         salaryType: formState.salaryType,
-        payments: calculationResult.payments,
+        payments,
         totalPayment: calculationResult.totalPayment,
-        deductions: calculationResult.deductions,
+        deductions,
         totalDeduction: calculationResult.totalDeduction,
         netPay: calculationResult.netPay,
         nonTaxableTotal: calculationResult.nonTaxableTotal,
@@ -283,7 +303,8 @@ export default function PayrollForm() {
           nightWorkHours: formState.nightWorkHours || undefined,
           holidayWorkHours: formState.holidayWorkHours || undefined,
           hourlyRate: formState.hourlyRate || undefined,
-          familyCount: formState.familyCount
+          familyCount: formState.familyCount,
+          childCount: formState.childCount
         }
       }
 
