@@ -304,7 +304,7 @@ export default function DashboardPage() {
   // 통계 계산
   const getStats = (periodType: 'weekly' | 'monthly' | 'annual', value: string) => {
     const periodData = getDatesForPeriod(periodType, value)
-    return getStatsForDateRange(dailyReports, giftLogs, periodData.startDate, periodData.endDate)
+    return getStatsForDateRange(dailyReports, giftLogs, periodData.startDate, periodData.endDate, giftInventory, giftCategories)
   }
 
   // 연도 옵션 생성 (현재 연도와 데이터가 있는 연도들)
@@ -571,7 +571,10 @@ export default function DashboardPage() {
                       revenueByManager: {},
                       consultProceedRate: 0,
                       recallSuccessRate: 0,
-                      giftCounts: {}
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
                     } : getStats('weekly', weekSelector)} />
                   </>
                 )}
@@ -604,7 +607,10 @@ export default function DashboardPage() {
                       revenueByManager: {},
                       consultProceedRate: 0,
                       recallSuccessRate: 0,
-                      giftCounts: {}
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
                     } : getStats('monthly', monthSelector)} />
                   </>
                 )}
@@ -640,7 +646,10 @@ export default function DashboardPage() {
                       revenueByManager: {},
                       consultProceedRate: 0,
                       recallSuccessRate: 0,
-                      giftCounts: {}
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
                     } : getStats('annual', yearSelector)} />
                   </>
                 )}

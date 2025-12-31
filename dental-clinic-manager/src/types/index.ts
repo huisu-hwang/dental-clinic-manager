@@ -98,6 +98,12 @@ export interface Stats {
   consultProceedRate: number;
   recallSuccessRate: number;
   giftCounts: Record<string, number>;
+  // 카테고리별 선물 통계: { categoryName: { giftName: count } }
+  giftCountsByCategory: Record<string, { gifts: Record<string, number>; total: number; color: string }>;
+  // 구환 선물 통계 (리뷰 비율 계산용)
+  returningPatientGiftCount: number;
+  // 리뷰 대비 구환 선물 비율 (리뷰 / 구환선물 * 100)
+  reviewToReturningGiftRate: number;
 }
 
 export interface ConsultRowData {
