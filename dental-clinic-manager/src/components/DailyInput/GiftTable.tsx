@@ -193,7 +193,11 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                       >
                         <option value="없음">없음</option>
                         {groupedInventory.map((group, groupIdx) => (
-                          <optgroup key={groupIdx} label={group.category ? `● ${group.category.name}` : '○ 미분류'}>
+                          <optgroup
+                            key={groupIdx}
+                            label={group.category ? `● ${group.category.name}` : '○ 미분류'}
+                            style={{ color: group.category?.color || '#64748b' }}
+                          >
                             {group.items.map(item => {
                               const availableQty = getAvailableInventory(item.name, index)
                               const isSelected = row.gift_type === item.name
@@ -203,6 +207,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                                   key={item.id}
                                   value={item.name}
                                   disabled={availableQty <= 0 && !isSelected}
+                                  style={{ color: '#1e293b' }}
                                 >
                                   {isSelected ? item.name : `${item.name} (${availableQty}개)${itemCategory ? ` [${itemCategory.name}]` : ''}`}
                                 </option>
@@ -211,14 +216,6 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                           </optgroup>
                         ))}
                       </select>
-                      {category && (
-                        <span
-                          className="inline-flex items-center self-start px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                          style={{ backgroundColor: category.color }}
-                        >
-                          {category.name}
-                        </span>
-                      )}
                     </div>
                   </td>
                   <td className="px-2 py-2">
@@ -350,7 +347,11 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                     >
                       <option value="없음">없음</option>
                       {groupedInventory.map((group, groupIdx) => (
-                        <optgroup key={groupIdx} label={group.category ? `● ${group.category.name}` : '○ 미분류'}>
+                        <optgroup
+                          key={groupIdx}
+                          label={group.category ? `● ${group.category.name}` : '○ 미분류'}
+                          style={{ color: group.category?.color || '#64748b' }}
+                        >
                           {group.items.map(item => {
                             const availableQty = getAvailableInventory(item.name, index)
                             const isSelected = row.gift_type === item.name
@@ -360,6 +361,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                                 key={item.id}
                                 value={item.name}
                                 disabled={availableQty <= 0 && !isSelected}
+                                style={{ color: '#1e293b' }}
                               >
                                 {isSelected ? item.name : `${item.name} (${availableQty}개)${itemCategory ? ` [${itemCategory.name}]` : ''}`}
                               </option>
@@ -368,14 +370,6 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                         </optgroup>
                       ))}
                     </select>
-                    {category && (
-                      <span
-                        className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                        style={{ backgroundColor: category.color }}
-                      >
-                        {category.name}
-                      </span>
-                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">수량</label>
