@@ -49,7 +49,8 @@ import {
   Target,
   Truck,
   Zap,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Banknote
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -80,6 +81,7 @@ const iconMap: Record<string, React.ElementType> = {
   'vendors': Building2,
   'contracts': FileSignature,
   'documents': FileText,
+  'payroll': Banknote,
   'settings': Package,
   'guide': HelpCircle,
   'menu-settings': SlidersHorizontal
@@ -135,6 +137,7 @@ const permissionsMap: Record<string, Permission[]> = {
   'vendors': ['vendor_contacts_view'],
   'contracts': ['contract_view'],
   'documents': ['contract_view'],
+  'payroll': ['contract_view'],
   'settings': ['inventory_view'],
   'guide': ['guide_view'],
   'menu-settings': []

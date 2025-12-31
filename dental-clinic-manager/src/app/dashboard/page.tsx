@@ -26,6 +26,7 @@ import AttendanceStats from '@/components/Attendance/AttendanceStats'
 import ScheduleManagement from '@/components/Attendance/ScheduleManagement'
 import TeamStatus from '@/components/Attendance/TeamStatus'
 import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
+import { PayrollManagement } from '@/components/Payroll'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
@@ -691,6 +692,11 @@ export default function DashboardPage() {
           {/* 문서 양식 */}
           {activeTab === 'documents' && (
             <DocumentTemplates />
+          )}
+
+          {/* 급여 명세서 */}
+          {activeTab === 'payroll' && (
+            <PayrollManagement />
           )}
 
           {/* 설정 */}

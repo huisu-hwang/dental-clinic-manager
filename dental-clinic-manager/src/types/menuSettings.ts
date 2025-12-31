@@ -60,11 +60,11 @@ export const DEFAULT_MENU_ITEMS: MenuItemSetting[] = [
   { id: 'bulletin', label: '병원 게시판', visible: true, order: 6 },
   { id: 'protocols', label: '진료 프로토콜', visible: true, order: 7, categoryId: 'documents' },
   { id: 'contracts', label: '근로계약서', visible: true, order: 8, categoryId: 'documents' },
-  { id: 'documents', label: '문서 양식', visible: true, order: 9, categoryId: 'documents' },
-  { id: 'vendors', label: '업체 연락처', visible: true, order: 10, categoryId: 'operations' },
-  { id: 'settings', label: '재고 관리', visible: true, order: 11, categoryId: 'operations' },
-  { id: 'guide', label: '사용 안내', visible: true, order: 12 },
-  { id: 'menu-settings', label: '메뉴 설정', visible: true, order: 13, fixedPosition: 'bottom' },
+  { id: 'payroll', label: '급여 명세서', visible: true, order: 9, categoryId: 'documents' },
+  { id: 'documents', label: '문서 양식', visible: true, order: 10, categoryId: 'documents' },
+  { id: 'vendors', label: '업체 연락처', visible: true, order: 11, categoryId: 'operations' },
+  { id: 'settings', label: '재고 관리', visible: true, order: 12, categoryId: 'operations' },
+  { id: 'guide', label: '사용 안내', visible: true, order: 13 },
 ]
 
 // 메뉴 ID 목록 (유효성 검사용)

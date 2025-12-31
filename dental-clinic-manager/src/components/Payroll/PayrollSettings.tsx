@@ -1,0 +1,691 @@
+'use client'
+
+import { useState, useEffect, useMemo } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import type { PayrollFormState, SalaryType } from '@/types/payroll'
+import { DEFAULT_PAYROLL_FORM_STATE } from '@/types/payroll'
+import {
+  getEmployeesForPayroll,
+  getEmployeeContract,
+  extractSalaryInfoFromContract,
+  getEstimatedInsurance
+} from '@/lib/payrollService'
+import { formatCurrency } from '@/utils/taxCalculationUtils'
+import { Save, RefreshCw, Check, AlertCircle } from 'lucide-react'
+
+interface Employee {
+  id: string
+  name: string
+  email: string
+  role: string
+  hire_date?: string
+  resident_registration_number?: string
+  hasContract: boolean
+}
+
+interface SalarySetting {
+  employeeId: string
+  salaryType: SalaryType
+  targetAmount: number
+  baseSalary: number
+  mealAllowance: number
+  vehicleAllowance: number
+  bonus: number
+  nationalPension: number
+  healthInsurance: number
+  longTermCare: number
+  employmentInsurance: number
+  familyCount: number
+  childCount: number
+  otherDeductions: number
+}
+
+export default function PayrollSettings() {
+  const { user } = useAuth()
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null)
+  const [formState, setFormState] = useState<PayrollFormState>(DEFAULT_PAYROLL_FORM_STATE)
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [loadingEmployee, setLoadingEmployee] = useState(false)
+  const [savedSettings, setSavedSettings] = useState<Record<string, SalarySetting>>({})
+
+  // 직원 목록 로드
+  useEffect(() => {
+    async function loadEmployees() {
+      if (!user?.clinic_id) return
+
+      setLoading(true)
+      try {
+        const data = await getEmployeesForPayroll(user.clinic_id)
+        setEmployees(data)
+
+        // 저장된 설정 로드
+        await loadSavedSettings(user.clinic_id)
+      } catch (error) {
+        console.error('Error loading employees:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadEmployees()
+  }, [user?.clinic_id])
+
+  // 저장된 급여 설정 로드
+  async function loadSavedSettings(clinicId: string) {
+    try {
+      const response = await fetch(`/api/payroll/settings?clinicId=${clinicId}`)
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        const settings: Record<string, SalarySetting> = {}
+        result.data.forEach((item: any) => {
+          settings[item.employee_user_id] = {
+            employeeId: item.employee_user_id,
+            salaryType: item.salary_type || 'net',
+            targetAmount: item.target_amount || 0,
+            baseSalary: item.base_salary || 0,
+            mealAllowance: item.meal_allowance || 0,
+            vehicleAllowance: item.vehicle_allowance || 0,
+            bonus: item.bonus || 0,
+            nationalPension: item.national_pension || 0,
+            healthInsurance: item.health_insurance || 0,
+            longTermCare: item.long_term_care || 0,
+            employmentInsurance: item.employment_insurance || 0,
+            familyCount: item.family_count || 1,
+            childCount: item.child_count || 0,
+            otherDeductions: item.other_deductions || 0
+          }
+        })
+        setSavedSettings(settings)
+      }
+    } catch (error) {
+      console.error('Error loading salary settings:', error)
+    }
+  }
+
+  // 직원 선택 시 설정 로드
+  useEffect(() => {
+    async function loadEmployeeSettings() {
+      if (!selectedEmployeeId || !user?.clinic_id) {
+        setFormState(DEFAULT_PAYROLL_FORM_STATE)
+        return
+      }
+
+      setLoadingEmployee(true)
+      setSaveMessage(null)
+
+      try {
+        // 1. 저장된 설정이 있으면 사용
+        if (savedSettings[selectedEmployeeId]) {
+          const settings = savedSettings[selectedEmployeeId]
+          setFormState(prev => ({
+            ...prev,
+            salaryType: settings.salaryType,
+            targetAmount: settings.targetAmount,
+            baseSalary: settings.baseSalary,
+            mealAllowance: settings.mealAllowance,
+            vehicleAllowance: settings.vehicleAllowance,
+            bonus: settings.bonus,
+            nationalPension: settings.nationalPension,
+            healthInsurance: settings.healthInsurance,
+            longTermCare: settings.longTermCare,
+            employmentInsurance: settings.employmentInsurance,
+            familyCount: settings.familyCount,
+            childCount: settings.childCount,
+            otherDeductions: settings.otherDeductions
+          }))
+        } else {
+          // 2. 계약서에서 정보 추출
+          const employee = employees.find(e => e.id === selectedEmployeeId)
+          const contract = await getEmployeeContract(selectedEmployeeId, user.clinic_id)
+
+          if (contract && employee) {
+            const salaryInfo = extractSalaryInfoFromContract(contract, {
+              id: employee.id,
+              name: employee.name,
+              resident_registration_number: employee.resident_registration_number,
+              hire_date: employee.hire_date
+            })
+
+            const estimatedInsurance = getEstimatedInsurance(salaryInfo.baseSalary)
+
+            setFormState(prev => ({
+              ...prev,
+              salaryType: salaryInfo.salaryType,
+              targetAmount: salaryInfo.baseSalary,
+              baseSalary: salaryInfo.baseSalary,
+              mealAllowance: salaryInfo.mealAllowance || 200000,
+              nationalPension: estimatedInsurance.nationalPension,
+              healthInsurance: estimatedInsurance.healthInsurance,
+              longTermCare: estimatedInsurance.longTermCare,
+              employmentInsurance: estimatedInsurance.employmentInsurance,
+              familyCount: salaryInfo.familyCount,
+              childCount: salaryInfo.childCount
+            }))
+          } else {
+            setFormState({
+              ...DEFAULT_PAYROLL_FORM_STATE,
+              mealAllowance: 200000
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error loading employee settings:', error)
+      } finally {
+        setLoadingEmployee(false)
+      }
+    }
+
+    loadEmployeeSettings()
+  }, [selectedEmployeeId, user?.clinic_id, employees, savedSettings])
+
+  // 폼 필드 변경 핸들러
+  const handleFieldChange = (field: keyof PayrollFormState, value: any) => {
+    setFormState(prev => ({ ...prev, [field]: value }))
+    setSaveMessage(null)
+  }
+
+  // 급여 유형 변경 핸들러
+  const handleSalaryTypeChange = (type: SalaryType) => {
+    setFormState(prev => ({
+      ...prev,
+      salaryType: type
+    }))
+  }
+
+  // 4대보험 재계산
+  const handleRecalculateInsurance = () => {
+    const baseAmount = formState.salaryType === 'net'
+      ? formState.targetAmount
+      : formState.baseSalary
+
+    const estimated = getEstimatedInsurance(baseAmount + formState.mealAllowance)
+
+    setFormState(prev => ({
+      ...prev,
+      nationalPension: estimated.nationalPension,
+      healthInsurance: estimated.healthInsurance,
+      longTermCare: estimated.longTermCare,
+      employmentInsurance: estimated.employmentInsurance
+    }))
+  }
+
+  // 설정 저장
+  const handleSave = async () => {
+    if (!selectedEmployeeId || !user?.clinic_id) {
+      setSaveMessage({ type: 'error', text: '직원을 선택해주세요.' })
+      return
+    }
+
+    setSaving(true)
+    setSaveMessage(null)
+
+    try {
+      const response = await fetch('/api/payroll/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clinicId: user.clinic_id,
+          employeeId: selectedEmployeeId,
+          salaryType: formState.salaryType,
+          targetAmount: formState.targetAmount,
+          baseSalary: formState.baseSalary,
+          mealAllowance: formState.mealAllowance,
+          vehicleAllowance: formState.vehicleAllowance,
+          bonus: formState.bonus,
+          nationalPension: formState.nationalPension,
+          healthInsurance: formState.healthInsurance,
+          longTermCare: formState.longTermCare,
+          employmentInsurance: formState.employmentInsurance,
+          familyCount: formState.familyCount,
+          childCount: formState.childCount,
+          otherDeductions: formState.otherDeductions,
+          updatedBy: user.id
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setSaveMessage({ type: 'success', text: '급여 설정이 저장되었습니다.' })
+        // 저장된 설정 업데이트
+        setSavedSettings(prev => ({
+          ...prev,
+          [selectedEmployeeId]: {
+            employeeId: selectedEmployeeId,
+            salaryType: formState.salaryType,
+            targetAmount: formState.targetAmount,
+            baseSalary: formState.baseSalary,
+            mealAllowance: formState.mealAllowance,
+            vehicleAllowance: formState.vehicleAllowance,
+            bonus: formState.bonus,
+            nationalPension: formState.nationalPension,
+            healthInsurance: formState.healthInsurance,
+            longTermCare: formState.longTermCare,
+            employmentInsurance: formState.employmentInsurance,
+            familyCount: formState.familyCount,
+            childCount: formState.childCount,
+            otherDeductions: formState.otherDeductions
+          }
+        }))
+      } else {
+        setSaveMessage({ type: 'error', text: result.error || '저장에 실패했습니다.' })
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      setSaveMessage({ type: 'error', text: '저장 중 오류가 발생했습니다.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const selectedEmployee = employees.find(e => e.id === selectedEmployeeId)
+  const hasSavedSetting = selectedEmployeeId ? !!savedSettings[selectedEmployeeId] : false
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* 안내 */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-medium text-blue-800 mb-2 flex items-center">
+          <AlertCircle className="w-4 h-4 mr-2" />
+          급여 설정 안내
+        </h4>
+        <ul className="list-disc list-inside text-blue-700 text-sm space-y-1">
+          <li>직원별 급여 기본 설정을 저장하면 매월 급여명세서가 자동으로 생성됩니다.</li>
+          <li>4대보험료는 매년 1월에 결정되어 연말까지 유지됩니다.</li>
+          <li>설정 변경 시 다음 달 명세서부터 반영됩니다.</li>
+        </ul>
+      </div>
+
+      {/* 직원 선택 */}
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4">직원 선택</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              직원 <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={selectedEmployeeId || ''}
+              onChange={(e) => setSelectedEmployeeId(e.target.value || null)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            >
+              <option value="">직원을 선택하세요</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name}
+                  {savedSettings[emp.id] ? ' ✓ (설정됨)' : emp.hasContract ? ' (계약서 있음)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedEmployee && (
+            <div className="flex items-center">
+              {hasSavedSetting ? (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+                  <Check className="w-4 h-4 mr-1" />
+                  급여 설정 완료
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-700">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  급여 설정 필요
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {loadingEmployee && (
+          <div className="mt-4 text-sm text-emerald-600">
+            직원 정보를 불러오는 중...
+          </div>
+        )}
+      </div>
+
+      {/* 급여 설정 폼 */}
+      {selectedEmployeeId && !loadingEmployee && (
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">
+            급여 설정 - {selectedEmployee?.name}
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* 왼쪽: 지급 항목 */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-700 border-b pb-2">지급 항목</h4>
+
+              {/* 급여 유형 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">급여 유형</label>
+                <div className="flex space-x-4 mt-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="salaryType"
+                      checked={formState.salaryType === 'net'}
+                      onChange={() => handleSalaryTypeChange('net')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">세후 (실수령액 기준)</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="salaryType"
+                      checked={formState.salaryType === 'gross'}
+                      onChange={() => handleSalaryTypeChange('gross')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">세전</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 목표 금액 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {formState.salaryType === 'net' ? '목표 실수령액' : '기본급'} <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={(formState.salaryType === 'net' ? formState.targetAmount : formState.baseSalary) || ''}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 0
+                      if (formState.salaryType === 'net') {
+                        handleFieldChange('targetAmount', value)
+                      } else {
+                        handleFieldChange('baseSalary', value)
+                      }
+                    }}
+                    className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    placeholder="금액을 입력하세요"
+                  />
+                  <span className="absolute right-3 top-2 text-slate-500">원</span>
+                </div>
+              </div>
+
+              {/* 상여 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">상여 (월정액)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={formState.bonus || ''}
+                    onChange={(e) => handleFieldChange('bonus', parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    placeholder="0"
+                  />
+                  <span className="absolute right-3 top-2 text-slate-500">원</span>
+                </div>
+              </div>
+
+              {/* 식대 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  식대 <span className="text-xs text-green-600">(비과세, 최대 20만원)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={formState.mealAllowance || ''}
+                    onChange={(e) => handleFieldChange('mealAllowance', parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    placeholder="200000"
+                  />
+                  <span className="absolute right-3 top-2 text-slate-500">원</span>
+                </div>
+              </div>
+
+              {/* 자가운전 보조금 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  자가운전 보조금 <span className="text-xs text-green-600">(비과세, 최대 20만원)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={formState.vehicleAllowance || ''}
+                    onChange={(e) => handleFieldChange('vehicleAllowance', parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    placeholder="0"
+                  />
+                  <span className="absolute right-3 top-2 text-slate-500">원</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 오른쪽: 공제 항목 */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b pb-2">
+                <h4 className="font-medium text-slate-700">공제 항목</h4>
+                <button
+                  type="button"
+                  onClick={handleRecalculateInsurance}
+                  className="inline-flex items-center text-xs text-emerald-600 hover:text-emerald-800"
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                  4대보험 재계산
+                </button>
+              </div>
+
+              {/* 4대보험 */}
+              <div className="p-3 bg-slate-50 rounded-md space-y-3">
+                <p className="text-xs text-slate-600 mb-2">
+                  4대보험료는 1월에 결정되어 연말까지 유지됩니다.
+                </p>
+
+                {/* 국민연금 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">국민연금</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formState.nationalPension || ''}
+                      onChange={(e) => handleFieldChange('nationalPension', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <span className="absolute right-3 top-2 text-slate-500">원</span>
+                  </div>
+                </div>
+
+                {/* 건강보험 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">건강보험</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formState.healthInsurance || ''}
+                      onChange={(e) => handleFieldChange('healthInsurance', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <span className="absolute right-3 top-2 text-slate-500">원</span>
+                  </div>
+                </div>
+
+                {/* 장기요양보험료 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">장기요양보험료</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formState.longTermCare || ''}
+                      onChange={(e) => handleFieldChange('longTermCare', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <span className="absolute right-3 top-2 text-slate-500">원</span>
+                  </div>
+                </div>
+
+                {/* 고용보험 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">고용보험</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formState.employmentInsurance || ''}
+                      onChange={(e) => handleFieldChange('employmentInsurance', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <span className="absolute right-3 top-2 text-slate-500">원</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 소득세 관련 정보 */}
+              <div className="p-3 bg-blue-50 rounded-md space-y-3">
+                <p className="text-xs text-blue-600 mb-2">
+                  소득세는 간이세액표에 따라 자동 계산됩니다.
+                </p>
+
+                {/* 부양가족 수 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    공제대상 가족 수 (본인 포함)
+                  </label>
+                  <select
+                    value={formState.familyCount}
+                    onChange={(e) => handleFieldChange('familyCount', parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(n => (
+                      <option key={n} value={n}>{n}명</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 자녀 수 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    8세~20세 자녀 수
+                  </label>
+                  <select
+                    value={formState.childCount}
+                    onChange={(e) => handleFieldChange('childCount', parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {[0, 1, 2, 3, 4, 5].map(n => (
+                      <option key={n} value={n}>{n}명</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 기타 공제 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">기타 공제액 (월정액)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={formState.otherDeductions || ''}
+                    onChange={(e) => handleFieldChange('otherDeductions', parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    placeholder="0"
+                  />
+                  <span className="absolute right-3 top-2 text-slate-500">원</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 저장 메시지 */}
+          {saveMessage && (
+            <div className={`mt-4 p-3 rounded-md ${
+              saveMessage.type === 'success'
+                ? 'bg-green-50 border border-green-200 text-green-700'
+                : 'bg-red-50 border border-red-200 text-red-700'
+            }`}>
+              {saveMessage.text}
+            </div>
+          )}
+
+          {/* 저장 버튼 */}
+          <div className="mt-6 flex justify-end">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex items-center px-6 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? '저장 중...' : '설정 저장'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 직원별 설정 현황 */}
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4">직원별 설정 현황</h3>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-2 px-3 font-medium text-slate-700">직원명</th>
+                <th className="text-left py-2 px-3 font-medium text-slate-700">급여 유형</th>
+                <th className="text-right py-2 px-3 font-medium text-slate-700">목표금액/기본급</th>
+                <th className="text-right py-2 px-3 font-medium text-slate-700">4대보험 합계</th>
+                <th className="text-center py-2 px-3 font-medium text-slate-700">상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map(emp => {
+                const setting = savedSettings[emp.id]
+                const insuranceTotal = setting
+                  ? setting.nationalPension + setting.healthInsurance + setting.longTermCare + setting.employmentInsurance
+                  : 0
+
+                return (
+                  <tr key={emp.id} className="border-b hover:bg-slate-50">
+                    <td className="py-2 px-3">{emp.name}</td>
+                    <td className="py-2 px-3">
+                      {setting ? (setting.salaryType === 'net' ? '세후' : '세전') : '-'}
+                    </td>
+                    <td className="py-2 px-3 text-right">
+                      {setting
+                        ? formatCurrency(setting.salaryType === 'net' ? setting.targetAmount : setting.baseSalary) + '원'
+                        : '-'
+                      }
+                    </td>
+                    <td className="py-2 px-3 text-right">
+                      {setting ? formatCurrency(insuranceTotal) + '원' : '-'}
+                    </td>
+                    <td className="py-2 px-3 text-center">
+                      {setting ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">
+                          <Check className="w-3 h-3 mr-1" />
+                          설정됨
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-500">
+                          미설정
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}

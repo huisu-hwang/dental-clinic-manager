@@ -17,6 +17,7 @@ const TAB_ROUTES: Record<string, string> = {
   'contracts': '/dashboard/contracts',
   'vendors': '/dashboard?tab=vendors',
   'documents': '/dashboard?tab=documents',
+  'payroll': '/dashboard?tab=payroll',
   'settings': '/dashboard?tab=settings',
   'guide': '/dashboard?tab=guide',
   'menu-settings': '/dashboard?tab=menu-settings',
