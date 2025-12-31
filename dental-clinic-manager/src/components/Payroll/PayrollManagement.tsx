@@ -1,19 +1,33 @@
 'use client'
 
-import { useState } from 'react'
-import { Banknote, FileText, Settings } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Banknote, FileText, Settings, History } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import PayrollForm from './PayrollForm'
+import PayrollSettings from './PayrollSettings'
 
-type PayrollSubTab = 'create' | 'history' | 'settings'
+type PayrollSubTab = 'view' | 'history' | 'settings'
 
 export default function PayrollManagement() {
-  const [activeSubTab, setActiveSubTab] = useState<PayrollSubTab>('create')
+  const { user } = useAuth()
+  const [activeSubTab, setActiveSubTab] = useState<PayrollSubTab>('view')
 
-  const subTabs = [
-    { id: 'create' as const, label: '명세서 생성', icon: FileText },
-    { id: 'history' as const, label: '발급 이력', icon: Banknote },
-    { id: 'settings' as const, label: '급여 설정', icon: Settings },
-  ]
+  const isOwner = user?.role === 'owner'
+
+  // 탭 목록 생성 (owner만 급여 설정 탭 표시)
+  const subTabs = useMemo(() => {
+    const tabs: { id: PayrollSubTab; label: string; icon: typeof FileText }[] = [
+      { id: 'view', label: '명세서 조회', icon: FileText },
+      { id: 'history', label: '발급 이력', icon: History },
+    ]
+
+    // owner만 급여 설정 탭 표시
+    if (isOwner) {
+      tabs.push({ id: 'settings', label: '급여 설정', icon: Settings })
+    }
+
+    return tabs
+  }, [isOwner])
 
   return (
     <div className="space-y-4">
@@ -55,11 +69,11 @@ export default function PayrollManagement() {
 
       {/* 콘텐츠 */}
       <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
-        {activeSubTab === 'create' && <PayrollForm />}
+        {activeSubTab === 'view' && <PayrollForm />}
 
         {activeSubTab === 'history' && (
           <div className="text-center py-12 text-slate-500">
-            <Banknote className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+            <History className="w-12 h-12 mx-auto mb-4 text-slate-300" />
             <p className="text-lg font-medium">발급 이력</p>
             <p className="text-sm mt-2">
               급여 명세서 발급 이력이 여기에 표시됩니다.
@@ -70,28 +84,26 @@ export default function PayrollManagement() {
           </div>
         )}
 
-        {activeSubTab === 'settings' && (
-          <div className="text-center py-12 text-slate-500">
-            <Settings className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-            <p className="text-lg font-medium">급여 설정</p>
-            <p className="text-sm mt-2">
-              4대보험 기본값, 비과세 한도 등 급여 관련 설정을 관리합니다.
-            </p>
-            <p className="text-xs text-slate-400 mt-4">
-              (향후 구현 예정)
-            </p>
-          </div>
-        )}
+        {activeSubTab === 'settings' && isOwner && <PayrollSettings />}
       </div>
 
       {/* 안내 사항 */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
-        <h4 className="font-medium text-amber-800 mb-2">급여 명세서 작성 안내</h4>
-        <ul className="list-disc list-inside text-amber-700 space-y-1">
-          <li>직원 선택 시 근로계약서가 있으면 급여 정보가 자동으로 불러와집니다.</li>
-          <li>4대보험료는 매년 1월에 결정되어 연말까지 유지되므로, 처음 입력 후 필요시 수정하세요.</li>
-          <li>소득세는 간이세액표에 따라 자동 계산됩니다.</li>
-          <li>세후 계약의 경우 실수령액을 입력하면 세전 급여가 역산됩니다.</li>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+        <h4 className="font-medium text-blue-800 mb-2">급여 명세서 안내</h4>
+        <ul className="list-disc list-inside text-blue-700 space-y-1">
+          {isOwner ? (
+            <>
+              <li><strong>급여 설정</strong> 탭에서 직원별 급여 기본 정보를 설정하세요.</li>
+              <li>설정이 완료되면 매월 급여 명세서가 자동으로 생성됩니다.</li>
+              <li>4대보험료는 매년 1월에 결정되어 연말까지 유지됩니다.</li>
+              <li>소득세는 간이세액표에 따라 자동 계산됩니다.</li>
+            </>
+          ) : (
+            <>
+              <li>직원 본인의 급여 명세서만 조회할 수 있습니다.</li>
+              <li>급여 관련 문의는 원장님께 문의해주세요.</li>
+            </>
+          )}
         </ul>
       </div>
     </div>
