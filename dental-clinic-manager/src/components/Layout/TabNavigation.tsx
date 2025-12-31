@@ -49,7 +49,8 @@ import {
   Target,
   Truck,
   Zap,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Banknote
 } from 'lucide-react'
 
 interface TabNavigationProps {
