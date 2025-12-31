@@ -201,13 +201,18 @@ export default function PayrollForm() {
       return
     }
 
+    // 저장된 데이터가 로드된 상태에서는 재계산하지 않음 (사용자가 값을 변경하면 hasSavedData가 false가 됨)
+    if (hasSavedData) {
+      return
+    }
+
     if (formState.targetAmount > 0 || formState.baseSalary > 0) {
       const result = calculatePayrollFromFormState(formState)
       setCalculationResult(result)
     } else {
       setCalculationResult(null)
     }
-  }, [formState])
+  }, [formState, hasSavedData])
 
   // 폼 필드 변경 핸들러
   const handleFieldChange = (field: keyof PayrollFormState, value: any) => {
