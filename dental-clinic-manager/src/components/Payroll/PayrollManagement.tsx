@@ -63,25 +63,25 @@ export default function PayrollManagement() {
     return tabs
   }, [isOwner])
 
-  // Show loading while checking verification
-  if (!isVerified && !showPasswordModal) {
+  // Show password modal if not verified
+  if (!isVerified) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <PasswordVerificationModal
+          isOpen={showPasswordModal}
+          onVerified={handlePasswordVerified}
+          onCancel={handlePasswordCancel}
+          purpose="payroll"
+        />
+        {!showPasswordModal && (
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        )}
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      {/* 비밀번호 확인 모달 */}
-      <PasswordVerificationModal
-        isOpen={showPasswordModal}
-        onVerified={handlePasswordVerified}
-        onCancel={handlePasswordCancel}
-        purpose="payroll"
-      />
-
       {/* 헤더 */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
         <div className="flex items-center space-x-3">
