@@ -1,18 +1,52 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Banknote, FileText, Settings, History } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { checkSecuritySession, setSecuritySession } from '@/lib/securitySession'
+import PasswordVerificationModal from '@/components/Security/PasswordVerificationModal'
 import PayrollForm from './PayrollForm'
 import PayrollSettings from './PayrollSettings'
 
 type PayrollSubTab = 'view' | 'history' | 'settings'
 
 export default function PayrollManagement() {
+  const router = useRouter()
   const { user } = useAuth()
   const [activeSubTab, setActiveSubTab] = useState<PayrollSubTab>('view')
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [isVerified, setIsVerified] = useState(false)
 
   const isOwner = user?.role === 'owner'
+
+  // Check security session on mount
+  useEffect(() => {
+    console.log('[PayrollManagement] Checking security session...')
+    const hasValidSession = checkSecuritySession('payroll')
+
+    if (hasValidSession) {
+      console.log('[PayrollManagement] Valid security session found')
+      setIsVerified(true)
+    } else {
+      console.log('[PayrollManagement] No valid security session, showing password modal')
+      setShowPasswordModal(true)
+    }
+  }, [])
+
+  // Handle successful password verification
+  const handlePasswordVerified = () => {
+    console.log('[PayrollManagement] Password verified, creating security session')
+    setSecuritySession('payroll')
+    setShowPasswordModal(false)
+    setIsVerified(true)
+  }
+
+  // Handle password verification cancel
+  const handlePasswordCancel = () => {
+    console.log('[PayrollManagement] Password verification cancelled, redirecting to dashboard')
+    router.push('/dashboard')
+  }
 
   // 탭 목록 생성 (owner만 급여 설정 탭 표시)
   const subTabs = useMemo(() => {
@@ -29,17 +63,34 @@ export default function PayrollManagement() {
     return tabs
   }, [isOwner])
 
+  // Show loading while checking verification
+  if (!isVerified && !showPasswordModal) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
+      {/* 비밀번호 확인 모달 */}
+      <PasswordVerificationModal
+        isOpen={showPasswordModal}
+        onVerified={handlePasswordVerified}
+        onCancel={handlePasswordCancel}
+        purpose="payroll"
+      />
+
       {/* 헤더 */}
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 rounded-t-xl shadow-sm">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
             <Banknote className="w-5 h-5 text-white" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">급여 명세서</h2>
-            <p className="text-emerald-100 text-sm">Payroll Statement</p>
+            <p className="text-blue-100 text-sm">Payroll Statement</p>
           </div>
         </div>
       </div>
@@ -55,7 +106,7 @@ export default function PayrollManagement() {
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                   activeSubTab === tab.id
-                    ? 'bg-white text-emerald-600 shadow-sm'
+                    ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                 }`}
               >
