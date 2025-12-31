@@ -1,0 +1,379 @@
+// ========================================
+// 환자 리콜 시스템 타입 정의
+// Patient Recall System Types
+// ========================================
+
+// 환자 리콜 상태
+export type PatientRecallStatus =
+  | 'pending'              // 대기 중 (아직 연락 안함)
+  | 'sms_sent'             // 문자 발송 완료
+  | 'call_attempted'       // 전화 시도함
+  | 'appointment_made'     // 내원 약속 잡음
+  | 'call_rejected'        // 통화 거부
+  | 'visit_refused'        // 내원 거부 의사 표시
+  | 'invalid_number'       // 없는 번호
+  | 'no_answer'            // 부재중
+  | 'callback_requested'   // 콜백 요청
+  | 'completed'            // 완료
+
+// 연락 유형
+export type ContactType = 'sms' | 'call'
+
+// 캠페인 상태
+export type CampaignStatus = 'active' | 'completed' | 'archived'
+
+// ========================================
+// 리콜 캠페인
+// ========================================
+export interface RecallCampaign {
+  id: string
+  clinic_id: string
+
+  // 캠페인 정보
+  name: string
+  description?: string
+
+  // 파일 업로드 정보
+  original_filename?: string
+  total_patients: number
+
+  // 통계
+  sms_sent_count: number
+  call_attempted_count: number
+  appointment_count: number
+
+  // 상태
+  status: CampaignStatus
+
+  // 메타데이터
+  created_by?: string
+  created_by_name?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface RecallCampaignFormData {
+  name: string
+  description?: string
+}
+
+// ========================================
+// 리콜 환자
+// ========================================
+export interface RecallPatient {
+  id: string
+  clinic_id: string
+  campaign_id?: string
+
+  // 환자 정보
+  patient_name: string
+  phone_number: string
+  chart_number?: string
+
+  // 추가 정보
+  last_visit_date?: string
+  treatment_type?: string
+  notes?: string
+
+  // 리콜 상태
+  status: PatientRecallStatus
+
+  // 예약 정보
+  appointment_date?: string
+  appointment_time?: string
+  appointment_notes?: string
+
+  // 연락 이력 요약
+  last_contact_date?: string
+  last_contact_type?: ContactType
+  contact_count: number
+
+  // 메타데이터
+  created_at: string
+  updated_at: string
+
+  // 조인 데이터
+  campaign?: RecallCampaign
+}
+
+// 환자 목록 업로드용 데이터 (CSV/Excel)
+export interface RecallPatientUploadData {
+  patient_name: string
+  phone_number: string
+  chart_number?: string
+  last_visit_date?: string
+  treatment_type?: string
+  notes?: string
+}
+
+// 환자 폼 데이터
+export interface RecallPatientFormData {
+  patient_name: string
+  phone_number: string
+  chart_number?: string
+  last_visit_date?: string
+  treatment_type?: string
+  notes?: string
+}
+
+// ========================================
+// 연락 이력
+// ========================================
+export interface RecallContactLog {
+  id: string
+  clinic_id: string
+  patient_id: string
+  campaign_id?: string
+
+  // 연락 정보
+  contact_type: ContactType
+  contact_date: string
+
+  // 문자 메시지 관련
+  sms_content?: string
+  sms_api_response?: string
+  sms_message_id?: string
+
+  // 전화 관련
+  call_duration?: number
+  call_result?: string
+
+  // 결과
+  result_status?: PatientRecallStatus
+  result_notes?: string
+
+  // 담당자
+  contacted_by?: string
+  contacted_by_name?: string
+
+  // 메타데이터
+  created_at: string
+
+  // 조인 데이터
+  patient?: RecallPatient
+}
+
+// 연락 이력 생성용 데이터
+export interface RecallContactLogFormData {
+  patient_id: string
+  campaign_id?: string
+  contact_type: ContactType
+  sms_content?: string
+  call_duration?: number
+  call_result?: string
+  result_status: PatientRecallStatus
+  result_notes?: string
+}
+
+// ========================================
+// 문자 템플릿
+// ========================================
+export interface RecallSmsTemplate {
+  id: string
+  clinic_id: string
+
+  // 템플릿 정보
+  name: string
+  content: string  // 치환 변수: {환자명}, {병원명}, {전화번호} 등
+
+  // 상태
+  is_default: boolean
+  is_active: boolean
+
+  // 메타데이터
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface RecallSmsTemplateFormData {
+  name: string
+  content: string
+  is_default?: boolean
+}
+
+// ========================================
+// 알리고 API 설정
+// ========================================
+export interface AligoSettings {
+  id: string
+  clinic_id: string
+
+  // API 설정
+  api_key?: string
+  user_id?: string
+  sender_number?: string
+
+  // 상태
+  is_active: boolean
+  last_test_date?: string
+  last_test_result?: boolean
+
+  // 메타데이터
+  created_at: string
+  updated_at: string
+}
+
+export interface AligoSettingsFormData {
+  api_key: string
+  user_id: string
+  sender_number: string
+}
+
+// ========================================
+// 알리고 API 요청/응답 타입
+// ========================================
+export interface AligoSendSmsRequest {
+  receiver: string       // 수신자 번호
+  msg: string           // 메시지 내용
+  msg_type?: 'SMS' | 'LMS' | 'MMS'  // 메시지 타입
+  title?: string        // LMS/MMS 제목
+}
+
+export interface AligoSendSmsResponse {
+  result_code: string
+  message: string
+  msg_id?: string
+  success_cnt?: number
+  error_cnt?: number
+}
+
+// ========================================
+// 인터넷 전화 API 설정
+// ========================================
+export interface VoipSettings {
+  id: string
+  clinic_id: string
+
+  // 서비스 제공업체
+  provider: VoipProvider
+
+  // API 설정
+  api_key?: string
+  api_secret?: string
+  caller_number?: string
+
+  // 추가 설정 (업체별)
+  extra_settings?: Record<string, string>
+
+  // 상태
+  is_active: boolean
+
+  // 메타데이터
+  created_at: string
+  updated_at: string
+}
+
+// 지원하는 VoIP 제공업체
+export type VoipProvider =
+  | 'kt_bizmeka'       // KT 비즈메카
+  | 'lg_uplus'         // LG U+
+  | 'sk_bizring'       // SK 비즈링
+  | 'samsung_voip'     // 삼성 VoIP
+  | 'custom'           // 사용자 정의
+
+export interface VoipProviderInfo {
+  id: VoipProvider
+  name: string
+  description: string
+  apiDocUrl?: string
+}
+
+export const VOIP_PROVIDERS: VoipProviderInfo[] = [
+  {
+    id: 'kt_bizmeka',
+    name: 'KT 비즈메카',
+    description: 'KT 클라우드 전화 서비스',
+    apiDocUrl: 'https://www.bizmeka.com'
+  },
+  {
+    id: 'lg_uplus',
+    name: 'LG U+ 스마트오피스',
+    description: 'LG U+ 클라우드 전화 서비스',
+    apiDocUrl: 'https://www.uplus.co.kr'
+  },
+  {
+    id: 'sk_bizring',
+    name: 'SK 비즈링',
+    description: 'SK 클라우드 전화 서비스',
+    apiDocUrl: 'https://www.skbizring.com'
+  },
+  {
+    id: 'samsung_voip',
+    name: '삼성 VoIP',
+    description: '삼성 IP 전화 시스템',
+  },
+  {
+    id: 'custom',
+    name: '사용자 정의',
+    description: '직접 API 설정',
+  }
+]
+
+// ========================================
+// 상태 레이블 및 색상
+// ========================================
+export const RECALL_STATUS_LABELS: Record<PatientRecallStatus, string> = {
+  pending: '대기 중',
+  sms_sent: '문자 발송',
+  call_attempted: '전화 시도',
+  appointment_made: '예약 완료',
+  call_rejected: '통화 거부',
+  visit_refused: '내원 거부',
+  invalid_number: '없는 번호',
+  no_answer: '부재중',
+  callback_requested: '콜백 요청',
+  completed: '완료'
+}
+
+export const RECALL_STATUS_COLORS: Record<PatientRecallStatus, string> = {
+  pending: 'bg-gray-100 text-gray-700',
+  sms_sent: 'bg-blue-100 text-blue-700',
+  call_attempted: 'bg-yellow-100 text-yellow-700',
+  appointment_made: 'bg-green-100 text-green-700',
+  call_rejected: 'bg-red-100 text-red-700',
+  visit_refused: 'bg-red-100 text-red-700',
+  invalid_number: 'bg-gray-100 text-gray-500',
+  no_answer: 'bg-orange-100 text-orange-700',
+  callback_requested: 'bg-purple-100 text-purple-700',
+  completed: 'bg-green-100 text-green-700'
+}
+
+export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
+  sms: '문자',
+  call: '전화'
+}
+
+// ========================================
+// 필터 옵션
+// ========================================
+export interface RecallPatientFilters {
+  status?: PatientRecallStatus | 'all'
+  campaign_id?: string
+  search?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
+// ========================================
+// 통계
+// ========================================
+export interface RecallStats {
+  total_patients: number
+  pending_count: number
+  contacted_count: number
+  appointment_count: number
+  rejected_count: number
+  invalid_count: number
+  success_rate: number  // 예약 성공률 (%)
+}
+
+// ========================================
+// 디바이스 타입 (전화 걸기용)
+// ========================================
+export type DeviceType = 'mobile' | 'desktop' | 'tablet'
+
+export interface CallOptions {
+  deviceType: DeviceType
+  useVoip: boolean
+}

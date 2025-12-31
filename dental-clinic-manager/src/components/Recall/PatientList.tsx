@@ -1,0 +1,438 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import {
+  Phone,
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  Clock,
+  User,
+  Search,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  MoreVertical,
+  Calendar,
+  PhoneOff,
+  PhoneMissed,
+  Ban
+} from 'lucide-react'
+import type {
+  RecallPatient,
+  PatientRecallStatus,
+  RecallPatientFilters
+} from '@/types/recall'
+import {
+  RECALL_STATUS_LABELS,
+  RECALL_STATUS_COLORS
+} from '@/types/recall'
+import { displayPhoneNumber } from '@/lib/phoneCallService'
+
+interface PatientListProps {
+  patients: RecallPatient[]
+  selectedPatients: string[]
+  onSelectPatient: (id: string) => void
+  onSelectAll: (selected: boolean) => void
+  onCallPatient: (patient: RecallPatient) => void
+  onSmsPatient: (patient: RecallPatient) => void
+  onUpdateStatus: (patient: RecallPatient) => void
+  onViewHistory: (patient: RecallPatient) => void
+  filters: RecallPatientFilters
+  onFiltersChange: (filters: RecallPatientFilters) => void
+  isLoading?: boolean
+}
+
+// 상태별 아이콘
+const STATUS_ICONS: Record<PatientRecallStatus, React.ReactNode> = {
+  pending: <Clock className="w-4 h-4" />,
+  sms_sent: <MessageSquare className="w-4 h-4" />,
+  call_attempted: <Phone className="w-4 h-4" />,
+  appointment_made: <CheckCircle className="w-4 h-4" />,
+  call_rejected: <PhoneOff className="w-4 h-4" />,
+  visit_refused: <Ban className="w-4 h-4" />,
+  invalid_number: <XCircle className="w-4 h-4" />,
+  no_answer: <PhoneMissed className="w-4 h-4" />,
+  callback_requested: <Phone className="w-4 h-4" />,
+  completed: <CheckCircle className="w-4 h-4" />
+}
+
+export default function PatientList({
+  patients,
+  selectedPatients,
+  onSelectPatient,
+  onSelectAll,
+  onCallPatient,
+  onSmsPatient,
+  onUpdateStatus,
+  onViewHistory,
+  filters,
+  onFiltersChange,
+  isLoading
+}: PatientListProps) {
+  const [sortField, setSortField] = useState<'patient_name' | 'status' | 'last_contact_date'>('patient_name')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [showFilters, setShowFilters] = useState(false)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
+  // 정렬된 환자 목록
+  const sortedPatients = useMemo(() => {
+    return [...patients].sort((a, b) => {
+      let comparison = 0
+
+      switch (sortField) {
+        case 'patient_name':
+          comparison = a.patient_name.localeCompare(b.patient_name)
+          break
+        case 'status':
+          comparison = a.status.localeCompare(b.status)
+          break
+        case 'last_contact_date':
+          const dateA = a.last_contact_date || ''
+          const dateB = b.last_contact_date || ''
+          comparison = dateA.localeCompare(dateB)
+          break
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [patients, sortField, sortDirection])
+
+  // 정렬 토글
+  const handleSort = (field: 'patient_name' | 'status' | 'last_contact_date') => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  // 전체 선택 상태
+  const isAllSelected = patients.length > 0 && selectedPatients.length === patients.length
+  const isPartiallySelected = selectedPatients.length > 0 && selectedPatients.length < patients.length
+
+  // 상태별 필터 옵션
+  const statusOptions: { value: PatientRecallStatus | 'all'; label: string }[] = [
+    { value: 'all', label: '전체' },
+    { value: 'pending', label: '대기 중' },
+    { value: 'sms_sent', label: '문자 발송' },
+    { value: 'call_attempted', label: '전화 시도' },
+    { value: 'appointment_made', label: '예약 완료' },
+    { value: 'call_rejected', label: '통화 거부' },
+    { value: 'visit_refused', label: '내원 거부' },
+    { value: 'invalid_number', label: '없는 번호' },
+    { value: 'no_answer', label: '부재중' },
+    { value: 'callback_requested', label: '콜백 요청' }
+  ]
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* 헤더 및 필터 */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          {/* 검색 */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="환자명, 전화번호, 차트번호 검색..."
+              value={filters.search || ''}
+              onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* 상태 필터 */}
+          <select
+            value={filters.status || 'all'}
+            onChange={(e) => onFiltersChange({ ...filters, status: e.target.value as PatientRecallStatus | 'all' })}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            {statusOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+
+          {/* 필터 토글 */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`px-4 py-2 border rounded-lg flex items-center gap-2 ${
+              showFilters ? 'border-blue-500 text-blue-600' : 'border-gray-300 text-gray-700'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            필터
+            {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {/* 확장 필터 */}
+        {showFilters && (
+          <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">등록일 (시작)</label>
+              <input
+                type="date"
+                value={filters.dateFrom || ''}
+                onChange={(e) => onFiltersChange({ ...filters, dateFrom: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">등록일 (종료)</label>
+              <input
+                type="date"
+                value={filters.dateTo || ''}
+                onChange={(e) => onFiltersChange({ ...filters, dateTo: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 선택 정보 및 액션 */}
+      {selectedPatients.length > 0 && (
+        <div className="p-4 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+          <span className="text-blue-700">
+            {selectedPatients.length}명 선택됨
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onSelectAll(false)}
+              className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800"
+            >
+              선택 해제
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 테이블 */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="px-4 py-3 text-left">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = isPartiallySelected
+                  }}
+                  onChange={(e) => onSelectAll(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </th>
+              <th className="px-4 py-3 text-left">
+                <button
+                  onClick={() => handleSort('patient_name')}
+                  className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  환자 정보
+                  {sortField === 'patient_name' && (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left">
+                <button
+                  onClick={() => handleSort('status')}
+                  className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  상태
+                  {sortField === 'status' && (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left">
+                <button
+                  onClick={() => handleSort('last_contact_date')}
+                  className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  마지막 연락
+                  {sortField === 'last_contact_date' && (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">예약 정보</th>
+              <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <span>로딩 중...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : sortedPatients.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                  <div className="flex flex-col items-center gap-2">
+                    <User className="w-12 h-12 text-gray-300" />
+                    <span>환자 목록이 없습니다.</span>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              sortedPatients.map((patient) => (
+                <tr
+                  key={patient.id}
+                  className={`border-b border-gray-100 hover:bg-gray-50 ${
+                    selectedPatients.includes(patient.id) ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  {/* 체크박스 */}
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedPatients.includes(patient.id)}
+                      onChange={() => onSelectPatient(patient.id)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </td>
+
+                  {/* 환자 정보 */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                        <User className="w-5 h-5 text-gray-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{patient.patient_name}</p>
+                        <p className="text-sm text-gray-500">{displayPhoneNumber(patient.phone_number)}</p>
+                        {patient.chart_number && (
+                          <p className="text-xs text-gray-400">차트: {patient.chart_number}</p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* 상태 */}
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${RECALL_STATUS_COLORS[patient.status]}`}>
+                      {STATUS_ICONS[patient.status]}
+                      {RECALL_STATUS_LABELS[patient.status]}
+                    </span>
+                    {patient.contact_count > 0 && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        연락 {patient.contact_count}회
+                      </p>
+                    )}
+                  </td>
+
+                  {/* 마지막 연락 */}
+                  <td className="px-4 py-3">
+                    {patient.last_contact_date ? (
+                      <div>
+                        <p className="text-sm text-gray-900">
+                          {new Date(patient.last_contact_date).toLocaleDateString('ko-KR')}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {patient.last_contact_type === 'sms' ? '문자' : '전화'}
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+
+                  {/* 예약 정보 */}
+                  <td className="px-4 py-3">
+                    {patient.appointment_date ? (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-green-500" />
+                        <div>
+                          <p className="text-sm text-gray-900">{patient.appointment_date}</p>
+                          {patient.appointment_time && (
+                            <p className="text-xs text-gray-500">{patient.appointment_time}</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+
+                  {/* 액션 */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => onCallPatient(patient)}
+                        title="전화 걸기"
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      >
+                        <Phone className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => onSmsPatient(patient)}
+                        title="문자 보내기"
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <MessageSquare className="w-5 h-5" />
+                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === patient.id ? null : patient.id)}
+                          className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+
+                        {/* 드롭다운 메뉴 */}
+                        {openMenuId === patient.id && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setOpenMenuId(null)}
+                            />
+                            <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                              <button
+                                onClick={() => {
+                                  onUpdateStatus(patient)
+                                  setOpenMenuId(null)
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                              >
+                                상태 변경
+                              </button>
+                              <button
+                                onClick={() => {
+                                  onViewHistory(patient)
+                                  setOpenMenuId(null)
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                              >
+                                연락 이력
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 페이지네이션 (추후 구현) */}
+      {patients.length > 0 && (
+        <div className="p-4 border-t border-gray-200 flex items-center justify-between">
+          <span className="text-sm text-gray-600">
+            총 {patients.length}명
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
