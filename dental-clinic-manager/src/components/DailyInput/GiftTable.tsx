@@ -178,24 +178,33 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                     <div className="flex flex-col gap-1">
                       <select
                         className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
-                        style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                          backgroundPosition: 'right 0.5rem center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '1.5em 1.5em',
+                          paddingRight: '2.5rem',
+                          borderLeftWidth: category ? '4px' : '1px',
+                          borderLeftColor: category ? category.color : undefined
+                        }}
                         value={row.gift_type}
                         onChange={(e) => updateRow(index, 'gift_type', e.target.value)}
                         disabled={isReadOnly}
                       >
                         <option value="없음">없음</option>
                         {groupedInventory.map((group, groupIdx) => (
-                          <optgroup key={groupIdx} label={group.category?.name || '미분류'}>
+                          <optgroup key={groupIdx} label={group.category ? `● ${group.category.name}` : '○ 미분류'}>
                             {group.items.map(item => {
                               const availableQty = getAvailableInventory(item.name, index)
                               const isSelected = row.gift_type === item.name
+                              const itemCategory = getCategoryForGift(item.name)
                               return (
                                 <option
                                   key={item.id}
                                   value={item.name}
                                   disabled={availableQty <= 0 && !isSelected}
                                 >
-                                  {isSelected ? item.name : `${item.name} (${availableQty}개)`}
+                                  {isSelected ? item.name : `${item.name} (${availableQty}개)${itemCategory ? ` [${itemCategory.name}]` : ''}`}
                                 </option>
                               )
                             })}
@@ -326,24 +335,33 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                     <label className="block text-xs font-medium text-slate-600 mb-1">선물 종류</label>
                     <select
                       className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
-                      style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                        backgroundPosition: 'right 0.5rem center',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundSize: '1.5em 1.5em',
+                        paddingRight: '2.5rem',
+                        borderLeftWidth: category ? '4px' : '1px',
+                        borderLeftColor: category ? category.color : undefined
+                      }}
                       value={row.gift_type}
                       onChange={(e) => updateRow(index, 'gift_type', e.target.value)}
                       disabled={isReadOnly}
                     >
                       <option value="없음">없음</option>
                       {groupedInventory.map((group, groupIdx) => (
-                        <optgroup key={groupIdx} label={group.category?.name || '미분류'}>
+                        <optgroup key={groupIdx} label={group.category ? `● ${group.category.name}` : '○ 미분류'}>
                           {group.items.map(item => {
                             const availableQty = getAvailableInventory(item.name, index)
                             const isSelected = row.gift_type === item.name
+                            const itemCategory = getCategoryForGift(item.name)
                             return (
                               <option
                                 key={item.id}
                                 value={item.name}
                                 disabled={availableQty <= 0 && !isSelected}
                               >
-                                {isSelected ? item.name : `${item.name} (${availableQty}개)`}
+                                {isSelected ? item.name : `${item.name} (${availableQty}개)${itemCategory ? ` [${itemCategory.name}]` : ''}`}
                               </option>
                             )
                           })}
