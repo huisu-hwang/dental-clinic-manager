@@ -78,6 +78,7 @@ export default function DashboardPage() {
     consultLogs,
     giftLogs,
     giftInventory,
+    giftCategories,
     inventoryLogs,
     cashRegisterLogs,
     loading,
@@ -219,6 +220,50 @@ export default function DashboardPage() {
     }
   }
 
+  // 선물 아이템의 카테고리 변경
+  const handleUpdateGiftCategory = async (giftId: number, categoryId: number | null) => {
+    const result = await dataService.updateGiftItemCategory(giftId, categoryId)
+    if (result.error) {
+      showToast(`카테고리 변경 실패: ${result.error}`, 'error')
+    } else {
+      showToast('선물 카테고리가 변경되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
+  // 카테고리 추가
+  const handleAddCategory = async (name: string, description?: string, color?: string) => {
+    const result = await dataService.addGiftCategory(name, description, color)
+    if (result.error) {
+      showToast(`카테고리 추가 실패: ${result.error}`, 'error')
+    } else {
+      showToast('카테고리가 추가되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
+  // 카테고리 수정
+  const handleUpdateCategory = async (id: number, updates: { name?: string; description?: string; color?: string }) => {
+    const result = await dataService.updateGiftCategory(id, updates)
+    if (result.error) {
+      showToast(`카테고리 수정 실패: ${result.error}`, 'error')
+    } else {
+      showToast('카테고리가 수정되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
+  // 카테고리 삭제
+  const handleDeleteCategory = async (id: number) => {
+    const result = await dataService.deleteGiftCategory(id)
+    if (result.error) {
+      showToast(`카테고리 삭제 실패: ${result.error}`, 'error')
+    } else {
+      showToast('카테고리가 삭제되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
   const handleRecalculateStats = async (date: string) => {
     const result = await dataService.recalculateDailyReportStats(date)
     if (result.error) {
@@ -297,6 +342,7 @@ export default function DashboardPage() {
           {activeTab === 'daily-input' && (
             <DailyInputForm
               giftInventory={giftInventory}
+              giftCategories={giftCategories}
               giftLogs={giftLogs}
               baseUsageByGift={baseUsageByGift}
               onSaveReport={handleSaveReport}
@@ -642,6 +688,7 @@ export default function DashboardPage() {
           {activeTab === 'settings' && (
             <InventoryManagement
               giftInventory={giftInventory}
+              giftCategories={giftCategories}
               giftLogs={giftLogs}
               baseUsageByGift={baseUsageByGift}
               currentGiftRows={currentGiftRows}
@@ -649,6 +696,10 @@ export default function DashboardPage() {
               onAddGiftItem={handleAddGiftItem}
               onUpdateStock={handleUpdateStock}
               onDeleteGiftItem={handleDeleteGiftItem}
+              onUpdateGiftCategory={handleUpdateGiftCategory}
+              onAddCategory={handleAddCategory}
+              onUpdateCategory={handleUpdateCategory}
+              onDeleteCategory={handleDeleteCategory}
             />
           )}
 

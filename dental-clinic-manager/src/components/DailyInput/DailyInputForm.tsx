@@ -11,7 +11,7 @@ import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
 import { saveDailyReport } from '@/app/actions/dailyReport'
 import { createClient } from '@/lib/supabase/client'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, CashRegisterRowData, GiftInventory, GiftLog } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, CashRegisterRowData, GiftInventory, GiftLog, GiftCategory } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
 
 // Feature Flag: 신규 아키텍처 사용 여부
@@ -19,6 +19,7 @@ const USE_NEW_ARCHITECTURE = process.env.NEXT_PUBLIC_USE_NEW_DAILY_REPORT === 't
 
 interface DailyInputFormProps {
   giftInventory: GiftInventory[]
+  giftCategories?: GiftCategory[]  // 선물 카테고리 목록
   giftLogs?: GiftLog[]  // 저장된 선물 사용 기록 (실제 재고 계산용)
   baseUsageByGift?: Record<string, number>  // 전체 giftLogs 기반 사용량 (dashboard에서 계산)
   onSaveReport: (data: {
@@ -39,7 +40,7 @@ interface DailyInputFormProps {
   currentUser?: UserProfile
 }
 
-export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsageByGift = {}, onSaveReport, onSaveSuccess, onGiftRowsChange, canCreate, canEdit, currentUser }: DailyInputFormProps) {
+export default function DailyInputForm({ giftInventory, giftCategories = [], giftLogs = [], baseUsageByGift = {}, onSaveReport, onSaveSuccess, onGiftRowsChange, canCreate, canEdit, currentUser }: DailyInputFormProps) {
   const [reportDate, setReportDate] = useState(getTodayString())
   const [consultRows, setConsultRows] = useState<ConsultRowData[]>([
     { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
@@ -796,6 +797,7 @@ export default function DailyInputForm({ giftInventory, giftLogs = [], baseUsage
             giftRows={giftRows}
             onGiftRowsChange={setGiftRows}
             giftInventory={giftInventory}
+            giftCategories={giftCategories}
             giftLogs={giftLogs}
             baseUsageByGift={baseUsageByGift}
             currentDate={reportDate}

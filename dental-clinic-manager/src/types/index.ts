@@ -32,10 +32,22 @@ export interface GiftLog {
   clinic_id?: string | null;
 }
 
+export interface GiftCategory {
+  id: number;
+  clinic_id: string;
+  name: string;
+  description?: string;
+  color: string;
+  display_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface GiftInventory {
   id: number;
   name: string;
   stock: number;
+  category_id?: number | null;
   clinic_id?: string | null;
 }
 

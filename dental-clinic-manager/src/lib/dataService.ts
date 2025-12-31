@@ -1,7 +1,7 @@
 import { createClient } from './supabase/client'
 import { ensureConnection } from './supabase/connectionCheck'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData, CashRegisterRowData } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftCategory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData, CashRegisterRowData } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
@@ -1171,6 +1171,161 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting gift item:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // ========================================
+  // 선물 카테고리 관리 함수들
+  // ========================================
+
+  // 선물 카테고리 목록 조회
+  async getGiftCategories() {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('gift_categories')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: true })
+
+      if (error) throw error
+
+      return { data: data as GiftCategory[], error: null }
+    } catch (error: unknown) {
+      console.error('Error fetching gift categories:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 카테고리 추가
+  async addGiftCategory(name: string, description?: string, color?: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      // 현재 최대 display_order 가져오기
+      const { data: existingCategories } = await supabase
+        .from('gift_categories')
+        .select('display_order')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: false })
+        .limit(1)
+
+      const maxOrder = existingCategories?.[0]?.display_order || 0
+
+      const { data, error } = await supabase
+        .from('gift_categories')
+        .insert([{
+          clinic_id: clinicId,
+          name,
+          description: description || '',
+          color: color || '#3b82f6',
+          display_order: maxOrder + 1
+        }] as any)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data: data as GiftCategory, error: null }
+    } catch (error: unknown) {
+      console.error('Error adding gift category:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 카테고리 수정
+  async updateGiftCategory(id: number, updates: { name?: string; description?: string; color?: string }) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('gift_categories')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('clinic_id', clinicId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data: data as GiftCategory, error: null }
+    } catch (error: unknown) {
+      console.error('Error updating gift category:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 카테고리 삭제
+  async deleteGiftCategory(id: number) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('gift_categories')
+        .delete()
+        .eq('id', id)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting gift category:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 아이템의 카테고리 변경
+  async updateGiftItemCategory(giftId: number, categoryId: number | null) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('gift_inventory')
+        .update({ category_id: categoryId })
+        .eq('id', giftId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating gift item category:', error)
       return { error: extractErrorMessage(error) }
     }
   },
