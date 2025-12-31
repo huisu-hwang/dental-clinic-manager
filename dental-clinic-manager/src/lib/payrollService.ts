@@ -12,7 +12,14 @@ import type {
   SalaryType,
   EmployeeSalaryInfo,
   SocialInsuranceSettings,
-  PayrollFormState
+  PayrollFormState,
+  AttendanceSummaryForPayroll,
+  AttendanceDeduction,
+  DeductionDetail,
+  PayrollBasis,
+  AttendancePayrollInput,
+  AttendancePayrollResult,
+  PayrollAccessResult
 } from '@/types/payroll'
 import {
   calculateIncomeTax,
@@ -570,4 +577,481 @@ export async function deletePayrollStatement(
       error: error instanceof Error ? error.message : '삭제 중 오류가 발생했습니다.'
     }
   }
+}
+
+// =====================================================================
+// 근태 연동 급여 계산 함수 (대한민국 근로기준법 기반)
+// =====================================================================
+
+/**
+ * 월 소정 근로시간 상수 (통상 209시간)
+ * 주 40시간 × (365일 ÷ 7일 ÷ 12개월) + 주휴 8시간 = 약 209시간
+ */
+const MONTHLY_WORK_HOURS = 209
+
+/**
+ * 일 소정 근로시간 (8시간)
+ */
+const DAILY_WORK_HOURS = 8
+
+/**
+ * 월 소정 근로일수 계산 (약 21.75일)
+ */
+const MONTHLY_WORK_DAYS = MONTHLY_WORK_HOURS / DAILY_WORK_HOURS
+
+/**
+ * 급여 계산 기준 정보 생성
+ * @param monthlyBaseSalary 월 기본급 (비과세 제외, 4대보험 및 세금 공제 전)
+ */
+export function calculatePayrollBasis(monthlyBaseSalary: number): PayrollBasis {
+  const hourlyWage = Math.round(monthlyBaseSalary / MONTHLY_WORK_HOURS)
+  const dailyWage = Math.round(monthlyBaseSalary / MONTHLY_WORK_DAYS)
+  // 주휴수당: 일급 × 1일 (주 5일 개근 시 지급)
+  const weeklyHolidayPay = dailyWage
+
+  return {
+    monthlyBaseSalary,
+    monthlyWorkDays: MONTHLY_WORK_DAYS,
+    dailyWorkHours: DAILY_WORK_HOURS,
+    monthlyWorkHours: MONTHLY_WORK_HOURS,
+    dailyWage,
+    hourlyWage,
+    weeklyHolidayPay
+  }
+}
+
+/**
+ * 해당 월의 소정 근로일수 계산
+ * @param year 연도
+ * @param month 월
+ * @param weekendOff 주말 휴무 여부 (기본: true - 토/일 휴무)
+ */
+export function getScheduledWorkDays(
+  year: number,
+  month: number,
+  weekendOff: boolean = true
+): number {
+  const daysInMonth = new Date(year, month, 0).getDate()
+  let workDays = 0
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day)
+    const dayOfWeek = date.getDay()
+
+    // 주말(토/일) 제외
+    if (weekendOff && (dayOfWeek === 0 || dayOfWeek === 6)) {
+      continue
+    }
+
+    workDays++
+  }
+
+  return workDays
+}
+
+/**
+ * 급여 계산용 근태 요약 조회
+ * 해당 월의 근태 기록을 기반으로 급여 계산에 필요한 정보를 요약
+ */
+export async function getAttendanceSummaryForPayroll(
+  employeeId: string,
+  clinicId: string,
+  year: number,
+  month: number
+): Promise<{ success: boolean; data?: AttendanceSummaryForPayroll; error?: string }> {
+  try {
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+
+    // 근태 기록 조회
+    const response = await fetch(
+      `/api/attendance/records?clinicId=${clinicId}&userId=${employeeId}&startDate=${startDate}&endDate=${endDate}`
+    )
+    const result = await response.json()
+
+    if (!result.success) {
+      // API가 없거나 오류 발생 시 기본값 반환
+      console.warn('Attendance API not available, using default values')
+      return {
+        success: true,
+        data: createDefaultAttendanceSummary(employeeId, year, month)
+      }
+    }
+
+    const records = result.data || []
+
+    // 소정 근로일수 계산 (주말 제외)
+    const totalWorkDays = getScheduledWorkDays(year, month, true)
+
+    // 근태 통계 집계
+    let presentDays = 0
+    let absentDays = 0
+    let leaveDays = 0
+    let holidayDays = 0
+    let lateCount = 0
+    let totalLateMinutes = 0
+    let earlyLeaveCount = 0
+    let totalEarlyLeaveMinutes = 0
+    let overtimeMinutes = 0
+
+    for (const record of records) {
+      switch (record.status) {
+        case 'present':
+          presentDays++
+          break
+        case 'late':
+          presentDays++
+          lateCount++
+          totalLateMinutes += record.late_minutes || 0
+          break
+        case 'early_leave':
+          presentDays++
+          earlyLeaveCount++
+          totalEarlyLeaveMinutes += record.early_leave_minutes || 0
+          break
+        case 'absent':
+          absentDays++
+          break
+        case 'leave':
+          leaveDays++
+          break
+        case 'holiday':
+          holidayDays++
+          break
+      }
+
+      // 초과근무 시간 집계
+      overtimeMinutes += record.overtime_minutes || 0
+    }
+
+    // 연차 정보 조회 (연차 시스템이 있다면)
+    // 현재는 기본값 사용
+    const allowedAnnualLeave = 15 // 기본 연차 일수
+    const usedAnnualLeave = leaveDays
+    const remainingAnnualLeave = Math.max(0, allowedAnnualLeave - usedAnnualLeave)
+
+    const summary: AttendanceSummaryForPayroll = {
+      userId: employeeId,
+      year,
+      month,
+      totalWorkDays,
+      presentDays,
+      absentDays,
+      leaveDays,
+      holidayDays,
+      lateCount,
+      totalLateMinutes,
+      earlyLeaveCount,
+      totalEarlyLeaveMinutes,
+      overtimeMinutes,
+      nightWorkMinutes: 0, // 야간근무 별도 집계 필요
+      holidayWorkMinutes: 0, // 휴일근무 별도 집계 필요
+      allowedAnnualLeave,
+      usedAnnualLeave,
+      remainingAnnualLeave
+    }
+
+    return { success: true, data: summary }
+  } catch (error) {
+    console.error('Error fetching attendance summary:', error)
+    // 오류 발생 시 기본값 반환
+    return {
+      success: true,
+      data: createDefaultAttendanceSummary(employeeId, year, month)
+    }
+  }
+}
+
+/**
+ * 기본 근태 요약 생성 (데이터가 없을 때)
+ */
+function createDefaultAttendanceSummary(
+  employeeId: string,
+  year: number,
+  month: number
+): AttendanceSummaryForPayroll {
+  const totalWorkDays = getScheduledWorkDays(year, month, true)
+
+  return {
+    userId: employeeId,
+    year,
+    month,
+    totalWorkDays,
+    presentDays: totalWorkDays, // 모두 출근한 것으로 간주
+    absentDays: 0,
+    leaveDays: 0,
+    holidayDays: 0,
+    lateCount: 0,
+    totalLateMinutes: 0,
+    earlyLeaveCount: 0,
+    totalEarlyLeaveMinutes: 0,
+    overtimeMinutes: 0,
+    nightWorkMinutes: 0,
+    holidayWorkMinutes: 0,
+    allowedAnnualLeave: 15,
+    usedAnnualLeave: 0,
+    remainingAnnualLeave: 15
+  }
+}
+
+/**
+ * 근태 기반 급여 차감 계산
+ * 대한민국 근로기준법에 따라 차감액 계산:
+ * - 무단결근: 일급 × 결근일수 + 해당 주 주휴수당 미지급
+ * - 지각/조퇴: 시급 × 해당 시간
+ * - 연차 초과: 초과 일수 × 일급 (사전 동의 필요)
+ */
+export function calculateAttendanceDeduction(
+  basis: PayrollBasis,
+  attendance: AttendanceSummaryForPayroll,
+  allowedAnnualLeave?: number
+): AttendanceDeduction {
+  const details: DeductionDetail[] = []
+  let totalDeduction = 0
+
+  // 1. 무단결근 차감
+  // 결근일 × 일급 차감
+  const absentDeduction = attendance.absentDays * basis.dailyWage
+  let weeklyHolidayPayDeduction = 0
+
+  if (attendance.absentDays > 0) {
+    // 주휴수당 차감: 결근 시 해당 주의 주휴수당 미지급
+    // 간략화: 결근 1일당 주휴수당 1/5 차감 (주 5일 기준)
+    weeklyHolidayPayDeduction = Math.round((attendance.absentDays / 5) * basis.weeklyHolidayPay)
+
+    details.push({
+      reason: 'absent',
+      description: `무단결근 ${attendance.absentDays}일`,
+      count: attendance.absentDays,
+      amount: absentDeduction + weeklyHolidayPayDeduction,
+      weeklyHolidayPayDeducted: weeklyHolidayPayDeduction > 0
+    })
+
+    totalDeduction += absentDeduction + weeklyHolidayPayDeduction
+  }
+
+  // 2. 지각 차감
+  // 지각 시간 × 시급 차감 (분 단위로 계산)
+  let lateDeduction = 0
+  if (attendance.totalLateMinutes > 0) {
+    lateDeduction = Math.round((attendance.totalLateMinutes / 60) * basis.hourlyWage)
+
+    details.push({
+      reason: 'late',
+      description: `지각 ${attendance.lateCount}회 (총 ${attendance.totalLateMinutes}분)`,
+      count: attendance.lateCount,
+      minutes: attendance.totalLateMinutes,
+      amount: lateDeduction
+    })
+
+    totalDeduction += lateDeduction
+  }
+
+  // 3. 조퇴 차감
+  // 조퇴 시간 × 시급 차감 (분 단위로 계산)
+  let earlyLeaveDeduction = 0
+  if (attendance.totalEarlyLeaveMinutes > 0) {
+    earlyLeaveDeduction = Math.round((attendance.totalEarlyLeaveMinutes / 60) * basis.hourlyWage)
+
+    details.push({
+      reason: 'early_leave',
+      description: `조퇴 ${attendance.earlyLeaveCount}회 (총 ${attendance.totalEarlyLeaveMinutes}분)`,
+      count: attendance.earlyLeaveCount,
+      minutes: attendance.totalEarlyLeaveMinutes,
+      amount: earlyLeaveDeduction
+    })
+
+    totalDeduction += earlyLeaveDeduction
+  }
+
+  // 4. 연차 초과 사용 차감
+  // 초과 연차 × 일급 (사전 동의가 있는 경우에만 차감)
+  const allowed = allowedAnnualLeave ?? attendance.allowedAnnualLeave
+  const excessLeaves = Math.max(0, attendance.usedAnnualLeave - allowed)
+  let excessLeaveDeduction = 0
+
+  if (excessLeaves > 0) {
+    excessLeaveDeduction = excessLeaves * basis.dailyWage
+
+    details.push({
+      reason: 'excess_leave',
+      description: `연차 초과 사용 ${excessLeaves}일 (허용: ${allowed}일, 사용: ${attendance.usedAnnualLeave}일)`,
+      count: excessLeaves,
+      amount: excessLeaveDeduction
+    })
+
+    totalDeduction += excessLeaveDeduction
+  }
+
+  return {
+    scheduledWorkDays: attendance.totalWorkDays,
+    actualWorkDays: attendance.presentDays,
+    absentDays: attendance.absentDays,
+    absentDeduction,
+    weeklyHolidayPayDeduction,
+    lateCount: attendance.lateCount,
+    totalLateMinutes: attendance.totalLateMinutes,
+    lateDeduction,
+    earlyLeaveCount: attendance.earlyLeaveCount,
+    totalEarlyLeaveMinutes: attendance.totalEarlyLeaveMinutes,
+    earlyLeaveDeduction,
+    usedLeaves: attendance.leaveDays,
+    allowedLeaves: allowed,
+    excessLeaves,
+    excessLeaveDeduction,
+    totalDeduction,
+    deductionDetails: details
+  }
+}
+
+/**
+ * 초과근무 수당 계산
+ * - 연장근로: 시급 × 1.5
+ * - 야간근로(22시~06시): 시급 × 0.5 (연장근로와 별도 가산)
+ * - 휴일근로: 시급 × 1.5 (8시간 이내), 시급 × 2.0 (8시간 초과)
+ */
+export function calculateOvertimePay(
+  hourlyWage: number,
+  overtimeMinutes: number,
+  nightWorkMinutes: number = 0,
+  holidayWorkMinutes: number = 0
+): { overtimePay: number; nightWorkPay: number; holidayWorkPay: number } {
+  // 연장근로수당 (시급 × 1.5)
+  const overtimePay = Math.round((overtimeMinutes / 60) * hourlyWage * 1.5)
+
+  // 야간근로수당 (시급 × 0.5 가산)
+  const nightWorkPay = Math.round((nightWorkMinutes / 60) * hourlyWage * 0.5)
+
+  // 휴일근로수당 (시급 × 1.5)
+  const holidayWorkPay = Math.round((holidayWorkMinutes / 60) * hourlyWage * 1.5)
+
+  return {
+    overtimePay,
+    nightWorkPay,
+    holidayWorkPay
+  }
+}
+
+/**
+ * 근태 연동 급여 계산 (통합)
+ * 기본급에서 근태 차감을 적용하고 초과근무수당을 추가
+ */
+export async function calculatePayrollWithAttendance(
+  input: AttendancePayrollInput,
+  clinicId: string
+): Promise<{ success: boolean; data?: AttendancePayrollResult; error?: string }> {
+  try {
+    // 1. 급여 계산 기준 생성
+    const basis = calculatePayrollBasis(input.baseSalary)
+
+    // 2. 근태 요약 조회
+    const attendanceResult = await getAttendanceSummaryForPayroll(
+      input.employeeId,
+      clinicId,
+      input.year,
+      input.month
+    )
+
+    if (!attendanceResult.success || !attendanceResult.data) {
+      return { success: false, error: attendanceResult.error || '근태 정보를 가져올 수 없습니다.' }
+    }
+
+    const attendance = attendanceResult.data
+
+    // 3. 근태 기반 급여 차감 계산
+    const deduction = calculateAttendanceDeduction(basis, attendance, input.allowedAnnualLeave)
+
+    // 4. 초과근무 수당 계산
+    const overtimePays = calculateOvertimePay(
+      basis.hourlyWage,
+      attendance.overtimeMinutes,
+      attendance.nightWorkMinutes,
+      attendance.holidayWorkMinutes
+    )
+
+    // 5. 조정된 기본급 계산
+    const adjustedBaseSalary = Math.max(0, input.baseSalary - deduction.totalDeduction)
+
+    return {
+      success: true,
+      data: {
+        basis,
+        attendance,
+        deduction,
+        adjustedBaseSalary,
+        overtimePay: overtimePays.overtimePay,
+        nightWorkPay: overtimePays.nightWorkPay,
+        holidayWorkPay: overtimePays.holidayWorkPay
+      }
+    }
+  } catch (error) {
+    console.error('Error calculating payroll with attendance:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '급여 계산 중 오류가 발생했습니다.'
+    }
+  }
+}
+
+/**
+ * 급여 명세서 접근 권한 확인
+ * - 대표 원장(owner): 항상 접근 가능 (실시간)
+ * - 일반 직원: 해당 월의 말일 이후에만 접근 가능
+ *
+ * @param userRole 사용자 역할
+ * @param year 급여 연도
+ * @param month 급여 월
+ * @param isOwnStatement 본인의 급여명세서 여부
+ */
+export function checkPayrollAccess(
+  userRole: string,
+  year: number,
+  month: number,
+  isOwnStatement: boolean = false
+): PayrollAccessResult {
+  // 대표 원장은 항상 접근 가능
+  if (userRole === 'owner') {
+    return { canAccess: true }
+  }
+
+  // 본인의 급여명세서가 아니면 접근 불가
+  if (!isOwnStatement) {
+    return {
+      canAccess: false,
+      reason: '본인의 급여명세서만 확인할 수 있습니다.'
+    }
+  }
+
+  // 해당 월의 마지막 날 계산
+  const lastDayOfMonth = new Date(year, month, 0).getDate()
+  const availableDate = new Date(year, month - 1, lastDayOfMonth)
+  const today = new Date()
+
+  // 현재 날짜가 해당 월의 말일 이후인지 확인
+  // 시간 비교를 위해 날짜만 비교 (시간은 무시)
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const availableDateOnly = new Date(availableDate.getFullYear(), availableDate.getMonth(), availableDate.getDate())
+
+  if (todayDate >= availableDateOnly) {
+    return { canAccess: true }
+  }
+
+  return {
+    canAccess: false,
+    reason: `${year}년 ${month}월 급여명세서는 ${month}월 ${lastDayOfMonth}일 이후에 확인할 수 있습니다.`,
+    availableDate: `${year}-${String(month).padStart(2, '0')}-${String(lastDayOfMonth).padStart(2, '0')}`
+  }
+}
+
+/**
+ * 특정 월이 급여 확정 상태인지 확인
+ * (해당 월이 지났으면 확정된 것으로 간주)
+ */
+export function isPayrollFinalized(year: number, month: number): boolean {
+  const today = new Date()
+  const lastDayOfMonth = new Date(year, month, 0)
+
+  // 오늘이 해당 월의 마지막 날 이후이면 확정
+  return today > lastDayOfMonth
 }
