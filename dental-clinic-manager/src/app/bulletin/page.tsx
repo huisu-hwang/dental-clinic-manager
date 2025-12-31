@@ -15,6 +15,7 @@ import AnnouncementList from '@/components/Bulletin/AnnouncementList'
 import DocumentList from '@/components/Bulletin/DocumentList'
 import TaskList from '@/components/Bulletin/TaskList'
 import type { BulletinTab } from '@/types/bulletin'
+import { getTabRoute } from '@/utils/tabRouting'
 
 // 서브 탭 설정
 const subTabs = [
@@ -59,18 +60,7 @@ export default function BulletinPage() {
   // 메인 탭 네비게이션 핸들러
   const handleMainTabChange = (tab: string) => {
     if (tab === 'bulletin') return // Already on bulletin page
-    if (tab === 'home') router.push('/dashboard')
-    else if (tab === 'daily-input') router.push('/dashboard?tab=daily-input')
-    else if (tab === 'attendance') router.push('/attendance')
-    else if (tab === 'leave') router.push('/dashboard?tab=leave')
-    else if (tab === 'contracts') router.push('/dashboard/contracts')
-    else if (tab === 'stats') router.push('/dashboard?tab=stats')
-    else if (tab === 'logs') router.push('/dashboard?tab=logs')
-    else if (tab === 'protocols') router.push('/dashboard?tab=protocols')
-    else if (tab === 'vendors') router.push('/dashboard?tab=vendors')
-    else if (tab === 'settings') router.push('/management')
-    else if (tab === 'guide') router.push('/dashboard?tab=guide')
-    else router.push('/dashboard')
+    router.push(getTabRoute(tab))
   }
 
   // 인증 확인 및 사용자 상태 체크

@@ -87,6 +87,7 @@ import {
   EyeOff,
   ArrowUpToLine,
   ArrowDownToLine,
+  SlidersHorizontal,
 } from 'lucide-react'
 import type { MenuItemSetting, MenuCategorySetting } from '@/types/menuSettings'
 import { DEFAULT_MENU_ITEMS, DEFAULT_CATEGORIES, AVAILABLE_CATEGORY_ICONS, createNewCategory } from '@/types/menuSettings'
@@ -107,7 +108,8 @@ const menuIcons: Record<string, React.ElementType> = {
   'contracts': FileSignature,
   'documents': FileText,
   'settings': Package,
-  'guide': HelpCircle
+  'guide': HelpCircle,
+  'menu-settings': SlidersHorizontal
 }
 
 // 카테고리 아이콘 매핑

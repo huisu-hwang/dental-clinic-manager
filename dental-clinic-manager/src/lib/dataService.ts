@@ -1,7 +1,7 @@
 import { createClient } from './supabase/client'
 import { ensureConnection } from './supabase/connectionCheck'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftCategory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData, CashRegisterRowData } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
@@ -423,6 +423,7 @@ export const dataService = {
           consultLogs: [],
           giftLogs: [],
           happyCallLogs: [],
+          cashRegisterLog: null,
           hasData: false
         }
       }
@@ -444,6 +445,7 @@ export const dataService = {
             consultLogs: [],
             giftLogs: [],
             happyCallLogs: [],
+            cashRegisterLog: null,
             hasData: false
           }
         }
@@ -517,6 +519,22 @@ export const dataService = {
         happyCallLogsResult = { data: [], error: err };
       }
 
+      // cash_register_logs 조회 (테이블이 없을 수 있음)
+      let cashRegisterLogResult;
+      try {
+        cashRegisterLogResult = await applyClinicFilter(
+          supabase
+            .from('cash_register_logs')
+            .select('*')
+            .eq('date', targetDate),
+          targetClinicId
+        ).maybeSingle();
+        console.log('[DataService] cash_register_logs fetched:', cashRegisterLogResult?.data ? 'found' : 'not found');
+      } catch (err) {
+        console.warn('[DataService] Error fetching cash_register_logs (table might not exist):', err);
+        cashRegisterLogResult = { data: null, error: err };
+      }
+
       // special_notes_history에서 해당 날짜의 최신 특이사항 조회
       let latestSpecialNote: { content: string; author_name: string } | null = null;
       try {
@@ -569,12 +587,14 @@ export const dataService = {
 
       // special_notes_history에서 가져온 값이 있으면 dailyReport에 설정
       const hasSpecialNotes = latestSpecialNote !== null
+      const hasCashRegisterData = cashRegisterLogResult?.data !== null
       const hasData =
         normalizedDailyReport.length > 0 ||
         normalizedConsultLogs.length > 0 ||
         normalizedGiftLogs.length > 0 ||
         normalizedHappyCallLogs.length > 0 ||
-        hasSpecialNotes
+        hasSpecialNotes ||
+        hasCashRegisterData
       console.log('[DataService] Data fetch complete. Has data:', hasData)
 
       // dailyReport 객체 생성 (special_notes는 special_notes_history에서 가져옴)
@@ -605,6 +625,7 @@ export const dataService = {
           consultLogs: normalizedConsultLogs,
           giftLogs: normalizedGiftLogs,
           happyCallLogs: normalizedHappyCallLogs,
+          cashRegisterLog: cashRegisterLogResult?.data || null,
           hasData
         }
       }
@@ -618,6 +639,7 @@ export const dataService = {
           consultLogs: [],
           giftLogs: [],
           happyCallLogs: [],
+          cashRegisterLog: null,
           hasData: false
         }
       }
@@ -632,6 +654,7 @@ export const dataService = {
     recallBookingCount: number
     recallBookingNames: string
     specialNotes: string
+    cashRegisterData?: CashRegisterRowData
   }) {
     const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
@@ -644,7 +667,8 @@ export const dataService = {
       recallCount,
       recallBookingCount,
       recallBookingNames,
-      specialNotes
+      specialNotes,
+      cashRegisterData
     } = data
 
     try {
@@ -676,6 +700,7 @@ export const dataService = {
             applyClinicFilter(supabase.from('consult_logs').delete().eq('date', date), clinicId),
             applyClinicFilter(supabase.from('gift_logs').delete().eq('date', date), clinicId),
             applyClinicFilter(supabase.from('happy_call_logs').delete().eq('date', date), clinicId),
+            applyClinicFilter(supabase.from('cash_register_logs').delete().eq('date', date), clinicId),
             supabase.from('daily_reports').delete().eq('id', report.id)
           ])
         }
@@ -735,7 +760,61 @@ export const dataService = {
         if (error) throw new Error(`해피콜 기록 저장 실패: ${error.message}`)
       }
 
-      // --- 5. 특이사항 히스토리 저장 ---
+      // --- 5. 현금 출납 기록 저장 ---
+      if (cashRegisterData) {
+        console.log('[DataService] Saving cash register log:', JSON.stringify(cashRegisterData))
+
+        // 전일 이월액 총액 계산
+        const previousBalance =
+          (cashRegisterData.prev_bill_50000 || 0) * 50000 +
+          (cashRegisterData.prev_bill_10000 || 0) * 10000 +
+          (cashRegisterData.prev_bill_5000 || 0) * 5000 +
+          (cashRegisterData.prev_bill_1000 || 0) * 1000 +
+          (cashRegisterData.prev_coin_500 || 0) * 500 +
+          (cashRegisterData.prev_coin_100 || 0) * 100
+
+        // 금일 잔액 총액 계산
+        const currentBalance =
+          (cashRegisterData.curr_bill_50000 || 0) * 50000 +
+          (cashRegisterData.curr_bill_10000 || 0) * 10000 +
+          (cashRegisterData.curr_bill_5000 || 0) * 5000 +
+          (cashRegisterData.curr_bill_1000 || 0) * 1000 +
+          (cashRegisterData.curr_coin_500 || 0) * 500 +
+          (cashRegisterData.curr_coin_100 || 0) * 100
+
+        const balanceDifference = currentBalance - previousBalance
+
+        const cashRegisterRecord = {
+          clinic_id: clinicId,
+          date,
+          prev_bill_50000: cashRegisterData.prev_bill_50000 || 0,
+          prev_bill_10000: cashRegisterData.prev_bill_10000 || 0,
+          prev_bill_5000: cashRegisterData.prev_bill_5000 || 0,
+          prev_bill_1000: cashRegisterData.prev_bill_1000 || 0,
+          prev_coin_500: cashRegisterData.prev_coin_500 || 0,
+          prev_coin_100: cashRegisterData.prev_coin_100 || 0,
+          previous_balance: previousBalance,
+          curr_bill_50000: cashRegisterData.curr_bill_50000 || 0,
+          curr_bill_10000: cashRegisterData.curr_bill_10000 || 0,
+          curr_bill_5000: cashRegisterData.curr_bill_5000 || 0,
+          curr_bill_1000: cashRegisterData.curr_bill_1000 || 0,
+          curr_coin_500: cashRegisterData.curr_coin_500 || 0,
+          curr_coin_100: cashRegisterData.curr_coin_100 || 0,
+          current_balance: currentBalance,
+          balance_difference: balanceDifference,
+          notes: cashRegisterData.notes || ''
+        }
+
+        const { error } = await supabase.from('cash_register_logs').insert([cashRegisterRecord] as any)
+        if (error) {
+          console.error('[DataService] Cash register log save failed:', error)
+          // 현금 출납 기록 저장 실패는 전체 저장을 실패시키지 않음
+        } else {
+          console.log('[DataService] Cash register log saved successfully')
+        }
+      }
+
+      // --- 6. 특이사항 히스토리 저장 ---
       const trimmedSpecialNotes = specialNotes?.trim()
       if (trimmedSpecialNotes) {
         try {
@@ -1092,6 +1171,161 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting gift item:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // ========================================
+  // 선물 카테고리 관리 함수들
+  // ========================================
+
+  // 선물 카테고리 목록 조회
+  async getGiftCategories() {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('gift_categories')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: true })
+
+      if (error) throw error
+
+      return { data: data as GiftCategory[], error: null }
+    } catch (error: unknown) {
+      console.error('Error fetching gift categories:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 카테고리 추가
+  async addGiftCategory(name: string, description?: string, color?: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      // 현재 최대 display_order 가져오기
+      const { data: existingCategories } = await supabase
+        .from('gift_categories')
+        .select('display_order')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: false })
+        .limit(1)
+
+      const maxOrder = existingCategories?.[0]?.display_order || 0
+
+      const { data, error } = await supabase
+        .from('gift_categories')
+        .insert([{
+          clinic_id: clinicId,
+          name,
+          description: description || '',
+          color: color || '#3b82f6',
+          display_order: maxOrder + 1
+        }] as any)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data: data as GiftCategory, error: null }
+    } catch (error: unknown) {
+      console.error('Error adding gift category:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 카테고리 수정
+  async updateGiftCategory(id: number, updates: { name?: string; description?: string; color?: string }) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('gift_categories')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('clinic_id', clinicId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data: data as GiftCategory, error: null }
+    } catch (error: unknown) {
+      console.error('Error updating gift category:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 카테고리 삭제
+  async deleteGiftCategory(id: number) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('gift_categories')
+        .delete()
+        .eq('id', id)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting gift category:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 아이템의 카테고리 변경
+  async updateGiftItemCategory(giftId: number, categoryId: number | null) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('gift_inventory')
+        .update({ category_id: categoryId })
+        .eq('id', giftId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating gift item category:', error)
       return { error: extractErrorMessage(error) }
     }
   },

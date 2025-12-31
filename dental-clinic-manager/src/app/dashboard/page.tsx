@@ -12,6 +12,7 @@ import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
 import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 } from 'lucide-react'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
+import MenuSettings from '@/components/Management/MenuSettings'
 import LeaveManagement from '@/components/Leave/LeaveManagement'
 import VendorContactManagement from '@/components/Vendor/VendorContactManagement'
 import DocumentTemplates from '@/components/Document/DocumentTemplates'
@@ -31,7 +32,7 @@ import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
 import { getStatsForDateRange } from '@/utils/statsUtils'
 import { inspectDatabase } from '@/utils/dbInspector'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog, CashRegisterRowData } from '@/types'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
@@ -78,7 +79,9 @@ export default function DashboardPage() {
     consultLogs,
     giftLogs,
     giftInventory,
+    giftCategories,
     inventoryLogs,
+    cashRegisterLogs,
     loading,
     error,
     refetch,
@@ -129,6 +132,7 @@ export default function DashboardPage() {
     recallBookingCount: number
     recallBookingNames: string
     specialNotes: string
+    cashRegisterData?: CashRegisterRowData
   }) => {
     if (!canCreateReport && !canEditReport) {
       showToast('보고서를 저장할 권한이 없습니다.', 'error')
@@ -217,6 +221,50 @@ export default function DashboardPage() {
     }
   }
 
+  // 선물 아이템의 카테고리 변경
+  const handleUpdateGiftCategory = async (giftId: number, categoryId: number | null) => {
+    const result = await dataService.updateGiftItemCategory(giftId, categoryId)
+    if (result.error) {
+      showToast(`카테고리 변경 실패: ${result.error}`, 'error')
+    } else {
+      showToast('선물 카테고리가 변경되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
+  // 카테고리 추가
+  const handleAddCategory = async (name: string, description?: string, color?: string) => {
+    const result = await dataService.addGiftCategory(name, description, color)
+    if (result.error) {
+      showToast(`카테고리 추가 실패: ${result.error}`, 'error')
+    } else {
+      showToast('카테고리가 추가되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
+  // 카테고리 수정
+  const handleUpdateCategory = async (id: number, updates: { name?: string; description?: string; color?: string }) => {
+    const result = await dataService.updateGiftCategory(id, updates)
+    if (result.error) {
+      showToast(`카테고리 수정 실패: ${result.error}`, 'error')
+    } else {
+      showToast('카테고리가 수정되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
+  // 카테고리 삭제
+  const handleDeleteCategory = async (id: number) => {
+    const result = await dataService.deleteGiftCategory(id)
+    if (result.error) {
+      showToast(`카테고리 삭제 실패: ${result.error}`, 'error')
+    } else {
+      showToast('카테고리가 삭제되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
   const handleRecalculateStats = async (date: string) => {
     const result = await dataService.recalculateDailyReportStats(date)
     if (result.error) {
@@ -257,7 +305,7 @@ export default function DashboardPage() {
   // 통계 계산
   const getStats = (periodType: 'weekly' | 'monthly' | 'annual', value: string) => {
     const periodData = getDatesForPeriod(periodType, value)
-    return getStatsForDateRange(dailyReports, giftLogs, periodData.startDate, periodData.endDate)
+    return getStatsForDateRange(dailyReports, giftLogs, periodData.startDate, periodData.endDate, giftInventory, giftCategories)
   }
 
   // 연도 옵션 생성 (현재 연도와 데이터가 있는 연도들)
@@ -295,6 +343,7 @@ export default function DashboardPage() {
           {activeTab === 'daily-input' && (
             <DailyInputForm
               giftInventory={giftInventory}
+              giftCategories={giftCategories}
               giftLogs={giftLogs}
               baseUsageByGift={baseUsageByGift}
               onSaveReport={handleSaveReport}
@@ -523,7 +572,10 @@ export default function DashboardPage() {
                       revenueByManager: {},
                       consultProceedRate: 0,
                       recallSuccessRate: 0,
-                      giftCounts: {}
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
                     } : getStats('weekly', weekSelector)} />
                   </>
                 )}
@@ -556,7 +608,10 @@ export default function DashboardPage() {
                       revenueByManager: {},
                       consultProceedRate: 0,
                       recallSuccessRate: 0,
-                      giftCounts: {}
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
                     } : getStats('monthly', monthSelector)} />
                   </>
                 )}
@@ -592,7 +647,10 @@ export default function DashboardPage() {
                       revenueByManager: {},
                       consultProceedRate: 0,
                       recallSuccessRate: 0,
-                      giftCounts: {}
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
                     } : getStats('annual', yearSelector)} />
                   </>
                 )}
@@ -607,6 +665,7 @@ export default function DashboardPage() {
               consultLogs={consultLogs}
               giftLogs={giftLogs}
               inventoryLogs={inventoryLogs}
+              cashRegisterLogs={cashRegisterLogs}
               onDeleteReport={handleDeleteReport}
               onRecalculateStats={handleRecalculateStats}
               onUpdateConsultStatus={handleUpdateConsultStatus}
@@ -644,6 +703,7 @@ export default function DashboardPage() {
           {activeTab === 'settings' && (
             <InventoryManagement
               giftInventory={giftInventory}
+              giftCategories={giftCategories}
               giftLogs={giftLogs}
               baseUsageByGift={baseUsageByGift}
               currentGiftRows={currentGiftRows}
@@ -651,6 +711,10 @@ export default function DashboardPage() {
               onAddGiftItem={handleAddGiftItem}
               onUpdateStock={handleUpdateStock}
               onDeleteGiftItem={handleDeleteGiftItem}
+              onUpdateGiftCategory={handleUpdateGiftCategory}
+              onAddCategory={handleAddCategory}
+              onUpdateCategory={handleUpdateCategory}
+              onDeleteCategory={handleDeleteCategory}
             />
           )}
 
@@ -722,6 +786,11 @@ export default function DashboardPage() {
                  </div>
               </footer>
             </div>
+          )}
+
+          {/* 메뉴 설정 */}
+          {activeTab === 'menu-settings' && (
+            <MenuSettings />
           )}
 
       <Toast

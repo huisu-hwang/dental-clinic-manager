@@ -32,10 +32,22 @@ export interface GiftLog {
   clinic_id?: string | null;
 }
 
+export interface GiftCategory {
+  id: number;
+  clinic_id: string;
+  name: string;
+  description?: string;
+  color: string;
+  display_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface GiftInventory {
   id: number;
   name: string;
   stock: number;
+  category_id?: number | null;
   clinic_id?: string | null;
 }
 
@@ -86,6 +98,12 @@ export interface Stats {
   consultProceedRate: number;
   recallSuccessRate: number;
   giftCounts: Record<string, number>;
+  // 카테고리별 선물 통계: { categoryName: { giftName: count } }
+  giftCountsByCategory: Record<string, { gifts: Record<string, number>; total: number; color: string }>;
+  // 구환 선물 통계 (리뷰 비율 계산용)
+  returningPatientGiftCount: number;
+  // 리뷰 대비 구환 선물 비율 (리뷰 / 구환선물 * 100)
+  reviewToReturningGiftRate: number;
 }
 
 export interface ConsultRowData {
@@ -106,6 +124,71 @@ export interface GiftRowData {
 export interface HappyCallRowData {
   patient_name: string;
   treatment: string;
+  notes: string;
+}
+
+// ========================================
+// Cash Register (현금 출납) Types
+// ========================================
+
+// 화폐 단위 정의 (5만원권부터 100원까지)
+export interface CurrencyDenomination {
+  denomination: number;  // 화폐 단위 (50000, 10000, 5000, 1000, 500, 100)
+  count: number;         // 개수
+  amount: number;        // 해당 화폐의 총액 (denomination * count)
+}
+
+export interface CashRegisterLog {
+  id?: number;
+  date: string;
+  clinic_id?: string | null;
+
+  // 전일 이월액 - 화폐별 개수
+  prev_bill_50000: number;    // 전일 5만원권
+  prev_bill_10000: number;    // 전일 1만원권
+  prev_bill_5000: number;     // 전일 5천원권
+  prev_bill_1000: number;     // 전일 1천원권
+  prev_coin_500: number;      // 전일 500원 동전
+  prev_coin_100: number;      // 전일 100원 동전
+  previous_balance: number;   // 전일 이월액 총액 (자동 계산)
+
+  // 금일 잔액 - 화폐별 개수
+  curr_bill_50000: number;    // 금일 5만원권
+  curr_bill_10000: number;    // 금일 1만원권
+  curr_bill_5000: number;     // 금일 5천원권
+  curr_bill_1000: number;     // 금일 1천원권
+  curr_coin_500: number;      // 금일 500원 동전
+  curr_coin_100: number;      // 금일 100원 동전
+  current_balance: number;    // 금일 잔액 총액 (자동 계산)
+
+  // 차액
+  balance_difference: number; // 차액 (current_balance - previous_balance)
+
+  // 비고
+  notes?: string;
+
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CashRegisterRowData {
+  // 전일 이월액 - 화폐별 개수
+  prev_bill_50000: number;
+  prev_bill_10000: number;
+  prev_bill_5000: number;
+  prev_bill_1000: number;
+  prev_coin_500: number;
+  prev_coin_100: number;
+
+  // 금일 잔액 - 화폐별 개수
+  curr_bill_50000: number;
+  curr_bill_10000: number;
+  curr_bill_5000: number;
+  curr_bill_1000: number;
+  curr_coin_500: number;
+  curr_coin_100: number;
+
+  // 비고
   notes: string;
 }
 

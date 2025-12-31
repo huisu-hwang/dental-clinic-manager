@@ -5,14 +5,16 @@ import { createClient } from '@/lib/supabase/client'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from '@/lib/clinicScope'
 import { refreshSessionWithTimeout, handleSessionExpired } from '@/lib/sessionUtils'
 import { TIMEOUTS } from '@/lib/constants/timeouts'
-import type { DailyReport, ConsultLog, GiftLog, GiftInventory, InventoryLog } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, GiftInventory, GiftCategory, InventoryLog, CashRegisterLog } from '@/types'
 
 export const useSupabaseData = (clinicId?: string | null) => {
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([])
   const [consultLogs, setConsultLogs] = useState<ConsultLog[]>([])
   const [giftLogs, setGiftLogs] = useState<GiftLog[]>([])
   const [giftInventory, setGiftInventory] = useState<GiftInventory[]>([])
+  const [giftCategories, setGiftCategories] = useState<GiftCategory[]>([])
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([])
+  const [cashRegisterLogs, setCashRegisterLogs] = useState<CashRegisterLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeClinicId, setActiveClinicId] = useState<string | null>(clinicId ?? null)
@@ -40,7 +42,8 @@ export const useSupabaseData = (clinicId?: string | null) => {
 
         const [
           { data: inventoryData, error: inventoryError },
-          { data: invLogData, error: invLogError }
+          { data: invLogData, error: invLogError },
+          { data: categoriesData, error: categoriesError }
         ] = await Promise.all([
           applyClinicFilter(
             supabase.from('gift_inventory').select('*'),
@@ -49,11 +52,16 @@ export const useSupabaseData = (clinicId?: string | null) => {
           applyClinicFilter(
             supabase.from('inventory_logs').select('*'),
             targetClinicId
+          ),
+          applyClinicFilter(
+            supabase.from('gift_categories').select('*'),
+            targetClinicId
           )
         ])
 
         if (inventoryError) throw inventoryError
         if (invLogError) throw invLogError
+        // categoriesError는 테이블이 없을 수 있으므로 무시
 
         const { normalized: normalizedInventory, missingIds: inventoryMissing } = ensureClinicIds(
           inventoryData as GiftInventory[] | null,
@@ -63,14 +71,20 @@ export const useSupabaseData = (clinicId?: string | null) => {
           invLogData as InventoryLog[] | null,
           targetClinicId
         )
+        const { normalized: normalizedCategories } = ensureClinicIds(
+          categoriesData as GiftCategory[] | null,
+          targetClinicId
+        )
 
         const sortedInventoryData = [...normalizedInventory].sort((a, b) => a.name.localeCompare(b.name))
         const sortedInventoryLogs = [...normalizedInventoryLogs].sort(
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         )
+        const sortedCategories = [...normalizedCategories].sort((a, b) => a.display_order - b.display_order)
 
         setGiftInventory(sortedInventoryData)
         setInventoryLogs(sortedInventoryLogs)
+        setGiftCategories(sortedCategories)
 
         if (inventoryMissing.length) {
           void backfillClinicIds(supabase, 'gift_inventory', targetClinicId, inventoryMissing)
@@ -159,7 +173,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
         }
 
         // 각 쿼리를 개별 타임아웃으로 감싸기 (60초 - idle 연결 재생성 시간 고려)
-        const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult] = await Promise.allSettled([
+        const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult, cashRegisterResult, categoriesResult] = await Promise.allSettled([
           withTimeout(
             Promise.resolve(applyClinicFilter(
               supabase.from('daily_reports').select('*'),
@@ -199,6 +213,22 @@ export const useSupabaseData = (clinicId?: string | null) => {
             )),
             TIMEOUTS.QUERY_LONG,
             'inventory_logs'
+          ),
+          withTimeout(
+            Promise.resolve(applyClinicFilter(
+              supabase.from('cash_register_logs').select('*'),
+              targetClinicId
+            )),
+            TIMEOUTS.QUERY_LONG,
+            'cash_register_logs'
+          ),
+          withTimeout(
+            Promise.resolve(applyClinicFilter(
+              supabase.from('gift_categories').select('*'),
+              targetClinicId
+            )),
+            TIMEOUTS.QUERY_LONG,
+            'gift_categories'
           )
         ])
 
@@ -210,7 +240,9 @@ export const useSupabaseData = (clinicId?: string | null) => {
           consult: consultResult.status,
           gift: giftResult.status,
           inventory: inventoryResult.status,
-          invLog: invLogResult.status
+          invLog: invLogResult.status,
+          cashRegister: cashRegisterResult.status,
+          categories: categoriesResult.status
         })
 
         // 실패한 쿼리 로깅 및 추적
@@ -252,6 +284,14 @@ export const useSupabaseData = (clinicId?: string | null) => {
             timeoutQueries.push('Inventory logs')
           }
         }
+        if (cashRegisterResult.status === 'rejected') {
+          console.warn('[useSupabaseData] Cash register logs 쿼리 실패 (테이블이 없을 수 있음):', cashRegisterResult.reason)
+          // Cash register는 새로운 테이블이므로 실패해도 전체 쿼리를 실패로 처리하지 않음
+        }
+        if (categoriesResult.status === 'rejected') {
+          console.warn('[useSupabaseData] Gift categories 쿼리 실패 (테이블이 없을 수 있음):', categoriesResult.reason)
+          // Gift categories는 새로운 테이블이므로 실패해도 전체 쿼리를 실패로 처리하지 않음
+        }
 
         // 타임아웃 경고 메시지
         if (timeoutQueries.length > 0) {
@@ -263,7 +303,9 @@ export const useSupabaseData = (clinicId?: string | null) => {
           setConsultLogs([])
           setGiftLogs([])
           setGiftInventory([])
+          setGiftCategories([])
           setInventoryLogs([])
+          setCashRegisterLogs([])
           setLoading(false)
           return // 추가 데이터 처리 중단
         }
@@ -273,7 +315,9 @@ export const useSupabaseData = (clinicId?: string | null) => {
           consultResult.status === 'fulfilled' ? consultResult.value : { data: [], error: 'Failed to fetch consult logs' },
           giftResult.status === 'fulfilled' ? giftResult.value : { data: [], error: 'Failed to fetch gift logs' },
           inventoryResult.status === 'fulfilled' ? inventoryResult.value : { data: [], error: 'Failed to fetch inventory' },
-          invLogResult.status === 'fulfilled' ? invLogResult.value : { data: [], error: 'Failed to fetch inventory logs' }
+          invLogResult.status === 'fulfilled' ? invLogResult.value : { data: [], error: 'Failed to fetch inventory logs' },
+          cashRegisterResult.status === 'fulfilled' ? cashRegisterResult.value : { data: [], error: 'Failed to fetch cash register logs' },
+          categoriesResult.status === 'fulfilled' ? categoriesResult.value : { data: [], error: 'Failed to fetch gift categories' }
         ]
 
         const [
@@ -281,7 +325,9 @@ export const useSupabaseData = (clinicId?: string | null) => {
           { data: consultData, error: consultError },
           { data: giftData, error: giftError },
           { data: inventoryData, error: inventoryError },
-          { data: invLogData, error: invLogError }
+          { data: invLogData, error: invLogError },
+          { data: cashRegisterData, error: cashRegisterError },
+          { data: categoriesData, error: categoriesError }
         ] = results
 
         if (dailyError) console.warn('[useSupabaseData] Daily reports error:', dailyError)
@@ -289,6 +335,8 @@ export const useSupabaseData = (clinicId?: string | null) => {
         if (giftError) console.warn('[useSupabaseData] Gift logs error:', giftError)
         if (inventoryError) console.warn('[useSupabaseData] Inventory error:', inventoryError)
         if (invLogError) console.warn('[useSupabaseData] Inventory logs error:', invLogError)
+        if (cashRegisterError) console.warn('[useSupabaseData] Cash register logs error:', cashRegisterError)
+        if (categoriesError) console.warn('[useSupabaseData] Gift categories error:', categoriesError)
 
         const { normalized: normalizedDailyReports, missingIds: dailyMissing } = ensureClinicIds(
           dailyData as DailyReport[] | null,
@@ -310,6 +358,14 @@ export const useSupabaseData = (clinicId?: string | null) => {
           invLogData as InventoryLog[] | null,
           targetClinicId
         )
+        const { normalized: normalizedCashRegisterLogs } = ensureClinicIds(
+          cashRegisterData as CashRegisterLog[] | null,
+          targetClinicId
+        )
+        const { normalized: normalizedCategories } = ensureClinicIds(
+          categoriesData as GiftCategory[] | null,
+          targetClinicId
+        )
 
         const sortedDailyReports = [...normalizedDailyReports].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -324,12 +380,18 @@ export const useSupabaseData = (clinicId?: string | null) => {
         const sortedInventoryLogs = [...normalizedInventoryLogs].sort(
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         )
+        const sortedCashRegisterLogs = [...normalizedCashRegisterLogs].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+        const sortedCategories = [...normalizedCategories].sort((a, b) => a.display_order - b.display_order)
 
         setDailyReports(sortedDailyReports)
         setConsultLogs(sortedConsultLogs)
         setGiftLogs(sortedGiftLogs)
         setGiftInventory(sortedInventoryData)
+        setGiftCategories(sortedCategories)
         setInventoryLogs(sortedInventoryLogs)
+        setCashRegisterLogs(sortedCashRegisterLogs)
 
         if (dailyMissing.length) {
           void backfillClinicIds(supabase, 'daily_reports', targetClinicId, dailyMissing)
@@ -372,7 +434,9 @@ export const useSupabaseData = (clinicId?: string | null) => {
         setConsultLogs([])
         setGiftLogs([])
         setGiftInventory([])
+        setGiftCategories([])
         setInventoryLogs([])
+        setCashRegisterLogs([])
       } finally {
         // silent 모드가 아닐 때만 로딩 상태 변경 (깜빡임 방지)
         if (!options?.silent) {
@@ -428,7 +492,9 @@ export const useSupabaseData = (clinicId?: string | null) => {
     consultLogs,
     giftLogs,
     giftInventory,
+    giftCategories,
     inventoryLogs,
+    cashRegisterLogs,
     loading,
     error,
     refetch: () => fetchAllData(activeClinicId),
