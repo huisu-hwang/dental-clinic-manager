@@ -162,7 +162,43 @@ export default function PayrollForm() {
       setNoSettingsWarning(false)
 
       try {
-        // 1. 먼저 저장된 급여명세서 확인
+        const settings = salarySettings[selectedEmployeeId]
+
+        // 급여 설정이 없으면 경고 표시
+        if (!settings) {
+          setNoSettingsWarning(true)
+          setCalculationResult(null)
+          setHasSavedPayroll(false)
+          setLoadingPayroll(false)
+          return
+        }
+
+        // 급여 설정이 있으면 항상 설정 기반으로 계산 (4대보험 값 정확히 반영)
+        const newFormState: PayrollFormState = {
+          ...DEFAULT_PAYROLL_FORM_STATE,
+          selectedEmployeeId,
+          selectedYear,
+          selectedMonth,
+          salaryType: settings.salaryType,
+          targetAmount: settings.targetAmount,
+          baseSalary: settings.baseSalary,
+          mealAllowance: settings.mealAllowance,
+          vehicleAllowance: settings.vehicleAllowance,
+          bonus: settings.bonus,
+          nationalPension: settings.nationalPension,
+          healthInsurance: settings.healthInsurance,
+          longTermCare: settings.longTermCare,
+          employmentInsurance: settings.employmentInsurance,
+          familyCount: settings.familyCount,
+          childCount: settings.childCount,
+          otherDeductions: settings.otherDeductions
+        }
+
+        setFormState(newFormState)
+        const result = calculatePayrollFromFormState(newFormState)
+        setCalculationResult(result)
+
+        // 저장된 급여명세서 확인
         const savedPayroll = await getPayrollStatement(
           user.clinic_id,
           selectedEmployeeId,
@@ -171,80 +207,28 @@ export default function PayrollForm() {
         )
 
         if (savedPayroll) {
-          // 저장된 데이터 사용
-          setHasSavedPayroll(true)
-          setCalculationResult({
-            payments: savedPayroll.payments,
-            totalPayment: savedPayroll.totalPayment,
-            deductions: savedPayroll.deductions,
-            totalDeduction: savedPayroll.totalDeduction,
-            netPay: savedPayroll.netPay,
-            nonTaxableTotal: savedPayroll.nonTaxableTotal,
-            taxableIncome: savedPayroll.totalPayment - savedPayroll.nonTaxableTotal
-          })
-
-          // formState도 업데이트 (미리보기용)
-          const payments = savedPayroll.payments || {}
+          // 저장된 데이터가 있지만, 설정이 변경되었는지 확인
           const deductions = savedPayroll.deductions || {}
-          setFormState(prev => ({
-            ...prev,
-            selectedEmployeeId,
-            selectedYear,
-            selectedMonth,
-            salaryType: savedPayroll.salaryType || 'net',
-            targetAmount: savedPayroll.netPay || 0,
-            baseSalary: payments.baseSalary || 0,
-            mealAllowance: payments.mealAllowance || 0,
-            vehicleAllowance: payments.vehicleAllowance || 0,
-            bonus: payments.bonus || 0,
-            nationalPension: deductions.nationalPension || 0,
-            healthInsurance: deductions.healthInsurance || 0,
-            longTermCare: deductions.longTermCare || 0,
-            employmentInsurance: deductions.employmentInsurance || 0,
-            familyCount: savedPayroll.workInfo?.familyCount || 1,
-            childCount: savedPayroll.workInfo?.childCount || 0,
-            otherDeductions: deductions.otherDeductions || 0
-          }))
-        } else {
-          // 2. 저장된 명세서가 없으면 급여 설정 기반으로 생성
-          setHasSavedPayroll(false)
-          const settings = salarySettings[selectedEmployeeId]
+          const settingsChanged =
+            deductions.nationalPension !== settings.nationalPension ||
+            deductions.healthInsurance !== settings.healthInsurance ||
+            deductions.longTermCare !== settings.longTermCare ||
+            deductions.employmentInsurance !== settings.employmentInsurance ||
+            savedPayroll.payments?.mealAllowance !== settings.mealAllowance ||
+            savedPayroll.payments?.vehicleAllowance !== settings.vehicleAllowance ||
+            savedPayroll.payments?.bonus !== settings.bonus
 
-          if (settings) {
-            // 급여 설정 기반으로 계산
-            const newFormState: PayrollFormState = {
-              ...DEFAULT_PAYROLL_FORM_STATE,
-              selectedEmployeeId,
-              selectedYear,
-              selectedMonth,
-              salaryType: settings.salaryType,
-              targetAmount: settings.targetAmount,
-              baseSalary: settings.baseSalary,
-              mealAllowance: settings.mealAllowance,
-              vehicleAllowance: settings.vehicleAllowance,
-              bonus: settings.bonus,
-              nationalPension: settings.nationalPension,
-              healthInsurance: settings.healthInsurance,
-              longTermCare: settings.longTermCare,
-              employmentInsurance: settings.employmentInsurance,
-              familyCount: settings.familyCount,
-              childCount: settings.childCount,
-              otherDeductions: settings.otherDeductions
-            }
-
-            setFormState(newFormState)
-            const result = calculatePayrollFromFormState(newFormState)
-            setCalculationResult(result)
-
-            // 자동 저장 (owner만)
-            if (isOwner) {
-              await autoSavePayroll(employee, newFormState, result)
-            }
-          } else {
-            // 급여 설정이 없음
-            setNoSettingsWarning(true)
-            setCalculationResult(null)
+          if (settingsChanged && isOwner) {
+            // 설정이 변경되었으면 새로운 값으로 저장
+            await autoSavePayroll(employee, newFormState, result)
           }
+          setHasSavedPayroll(true)
+        } else {
+          // 저장된 명세서가 없으면 자동 저장 (owner만)
+          if (isOwner) {
+            await autoSavePayroll(employee, newFormState, result)
+          }
+          setHasSavedPayroll(true)
         }
       } catch (error) {
         console.error('Error loading payroll:', error)
