@@ -44,8 +44,8 @@ export default function PayrollManagement() {
 
   // Handle password verification cancel
   const handlePasswordCancel = () => {
-    console.log('[PayrollManagement] Password verification cancelled, redirecting to dashboard')
-    router.push('/dashboard')
+    console.log('[PayrollManagement] Password verification cancelled, redirecting to home')
+    router.push('/dashboard?tab=home')
   }
 
   // 탭 목록 생성 (owner만 급여 설정 탭 표시)
