@@ -216,8 +216,8 @@ export default function InventoryManagement({
             <Settings className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">설정</h2>
-            <p className="text-blue-100 text-sm">Settings & Inventory Management</p>
+            <h2 className="text-lg font-bold text-white">재고 관리</h2>
+            <p className="text-blue-100 text-sm">Inventory Management</p>
           </div>
         </div>
       </div>
@@ -428,15 +428,15 @@ export default function InventoryManagement({
                   <div key={item.id} className={`grid grid-cols-1 md:grid-cols-7 gap-3 items-center p-4 rounded-lg border ${isOutOfStock ? 'bg-red-50 border-red-200' : isLowStock ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
                     <div className="md:col-span-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-800">{item.name}</span>
                         {category && (
                           <span
-                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                            style={{ backgroundColor: category.color }}
+                            className="text-lg font-bold leading-none"
+                            style={{ color: category.color }}
                           >
-                            {category.name}
+                            ●
                           </span>
                         )}
+                        <span className="font-semibold text-slate-800">{item.name}</span>
                       </div>
                       {isOutOfStock && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mt-1">
