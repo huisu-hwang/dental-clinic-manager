@@ -110,6 +110,9 @@ export default function PayrollForm() {
           const payments = savedPayroll.payments || {}
           const deductions = savedPayroll.deductions || {}
 
+          // 재계산 방지 플래그를 먼저 설정 (setFormState로 인한 useEffect 트리거 전에)
+          skipRecalculation.current = true
+
           // 폼 상태 업데이트
           setFormState(prev => ({
             ...prev,
@@ -133,8 +136,7 @@ export default function PayrollForm() {
             overtimeHours: savedPayroll.workInfo?.overtimeHours || 0
           }))
 
-          // 저장된 계산 결과 직접 설정 (재계산 방지)
-          skipRecalculation.current = true
+          // 저장된 계산 결과 직접 설정
           setCalculationResult({
             payments: savedPayroll.payments,
             totalPayment: savedPayroll.totalPayment,
@@ -461,7 +463,7 @@ export default function PayrollForm() {
                 <div className="relative">
                   <input
                     type="number"
-                    value={formState.salaryType === 'net' ? formState.targetAmount : formState.baseSalary}
+                    value={(formState.salaryType === 'net' ? formState.targetAmount : formState.baseSalary) || ''}
                     onChange={(e) => {
                       const value = parseInt(e.target.value) || 0
                       if (formState.salaryType === 'net') {
@@ -471,7 +473,7 @@ export default function PayrollForm() {
                       }
                     }}
                     className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                    placeholder="0"
+                    placeholder="금액을 입력하세요"
                   />
                   <span className="absolute right-3 top-2 text-slate-500">원</span>
                 </div>
