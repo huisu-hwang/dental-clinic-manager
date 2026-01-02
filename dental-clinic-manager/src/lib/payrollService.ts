@@ -30,6 +30,8 @@ import {
 } from '@/utils/taxCalculationUtils'
 import { createClient } from '@/lib/supabase/client'
 import type { ContractData, EmploymentContract } from '@/types/contract'
+import type { WorkSchedule, DayName } from '@/types/workSchedule'
+import { DEFAULT_WORK_SCHEDULE, DAY_OF_WEEK_TO_NAME } from '@/types/workSchedule'
 
 // =====================================================================
 // 급여 계산 함수
@@ -584,36 +586,152 @@ export async function deletePayrollStatement(
 // =====================================================================
 
 /**
- * 월 소정 근로시간 상수 (통상 209시간)
+ * 기준 월 소정 근로시간 상수 (주 40시간 기준 209시간)
  * 주 40시간 × (365일 ÷ 7일 ÷ 12개월) + 주휴 8시간 = 약 209시간
  */
-const MONTHLY_WORK_HOURS = 209
+const STANDARD_MONTHLY_WORK_HOURS = 209
 
 /**
- * 일 소정 근로시간 (8시간)
+ * 기준 주 소정 근로시간 (40시간)
  */
-const DAILY_WORK_HOURS = 8
+const STANDARD_WEEKLY_WORK_HOURS = 40
 
 /**
- * 월 소정 근로일수 계산 (약 21.75일)
+ * 근무 스케줄에서 주간 근로시간 계산
+ * @param schedule 근무 스케줄
+ * @returns 주간 근로시간 (분)
  */
-const MONTHLY_WORK_DAYS = MONTHLY_WORK_HOURS / DAILY_WORK_HOURS
+export function calculateWeeklyWorkMinutes(schedule: WorkSchedule): number {
+  let totalMinutes = 0
+  const days: DayName[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+  for (const day of days) {
+    const daySchedule = schedule[day]
+    if (daySchedule.isWorking && daySchedule.start && daySchedule.end) {
+      const [startH, startM] = daySchedule.start.split(':').map(Number)
+      const [endH, endM] = daySchedule.end.split(':').map(Number)
+      let workMinutes = (endH * 60 + endM) - (startH * 60 + startM)
+
+      // 휴게시간 제외
+      if (daySchedule.breakStart && daySchedule.breakEnd) {
+        const [breakStartH, breakStartM] = daySchedule.breakStart.split(':').map(Number)
+        const [breakEndH, breakEndM] = daySchedule.breakEnd.split(':').map(Number)
+        const breakMinutes = (breakEndH * 60 + breakEndM) - (breakStartH * 60 + breakStartM)
+        workMinutes -= breakMinutes
+      }
+
+      totalMinutes += workMinutes
+    }
+  }
+
+  return totalMinutes
+}
+
+/**
+ * 근무 스케줄에서 일 평균 근로시간 계산
+ * @param schedule 근무 스케줄
+ * @returns 일 평균 근로시간 (시간)
+ */
+export function calculateDailyAverageWorkHours(schedule: WorkSchedule): number {
+  const days: DayName[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+  let totalMinutes = 0
+  let workDayCount = 0
+
+  for (const day of days) {
+    const daySchedule = schedule[day]
+    if (daySchedule.isWorking && daySchedule.start && daySchedule.end) {
+      const [startH, startM] = daySchedule.start.split(':').map(Number)
+      const [endH, endM] = daySchedule.end.split(':').map(Number)
+      let workMinutes = (endH * 60 + endM) - (startH * 60 + startM)
+
+      // 휴게시간 제외
+      if (daySchedule.breakStart && daySchedule.breakEnd) {
+        const [breakStartH, breakStartM] = daySchedule.breakStart.split(':').map(Number)
+        const [breakEndH, breakEndM] = daySchedule.breakEnd.split(':').map(Number)
+        const breakMinutes = (breakEndH * 60 + breakEndM) - (breakStartH * 60 + breakStartM)
+        workMinutes -= breakMinutes
+      }
+
+      totalMinutes += workMinutes
+      workDayCount++
+    }
+  }
+
+  if (workDayCount === 0) return 8 // 기본값 8시간
+  return totalMinutes / 60 / workDayCount
+}
+
+/**
+ * 주간 근무일수 계산
+ * @param schedule 근무 스케줄
+ * @returns 주간 근무일수
+ */
+export function calculateWeeklyWorkDays(schedule: WorkSchedule): number {
+  const days: DayName[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+  let workDayCount = 0
+
+  for (const day of days) {
+    if (schedule[day].isWorking) {
+      workDayCount++
+    }
+  }
+
+  return workDayCount
+}
+
+/**
+ * 월 소정 근로시간 계산 (병원 실제 근무시간 기반)
+ * 공식: (주간 근로시간 × 365 ÷ 7 ÷ 12) + 주휴시간
+ * @param weeklyWorkHours 주간 근로시간 (시간)
+ * @param weeklyWorkDays 주간 근무일수
+ * @returns 월 소정 근로시간
+ */
+export function calculateMonthlyWorkHours(weeklyWorkHours: number, weeklyWorkDays: number): number {
+  // 주휴시간 = (주간 근로시간 / 주간 근무일수) = 하루치 시간
+  const weeklyHolidayHours = weeklyWorkDays > 0 ? weeklyWorkHours / weeklyWorkDays : 0
+  // 월 소정 근로시간 = (주간 근로시간 + 주휴시간) × (365 / 7 / 12)
+  const monthlyHours = (weeklyWorkHours + weeklyHolidayHours) * (365 / 7 / 12)
+  return Math.round(monthlyHours * 100) / 100
+}
 
 /**
  * 급여 계산 기준 정보 생성
  * @param monthlyBaseSalary 월 기본급 (비과세 제외, 4대보험 및 세금 공제 전)
+ * @param workSchedule 근무 스케줄 (없으면 기본값 사용)
  */
-export function calculatePayrollBasis(monthlyBaseSalary: number): PayrollBasis {
-  const hourlyWage = Math.round(monthlyBaseSalary / MONTHLY_WORK_HOURS)
-  const dailyWage = Math.round(monthlyBaseSalary / MONTHLY_WORK_DAYS)
-  // 주휴수당: 일급 × 1일 (주 5일 개근 시 지급)
+export function calculatePayrollBasis(
+  monthlyBaseSalary: number,
+  workSchedule?: WorkSchedule
+): PayrollBasis {
+  const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
+
+  // 근무 스케줄에서 실제 근로시간 계산
+  const weeklyWorkMinutes = calculateWeeklyWorkMinutes(schedule)
+  const weeklyWorkHours = weeklyWorkMinutes / 60
+  const weeklyWorkDays = calculateWeeklyWorkDays(schedule)
+  const dailyAverageHours = calculateDailyAverageWorkHours(schedule)
+
+  // 월 소정 근로시간 계산 (실제 근무시간 비례)
+  // 주 40시간 기준 209시간에서 비례 계산
+  const monthlyWorkHours = calculateMonthlyWorkHours(weeklyWorkHours, weeklyWorkDays)
+
+  // 월 소정 근로일수 = 월 소정 근로시간 / 일 평균 근로시간
+  const monthlyWorkDays = dailyAverageHours > 0 ? monthlyWorkHours / dailyAverageHours : 21.75
+
+  // 통상 시급 = 월 기본급 / 월 소정 근로시간
+  const hourlyWage = monthlyWorkHours > 0 ? Math.round(monthlyBaseSalary / monthlyWorkHours) : 0
+
+  // 일급 = 통상 시급 × 일 평균 근로시간
+  const dailyWage = Math.round(hourlyWage * dailyAverageHours)
+
+  // 주휴수당 = 일급 (주 만근 시 1일분 지급)
   const weeklyHolidayPay = dailyWage
 
   return {
     monthlyBaseSalary,
-    monthlyWorkDays: MONTHLY_WORK_DAYS,
-    dailyWorkHours: DAILY_WORK_HOURS,
-    monthlyWorkHours: MONTHLY_WORK_HOURS,
+    monthlyWorkDays: Math.round(monthlyWorkDays * 100) / 100,
+    dailyWorkHours: Math.round(dailyAverageHours * 100) / 100,
+    monthlyWorkHours: Math.round(monthlyWorkHours * 100) / 100,
     dailyWage,
     hourlyWage,
     weeklyHolidayPay
@@ -798,41 +916,138 @@ function createDefaultAttendanceSummary(
 /**
  * 근태 기반 급여 차감 계산
  * 대한민국 근로기준법에 따라 차감액 계산:
- * - 무단결근: 일급 × 결근일수 + 해당 주 주휴수당 미지급
- * - 지각/조퇴: 시급 × 해당 시간
- * - 연차 초과: 초과 일수 × 일급 (사전 동의 필요)
+ *
+ * 1. 조퇴/반차: 잔여 연차가 있으면 유급 처리(차감 없음), 없으면 시급 × 시간 차감
+ * 2. 무단결근/연차초과 휴무(무급휴가):
+ *    - 일급 × 결근일수
+ *    - 주휴수당 차감: 해당 주에 결근이 있으면 1일분 주휴수당 차감 (주당 최대 1일분)
+ * 3. 유급휴가 (연차, 경조사, 대체휴가 등): 차감 없음 (만근으로 계산)
+ *
+ * @param basis 급여 계산 기준
+ * @param attendance 근태 요약 정보
+ * @param allowedAnnualLeave 허용 연차 일수 (옵션)
+ * @param weeksWithAbsence 결근이 있는 주 수 (옵션, 없으면 결근일수 기반 추정)
  */
 export function calculateAttendanceDeduction(
   basis: PayrollBasis,
   attendance: AttendanceSummaryForPayroll,
-  allowedAnnualLeave?: number
+  allowedAnnualLeave?: number,
+  weeksWithAbsence?: number
 ): AttendanceDeduction {
   const details: DeductionDetail[] = []
   let totalDeduction = 0
 
-  // 1. 무단결근 차감
-  // 결근일 × 일급 차감
-  const absentDeduction = attendance.absentDays * basis.dailyWage
+  // 잔여 연차 계산
+  const allowed = allowedAnnualLeave ?? attendance.allowedAnnualLeave
+  const remainingAnnualLeave = attendance.remainingAnnualLeave
+
+  // =====================================================================
+  // 1. 조퇴/반차 차감 계산
+  // - 잔여 연차가 있으면: 유급 처리 (차감 없음)
+  // - 잔여 연차가 없으면: 통상시급 × 조퇴시간 차감
+  // =====================================================================
+  let earlyLeaveDeduction = 0
+  let earlyLeaveMinutesToDeduct = 0
+
+  if (attendance.totalEarlyLeaveMinutes > 0) {
+    // 조퇴 시간을 연차로 커버 가능한지 확인
+    // 반차 = 4시간(240분), 연차 1일 = 일 평균 근로시간
+    const dailyWorkMinutes = basis.dailyWorkHours * 60
+
+    if (remainingAnnualLeave > 0) {
+      // 잔여 연차가 있으면 유급 처리 (차감 없음)
+      // 조퇴 시간만큼 연차를 사용한 것으로 처리
+      details.push({
+        reason: 'early_leave',
+        description: `조퇴 ${attendance.earlyLeaveCount}회 (총 ${attendance.totalEarlyLeaveMinutes}분) - 잔여 연차로 유급 처리`,
+        count: attendance.earlyLeaveCount,
+        minutes: attendance.totalEarlyLeaveMinutes,
+        amount: 0
+      })
+    } else {
+      // 잔여 연차가 없으면 조퇴 시간만큼 차감
+      earlyLeaveMinutesToDeduct = attendance.totalEarlyLeaveMinutes
+      earlyLeaveDeduction = Math.round((earlyLeaveMinutesToDeduct / 60) * basis.hourlyWage)
+
+      details.push({
+        reason: 'early_leave',
+        description: `조퇴 ${attendance.earlyLeaveCount}회 (총 ${attendance.totalEarlyLeaveMinutes}분) - 무급 처리`,
+        count: attendance.earlyLeaveCount,
+        minutes: earlyLeaveMinutesToDeduct,
+        amount: earlyLeaveDeduction
+      })
+
+      totalDeduction += earlyLeaveDeduction
+    }
+  }
+
+  // =====================================================================
+  // 2. 무단결근 및 연차초과 휴무(무급휴가) 차감 계산
+  // - 일급 × 결근일수
+  // - 주휴수당: 결근이 있는 주마다 1일분 차감 (주당 최대 1일분)
+  // =====================================================================
+
+  // 연차 초과 사용일수 계산 (무급휴가로 처리될 일수)
+  const excessLeaves = Math.max(0, attendance.usedAnnualLeave - allowed)
+
+  // 총 무급 결근일수 = 무단결근 + 연차초과 휴무
+  const totalUnpaidAbsentDays = attendance.absentDays + excessLeaves
+
+  let absentDeduction = 0
   let weeklyHolidayPayDeduction = 0
 
-  if (attendance.absentDays > 0) {
-    // 주휴수당 차감: 결근 시 해당 주의 주휴수당 미지급
-    // 간략화: 결근 1일당 주휴수당 1/5 차감 (주 5일 기준)
-    weeklyHolidayPayDeduction = Math.round((attendance.absentDays / 5) * basis.weeklyHolidayPay)
+  if (totalUnpaidAbsentDays > 0) {
+    // 결근 급여 차감: 일급 × 결근일수
+    absentDeduction = totalUnpaidAbsentDays * basis.dailyWage
 
-    details.push({
-      reason: 'absent',
-      description: `무단결근 ${attendance.absentDays}일`,
-      count: attendance.absentDays,
-      amount: absentDeduction + weeklyHolidayPayDeduction,
-      weeklyHolidayPayDeducted: weeklyHolidayPayDeduction > 0
-    })
+    // 주휴수당 차감: 결근이 있는 주 수만큼 1일분씩 차감
+    // weeksWithAbsence가 제공되지 않으면, 결근일수를 기반으로 추정
+    // (매주 5일 근무 가정, 결근일수 / 5의 올림 = 영향받는 주 수)
+    const estimatedWeeksWithAbsence = weeksWithAbsence ??
+      Math.min(Math.ceil(totalUnpaidAbsentDays / 5), 4) // 최대 4주 (한 달)
+
+    weeklyHolidayPayDeduction = estimatedWeeksWithAbsence * basis.weeklyHolidayPay
+
+    // 무단결근 내역 추가
+    if (attendance.absentDays > 0) {
+      details.push({
+        reason: 'absent',
+        description: `무단결근 ${attendance.absentDays}일`,
+        count: attendance.absentDays,
+        amount: attendance.absentDays * basis.dailyWage,
+        weeklyHolidayPayDeducted: false
+      })
+    }
+
+    // 연차 초과 내역 추가
+    if (excessLeaves > 0) {
+      details.push({
+        reason: 'excess_leave',
+        description: `연차 초과 사용 ${excessLeaves}일 (허용: ${allowed}일, 사용: ${attendance.usedAnnualLeave}일) - 무급 휴가 처리`,
+        count: excessLeaves,
+        amount: excessLeaves * basis.dailyWage
+      })
+    }
+
+    // 주휴수당 차감 내역 추가
+    if (weeklyHolidayPayDeduction > 0) {
+      details.push({
+        reason: 'absent',
+        description: `주휴수당 차감 (${estimatedWeeksWithAbsence}주분)`,
+        count: estimatedWeeksWithAbsence,
+        amount: weeklyHolidayPayDeduction,
+        weeklyHolidayPayDeducted: true
+      })
+    }
 
     totalDeduction += absentDeduction + weeklyHolidayPayDeduction
   }
 
-  // 2. 지각 차감
-  // 지각 시간 × 시급 차감 (분 단위로 계산)
+  // =====================================================================
+  // 3. 지각 차감 계산
+  // - 지각은 일반적으로 무급 처리 (시급 × 지각시간)
+  // - 회사 정책에 따라 일정 시간 이하는 면제할 수 있음
+  // =====================================================================
   let lateDeduction = 0
   if (attendance.totalLateMinutes > 0) {
     lateDeduction = Math.round((attendance.totalLateMinutes / 60) * basis.hourlyWage)
@@ -848,41 +1063,11 @@ export function calculateAttendanceDeduction(
     totalDeduction += lateDeduction
   }
 
-  // 3. 조퇴 차감
-  // 조퇴 시간 × 시급 차감 (분 단위로 계산)
-  let earlyLeaveDeduction = 0
-  if (attendance.totalEarlyLeaveMinutes > 0) {
-    earlyLeaveDeduction = Math.round((attendance.totalEarlyLeaveMinutes / 60) * basis.hourlyWage)
-
-    details.push({
-      reason: 'early_leave',
-      description: `조퇴 ${attendance.earlyLeaveCount}회 (총 ${attendance.totalEarlyLeaveMinutes}분)`,
-      count: attendance.earlyLeaveCount,
-      minutes: attendance.totalEarlyLeaveMinutes,
-      amount: earlyLeaveDeduction
-    })
-
-    totalDeduction += earlyLeaveDeduction
-  }
-
-  // 4. 연차 초과 사용 차감
-  // 초과 연차 × 일급 (사전 동의가 있는 경우에만 차감)
-  const allowed = allowedAnnualLeave ?? attendance.allowedAnnualLeave
-  const excessLeaves = Math.max(0, attendance.usedAnnualLeave - allowed)
-  let excessLeaveDeduction = 0
-
-  if (excessLeaves > 0) {
-    excessLeaveDeduction = excessLeaves * basis.dailyWage
-
-    details.push({
-      reason: 'excess_leave',
-      description: `연차 초과 사용 ${excessLeaves}일 (허용: ${allowed}일, 사용: ${attendance.usedAnnualLeave}일)`,
-      count: excessLeaves,
-      amount: excessLeaveDeduction
-    })
-
-    totalDeduction += excessLeaveDeduction
-  }
+  // =====================================================================
+  // 4. 유급휴가 (연차, 경조사 등) - 차감 없음
+  // 연차 사용은 차감 대상이 아님 (이미 presentDays에서 제외되어 있음)
+  // =====================================================================
+  // 유급휴가는 급여에서 차감하지 않음 (만근 처리)
 
   return {
     scheduledWorkDays: attendance.totalWorkDays,
@@ -899,7 +1084,7 @@ export function calculateAttendanceDeduction(
     usedLeaves: attendance.leaveDays,
     allowedLeaves: allowed,
     excessLeaves,
-    excessLeaveDeduction,
+    excessLeaveDeduction: excessLeaves * basis.dailyWage,
     totalDeduction,
     deductionDetails: details
   }

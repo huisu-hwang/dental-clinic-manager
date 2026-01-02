@@ -25,6 +25,8 @@ import {
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import PayrollPreview from './PayrollPreview'
 import { AlertCircle, FileText, Settings, Clock, Calendar, AlertTriangle, Lock } from 'lucide-react'
+import type { WorkSchedule } from '@/types/workSchedule'
+import { workScheduleService } from '@/lib/workScheduleService'
 
 interface Employee {
   id: string
@@ -97,6 +99,7 @@ export default function PayrollForm() {
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummaryForPayroll | null>(null)
   const [attendanceDeduction, setAttendanceDeduction] = useState<AttendanceDeduction | null>(null)
   const [accessResult, setAccessResult] = useState<PayrollAccessResult | null>(null)
+  const [employeeWorkSchedule, setEmployeeWorkSchedule] = useState<WorkSchedule | null>(null)
 
   const yearMonthOptions = useMemo(() => generatePayrollYearMonthOptions(), [])
 
@@ -208,6 +211,18 @@ export default function PayrollForm() {
           return
         }
 
+        // 직원 근무 스케줄 조회
+        let workSchedule: WorkSchedule | undefined = undefined
+        try {
+          const scheduleResult = await workScheduleService.getUserWorkSchedule(selectedEmployeeId)
+          if (scheduleResult.data) {
+            workSchedule = scheduleResult.data
+            setEmployeeWorkSchedule(scheduleResult.data)
+          }
+        } catch (error) {
+          console.warn('Failed to fetch work schedule, using default:', error)
+        }
+
         // 근태 요약 조회
         const attendanceResult = await getAttendanceSummaryForPayroll(
           selectedEmployeeId,
@@ -223,8 +238,8 @@ export default function PayrollForm() {
           currentAttendanceSummary = attendanceResult.data
           setAttendanceSummary(currentAttendanceSummary)
 
-          // 근태 기반 급여 차감 계산
-          const basis = calculatePayrollBasis(settings.baseSalary)
+          // 근태 기반 급여 차감 계산 (직원 근무 스케줄 반영)
+          const basis = calculatePayrollBasis(settings.baseSalary, workSchedule)
           currentAttendanceDeduction = calculateAttendanceDeduction(basis, currentAttendanceSummary)
           setAttendanceDeduction(currentAttendanceDeduction)
         }
