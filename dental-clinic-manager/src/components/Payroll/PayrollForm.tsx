@@ -230,13 +230,28 @@ export default function PayrollForm() {
         }
 
         // 급여 설정이 있으면 항상 설정 기반으로 계산 (4대보험 값 정확히 반영)
+        // 근태 차감 적용 방식:
+        // - 세전(gross) 계약: 기타 공제에 추가하여 실수령액 감소
+        // - 세후(net) 계약: 목표 실수령액에서 직접 차감 (targetAmount 조정)
+        const attendanceDeductionAmount = currentAttendanceDeduction?.totalDeduction || 0
+
+        // 세후 계약의 경우 targetAmount에서 근태 차감액을 빼고,
+        // 세전 계약의 경우 기타공제에 추가
+        const adjustedTargetAmount = settings.salaryType === 'net'
+          ? Math.max(0, settings.targetAmount - attendanceDeductionAmount)
+          : settings.targetAmount
+
+        const adjustedOtherDeductions = settings.salaryType === 'gross'
+          ? settings.otherDeductions + attendanceDeductionAmount
+          : settings.otherDeductions
+
         const newFormState: PayrollFormState = {
           ...DEFAULT_PAYROLL_FORM_STATE,
           selectedEmployeeId,
           selectedYear,
           selectedMonth,
           salaryType: settings.salaryType,
-          targetAmount: settings.targetAmount,
+          targetAmount: adjustedTargetAmount,
           baseSalary: settings.baseSalary,
           mealAllowance: settings.mealAllowance,
           vehicleAllowance: settings.vehicleAllowance,
@@ -247,8 +262,7 @@ export default function PayrollForm() {
           employmentInsurance: settings.employmentInsurance,
           familyCount: settings.familyCount,
           childCount: settings.childCount,
-          // 근태 차감액을 기타 공제에 추가
-          otherDeductions: settings.otherDeductions + (currentAttendanceDeduction?.totalDeduction || 0)
+          otherDeductions: adjustedOtherDeductions
         }
 
         setFormState(newFormState)
@@ -638,6 +652,20 @@ export default function PayrollForm() {
                     <td className="py-2 text-slate-600">기본급</td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.payments.baseSalary || 0)}원</td>
                   </tr>
+                  {/* 세후 계약에서 근태 차감이 적용된 경우 표시 */}
+                  {formState.salaryType === 'net' && attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
+                    <tr className="border-b bg-orange-50">
+                      <td className="py-2 text-orange-700 text-xs">
+                        ↳ 근태 차감 적용됨
+                        <span className="block text-orange-500">
+                          (원 목표: {formatCurrency(salarySettings[selectedEmployeeId || '']?.targetAmount || 0)}원)
+                        </span>
+                      </td>
+                      <td className="py-2 text-right text-orange-700 text-xs">
+                        -{formatCurrency(attendanceDeduction.totalDeduction)}원
+                      </td>
+                    </tr>
+                  )}
                   {calculationResult.payments.bonus && calculationResult.payments.bonus > 0 && (
                     <tr className="border-b">
                       <td className="py-2 text-slate-600">상여</td>
@@ -704,7 +732,15 @@ export default function PayrollForm() {
                   </tr>
                   {calculationResult.deductions.otherDeductions && calculationResult.deductions.otherDeductions > 0 && (
                     <tr className="border-b">
-                      <td className="py-2 text-slate-600">기타공제</td>
+                      <td className="py-2 text-slate-600">
+                        기타공제
+                        {/* 세전 계약에서 근태 차감이 포함된 경우 표시 */}
+                        {formState.salaryType === 'gross' && attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
+                          <span className="block text-xs text-orange-600">
+                            (근태 차감 {formatCurrency(attendanceDeduction.totalDeduction)}원 포함)
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.otherDeductions)}원</td>
                     </tr>
                   )}
