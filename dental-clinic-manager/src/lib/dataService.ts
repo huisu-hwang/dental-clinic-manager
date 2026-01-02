@@ -4084,7 +4084,7 @@ export const dataService = {
         return { data: null, error: error.message }
       }
 
-      const protocolIds = data?.map(p => p.protocol_id) || []
+      const protocolIds = data?.map((p: { protocol_id: string }) => p.protocol_id) || []
       return { data: protocolIds, error: null }
     } catch (error: unknown) {
       console.error('[getUserAccessibleProtocolIds] Exception:', error)
@@ -4113,7 +4113,7 @@ export const dataService = {
         return { data: null, error: error.message }
       }
 
-      const protocolIds = data?.map(p => p.protocol_id) || []
+      const protocolIds = data?.map((p: { protocol_id: string }) => p.protocol_id) || []
       return { data: protocolIds, error: null }
     } catch (error: unknown) {
       console.error('[getUserEditableProtocolIds] Exception:', error)
