@@ -54,7 +54,7 @@ export default function DashboardPage() {
 
   // URL 쿼리 파라미터에서 활성 탭 읽기
   const activeTab = searchParams.get('tab') || 'home'
-  const [statsSubTab, setStatsSubTab] = useState<'weekly' | 'monthly' | 'annual'>('weekly')
+  const [statsSubTab, setStatsSubTab] = useState<'weekly' | 'monthly' | 'annual' | 'custom'>('weekly')
   const [attendanceSubTab, setAttendanceSubTab] = useState<'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'>('checkin')
   const [dbStatus, setDbStatus] = useState<'connected' | 'connecting' | 'error'>('connecting')
   const [toast, setToast] = useState<{
@@ -67,6 +67,19 @@ export default function DashboardPage() {
   const [weekSelector, setWeekSelector] = useState(() => getCurrentWeekString(new Date()))
   const [monthSelector, setMonthSelector] = useState(() => getCurrentMonthString())
   const [yearSelector, setYearSelector] = useState(() => new Date().getFullYear().toString())
+
+  // 사용자 지정 기간 선택
+  const getDefaultDateRange = () => {
+    const today = new Date()
+    const oneMonthAgo = new Date(today)
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+    return {
+      start: oneMonthAgo.toISOString().split('T')[0],
+      end: today.toISOString().split('T')[0]
+    }
+  }
+  const [customStartDate, setCustomStartDate] = useState(() => getDefaultDateRange().start)
+  const [customEndDate, setCustomEndDate] = useState(() => getDefaultDateRange().end)
 
   // 일일보고서에서 현재 입력 중인 선물 데이터 (재고 관리 실시간 반영용)
   const [currentGiftRows, setCurrentGiftRows] = useState<GiftRowData[]>([])
@@ -539,6 +552,19 @@ export default function DashboardPage() {
                     </svg>
                     연간 통계
                   </button>
+                  <button
+                    onClick={() => setStatsSubTab('custom')}
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+                      statsSubTab === 'custom'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    기간 지정
+                  </button>
                 </nav>
               </div>
 
@@ -652,6 +678,73 @@ export default function DashboardPage() {
                       returningPatientGiftCount: 0,
                       reviewToReturningGiftRate: 0
                     } : getStats('annual', yearSelector)} />
+                  </>
+                )}
+
+                {statsSubTab === 'custom' && (
+                  <>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="custom-start-date" className="text-sm font-medium text-slate-600 whitespace-nowrap">시작일:</label>
+                          <input
+                            type="date"
+                            id="custom-start-date"
+                            className="p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={customStartDate}
+                            onChange={(e) => setCustomStartDate(e.target.value)}
+                            max={customEndDate}
+                          />
+                        </div>
+                        <span className="hidden sm:block text-slate-400">~</span>
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="custom-end-date" className="text-sm font-medium text-slate-600 whitespace-nowrap">종료일:</label>
+                          <input
+                            type="date"
+                            id="custom-end-date"
+                            className="p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={customEndDate}
+                            onChange={(e) => setCustomEndDate(e.target.value)}
+                            min={customStartDate}
+                          />
+                        </div>
+                      </div>
+                      <div className="text-sm text-slate-500">
+                        {(() => {
+                          const start = new Date(customStartDate)
+                          const end = new Date(customEndDate)
+                          const diffTime = Math.abs(end.getTime() - start.getTime())
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+                          return `${diffDays}일 간의 통계`
+                        })()}
+                      </div>
+                    </div>
+                    <StatsContainer stats={loading ? {
+                      naver_review_count: 0,
+                      consult_proceed: 0,
+                      consult_hold: 0,
+                      recall_count: 0,
+                      recall_booking_count: 0,
+                      totalConsults: 0,
+                      totalGifts: 0,
+                      totalRevenue: 0,
+                      consultsByManager: {},
+                      giftsByManager: {},
+                      revenueByManager: {},
+                      consultProceedRate: 0,
+                      recallSuccessRate: 0,
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
+                    } : getStatsForDateRange(
+                      dailyReports,
+                      giftLogs,
+                      new Date(customStartDate + 'T00:00:00'),
+                      new Date(customEndDate + 'T23:59:59'),
+                      giftInventory,
+                      giftCategories
+                    )} />
                   </>
                 )}
               </div>
