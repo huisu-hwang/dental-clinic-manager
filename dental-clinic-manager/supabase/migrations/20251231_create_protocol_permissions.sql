@@ -5,10 +5,10 @@
 CREATE TABLE IF NOT EXISTS protocol_permissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   protocol_id UUID NOT NULL REFERENCES protocols(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   can_view BOOLEAN NOT NULL DEFAULT false,
   can_edit BOOLEAN NOT NULL DEFAULT false,
-  granted_by UUID NOT NULL REFERENCES auth.users(id),
+  granted_by UUID NOT NULL REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
 

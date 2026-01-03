@@ -3875,22 +3875,54 @@ export const dataService = {
         return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
       }
 
-      const { data, error } = await supabase
+      // 권한 목록 조회
+      const { data: permissions, error: permError } = await supabase
         .from('protocol_permissions')
-        .select(`
-          *,
-          user:users!protocol_permissions_user_id_fkey(id, name, email, role),
-          granted_by_user:users!protocol_permissions_granted_by_fkey(id, name)
-        `)
+        .select('*')
         .eq('protocol_id', protocolId)
         .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('[getProtocolPermissions] Error:', error)
-        return { data: null, error: error.message }
+      if (permError) {
+        console.error('[getProtocolPermissions] Error:', permError)
+        return { data: null, error: permError.message }
       }
 
-      return { data: data as ProtocolPermission[], error: null }
+      if (!permissions || permissions.length === 0) {
+        return { data: [], error: null }
+      }
+
+      // 사용자 ID 목록 추출
+      const userIds = [...new Set([
+        ...permissions.map((p: { user_id: string }) => p.user_id),
+        ...permissions.map((p: { granted_by: string }) => p.granted_by)
+      ])]
+
+      // 사용자 정보 조회
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('id, name, email, role')
+        .in('id', userIds)
+
+      if (userError) {
+        console.error('[getProtocolPermissions] User fetch error:', userError)
+        // 사용자 정보 없이 권한만 반환
+        return { data: permissions as ProtocolPermission[], error: null }
+      }
+
+      // 사용자 정보를 Map으로 변환
+      const userMap = new Map<string, { id: string; name: string; email: string; role: string }>()
+      users?.forEach((u: { id: string; name: string; email: string; role: string }) => {
+        userMap.set(u.id, u)
+      })
+
+      // 권한에 사용자 정보 추가
+      const permissionsWithUsers = permissions.map((p: ProtocolPermission) => ({
+        ...p,
+        user: userMap.get(p.user_id),
+        granted_by_user: userMap.get(p.granted_by) ? { id: userMap.get(p.granted_by)!.id, name: userMap.get(p.granted_by)!.name } : undefined
+      }))
+
+      return { data: permissionsWithUsers as ProtocolPermission[], error: null }
     } catch (error: unknown) {
       console.error('[getProtocolPermissions] Exception:', error)
       return { data: null, error: extractErrorMessage(error) }
