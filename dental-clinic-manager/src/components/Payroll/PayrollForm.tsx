@@ -100,6 +100,7 @@ export default function PayrollForm() {
   const [attendanceDeduction, setAttendanceDeduction] = useState<AttendanceDeduction | null>(null)
   const [accessResult, setAccessResult] = useState<PayrollAccessResult | null>(null)
   const [employeeWorkSchedule, setEmployeeWorkSchedule] = useState<WorkSchedule | null>(null)
+  const [attendanceLoadError, setAttendanceLoadError] = useState<string | null>(null)
 
   const yearMonthOptions = useMemo(() => generatePayrollYearMonthOptions(), [])
 
@@ -173,6 +174,7 @@ export default function PayrollForm() {
         setAttendanceSummary(null)
         setAttendanceDeduction(null)
         setAccessResult(null)
+        setAttendanceLoadError(null)
         return
       }
 
@@ -182,6 +184,7 @@ export default function PayrollForm() {
       setSelectedEmployee(employee)
       setLoadingPayroll(true)
       setNoSettingsWarning(false)
+      setAttendanceLoadError(null)
 
       // 접근 권한 확인
       const isOwnStatement = selectedEmployeeId === user.id
@@ -243,6 +246,20 @@ export default function PayrollForm() {
           const basis = calculatePayrollBasis(settings.baseSalary, workSchedule)
           currentAttendanceDeduction = calculateAttendanceDeduction(basis, currentAttendanceSummary)
           setAttendanceDeduction(currentAttendanceDeduction)
+
+          console.log('[PayrollForm] 근태 데이터 로드됨:', {
+            totalWorkDays: currentAttendanceSummary.totalWorkDays,
+            presentDays: currentAttendanceSummary.presentDays,
+            absentDays: currentAttendanceSummary.absentDays,
+            leaveDays: currentAttendanceSummary.leaveDays,
+            totalDeduction: currentAttendanceDeduction.totalDeduction
+          })
+        } else {
+          // 근태 데이터 로드 실패
+          console.warn('[PayrollForm] 근태 데이터 로드 실패:', attendanceResult.error)
+          setAttendanceLoadError(attendanceResult.error || '근태 데이터를 불러올 수 없습니다.')
+          setAttendanceSummary(null)
+          setAttendanceDeduction(null)
         }
 
         // 급여 설정이 있으면 항상 설정 기반으로 계산 (4대보험 값 정확히 반영)
@@ -508,6 +525,24 @@ export default function PayrollForm() {
                   상단의 "급여 설정" 탭에서 설정할 수 있습니다.
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 근태 데이터 로드 실패 경고 */}
+      {attendanceLoadError && selectedEmployeeId && accessResult?.canAccess && !noSettingsWarning && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-amber-800 mb-2">근태 데이터를 불러올 수 없습니다</h4>
+              <p className="text-sm text-amber-700 mb-2">
+                {attendanceLoadError}
+              </p>
+              <p className="text-xs text-amber-600">
+                * 근태 데이터가 없으면 결근 차감이 적용되지 않습니다. 근태 기록을 확인해주세요.
+              </p>
             </div>
           </div>
         </div>

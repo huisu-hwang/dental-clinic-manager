@@ -835,11 +835,11 @@ export async function getAttendanceSummaryForPayroll(
     const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule)
 
     if (!result.success) {
-      // API가 없거나 오류 발생 시 기본값 반환
-      console.warn('Attendance API not available, using default values')
+      // API가 없거나 오류 발생 시 에러 반환 (결근 마스킹 방지)
+      console.warn('Attendance API not available:', result.error)
       return {
-        success: true,
-        data: createDefaultAttendanceSummary(employeeId, year, month, totalWorkDays)
+        success: false,
+        error: result.error || '근태 데이터를 불러올 수 없습니다.'
       }
     }
 
@@ -936,11 +936,10 @@ export async function getAttendanceSummaryForPayroll(
     return { success: true, data: summary }
   } catch (error) {
     console.error('Error fetching attendance summary:', error)
-    // 오류 발생 시 기본값 반환
-    const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule)
+    // 오류 발생 시 에러 반환 (결근 마스킹 방지)
     return {
-      success: true,
-      data: createDefaultAttendanceSummary(employeeId, year, month, totalWorkDays)
+      success: false,
+      error: error instanceof Error ? error.message : '근태 데이터 조회 중 오류가 발생했습니다.'
     }
   }
 }

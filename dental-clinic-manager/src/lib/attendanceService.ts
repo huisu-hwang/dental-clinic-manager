@@ -22,6 +22,8 @@ import type {
   AttendanceStatus,
 } from '@/types/attendance'
 import type { ClinicBranch } from '@/types/branch'
+import type { WorkSchedule, DayName } from '@/types/workSchedule'
+import { DEFAULT_WORK_SCHEDULE, DAY_OF_WEEK_TO_NAME } from '@/types/workSchedule'
 
 /**
  * 한국 시간대 기준 오늘 날짜 반환 (YYYY-MM-DD 형식)
@@ -116,6 +118,133 @@ function calculateValidityDays(validity_type?: string, validity_days?: number): 
       return validity_days && validity_days > 0 ? validity_days : 1
     default:
       return 1 // 기본값: 1일
+  }
+}
+
+/**
+ * 직원 근무 스케줄 기반 해당 월의 소정 근로일수 계산
+ * @param year 연도
+ * @param month 월
+ * @param workSchedule 직원 근무 스케줄 (없으면 기본 스케줄 사용)
+ */
+function getScheduledWorkDaysFromSchedule(
+  year: number,
+  month: number,
+  workSchedule?: WorkSchedule
+): number {
+  const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
+  const daysInMonth = new Date(year, month, 0).getDate()
+  let workDays = 0
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day)
+    const dayOfWeek = date.getDay()
+    const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+
+    // 해당 요일이 근무일인지 확인
+    if (schedule[dayName]?.isWorking) {
+      workDays++
+    }
+  }
+
+  return workDays
+}
+
+/**
+ * 직원별 근태 통계 계산 (직원 근무 스케줄 기반)
+ * - 근무일: 직원 근무 스케줄 기반 해당 월의 총 근무해야 하는 일수
+ * - 출근일: 출근 기록이 있는 일수 (present, late, early_leave)
+ * - 결근일: 근무일 - 출근일 - 연차사용일
+ */
+function calculateAttendanceStatsFromRecords(
+  records: AttendanceRecord[],
+  totalWorkDays: number
+): {
+  presentDays: number
+  absentDays: number
+  leaveDays: number
+  holidayDays: number
+  lateCount: number
+  totalLateMinutes: number
+  earlyLeaveCount: number
+  totalEarlyLeaveMinutes: number
+  overtimeCount: number
+  totalOvertimeMinutes: number
+  totalWorkMinutes: number
+} {
+  // 출근 기록이 있는 날짜 집합 (중복 방지)
+  const presentDates = new Set<string>()
+  const leaveDates = new Set<string>()
+
+  let holidayDays = 0
+  let lateCount = 0
+  let totalLateMinutes = 0
+  let earlyLeaveCount = 0
+  let totalEarlyLeaveMinutes = 0
+  let overtimeCount = 0
+  let totalOvertimeMinutes = 0
+  let totalWorkMinutes = 0
+
+  for (const record of records) {
+    const recordDate = record.work_date
+
+    switch (record.status) {
+      case 'present':
+        if (!presentDates.has(recordDate)) {
+          presentDates.add(recordDate)
+        }
+        break
+      case 'late':
+        if (!presentDates.has(recordDate)) {
+          presentDates.add(recordDate)
+        }
+        lateCount++
+        totalLateMinutes += record.late_minutes || 0
+        break
+      case 'early_leave':
+        if (!presentDates.has(recordDate)) {
+          presentDates.add(recordDate)
+        }
+        earlyLeaveCount++
+        totalEarlyLeaveMinutes += record.early_leave_minutes || 0
+        break
+      case 'leave':
+        if (!leaveDates.has(recordDate)) {
+          leaveDates.add(recordDate)
+        }
+        break
+      case 'holiday':
+        holidayDays++
+        break
+    }
+
+    // 초과근무 집계
+    if (record.overtime_minutes && record.overtime_minutes > 0) {
+      overtimeCount++
+      totalOvertimeMinutes += record.overtime_minutes
+    }
+
+    // 총 근무 시간 집계
+    totalWorkMinutes += record.total_work_minutes || 0
+  }
+
+  const presentDays = presentDates.size
+  const leaveDays = leaveDates.size
+  // 결근일 = 근무일 - 출근일 - 연차사용일
+  const absentDays = Math.max(0, totalWorkDays - presentDays - leaveDays)
+
+  return {
+    presentDays,
+    absentDays,
+    leaveDays,
+    holidayDays,
+    lateCount,
+    totalLateMinutes,
+    earlyLeaveCount,
+    totalEarlyLeaveMinutes,
+    overtimeCount,
+    totalOvertimeMinutes,
+    totalWorkMinutes
   }
 }
 
@@ -1250,6 +1379,12 @@ export async function editAttendanceRecord(
 
 /**
  * 모든 직원의 월별 통계 조회 (관리자용)
+ * 직원별 근무 스케줄 기반으로 정확한 근태 통계 계산
+ *
+ * 계산 로직:
+ * - 근무일: 직원 근무 스케줄 기반 해당 월의 총 근무해야 하는 일수
+ * - 출근일: 출근 기록이 있는 일수 (present, late, early_leave)
+ * - 결근일: 근무일 - 출근일 - 연차사용일
  */
 export async function getAllUsersMonthlyStatistics(
   clinicId: string,
@@ -1267,10 +1402,10 @@ export async function getAllUsersMonthlyStatistics(
   }
 
   try {
-    // 해당 클리닉의 활성 직원 목록 조회
+    // 해당 클리닉의 활성 직원 목록 조회 (work_schedule 포함)
     let usersQuery = supabase
       .from('users')
-      .select('id, name')
+      .select('id, name, work_schedule')
       .eq('clinic_id', clinicId)
       .eq('status', 'active')
 
@@ -1288,62 +1423,99 @@ export async function getAllUsersMonthlyStatistics(
       return { success: true, statistics: [] }
     }
 
-    const userIds = users.map((u: { id: string; name: string }) => u.id)
-    const userNameMap = new Map(users.map((u: { id: string; name: string }) => [u.id, u.name]))
+    // 해당 월의 모든 출퇴근 기록 조회
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
 
-    // 해당 월의 통계 조회
-    const { data: stats, error: statsError } = await supabase
-      .from('attendance_statistics')
+    const userIds = users.map((u: { id: string; name: string; work_schedule?: WorkSchedule }) => u.id)
+
+    const { data: allRecords, error: recordsError } = await supabase
+      .from('attendance_records')
       .select('*')
-      .eq('year', year)
-      .eq('month', month)
+      .eq('clinic_id', clinicId)
       .in('user_id', userIds)
+      .gte('work_date', startDate)
+      .lte('work_date', endDate)
 
-    if (statsError) {
-      return { success: false, error: statsError.message }
+    if (recordsError) {
+      return { success: false, error: recordsError.message }
     }
 
-    const statsWithNames = (stats || []).map((stat: AttendanceStatistics) => ({
-      ...stat,
-      user_name: userNameMap.get(stat.user_id) || '알 수 없음',
-    }))
+    // 사용자별 기록 그룹화
+    const recordsByUser = new Map<string, AttendanceRecord[]>()
+    for (const record of allRecords || []) {
+      const userRecords = recordsByUser.get(record.user_id) || []
+      userRecords.push(record)
+      recordsByUser.set(record.user_id, userRecords)
+    }
 
-    // 통계가 없는 사용자도 포함 (0으로 초기화)
-    const existingUserIds = new Set(stats?.map((s: AttendanceStatistics) => s.user_id) || [])
-    const missingStats = users
-      .filter((u: { id: string; name: string }) => !existingUserIds.has(u.id))
-      .map((u: { id: string; name: string }) => ({
-        id: '',
-        user_id: u.id,
-        clinic_id: clinicId,
-        year,
-        month,
-        total_work_days: 0,
-        present_days: 0,
-        absent_days: 0,
-        leave_days: 0,
-        holiday_days: 0,
-        late_count: 0,
-        total_late_minutes: 0,
-        avg_late_minutes: 0,
-        early_leave_count: 0,
-        total_early_leave_minutes: 0,
-        avg_early_leave_minutes: 0,
-        overtime_count: 0,
-        total_overtime_minutes: 0,
-        avg_overtime_minutes: 0,
-        total_work_minutes: 0,
-        avg_work_minutes_per_day: 0,
-        attendance_rate: 0,
-        last_calculated_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_name: u.name,
-      }))
+    // 각 직원별 통계 계산
+    const statistics: (AttendanceStatistics & { user_name: string })[] = users.map(
+      (user: { id: string; name: string; work_schedule?: WorkSchedule }) => {
+        // 직원 근무 스케줄 기반 근무일수 계산
+        const workSchedule = user.work_schedule as WorkSchedule | undefined
+        const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule)
+
+        // 해당 직원의 출퇴근 기록
+        const userRecords = recordsByUser.get(user.id) || []
+
+        // 통계 계산
+        const stats = calculateAttendanceStatsFromRecords(userRecords, totalWorkDays)
+
+        // 출근율 계산
+        const attendanceRate = totalWorkDays > 0
+          ? Math.round(((stats.presentDays + stats.leaveDays) / totalWorkDays) * 1000) / 10
+          : 0
+
+        // 평균 계산
+        const avgWorkMinutesPerDay = stats.presentDays > 0
+          ? Math.round(stats.totalWorkMinutes / stats.presentDays)
+          : 0
+        const avgLateMinutes = stats.lateCount > 0
+          ? Math.round(stats.totalLateMinutes / stats.lateCount)
+          : 0
+        const avgEarlyLeaveMinutes = stats.earlyLeaveCount > 0
+          ? Math.round(stats.totalEarlyLeaveMinutes / stats.earlyLeaveCount)
+          : 0
+        const avgOvertimeMinutes = stats.overtimeCount > 0
+          ? Math.round(stats.totalOvertimeMinutes / stats.overtimeCount)
+          : 0
+
+        return {
+          id: '',
+          user_id: user.id,
+          clinic_id: clinicId,
+          year,
+          month,
+          total_work_days: totalWorkDays,
+          present_days: stats.presentDays,
+          absent_days: stats.absentDays,
+          leave_days: stats.leaveDays,
+          holiday_days: stats.holidayDays,
+          late_count: stats.lateCount,
+          total_late_minutes: stats.totalLateMinutes,
+          avg_late_minutes: avgLateMinutes,
+          early_leave_count: stats.earlyLeaveCount,
+          total_early_leave_minutes: stats.totalEarlyLeaveMinutes,
+          avg_early_leave_minutes: avgEarlyLeaveMinutes,
+          overtime_count: stats.overtimeCount,
+          total_overtime_minutes: stats.totalOvertimeMinutes,
+          avg_overtime_minutes: avgOvertimeMinutes,
+          total_work_minutes: stats.totalWorkMinutes,
+          avg_work_minutes_per_day: avgWorkMinutesPerDay,
+          attendance_rate: attendanceRate,
+          last_calculated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          user_name: user.name,
+        }
+      }
+    )
 
     return {
       success: true,
-      statistics: [...statsWithNames, ...missingStats].sort((a, b) =>
+      statistics: statistics.sort((a, b) =>
         a.user_name.localeCompare(b.user_name, 'ko')
       ),
     }
