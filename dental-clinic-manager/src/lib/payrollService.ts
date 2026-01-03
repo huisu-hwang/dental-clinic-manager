@@ -739,10 +739,40 @@ export function calculatePayrollBasis(
 }
 
 /**
- * 해당 월의 소정 근로일수 계산
+ * 해당 월의 소정 근로일수 계산 (근무 스케줄 기반)
+ * @param year 연도
+ * @param month 월
+ * @param workSchedule 직원 근무 스케줄 (없으면 기본 스케줄 사용)
+ */
+export function getScheduledWorkDaysFromSchedule(
+  year: number,
+  month: number,
+  workSchedule?: WorkSchedule
+): number {
+  const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
+  const daysInMonth = new Date(year, month, 0).getDate()
+  let workDays = 0
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day)
+    const dayOfWeek = date.getDay()
+    const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+
+    // 해당 요일이 근무일인지 확인
+    if (schedule[dayName]?.isWorking) {
+      workDays++
+    }
+  }
+
+  return workDays
+}
+
+/**
+ * 해당 월의 소정 근로일수 계산 (단순 주말 제외 - 레거시)
  * @param year 연도
  * @param month 월
  * @param weekendOff 주말 휴무 여부 (기본: true - 토/일 휴무)
+ * @deprecated Use getScheduledWorkDaysFromSchedule instead
  */
 export function getScheduledWorkDays(
   year: number,
@@ -770,12 +800,25 @@ export function getScheduledWorkDays(
 /**
  * 급여 계산용 근태 요약 조회
  * 해당 월의 근태 기록을 기반으로 급여 계산에 필요한 정보를 요약
+ *
+ * 계산 로직:
+ * - 근무일: 직원 근무 스케줄 기반 해당 월의 총 근무해야 하는 일수
+ * - 출근일: 출근 기록이 있는 일수 (present, late, early_leave)
+ * - 결근일: 근무일 - 출근일 - 연차사용일
+ * - 무단결근일: 결근일 중 연차를 사용하지 않은 일수
+ *
+ * @param employeeId 직원 ID
+ * @param clinicId 병원 ID
+ * @param year 연도
+ * @param month 월
+ * @param workSchedule 직원 근무 스케줄 (옵션)
  */
 export async function getAttendanceSummaryForPayroll(
   employeeId: string,
   clinicId: string,
   year: number,
-  month: number
+  month: number,
+  workSchedule?: WorkSchedule
 ): Promise<{ success: boolean; data?: AttendanceSummaryForPayroll; error?: string }> {
   try {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
@@ -788,60 +831,80 @@ export async function getAttendanceSummaryForPayroll(
     )
     const result = await response.json()
 
+    // 소정 근로일수 계산 (직원 근무 스케줄 기반)
+    const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule)
+
     if (!result.success) {
       // API가 없거나 오류 발생 시 기본값 반환
       console.warn('Attendance API not available, using default values')
       return {
         success: true,
-        data: createDefaultAttendanceSummary(employeeId, year, month)
+        data: createDefaultAttendanceSummary(employeeId, year, month, totalWorkDays)
       }
     }
 
     const records = result.data || []
 
-    // 소정 근로일수 계산 (주말 제외)
-    const totalWorkDays = getScheduledWorkDays(year, month, true)
-
     // 근태 통계 집계
+    // 출근일: present, late, early_leave 상태의 기록
     let presentDays = 0
-    let absentDays = 0
-    let leaveDays = 0
-    let holidayDays = 0
+    let leaveDays = 0 // 연차 사용일
+    let holidayDays = 0 // 공휴일
     let lateCount = 0
     let totalLateMinutes = 0
     let earlyLeaveCount = 0
     let totalEarlyLeaveMinutes = 0
     let overtimeMinutes = 0
 
+    // 출근 기록이 있는 날짜 집합 (중복 방지)
+    const presentDates = new Set<string>()
+    const leaveDates = new Set<string>()
+
     for (const record of records) {
+      const recordDate = record.work_date
+
       switch (record.status) {
         case 'present':
-          presentDays++
+          if (!presentDates.has(recordDate)) {
+            presentDays++
+            presentDates.add(recordDate)
+          }
           break
         case 'late':
-          presentDays++
+          if (!presentDates.has(recordDate)) {
+            presentDays++
+            presentDates.add(recordDate)
+          }
           lateCount++
           totalLateMinutes += record.late_minutes || 0
           break
         case 'early_leave':
-          presentDays++
+          if (!presentDates.has(recordDate)) {
+            presentDays++
+            presentDates.add(recordDate)
+          }
           earlyLeaveCount++
           totalEarlyLeaveMinutes += record.early_leave_minutes || 0
           break
-        case 'absent':
-          absentDays++
-          break
         case 'leave':
-          leaveDays++
+          if (!leaveDates.has(recordDate)) {
+            leaveDays++
+            leaveDates.add(recordDate)
+          }
           break
         case 'holiday':
           holidayDays++
           break
+        // 'absent' 상태는 별도 집계하지 않음 - 계산으로 도출
       }
 
       // 초과근무 시간 집계
       overtimeMinutes += record.overtime_minutes || 0
     }
+
+    // 결근일 계산: 근무일 - 출근일 - 연차사용일
+    // (공휴일은 근무 스케줄에 포함되어 있지 않으므로 제외할 필요 없음)
+    const absentDays = Math.max(0, totalWorkDays - presentDays - leaveDays)
 
     // 연차 정보 조회 (연차 시스템이 있다면)
     // 현재는 기본값 사용
@@ -855,7 +918,7 @@ export async function getAttendanceSummaryForPayroll(
       month,
       totalWorkDays,
       presentDays,
-      absentDays,
+      absentDays, // 계산된 결근일 (무단결근)
       leaveDays,
       holidayDays,
       lateCount,
@@ -874,9 +937,10 @@ export async function getAttendanceSummaryForPayroll(
   } catch (error) {
     console.error('Error fetching attendance summary:', error)
     // 오류 발생 시 기본값 반환
+    const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule)
     return {
       success: true,
-      data: createDefaultAttendanceSummary(employeeId, year, month)
+      data: createDefaultAttendanceSummary(employeeId, year, month, totalWorkDays)
     }
   }
 }
@@ -887,16 +951,17 @@ export async function getAttendanceSummaryForPayroll(
 function createDefaultAttendanceSummary(
   employeeId: string,
   year: number,
-  month: number
+  month: number,
+  totalWorkDays?: number
 ): AttendanceSummaryForPayroll {
-  const totalWorkDays = getScheduledWorkDays(year, month, true)
+  const workDays = totalWorkDays ?? getScheduledWorkDays(year, month, true)
 
   return {
     userId: employeeId,
     year,
     month,
-    totalWorkDays,
-    presentDays: totalWorkDays, // 모두 출근한 것으로 간주
+    totalWorkDays: workDays,
+    presentDays: workDays, // 모두 출근한 것으로 간주
     absentDays: 0,
     leaveDays: 0,
     holidayDays: 0,

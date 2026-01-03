@@ -223,12 +223,13 @@ export default function PayrollForm() {
           console.warn('Failed to fetch work schedule, using default:', error)
         }
 
-        // 근태 요약 조회
+        // 근태 요약 조회 (직원 근무 스케줄 기반으로 근무일 계산)
         const attendanceResult = await getAttendanceSummaryForPayroll(
           selectedEmployeeId,
           user.clinic_id,
           selectedYear,
-          selectedMonth
+          selectedMonth,
+          workSchedule // 근무 스케줄 전달하여 정확한 근무일수 계산
         )
 
         let currentAttendanceSummary: AttendanceSummaryForPayroll | null = null
