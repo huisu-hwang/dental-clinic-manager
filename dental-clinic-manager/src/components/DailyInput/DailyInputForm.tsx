@@ -86,6 +86,13 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   // 날짜별 데이터 로드
   const loadDataForDate = useCallback(async (date: string) => {
     console.log('[DailyInputForm] loadDataForDate called with:', date)
+
+    // 저장 중일 때는 데이터 로드 스킵 (저장 직후 재로드로 인한 데이터 초기화 방지)
+    if (isSavingRef.current) {
+      console.log('[DailyInputForm] Skipping load - save in progress')
+      return
+    }
+
     if (!date) {
       console.log('[DailyInputForm] No date provided, skipping load')
       setLoading(false)
