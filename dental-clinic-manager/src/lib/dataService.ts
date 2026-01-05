@@ -741,9 +741,11 @@ export const dataService = {
           date,
           patient_name: row.patient_name,
           gift_type: row.gift_type,
+          quantity: row.quantity || 1,  // quantity 필드 추가!
           naver_review: row.naver_review,
           notes: row.notes ?? ''
         }))
+        console.log('[DataService] Saving gift_logs with quantity:', JSON.stringify(giftData))
         const { error } = await supabase.from('gift_logs').insert(giftData as any)
         if (error) throw new Error(`선물 기록 저장 실패: ${error.message}`)
       }
