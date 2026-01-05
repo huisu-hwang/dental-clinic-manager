@@ -255,16 +255,30 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                         const availableForThis = actualStock - usedByOthers
                         const maxQuantity = Math.min(Math.max(availableForThis, 1), 10)
 
-                        return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => {
-                          const remaining = actualStock - usedByOthers - num
-                          return (
-                            <option key={num} value={String(num)}>
-                              {num}개 (남음:{remaining >= 0 ? remaining : 0})
-                            </option>
-                          )
-                        })
+                        return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => (
+                            <option key={num} value={String(num)}>{num}</option>
+                          ))
                       })()}
                     </select>
+                    {/* 재고량 별도 표시 */}
+                    {row.gift_type !== '없음' && (() => {
+                      const gift = giftInventory.find(item => item.name === row.gift_type)
+                      const totalStock = gift?.stock || 0
+                      const totalSavedUsage = baseUsageByGift[row.gift_type] || 0
+                      const currentDateUsage = currentDateSavedUsage[row.gift_type] || 0
+                      const actualStock = totalStock - totalSavedUsage + currentDateUsage
+                      const usedByOthers = giftRows.reduce((total, r, idx) => {
+                        if (idx === index || r.gift_type !== row.gift_type) return total
+                        if (!r.patient_name?.trim()) return total
+                        return total + (r.quantity || 1)
+                      }, 0)
+                      const remaining = actualStock - usedByOthers - (row.quantity || 1)
+                      return (
+                        <div className="text-xs text-slate-500 mt-1">
+                          남은 재고: {remaining >= 0 ? remaining : 0}
+                        </div>
+                      )
+                    })()}
                   </td>
                   <td className="px-4 py-2">
                     <select
@@ -413,16 +427,30 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                         const availableForThis = actualStock - usedByOthers
                         const maxQuantity = Math.min(Math.max(availableForThis, 1), 10)
 
-                        return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => {
-                          const remaining = actualStock - usedByOthers - num
-                          return (
-                            <option key={num} value={String(num)}>
-                              {num}개 (남음:{remaining >= 0 ? remaining : 0})
-                            </option>
-                          )
-                        })
+                        return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => (
+                            <option key={num} value={String(num)}>{num}</option>
+                          ))
                       })()}
                     </select>
+                    {/* 재고량 별도 표시 */}
+                    {row.gift_type !== '없음' && (() => {
+                      const gift = giftInventory.find(item => item.name === row.gift_type)
+                      const totalStock = gift?.stock || 0
+                      const totalSavedUsage = baseUsageByGift[row.gift_type] || 0
+                      const currentDateUsage = currentDateSavedUsage[row.gift_type] || 0
+                      const actualStock = totalStock - totalSavedUsage + currentDateUsage
+                      const usedByOthers = giftRows.reduce((total, r, idx) => {
+                        if (idx === index || r.gift_type !== row.gift_type) return total
+                        if (!r.patient_name?.trim()) return total
+                        return total + (r.quantity || 1)
+                      }, 0)
+                      const remaining = actualStock - usedByOthers - (row.quantity || 1)
+                      return (
+                        <div className="text-xs text-slate-500 mt-1">
+                          남은 재고: {remaining >= 0 ? remaining : 0}
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
