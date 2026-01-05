@@ -1061,6 +1061,16 @@ function createDefaultAttendanceSummary(
 }
 
 /**
+ * 근태 차감 옵션 인터페이스
+ */
+export interface AttendanceDeductionOptions {
+  /** 지각 시간 급여 차감 여부 (기본: true) */
+  deductLateMinutes?: boolean
+  /** 조퇴 시간 급여 차감 여부 (기본: true) */
+  deductEarlyLeaveMinutes?: boolean
+}
+
+/**
  * 근태 기반 급여 차감 계산
  * 대한민국 근로기준법에 따라 차감액 계산:
  *
@@ -1074,13 +1084,18 @@ function createDefaultAttendanceSummary(
  * @param attendance 근태 요약 정보
  * @param allowedAnnualLeave 허용 연차 일수 (옵션)
  * @param weeksWithAbsence 결근이 있는 주 수 (옵션, 없으면 결근일수 기반 추정)
+ * @param options 차감 옵션 (지각/조퇴 차감 여부)
  */
 export function calculateAttendanceDeduction(
   basis: PayrollBasis,
   attendance: AttendanceSummaryForPayroll,
   allowedAnnualLeave?: number,
-  weeksWithAbsence?: number
+  weeksWithAbsence?: number,
+  options?: AttendanceDeductionOptions
 ): AttendanceDeduction {
+  // 기본 옵션 설정
+  const deductLate = options?.deductLateMinutes !== false
+  const deductEarlyLeave = options?.deductEarlyLeaveMinutes !== false
   const details: DeductionDetail[] = []
   let totalDeduction = 0
 
@@ -1090,6 +1105,7 @@ export function calculateAttendanceDeduction(
 
   // =====================================================================
   // 1. 조퇴/반차 차감 계산
+  // - 차감 옵션이 꺼져있으면: 차감 없음
   // - 잔여 연차가 있으면: 유급 처리 (차감 없음)
   // - 잔여 연차가 없으면: 통상시급 × 조퇴시간 차감
   // =====================================================================
@@ -1101,7 +1117,16 @@ export function calculateAttendanceDeduction(
     // 반차 = 4시간(240분), 연차 1일 = 일 평균 근로시간
     const dailyWorkMinutes = basis.dailyWorkHours * 60
 
-    if (remainingAnnualLeave > 0) {
+    if (!deductEarlyLeave) {
+      // 조퇴 차감 옵션이 꺼져있으면 차감 없음
+      details.push({
+        reason: 'early_leave',
+        description: `조퇴 ${attendance.earlyLeaveCount}회 (총 ${attendance.totalEarlyLeaveMinutes}분) - 차감 미적용 설정`,
+        count: attendance.earlyLeaveCount,
+        minutes: attendance.totalEarlyLeaveMinutes,
+        amount: 0
+      })
+    } else if (remainingAnnualLeave > 0) {
       // 잔여 연차가 있으면 유급 처리 (차감 없음)
       // 조퇴 시간만큼 연차를 사용한 것으로 처리
       details.push({
@@ -1205,22 +1230,34 @@ export function calculateAttendanceDeduction(
 
   // =====================================================================
   // 3. 지각 차감 계산
+  // - 차감 옵션이 꺼져있으면: 차감 없음
   // - 지각은 일반적으로 무급 처리 (시급 × 지각시간)
   // - 회사 정책에 따라 일정 시간 이하는 면제할 수 있음
   // =====================================================================
   let lateDeduction = 0
   if (attendance.totalLateMinutes > 0) {
-    lateDeduction = Math.round((attendance.totalLateMinutes / 60) * basis.hourlyWage)
+    if (!deductLate) {
+      // 지각 차감 옵션이 꺼져있으면 차감 없음
+      details.push({
+        reason: 'late',
+        description: `지각 ${attendance.lateCount}회 (총 ${attendance.totalLateMinutes}분) - 차감 미적용 설정`,
+        count: attendance.lateCount,
+        minutes: attendance.totalLateMinutes,
+        amount: 0
+      })
+    } else {
+      lateDeduction = Math.round((attendance.totalLateMinutes / 60) * basis.hourlyWage)
 
-    details.push({
-      reason: 'late',
-      description: `지각 ${attendance.lateCount}회 (총 ${attendance.totalLateMinutes}분)`,
-      count: attendance.lateCount,
-      minutes: attendance.totalLateMinutes,
-      amount: lateDeduction
-    })
+      details.push({
+        reason: 'late',
+        description: `지각 ${attendance.lateCount}회 (총 ${attendance.totalLateMinutes}분)`,
+        count: attendance.lateCount,
+        minutes: attendance.totalLateMinutes,
+        amount: lateDeduction
+      })
 
-    totalDeduction += lateDeduction
+      totalDeduction += lateDeduction
+    }
   }
 
   // =====================================================================
@@ -1287,6 +1324,9 @@ export async function calculatePayrollWithAttendance(
   clinicId: string
 ): Promise<{ success: boolean; data?: AttendancePayrollResult; error?: string }> {
   try {
+    // 기본 옵션 설정
+    const includeOvertimePay = input.includeOvertimePay !== false
+
     // 1. 급여 계산 기준 생성
     const basis = calculatePayrollBasis(input.baseSalary)
 
@@ -1304,16 +1344,29 @@ export async function calculatePayrollWithAttendance(
 
     const attendance = attendanceResult.data
 
-    // 3. 근태 기반 급여 차감 계산
-    const deduction = calculateAttendanceDeduction(basis, attendance, input.allowedAnnualLeave)
-
-    // 4. 초과근무 수당 계산
-    const overtimePays = calculateOvertimePay(
-      basis.hourlyWage,
-      attendance.overtimeMinutes,
-      attendance.nightWorkMinutes,
-      attendance.holidayWorkMinutes
+    // 3. 근태 기반 급여 차감 계산 (옵션 전달)
+    const deductionOptions: AttendanceDeductionOptions = {
+      deductLateMinutes: input.deductLateMinutes,
+      deductEarlyLeaveMinutes: input.deductEarlyLeaveMinutes
+    }
+    const deduction = calculateAttendanceDeduction(
+      basis,
+      attendance,
+      input.allowedAnnualLeave,
+      undefined,
+      deductionOptions
     )
+
+    // 4. 초과근무 수당 계산 (옵션에 따라 계산 여부 결정)
+    let overtimePays = { overtimePay: 0, nightWorkPay: 0, holidayWorkPay: 0 }
+    if (includeOvertimePay) {
+      overtimePays = calculateOvertimePay(
+        basis.hourlyWage,
+        attendance.overtimeMinutes,
+        attendance.nightWorkMinutes,
+        attendance.holidayWorkMinutes
+      )
+    }
 
     // 5. 조정된 기본급 계산
     const adjustedBaseSalary = Math.max(0, input.baseSalary - deduction.totalDeduction)

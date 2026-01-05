@@ -409,6 +409,10 @@ export interface AttendancePayrollInput {
   baseSalary: number           // 월 기본급 (비과세 제외)
   includeWeeklyHolidayPay?: boolean // 주휴수당 포함 여부 (월급제는 보통 포함)
   allowedAnnualLeave?: number  // 허용 연차 (잔여 연차)
+  // 근태 차감/수당 옵션
+  deductLateMinutes?: boolean  // 지각 시간 급여 차감 여부 (기본: true)
+  deductEarlyLeaveMinutes?: boolean // 조퇴 시간 급여 차감 여부 (기본: true)
+  includeOvertimePay?: boolean // 초과근무 수당 포함 여부 (기본: true)
 }
 
 /**

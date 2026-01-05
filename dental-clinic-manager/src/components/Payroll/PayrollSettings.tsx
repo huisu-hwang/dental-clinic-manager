@@ -38,6 +38,10 @@ interface SalarySetting {
   familyCount: number
   childCount: number
   otherDeductions: number
+  // 근태 차감/수당 옵션
+  deductLateMinutes: boolean
+  deductEarlyLeaveMinutes: boolean
+  includeOvertimePay: boolean
 }
 
 export default function PayrollSettings() {
@@ -50,6 +54,11 @@ export default function PayrollSettings() {
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [loadingEmployee, setLoadingEmployee] = useState(false)
   const [savedSettings, setSavedSettings] = useState<Record<string, SalarySetting>>({})
+
+  // 근태 차감/수당 옵션 상태
+  const [deductLateMinutes, setDeductLateMinutes] = useState(true)
+  const [deductEarlyLeaveMinutes, setDeductEarlyLeaveMinutes] = useState(true)
+  const [includeOvertimePay, setIncludeOvertimePay] = useState(true)
 
   // 직원 목록 로드
   useEffect(() => {
@@ -96,7 +105,11 @@ export default function PayrollSettings() {
             employmentInsurance: item.employment_insurance || 0,
             familyCount: item.family_count || 1,
             childCount: item.child_count || 0,
-            otherDeductions: item.other_deductions || 0
+            otherDeductions: item.other_deductions || 0,
+            // 근태 차감/수당 옵션 (기본값: true)
+            deductLateMinutes: item.deduct_late_minutes !== false,
+            deductEarlyLeaveMinutes: item.deduct_early_leave_minutes !== false,
+            includeOvertimePay: item.include_overtime_pay !== false
           }
         })
         setSavedSettings(settings)
@@ -137,6 +150,10 @@ export default function PayrollSettings() {
             childCount: settings.childCount,
             otherDeductions: settings.otherDeductions
           }))
+          // 근태 차감/수당 옵션 설정
+          setDeductLateMinutes(settings.deductLateMinutes)
+          setDeductEarlyLeaveMinutes(settings.deductEarlyLeaveMinutes)
+          setIncludeOvertimePay(settings.includeOvertimePay)
         } else {
           // 2. 계약서에서 정보 추출
           const employee = employees.find(e => e.id === selectedEmployeeId)
@@ -171,6 +188,10 @@ export default function PayrollSettings() {
               mealAllowance: 200000
             })
           }
+          // 저장된 설정이 없으면 기본값으로 리셋
+          setDeductLateMinutes(true)
+          setDeductEarlyLeaveMinutes(true)
+          setIncludeOvertimePay(true)
         }
       } catch (error) {
         console.error('Error loading employee settings:', error)
@@ -245,6 +266,10 @@ export default function PayrollSettings() {
           familyCount: formState.familyCount,
           childCount: formState.childCount,
           otherDeductions: formState.otherDeductions,
+          // 근태 차감/수당 옵션
+          deductLateMinutes,
+          deductEarlyLeaveMinutes,
+          includeOvertimePay,
           updatedBy: user.id
         }),
       })
@@ -270,7 +295,11 @@ export default function PayrollSettings() {
             employmentInsurance: formState.employmentInsurance,
             familyCount: formState.familyCount,
             childCount: formState.childCount,
-            otherDeductions: formState.otherDeductions
+            otherDeductions: formState.otherDeductions,
+            // 근태 차감/수당 옵션
+            deductLateMinutes,
+            deductEarlyLeaveMinutes,
+            includeOvertimePay
           }
         }))
       } else {
@@ -601,6 +630,81 @@ export default function PayrollSettings() {
                   <span className="absolute right-3 top-2 text-slate-500">원</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* 근태 연동 설정 */}
+          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <h4 className="font-medium text-amber-800 mb-4 flex items-center">
+              <AlertCircle className="w-4 h-4 mr-2" />
+              근태 연동 설정
+            </h4>
+            <p className="text-xs text-amber-700 mb-4">
+              근태 기록에 따른 급여 차감/수당 계산 옵션을 설정합니다. 설정을 변경하면 다음 급여명세서부터 적용됩니다.
+            </p>
+            <div className="space-y-4">
+              {/* 지각 차감 */}
+              <label className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium text-slate-700">지각 시간 급여 차감</span>
+                  <p className="text-xs text-slate-500">지각 시간만큼 급여에서 차감합니다</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDeductLateMinutes(!deductLateMinutes)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    deductLateMinutes ? 'bg-emerald-600' : 'bg-slate-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      deductLateMinutes ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </label>
+
+              {/* 조퇴 차감 */}
+              <label className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium text-slate-700">조퇴 시간 급여 차감</span>
+                  <p className="text-xs text-slate-500">조퇴 시간만큼 급여에서 차감합니다</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDeductEarlyLeaveMinutes(!deductEarlyLeaveMinutes)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    deductEarlyLeaveMinutes ? 'bg-emerald-600' : 'bg-slate-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      deductEarlyLeaveMinutes ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </label>
+
+              {/* 초과근무 수당 */}
+              <label className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium text-slate-700">초과근무 수당 포함</span>
+                  <p className="text-xs text-slate-500">초과근무 시간에 대한 수당을 급여에 포함합니다</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIncludeOvertimePay(!includeOvertimePay)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    includeOvertimePay ? 'bg-emerald-600' : 'bg-slate-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      includeOvertimePay ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </label>
             </div>
           </div>
 
