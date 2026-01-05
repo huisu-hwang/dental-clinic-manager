@@ -152,13 +152,24 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         }
 
         if (giftLogs.length > 0) {
-          setGiftRows(giftLogs.map(log => ({
-            patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
-            gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
-            quantity: typeof log.quantity === 'number' ? log.quantity : 1,
-            naver_review: (log.naver_review as 'O' | 'X') || 'X',
-            notes: typeof log.notes === 'string' ? log.notes : ''
-          })))
+          console.log('[DailyInputForm] Loading giftLogs from DB:', JSON.stringify(giftLogs))
+          setGiftRows(giftLogs.map(log => {
+            // DB에서 가져온 quantity를 확실하게 숫자로 변환
+            const loadedQty = parseInt(String(log.quantity), 10) || 1
+            console.log('[DailyInputForm] Loading gift row:', {
+              patient_name: log.patient_name,
+              db_quantity: log.quantity,
+              db_quantity_type: typeof log.quantity,
+              loaded_quantity: loadedQty
+            })
+            return {
+              patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
+              gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
+              quantity: loadedQty,
+              naver_review: (log.naver_review as 'O' | 'X') || 'X',
+              notes: typeof log.notes === 'string' ? log.notes : ''
+            }
+          }))
         } else {
           setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
         }
@@ -434,10 +445,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     try {
       if (USE_NEW_ARCHITECTURE) {
         console.log('[DailyInputForm] Calling Server Action...')
+        console.log('[DailyInputForm] giftRows before filter:', JSON.stringify(giftRows))
         console.log('[DailyInputForm] cashRegisterData before save:', JSON.stringify(cashRegisterData))
 
         const filteredConsultLogs = consultRows.filter(row => row.patient_name?.trim())
         const filteredGiftLogs = giftRows.filter(row => row.patient_name?.trim())
+        console.log('[DailyInputForm] filteredGiftLogs:', JSON.stringify(filteredGiftLogs))
         const filteredHappyCallLogs = happyCallRows.filter(row => row.patient_name?.trim())
 
         const result = await saveDailyReport({
@@ -455,14 +468,24 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             consult_status: row.consult_status,
             remarks: row.remarks || ''
           })),
-          giftLogs: filteredGiftLogs.map(row => ({
-            date: reportDate,
-            patient_name: row.patient_name,
-            gift_type: row.gift_type || '',
-            quantity: row.quantity || 1,
-            naver_review: row.naver_review,
-            notes: row.notes || ''
-          })),
+          giftLogs: filteredGiftLogs.map(row => {
+            // 문자열이든 숫자든 상관없이 정수로 변환
+            const qty = parseInt(String(row.quantity), 10) || 1
+            console.log('[DailyInputForm] Mapping gift row:', {
+              patient_name: row.patient_name,
+              original_quantity: row.quantity,
+              original_type: typeof row.quantity,
+              mapped_quantity: qty
+            })
+            return {
+              date: reportDate,
+              patient_name: row.patient_name,
+              gift_type: row.gift_type || '',
+              quantity: qty,
+              naver_review: row.naver_review,
+              notes: row.notes || ''
+            }
+          }),
           happyCallLogs: filteredHappyCallLogs.map(row => ({
             date: reportDate,
             patient_name: row.patient_name,
@@ -571,14 +594,18 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               consult_status: row.consult_status,
               remarks: row.remarks || ''
             })),
-            giftLogs: filteredGiftLogs.map(row => ({
-              date: reportDate,
-              patient_name: row.patient_name,
-              gift_type: row.gift_type || '',
-              quantity: row.quantity || 1,
-              naver_review: row.naver_review,
-              notes: row.notes || ''
-            })),
+            giftLogs: filteredGiftLogs.map(row => {
+              // 문자열이든 숫자든 상관없이 정수로 변환
+              const qty = parseInt(String(row.quantity), 10) || 1
+              return {
+                date: reportDate,
+                patient_name: row.patient_name,
+                gift_type: row.gift_type || '',
+                quantity: qty,
+                naver_review: row.naver_review,
+                notes: row.notes || ''
+              }
+            }),
             happyCallLogs: filteredHappyCallLogs.map(row => ({
               date: reportDate,
               patient_name: row.patient_name,
