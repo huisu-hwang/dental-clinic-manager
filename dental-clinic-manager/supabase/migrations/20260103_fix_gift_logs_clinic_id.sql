@@ -17,7 +17,7 @@ CREATE OR REPLACE FUNCTION save_daily_report_v2(
   p_gift_logs JSONB,
   p_happy_call_logs JSONB,
   p_cash_register JSONB DEFAULT NULL
-) RETURNS JSONB AS $$
+) RETURNS JSONB AS $function$
 DECLARE
   start_time TIMESTAMP;
   end_time TIMESTAMP;
@@ -28,7 +28,6 @@ DECLARE
   v_previous_balance BIGINT;
   v_current_balance BIGINT;
   v_balance_diff BIGINT;
-  log_item JSONB;
 BEGIN
   start_time := clock_timestamp();
 
@@ -65,6 +64,9 @@ BEGIN
   -- 3. consult_logs 삽입 (명시적으로 clinic_id 설정)
   -- ============================================================
   IF p_consult_logs IS NOT NULL AND jsonb_array_length(p_consult_logs) > 0 THEN
+    WITH logs AS (
+      SELECT jsonb_array_elements(p_consult_logs) AS log
+    )
     INSERT INTO consult_logs (date, patient_name, consult_content, consult_status, remarks, clinic_id)
     SELECT
       (log->>'date')::date,
@@ -72,8 +74,8 @@ BEGIN
       log->>'consult_content',
       log->>'consult_status',
       log->>'remarks',
-      p_clinic_id  -- 명시적으로 clinic_id 설정
-    FROM jsonb_array_elements(p_consult_logs) AS log;
+      p_clinic_id
+    FROM logs;
     GET DIAGNOSTICS consult_count = ROW_COUNT;
     RAISE NOTICE '[save_daily_report_v2] Inserted % consult logs with clinic_id %', consult_count, p_clinic_id;
   END IF;
@@ -82,16 +84,19 @@ BEGIN
   -- 4. gift_logs 삽입 (명시적으로 clinic_id 및 quantity 설정)
   -- ============================================================
   IF p_gift_logs IS NOT NULL AND jsonb_array_length(p_gift_logs) > 0 THEN
+    WITH logs AS (
+      SELECT jsonb_array_elements(p_gift_logs) AS log
+    )
     INSERT INTO gift_logs (date, patient_name, gift_type, quantity, naver_review, notes, clinic_id)
     SELECT
       (log->>'date')::date,
       log->>'patient_name',
       log->>'gift_type',
-      COALESCE((log->>'quantity')::integer, 1),  -- quantity 명시적 추출
+      COALESCE((log->>'quantity')::integer, 1),
       log->>'naver_review',
       log->>'notes',
-      p_clinic_id  -- 명시적으로 clinic_id 설정
-    FROM jsonb_array_elements(p_gift_logs) AS log;
+      p_clinic_id
+    FROM logs;
     GET DIAGNOSTICS gift_count = ROW_COUNT;
     RAISE NOTICE '[save_daily_report_v2] Inserted % gift logs with clinic_id %, quantity values preserved', gift_count, p_clinic_id;
   END IF;
@@ -100,14 +105,17 @@ BEGIN
   -- 5. happy_call_logs 삽입 (명시적으로 clinic_id 설정)
   -- ============================================================
   IF p_happy_call_logs IS NOT NULL AND jsonb_array_length(p_happy_call_logs) > 0 THEN
+    WITH logs AS (
+      SELECT jsonb_array_elements(p_happy_call_logs) AS log
+    )
     INSERT INTO happy_call_logs (date, patient_name, treatment, notes, clinic_id)
     SELECT
       (log->>'date')::date,
       log->>'patient_name',
       log->>'treatment',
       log->>'notes',
-      p_clinic_id  -- 명시적으로 clinic_id 설정
-    FROM jsonb_array_elements(p_happy_call_logs) AS log;
+      p_clinic_id
+    FROM logs;
     GET DIAGNOSTICS happy_call_count = ROW_COUNT;
     RAISE NOTICE '[save_daily_report_v2] Inserted % happy call logs with clinic_id %', happy_call_count, p_clinic_id;
   END IF;
@@ -116,7 +124,6 @@ BEGIN
   -- 6. cash_register_logs 삽입
   -- ============================================================
   IF p_cash_register IS NOT NULL THEN
-    -- 전일 이월액 총액 계산
     v_previous_balance := (
       COALESCE((p_cash_register->>'prev_bill_50000')::int, 0) * 50000 +
       COALESCE((p_cash_register->>'prev_bill_10000')::int, 0) * 10000 +
@@ -126,7 +133,6 @@ BEGIN
       COALESCE((p_cash_register->>'prev_coin_100')::int, 0) * 100
     );
 
-    -- 금일 잔액 총액 계산
     v_current_balance := (
       COALESCE((p_cash_register->>'curr_bill_50000')::int, 0) * 50000 +
       COALESCE((p_cash_register->>'curr_bill_10000')::int, 0) * 10000 +
@@ -193,19 +199,10 @@ EXCEPTION
   WHEN OTHERS THEN
     RAISE EXCEPTION '[save_daily_report_v2] Error: %', SQLERRM;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$function$ LANGUAGE plpgsql SECURITY INVOKER;
 
 -- Grant permissions
 GRANT EXECUTE ON FUNCTION save_daily_report_v2(UUID, TEXT, JSONB, JSONB, JSONB, JSONB, JSONB) TO authenticated;
 
 -- Add comment
 COMMENT ON FUNCTION save_daily_report_v2 IS '일일 보고서를 트랜잭션으로 저장하는 RPC 함수 (v2) - clinic_id 명시적 설정 버전';
-
--- ============================================================================
--- 기존 데이터 중 clinic_id가 NULL인 레코드 정리 (선택적)
--- 주의: 이 쿼리는 clinic_id가 NULL인 고아 레코드를 삭제합니다.
--- 필요한 경우 주석을 해제하여 실행하세요.
--- ============================================================================
--- DELETE FROM gift_logs WHERE clinic_id IS NULL;
--- DELETE FROM consult_logs WHERE clinic_id IS NULL;
--- DELETE FROM happy_call_logs WHERE clinic_id IS NULL;
