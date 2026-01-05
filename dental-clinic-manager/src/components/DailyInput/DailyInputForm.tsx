@@ -145,13 +145,24 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         }
 
         if (giftLogs.length > 0) {
-          setGiftRows(giftLogs.map(log => ({
-            patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
-            gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
-            quantity: typeof log.quantity === 'number' ? log.quantity : 1,
-            naver_review: (log.naver_review as 'O' | 'X') || 'X',
-            notes: typeof log.notes === 'string' ? log.notes : ''
-          })))
+          console.log('[DailyInputForm] Loading giftLogs from DB:', JSON.stringify(giftLogs))
+          setGiftRows(giftLogs.map(log => {
+            // DB에서 가져온 quantity를 확실하게 숫자로 변환
+            const loadedQty = parseInt(String(log.quantity), 10) || 1
+            console.log('[DailyInputForm] Loading gift row:', {
+              patient_name: log.patient_name,
+              db_quantity: log.quantity,
+              db_quantity_type: typeof log.quantity,
+              loaded_quantity: loadedQty
+            })
+            return {
+              patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
+              gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
+              quantity: loadedQty,
+              naver_review: (log.naver_review as 'O' | 'X') || 'X',
+              notes: typeof log.notes === 'string' ? log.notes : ''
+            }
+          }))
         } else {
           setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
         }
