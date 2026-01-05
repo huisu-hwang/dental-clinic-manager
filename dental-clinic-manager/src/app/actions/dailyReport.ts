@@ -224,6 +224,7 @@ export async function saveDailyReport(formData: {
     const callRpc = async () => {
       const rpcStartTime = Date.now()
       console.log('[saveDailyReport] Calling RPC function...')
+      console.log('[saveDailyReport] giftLogs data:', JSON.stringify(formData.giftLogs))
       console.log('[saveDailyReport] cashRegister data:', JSON.stringify(formData.cashRegister))
 
       // special_notes는 special_notes_history 테이블에만 저장하므로 RPC 페이로드에서 제외

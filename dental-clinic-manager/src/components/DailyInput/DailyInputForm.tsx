@@ -427,10 +427,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     try {
       if (USE_NEW_ARCHITECTURE) {
         console.log('[DailyInputForm] Calling Server Action...')
+        console.log('[DailyInputForm] giftRows before filter:', JSON.stringify(giftRows))
         console.log('[DailyInputForm] cashRegisterData before save:', JSON.stringify(cashRegisterData))
 
         const filteredConsultLogs = consultRows.filter(row => row.patient_name?.trim())
         const filteredGiftLogs = giftRows.filter(row => row.patient_name?.trim())
+        console.log('[DailyInputForm] filteredGiftLogs:', JSON.stringify(filteredGiftLogs))
         const filteredHappyCallLogs = happyCallRows.filter(row => row.patient_name?.trim())
 
         const result = await saveDailyReport({
