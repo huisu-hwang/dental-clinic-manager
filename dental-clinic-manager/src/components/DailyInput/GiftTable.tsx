@@ -225,15 +225,19 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                     <select
                       className="w-full px-2 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
                       style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.25rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.25em 1.25em', paddingRight: '1.5rem' }}
-                      value={row.quantity}
-                      onChange={(e) => updateRow(index, 'quantity', parseInt(e.target.value))}
+                      value={String(row.quantity)}
+                      onChange={(e) => {
+                        const newQuantity = parseInt(e.target.value, 10)
+                        console.log('[GiftTable] Quantity select onChange:', { rawValue: e.target.value, parsed: newQuantity })
+                        updateRow(index, 'quantity', newQuantity)
+                      }}
                       disabled={row.gift_type === '없음' || isReadOnly}
                     >
                       {(() => {
                         // 선물 종류가 '없음'이면 기본 10개 옵션
                         if (row.gift_type === '없음') {
                           return Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
-                            <option key={num} value={num}>{num}</option>
+                            <option key={num} value={String(num)}>{num}</option>
                           ))
                         }
                         // 선물이 선택된 경우: 실제 재고 기준으로 최대값 계산
@@ -254,7 +258,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                         return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => {
                           const remaining = actualStock - usedByOthers - num
                           return (
-                            <option key={num} value={num}>
+                            <option key={num} value={String(num)}>
                               {num}개 (남음:{remaining >= 0 ? remaining : 0})
                             </option>
                           )
@@ -379,15 +383,19 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                     <select
                       className="w-full px-2 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
                       style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.25rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.25em 1.25em', paddingRight: '1.5rem' }}
-                      value={row.quantity}
-                      onChange={(e) => updateRow(index, 'quantity', parseInt(e.target.value))}
+                      value={String(row.quantity)}
+                      onChange={(e) => {
+                        const newQuantity = parseInt(e.target.value, 10)
+                        console.log('[GiftTable Mobile] Quantity select onChange:', { rawValue: e.target.value, parsed: newQuantity })
+                        updateRow(index, 'quantity', newQuantity)
+                      }}
                       disabled={row.gift_type === '없음' || isReadOnly}
                     >
                       {(() => {
                         // 선물 종류가 '없음'이면 기본 10개 옵션
                         if (row.gift_type === '없음') {
                           return Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
-                            <option key={num} value={num}>{num}</option>
+                            <option key={num} value={String(num)}>{num}</option>
                           ))
                         }
                         // 선물이 선택된 경우: 실제 재고 기준으로 최대값 계산
@@ -408,7 +416,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                         return Array.from({ length: Math.max(1, maxQuantity) }, (_, i) => i + 1).map(num => {
                           const remaining = actualStock - usedByOthers - num
                           return (
-                            <option key={num} value={num}>
+                            <option key={num} value={String(num)}>
                               {num}개 (남음:{remaining >= 0 ? remaining : 0})
                             </option>
                           )

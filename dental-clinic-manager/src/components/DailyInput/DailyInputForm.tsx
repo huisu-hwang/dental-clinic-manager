@@ -450,14 +450,18 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             consult_status: row.consult_status,
             remarks: row.remarks || ''
           })),
-          giftLogs: filteredGiftLogs.map(row => ({
-            date: reportDate,
-            patient_name: row.patient_name,
-            gift_type: row.gift_type || '',
-            quantity: row.quantity || 1,
-            naver_review: row.naver_review,
-            notes: row.notes || ''
-          })),
+          giftLogs: filteredGiftLogs.map(row => {
+            const qty = typeof row.quantity === 'number' && !isNaN(row.quantity) ? row.quantity : 1
+            console.log('[DailyInputForm] Mapping gift row:', { patient_name: row.patient_name, original_quantity: row.quantity, mapped_quantity: qty })
+            return {
+              date: reportDate,
+              patient_name: row.patient_name,
+              gift_type: row.gift_type || '',
+              quantity: qty,
+              naver_review: row.naver_review,
+              notes: row.notes || ''
+            }
+          }),
           happyCallLogs: filteredHappyCallLogs.map(row => ({
             date: reportDate,
             patient_name: row.patient_name,
@@ -566,14 +570,17 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               consult_status: row.consult_status,
               remarks: row.remarks || ''
             })),
-            giftLogs: filteredGiftLogs.map(row => ({
-              date: reportDate,
-              patient_name: row.patient_name,
-              gift_type: row.gift_type || '',
-              quantity: row.quantity || 1,
-              naver_review: row.naver_review,
-              notes: row.notes || ''
-            })),
+            giftLogs: filteredGiftLogs.map(row => {
+              const qty = typeof row.quantity === 'number' && !isNaN(row.quantity) ? row.quantity : 1
+              return {
+                date: reportDate,
+                patient_name: row.patient_name,
+                gift_type: row.gift_type || '',
+                quantity: qty,
+                naver_review: row.naver_review,
+                notes: row.notes || ''
+              }
+            }),
             happyCallLogs: filteredHappyCallLogs.map(row => ({
               date: reportDate,
               patient_name: row.patient_name,
