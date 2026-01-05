@@ -235,25 +235,14 @@ function calculateAttendanceStatsFromRecords(
   for (const record of records) {
     const recordDate = record.work_date
 
+    // 출근 상태 처리 (present, late, early_leave 모두 출근으로 간주)
     switch (record.status) {
       case 'present':
-        if (!presentDates.has(recordDate)) {
-          presentDates.add(recordDate)
-        }
-        break
       case 'late':
-        if (!presentDates.has(recordDate)) {
-          presentDates.add(recordDate)
-        }
-        lateCount++
-        totalLateMinutes += record.late_minutes || 0
-        break
       case 'early_leave':
         if (!presentDates.has(recordDate)) {
           presentDates.add(recordDate)
         }
-        earlyLeaveCount++
-        totalEarlyLeaveMinutes += record.early_leave_minutes || 0
         break
       case 'leave':
         if (!leaveDates.has(recordDate)) {
@@ -263,6 +252,18 @@ function calculateAttendanceStatsFromRecords(
       case 'holiday':
         holidayDays++
         break
+    }
+
+    // 지각 집계: late_minutes > 0 기준 (상세 기록 표시와 일치)
+    if (record.late_minutes && record.late_minutes > 0) {
+      lateCount++
+      totalLateMinutes += record.late_minutes
+    }
+
+    // 조퇴 집계: early_leave_minutes > 0 기준 (상세 기록 표시와 일치)
+    if (record.early_leave_minutes && record.early_leave_minutes > 0) {
+      earlyLeaveCount++
+      totalEarlyLeaveMinutes += record.early_leave_minutes
     }
 
     // 초과근무 집계
