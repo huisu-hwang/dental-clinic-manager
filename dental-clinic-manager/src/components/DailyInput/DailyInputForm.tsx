@@ -451,8 +451,14 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             remarks: row.remarks || ''
           })),
           giftLogs: filteredGiftLogs.map(row => {
-            const qty = typeof row.quantity === 'number' && !isNaN(row.quantity) ? row.quantity : 1
-            console.log('[DailyInputForm] Mapping gift row:', { patient_name: row.patient_name, original_quantity: row.quantity, mapped_quantity: qty })
+            // 문자열이든 숫자든 상관없이 정수로 변환
+            const qty = parseInt(String(row.quantity), 10) || 1
+            console.log('[DailyInputForm] Mapping gift row:', {
+              patient_name: row.patient_name,
+              original_quantity: row.quantity,
+              original_type: typeof row.quantity,
+              mapped_quantity: qty
+            })
             return {
               date: reportDate,
               patient_name: row.patient_name,
@@ -571,7 +577,8 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               remarks: row.remarks || ''
             })),
             giftLogs: filteredGiftLogs.map(row => {
-              const qty = typeof row.quantity === 'number' && !isNaN(row.quantity) ? row.quantity : 1
+              // 문자열이든 숫자든 상관없이 정수로 변환
+              const qty = parseInt(String(row.quantity), 10) || 1
               return {
                 date: reportDate,
                 patient_name: row.patient_name,
