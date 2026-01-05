@@ -6,21 +6,29 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   InformationCircleIcon,
+  PlusIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline'
 import {
   getClinicHolidaySettings,
   saveClinicHolidaySettings,
   getKoreanPublicHolidays,
+  getClinicCustomHolidays,
+  addClinicCustomHoliday,
+  deleteClinicCustomHoliday,
   type ClinicHolidaySettings,
   type PublicHoliday,
+  type ClinicCustomHoliday,
   DEFAULT_HOLIDAY_SETTINGS,
 } from '@/lib/holidayService'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface HolidaySettingsProps {
   clinicId: string
 }
 
 export default function HolidaySettings({ clinicId }: HolidaySettingsProps) {
+  const { user } = useAuth()
   const [settings, setSettings] = useState<ClinicHolidaySettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -28,11 +36,20 @@ export default function HolidaySettings({ clinicId }: HolidaySettingsProps) {
   const [success, setSuccess] = useState('')
   const [currentYearHolidays, setCurrentYearHolidays] = useState<PublicHoliday[]>([])
 
+  // 추가 법정 공휴일 관련 상태
+  const [customHolidays, setCustomHolidays] = useState<ClinicCustomHoliday[]>([])
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newHolidayDate, setNewHolidayDate] = useState('')
+  const [newHolidayName, setNewHolidayName] = useState('')
+  const [addingHoliday, setAddingHoliday] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   // 현재 연도
   const currentYear = new Date().getFullYear()
 
   useEffect(() => {
     fetchSettings()
+    fetchCustomHolidays()
     // 현재 연도 공휴일 목록 조회
     const holidays = getKoreanPublicHolidays(currentYear, true)
     setCurrentYearHolidays(holidays)
@@ -64,6 +81,17 @@ export default function HolidaySettings({ clinicId }: HolidaySettingsProps) {
     }
   }
 
+  const fetchCustomHolidays = async () => {
+    try {
+      const result = await getClinicCustomHolidays(clinicId, currentYear)
+      if (result.success && result.holidays) {
+        setCustomHolidays(result.holidays)
+      }
+    } catch (err) {
+      console.error('Error fetching custom holidays:', err)
+    }
+  }
+
   const handleToggle = (field: keyof ClinicHolidaySettings) => {
     if (!settings) return
     setSettings({
@@ -71,6 +99,64 @@ export default function HolidaySettings({ clinicId }: HolidaySettingsProps) {
       [field]: !settings[field],
     })
     setSuccess('')
+  }
+
+  const handleAddHoliday = async () => {
+    if (!newHolidayDate || !newHolidayName.trim()) {
+      setError('날짜와 공휴일 이름을 입력해주세요.')
+      return
+    }
+
+    setAddingHoliday(true)
+    setError('')
+
+    try {
+      const result = await addClinicCustomHoliday(
+        clinicId,
+        newHolidayDate,
+        newHolidayName.trim(),
+        undefined,
+        user?.id
+      )
+
+      if (result.success && result.holiday) {
+        setCustomHolidays(prev => [...prev, result.holiday!].sort((a, b) =>
+          a.holiday_date.localeCompare(b.holiday_date)
+        ))
+        setNewHolidayDate('')
+        setNewHolidayName('')
+        setShowAddForm(false)
+        setSuccess('공휴일이 추가되었습니다.')
+      } else {
+        setError(result.error || '공휴일 추가에 실패했습니다.')
+      }
+    } catch (err) {
+      console.error('Error adding custom holiday:', err)
+      setError('공휴일 추가 중 오류가 발생했습니다.')
+    } finally {
+      setAddingHoliday(false)
+    }
+  }
+
+  const handleDeleteHoliday = async (holidayId: string) => {
+    setDeletingId(holidayId)
+    setError('')
+
+    try {
+      const result = await deleteClinicCustomHoliday(holidayId)
+
+      if (result.success) {
+        setCustomHolidays(prev => prev.filter(h => h.id !== holidayId))
+        setSuccess('공휴일이 삭제되었습니다.')
+      } else {
+        setError(result.error || '공휴일 삭제에 실패했습니다.')
+      }
+    } catch (err) {
+      console.error('Error deleting custom holiday:', err)
+      setError('공휴일 삭제 중 오류가 발생했습니다.')
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   const handleSave = async () => {
@@ -292,6 +378,111 @@ export default function HolidaySettings({ clinicId }: HolidaySettingsProps) {
                   </button>
                 </label>
               </div>
+            </div>
+
+            {/* 추가 법정 공휴일 */}
+            <div className="bg-white border border-slate-200 rounded-lg p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <CalendarDaysIcon className="h-5 w-5 text-purple-500" />
+                  추가 법정 공휴일
+                </h3>
+                <button
+                  onClick={() => setShowAddForm(!showAddForm)}
+                  className="inline-flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  공휴일 추가
+                </button>
+              </div>
+              <p className="text-sm text-slate-600 mb-4">
+                선거일, 임시공휴일 등 추가 법정 공휴일을 등록합니다. 추가된 공휴일은 연차에서 차감되지 않습니다.
+              </p>
+
+              {/* 추가 폼 */}
+              {showAddForm && (
+                <div className="bg-purple-50 border border-purple-200 rounded-md p-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">날짜</label>
+                      <input
+                        type="date"
+                        value={newHolidayDate}
+                        onChange={(e) => setNewHolidayDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">공휴일 이름</label>
+                      <input
+                        type="text"
+                        value={newHolidayName}
+                        onChange={(e) => setNewHolidayName(e.target.value)}
+                        placeholder="예: 대통령 선거일"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => {
+                        setShowAddForm(false)
+                        setNewHolidayDate('')
+                        setNewHolidayName('')
+                      }}
+                      className="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-800"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleAddHoliday}
+                      disabled={addingHoliday}
+                      className="px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white rounded-md"
+                    >
+                      {addingHoliday ? '추가 중...' : '추가'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 추가된 공휴일 목록 */}
+              {customHolidays.length > 0 ? (
+                <div className="space-y-2">
+                  {customHolidays.map((holiday) => (
+                    <div
+                      key={holiday.id}
+                      className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-md"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-slate-600">
+                          {new Date(holiday.holiday_date + 'T00:00:00').toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            weekday: 'short',
+                          })}
+                        </span>
+                        <span className="text-sm font-medium text-slate-800">{holiday.holiday_name}</span>
+                        <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                          추가
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteHoliday(holiday.id)}
+                        disabled={deletingId === holiday.id}
+                        className="p-1 text-red-500 hover:text-red-700 disabled:opacity-50"
+                        title="삭제"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-4">
+                  추가된 공휴일이 없습니다
+                </p>
+              )}
             </div>
 
             {/* 저장 버튼 */}

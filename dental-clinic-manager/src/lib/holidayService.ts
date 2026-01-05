@@ -34,6 +34,19 @@ export interface ClinicHolidaySettings {
 }
 
 /**
+ * 병원 추가 법정 공휴일
+ */
+export interface ClinicCustomHoliday {
+  id: string
+  clinic_id: string
+  holiday_date: string      // YYYY-MM-DD
+  holiday_name: string
+  description?: string
+  created_at: string
+  created_by?: string
+}
+
+/**
  * 기본 공휴일 설정
  */
 export const DEFAULT_HOLIDAY_SETTINGS: Omit<ClinicHolidaySettings, 'id' | 'clinic_id' | 'created_at' | 'updated_at'> = {
@@ -549,6 +562,140 @@ export async function getAllHolidaysForMonth(
   }
 }
 
+// ============================================
+// 병원 추가 법정 공휴일 CRUD
+// ============================================
+
+/**
+ * 병원 추가 법정 공휴일 목록 조회
+ */
+export async function getClinicCustomHolidays(
+  clinicId: string,
+  year?: number
+): Promise<{ success: boolean; holidays?: ClinicCustomHoliday[]; error?: string }> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    let query = supabase
+      .from('clinic_custom_public_holidays')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .order('holiday_date', { ascending: true })
+
+    if (year) {
+      const startOfYear = `${year}-01-01`
+      const endOfYear = `${year}-12-31`
+      query = query.gte('holiday_date', startOfYear).lte('holiday_date', endOfYear)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, holidays: data as ClinicCustomHoliday[] }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 병원 추가 법정 공휴일 추가
+ */
+export async function addClinicCustomHoliday(
+  clinicId: string,
+  holidayDate: string,
+  holidayName: string,
+  description?: string,
+  createdBy?: string
+): Promise<{ success: boolean; holiday?: ClinicCustomHoliday; error?: string }> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('clinic_custom_public_holidays')
+      .insert({
+        clinic_id: clinicId,
+        holiday_date: holidayDate,
+        holiday_name: holidayName,
+        description: description || null,
+        created_by: createdBy || null,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === '23505') {
+        return { success: false, error: '이미 등록된 날짜입니다.' }
+      }
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, holiday: data as ClinicCustomHoliday }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 병원 추가 법정 공휴일 삭제
+ */
+export async function deleteClinicCustomHoliday(
+  holidayId: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    const { error } = await supabase
+      .from('clinic_custom_public_holidays')
+      .delete()
+      .eq('id', holidayId)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 병원 추가 법정 공휴일 Set 조회 (빠른 검색용)
+ */
+export async function getClinicCustomHolidaySet(
+  clinicId: string,
+  year?: number,
+  month?: number
+): Promise<Set<string>> {
+  const result = await getClinicCustomHolidays(clinicId, year)
+  if (!result.success || !result.holidays) {
+    return new Set()
+  }
+
+  let holidays = result.holidays
+  if (month) {
+    const monthStr = String(month).padStart(2, '0')
+    const prefix = year ? `${year}-${monthStr}` : `-${monthStr}-`
+    holidays = holidays.filter(h =>
+      year ? h.holiday_date.startsWith(prefix) : h.holiday_date.includes(prefix)
+    )
+  }
+
+  return new Set(holidays.map(h => h.holiday_date))
+}
+
 export const holidayService = {
   getKoreanPublicHolidays,
   getMonthlyPublicHolidays,
@@ -558,4 +705,9 @@ export const holidayService = {
   saveClinicHolidaySettings,
   getClinicDesignatedHolidays,
   getAllHolidaysForMonth,
+  // 추가 법정 공휴일 관련
+  getClinicCustomHolidays,
+  addClinicCustomHoliday,
+  deleteClinicCustomHoliday,
+  getClinicCustomHolidaySet,
 }
