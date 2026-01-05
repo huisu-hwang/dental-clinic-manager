@@ -224,6 +224,16 @@ export async function saveDailyReport(formData: {
     const callRpc = async () => {
       const rpcStartTime = Date.now()
       console.log('[saveDailyReport] Calling RPC function...')
+      console.log('[saveDailyReport] giftLogs full data:', JSON.stringify(formData.giftLogs))
+      // 각 giftLog의 quantity 타입과 값을 자세히 로깅
+      formData.giftLogs?.forEach((log, idx) => {
+        console.log(`[saveDailyReport] giftLog[${idx}]:`, {
+          patient_name: log.patient_name,
+          gift_type: log.gift_type,
+          quantity: log.quantity,
+          quantity_type: typeof log.quantity
+        })
+      })
       console.log('[saveDailyReport] cashRegister data:', JSON.stringify(formData.cashRegister))
 
       // special_notes는 special_notes_history 테이블에만 저장하므로 RPC 페이로드에서 제외

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink, Banknote } from 'lucide-react'
+import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink, Banknote, Package } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
@@ -86,6 +86,13 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   // 날짜별 데이터 로드
   const loadDataForDate = useCallback(async (date: string) => {
     console.log('[DailyInputForm] loadDataForDate called with:', date)
+
+    // 저장 중일 때는 데이터 로드 스킵 (저장 직후 재로드로 인한 데이터 초기화 방지)
+    if (isSavingRef.current) {
+      console.log('[DailyInputForm] Skipping load - save in progress')
+      return
+    }
+
     if (!date) {
       console.log('[DailyInputForm] No date provided, skipping load')
       setLoading(false)
@@ -145,13 +152,24 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         }
 
         if (giftLogs.length > 0) {
-          setGiftRows(giftLogs.map(log => ({
-            patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
-            gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
-            quantity: typeof log.quantity === 'number' ? log.quantity : 1,
-            naver_review: (log.naver_review as 'O' | 'X') || 'X',
-            notes: typeof log.notes === 'string' ? log.notes : ''
-          })))
+          console.log('[DailyInputForm] Loading giftLogs from DB:', JSON.stringify(giftLogs))
+          setGiftRows(giftLogs.map(log => {
+            // DB에서 가져온 quantity를 확실하게 숫자로 변환
+            const loadedQty = parseInt(String(log.quantity), 10) || 1
+            console.log('[DailyInputForm] Loading gift row:', {
+              patient_name: log.patient_name,
+              db_quantity: log.quantity,
+              db_quantity_type: typeof log.quantity,
+              loaded_quantity: loadedQty
+            })
+            return {
+              patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
+              gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
+              quantity: loadedQty,
+              naver_review: (log.naver_review as 'O' | 'X') || 'X',
+              notes: typeof log.notes === 'string' ? log.notes : ''
+            }
+          }))
         } else {
           setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
         }
@@ -427,10 +445,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     try {
       if (USE_NEW_ARCHITECTURE) {
         console.log('[DailyInputForm] Calling Server Action...')
+        console.log('[DailyInputForm] giftRows before filter:', JSON.stringify(giftRows))
         console.log('[DailyInputForm] cashRegisterData before save:', JSON.stringify(cashRegisterData))
 
         const filteredConsultLogs = consultRows.filter(row => row.patient_name?.trim())
         const filteredGiftLogs = giftRows.filter(row => row.patient_name?.trim())
+        console.log('[DailyInputForm] filteredGiftLogs:', JSON.stringify(filteredGiftLogs))
         const filteredHappyCallLogs = happyCallRows.filter(row => row.patient_name?.trim())
 
         const result = await saveDailyReport({
@@ -448,14 +468,24 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             consult_status: row.consult_status,
             remarks: row.remarks || ''
           })),
-          giftLogs: filteredGiftLogs.map(row => ({
-            date: reportDate,
-            patient_name: row.patient_name,
-            gift_type: row.gift_type || '',
-            quantity: row.quantity || 1,
-            naver_review: row.naver_review,
-            notes: row.notes || ''
-          })),
+          giftLogs: filteredGiftLogs.map(row => {
+            // 문자열이든 숫자든 상관없이 정수로 변환
+            const qty = parseInt(String(row.quantity), 10) || 1
+            console.log('[DailyInputForm] Mapping gift row:', {
+              patient_name: row.patient_name,
+              original_quantity: row.quantity,
+              original_type: typeof row.quantity,
+              mapped_quantity: qty
+            })
+            return {
+              date: reportDate,
+              patient_name: row.patient_name,
+              gift_type: row.gift_type || '',
+              quantity: qty,
+              naver_review: row.naver_review,
+              notes: row.notes || ''
+            }
+          }),
           happyCallLogs: filteredHappyCallLogs.map(row => ({
             date: reportDate,
             patient_name: row.patient_name,
@@ -564,14 +594,18 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               consult_status: row.consult_status,
               remarks: row.remarks || ''
             })),
-            giftLogs: filteredGiftLogs.map(row => ({
-              date: reportDate,
-              patient_name: row.patient_name,
-              gift_type: row.gift_type || '',
-              quantity: row.quantity || 1,
-              naver_review: row.naver_review,
-              notes: row.notes || ''
-            })),
+            giftLogs: filteredGiftLogs.map(row => {
+              // 문자열이든 숫자든 상관없이 정수로 변환
+              const qty = parseInt(String(row.quantity), 10) || 1
+              return {
+                date: reportDate,
+                patient_name: row.patient_name,
+                gift_type: row.gift_type || '',
+                quantity: qty,
+                naver_review: row.naver_review,
+                notes: row.notes || ''
+              }
+            }),
             happyCallLogs: filteredHappyCallLogs.map(row => ({
               date: reportDate,
               patient_name: row.patient_name,
@@ -792,7 +826,28 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
         {/* 선물/리뷰 관리 */}
         <div>
-          <SectionHeader number={4} title="선물 및 리뷰 관리" icon={Gift} />
+          <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
+                <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </div>
+              <h3 className="text-sm sm:text-base font-semibold text-slate-800">
+                <span className="text-blue-600 mr-1">4.</span>
+                선물 및 리뷰 관리
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard?tab=settings')}
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group"
+              title="재고 관리 페이지로 이동"
+            >
+              <Package className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="hidden sm:inline">재고 관리</span>
+              <span className="sm:hidden">재고</span>
+              <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </button>
+          </div>
           <GiftTable
             giftRows={giftRows}
             onGiftRowsChange={setGiftRows}
