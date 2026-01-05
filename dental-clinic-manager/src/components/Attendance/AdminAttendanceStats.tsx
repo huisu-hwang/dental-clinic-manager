@@ -1,18 +1,28 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, BarChart3, Clock, TrendingUp, ChevronDown, ChevronUp, Users, X } from 'lucide-react'
+import { Calendar, BarChart3, Clock, TrendingUp, ChevronDown, ChevronUp, Users, X, Pencil, Save } from 'lucide-react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
-import type { AttendanceStatistics, AttendanceRecord } from '@/types/attendance'
+import { usePermissions } from '@/hooks/usePermissions'
+import type { AttendanceStatistics, AttendanceRecord, AttendanceStatus } from '@/types/attendance'
 import { ATTENDANCE_STATUS_NAMES, ATTENDANCE_STATUS_COLORS } from '@/types/attendance'
 import BranchSelector from './BranchSelector'
 import { useBranches } from '@/hooks/useBranches'
 
 type StatisticsWithName = AttendanceStatistics & { user_name: string }
 
+// 수정 폼 데이터 타입
+interface EditFormData {
+  check_in_time: string
+  check_out_time: string
+  status: AttendanceStatus
+  notes: string
+}
+
 export default function AdminAttendanceStats() {
   const { user } = useAuth()
+  const { hasPermission } = usePermissions()
   const [statistics, setStatistics] = useState<StatisticsWithName[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
@@ -22,6 +32,21 @@ export default function AdminAttendanceStats() {
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
   const [userRecords, setUserRecords] = useState<AttendanceRecord[]>([])
   const [loadingRecords, setLoadingRecords] = useState(false)
+
+  // 수정 모달 상태
+  const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editFormData, setEditFormData] = useState<EditFormData>({
+    check_in_time: '',
+    check_out_time: '',
+    status: 'present',
+    notes: '',
+  })
+  const [isSaving, setIsSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  // 근태 수정 권한 확인
+  const canEditAttendance = hasPermission('attendance_manage')
 
   // 지점 선택
   const { selectedBranchId, selectedBranch } = useBranches({
@@ -126,6 +151,84 @@ export default function AdminAttendanceStats() {
     if (rate >= 95) return 'text-green-600'
     if (rate >= 85) return 'text-yellow-600'
     return 'text-red-600'
+  }
+
+  // ISO 시간 문자열에서 HH:MM 형식으로 변환
+  const isoToTimeInput = (isoString: string | null | undefined): string => {
+    if (!isoString) return ''
+    const date = new Date(isoString)
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${hours}:${minutes}`
+  }
+
+  // HH:MM 형식에서 ISO 시간 문자열로 변환 (해당 날짜 기준)
+  const timeInputToIso = (timeStr: string, workDate: string): string | undefined => {
+    if (!timeStr) return undefined
+    const [hours, minutes] = timeStr.split(':')
+    const date = new Date(workDate)
+    date.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0)
+    return date.toISOString()
+  }
+
+  // 수정 모달 열기
+  const openEditModal = (record: AttendanceRecord, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingRecord(record)
+    setEditFormData({
+      check_in_time: isoToTimeInput(record.check_in_time),
+      check_out_time: isoToTimeInput(record.check_out_time),
+      status: record.status,
+      notes: record.notes || '',
+    })
+    setEditError(null)
+    setIsEditModalOpen(true)
+  }
+
+  // 수정 모달 닫기
+  const closeEditModal = () => {
+    setIsEditModalOpen(false)
+    setEditingRecord(null)
+    setEditError(null)
+  }
+
+  // 수정 저장
+  const handleSaveEdit = async () => {
+    if (!editingRecord || !user) return
+
+    setIsSaving(true)
+    setEditError(null)
+
+    try {
+      const result = await attendanceService.editAttendanceRecord({
+        record_id: editingRecord.id,
+        check_in_time: editFormData.check_in_time
+          ? timeInputToIso(editFormData.check_in_time, editingRecord.work_date)
+          : undefined,
+        check_out_time: editFormData.check_out_time
+          ? timeInputToIso(editFormData.check_out_time, editingRecord.work_date)
+          : undefined,
+        status: editFormData.status,
+        notes: editFormData.notes,
+        edited_by: user.id,
+      })
+
+      if (result.success) {
+        // 기록 목록 갱신
+        setUserRecords((prev) =>
+          prev.map((r) => (r.id === editingRecord.id ? { ...r, ...result.record } : r))
+        )
+        // 통계 갱신
+        await refreshStatisticsOnLoad()
+        closeEditModal()
+      } else {
+        setEditError(result.error || '저장에 실패했습니다.')
+      }
+    } catch (error: any) {
+      setEditError(error.message || '예기치 않은 오류가 발생했습니다.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // 요약 통계 계산
@@ -441,6 +544,11 @@ export default function AdminAttendanceStats() {
                                           <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">
                                             총 근무
                                           </th>
+                                          {canEditAttendance && (
+                                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">
+                                              수정
+                                            </th>
+                                          )}
                                         </tr>
                                       </thead>
                                       <tbody className="bg-white divide-y divide-gray-200">
@@ -494,6 +602,18 @@ export default function AdminAttendanceStats() {
                                                 ? formatMinutesToHours(record.total_work_minutes)
                                                 : '-'}
                                             </td>
+                                            {canEditAttendance && (
+                                              <td className="px-3 py-2 text-center">
+                                                <button
+                                                  onClick={(e) => openEditModal(record, e)}
+                                                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+                                                  title="기록 수정"
+                                                >
+                                                  <Pencil className="w-3 h-3 mr-1" />
+                                                  수정
+                                                </button>
+                                              </td>
+                                            )}
                                           </tr>
                                         ))}
                                       </tbody>
@@ -512,6 +632,155 @@ export default function AdminAttendanceStats() {
             )}
           </div>
         </>
+      )}
+
+      {/* 수정 모달 */}
+      {isEditModalOpen && editingRecord && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            {/* 배경 오버레이 */}
+            <div
+              className="fixed inset-0 bg-black/50 transition-opacity"
+              onClick={closeEditModal}
+            />
+
+            {/* 모달 콘텐츠 */}
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6 z-10">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  근태 기록 수정
+                </h3>
+                <button
+                  onClick={closeEditModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">날짜:</span> {formatDate(editingRecord.work_date)}
+                </p>
+              </div>
+
+              {editError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{editError}</p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* 상태 선택 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    근태 상태
+                  </label>
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) =>
+                      setEditFormData((prev) => ({
+                        ...prev,
+                        status: e.target.value as AttendanceStatus,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="present">정상출근</option>
+                    <option value="late">지각</option>
+                    <option value="early_leave">조퇴</option>
+                    <option value="absent">결근</option>
+                    <option value="leave">연차</option>
+                    <option value="holiday">공휴일</option>
+                  </select>
+                </div>
+
+                {/* 출근 시간 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    출근 시간
+                  </label>
+                  <input
+                    type="time"
+                    value={editFormData.check_in_time}
+                    onChange={(e) =>
+                      setEditFormData((prev) => ({
+                        ...prev,
+                        check_in_time: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                {/* 퇴근 시간 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    퇴근 시간
+                  </label>
+                  <input
+                    type="time"
+                    value={editFormData.check_out_time}
+                    onChange={(e) =>
+                      setEditFormData((prev) => ({
+                        ...prev,
+                        check_out_time: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                {/* 메모 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    메모
+                  </label>
+                  <textarea
+                    value={editFormData.notes}
+                    onChange={(e) =>
+                      setEditFormData((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
+                    rows={3}
+                    placeholder="수정 사유를 입력하세요..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* 버튼 */}
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={closeEditModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  disabled={isSaving}
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={isSaving}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      저장 중...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      저장
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
