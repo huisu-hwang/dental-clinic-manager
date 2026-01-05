@@ -244,13 +244,19 @@ export default function PayrollForm() {
           setAttendanceSummary(currentAttendanceSummary)
 
           // 근태 기반 급여 차감 계산 (직원 근무 스케줄 반영)
-          const basis = calculatePayrollBasis(settings.baseSalary, workSchedule)
+          // 세후 계약의 경우 targetAmount를, 세전 계약의 경우 baseSalary를 기준으로 계산
+          const basisAmount = settings.salaryType === 'net'
+            ? settings.targetAmount
+            : settings.baseSalary
+          const basis = calculatePayrollBasis(basisAmount, workSchedule)
 
           console.log('[PayrollForm] 급여 기준 계산:', {
             employeeId: selectedEmployeeId,
             employeeName: employee.name,
-            baseSalary: settings.baseSalary,
             salaryType: settings.salaryType,
+            targetAmount: settings.targetAmount,
+            baseSalary: settings.baseSalary,
+            basisAmount, // 실제 계산에 사용되는 금액
             workSchedule: workSchedule ? '설정됨' : '기본값 사용',
             dailyWage: basis.dailyWage,
             hourlyWage: basis.hourlyWage,
