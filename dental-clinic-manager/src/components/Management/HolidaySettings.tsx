@@ -235,27 +235,12 @@ export default function HolidaySettings({ clinicId }: HolidaySettingsProps) {
               <div className="space-y-4">
                 <label className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-medium text-slate-700">대체 공휴일 휴무 적용</span>
-                    <p className="text-xs text-slate-500">대체 공휴일을 휴무일로 처리합니다</p>
-                  </div>
-                  <button
-                    onClick={() => handleToggle('use_substitute_holidays')}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      settings.use_substitute_holidays ? 'bg-blue-600' : 'bg-slate-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        settings.use_substitute_holidays ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </label>
-
-                <label className="flex items-center justify-between">
-                  <div>
                     <span className="text-sm font-medium text-slate-700">대체 공휴일 연차 차감</span>
-                    <p className="text-xs text-slate-500">대체 공휴일에 연차를 차감합니다</p>
+                    <p className="text-xs text-slate-500">
+                      {settings.deduct_substitute_holidays
+                        ? '대체 공휴일에 연차를 차감합니다'
+                        : '대체 공휴일에 연차를 차감하지 않습니다 (유급 휴무)'}
+                    </p>
                   </div>
                   <button
                     onClick={() => handleToggle('deduct_substitute_holidays')}
@@ -287,7 +272,11 @@ export default function HolidaySettings({ clinicId }: HolidaySettingsProps) {
                 <label className="flex items-center justify-between">
                   <div>
                     <span className="text-sm font-medium text-slate-700">병원 지정 휴무일 연차 차감</span>
-                    <p className="text-xs text-slate-500">병원 휴무일에 직원 연차를 차감합니다</p>
+                    <p className="text-xs text-slate-500">
+                      {settings.deduct_clinic_holidays
+                        ? '병원 휴무일에 직원 연차를 차감합니다'
+                        : '병원 휴무일에 연차를 차감하지 않습니다 (유급 휴무)'}
+                    </p>
                   </div>
                   <button
                     onClick={() => handleToggle('deduct_clinic_holidays')}
