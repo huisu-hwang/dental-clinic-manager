@@ -760,13 +760,28 @@ export function getScheduledWorkDaysFromSchedule(
   year: number,
   month: number,
   workSchedule?: WorkSchedule,
-  holidayDates?: Set<string>
+  holidayDates?: Set<string>,
+  endDate?: Date
 ): number {
   const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
   const daysInMonth = new Date(year, month, 0).getDate()
   let workDays = 0
 
-  for (let day = 1; day <= daysInMonth; day++) {
+  // 종료일 결정: endDate가 있으면 해당 월 내에서 min(endDate, 월말)
+  let lastDay = daysInMonth
+  if (endDate) {
+    const endYear = endDate.getFullYear()
+    const endMonth = endDate.getMonth() + 1
+    if (endYear === year && endMonth === month) {
+      lastDay = Math.min(endDate.getDate(), daysInMonth)
+    } else if (endYear < year || (endYear === year && endMonth < month)) {
+      // 종료일이 해당 월보다 이전이면 0일
+      return 0
+    }
+    // 종료일이 해당 월보다 이후면 전체 월 계산
+  }
+
+  for (let day = 1; day <= lastDay; day++) {
     const date = new Date(year, month - 1, day)
     const dateStr = formatDateString(date)
     const dayOfWeek = date.getDay()
@@ -849,6 +864,13 @@ export async function getAttendanceSummaryForPayroll(
     // 해당 월의 법정 공휴일 조회 (결근 처리 제외용)
     const publicHolidays = getPublicHolidaySet(year, month, true)
 
+    // 오늘 날짜 (결근 계산 시 미래 날짜 제외용)
+    const today = new Date()
+    today.setHours(23, 59, 59, 999) // 오늘 하루 전체 포함
+
+    // 현재 월인지 확인
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month
+
     // 근태 기록 조회
     const response = await fetch(
       `/api/attendance/records?clinicId=${clinicId}&userId=${employeeId}&startDate=${startDate}&endDate=${endDate}`
@@ -857,6 +879,11 @@ export async function getAttendanceSummaryForPayroll(
 
     // 소정 근로일수 계산 (직원 근무 스케줄 기반, 공휴일 제외)
     const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule, publicHolidays)
+
+    // 지나간 근무일수 계산 (결근 계산용 - 현재 월이면 오늘까지만, 과거 월이면 전체)
+    const passedWorkDays = isCurrentMonth
+      ? getScheduledWorkDaysFromSchedule(year, month, workSchedule, publicHolidays, today)
+      : totalWorkDays
 
     if (!result.success) {
       // API가 없거나 오류 발생 시 에러 반환 (결근 마스킹 방지)
@@ -948,16 +975,18 @@ export async function getAttendanceSummaryForPayroll(
     // 유급 연차 사용일 (허용 범위 내만 유급 처리)
     const paidLeaveDays = Math.min(leaveDays, allowedAnnualLeave)
 
-    // 결근일 계산: 근무일 - 출근일 - 유급연차사용일
+    // 결근일 계산: 지나간 근무일 - 출근일 - 유급연차사용일
+    // passedWorkDays를 사용하여 미래 날짜는 결근으로 계산하지 않음
     // 이렇게 하면 무단결근 + 연차초과가 결근일에 포함됨
-    // (공휴일은 근무 스케줄에 포함되어 있지 않으므로 제외할 필요 없음)
-    const absentDays = Math.max(0, totalWorkDays - presentDays - paidLeaveDays)
+    const absentDays = Math.max(0, passedWorkDays - presentDays - paidLeaveDays)
 
     console.log('[getAttendanceSummaryForPayroll] 근태 요약 계산:', {
       employeeId,
       year,
       month,
+      isCurrentMonth,
       totalWorkDays,
+      passedWorkDays, // 결근 계산에 사용되는 지나간 근무일수
       presentDays,
       leaveDays,
       paidLeaveDays,

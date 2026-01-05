@@ -139,18 +139,34 @@ function formatDateString(date: Date): string {
  * @param month 월
  * @param workSchedule 직원 근무 스케줄 (없으면 기본 스케줄 사용)
  * @param holidayDates 공휴일 날짜 Set (YYYY-MM-DD 형식)
+ * @param endDate 종료일 (옵션) - 이 날짜까지만 계산 (오늘 이후 날짜 제외용)
  */
 function getScheduledWorkDaysFromSchedule(
   year: number,
   month: number,
   workSchedule?: WorkSchedule,
-  holidayDates?: Set<string>
+  holidayDates?: Set<string>,
+  endDate?: Date
 ): number {
   const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
   const daysInMonth = new Date(year, month, 0).getDate()
   let workDays = 0
 
-  for (let day = 1; day <= daysInMonth; day++) {
+  // 종료일 결정: endDate가 있으면 해당 월 내에서 min(endDate, 월말)
+  let lastDay = daysInMonth
+  if (endDate) {
+    const endYear = endDate.getFullYear()
+    const endMonth = endDate.getMonth() + 1
+    if (endYear === year && endMonth === month) {
+      lastDay = Math.min(endDate.getDate(), daysInMonth)
+    } else if (endYear < year || (endYear === year && endMonth < month)) {
+      // 종료일이 해당 월보다 이전이면 0일
+      return 0
+    }
+    // 종료일이 해당 월보다 이후면 전체 월 계산
+  }
+
+  for (let day = 1; day <= lastDay; day++) {
     const date = new Date(year, month - 1, day)
     const dateStr = formatDateString(date)
     const dayOfWeek = date.getDay()
@@ -174,20 +190,22 @@ function getScheduledWorkDaysFromSchedule(
  * 직원별 근태 통계 계산 (직원 근무 스케줄 기반)
  * - 근무일: 직원 근무 스케줄 기반 해당 월의 총 근무해야 하는 일수
  * - 출근일: 출근 기록이 있는 일수 (present, late, early_leave)
- * - 결근일: 근무일 - 출근일 - 유급연차사용일
+ * - 결근일: 지나간 근무일 중 출근하지 않은 날 (미래 날짜 제외)
  *
  * @param records 근태 기록 배열
- * @param totalWorkDays 해당 월 총 근무일수
+ * @param totalWorkDays 해당 월 총 근무일수 (표시용)
  * @param year 연도 (연차 계산용)
  * @param month 월 (연차 계산용)
  * @param hireDate 입사일 (연차 계산용, 옵션)
+ * @param passedWorkDays 지나간 근무일수 (결근 계산용, 옵션 - 없으면 totalWorkDays 사용)
  */
 function calculateAttendanceStatsFromRecords(
   records: AttendanceRecord[],
   totalWorkDays: number,
   year?: number,
   month?: number,
-  hireDate?: string
+  hireDate?: string,
+  passedWorkDays?: number
 ): {
   presentDays: number
   absentDays: number
@@ -273,9 +291,10 @@ function calculateAttendanceStatsFromRecords(
 
   const paidLeaveDays = Math.min(leaveDays, allowedAnnualLeave)
 
-  // 결근일 = 근무일 - 출근일 - 유급연차사용일
-  // 이렇게 하면 무단결근 + 연차초과가 결근일에 포함됨
-  const absentDays = Math.max(0, totalWorkDays - presentDays - paidLeaveDays)
+  // 결근일 = 지나간 근무일 - 출근일 - 유급연차사용일
+  // passedWorkDays가 있으면 사용, 없으면 totalWorkDays 사용 (과거 월의 경우)
+  const workDaysForAbsentCalc = passedWorkDays !== undefined ? passedWorkDays : totalWorkDays
+  const absentDays = Math.max(0, workDaysForAbsentCalc - presentDays - paidLeaveDays)
 
   return {
     presentDays,
@@ -1497,6 +1516,13 @@ export async function getAllUsersMonthlyStatistics(
       recordsByUser.set(record.user_id, userRecords)
     }
 
+    // 오늘 날짜 (결근 계산 시 미래 날짜 제외용)
+    const today = new Date()
+    today.setHours(23, 59, 59, 999) // 오늘 하루 전체 포함
+
+    // 현재 월인지 확인
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month
+
     // 각 직원별 통계 계산
     const statistics: (AttendanceStatistics & { user_name: string })[] = users.map(
       (user: { id: string; name: string; work_schedule?: WorkSchedule; hire_date?: string }) => {
@@ -1504,11 +1530,16 @@ export async function getAllUsersMonthlyStatistics(
         const workSchedule = user.work_schedule as WorkSchedule | undefined
         const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule, publicHolidays)
 
+        // 지나간 근무일수 계산 (결근 계산용 - 현재 월이면 오늘까지만, 과거 월이면 전체)
+        const passedWorkDays = isCurrentMonth
+          ? getScheduledWorkDaysFromSchedule(year, month, workSchedule, publicHolidays, today)
+          : totalWorkDays
+
         // 해당 직원의 출퇴근 기록
         const userRecords = recordsByUser.get(user.id) || []
 
-        // 통계 계산 (입사일 기반 연차 계산 포함)
-        const stats = calculateAttendanceStatsFromRecords(userRecords, totalWorkDays, year, month, user.hire_date)
+        // 통계 계산 (입사일 기반 연차 계산 포함, 지나간 근무일수 전달)
+        const stats = calculateAttendanceStatsFromRecords(userRecords, totalWorkDays, year, month, user.hire_date, passedWorkDays)
 
         // 출근율 계산
         const attendanceRate = totalWorkDays > 0
