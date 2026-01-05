@@ -33,6 +33,7 @@ import type { ContractData, EmploymentContract } from '@/types/contract'
 import type { WorkSchedule, DayName } from '@/types/workSchedule'
 import { DEFAULT_WORK_SCHEDULE, DAY_OF_WEEK_TO_NAME } from '@/types/workSchedule'
 import { calculateAnnualLeaveDays } from '@/lib/leaveService'
+import { getPublicHolidaySet } from '@/lib/holidayService'
 
 // =====================================================================
 // 급여 계산 함수
@@ -745,10 +746,21 @@ export function calculatePayrollBasis(
  * @param month 월
  * @param workSchedule 직원 근무 스케줄 (없으면 기본 스케줄 사용)
  */
+/**
+ * 날짜를 YYYY-MM-DD 형식으로 변환
+ */
+function formatDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export function getScheduledWorkDaysFromSchedule(
   year: number,
   month: number,
-  workSchedule?: WorkSchedule
+  workSchedule?: WorkSchedule,
+  holidayDates?: Set<string>
 ): number {
   const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
   const daysInMonth = new Date(year, month, 0).getDate()
@@ -756,8 +768,14 @@ export function getScheduledWorkDaysFromSchedule(
 
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(year, month - 1, day)
+    const dateStr = formatDateString(date)
     const dayOfWeek = date.getDay()
     const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+
+    // 공휴일이면 근무일에서 제외
+    if (holidayDates && holidayDates.has(dateStr)) {
+      continue
+    }
 
     // 해당 요일이 근무일인지 확인
     if (schedule[dayName]?.isWorking) {
@@ -828,14 +846,17 @@ export async function getAttendanceSummaryForPayroll(
     const lastDay = new Date(year, month, 0).getDate()
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
+    // 해당 월의 법정 공휴일 조회 (결근 처리 제외용)
+    const publicHolidays = getPublicHolidaySet(year, month, true)
+
     // 근태 기록 조회
     const response = await fetch(
       `/api/attendance/records?clinicId=${clinicId}&userId=${employeeId}&startDate=${startDate}&endDate=${endDate}`
     )
     const result = await response.json()
 
-    // 소정 근로일수 계산 (직원 근무 스케줄 기반)
-    const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule)
+    // 소정 근로일수 계산 (직원 근무 스케줄 기반, 공휴일 제외)
+    const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule, publicHolidays)
 
     if (!result.success) {
       // API가 없거나 오류 발생 시 에러 반환 (결근 마스킹 방지)

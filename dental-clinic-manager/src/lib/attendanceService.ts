@@ -25,6 +25,7 @@ import type { ClinicBranch } from '@/types/branch'
 import type { WorkSchedule, DayName } from '@/types/workSchedule'
 import { DEFAULT_WORK_SCHEDULE, DAY_OF_WEEK_TO_NAME } from '@/types/workSchedule'
 import { calculateAnnualLeaveDays } from '@/lib/leaveService'
+import { getPublicHolidaySet } from '@/lib/holidayService'
 
 /**
  * 한국 시간대 기준 오늘 날짜 반환 (YYYY-MM-DD 형식)
@@ -123,15 +124,27 @@ function calculateValidityDays(validity_type?: string, validity_days?: number): 
 }
 
 /**
+ * 날짜를 YYYY-MM-DD 형식으로 변환
+ */
+function formatDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
  * 직원 근무 스케줄 기반 해당 월의 소정 근로일수 계산
  * @param year 연도
  * @param month 월
  * @param workSchedule 직원 근무 스케줄 (없으면 기본 스케줄 사용)
+ * @param holidayDates 공휴일 날짜 Set (YYYY-MM-DD 형식)
  */
 function getScheduledWorkDaysFromSchedule(
   year: number,
   month: number,
-  workSchedule?: WorkSchedule
+  workSchedule?: WorkSchedule,
+  holidayDates?: Set<string>
 ): number {
   const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
   const daysInMonth = new Date(year, month, 0).getDate()
@@ -139,8 +152,14 @@ function getScheduledWorkDaysFromSchedule(
 
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(year, month - 1, day)
+    const dateStr = formatDateString(date)
     const dayOfWeek = date.getDay()
     const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+
+    // 공휴일이면 근무일에서 제외
+    if (holidayDates && holidayDates.has(dateStr)) {
+      continue
+    }
 
     // 해당 요일이 근무일인지 확인
     if (schedule[dayName]?.isWorking) {
@@ -1427,6 +1446,9 @@ export async function getAllUsersMonthlyStatistics(
   }
 
   try {
+    // 해당 월의 법정 공휴일 조회 (결근 처리 제외용)
+    const publicHolidays = getPublicHolidaySet(year, month, true)
+
     // 해당 클리닉의 활성 직원 목록 조회 (work_schedule, hire_date 포함)
     let usersQuery = supabase
       .from('users')
@@ -1478,9 +1500,9 @@ export async function getAllUsersMonthlyStatistics(
     // 각 직원별 통계 계산
     const statistics: (AttendanceStatistics & { user_name: string })[] = users.map(
       (user: { id: string; name: string; work_schedule?: WorkSchedule; hire_date?: string }) => {
-        // 직원 근무 스케줄 기반 근무일수 계산
+        // 직원 근무 스케줄 기반 근무일수 계산 (공휴일 제외)
         const workSchedule = user.work_schedule as WorkSchedule | undefined
-        const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule)
+        const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule, publicHolidays)
 
         // 해당 직원의 출퇴근 기록
         const userRecords = recordsByUser.get(user.id) || []
