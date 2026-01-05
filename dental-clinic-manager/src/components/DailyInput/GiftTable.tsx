@@ -81,8 +81,10 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
   }
 
   const updateRow = (index: number, field: keyof GiftRowData, value: string | number) => {
+    console.log('[GiftTable] updateRow called:', { index, field, value, valueType: typeof value })
     const newRows = [...giftRows]
     newRows[index] = { ...newRows[index], [field]: value }
+    console.log('[GiftTable] After update:', { quantity: newRows[index].quantity, quantityType: typeof newRows[index].quantity })
 
     // 선물 종류 변경 시: 재고가 부족하면 수량 조정
     if (field === 'gift_type' && value !== '없음') {
@@ -109,6 +111,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
       // giftInventory에 없는 선물이면 재고 체크 없이 수량 변경 허용
     }
 
+    console.log('[GiftTable] Final newRows before onGiftRowsChange:', JSON.stringify(newRows.map(r => ({ patient_name: r.patient_name, quantity: r.quantity }))))
     onGiftRowsChange(newRows)
   }
 
