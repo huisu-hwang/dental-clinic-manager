@@ -9,9 +9,7 @@ import {
   PhoneOff,
   PhoneMissed,
   XCircle,
-  AlertCircle,
-  Phone,
-  MessageSquare
+  AlertCircle
 } from 'lucide-react'
 import type { RecallPatient, PatientRecallStatus } from '@/types/recall'
 import { RECALL_STATUS_LABELS } from '@/types/recall'
@@ -37,42 +35,21 @@ export default function StatusUpdateModal({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 상태 옵션
+  // 상태 옵션 (간소화 - 문자발송은 자동으로만 설정됨)
   const statusOptions: { value: PatientRecallStatus; label: string; icon: React.ReactNode; color: string; description: string }[] = [
     {
       value: 'pending',
-      label: '대기 중',
+      label: '대기중',
       icon: <Clock className="w-5 h-5" />,
       color: 'bg-gray-100 text-gray-700 border-gray-300',
       description: '아직 연락하지 않음'
     },
     {
-      value: 'sms_sent',
-      label: '문자 발송',
-      icon: <MessageSquare className="w-5 h-5" />,
-      color: 'bg-blue-100 text-blue-700 border-blue-300',
-      description: '문자 메시지 발송 완료'
-    },
-    {
-      value: 'call_attempted',
-      label: '전화 시도',
-      icon: <Phone className="w-5 h-5" />,
-      color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-      description: '전화를 시도함'
-    },
-    {
       value: 'appointment_made',
-      label: '예약 완료',
+      label: '예약완료',
       icon: <Calendar className="w-5 h-5" />,
       color: 'bg-green-100 text-green-700 border-green-300',
       description: '내원 예약 확정'
-    },
-    {
-      value: 'callback_requested',
-      label: '콜백 요청',
-      icon: <Phone className="w-5 h-5" />,
-      color: 'bg-purple-100 text-purple-700 border-purple-300',
-      description: '환자가 콜백 요청'
     },
     {
       value: 'no_answer',
@@ -83,31 +60,24 @@ export default function StatusUpdateModal({
     },
     {
       value: 'call_rejected',
-      label: '통화 거부',
+      label: '통화거부',
       icon: <PhoneOff className="w-5 h-5" />,
       color: 'bg-red-100 text-red-700 border-red-300',
       description: '통화를 거부함'
     },
     {
       value: 'visit_refused',
-      label: '내원 거부',
+      label: '내원거부',
       icon: <XCircle className="w-5 h-5" />,
       color: 'bg-red-100 text-red-700 border-red-300',
       description: '내원 의사 없음'
     },
     {
       value: 'invalid_number',
-      label: '없는 번호',
+      label: '없는번호',
       icon: <AlertCircle className="w-5 h-5" />,
       color: 'bg-gray-100 text-gray-500 border-gray-300',
       description: '전화번호가 유효하지 않음'
-    },
-    {
-      value: 'completed',
-      label: '완료',
-      icon: <CheckCircle className="w-5 h-5" />,
-      color: 'bg-green-100 text-green-700 border-green-300',
-      description: '리콜 프로세스 완료'
     }
   ]
 

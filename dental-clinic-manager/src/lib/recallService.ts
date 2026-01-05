@@ -534,12 +534,12 @@ export const recallPatientService = {
       const stats: RecallStats = {
         total_patients: patients.length,
         pending_count: patients.filter(p => p.status === 'pending').length,
-        contacted_count: patients.filter(p => ['sms_sent', 'call_attempted', 'appointment_made', 'completed'].includes(p.status)).length,
-        appointment_count: patients.filter(p => ['appointment_made', 'completed'].includes(p.status)).length,
+        contacted_count: patients.filter(p => ['sms_sent', 'appointment_made', 'no_answer'].includes(p.status)).length,
+        appointment_count: patients.filter(p => p.status === 'appointment_made').length,
         rejected_count: patients.filter(p => ['call_rejected', 'visit_refused'].includes(p.status)).length,
         invalid_count: patients.filter(p => p.status === 'invalid_number').length,
         success_rate: patients.length > 0
-          ? Math.round((patients.filter(p => ['appointment_made', 'completed'].includes(p.status)).length / patients.length) * 100)
+          ? Math.round((patients.filter(p => p.status === 'appointment_made').length / patients.length) * 100)
           : 0
       }
 

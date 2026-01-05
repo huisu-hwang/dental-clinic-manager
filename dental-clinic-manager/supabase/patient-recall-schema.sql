@@ -3,19 +3,16 @@
 -- Patient Recall System Database Schema
 -- ========================================
 
--- 환자 리콜 상태 ENUM 타입
+-- 환자 리콜 상태 ENUM 타입 (간소화)
 DO $$ BEGIN
     CREATE TYPE patient_recall_status AS ENUM (
-        'pending',              -- 대기 중 (아직 연락 안함)
-        'sms_sent',             -- 문자 발송 완료
-        'call_attempted',       -- 전화 시도함
-        'appointment_made',     -- 내원 약속 잡음
-        'call_rejected',        -- 통화 거부
-        'visit_refused',        -- 내원 거부 의사 표시
-        'invalid_number',       -- 없는 번호
+        'pending',              -- 대기 중
+        'sms_sent',             -- 문자 발송 (자동)
+        'appointment_made',     -- 예약 완료
         'no_answer',            -- 부재중
-        'callback_requested',   -- 콜백 요청
-        'completed'             -- 완료
+        'call_rejected',        -- 통화 거부
+        'visit_refused',        -- 내원 거부
+        'invalid_number'        -- 없는 번호
     );
 EXCEPTION
     WHEN duplicate_object THEN null;
@@ -26,6 +23,17 @@ DO $$ BEGIN
     CREATE TYPE contact_type AS ENUM (
         'sms',      -- 문자 메시지
         'call'      -- 전화
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- 성별 ENUM 타입
+DO $$ BEGIN
+    CREATE TYPE gender_type AS ENUM (
+        'male',     -- 남성
+        'female',   -- 여성
+        'other'     -- 기타
     );
 EXCEPTION
     WHEN duplicate_object THEN null;
@@ -72,6 +80,8 @@ CREATE TABLE IF NOT EXISTS recall_patients (
     patient_name VARCHAR(100) NOT NULL,            -- 환자명
     phone_number VARCHAR(20) NOT NULL,             -- 전화번호
     chart_number VARCHAR(50),                      -- 차트 번호
+    birth_date DATE,                               -- 생년월일
+    gender gender_type,                            -- 성별
 
     -- 추가 정보 (선택)
     last_visit_date DATE,                          -- 마지막 내원일
@@ -345,16 +355,3 @@ CREATE TRIGGER update_aligo_settings_updated_at
     BEFORE UPDATE ON aligo_settings
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
-
--- ========================================
--- 기본 문자 템플릿 삽입 (선택)
--- ========================================
-
--- 이 부분은 각 병원이 가입 시 실행되거나, 관리자가 수동으로 추가할 수 있음
--- INSERT INTO recall_sms_templates (clinic_id, name, content, is_default)
--- VALUES (
---     'clinic_uuid_here',
---     '정기검진 리콜',
---     '[{병원명}] {환자명}님, 정기검진 시기가 다가왔습니다. 편하신 시간에 예약 부탁드립니다. 문의: {전화번호}',
---     true
--- );

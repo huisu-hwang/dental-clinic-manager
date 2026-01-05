@@ -22,7 +22,8 @@ import type {
   RecallPatient,
   RecallPatientUploadData,
   RecallPatientFilters,
-  RecallStats as RecallStatsType
+  RecallStats as RecallStatsType,
+  PatientRecallStatus
 } from '@/types/recall'
 import { recallService } from '@/lib/recallService'
 import PatientFileUpload from './PatientFileUpload'
@@ -228,9 +229,22 @@ export default function RecallManagement() {
     loadStats()
   }
 
-  // 상태 변경
-  const handleUpdateStatus = (patient: RecallPatient) => {
-    setStatusModalPatient(patient)
+  // 상태 변경 (직접 상태 전달 시 바로 업데이트, 없으면 모달 열기)
+  const handleUpdateStatus = async (patient: RecallPatient, newStatus?: PatientRecallStatus) => {
+    if (newStatus) {
+      // 직접 상태 업데이트
+      const result = await recallService.patients.updatePatientStatus(patient.id, newStatus)
+      if (result.success) {
+        showToast('상태가 변경되었습니다.', 'success')
+        loadPatients()
+        loadStats()
+      } else {
+        showToast(result.error || '상태 변경에 실패했습니다.', 'error')
+      }
+    } else {
+      // 모달로 상태 변경
+      setStatusModalPatient(patient)
+    }
   }
 
   // 상태 변경 완료

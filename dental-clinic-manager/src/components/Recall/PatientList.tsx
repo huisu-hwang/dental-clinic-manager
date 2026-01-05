@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   Phone,
   MessageSquare,
@@ -12,11 +12,11 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
-  MoreVertical,
   Calendar,
   PhoneOff,
   PhoneMissed,
-  Ban
+  Ban,
+  History
 } from 'lucide-react'
 import type {
   RecallPatient,
@@ -25,7 +25,10 @@ import type {
 } from '@/types/recall'
 import {
   RECALL_STATUS_LABELS,
-  RECALL_STATUS_COLORS
+  RECALL_STATUS_COLORS,
+  MANUAL_STATUS_OPTIONS,
+  GENDER_LABELS,
+  calculateAge
 } from '@/types/recall'
 import { displayPhoneNumber } from '@/lib/phoneCallService'
 
@@ -36,7 +39,7 @@ interface PatientListProps {
   onSelectAll: (selected: boolean) => void
   onCallPatient: (patient: RecallPatient) => void
   onSmsPatient: (patient: RecallPatient) => void
-  onUpdateStatus: (patient: RecallPatient) => void
+  onUpdateStatus: (patient: RecallPatient, newStatus?: PatientRecallStatus) => void
   onViewHistory: (patient: RecallPatient) => void
   filters: RecallPatientFilters
   onFiltersChange: (filters: RecallPatientFilters) => void
@@ -45,16 +48,13 @@ interface PatientListProps {
 
 // 상태별 아이콘
 const STATUS_ICONS: Record<PatientRecallStatus, React.ReactNode> = {
-  pending: <Clock className="w-4 h-4" />,
-  sms_sent: <MessageSquare className="w-4 h-4" />,
-  call_attempted: <Phone className="w-4 h-4" />,
-  appointment_made: <CheckCircle className="w-4 h-4" />,
-  call_rejected: <PhoneOff className="w-4 h-4" />,
-  visit_refused: <Ban className="w-4 h-4" />,
-  invalid_number: <XCircle className="w-4 h-4" />,
-  no_answer: <PhoneMissed className="w-4 h-4" />,
-  callback_requested: <Phone className="w-4 h-4" />,
-  completed: <CheckCircle className="w-4 h-4" />
+  pending: <Clock className="w-3.5 h-3.5" />,
+  sms_sent: <MessageSquare className="w-3.5 h-3.5" />,
+  appointment_made: <CheckCircle className="w-3.5 h-3.5" />,
+  call_rejected: <PhoneOff className="w-3.5 h-3.5" />,
+  visit_refused: <Ban className="w-3.5 h-3.5" />,
+  invalid_number: <XCircle className="w-3.5 h-3.5" />,
+  no_answer: <PhoneMissed className="w-3.5 h-3.5" />
 }
 
 export default function PatientList({
@@ -73,7 +73,19 @@ export default function PatientList({
   const [sortField, setSortField] = useState<'patient_name' | 'status' | 'last_contact_date'>('patient_name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [showFilters, setShowFilters] = useState(false)
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [openStatusDropdown, setOpenStatusDropdown] = useState<string | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // 드롭다운 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpenStatusDropdown(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // 정렬된 환자 목록
   const sortedPatients = useMemo(() => {
@@ -112,19 +124,38 @@ export default function PatientList({
   const isAllSelected = patients.length > 0 && selectedPatients.length === patients.length
   const isPartiallySelected = selectedPatients.length > 0 && selectedPatients.length < patients.length
 
-  // 상태별 필터 옵션
+  // 상태별 필터 옵션 (간소화된 상태)
   const statusOptions: { value: PatientRecallStatus | 'all'; label: string }[] = [
     { value: 'all', label: '전체' },
-    { value: 'pending', label: '대기 중' },
-    { value: 'sms_sent', label: '문자 발송' },
-    { value: 'call_attempted', label: '전화 시도' },
-    { value: 'appointment_made', label: '예약 완료' },
-    { value: 'call_rejected', label: '통화 거부' },
-    { value: 'visit_refused', label: '내원 거부' },
-    { value: 'invalid_number', label: '없는 번호' },
+    { value: 'pending', label: '대기중' },
+    { value: 'sms_sent', label: '문자발송' },
+    { value: 'appointment_made', label: '예약완료' },
     { value: 'no_answer', label: '부재중' },
-    { value: 'callback_requested', label: '콜백 요청' }
+    { value: 'call_rejected', label: '통화거부' },
+    { value: 'visit_refused', label: '내원거부' },
+    { value: 'invalid_number', label: '없는번호' }
   ]
+
+  // 상태 변경 핸들러
+  const handleStatusChange = (patient: RecallPatient, newStatus: PatientRecallStatus) => {
+    setOpenStatusDropdown(null)
+    if (patient.status !== newStatus) {
+      onUpdateStatus(patient, newStatus)
+    }
+  }
+
+  // 나이/성별 포맷
+  const formatAgeGender = (patient: RecallPatient): string => {
+    const parts: string[] = []
+    const age = calculateAge(patient.birth_date)
+    if (age !== null) {
+      parts.push(`${age}세`)
+    }
+    if (patient.gender && GENDER_LABELS[patient.gender]) {
+      parts.push(GENDER_LABELS[patient.gender])
+    }
+    return parts.length > 0 ? parts.join('/') : ''
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -306,7 +337,14 @@ export default function PatientList({
                         <User className="w-5 h-5 text-gray-500" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{patient.patient_name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900">{patient.patient_name}</p>
+                          {formatAgeGender(patient) && (
+                            <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                              {formatAgeGender(patient)}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500">{displayPhoneNumber(patient.phone_number)}</p>
                         {patient.chart_number && (
                           <p className="text-xs text-gray-400">차트: {patient.chart_number}</p>
@@ -315,17 +353,45 @@ export default function PatientList({
                     </div>
                   </td>
 
-                  {/* 상태 */}
+                  {/* 상태 - 클릭 시 드롭다운 표시 */}
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${RECALL_STATUS_COLORS[patient.status]}`}>
-                      {STATUS_ICONS[patient.status]}
-                      {RECALL_STATUS_LABELS[patient.status]}
-                    </span>
-                    {patient.contact_count > 0 && (
-                      <p className="text-xs text-gray-400 mt-1">
-                        연락 {patient.contact_count}회
-                      </p>
-                    )}
+                    <div className="relative" ref={openStatusDropdown === patient.id ? dropdownRef : undefined}>
+                      <button
+                        onClick={() => setOpenStatusDropdown(openStatusDropdown === patient.id ? null : patient.id)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-gray-300 transition-all ${RECALL_STATUS_COLORS[patient.status]}`}
+                      >
+                        {STATUS_ICONS[patient.status]}
+                        {RECALL_STATUS_LABELS[patient.status]}
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+
+                      {/* 상태 드롭다운 */}
+                      {openStatusDropdown === patient.id && (
+                        <div className="absolute left-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-30">
+                          {MANUAL_STATUS_OPTIONS.map((status) => (
+                            <button
+                              key={status}
+                              onClick={() => handleStatusChange(patient, status)}
+                              disabled={patient.status === status}
+                              className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                patient.status === status ? 'bg-gray-50' : ''
+                              }`}
+                            >
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${RECALL_STATUS_COLORS[status]}`}>
+                                {STATUS_ICONS[status]}
+                              </span>
+                              {RECALL_STATUS_LABELS[status]}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {patient.contact_count > 0 && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          연락 {patient.contact_count}회
+                        </p>
+                      )}
+                    </div>
                   </td>
 
                   {/* 마지막 연락 */}
@@ -378,44 +444,13 @@ export default function PatientList({
                       >
                         <MessageSquare className="w-5 h-5" />
                       </button>
-                      <div className="relative">
-                        <button
-                          onClick={() => setOpenMenuId(openMenuId === patient.id ? null : patient.id)}
-                          className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                          <MoreVertical className="w-5 h-5" />
-                        </button>
-
-                        {/* 드롭다운 메뉴 */}
-                        {openMenuId === patient.id && (
-                          <>
-                            <div
-                              className="fixed inset-0 z-10"
-                              onClick={() => setOpenMenuId(null)}
-                            />
-                            <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                              <button
-                                onClick={() => {
-                                  onUpdateStatus(patient)
-                                  setOpenMenuId(null)
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                상태 변경
-                              </button>
-                              <button
-                                onClick={() => {
-                                  onViewHistory(patient)
-                                  setOpenMenuId(null)
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                연락 이력
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
+                      <button
+                        onClick={() => onViewHistory(patient)}
+                        title="연락 이력"
+                        className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <History className="w-5 h-5" />
+                      </button>
                     </div>
                   </td>
                 </tr>

@@ -21,6 +21,8 @@ const EXPECTED_COLUMNS: ParsedColumn[] = [
   { key: 'patient_name', label: '환자명', required: true },
   { key: 'phone_number', label: '전화번호', required: true },
   { key: 'chart_number', label: '차트번호', required: false },
+  { key: 'birth_date', label: '생년월일', required: false },
+  { key: 'gender', label: '성별', required: false },
   { key: 'last_visit_date', label: '마지막 내원일', required: false },
   { key: 'treatment_type', label: '시술 종류', required: false },
   { key: 'notes', label: '비고', required: false }
@@ -50,6 +52,21 @@ const COLUMN_MAPPINGS: Record<string, keyof RecallPatientUploadData> = {
   'chart': 'chart_number',
   'chart_number': 'chart_number',
 
+  '생년월일': 'birth_date',
+  '생일': 'birth_date',
+  '출생일': 'birth_date',
+  '주민번호앞자리': 'birth_date',
+  'birth': 'birth_date',
+  'birthday': 'birth_date',
+  'birth_date': 'birth_date',
+  'birthdate': 'birth_date',
+  'dob': 'birth_date',
+
+  '성별': 'gender',
+  '성': 'gender',
+  'gender': 'gender',
+  'sex': 'gender',
+
   '마지막내원일': 'last_visit_date',
   '최근내원일': 'last_visit_date',
   '내원일': 'last_visit_date',
@@ -75,7 +92,6 @@ const COLUMN_MAPPINGS: Record<string, keyof RecallPatientUploadData> = {
 export default function PatientFileUpload({ onUpload, onCancel, isLoading }: PatientFileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [file, setFile] = useState<File | null>(null)
-  const [parsedData, setParsedData] = useState<RecallPatientUploadData[]>([])
   const [parseError, setParseError] = useState<string | null>(null)
   const [columnMapping, setColumnMapping] = useState<Record<string, keyof RecallPatientUploadData>>({})
   const [previewData, setPreviewData] = useState<any[]>([])
@@ -105,7 +121,7 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
     }
 
     // 문자열 날짜 처리
-    const dateStr = date.toString()
+    const dateStr = date.toString().trim()
     // YYYY-MM-DD 형식
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       return dateStr
@@ -118,8 +134,32 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
     if (/^\d{8}$/.test(dateStr)) {
       return `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`
     }
+    // YYMMDD 형식 (주민번호 앞자리)
+    if (/^\d{6}$/.test(dateStr)) {
+      const yy = parseInt(dateStr.slice(0, 2))
+      const century = yy > 30 ? '19' : '20'  // 30보다 크면 1900년대, 아니면 2000년대
+      return `${century}${dateStr.slice(0, 2)}-${dateStr.slice(2, 4)}-${dateStr.slice(4, 6)}`
+    }
 
     return dateStr
+  }
+
+  // 성별 정규화
+  const normalizeGender = (gender: any): string => {
+    if (!gender) return ''
+
+    const genderStr = gender.toString().trim().toLowerCase()
+
+    // 남성
+    if (['남', '남성', '남자', 'm', 'male', '1', '3'].includes(genderStr)) {
+      return 'male'
+    }
+    // 여성
+    if (['여', '여성', '여자', 'f', 'female', '2', '4'].includes(genderStr)) {
+      return 'female'
+    }
+
+    return ''
   }
 
   // 파일 파싱
@@ -276,8 +316,10 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
               // 특수 처리
               if (key === 'phone_number') {
                 value = normalizePhoneNumber(value)
-              } else if (key === 'last_visit_date') {
+              } else if (key === 'last_visit_date' || key === 'birth_date') {
                 value = normalizeDate(value)
+              } else if (key === 'gender') {
+                value = normalizeGender(value)
               }
 
               patient[key] = value
@@ -411,7 +453,7 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
             <p className="text-sm text-blue-700 mb-3">
               아래 컬럼명을 포함한 Excel 또는 CSV 파일을 업로드해주세요.
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
               {EXPECTED_COLUMNS.map(col => (
                 <div key={col.key} className="flex items-center gap-1">
                   <span className={col.required ? 'text-red-500' : 'text-gray-400'}>
@@ -438,7 +480,6 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
             <button
               onClick={() => {
                 setFile(null)
-                setParsedData([])
                 setPreviewData([])
                 setHeaders([])
                 setColumnMapping({})

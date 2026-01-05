@@ -3,18 +3,28 @@
 // Patient Recall System Types
 // ========================================
 
-// 환자 리콜 상태
+// 환자 리콜 상태 (간소화)
 export type PatientRecallStatus =
-  | 'pending'              // 대기 중 (아직 연락 안함)
-  | 'sms_sent'             // 문자 발송 완료
-  | 'call_attempted'       // 전화 시도함
-  | 'appointment_made'     // 내원 약속 잡음
-  | 'call_rejected'        // 통화 거부
-  | 'visit_refused'        // 내원 거부 의사 표시
-  | 'invalid_number'       // 없는 번호
+  | 'pending'              // 대기 중
+  | 'sms_sent'             // 문자 발송 (자동)
+  | 'appointment_made'     // 예약 완료
   | 'no_answer'            // 부재중
-  | 'callback_requested'   // 콜백 요청
-  | 'completed'            // 완료
+  | 'call_rejected'        // 통화 거부
+  | 'visit_refused'        // 내원 거부
+  | 'invalid_number'       // 없는 번호
+
+// 수동으로 선택 가능한 상태 (문자발송 제외)
+export const MANUAL_STATUS_OPTIONS: PatientRecallStatus[] = [
+  'pending',
+  'appointment_made',
+  'no_answer',
+  'call_rejected',
+  'visit_refused',
+  'invalid_number'
+]
+
+// 성별 타입
+export type Gender = 'male' | 'female' | 'other'
 
 // 연락 유형
 export type ContactType = 'sms' | 'call'
@@ -69,6 +79,8 @@ export interface RecallPatient {
   patient_name: string
   phone_number: string
   chart_number?: string
+  birth_date?: string        // 생년월일 추가
+  gender?: Gender            // 성별 추가
 
   // 추가 정보
   last_visit_date?: string
@@ -101,6 +113,8 @@ export interface RecallPatientUploadData {
   patient_name: string
   phone_number: string
   chart_number?: string
+  birth_date?: string        // 생년월일 추가
+  gender?: string            // 성별 추가
   last_visit_date?: string
   treatment_type?: string
   notes?: string
@@ -111,6 +125,8 @@ export interface RecallPatientFormData {
   patient_name: string
   phone_number: string
   chart_number?: string
+  birth_date?: string
+  gender?: Gender
   last_visit_date?: string
   treatment_type?: string
   notes?: string
@@ -314,34 +330,55 @@ export const VOIP_PROVIDERS: VoipProviderInfo[] = [
 // 상태 레이블 및 색상
 // ========================================
 export const RECALL_STATUS_LABELS: Record<PatientRecallStatus, string> = {
-  pending: '대기 중',
-  sms_sent: '문자 발송',
-  call_attempted: '전화 시도',
-  appointment_made: '예약 완료',
-  call_rejected: '통화 거부',
-  visit_refused: '내원 거부',
-  invalid_number: '없는 번호',
+  pending: '대기중',
+  sms_sent: '문자발송',
+  appointment_made: '예약완료',
   no_answer: '부재중',
-  callback_requested: '콜백 요청',
-  completed: '완료'
+  call_rejected: '통화거부',
+  visit_refused: '내원거부',
+  invalid_number: '없는번호'
 }
 
 export const RECALL_STATUS_COLORS: Record<PatientRecallStatus, string> = {
   pending: 'bg-gray-100 text-gray-700',
   sms_sent: 'bg-blue-100 text-blue-700',
-  call_attempted: 'bg-yellow-100 text-yellow-700',
   appointment_made: 'bg-green-100 text-green-700',
+  no_answer: 'bg-orange-100 text-orange-700',
   call_rejected: 'bg-red-100 text-red-700',
   visit_refused: 'bg-red-100 text-red-700',
-  invalid_number: 'bg-gray-100 text-gray-500',
-  no_answer: 'bg-orange-100 text-orange-700',
-  callback_requested: 'bg-purple-100 text-purple-700',
-  completed: 'bg-green-100 text-green-700'
+  invalid_number: 'bg-gray-100 text-gray-500'
 }
 
 export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
   sms: '문자',
   call: '전화'
+}
+
+export const GENDER_LABELS: Record<Gender, string> = {
+  male: '남',
+  female: '여',
+  other: '기타'
+}
+
+// ========================================
+// 나이 계산 유틸리티
+// ========================================
+export function calculateAge(birthDate: string | undefined): number | null {
+  if (!birthDate) return null
+
+  const today = new Date()
+  const birth = new Date(birthDate)
+
+  if (isNaN(birth.getTime())) return null
+
+  let age = today.getFullYear() - birth.getFullYear()
+  const monthDiff = today.getMonth() - birth.getMonth()
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--
+  }
+
+  return age
 }
 
 // ========================================
