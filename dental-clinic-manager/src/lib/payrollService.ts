@@ -902,15 +902,32 @@ export async function getAttendanceSummaryForPayroll(
       overtimeMinutes += record.overtime_minutes || 0
     }
 
-    // 결근일 계산: 근무일 - 출근일 - 연차사용일
-    // (공휴일은 근무 스케줄에 포함되어 있지 않으므로 제외할 필요 없음)
-    const absentDays = Math.max(0, totalWorkDays - presentDays - leaveDays)
-
     // 연차 정보 조회 (연차 시스템이 있다면)
     // 현재는 기본값 사용
     const allowedAnnualLeave = 15 // 기본 연차 일수
     const usedAnnualLeave = leaveDays
     const remainingAnnualLeave = Math.max(0, allowedAnnualLeave - usedAnnualLeave)
+
+    // 유급 연차 사용일 (허용 범위 내만 유급 처리)
+    const paidLeaveDays = Math.min(leaveDays, allowedAnnualLeave)
+
+    // 결근일 계산: 근무일 - 출근일 - 유급연차사용일
+    // 이렇게 하면 무단결근 + 연차초과가 결근일에 포함됨
+    // (공휴일은 근무 스케줄에 포함되어 있지 않으므로 제외할 필요 없음)
+    const absentDays = Math.max(0, totalWorkDays - presentDays - paidLeaveDays)
+
+    console.log('[getAttendanceSummaryForPayroll] 근태 요약 계산:', {
+      employeeId,
+      year,
+      month,
+      totalWorkDays,
+      presentDays,
+      leaveDays,
+      paidLeaveDays,
+      absentDays,
+      allowedAnnualLeave,
+      usedAnnualLeave
+    })
 
     const summary: AttendanceSummaryForPayroll = {
       userId: employeeId,
@@ -1051,11 +1068,24 @@ export function calculateAttendanceDeduction(
   // - 주휴수당: 결근이 있는 주마다 1일분 차감 (주당 최대 1일분)
   // =====================================================================
 
-  // 연차 초과 사용일수 계산 (무급휴가로 처리될 일수)
+  // 연차 초과 사용일수 계산 (내역 표시용 - absentDays에 이미 포함됨)
   const excessLeaves = Math.max(0, attendance.usedAnnualLeave - allowed)
 
-  // 총 무급 결근일수 = 무단결근 + 연차초과 휴무
-  const totalUnpaidAbsentDays = attendance.absentDays + excessLeaves
+  // 무단결근일 = 총 결근일 - 연차초과일
+  // (absentDays = 근무일 - 출근일 - 유급연차사용일, 이므로 무단결근+연차초과 포함)
+  const unauthorizedAbsentDays = Math.max(0, attendance.absentDays - excessLeaves)
+
+  // 총 무급 결근일수 = attendance.absentDays (이미 무단결근 + 연차초과 포함)
+  const totalUnpaidAbsentDays = attendance.absentDays
+
+  console.log('[calculateAttendanceDeduction] 결근 계산:', {
+    absentDays: attendance.absentDays,
+    excessLeaves,
+    unauthorizedAbsentDays,
+    totalUnpaidAbsentDays,
+    dailyWage: basis.dailyWage,
+    weeklyHolidayPay: basis.weeklyHolidayPay
+  })
 
   let absentDeduction = 0
   let weeklyHolidayPayDeduction = 0
@@ -1072,13 +1102,13 @@ export function calculateAttendanceDeduction(
 
     weeklyHolidayPayDeduction = estimatedWeeksWithAbsence * basis.weeklyHolidayPay
 
-    // 무단결근 내역 추가
-    if (attendance.absentDays > 0) {
+    // 무단결근 내역 추가 (연차초과 제외한 순수 무단결근)
+    if (unauthorizedAbsentDays > 0) {
       details.push({
         reason: 'absent',
-        description: `무단결근 ${attendance.absentDays}일`,
-        count: attendance.absentDays,
-        amount: attendance.absentDays * basis.dailyWage,
+        description: `무단결근 ${unauthorizedAbsentDays}일`,
+        count: unauthorizedAbsentDays,
+        amount: unauthorizedAbsentDays * basis.dailyWage,
         weeklyHolidayPayDeducted: false
       })
     }

@@ -230,8 +230,14 @@ function calculateAttendanceStatsFromRecords(
 
   const presentDays = presentDates.size
   const leaveDays = leaveDates.size
-  // 결근일 = 근무일 - 출근일 - 연차사용일
-  const absentDays = Math.max(0, totalWorkDays - presentDays - leaveDays)
+
+  // 유급 연차 사용일 (허용 범위 내, 기본 15일)
+  const allowedAnnualLeave = 15
+  const paidLeaveDays = Math.min(leaveDays, allowedAnnualLeave)
+
+  // 결근일 = 근무일 - 출근일 - 유급연차사용일
+  // 이렇게 하면 무단결근 + 연차초과가 결근일에 포함됨
+  const absentDays = Math.max(0, totalWorkDays - presentDays - paidLeaveDays)
 
   return {
     presentDays,

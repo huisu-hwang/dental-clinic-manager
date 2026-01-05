@@ -244,15 +244,29 @@ export default function PayrollForm() {
 
           // 근태 기반 급여 차감 계산 (직원 근무 스케줄 반영)
           const basis = calculatePayrollBasis(settings.baseSalary, workSchedule)
+
+          console.log('[PayrollForm] 급여 기준 계산:', {
+            employeeId: selectedEmployeeId,
+            employeeName: employee.name,
+            baseSalary: settings.baseSalary,
+            salaryType: settings.salaryType,
+            workSchedule: workSchedule ? '설정됨' : '기본값 사용',
+            dailyWage: basis.dailyWage,
+            hourlyWage: basis.hourlyWage,
+            monthlyWorkHours: basis.monthlyWorkHours
+          })
+
           currentAttendanceDeduction = calculateAttendanceDeduction(basis, currentAttendanceSummary)
           setAttendanceDeduction(currentAttendanceDeduction)
 
           console.log('[PayrollForm] 근태 데이터 로드됨:', {
+            employeeName: employee.name,
             totalWorkDays: currentAttendanceSummary.totalWorkDays,
             presentDays: currentAttendanceSummary.presentDays,
             absentDays: currentAttendanceSummary.absentDays,
             leaveDays: currentAttendanceSummary.leaveDays,
-            totalDeduction: currentAttendanceDeduction.totalDeduction
+            totalDeduction: currentAttendanceDeduction.totalDeduction,
+            deductionDetails: currentAttendanceDeduction.deductionDetails
           })
         } else {
           // 근태 데이터 로드 실패
