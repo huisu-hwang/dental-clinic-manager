@@ -232,7 +232,8 @@ export default function PayrollForm() {
           user.clinic_id,
           selectedYear,
           selectedMonth,
-          workSchedule // 근무 스케줄 전달하여 정확한 근무일수 계산
+          workSchedule, // 근무 스케줄 전달하여 정확한 근무일수 계산
+          employee.hire_date // 입사일 전달하여 정확한 연차 계산
         )
 
         let currentAttendanceSummary: AttendanceSummaryForPayroll | null = null

@@ -32,6 +32,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { ContractData, EmploymentContract } from '@/types/contract'
 import type { WorkSchedule, DayName } from '@/types/workSchedule'
 import { DEFAULT_WORK_SCHEDULE, DAY_OF_WEEK_TO_NAME } from '@/types/workSchedule'
+import { calculateAnnualLeaveDays } from '@/lib/leaveService'
 
 // =====================================================================
 // 급여 계산 함수
@@ -804,7 +805,7 @@ export function getScheduledWorkDays(
  * 계산 로직:
  * - 근무일: 직원 근무 스케줄 기반 해당 월의 총 근무해야 하는 일수
  * - 출근일: 출근 기록이 있는 일수 (present, late, early_leave)
- * - 결근일: 근무일 - 출근일 - 연차사용일
+ * - 결근일: 근무일 - 출근일 - 유급연차사용일
  * - 무단결근일: 결근일 중 연차를 사용하지 않은 일수
  *
  * @param employeeId 직원 ID
@@ -812,13 +813,15 @@ export function getScheduledWorkDays(
  * @param year 연도
  * @param month 월
  * @param workSchedule 직원 근무 스케줄 (옵션)
+ * @param hireDate 입사일 (옵션) - 연차 계산에 사용
  */
 export async function getAttendanceSummaryForPayroll(
   employeeId: string,
   clinicId: string,
   year: number,
   month: number,
-  workSchedule?: WorkSchedule
+  workSchedule?: WorkSchedule,
+  hireDate?: string
 ): Promise<{ success: boolean; data?: AttendanceSummaryForPayroll; error?: string }> {
   try {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
@@ -902,9 +905,22 @@ export async function getAttendanceSummaryForPayroll(
       overtimeMinutes += record.overtime_minutes || 0
     }
 
-    // 연차 정보 조회 (연차 시스템이 있다면)
-    // 현재는 기본값 사용
-    const allowedAnnualLeave = 15 // 기본 연차 일수
+    // 연차 정보 조회 (입사일 기준 근로기준법 계산)
+    // 1년 미만: 월 1일 (최대 11일)
+    // 1년 이상: 15일 기본 + 2년마다 1일 추가 (최대 25일)
+    const referenceDate = new Date(year, month - 1, 1) // 해당 월의 시작일 기준
+    let allowedAnnualLeave = 15 // 기본값
+
+    if (hireDate) {
+      const hireDateObj = new Date(hireDate)
+      allowedAnnualLeave = calculateAnnualLeaveDays(hireDateObj, referenceDate)
+      console.log('[getAttendanceSummaryForPayroll] 입사일 기반 연차 계산:', {
+        hireDate,
+        referenceDate: referenceDate.toISOString().split('T')[0],
+        allowedAnnualLeave
+      })
+    }
+
     const usedAnnualLeave = leaveDays
     const remainingAnnualLeave = Math.max(0, allowedAnnualLeave - usedAnnualLeave)
 

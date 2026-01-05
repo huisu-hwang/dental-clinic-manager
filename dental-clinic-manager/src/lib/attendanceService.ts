@@ -24,6 +24,7 @@ import type {
 import type { ClinicBranch } from '@/types/branch'
 import type { WorkSchedule, DayName } from '@/types/workSchedule'
 import { DEFAULT_WORK_SCHEDULE, DAY_OF_WEEK_TO_NAME } from '@/types/workSchedule'
+import { calculateAnnualLeaveDays } from '@/lib/leaveService'
 
 /**
  * 한국 시간대 기준 오늘 날짜 반환 (YYYY-MM-DD 형식)
@@ -154,11 +155,20 @@ function getScheduledWorkDaysFromSchedule(
  * 직원별 근태 통계 계산 (직원 근무 스케줄 기반)
  * - 근무일: 직원 근무 스케줄 기반 해당 월의 총 근무해야 하는 일수
  * - 출근일: 출근 기록이 있는 일수 (present, late, early_leave)
- * - 결근일: 근무일 - 출근일 - 연차사용일
+ * - 결근일: 근무일 - 출근일 - 유급연차사용일
+ *
+ * @param records 근태 기록 배열
+ * @param totalWorkDays 해당 월 총 근무일수
+ * @param year 연도 (연차 계산용)
+ * @param month 월 (연차 계산용)
+ * @param hireDate 입사일 (연차 계산용, 옵션)
  */
 function calculateAttendanceStatsFromRecords(
   records: AttendanceRecord[],
-  totalWorkDays: number
+  totalWorkDays: number,
+  year?: number,
+  month?: number,
+  hireDate?: string
 ): {
   presentDays: number
   absentDays: number
@@ -231,8 +241,17 @@ function calculateAttendanceStatsFromRecords(
   const presentDays = presentDates.size
   const leaveDays = leaveDates.size
 
-  // 유급 연차 사용일 (허용 범위 내, 기본 15일)
-  const allowedAnnualLeave = 15
+  // 연차 정보 조회 (입사일 기준 근로기준법 계산)
+  // 1년 미만: 월 1일 (최대 11일)
+  // 1년 이상: 15일 기본 + 2년마다 1일 추가 (최대 25일)
+  let allowedAnnualLeave = 15 // 기본값
+
+  if (hireDate && year && month) {
+    const referenceDate = new Date(year, month - 1, 1) // 해당 월의 시작일 기준
+    const hireDateObj = new Date(hireDate)
+    allowedAnnualLeave = calculateAnnualLeaveDays(hireDateObj, referenceDate)
+  }
+
   const paidLeaveDays = Math.min(leaveDays, allowedAnnualLeave)
 
   // 결근일 = 근무일 - 출근일 - 유급연차사용일
@@ -1408,10 +1427,10 @@ export async function getAllUsersMonthlyStatistics(
   }
 
   try {
-    // 해당 클리닉의 활성 직원 목록 조회 (work_schedule 포함)
+    // 해당 클리닉의 활성 직원 목록 조회 (work_schedule, hire_date 포함)
     let usersQuery = supabase
       .from('users')
-      .select('id, name, work_schedule')
+      .select('id, name, work_schedule, hire_date')
       .eq('clinic_id', clinicId)
       .eq('status', 'active')
 
@@ -1434,7 +1453,7 @@ export async function getAllUsersMonthlyStatistics(
     const lastDay = new Date(year, month, 0).getDate()
     const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
 
-    const userIds = users.map((u: { id: string; name: string; work_schedule?: WorkSchedule }) => u.id)
+    const userIds = users.map((u: { id: string; name: string; work_schedule?: WorkSchedule; hire_date?: string }) => u.id)
 
     const { data: allRecords, error: recordsError } = await supabase
       .from('attendance_records')
@@ -1458,7 +1477,7 @@ export async function getAllUsersMonthlyStatistics(
 
     // 각 직원별 통계 계산
     const statistics: (AttendanceStatistics & { user_name: string })[] = users.map(
-      (user: { id: string; name: string; work_schedule?: WorkSchedule }) => {
+      (user: { id: string; name: string; work_schedule?: WorkSchedule; hire_date?: string }) => {
         // 직원 근무 스케줄 기반 근무일수 계산
         const workSchedule = user.work_schedule as WorkSchedule | undefined
         const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule)
@@ -1466,8 +1485,8 @@ export async function getAllUsersMonthlyStatistics(
         // 해당 직원의 출퇴근 기록
         const userRecords = recordsByUser.get(user.id) || []
 
-        // 통계 계산
-        const stats = calculateAttendanceStatsFromRecords(userRecords, totalWorkDays)
+        // 통계 계산 (입사일 기반 연차 계산 포함)
+        const stats = calculateAttendanceStatsFromRecords(userRecords, totalWorkDays, year, month, user.hire_date)
 
         // 출근율 계산
         const attendanceRate = totalWorkDays > 0
