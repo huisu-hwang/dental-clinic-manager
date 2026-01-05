@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import type { PayrollStatement } from '@/types/payroll'
+import type { PayrollStatement, AttendanceSummaryForPayroll, AttendanceDeduction } from '@/types/payroll'
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import { formatResidentNumberForPayroll } from '@/lib/payrollService'
 
@@ -9,9 +9,17 @@ interface PayrollPreviewProps {
   statement: PayrollStatement
   clinicName: string
   onClose: () => void
+  attendanceSummary?: AttendanceSummaryForPayroll
+  attendanceDeduction?: AttendanceDeduction
 }
 
-export default function PayrollPreview({ statement, clinicName, onClose }: PayrollPreviewProps) {
+export default function PayrollPreview({
+  statement,
+  clinicName,
+  onClose,
+  attendanceSummary,
+  attendanceDeduction
+}: PayrollPreviewProps) {
   const printRef = useRef<HTMLDivElement>(null)
 
   // 인쇄 기능
@@ -265,6 +273,83 @@ export default function PayrollPreview({ statement, clinicName, onClose }: Payro
               </div>
             </div>
           </div>
+
+          {/* 근태 정보 (있는 경우만 표시) */}
+          {attendanceSummary && (
+            <div className="mt-4 text-sm border border-slate-400">
+              <div className="bg-slate-200 py-1.5 px-3 font-bold text-center border-b border-slate-400">
+                근태 현황
+              </div>
+              <div className="p-3">
+                <div className="grid grid-cols-4 gap-x-4 gap-y-1 mb-2">
+                  <div className="flex justify-between">
+                    <span>• 소정근로일수 :</span>
+                    <span>{attendanceSummary.totalWorkDays}일</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• 출근일수 :</span>
+                    <span>{attendanceSummary.presentDays}일</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• 연차사용 :</span>
+                    <span>{attendanceSummary.leaveDays}일</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• 결근일수 :</span>
+                    <span className={attendanceSummary.absentDays > 0 ? 'text-red-600 font-medium' : ''}>
+                      {attendanceSummary.absentDays}일
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• 지각횟수 :</span>
+                    <span className={attendanceSummary.lateCount > 0 ? 'text-amber-600 font-medium' : ''}>
+                      {attendanceSummary.lateCount}회
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• 지각시간 :</span>
+                    <span className={attendanceSummary.totalLateMinutes > 0 ? 'text-amber-600 font-medium' : ''}>
+                      {attendanceSummary.totalLateMinutes}분
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• 조퇴횟수 :</span>
+                    <span className={attendanceSummary.earlyLeaveCount > 0 ? 'text-amber-600 font-medium' : ''}>
+                      {attendanceSummary.earlyLeaveCount}회
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• 조퇴시간 :</span>
+                    <span className={attendanceSummary.totalEarlyLeaveMinutes > 0 ? 'text-amber-600 font-medium' : ''}>
+                      {attendanceSummary.totalEarlyLeaveMinutes}분
+                    </span>
+                  </div>
+                </div>
+
+                {/* 차감 내역 (있는 경우) */}
+                {attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
+                  <div className="mt-3 pt-3 border-t border-slate-300">
+                    <div className="font-medium text-red-700 mb-2">▶ 근태 관련 급여 차감 내역</div>
+                    <div className="space-y-1 text-xs">
+                      {attendanceDeduction.deductionDetails.map((detail, index) => (
+                        <div key={index} className="flex justify-between">
+                          <span>• {detail.description}</span>
+                          <span className="text-red-600 font-medium">-{formatCurrency(detail.amount)}원</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between pt-2 border-t border-slate-200 font-medium text-red-700">
+                        <span>총 차감액</span>
+                        <span>-{formatCurrency(attendanceDeduction.totalDeduction)}원</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">
+                      ※ 근로기준법에 따라 무노동 무임금 원칙 적용 (무단결근: 일급+주휴수당 차감, 지각/조퇴: 시급×해당시간 차감)
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* 하단 정보 (세후 계약 안내) */}
           {statement.salaryType === 'net' && (

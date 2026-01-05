@@ -2,18 +2,31 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import type { PayrollFormState, PayrollCalculationResult, SalaryType } from '@/types/payroll'
+import type {
+  PayrollFormState,
+  PayrollCalculationResult,
+  SalaryType,
+  AttendanceSummaryForPayroll,
+  AttendanceDeduction,
+  PayrollAccessResult
+} from '@/types/payroll'
 import { DEFAULT_PAYROLL_FORM_STATE } from '@/types/payroll'
 import {
   calculatePayrollFromFormState,
   getEmployeesForPayroll,
   calculatePaymentDate,
   savePayrollStatement,
-  getPayrollStatement
+  getPayrollStatement,
+  getAttendanceSummaryForPayroll,
+  calculatePayrollBasis,
+  calculateAttendanceDeduction,
+  checkPayrollAccess
 } from '@/lib/payrollService'
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import PayrollPreview from './PayrollPreview'
-import { AlertCircle, FileText, Settings } from 'lucide-react'
+import { AlertCircle, FileText, Settings, Clock, Calendar, AlertTriangle, Lock } from 'lucide-react'
+import type { WorkSchedule } from '@/types/workSchedule'
+import { workScheduleService } from '@/lib/workScheduleService'
 
 interface Employee {
   id: string
@@ -81,6 +94,13 @@ export default function PayrollForm() {
   const [hasSavedPayroll, setHasSavedPayroll] = useState(false)
   const [noSettingsWarning, setNoSettingsWarning] = useState(false)
   const [formState, setFormState] = useState<PayrollFormState>(DEFAULT_PAYROLL_FORM_STATE)
+
+  // 근태 연동 관련 상태
+  const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummaryForPayroll | null>(null)
+  const [attendanceDeduction, setAttendanceDeduction] = useState<AttendanceDeduction | null>(null)
+  const [accessResult, setAccessResult] = useState<PayrollAccessResult | null>(null)
+  const [employeeWorkSchedule, setEmployeeWorkSchedule] = useState<WorkSchedule | null>(null)
+  const [attendanceLoadError, setAttendanceLoadError] = useState<string | null>(null)
 
   const yearMonthOptions = useMemo(() => generatePayrollYearMonthOptions(), [])
 
@@ -151,6 +171,10 @@ export default function PayrollForm() {
         setSelectedEmployee(null)
         setCalculationResult(null)
         setNoSettingsWarning(false)
+        setAttendanceSummary(null)
+        setAttendanceDeduction(null)
+        setAccessResult(null)
+        setAttendanceLoadError(null)
         return
       }
 
@@ -160,6 +184,21 @@ export default function PayrollForm() {
       setSelectedEmployee(employee)
       setLoadingPayroll(true)
       setNoSettingsWarning(false)
+      setAttendanceLoadError(null)
+
+      // 접근 권한 확인
+      const isOwnStatement = selectedEmployeeId === user.id
+      const access = checkPayrollAccess(user.role || '', selectedYear, selectedMonth, isOwnStatement)
+      setAccessResult(access)
+
+      // 접근 권한이 없으면 더 이상 로드하지 않음
+      if (!access.canAccess) {
+        setLoadingPayroll(false)
+        setCalculationResult(null)
+        setAttendanceSummary(null)
+        setAttendanceDeduction(null)
+        return
+      }
 
       try {
         const settings = salarySettings[selectedEmployeeId]
@@ -169,18 +208,104 @@ export default function PayrollForm() {
           setNoSettingsWarning(true)
           setCalculationResult(null)
           setHasSavedPayroll(false)
+          setAttendanceSummary(null)
+          setAttendanceDeduction(null)
           setLoadingPayroll(false)
           return
         }
 
+        // 직원 근무 스케줄 조회
+        let workSchedule: WorkSchedule | undefined = undefined
+        try {
+          const scheduleResult = await workScheduleService.getUserWorkSchedule(selectedEmployeeId)
+          if (scheduleResult.data) {
+            workSchedule = scheduleResult.data
+            setEmployeeWorkSchedule(scheduleResult.data)
+          }
+        } catch (error) {
+          console.warn('Failed to fetch work schedule, using default:', error)
+        }
+
+        // 근태 요약 조회 (직원 근무 스케줄 기반으로 근무일 계산)
+        const attendanceResult = await getAttendanceSummaryForPayroll(
+          selectedEmployeeId,
+          user.clinic_id,
+          selectedYear,
+          selectedMonth,
+          workSchedule, // 근무 스케줄 전달하여 정확한 근무일수 계산
+          employee.hire_date // 입사일 전달하여 정확한 연차 계산
+        )
+
+        let currentAttendanceSummary: AttendanceSummaryForPayroll | null = null
+        let currentAttendanceDeduction: AttendanceDeduction | null = null
+
+        if (attendanceResult.success && attendanceResult.data) {
+          currentAttendanceSummary = attendanceResult.data
+          setAttendanceSummary(currentAttendanceSummary)
+
+          // 근태 기반 급여 차감 계산 (직원 근무 스케줄 반영)
+          // 세후 계약의 경우 targetAmount를, 세전 계약의 경우 baseSalary를 기준으로 계산
+          const basisAmount = settings.salaryType === 'net'
+            ? settings.targetAmount
+            : settings.baseSalary
+          const basis = calculatePayrollBasis(basisAmount, workSchedule)
+
+          console.log('[PayrollForm] 급여 기준 계산:', {
+            employeeId: selectedEmployeeId,
+            employeeName: employee.name,
+            salaryType: settings.salaryType,
+            targetAmount: settings.targetAmount,
+            baseSalary: settings.baseSalary,
+            basisAmount, // 실제 계산에 사용되는 금액
+            workSchedule: workSchedule ? '설정됨' : '기본값 사용',
+            dailyWage: basis.dailyWage,
+            hourlyWage: basis.hourlyWage,
+            monthlyWorkHours: basis.monthlyWorkHours
+          })
+
+          currentAttendanceDeduction = calculateAttendanceDeduction(basis, currentAttendanceSummary)
+          setAttendanceDeduction(currentAttendanceDeduction)
+
+          console.log('[PayrollForm] 근태 데이터 로드됨:', {
+            employeeName: employee.name,
+            totalWorkDays: currentAttendanceSummary.totalWorkDays,
+            presentDays: currentAttendanceSummary.presentDays,
+            absentDays: currentAttendanceSummary.absentDays,
+            leaveDays: currentAttendanceSummary.leaveDays,
+            totalDeduction: currentAttendanceDeduction.totalDeduction,
+            deductionDetails: currentAttendanceDeduction.deductionDetails
+          })
+        } else {
+          // 근태 데이터 로드 실패
+          console.warn('[PayrollForm] 근태 데이터 로드 실패:', attendanceResult.error)
+          setAttendanceLoadError(attendanceResult.error || '근태 데이터를 불러올 수 없습니다.')
+          setAttendanceSummary(null)
+          setAttendanceDeduction(null)
+        }
+
         // 급여 설정이 있으면 항상 설정 기반으로 계산 (4대보험 값 정확히 반영)
+        // 근태 차감 적용 방식:
+        // - 세전(gross) 계약: 기타 공제에 추가하여 실수령액 감소
+        // - 세후(net) 계약: 목표 실수령액에서 직접 차감 (targetAmount 조정)
+        const attendanceDeductionAmount = currentAttendanceDeduction?.totalDeduction || 0
+
+        // 세후 계약의 경우 targetAmount에서 근태 차감액을 빼고,
+        // 세전 계약의 경우 기타공제에 추가
+        const adjustedTargetAmount = settings.salaryType === 'net'
+          ? Math.max(0, settings.targetAmount - attendanceDeductionAmount)
+          : settings.targetAmount
+
+        const adjustedOtherDeductions = settings.salaryType === 'gross'
+          ? settings.otherDeductions + attendanceDeductionAmount
+          : settings.otherDeductions
+
         const newFormState: PayrollFormState = {
           ...DEFAULT_PAYROLL_FORM_STATE,
           selectedEmployeeId,
           selectedYear,
           selectedMonth,
           salaryType: settings.salaryType,
-          targetAmount: settings.targetAmount,
+          targetAmount: adjustedTargetAmount,
           baseSalary: settings.baseSalary,
           mealAllowance: settings.mealAllowance,
           vehicleAllowance: settings.vehicleAllowance,
@@ -191,7 +316,7 @@ export default function PayrollForm() {
           employmentInsurance: settings.employmentInsurance,
           familyCount: settings.familyCount,
           childCount: settings.childCount,
-          otherDeductions: settings.otherDeductions
+          otherDeductions: adjustedOtherDeductions
         }
 
         setFormState(newFormState)
@@ -220,13 +345,13 @@ export default function PayrollForm() {
 
           if (settingsChanged && isOwner) {
             // 설정이 변경되었으면 새로운 값으로 저장
-            await autoSavePayroll(employee, newFormState, result)
+            await autoSavePayroll(employee, newFormState, result, currentAttendanceSummary, currentAttendanceDeduction)
           }
           setHasSavedPayroll(true)
         } else {
           // 저장된 명세서가 없으면 자동 저장 (owner만)
           if (isOwner) {
-            await autoSavePayroll(employee, newFormState, result)
+            await autoSavePayroll(employee, newFormState, result, currentAttendanceSummary, currentAttendanceDeduction)
           }
           setHasSavedPayroll(true)
         }
@@ -238,13 +363,15 @@ export default function PayrollForm() {
     }
 
     loadOrGeneratePayroll()
-  }, [selectedEmployeeId, selectedYear, selectedMonth, user?.clinic_id, employees, salarySettings, isOwner])
+  }, [selectedEmployeeId, selectedYear, selectedMonth, user?.clinic_id, user?.id, user?.role, employees, salarySettings, isOwner])
 
   // 자동 저장 함수
   async function autoSavePayroll(
     employee: Employee,
     state: PayrollFormState,
-    result: PayrollCalculationResult
+    result: PayrollCalculationResult,
+    attendanceSummaryData?: AttendanceSummaryForPayroll | null,
+    attendanceDeductionData?: AttendanceDeduction | null
   ) {
     if (!user?.clinic_id) return
 
@@ -284,8 +411,15 @@ export default function PayrollForm() {
         nonTaxableTotal: result.nonTaxableTotal,
         workInfo: {
           familyCount: state.familyCount,
-          childCount: state.childCount
-        }
+          childCount: state.childCount,
+          // 근태 정보 추가
+          workDays: attendanceSummaryData?.presentDays,
+          totalWorkHours: attendanceSummaryData ? Math.round(attendanceSummaryData.presentDays * 8) : undefined,
+          overtimeHours: attendanceSummaryData ? Math.round(attendanceSummaryData.overtimeMinutes / 60) : undefined
+        },
+        // 근태 연동 정보 추가
+        attendanceSummary: attendanceSummaryData || undefined,
+        attendanceDeduction: attendanceDeductionData || undefined
       }
 
       await savePayrollStatement(statement, user.id)
@@ -367,8 +501,32 @@ export default function PayrollForm() {
         )}
       </div>
 
+      {/* 접근 권한 제한 메시지 */}
+      {accessResult && !accessResult.canAccess && selectedEmployeeId && (
+        <div className="bg-slate-100 border border-slate-300 rounded-lg p-6">
+          <div className="flex items-start space-x-3">
+            <Lock className="w-6 h-6 text-slate-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-slate-800 mb-2">급여 명세서 확인 불가</h4>
+              <p className="text-sm text-slate-600 mb-2">
+                {accessResult.reason}
+              </p>
+              {accessResult.availableDate && (
+                <p className="text-sm text-slate-500">
+                  <Calendar className="w-4 h-4 inline-block mr-1" />
+                  확인 가능일: {accessResult.availableDate}
+                </p>
+              )}
+              <p className="text-xs text-slate-400 mt-3">
+                * 급여 명세서는 급여가 확정된 후(매월 말일) 확인할 수 있습니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 급여 설정 없음 경고 */}
-      {noSettingsWarning && selectedEmployeeId && (
+      {noSettingsWarning && selectedEmployeeId && accessResult?.canAccess && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
           <div className="flex items-start space-x-3">
             <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -393,8 +551,123 @@ export default function PayrollForm() {
         </div>
       )}
 
+      {/* 근태 데이터 로드 실패 경고 */}
+      {attendanceLoadError && selectedEmployeeId && accessResult?.canAccess && !noSettingsWarning && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-amber-800 mb-2">근태 데이터를 불러올 수 없습니다</h4>
+              <p className="text-sm text-amber-700 mb-2">
+                {attendanceLoadError}
+              </p>
+              <p className="text-xs text-amber-600">
+                * 근태 데이터가 없으면 결근 차감이 적용되지 않습니다. 근태 기록을 확인해주세요.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 근태 정보 요약 (owner 또는 차감이 있는 경우에만 표시) */}
+      {attendanceSummary && accessResult?.canAccess && !noSettingsWarning && (
+        (isOwner || (attendanceDeduction && attendanceDeduction.totalDeduction > 0)) && (
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-800 flex items-center">
+                <Clock className="w-5 h-5 mr-2 text-blue-500" />
+                {selectedYear}년 {selectedMonth}월 근태 현황
+              </h3>
+              {attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-orange-100 text-orange-700">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  차감 발생
+                </span>
+              )}
+            </div>
+
+            {/* 근태 요약 그리드 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="p-3 bg-emerald-50 rounded-lg text-center">
+                <p className="text-xs text-emerald-600 mb-1">출근 일수</p>
+                <p className="text-xl font-bold text-emerald-700">
+                  {attendanceSummary.presentDays}일
+                </p>
+                <p className="text-xs text-emerald-500">
+                  / {attendanceSummary.totalWorkDays}일
+                </p>
+              </div>
+
+              <div className="p-3 bg-blue-50 rounded-lg text-center">
+                <p className="text-xs text-blue-600 mb-1">연차 사용</p>
+                <p className="text-xl font-bold text-blue-700">
+                  {attendanceSummary.leaveDays}일
+                </p>
+                <p className="text-xs text-blue-500">
+                  잔여: {attendanceSummary.remainingAnnualLeave}일
+                </p>
+              </div>
+
+              <div className={`p-3 rounded-lg text-center ${attendanceSummary.absentDays > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
+                <p className={`text-xs mb-1 ${attendanceSummary.absentDays > 0 ? 'text-red-600' : 'text-slate-600'}`}>결근</p>
+                <p className={`text-xl font-bold ${attendanceSummary.absentDays > 0 ? 'text-red-700' : 'text-slate-700'}`}>
+                  {attendanceSummary.absentDays}일
+                </p>
+              </div>
+
+              <div className={`p-3 rounded-lg text-center ${attendanceSummary.lateCount > 0 ? 'bg-amber-50' : 'bg-slate-50'}`}>
+                <p className={`text-xs mb-1 ${attendanceSummary.lateCount > 0 ? 'text-amber-600' : 'text-slate-600'}`}>지각/조퇴</p>
+                <p className={`text-xl font-bold ${attendanceSummary.lateCount > 0 ? 'text-amber-700' : 'text-slate-700'}`}>
+                  {attendanceSummary.lateCount + attendanceSummary.earlyLeaveCount}회
+                </p>
+                {(attendanceSummary.totalLateMinutes > 0 || attendanceSummary.totalEarlyLeaveMinutes > 0) && (
+                  <p className="text-xs text-amber-500">
+                    {attendanceSummary.totalLateMinutes + attendanceSummary.totalEarlyLeaveMinutes}분
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 차감 상세 내역 */}
+            {attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
+              <div className="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                <h4 className="font-medium text-orange-800 mb-3 flex items-center">
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  근태 관련 급여 차감 내역 (근로기준법 기준)
+                </h4>
+                <div className="space-y-2 text-sm">
+                  {attendanceDeduction.deductionDetails.map((detail, index) => (
+                    <div key={index} className="flex justify-between items-center py-1 border-b border-orange-100">
+                      <span className="text-orange-700">{detail.description}</span>
+                      <span className="font-medium text-orange-800">-{formatCurrency(detail.amount)}원</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center pt-2 font-medium">
+                    <span className="text-orange-800">총 차감액</span>
+                    <span className="text-lg text-orange-900">-{formatCurrency(attendanceDeduction.totalDeduction)}원</span>
+                  </div>
+                </div>
+                <p className="text-xs text-orange-600 mt-3">
+                  * 무단결근: 일급 × 결근일수 + 주휴수당 차감 | 지각/조퇴: 시급 × 해당 시간 차감
+                </p>
+              </div>
+            )}
+
+            {/* 초과근무 정보 */}
+            {attendanceSummary.overtimeMinutes > 0 && (
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg">
+                <h4 className="font-medium text-purple-800 mb-2">초과근무 정보</h4>
+                <p className="text-sm text-purple-700">
+                  연장근로: {Math.floor(attendanceSummary.overtimeMinutes / 60)}시간 {attendanceSummary.overtimeMinutes % 60}분
+                </p>
+              </div>
+            )}
+          </div>
+        )
+      )}
+
       {/* 계산 결과 표시 */}
-      {calculationResult && selectedEmployeeId && !noSettingsWarning && (
+      {calculationResult && selectedEmployeeId && !noSettingsWarning && accessResult?.canAccess && (
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-slate-800">
@@ -451,6 +724,20 @@ export default function PayrollForm() {
                     <td className="py-2 text-slate-600">기본급</td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.payments.baseSalary || 0)}원</td>
                   </tr>
+                  {/* 세후 계약에서 근태 차감이 적용된 경우 표시 */}
+                  {formState.salaryType === 'net' && attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
+                    <tr className="border-b bg-orange-50">
+                      <td className="py-2 text-orange-700 text-xs">
+                        ↳ 근태 차감 적용됨
+                        <span className="block text-orange-500">
+                          (원 목표: {formatCurrency(salarySettings[selectedEmployeeId || '']?.targetAmount || 0)}원)
+                        </span>
+                      </td>
+                      <td className="py-2 text-right text-orange-700 text-xs">
+                        -{formatCurrency(attendanceDeduction.totalDeduction)}원
+                      </td>
+                    </tr>
+                  )}
                   {calculationResult.payments.bonus && calculationResult.payments.bonus > 0 && (
                     <tr className="border-b">
                       <td className="py-2 text-slate-600">상여</td>
@@ -517,7 +804,15 @@ export default function PayrollForm() {
                   </tr>
                   {calculationResult.deductions.otherDeductions && calculationResult.deductions.otherDeductions > 0 && (
                     <tr className="border-b">
-                      <td className="py-2 text-slate-600">기타공제</td>
+                      <td className="py-2 text-slate-600">
+                        기타공제
+                        {/* 세전 계약에서 근태 차감이 포함된 경우 표시 */}
+                        {formState.salaryType === 'gross' && attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
+                          <span className="block text-xs text-orange-600">
+                            (근태 차감 {formatCurrency(attendanceDeduction.totalDeduction)}원 포함)
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.otherDeductions)}원</td>
                     </tr>
                   )}
@@ -563,11 +858,16 @@ export default function PayrollForm() {
             netPay: calculationResult.netPay,
             nonTaxableTotal: calculationResult.nonTaxableTotal,
             workInfo: {
-              familyCount: formState.familyCount
+              familyCount: formState.familyCount,
+              workDays: attendanceSummary?.presentDays,
+              totalWorkHours: attendanceSummary ? Math.round(attendanceSummary.presentDays * 8) : undefined,
+              overtimeHours: attendanceSummary ? Math.round(attendanceSummary.overtimeMinutes / 60) : undefined
             }
           }}
           clinicName={user.clinic_name || '치과의원'}
           onClose={() => setShowPreview(false)}
+          attendanceSummary={attendanceSummary || undefined}
+          attendanceDeduction={attendanceDeduction || undefined}
         />
       )}
     </div>

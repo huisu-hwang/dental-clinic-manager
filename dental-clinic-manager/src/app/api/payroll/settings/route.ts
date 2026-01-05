@@ -59,7 +59,11 @@ export async function POST(request: NextRequest) {
       familyCount,
       childCount,
       otherDeductions,
-      updatedBy
+      updatedBy,
+      // 근태 차감/수당 옵션
+      deductLateMinutes,
+      deductEarlyLeaveMinutes,
+      includeOvertimePay
     } = body
 
     if (!clinicId || !employeeId) {
@@ -99,6 +103,10 @@ export async function POST(request: NextRequest) {
       family_count: familyCount || 1,
       child_count: childCount || 0,
       other_deductions: otherDeductions || 0,
+      // 근태 차감/수당 옵션 (기본값: true)
+      deduct_late_minutes: deductLateMinutes !== undefined ? deductLateMinutes : true,
+      deduct_early_leave_minutes: deductEarlyLeaveMinutes !== undefined ? deductEarlyLeaveMinutes : true,
+      include_overtime_pay: includeOvertimePay !== undefined ? includeOvertimePay : true,
       updated_at: new Date().toISOString(),
       updated_by: updatedBy
     }
