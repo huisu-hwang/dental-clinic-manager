@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 interface NewsItem {
   title: string
   link: string
   source: string
   date: string
+}
+
+interface NewsArticle {
+  id: number
+  title: string
+  link: string
+  summary: string | null
+  category: string
+  created_at: string
 }
 
 // 데모 뉴스 데이터 (폴백용)
@@ -16,24 +26,99 @@ const fallbackNews: NewsItem[] = [
 
 // 캐시 (5분)
 let cachedNews: NewsItem[] | null = null
+let cachedArticles: { latest: NewsArticle[], popular: NewsArticle[] } | null = null
 let cacheTimestamp: number = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5분
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const withSummary = searchParams.get('withSummary') === 'true'
+
   try {
-    // 캐시 확인
     const now = Date.now()
+
+    // Supabase에서 데이터 가져오기 시도
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      )
+
+      // withSummary 파라미터가 true면 요약 포함 데이터 반환
+      if (withSummary) {
+        // 캐시 확인
+        if (cachedArticles && (now - cacheTimestamp) < CACHE_DURATION) {
+          return NextResponse.json({
+            articles: cachedArticles,
+            cached: true,
+            source: 'database'
+          })
+        }
+
+        // 최신 기사 (최대 5개)
+        const { data: latestData, error: latestError } = await supabase
+          .from('news_articles')
+          .select('*')
+          .eq('category', 'latest')
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        // 인기 기사 (최대 5개)
+        const { data: popularData, error: popularError } = await supabase
+          .from('news_articles')
+          .select('*')
+          .eq('category', 'popular')
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (!latestError && !popularError && (latestData?.length || popularData?.length)) {
+          const articles = {
+            latest: latestData || [],
+            popular: popularData || []
+          }
+          cachedArticles = articles
+          cacheTimestamp = now
+          return NextResponse.json({
+            articles,
+            cached: false,
+            source: 'database'
+          })
+        }
+      } else {
+        // 기존 형식: 요약 없이 기사 제목만
+        const { data, error } = await supabase
+          .from('news_articles')
+          .select('id, title, link, category, created_at')
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (!error && data && data.length > 0) {
+          const news: NewsItem[] = data.map(article => ({
+            title: article.title,
+            link: article.link,
+            source: '치의신보',
+            date: article.created_at.split('T')[0]
+          }))
+
+          cachedNews = news
+          cacheTimestamp = now
+          return NextResponse.json({ news, cached: false, source: 'database' })
+        }
+      }
+    }
+
+    // 캐시 확인 (기존 크롤링 데이터)
     if (cachedNews && (now - cacheTimestamp) < CACHE_DURATION) {
       return NextResponse.json({ news: cachedNews, cached: true })
     }
 
-    // 치의신보 메인 페이지에서 뉴스 가져오기 시도
+    // DB에 데이터가 없으면 직접 크롤링 시도
     const news = await fetchDailyDentalNews()
 
     if (news.length > 0) {
       cachedNews = news
       cacheTimestamp = now
-      return NextResponse.json({ news, cached: false })
+      return NextResponse.json({ news, cached: false, source: 'crawled' })
     }
 
     // 실패 시 폴백 데이터 반환
@@ -78,9 +163,7 @@ function parseNewsFromHtml(html: string): NewsItem[] {
 
   try {
     // 기사 목록 패턴 찾기 (치의신보 HTML 구조에 맞게 조정)
-    // <a href="/news/articleView.html?idxno=XXXXX" class="..." >기사제목</a>
     const articlePattern = /<a[^>]*href="(\/news\/articleView\.html\?idxno=\d+)"[^>]*>([^<]+)<\/a>/gi
-    const datePattern = /(\d{4})\.(\d{2})\.(\d{2})/g
 
     let match
     const seenTitles = new Set<string>()

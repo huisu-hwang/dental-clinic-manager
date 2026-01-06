@@ -19,8 +19,11 @@ import {
   Calendar,
   TrendingUp,
   BarChart3,
-  AlertCircle
+  AlertCircle,
+  Flame,
+  Sparkles
 } from 'lucide-react'
+import NewsAccordion from '@/components/News/NewsAccordion'
 
 // 날씨 아이콘 매핑
 const weatherIcons: Record<string, React.ReactNode> = {
@@ -82,6 +85,16 @@ interface NewsItem {
   date: string
 }
 
+// DB 뉴스 기사 타입 (AI 요약 포함)
+interface NewsArticle {
+  id: number
+  title: string
+  link: string
+  summary: string | null
+  category: string
+  created_at: string
+}
+
 export default function DashboardHome() {
   const { user } = useAuth()
   const today = new Date().toISOString().split('T')[0]
@@ -100,6 +113,11 @@ export default function DashboardHome() {
   // 뉴스 데이터
   const [news, setNews] = useState<NewsItem[]>([])
   const [newsLoading, setNewsLoading] = useState(false)
+
+  // AI 요약 뉴스 데이터
+  const [latestArticles, setLatestArticles] = useState<NewsArticle[]>([])
+  const [popularArticles, setPopularArticles] = useState<NewsArticle[]>([])
+  const [articlesLoading, setArticlesLoading] = useState(false)
 
   // 오늘 보고서 요약 계산
   const todaySummary = useMemo(() => {
@@ -288,6 +306,7 @@ export default function DashboardHome() {
   // 뉴스 로드
   useEffect(() => {
     loadNews()
+    loadArticlesWithSummary()
   }, [])
 
   const loadNews = async () => {
@@ -318,6 +337,25 @@ export default function DashboardHome() {
     }
   }
 
+  // AI 요약 포함 뉴스 로드
+  const loadArticlesWithSummary = async () => {
+    setArticlesLoading(true)
+    try {
+      const response = await fetch('/api/news/dental?withSummary=true')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.articles) {
+          setLatestArticles(data.articles.latest || [])
+          setPopularArticles(data.articles.popular || [])
+        }
+      }
+    } catch (error) {
+      console.error('[DashboardHome] Error loading articles:', error)
+    } finally {
+      setArticlesLoading(false)
+    }
+  }
+
   // 날짜 포맷
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('ko-KR', {
@@ -338,6 +376,7 @@ export default function DashboardHome() {
     loadTeamStatus()
     loadWeather()
     loadNews()
+    loadArticlesWithSummary()
   }
 
   // 출근률 계산
@@ -540,7 +579,7 @@ export default function DashboardHome() {
               ) : null}
             </div>
 
-            {/* 뉴스 카드 */}
+            {/* 뉴스 카드 (간단 목록) */}
             <div className="bg-slate-50 rounded-lg overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-200">
                 <h3 className="text-sm font-semibold text-slate-700 flex items-center">
@@ -578,6 +617,33 @@ export default function DashboardHome() {
             </div>
           </div>
         </div>
+
+        {/* 치의신보 브리핑 섹션 (AI 요약 아코디언) */}
+        {(latestArticles.length > 0 || popularArticles.length > 0 || articlesLoading) && (
+          <div className="mt-6 pt-6 border-t border-slate-200">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <h3 className="text-base font-bold text-slate-800">치의신보 브리핑</h3>
+              <span className="text-xs text-slate-400 ml-2">AI가 요약한 오늘의 주요 소식</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <NewsAccordion
+                title="최신 뉴스"
+                icon={<Newspaper className="w-4 h-4 text-blue-500" />}
+                articles={latestArticles}
+                loading={articlesLoading}
+                emptyMessage="최신 기사가 없습니다."
+              />
+              <NewsAccordion
+                title="인기 게시물"
+                icon={<Flame className="w-4 h-4 text-orange-500" />}
+                articles={popularArticles}
+                loading={articlesLoading}
+                emptyMessage="인기 기사가 없습니다."
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
