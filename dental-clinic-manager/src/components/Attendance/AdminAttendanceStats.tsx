@@ -593,9 +593,9 @@ export default function AdminAttendanceStats() {
                 <p>선택한 기간의 근태 통계가 없습니다.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         직원명
@@ -729,9 +729,9 @@ export default function AdminAttendanceStats() {
                                 ) : userRecords.length === 0 ? (
                                   <p className="text-sm text-gray-500 text-center py-4">기록이 없습니다.</p>
                                 ) : (
-                                  <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-                                      <thead className="bg-gray-100">
+                                  <div className="overflow-x-auto max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                      <thead className="bg-gray-100 sticky top-0 z-10">
                                         <tr>
                                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
                                             날짜
