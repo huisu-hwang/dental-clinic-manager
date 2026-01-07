@@ -277,7 +277,11 @@ export default function PayrollSettings() {
       const result = await response.json()
 
       if (result.success) {
-        setSaveMessage({ type: 'success', text: '급여 설정이 저장되었습니다.' })
+        setSaveMessage({ type: 'success', text: '설정이 저장되었습니다.' })
+        // 3초 후 성공 메시지 자동 숨기기
+        setTimeout(() => {
+          setSaveMessage(null)
+        }, 3000)
         // 저장된 설정 업데이트
         setSavedSettings(prev => ({
           ...prev,
@@ -708,19 +712,24 @@ export default function PayrollSettings() {
             </div>
           </div>
 
-          {/* 저장 메시지 */}
-          {saveMessage && (
-            <div className={`mt-4 p-3 rounded-md ${
-              saveMessage.type === 'success'
-                ? 'bg-green-50 border border-green-200 text-green-700'
-                : 'bg-red-50 border border-red-200 text-red-700'
-            }`}>
-              {saveMessage.text}
-            </div>
-          )}
+          {/* 저장 버튼 및 메시지 */}
+          <div className="mt-6 flex items-center justify-end gap-4">
+            {/* 저장 메시지 */}
+            {saveMessage && (
+              <div className={`flex items-center px-4 py-2 rounded-md text-sm font-medium animate-fade-in ${
+                saveMessage.type === 'success'
+                  ? 'bg-green-100 border border-green-300 text-green-700'
+                  : 'bg-red-100 border border-red-300 text-red-700'
+              }`}>
+                {saveMessage.type === 'success' ? (
+                  <Check className="w-4 h-4 mr-2" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                )}
+                {saveMessage.text}
+              </div>
+            )}
 
-          {/* 저장 버튼 */}
-          <div className="mt-6 flex justify-end">
             <button
               type="button"
               onClick={handleSave}
