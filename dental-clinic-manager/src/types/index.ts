@@ -313,6 +313,8 @@ export interface ProtocolPermission {
   user_id: string;
   can_view: boolean;
   can_edit: boolean;
+  can_create: boolean;
+  can_delete: boolean;
   granted_by: string;
   created_at: string;
   updated_at: string;
@@ -334,6 +336,8 @@ export interface ProtocolPermissionFormData {
   user_id: string;
   can_view: boolean;
   can_edit: boolean;
+  can_create: boolean;
+  can_delete: boolean;
 }
 
 // 프로토콜 권한이 있는 사용자 목록 (UI 표시용)

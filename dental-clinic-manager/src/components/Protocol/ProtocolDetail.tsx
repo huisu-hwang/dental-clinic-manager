@@ -33,6 +33,7 @@ export default function ProtocolDetail({
   const [activeTab, setActiveTab] = useState<'content' | 'history'>('content')
   const [showPermissionManager, setShowPermissionManager] = useState(false)
   const [hasEditPermission, setHasEditPermission] = useState(false)
+  const [hasDeletePermission, setHasDeletePermission] = useState(false)
 
   const canViewHistory = hasPermission('protocol_history_view')
   const isOwner = user?.role === 'owner'
@@ -42,7 +43,11 @@ export default function ProtocolDetail({
     hasPermission('protocol_create') ||
     hasEditPermission ||
     (protocol && protocol.created_by === user?.id)
-  const canDelete = hasPermission('protocol_delete')
+  // 대표원장이거나, 전역 삭제 권한이 있거나, 개별 프로토콜 삭제 권한이 있거나, 본인이 생성한 프로토콜인 경우 삭제 가능
+  const canDelete = isOwner ||
+    hasPermission('protocol_delete') ||
+    hasDeletePermission ||
+    (protocol && protocol.created_by === user?.id)
 
   const fetchProtocol = useCallback(async () => {
     try {
@@ -60,6 +65,7 @@ export default function ProtocolDetail({
           const permResult = await dataService.getUserProtocolPermission(protocolId, user.id)
           if (!permResult.error && permResult.data) {
             setHasEditPermission(permResult.data.can_edit)
+            setHasDeletePermission(permResult.data.can_delete)
           }
         }
       }

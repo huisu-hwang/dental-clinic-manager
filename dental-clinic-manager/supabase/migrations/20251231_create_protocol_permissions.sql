@@ -1,5 +1,5 @@
 -- 프로토콜별 개별 권한 테이블
--- 대표원장이 직원들에게 프로토콜별로 접근 권한 및 수정 권한을 부여할 수 있도록 함
+-- 대표원장이 직원들에게 프로토콜별로 접근, 수정, 생성, 삭제 권한을 부여할 수 있도록 함
 
 -- protocol_permissions 테이블 생성
 CREATE TABLE IF NOT EXISTS protocol_permissions (
@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS protocol_permissions (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   can_view BOOLEAN NOT NULL DEFAULT false,
   can_edit BOOLEAN NOT NULL DEFAULT false,
+  can_create BOOLEAN NOT NULL DEFAULT false,
+  can_delete BOOLEAN NOT NULL DEFAULT false,
   granted_by UUID NOT NULL REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
@@ -96,4 +98,6 @@ COMMENT ON COLUMN protocol_permissions.protocol_id IS '프로토콜 ID';
 COMMENT ON COLUMN protocol_permissions.user_id IS '권한을 부여받은 사용자 ID';
 COMMENT ON COLUMN protocol_permissions.can_view IS '조회 권한';
 COMMENT ON COLUMN protocol_permissions.can_edit IS '수정 권한';
+COMMENT ON COLUMN protocol_permissions.can_create IS '생성 권한';
+COMMENT ON COLUMN protocol_permissions.can_delete IS '삭제 권한';
 COMMENT ON COLUMN protocol_permissions.granted_by IS '권한을 부여한 사용자 ID (대표원장)';

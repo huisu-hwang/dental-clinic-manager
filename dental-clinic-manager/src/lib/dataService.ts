@@ -3980,6 +3980,8 @@ export const dataService = {
           user_id: permission.user_id,
           can_view: permission.can_view,
           can_edit: permission.can_edit,
+          can_create: permission.can_create,
+          can_delete: permission.can_delete,
           granted_by: grantedBy
         }, {
           onConflict: 'protocol_id,user_id'
@@ -4046,6 +4048,8 @@ export const dataService = {
         user_id: p.user_id,
         can_view: p.can_view,
         can_edit: p.can_edit,
+        can_create: p.can_create,
+        can_delete: p.can_delete,
         granted_by: grantedBy
       }))
 
@@ -4149,6 +4153,35 @@ export const dataService = {
       return { data: protocolIds, error: null }
     } catch (error: unknown) {
       console.error('[getUserEditableProtocolIds] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 사용자가 삭제 가능한 프로토콜 ID 목록 조회
+   */
+  async getUserDeletableProtocolIds(userId: string): Promise<{ data: string[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .select('protocol_id')
+        .eq('user_id', userId)
+        .eq('can_delete', true)
+
+      if (error) {
+        console.error('[getUserDeletableProtocolIds] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      const protocolIds = data?.map((p: { protocol_id: string }) => p.protocol_id) || []
+      return { data: protocolIds, error: null }
+    } catch (error: unknown) {
+      console.error('[getUserDeletableProtocolIds] Exception:', error)
       return { data: null, error: extractErrorMessage(error) }
     }
   },
