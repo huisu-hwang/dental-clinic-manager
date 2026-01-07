@@ -376,6 +376,12 @@ export interface AttendanceEditRequest {
   status?: AttendanceStatus;
   notes?: string;
   edited_by: string;
+  // 가상 결근 기록 생성 시 필요한 필드
+  user_id?: string;
+  clinic_id?: string;
+  work_date?: string;
+  scheduled_start?: string | null;
+  scheduled_end?: string | null;
 }
 
 /**

@@ -1398,6 +1398,7 @@ export async function getTeamAttendanceStatus(
 
 /**
  * 출퇴근 기록 수정 (관리자용)
+ * 가상 결근 기록(ID가 'absent-'로 시작)의 경우 새 기록을 생성합니다.
  */
 export async function editAttendanceRecord(
   request: AttendanceEditRequest
@@ -1408,8 +1409,94 @@ export async function editAttendanceRecord(
   }
 
   try {
-    const { record_id, check_in_time, check_out_time, status, notes, edited_by } = request
+    const {
+      record_id,
+      check_in_time,
+      check_out_time,
+      status,
+      notes,
+      edited_by,
+      user_id,
+      clinic_id,
+      work_date,
+      scheduled_start,
+      scheduled_end,
+    } = request
 
+    // 가상 결근 기록인지 확인 (ID가 'absent-'로 시작)
+    const isVirtualAbsentRecord = record_id.startsWith('absent-')
+
+    if (isVirtualAbsentRecord) {
+      // 가상 결근 기록을 실제 기록으로 생성
+      if (!user_id || !clinic_id || !work_date) {
+        return {
+          success: false,
+          error: '결근 기록을 수정하려면 user_id, clinic_id, work_date가 필요합니다.',
+        }
+      }
+
+      // 정상 출근으로 변경 시 출퇴근 시간 자동 설정
+      let finalCheckInTime = check_in_time
+      let finalCheckOutTime = check_out_time
+
+      if (status === 'present' || status === 'late' || status === 'early_leave') {
+        // 출퇴근 시간이 제공되지 않으면 스케줄 기반 자동 설정
+        if (!finalCheckInTime && scheduled_start) {
+          const [hours, minutes] = scheduled_start.split(':')
+          const checkInDate = new Date(work_date)
+          checkInDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0)
+          finalCheckInTime = checkInDate.toISOString()
+        }
+        if (!finalCheckOutTime && scheduled_end) {
+          const [hours, minutes] = scheduled_end.split(':')
+          const checkOutDate = new Date(work_date)
+          checkOutDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0)
+          finalCheckOutTime = checkOutDate.toISOString()
+        }
+      }
+
+      // 새 기록 생성
+      const insertData: any = {
+        user_id,
+        clinic_id,
+        work_date,
+        status: status || 'present',
+        scheduled_start,
+        scheduled_end,
+        is_manually_edited: true,
+        edited_by,
+        edited_at: new Date().toISOString(),
+        notes,
+      }
+
+      if (finalCheckInTime) insertData.check_in_time = finalCheckInTime
+      if (finalCheckOutTime) insertData.check_out_time = finalCheckOutTime
+
+      // 총 근무 시간 계산
+      if (finalCheckInTime && finalCheckOutTime) {
+        const checkIn = new Date(finalCheckInTime)
+        const checkOut = new Date(finalCheckOutTime)
+        const totalMinutes = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60))
+        if (totalMinutes > 0) {
+          insertData.total_work_minutes = totalMinutes
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .insert(insertData)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[editAttendanceRecord] Insert error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true, record: data as AttendanceRecord }
+    }
+
+    // 기존 기록 업데이트
     const updateData: any = {
       is_manually_edited: true,
       edited_by,
@@ -1605,6 +1692,7 @@ export async function getAllUsersMonthlyStatistics(
 
 /**
  * 특정 직원의 월별 상세 기록 조회 (관리자용)
+ * 결근 날짜도 포함하여 반환 (근무 예정일 중 기록이 없는 날)
  */
 export async function getUserMonthlyRecords(
   userId: string,
@@ -1625,6 +1713,21 @@ export async function getUserMonthlyRecords(
     const lastDay = new Date(year, month, 0).getDate()
     const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
 
+    // 1. 사용자 정보 및 근무 스케줄 조회
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, clinic_id, work_schedule')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !userData) {
+      return { success: false, error: userError?.message || 'User not found' }
+    }
+
+    // 2. 공휴일 정보 조회
+    const publicHolidays = getPublicHolidaySet(year, month, true)
+
+    // 3. 실제 출근 기록 조회
     const { data, error } = await supabase
       .from('attendance_records')
       .select('*')
@@ -1637,7 +1740,78 @@ export async function getUserMonthlyRecords(
       return { success: false, error: error.message }
     }
 
-    return { success: true, records: data as AttendanceRecord[] }
+    // 4. 기존 기록을 날짜별 Map으로 변환
+    const recordsByDate = new Map<string, AttendanceRecord>()
+    for (const record of data || []) {
+      recordsByDate.set(record.work_date, record)
+    }
+
+    // 5. 근무 스케줄에 따른 근무 예정일 계산 및 결근 날짜 추가
+    const workSchedule = userData.work_schedule as WorkSchedule | undefined
+    const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
+    const allRecords: AttendanceRecord[] = []
+
+    // 오늘 날짜 (결근은 오늘 이전까지만)
+    const today = new Date()
+    const todayStr = getKoreanDateString(today)
+
+    for (let day = 1; day <= lastDay; day++) {
+      const date = new Date(year, month - 1, day)
+      const dateStr = formatDateString(date)
+      const dayOfWeek = date.getDay()
+      const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+
+      // 공휴일이면 건너뜀
+      if (publicHolidays.has(dateStr)) {
+        continue
+      }
+
+      // 근무일이 아니면 건너뜀
+      if (!schedule[dayName]?.isWorking) {
+        continue
+      }
+
+      // 기존 기록이 있으면 그대로 사용
+      const existingRecord = recordsByDate.get(dateStr)
+      if (existingRecord) {
+        allRecords.push(existingRecord)
+      } else if (dateStr <= todayStr) {
+        // 기록이 없고 오늘 이전인 근무 예정일 = 결근
+        allRecords.push({
+          id: `absent-${dateStr}`,
+          user_id: userId,
+          clinic_id: userData.clinic_id,
+          branch_id: null,
+          work_date: dateStr,
+          check_in_time: null,
+          check_out_time: null,
+          check_in_latitude: null,
+          check_in_longitude: null,
+          check_out_latitude: null,
+          check_out_longitude: null,
+          check_in_device_info: null,
+          check_out_device_info: null,
+          scheduled_start: schedule[dayName]?.start || null,
+          scheduled_end: schedule[dayName]?.end || null,
+          status: 'absent' as AttendanceStatus,
+          late_minutes: 0,
+          early_leave_minutes: 0,
+          overtime_minutes: 0,
+          total_work_minutes: 0,
+          is_manually_edited: false,
+          edited_by: null,
+          edited_at: null,
+          notes: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as AttendanceRecord)
+      }
+    }
+
+    // 날짜순 정렬
+    allRecords.sort((a, b) => a.work_date.localeCompare(b.work_date))
+
+    return { success: true, records: allRecords }
   } catch (error: any) {
     console.error('[getUserMonthlyRecords] Error:', error)
     return { success: false, error: error.message }

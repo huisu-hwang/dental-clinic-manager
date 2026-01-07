@@ -200,6 +200,9 @@ export default function AdminAttendanceStats() {
     setEditError(null)
 
     try {
+      // 가상 결근 기록인지 확인
+      const isVirtualAbsentRecord = editingRecord.id.startsWith('absent-')
+
       const result = await attendanceService.editAttendanceRecord({
         record_id: editingRecord.id,
         check_in_time: editFormData.check_in_time
@@ -211,13 +214,27 @@ export default function AdminAttendanceStats() {
         status: editFormData.status,
         notes: editFormData.notes,
         edited_by: user.id,
+        // 가상 결근 기록인 경우 추가 정보 전달
+        ...(isVirtualAbsentRecord && {
+          user_id: editingRecord.user_id,
+          clinic_id: editingRecord.clinic_id,
+          work_date: editingRecord.work_date,
+          scheduled_start: editingRecord.scheduled_start,
+          scheduled_end: editingRecord.scheduled_end,
+        }),
       })
 
       if (result.success) {
-        // 기록 목록 갱신
-        setUserRecords((prev) =>
-          prev.map((r) => (r.id === editingRecord.id ? { ...r, ...result.record } : r))
-        )
+        // 기록 목록 갱신 (가상 기록이면 새 기록으로 교체, 아니면 업데이트)
+        if (isVirtualAbsentRecord && result.record) {
+          setUserRecords((prev) =>
+            prev.map((r) => (r.id === editingRecord.id ? result.record! : r))
+          )
+        } else {
+          setUserRecords((prev) =>
+            prev.map((r) => (r.id === editingRecord.id ? { ...r, ...result.record } : r))
+          )
+        }
         // 통계 갱신
         await refreshStatisticsOnLoad()
         closeEditModal()
