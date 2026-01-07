@@ -28,6 +28,7 @@ import type {
 import { recallService } from '@/lib/recallService'
 import PatientFileUpload from './PatientFileUpload'
 import PatientList from './PatientList'
+import PatientAddModal from './PatientAddModal'
 import SmsSendModal from './SmsSendModal'
 import CallModal from './CallModal'
 import StatusUpdateModal from './StatusUpdateModal'
@@ -58,6 +59,7 @@ export default function RecallManagement() {
 
   // 모달 상태
   const [smsModalOpen, setSmsModalOpen] = useState(false)
+  const [patientAddModalOpen, setPatientAddModalOpen] = useState(false)
   const [callModalPatient, setCallModalPatient] = useState<RecallPatient | null>(null)
   const [statusModalPatient, setStatusModalPatient] = useState<RecallPatient | null>(null)
   const [historyModalPatient, setHistoryModalPatient] = useState<RecallPatient | null>(null)
@@ -265,6 +267,14 @@ export default function RecallManagement() {
     showToast('새로고침되었습니다.', 'info')
   }
 
+  // 환자 추가 완료
+  const handlePatientAddComplete = () => {
+    loadPatients()
+    loadStats()
+    loadCampaigns()
+    showToast('환자가 추가되었습니다.', 'success')
+  }
+
   // 선택된 환자 객체들
   const selectedPatientObjects = patients.filter(p => selectedPatients.includes(p.id))
 
@@ -429,6 +439,14 @@ export default function RecallManagement() {
                   환자 업로드
                 </button>
 
+                <button
+                  onClick={() => setPatientAddModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  환자 추가
+                </button>
+
                 {selectedPatients.length > 0 && (
                   <>
                     <button
@@ -496,6 +514,13 @@ export default function RecallManagement() {
       </div>
 
       {/* 모달들 */}
+      <PatientAddModal
+        isOpen={patientAddModalOpen}
+        onClose={() => setPatientAddModalOpen(false)}
+        campaignId={selectedCampaignId || undefined}
+        onAddComplete={handlePatientAddComplete}
+      />
+
       <SmsSendModal
         isOpen={smsModalOpen}
         onClose={() => {
