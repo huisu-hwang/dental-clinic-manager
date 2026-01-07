@@ -38,10 +38,16 @@ interface PermissionData {
 }
 
 const ROLE_LABELS: Record<string, string> = {
+  owner: '대표원장',
   vice_director: '부원장',
+  doctor: '원장',
   manager: '실장',
   team_leader: '팀장',
-  staff: '직원'
+  dental_hygienist: '치과위생사',
+  dental_assistant: '치과조무사',
+  coordinator: '코디네이터',
+  staff: '직원',
+  intern: '인턴'
 }
 
 const DEFAULT_PERMISSION: PermissionData = {
@@ -88,6 +94,10 @@ export default function ProtocolPermissionManager({
         dataService.getProtocolPermissions(protocolId)
       ])
 
+      console.log('[ProtocolPermissionManager] clinicId:', clinicId)
+      console.log('[ProtocolPermissionManager] staffResult:', staffResult)
+      console.log('[ProtocolPermissionManager] permissionsResult:', permissionsResult)
+
       if (staffResult.error) {
         setError(staffResult.error)
         return
@@ -98,6 +108,7 @@ export default function ProtocolPermissionManager({
         return
       }
 
+      console.log('[ProtocolPermissionManager] Staff count:', staffResult.data?.length || 0)
       setStaffList(staffResult.data || [])
 
       // 기존 권한을 Map으로 변환
@@ -338,9 +349,10 @@ export default function ProtocolPermissionManager({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+            className="p-2 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 border border-slate-300"
+            title="닫기"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
 
