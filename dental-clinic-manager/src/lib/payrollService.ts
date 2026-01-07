@@ -1106,17 +1106,12 @@ export function calculateAttendanceDeduction(
   // =====================================================================
   // 1. 조퇴/반차 차감 계산
   // - 차감 옵션이 꺼져있으면: 차감 없음
-  // - 잔여 연차가 있으면: 유급 처리 (차감 없음)
-  // - 잔여 연차가 없으면: 통상시급 × 조퇴시간 차감
+  // - 차감 옵션이 켜져있으면: 잔여 연차와 상관없이 통상시급 × 조퇴시간 차감
   // =====================================================================
   let earlyLeaveDeduction = 0
   let earlyLeaveMinutesToDeduct = 0
 
   if (attendance.totalEarlyLeaveMinutes > 0) {
-    // 조퇴 시간을 연차로 커버 가능한지 확인
-    // 반차 = 4시간(240분), 연차 1일 = 일 평균 근로시간
-    const dailyWorkMinutes = basis.dailyWorkHours * 60
-
     if (!deductEarlyLeave) {
       // 조퇴 차감 옵션이 꺼져있으면 차감 없음
       details.push({
@@ -1126,24 +1121,14 @@ export function calculateAttendanceDeduction(
         minutes: attendance.totalEarlyLeaveMinutes,
         amount: 0
       })
-    } else if (remainingAnnualLeave > 0) {
-      // 잔여 연차가 있으면 유급 처리 (차감 없음)
-      // 조퇴 시간만큼 연차를 사용한 것으로 처리
-      details.push({
-        reason: 'early_leave',
-        description: `조퇴 ${attendance.earlyLeaveCount}회 (총 ${attendance.totalEarlyLeaveMinutes}분) - 잔여 연차로 유급 처리`,
-        count: attendance.earlyLeaveCount,
-        minutes: attendance.totalEarlyLeaveMinutes,
-        amount: 0
-      })
     } else {
-      // 잔여 연차가 없으면 조퇴 시간만큼 차감
+      // 조퇴 차감 옵션이 켜져있으면 잔여 연차와 상관없이 급여에서 차감
       earlyLeaveMinutesToDeduct = attendance.totalEarlyLeaveMinutes
       earlyLeaveDeduction = Math.round((earlyLeaveMinutesToDeduct / 60) * basis.hourlyWage)
 
       details.push({
         reason: 'early_leave',
-        description: `조퇴 ${attendance.earlyLeaveCount}회 (총 ${attendance.totalEarlyLeaveMinutes}분) - 무급 처리`,
+        description: `조퇴 ${attendance.earlyLeaveCount}회 (총 ${attendance.totalEarlyLeaveMinutes}분) - 급여 차감`,
         count: attendance.earlyLeaveCount,
         minutes: earlyLeaveMinutesToDeduct,
         amount: earlyLeaveDeduction
