@@ -593,9 +593,9 @@ export default function AdminAttendanceStats() {
                 <p>선택한 기간의 근태 통계가 없습니다.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+              <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50 sticky top-0 z-10">
+                  <thead className="bg-gray-50 sticky top-[calc(3.5rem+96px)] sm:top-[calc(3.5rem+120px)] z-10">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         직원명
