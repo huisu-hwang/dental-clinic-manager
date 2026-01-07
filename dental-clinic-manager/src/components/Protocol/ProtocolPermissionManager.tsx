@@ -65,6 +65,8 @@ export default function ProtocolPermissionManager({
   onClose,
   onSave
 }: ProtocolPermissionManagerProps) {
+  console.log('[ProtocolPermissionManager] Rendering with props:', { protocolId, protocolTitle, clinicId, currentUserId })
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -325,7 +327,14 @@ export default function ProtocolPermissionManager({
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
-        <div className="bg-white p-8 rounded-lg">
+        <div className="bg-white p-8 rounded-lg relative">
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 p-2 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100"
+            title="닫기"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-slate-600">권한 정보를 불러오는 중...</p>
         </div>
@@ -335,9 +344,9 @@ export default function ProtocolPermissionManager({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8 relative">
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-slate-200">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
               <ShieldCheckIcon className="w-5 h-5 text-blue-600" />
@@ -349,10 +358,10 @@ export default function ProtocolPermissionManager({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 border border-slate-300"
-            title="닫기"
+            className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-800 rounded-lg hover:bg-slate-100 border border-slate-300 bg-white"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <XMarkIcon className="h-5 w-5" />
+            <span className="text-sm font-medium">닫기</span>
           </button>
         </div>
 
