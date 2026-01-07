@@ -20,8 +20,7 @@ import {
   TrendingUp,
   BarChart3,
   AlertCircle,
-  Flame,
-  Sparkles
+  Flame
 } from 'lucide-react'
 import NewsAccordion from '@/components/News/NewsAccordion'
 
@@ -85,12 +84,11 @@ interface NewsItem {
   date: string
 }
 
-// DB 뉴스 기사 타입 (AI 요약 포함)
+// DB 뉴스 기사 타입
 interface NewsArticle {
   id: number
   title: string
   link: string
-  summary: string | null
   category: string
   created_at: string
 }
@@ -618,13 +616,13 @@ export default function DashboardHome() {
           </div>
         </div>
 
-        {/* 치의신보 브리핑 섹션 (AI 요약 아코디언) */}
+        {/* 치의신보 브리핑 섹션 */}
         {(latestArticles.length > 0 || popularArticles.length > 0 || articlesLoading) && (
           <div className="mt-6 pt-6 border-t border-slate-200">
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-5 h-5 text-amber-500" />
+              <Newspaper className="w-5 h-5 text-blue-500" />
               <h3 className="text-base font-bold text-slate-800">치의신보 브리핑</h3>
-              <span className="text-xs text-slate-400 ml-2">AI가 요약한 오늘의 주요 소식</span>
+              <span className="text-xs text-slate-400 ml-2">오늘의 주요 소식</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <NewsAccordion

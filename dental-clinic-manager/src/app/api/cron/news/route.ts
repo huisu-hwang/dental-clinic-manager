@@ -1,7 +1,6 @@
-// 치의신보 기사 자동 크롤링 및 GPT 요약 API
+// 치의신보 기사 자동 크롤링 API
 import { NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import OpenAI from 'openai'
 import * as cheerio from 'cheerio'
 
 export const maxDuration = 60 // Vercel 타임아웃 연장
@@ -16,13 +15,6 @@ function getSupabaseClient(): SupabaseClient | null {
   }
 
   return createClient(supabaseUrl, supabaseServiceKey)
-}
-
-// OpenAI 클라이언트를 런타임에 생성
-function getOpenAIClient(): OpenAI | null {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return null
-  return new OpenAI({ apiKey })
 }
 
 interface ArticleData {
@@ -46,9 +38,6 @@ export async function GET(request: Request) {
       error: 'Supabase configuration missing'
     }, { status: 500 })
   }
-
-  // OpenAI 클라이언트 (선택사항)
-  const openai = getOpenAIClient()
 
   try {
     const results = {
@@ -84,44 +73,10 @@ export async function GET(request: Request) {
           .single()
 
         if (!existing) {
-          // 기사 본문 가져오기
-          const content = await fetchArticleContent(article.link)
-
-          // GPT 요약 (OpenAI API가 설정된 경우만)
-          let summary = '요약을 불러오는 중입니다...'
-          if (openai && content) {
-            try {
-              const gptRes = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
-                messages: [
-                  {
-                    role: 'system',
-                    content: '당신은 치과 뉴스 전문 에디터입니다. 주어진 기사를 2~3문장으로 핵심만 요약해주세요. 전문 용어는 쉽게 풀어서 설명하고, 치과 종사자에게 유용한 정보를 강조해주세요.'
-                  },
-                  {
-                    role: 'user',
-                    content: `제목: ${article.title}\n\n내용:\n${content}`
-                  }
-                ],
-                max_tokens: 200,
-                temperature: 0.7
-              })
-              summary = gptRes.choices[0].message.content || summary
-            } catch (gptError) {
-              console.error('[Cron News] GPT Error:', gptError)
-              // GPT 실패 시 기본 요약 사용
-              summary = content.substring(0, 150) + '...'
-            }
-          } else if (content) {
-            // OpenAI 미설정 시 본문 앞부분을 요약으로 사용
-            summary = content.substring(0, 200) + '...'
-          }
-
           // DB 저장
           const { error: insertError } = await supabase.from('news_articles').insert({
             title: article.title,
             link: article.link,
-            summary: summary,
             category: article.category,
           })
 
@@ -225,47 +180,5 @@ async function fetchArticles(url: string, category: 'latest' | 'popular'): Promi
   } catch (error) {
     console.error(`[Cron News] Fetch articles error (${category}):`, error)
     return []
-  }
-}
-
-// 기사 본문 크롤링
-async function fetchArticleContent(url: string): Promise<string> {
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-    })
-
-    if (!response.ok) return ''
-
-    const html = await response.text()
-    const $ = cheerio.load(html)
-
-    // 치의신보 기사 본문 선택자
-    const contentSelectors = [
-      '#article-view-content-div',
-      '.article-view-content',
-      '#articleBody',
-      '.article-body'
-    ]
-
-    let content = ''
-    for (const selector of contentSelectors) {
-      const text = $(selector).text().trim()
-      if (text && text.length > content.length) {
-        content = text
-      }
-    }
-
-    // 본문 정리 (1500자 제한)
-    return content
-      .replace(/\s+/g, ' ')
-      .replace(/\[.*?\]/g, '') // 기자명 등 제거
-      .trim()
-      .substring(0, 1500)
-  } catch (error) {
-    console.error('[Cron News] Fetch content error:', error)
-    return ''
   }
 }
