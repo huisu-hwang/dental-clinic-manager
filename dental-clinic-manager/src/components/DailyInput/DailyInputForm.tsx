@@ -643,7 +643,8 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             recallCount,
             recallBookingCount,
             recallBookingNames,
-            specialNotes
+            specialNotes,
+            cashRegisterData
           })
           onSaveSuccess?.()
         }
