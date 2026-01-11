@@ -252,38 +252,43 @@ export default function PayrollSettings() {
     setSaveMessage(null)
 
     try {
+      const requestBody = {
+        clinicId: user.clinic_id,
+        employeeId: selectedEmployeeId,
+        salaryType: formState.salaryType,
+        targetAmount: formState.targetAmount,
+        baseSalary: formState.baseSalary,
+        mealAllowance: formState.mealAllowance,
+        vehicleAllowance: formState.vehicleAllowance,
+        bonus: formState.bonus,
+        nationalPension: formState.nationalPension,
+        healthInsurance: formState.healthInsurance,
+        longTermCare: formState.longTermCare,
+        employmentInsurance: formState.employmentInsurance,
+        familyCount: formState.familyCount,
+        childCount: formState.childCount,
+        otherDeductions: formState.otherDeductions,
+        // 근태 차감/수당 옵션
+        deductLateMinutes,
+        deductEarlyLeaveMinutes,
+        includeOvertimePay,
+        // 적용 범위 옵션
+        applyToPast,
+        updatedBy: user.id
+      }
+
+      console.log('[PayrollSettings] Saving with applyToPast:', applyToPast, 'requestBody:', requestBody)
+
       const response = await fetch('/api/payroll/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          clinicId: user.clinic_id,
-          employeeId: selectedEmployeeId,
-          salaryType: formState.salaryType,
-          targetAmount: formState.targetAmount,
-          baseSalary: formState.baseSalary,
-          mealAllowance: formState.mealAllowance,
-          vehicleAllowance: formState.vehicleAllowance,
-          bonus: formState.bonus,
-          nationalPension: formState.nationalPension,
-          healthInsurance: formState.healthInsurance,
-          longTermCare: formState.longTermCare,
-          employmentInsurance: formState.employmentInsurance,
-          familyCount: formState.familyCount,
-          childCount: formState.childCount,
-          otherDeductions: formState.otherDeductions,
-          // 근태 차감/수당 옵션
-          deductLateMinutes,
-          deductEarlyLeaveMinutes,
-          includeOvertimePay,
-          // 적용 범위 옵션
-          applyToPast,
-          updatedBy: user.id
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const result = await response.json()
+      console.log('[PayrollSettings] API response:', result)
 
       if (result.success) {
         let message = '설정이 저장되었습니다.'

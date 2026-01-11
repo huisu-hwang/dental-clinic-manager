@@ -294,7 +294,9 @@ export async function POST(request: NextRequest) {
 
     // 과거 급여명세서에도 적용하는 경우 - 삭제 후 새로 생성
     let updatedStatementsCount = 0
-    if (applyToPast) {
+    console.log('[API] applyToPast value:', applyToPast, 'type:', typeof applyToPast)
+
+    if (applyToPast === true) {
       console.log('[API] applyToPast is true, deleting and recreating past statements for employee:', employeeId)
       console.log('[API] Attendance options:', { deductLateMinutes, deductEarlyLeaveMinutes, includeOvertimePay })
 
