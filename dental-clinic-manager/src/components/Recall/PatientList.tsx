@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Phone,
   MessageSquare,
@@ -73,19 +73,6 @@ export default function PatientList({
   const [sortField, setSortField] = useState<'patient_name' | 'status' | 'last_contact_date'>('patient_name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [showFilters, setShowFilters] = useState(false)
-  const [openStatusDropdown, setOpenStatusDropdown] = useState<string | null>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  // 드롭다운 외부 클릭 감지
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpenStatusDropdown(null)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   // 정렬된 환자 목록
   const sortedPatients = useMemo(() => {
@@ -138,7 +125,6 @@ export default function PatientList({
 
   // 상태 변경 핸들러
   const handleStatusChange = (patient: RecallPatient, newStatus: PatientRecallStatus) => {
-    setOpenStatusDropdown(null)
     if (patient.status !== newStatus) {
       onUpdateStatus(patient, newStatus)
     }
@@ -353,45 +339,36 @@ export default function PatientList({
                     </div>
                   </td>
 
-                  {/* 상태 - 클릭 시 드롭다운 표시 */}
+                  {/* 상태 - 버튼으로 표시 */}
                   <td className="px-4 py-3">
-                    <div className="relative" ref={openStatusDropdown === patient.id ? dropdownRef : undefined}>
-                      <button
-                        onClick={() => setOpenStatusDropdown(openStatusDropdown === patient.id ? null : patient.id)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-gray-300 transition-all ${RECALL_STATUS_COLORS[patient.status]}`}
-                      >
-                        {STATUS_ICONS[patient.status]}
-                        {RECALL_STATUS_LABELS[patient.status]}
-                        <ChevronDown className="w-3 h-3" />
-                      </button>
-
-                      {/* 상태 드롭다운 */}
-                      {openStatusDropdown === patient.id && (
-                        <div className="absolute left-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-30">
-                          {MANUAL_STATUS_OPTIONS.map((status) => (
-                            <button
-                              key={status}
-                              onClick={() => handleStatusChange(patient, status)}
-                              disabled={patient.status === status}
-                              className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                patient.status === status ? 'bg-gray-50' : ''
-                              }`}
-                            >
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${RECALL_STATUS_COLORS[status]}`}>
-                                {STATUS_ICONS[status]}
-                              </span>
-                              {RECALL_STATUS_LABELS[status]}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {patient.contact_count > 0 && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          연락 {patient.contact_count}회
-                        </p>
+                    <div className="flex flex-wrap gap-1">
+                      {MANUAL_STATUS_OPTIONS.map((status) => (
+                        <button
+                          key={status}
+                          onClick={() => handleStatusChange(patient, status)}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
+                            patient.status === status
+                              ? `${RECALL_STATUS_COLORS[status]} ring-2 ring-offset-1 ring-current`
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                        >
+                          {STATUS_ICONS[status]}
+                          {RECALL_STATUS_LABELS[status]}
+                        </button>
+                      ))}
+                      {/* 문자발송 상태는 자동으로만 설정됨 - 표시만 */}
+                      {patient.status === 'sms_sent' && (
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ring-2 ring-offset-1 ring-current ${RECALL_STATUS_COLORS['sms_sent']}`}>
+                          {STATUS_ICONS['sms_sent']}
+                          {RECALL_STATUS_LABELS['sms_sent']}
+                        </span>
                       )}
                     </div>
+                    {patient.contact_count > 0 && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        연락 {patient.contact_count}회
+                      </p>
+                    )}
                   </td>
 
                   {/* 마지막 연락 */}
