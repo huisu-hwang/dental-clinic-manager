@@ -346,7 +346,7 @@ export const RECALL_STATUS_COLORS: Record<PatientRecallStatus, string> = {
   no_answer: 'bg-orange-100 text-orange-700',
   call_rejected: 'bg-red-100 text-red-700',
   visit_refused: 'bg-red-100 text-red-700',
-  invalid_number: 'bg-gray-100 text-gray-500'
+  invalid_number: 'bg-purple-100 text-purple-700'
 }
 
 export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {

@@ -234,13 +234,22 @@ export default function RecallManagement() {
   // 상태 변경 (직접 상태 전달 시 바로 업데이트, 없으면 모달 열기)
   const handleUpdateStatus = async (patient: RecallPatient, newStatus?: PatientRecallStatus) => {
     if (newStatus) {
-      // 직접 상태 업데이트
+      // 낙관적 업데이트: 먼저 UI를 즉시 업데이트
+      const previousStatus = patient.status
+      setPatients(prev => prev.map(p =>
+        p.id === patient.id ? { ...p, status: newStatus } : p
+      ))
+
+      // 백그라운드에서 서버 업데이트
       const result = await recallService.patients.updatePatientStatus(patient.id, newStatus)
       if (result.success) {
-        showToast('상태가 변경되었습니다.', 'success')
-        loadPatients()
+        // 통계만 업데이트 (환자 목록은 이미 업데이트됨)
         loadStats()
       } else {
+        // 실패 시 이전 상태로 복원
+        setPatients(prev => prev.map(p =>
+          p.id === patient.id ? { ...p, status: previousStatus } : p
+        ))
         showToast(result.error || '상태 변경에 실패했습니다.', 'error')
       }
     } else {
