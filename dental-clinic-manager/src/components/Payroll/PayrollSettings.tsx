@@ -119,6 +119,11 @@ export default function PayrollSettings() {
     }
   }
 
+  // 직원 선택 시 메시지 초기화
+  useEffect(() => {
+    setSaveMessage(null)
+  }, [selectedEmployeeId])
+
   // 직원 선택 시 설정 로드
   useEffect(() => {
     async function loadEmployeeSettings() {
@@ -128,7 +133,6 @@ export default function PayrollSettings() {
       }
 
       setLoadingEmployee(true)
-      setSaveMessage(null)
 
       try {
         // 1. 저장된 설정이 있으면 사용
