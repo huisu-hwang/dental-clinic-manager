@@ -236,8 +236,8 @@ export const announcementService = {
           ...(input.category && { category: input.category }),
           ...(input.is_pinned !== undefined && { is_pinned: input.is_pinned }),
           ...(input.is_important !== undefined && { is_important: input.is_important }),
-          ...(input.start_date !== undefined && { start_date: input.start_date }),
-          ...(input.end_date !== undefined && { end_date: input.end_date }),
+          ...(input.start_date !== undefined && { start_date: input.start_date || null }),
+          ...(input.end_date !== undefined && { end_date: input.end_date || null }),
         })
         .eq('id', id)
         .select()
@@ -711,7 +711,7 @@ export const taskService = {
       }
       if (input.priority !== undefined) updateData.priority = input.priority
       if (input.assignee_id !== undefined) updateData.assignee_id = input.assignee_id
-      if (input.due_date !== undefined) updateData.due_date = input.due_date
+      if (input.due_date !== undefined) updateData.due_date = input.due_date || null
       if (input.progress !== undefined) updateData.progress = input.progress
 
       const { data, error } = await (supabase as any)
