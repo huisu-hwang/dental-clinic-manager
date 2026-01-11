@@ -63,7 +63,9 @@ export async function POST(request: NextRequest) {
       // 근태 차감/수당 옵션
       deductLateMinutes,
       deductEarlyLeaveMinutes,
-      includeOvertimePay
+      includeOvertimePay,
+      // 적용 범위 옵션
+      applyToPast
     } = body
 
     if (!clinicId || !employeeId) {
@@ -150,10 +152,81 @@ export async function POST(request: NextRequest) {
       result = data
     }
 
+    // 과거 급여명세서에도 적용하는 경우
+    let updatedStatementsCount = 0
+    if (applyToPast) {
+      // 해당 직원의 모든 급여명세서 조회
+      const { data: statements, error: fetchError } = await supabase
+        .from('payroll_statements')
+        .select('id, payments, deductions')
+        .eq('clinic_id', clinicId)
+        .eq('employee_user_id', employeeId)
+
+      if (fetchError) {
+        console.error('[API] Error fetching past statements:', fetchError)
+      } else if (statements && statements.length > 0) {
+        // 각 급여명세서 업데이트
+        for (const statement of statements) {
+          const updatedPayments = {
+            ...statement.payments,
+            baseSalary: baseSalary || statement.payments?.baseSalary || 0,
+            mealAllowance: mealAllowance || statement.payments?.mealAllowance || 0,
+            vehicleAllowance: vehicleAllowance || statement.payments?.vehicleAllowance || 0,
+            bonus: bonus || statement.payments?.bonus || 0
+          }
+
+          const updatedDeductions = {
+            ...statement.deductions,
+            nationalPension: nationalPension || statement.deductions?.nationalPension || 0,
+            healthInsurance: healthInsurance || statement.deductions?.healthInsurance || 0,
+            longTermCare: longTermCare || statement.deductions?.longTermCare || 0,
+            employmentInsurance: employmentInsurance || statement.deductions?.employmentInsurance || 0,
+            otherDeductions: otherDeductions || statement.deductions?.otherDeductions || 0
+          }
+
+          // 총 지급액 계산
+          const totalPayment = Object.values(updatedPayments).reduce((sum: number, val) => sum + (Number(val) || 0), 0)
+
+          // 총 공제액 계산 (소득세, 지방소득세는 기존 값 유지)
+          const totalDeduction = (updatedDeductions.nationalPension || 0) +
+            (updatedDeductions.healthInsurance || 0) +
+            (updatedDeductions.longTermCare || 0) +
+            (updatedDeductions.employmentInsurance || 0) +
+            (updatedDeductions.incomeTax || statement.deductions?.incomeTax || 0) +
+            (updatedDeductions.localIncomeTax || statement.deductions?.localIncomeTax || 0) +
+            (updatedDeductions.otherDeductions || 0)
+
+          const netPay = totalPayment - totalDeduction
+
+          const { error: updateError } = await supabase
+            .from('payroll_statements')
+            .update({
+              salary_type: salaryType,
+              payments: updatedPayments,
+              total_payment: totalPayment,
+              deductions: { ...statement.deductions, ...updatedDeductions },
+              total_deduction: totalDeduction,
+              net_pay: netPay,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', statement.id)
+
+          if (updateError) {
+            console.error(`[API] Error updating statement ${statement.id}:`, updateError)
+          } else {
+            updatedStatementsCount++
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: result,
-      message: '급여 설정이 저장되었습니다.'
+      message: applyToPast
+        ? `급여 설정이 저장되었습니다. ${updatedStatementsCount}개의 과거 급여명세서가 업데이트되었습니다.`
+        : '급여 설정이 저장되었습니다.',
+      updatedStatementsCount
     })
 
   } catch (error) {

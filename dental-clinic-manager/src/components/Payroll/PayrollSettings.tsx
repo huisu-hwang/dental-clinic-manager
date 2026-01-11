@@ -60,6 +60,9 @@ export default function PayrollSettings() {
   const [deductEarlyLeaveMinutes, setDeductEarlyLeaveMinutes] = useState(true)
   const [includeOvertimePay, setIncludeOvertimePay] = useState(true)
 
+  // 적용 범위 선택 상태
+  const [applyToPast, setApplyToPast] = useState(false)
+
   // 직원 목록 로드
   useEffect(() => {
     async function loadEmployees() {
@@ -274,6 +277,8 @@ export default function PayrollSettings() {
           deductLateMinutes,
           deductEarlyLeaveMinutes,
           includeOvertimePay,
+          // 적용 범위 옵션
+          applyToPast,
           updatedBy: user.id
         }),
       })
@@ -281,7 +286,13 @@ export default function PayrollSettings() {
       const result = await response.json()
 
       if (result.success) {
-        setSaveMessage({ type: 'success', text: '설정이 저장되었습니다.' })
+        let message = '설정이 저장되었습니다.'
+        if (applyToPast && result.updatedStatementsCount > 0) {
+          message = `설정이 저장되었습니다. ${result.updatedStatementsCount}개의 과거 급여명세서가 업데이트되었습니다.`
+        } else if (applyToPast) {
+          message = '설정이 저장되었습니다. 업데이트할 과거 급여명세서가 없습니다.'
+        }
+        setSaveMessage({ type: 'success', text: message })
         // 3초 후 성공 메시지 자동 숨기기
         setTimeout(() => {
           setSaveMessage(null)
@@ -712,6 +723,39 @@ export default function PayrollSettings() {
                     }`}
                   />
                 </button>
+              </label>
+            </div>
+          </div>
+
+          {/* 적용 범위 선택 */}
+          <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+            <h4 className="font-medium text-slate-800 mb-3">적용 범위</h4>
+            <div className="space-y-2">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="applyScope"
+                  checked={!applyToPast}
+                  onChange={() => setApplyToPast(false)}
+                  className="mr-3 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-slate-700">앞으로의 급여명세서에만 적용</span>
+                  <p className="text-xs text-slate-500">다음 달부터 생성되는 급여명세서에 적용됩니다.</p>
+                </div>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="applyScope"
+                  checked={applyToPast}
+                  onChange={() => setApplyToPast(true)}
+                  className="mr-3 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-slate-700">과거 급여명세서에도 적용</span>
+                  <p className="text-xs text-slate-500">이미 생성된 모든 급여명세서도 함께 수정됩니다.</p>
+                </div>
               </label>
             </div>
           </div>
