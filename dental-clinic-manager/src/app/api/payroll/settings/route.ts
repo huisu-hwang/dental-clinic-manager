@@ -5,6 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import {
+  calculatePayrollBasis,
+  calculateAttendanceDeduction,
+  calculatePayrollFromFormState,
+  type AttendanceDeductionOptions
+} from '@/lib/payrollService'
+import type { PayrollFormState, AttendanceSummaryForPayroll } from '@/types/payroll'
+import { DEFAULT_PAYROLL_FORM_STATE } from '@/types/payroll'
 
 const getServiceRoleClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -34,6 +42,138 @@ const getServiceRoleClient = () => {
       persistSession: false
     }
   })
+}
+
+/**
+ * 근태 요약 데이터 조회 (API용)
+ */
+async function getAttendanceSummaryForMonth(
+  supabase: ReturnType<typeof getServiceRoleClient>,
+  employeeId: string,
+  clinicId: string,
+  year: number,
+  month: number
+): Promise<AttendanceSummaryForPayroll> {
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+  const lastDay = new Date(year, month, 0).getDate()
+  const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+
+  // 근태 기록 조회
+  const { data: records, error } = await supabase
+    .from('attendance')
+    .select('*')
+    .eq('user_id', employeeId)
+    .eq('clinic_id', clinicId)
+    .gte('work_date', startDate)
+    .lte('work_date', endDate)
+
+  // 소정 근로일수 (주말 제외, 간단 계산)
+  const daysInMonth = new Date(year, month, 0).getDate()
+  let totalWorkDays = 0
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day)
+    const dayOfWeek = date.getDay()
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      totalWorkDays++
+    }
+  }
+
+  if (error || !records || records.length === 0) {
+    // 근태 기록이 없으면 기본값 반환
+    return {
+      userId: employeeId,
+      year,
+      month,
+      totalWorkDays,
+      presentDays: totalWorkDays,
+      absentDays: 0,
+      leaveDays: 0,
+      holidayDays: 0,
+      lateCount: 0,
+      totalLateMinutes: 0,
+      earlyLeaveCount: 0,
+      totalEarlyLeaveMinutes: 0,
+      overtimeMinutes: 0,
+      nightWorkMinutes: 0,
+      holidayWorkMinutes: 0,
+      allowedAnnualLeave: 15,
+      usedAnnualLeave: 0,
+      remainingAnnualLeave: 15
+    }
+  }
+
+  // 근태 통계 집계
+  let presentDays = 0
+  let leaveDays = 0
+  let lateCount = 0
+  let totalLateMinutes = 0
+  let earlyLeaveCount = 0
+  let totalEarlyLeaveMinutes = 0
+  let overtimeMinutes = 0
+
+  const presentDates = new Set<string>()
+  const leaveDates = new Set<string>()
+
+  for (const record of records) {
+    const recordDate = record.work_date
+
+    switch (record.status) {
+      case 'present':
+        if (!presentDates.has(recordDate)) {
+          presentDays++
+          presentDates.add(recordDate)
+        }
+        break
+      case 'late':
+        if (!presentDates.has(recordDate)) {
+          presentDays++
+          presentDates.add(recordDate)
+        }
+        lateCount++
+        totalLateMinutes += record.late_minutes || 0
+        break
+      case 'early_leave':
+        if (!presentDates.has(recordDate)) {
+          presentDays++
+          presentDates.add(recordDate)
+        }
+        earlyLeaveCount++
+        totalEarlyLeaveMinutes += record.early_leave_minutes || 0
+        break
+      case 'leave':
+        if (!leaveDates.has(recordDate)) {
+          leaveDays++
+          leaveDates.add(recordDate)
+        }
+        break
+    }
+
+    overtimeMinutes += record.overtime_minutes || 0
+  }
+
+  const paidLeaveDays = Math.min(leaveDays, 15)
+  const absentDays = Math.max(0, totalWorkDays - presentDays - paidLeaveDays)
+
+  return {
+    userId: employeeId,
+    year,
+    month,
+    totalWorkDays,
+    presentDays,
+    absentDays,
+    leaveDays,
+    holidayDays: 0,
+    lateCount,
+    totalLateMinutes,
+    earlyLeaveCount,
+    totalEarlyLeaveMinutes,
+    overtimeMinutes,
+    nightWorkMinutes: 0,
+    holidayWorkMinutes: 0,
+    allowedAnnualLeave: 15,
+    usedAnnualLeave: leaveDays,
+    remainingAnnualLeave: Math.max(0, 15 - leaveDays)
+  }
 }
 
 /**
@@ -152,15 +292,16 @@ export async function POST(request: NextRequest) {
       result = data
     }
 
-    // 과거 급여명세서에도 적용하는 경우
+    // 과거 급여명세서에도 적용하는 경우 - 완전히 재계산
     let updatedStatementsCount = 0
     if (applyToPast) {
-      console.log('[API] applyToPast is true, fetching past statements for employee:', employeeId)
+      console.log('[API] applyToPast is true, recalculating past statements for employee:', employeeId)
+      console.log('[API] Attendance options:', { deductLateMinutes, deductEarlyLeaveMinutes, includeOvertimePay })
 
-      // 해당 직원의 모든 급여명세서 조회
+      // 해당 직원의 모든 급여명세서 조회 (연월 정보 포함)
       const { data: statements, error: fetchError } = await supabase
         .from('payroll_statements')
-        .select('id, payments, deductions')
+        .select('id, payment_year, payment_month, payments, deductions')
         .eq('clinic_id', clinicId)
         .eq('employee_user_id', employeeId)
 
@@ -169,62 +310,123 @@ export async function POST(request: NextRequest) {
       if (fetchError) {
         console.error('[API] Error fetching past statements:', fetchError)
       } else if (statements && statements.length > 0) {
-        // 각 급여명세서 업데이트
+        // 각 급여명세서 완전히 재계산
         for (const statement of statements) {
-          // 값이 0인 경우도 적용되도록 명시적으로 체크
-          const updatedPayments = {
-            ...statement.payments,
-            baseSalary: baseSalary ?? statement.payments?.baseSalary ?? 0,
-            mealAllowance: mealAllowance ?? statement.payments?.mealAllowance ?? 0,
-            vehicleAllowance: vehicleAllowance ?? statement.payments?.vehicleAllowance ?? 0,
-            bonus: bonus ?? statement.payments?.bonus ?? 0
-          }
+          try {
+            const year = statement.payment_year
+            const month = statement.payment_month
 
-          const updatedDeductions = {
-            ...statement.deductions,
-            nationalPension: nationalPension ?? statement.deductions?.nationalPension ?? 0,
-            healthInsurance: healthInsurance ?? statement.deductions?.healthInsurance ?? 0,
-            longTermCare: longTermCare ?? statement.deductions?.longTermCare ?? 0,
-            employmentInsurance: employmentInsurance ?? statement.deductions?.employmentInsurance ?? 0,
-            otherDeductions: otherDeductions ?? statement.deductions?.otherDeductions ?? 0
-          }
+            console.log(`[API] Recalculating statement for ${year}-${month}`)
 
-          // 총 지급액 계산
-          const totalPayment = Object.values(updatedPayments).reduce((sum: number, val) => sum + (Number(val) || 0), 0)
+            // 1. 해당 월의 근태 데이터 조회
+            const attendanceSummary = await getAttendanceSummaryForMonth(
+              supabase,
+              employeeId,
+              clinicId,
+              year,
+              month
+            )
 
-          // 총 공제액 계산 (소득세, 지방소득세는 기존 값 유지)
-          const totalDeduction = (updatedDeductions.nationalPension || 0) +
-            (updatedDeductions.healthInsurance || 0) +
-            (updatedDeductions.longTermCare || 0) +
-            (updatedDeductions.employmentInsurance || 0) +
-            (updatedDeductions.incomeTax || statement.deductions?.incomeTax || 0) +
-            (updatedDeductions.localIncomeTax || statement.deductions?.localIncomeTax || 0) +
-            (updatedDeductions.otherDeductions || 0)
-
-          const netPay = totalPayment - totalDeduction
-
-          const { error: updateError } = await supabase
-            .from('payroll_statements')
-            .update({
-              salary_type: salaryType,
-              payments: updatedPayments,
-              total_payment: totalPayment,
-              deductions: { ...statement.deductions, ...updatedDeductions },
-              total_deduction: totalDeduction,
-              net_pay: netPay,
-              updated_at: new Date().toISOString()
+            console.log(`[API] Attendance summary for ${year}-${month}:`, {
+              presentDays: attendanceSummary.presentDays,
+              absentDays: attendanceSummary.absentDays,
+              lateCount: attendanceSummary.lateCount,
+              totalLateMinutes: attendanceSummary.totalLateMinutes,
+              earlyLeaveCount: attendanceSummary.earlyLeaveCount,
+              totalEarlyLeaveMinutes: attendanceSummary.totalEarlyLeaveMinutes
             })
-            .eq('id', statement.id)
 
-          if (updateError) {
-            console.error(`[API] Error updating statement ${statement.id}:`, updateError)
-          } else {
-            console.log(`[API] Successfully updated statement ${statement.id}`)
-            updatedStatementsCount++
+            // 2. 급여 기준 계산
+            const basisAmount = salaryType === 'net' ? targetAmount : baseSalary
+            const basis = calculatePayrollBasis(basisAmount || 0)
+
+            // 3. 근태 차감 계산 (새로운 옵션 적용)
+            const deductionOptions: AttendanceDeductionOptions = {
+              deductLateMinutes: deductLateMinutes !== false,
+              deductEarlyLeaveMinutes: deductEarlyLeaveMinutes !== false
+            }
+            const attendanceDeduction = calculateAttendanceDeduction(
+              basis,
+              attendanceSummary,
+              attendanceSummary.allowedAnnualLeave,
+              undefined,
+              deductionOptions
+            )
+
+            console.log(`[API] Attendance deduction for ${year}-${month}:`, {
+              totalDeduction: attendanceDeduction.totalDeduction,
+              lateDeduction: attendanceDeduction.lateDeduction,
+              earlyLeaveDeduction: attendanceDeduction.earlyLeaveDeduction,
+              absentDeduction: attendanceDeduction.absentDeduction
+            })
+
+            // 4. 급여 재계산
+            const attendanceDeductionAmount = attendanceDeduction.totalDeduction
+
+            // 세후 계약: targetAmount에서 근태 차감, 세전 계약: 기타공제에 추가
+            const adjustedTargetAmount = salaryType === 'net'
+              ? Math.max(0, (targetAmount || 0) - attendanceDeductionAmount)
+              : (targetAmount || 0)
+
+            const adjustedOtherDeductions = salaryType === 'gross'
+              ? (otherDeductions || 0) + attendanceDeductionAmount
+              : (otherDeductions || 0)
+
+            const newFormState: PayrollFormState = {
+              ...DEFAULT_PAYROLL_FORM_STATE,
+              selectedEmployeeId: employeeId,
+              selectedYear: year,
+              selectedMonth: month,
+              salaryType: salaryType || 'net',
+              targetAmount: adjustedTargetAmount,
+              baseSalary: baseSalary || 0,
+              mealAllowance: mealAllowance || 0,
+              vehicleAllowance: vehicleAllowance || 0,
+              bonus: bonus || 0,
+              nationalPension: nationalPension || 0,
+              healthInsurance: healthInsurance || 0,
+              longTermCare: longTermCare || 0,
+              employmentInsurance: employmentInsurance || 0,
+              familyCount: familyCount || 1,
+              childCount: childCount || 0,
+              otherDeductions: adjustedOtherDeductions
+            }
+
+            const calculationResult = calculatePayrollFromFormState(newFormState)
+
+            console.log(`[API] Recalculated payroll for ${year}-${month}:`, {
+              totalPayment: calculationResult.totalPayment,
+              totalDeduction: calculationResult.totalDeduction,
+              netPay: calculationResult.netPay
+            })
+
+            // 5. 급여명세서 업데이트
+            const { error: updateError } = await supabase
+              .from('payroll_statements')
+              .update({
+                salary_type: salaryType,
+                payments: calculationResult.payments,
+                total_payment: calculationResult.totalPayment,
+                deductions: calculationResult.deductions,
+                total_deduction: calculationResult.totalDeduction,
+                net_pay: calculationResult.netPay,
+                non_taxable_total: calculationResult.nonTaxableTotal,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', statement.id)
+
+            if (updateError) {
+              console.error(`[API] Error updating statement ${statement.id}:`, updateError)
+            } else {
+              console.log(`[API] Successfully recalculated statement ${statement.id} for ${year}-${month}`)
+              updatedStatementsCount++
+            }
+          } catch (err) {
+            console.error(`[API] Error recalculating statement ${statement.id}:`, err)
           }
         }
       }
-      console.log('[API] Total updated statements:', updatedStatementsCount)
+      console.log('[API] Total recalculated statements:', updatedStatementsCount)
     }
 
     return NextResponse.json({
