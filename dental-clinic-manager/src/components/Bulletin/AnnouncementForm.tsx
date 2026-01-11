@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { announcementService } from '@/lib/bulletinService'
 import type { Announcement, AnnouncementCategory, CreateAnnouncementDto } from '@/types/bulletin'
 import { ANNOUNCEMENT_CATEGORY_LABELS } from '@/types/bulletin'
+import EnhancedTiptapEditor from '@/components/Protocol/EnhancedTiptapEditor'
 
 interface AnnouncementFormProps {
   announcement?: Announcement | null
@@ -146,12 +147,10 @@ export default function AnnouncementForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             내용 <span className="text-red-500">*</span>
           </label>
-          <textarea
-            value={formData.content}
-            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+          <EnhancedTiptapEditor
+            content={formData.content}
+            onChange={(content) => setFormData({ ...formData, content })}
             placeholder="공지사항 내용을 입력하세요"
-            rows={10}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </div>
 

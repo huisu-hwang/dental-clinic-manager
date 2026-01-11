@@ -2,6 +2,7 @@
 
 import { useEditor, EditorContent } from '@tiptap/react'
 import { useCallback, useEffect, useState } from 'react'
+import { Extension } from '@tiptap/core'
 
 import StarterKit from '@tiptap/starter-kit'
 import Heading from '@tiptap/extension-heading'
@@ -33,8 +34,71 @@ import {
   TableCellsIcon,
   ExclamationTriangleIcon,
   ArrowUturnLeftIcon,
-  ArrowUturnRightIcon
+  ArrowUturnRightIcon,
+  Bars3Icon
 } from '@heroicons/react/24/outline'
+
+// 줄간격 커스텀 익스텐션
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    lineHeight: {
+      setLineHeight: (lineHeight: string) => ReturnType
+      unsetLineHeight: () => ReturnType
+    }
+  }
+}
+
+const LineHeight = Extension.create({
+  name: 'lineHeight',
+
+  addOptions() {
+    return {
+      types: ['paragraph', 'heading'],
+      defaultLineHeight: '1.5',
+    }
+  },
+
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          lineHeight: {
+            default: null,
+            parseHTML: element => element.style.lineHeight || null,
+            renderHTML: attributes => {
+              if (!attributes.lineHeight) {
+                return {}
+              }
+              return {
+                style: `line-height: ${attributes.lineHeight}`,
+              }
+            },
+          },
+        },
+      },
+    ]
+  },
+
+  addCommands() {
+    return {
+      setLineHeight:
+        (lineHeight: string) =>
+        ({ commands }) => {
+          return this.options.types.every((type: string) =>
+            commands.updateAttributes(type, { lineHeight })
+          )
+        },
+      unsetLineHeight:
+        () =>
+        ({ commands }) => {
+          return this.options.types.every((type: string) =>
+            commands.resetAttributes(type, 'lineHeight')
+          )
+        },
+    }
+  },
+})
 
 interface EnhancedTiptapEditorProps {
   content: string
@@ -396,6 +460,8 @@ export default function EnhancedTiptapEditor({
 }: EnhancedTiptapEditorProps) {
   // 색상 팔레트 표시 상태
   const [showColorPicker, setShowColorPicker] = useState(false)
+  // 줄간격 드롭다운 표시 상태
+  const [showLineHeightPicker, setShowLineHeightPicker] = useState(false)
 
   // Tiptap Editor 설정
   const editor = useEditor({
@@ -406,6 +472,7 @@ export default function EnhancedTiptapEditor({
         orderedList: false,
         listItem: false
       }),
+      LineHeight,
       Heading.configure({
         levels: [1, 2, 3],
         HTMLAttributes: {
@@ -776,6 +843,59 @@ export default function EnhancedTiptapEditor({
           )}
         </div>
 
+        {/* 줄간격 */}
+        <div className="relative flex gap-1">
+          <button
+            type="button"
+            onClick={() => setShowLineHeightPicker(!showLineHeightPicker)}
+            className="p-2 rounded hover:bg-slate-200 transition-colors flex items-center gap-1"
+            title="줄간격"
+          >
+            <Bars3Icon className="h-4 w-4" />
+            <span className="text-xs">↕</span>
+          </button>
+
+          {showLineHeightPicker && (
+            <div className="absolute top-12 left-0 bg-white border border-slate-300 rounded-lg shadow-lg p-3 z-20 min-w-[140px]">
+              <div className="text-xs text-slate-600 mb-2 font-medium">줄간격</div>
+              <div className="flex flex-col gap-1">
+                {[
+                  { value: '1', label: '1.0 (좁게)' },
+                  { value: '1.5', label: '1.5 (기본)' },
+                  { value: '1.75', label: '1.75' },
+                  { value: '2', label: '2.0 (넓게)' },
+                  { value: '2.5', label: '2.5' },
+                  { value: '3', label: '3.0 (매우 넓게)' }
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      editor.chain().focus().setLineHeight(value).run()
+                      setShowLineHeightPicker(false)
+                    }}
+                    className="px-3 py-2 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  editor.chain().focus().unsetLineHeight().run()
+                  setShowLineHeightPicker(false)
+                }}
+                className="w-full mt-3 px-2 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded transition-colors"
+              >
+                기본값으로 재설정
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="w-px h-8 bg-slate-300" />
 
         {/* 제목 */}
@@ -841,10 +961,10 @@ export default function EnhancedTiptapEditor({
         <div className="w-px h-8 bg-slate-300" />
 
         {/* 미디어 삽입 */}
-        <div className="flex gap-1">
-          <label className="p-2 rounded hover:bg-slate-200 cursor-pointer transition-colors" title="이미지 삽입">
+        <div className="flex gap-1 items-center">
+          <label className="p-2 rounded hover:bg-slate-200 cursor-pointer transition-colors flex items-center justify-center" title="이미지 삽입">
             <PhotoIcon className="h-4 w-4" />
-            <input {...getInputProps()} />
+            <input {...getInputProps()} className="hidden" />
           </label>
           <button
             type="button"
