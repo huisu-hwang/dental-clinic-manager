@@ -4187,24 +4187,28 @@ export const dataService = {
   },
 
   /**
-   * 클리닉의 승인된 직원 목록 조회 (권한 부여 대상)
-   * 대표원장(owner)을 제외한 모든 승인된 직원을 반환
+   * 클리닉의 직원 목록 조회 (권한 부여 대상)
+   * 대표원장(owner)을 제외한 모든 직원을 반환
    */
   async getClinicStaffForPermission(clinicId: string): Promise<{ data: Array<{ id: string, name: string, email: string, role: string }> | null, error: string | null }> {
     try {
-      console.log('[getClinicStaffForPermission] clinicId:', clinicId)
+      console.log('[getClinicStaffForPermission] Called with clinicId:', clinicId)
+
+      if (!clinicId) {
+        console.error('[getClinicStaffForPermission] clinicId is empty or undefined')
+        return { data: [], error: 'clinicId가 없습니다.' }
+      }
 
       const supabase = await ensureConnection()
       if (!supabase) {
         return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
       }
 
-      // 대표원장(owner)을 제외한 모든 승인된 직원 조회
+      // 대표원장(owner)을 제외한 모든 직원 조회 (status 필터 제거)
       const { data, error } = await supabase
         .from('users')
-        .select('id, name, email, role')
+        .select('id, name, email, role, status')
         .eq('clinic_id', clinicId)
-        .eq('status', 'approved')
         .neq('role', 'owner')  // 대표원장 제외 (대표원장은 자동으로 모든 권한 보유)
         .order('name', { ascending: true })
 
@@ -4215,8 +4219,14 @@ export const dataService = {
         return { data: null, error: error.message }
       }
 
-      console.log('[getClinicStaffForPermission] Found', data?.length || 0, 'staff members')
-      return { data: data || [], error: null }
+      // 승인된 직원만 필터링 (approved 또는 active)
+      const filteredData = (data || []).filter((user: { id: string; name: string; email: string; role: string; status: string | null }) =>
+        user.status === 'approved' || user.status === 'active' || !user.status
+      )
+
+      console.log('[getClinicStaffForPermission] Total staff:', data?.length || 0, 'Filtered:', filteredData.length)
+
+      return { data: filteredData, error: null }
     } catch (error: unknown) {
       console.error('[getClinicStaffForPermission] Exception:', error)
       return { data: null, error: extractErrorMessage(error) }
