@@ -8,6 +8,7 @@ import { documentService } from '@/lib/bulletinService'
 import { createClient } from '@/lib/supabase/client'
 import type { Document, DocumentCategory, CreateDocumentDto } from '@/types/bulletin'
 import { DOCUMENT_CATEGORY_LABELS } from '@/types/bulletin'
+import EnhancedTiptapEditor from '@/components/Protocol/EnhancedTiptapEditor'
 
 interface DocumentFormProps {
   document?: Document | null
@@ -341,12 +342,10 @@ export default function DocumentForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             내용
           </label>
-          <textarea
-            value={formData.content || ''}
-            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+          <EnhancedTiptapEditor
+            content={formData.content || ''}
+            onChange={(content) => setFormData({ ...formData, content })}
             placeholder="문서 내용을 입력하세요 (선택사항)"
-            rows={8}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </div>
 
