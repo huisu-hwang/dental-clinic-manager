@@ -155,6 +155,8 @@ export async function POST(request: NextRequest) {
     // 과거 급여명세서에도 적용하는 경우
     let updatedStatementsCount = 0
     if (applyToPast) {
+      console.log('[API] applyToPast is true, fetching past statements for employee:', employeeId)
+
       // 해당 직원의 모든 급여명세서 조회
       const { data: statements, error: fetchError } = await supabase
         .from('payroll_statements')
@@ -162,26 +164,29 @@ export async function POST(request: NextRequest) {
         .eq('clinic_id', clinicId)
         .eq('employee_user_id', employeeId)
 
+      console.log('[API] Found statements:', statements?.length || 0)
+
       if (fetchError) {
         console.error('[API] Error fetching past statements:', fetchError)
       } else if (statements && statements.length > 0) {
         // 각 급여명세서 업데이트
         for (const statement of statements) {
+          // 값이 0인 경우도 적용되도록 명시적으로 체크
           const updatedPayments = {
             ...statement.payments,
-            baseSalary: baseSalary || statement.payments?.baseSalary || 0,
-            mealAllowance: mealAllowance || statement.payments?.mealAllowance || 0,
-            vehicleAllowance: vehicleAllowance || statement.payments?.vehicleAllowance || 0,
-            bonus: bonus || statement.payments?.bonus || 0
+            baseSalary: baseSalary ?? statement.payments?.baseSalary ?? 0,
+            mealAllowance: mealAllowance ?? statement.payments?.mealAllowance ?? 0,
+            vehicleAllowance: vehicleAllowance ?? statement.payments?.vehicleAllowance ?? 0,
+            bonus: bonus ?? statement.payments?.bonus ?? 0
           }
 
           const updatedDeductions = {
             ...statement.deductions,
-            nationalPension: nationalPension || statement.deductions?.nationalPension || 0,
-            healthInsurance: healthInsurance || statement.deductions?.healthInsurance || 0,
-            longTermCare: longTermCare || statement.deductions?.longTermCare || 0,
-            employmentInsurance: employmentInsurance || statement.deductions?.employmentInsurance || 0,
-            otherDeductions: otherDeductions || statement.deductions?.otherDeductions || 0
+            nationalPension: nationalPension ?? statement.deductions?.nationalPension ?? 0,
+            healthInsurance: healthInsurance ?? statement.deductions?.healthInsurance ?? 0,
+            longTermCare: longTermCare ?? statement.deductions?.longTermCare ?? 0,
+            employmentInsurance: employmentInsurance ?? statement.deductions?.employmentInsurance ?? 0,
+            otherDeductions: otherDeductions ?? statement.deductions?.otherDeductions ?? 0
           }
 
           // 총 지급액 계산
@@ -214,10 +219,12 @@ export async function POST(request: NextRequest) {
           if (updateError) {
             console.error(`[API] Error updating statement ${statement.id}:`, updateError)
           } else {
+            console.log(`[API] Successfully updated statement ${statement.id}`)
             updatedStatementsCount++
           }
         }
       }
+      console.log('[API] Total updated statements:', updatedStatementsCount)
     }
 
     return NextResponse.json({
