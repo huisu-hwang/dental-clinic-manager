@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, BarChart3, Clock, Info, User, Users } from 'lucide-react'
+import { Calendar, BarChart3, Clock, Info, User, Users, CalendarRange } from 'lucide-react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -22,6 +22,15 @@ const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: s
 )
 
 type StatsView = 'personal' | 'team'
+type PeriodMode = 'monthly' | 'custom'
+
+// 날짜 포맷 함수 (YYYY-MM-DD)
+function formatDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 export default function AttendanceStats() {
   const { user } = useAuth()
@@ -30,15 +39,28 @@ export default function AttendanceStats() {
   const [statsView, setStatsView] = useState<StatsView>('personal')
   const [statistics, setStatistics] = useState<AttendanceStatistics | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // 기간 선택 모드
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('monthly')
+
+  // 월별 선택
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+
+  // 기간 선택 (커스텀)
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date()
+    date.setDate(1) // 이번 달 1일
+    return formatDateString(date)
+  })
+  const [endDate, setEndDate] = useState(() => formatDateString(new Date()))
 
   useEffect(() => {
     if (user?.id) {
       // 페이지 로드 시 최신 통계로 자동 갱신
       refreshStatisticsOnLoad()
     }
-  }, [user, selectedYear, selectedMonth])
+  }, [user, periodMode, selectedYear, selectedMonth, startDate, endDate])
 
   // 페이지 로드 시 최신 통계로 자동 갱신하는 함수
   const refreshStatisticsOnLoad = async () => {
@@ -46,23 +68,80 @@ export default function AttendanceStats() {
 
     setLoading(true)
     try {
-      await attendanceService.updateMonthlyStatistics(user.id, selectedYear, selectedMonth)
-      const result = await attendanceService.getMonthlyStatistics(
-        user.id,
-        selectedYear,
-        selectedMonth
-      )
+      if (periodMode === 'monthly') {
+        // 월별 통계 조회
+        await attendanceService.updateMonthlyStatistics(user.id, selectedYear, selectedMonth)
+        const result = await attendanceService.getMonthlyStatistics(
+          user.id,
+          selectedYear,
+          selectedMonth
+        )
 
-      if (result.success && result.statistics) {
-        setStatistics(result.statistics)
+        if (result.success && result.statistics) {
+          setStatistics(result.statistics)
+        } else {
+          setStatistics(null)
+        }
       } else {
-        setStatistics(null)
+        // 기간별 통계 조회
+        const result = await attendanceService.getStatisticsForDateRange(
+          user.id,
+          startDate,
+          endDate
+        )
+
+        if (result.success && result.statistics) {
+          setStatistics(result.statistics)
+        } else {
+          setStatistics(null)
+        }
       }
     } catch (error) {
       console.error('[AttendanceStats] Error refreshing statistics on load:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  // 기간 선택 프리셋
+  const handlePresetPeriod = (preset: string) => {
+    const today = new Date()
+    let start: Date
+    let end: Date = today
+
+    switch (preset) {
+      case 'thisWeek':
+        start = new Date(today)
+        start.setDate(today.getDate() - today.getDay()) // 이번 주 일요일
+        break
+      case 'lastWeek':
+        start = new Date(today)
+        start.setDate(today.getDate() - today.getDay() - 7)
+        end = new Date(start)
+        end.setDate(start.getDate() + 6)
+        break
+      case 'thisMonth':
+        start = new Date(today.getFullYear(), today.getMonth(), 1)
+        break
+      case 'lastMonth':
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+        end = new Date(today.getFullYear(), today.getMonth(), 0)
+        break
+      case 'last3Months':
+        start = new Date(today.getFullYear(), today.getMonth() - 2, 1)
+        break
+      case 'last6Months':
+        start = new Date(today.getFullYear(), today.getMonth() - 5, 1)
+        break
+      case 'thisYear':
+        start = new Date(today.getFullYear(), 0, 1)
+        break
+      default:
+        return
+    }
+
+    setStartDate(formatDateString(start))
+    setEndDate(formatDateString(end))
   }
 
   const formatMinutesToHours = (minutes: number) => {
@@ -118,36 +197,143 @@ export default function AttendanceStats() {
       {/* 섹션 1: 기간 선택 */}
       <div>
         <SectionHeader number={1} title="기간 선택" icon={Calendar} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-600 mb-1.5">년도</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            >
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}년
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-600 mb-1.5">월</label>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            >
-              {months.map((month) => (
-                <option key={month} value={month}>
-                  {month}월
-                </option>
-              ))}
-            </select>
-          </div>
+
+        {/* 기간 선택 모드 탭 */}
+        <div className="flex mb-4 bg-slate-100 rounded-lg p-1">
+          <button
+            onClick={() => setPeriodMode('monthly')}
+            className={`flex-1 flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              periodMode === 'monthly'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Calendar className="w-4 h-4 mr-2" />
+            월별
+          </button>
+          <button
+            onClick={() => setPeriodMode('custom')}
+            className={`flex-1 flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              periodMode === 'custom'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <CalendarRange className="w-4 h-4 mr-2" />
+            기간별
+          </button>
         </div>
+
+        {periodMode === 'monthly' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1.5">년도</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}년
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1.5">월</label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                {months.map((month) => (
+                  <option key={month} value={month}>
+                    {month}월
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* 빠른 선택 버튼 */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handlePresetPeriod('thisWeek')}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                이번 주
+              </button>
+              <button
+                onClick={() => handlePresetPeriod('lastWeek')}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                지난 주
+              </button>
+              <button
+                onClick={() => handlePresetPeriod('thisMonth')}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                이번 달
+              </button>
+              <button
+                onClick={() => handlePresetPeriod('lastMonth')}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                지난 달
+              </button>
+              <button
+                onClick={() => handlePresetPeriod('last3Months')}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                최근 3개월
+              </button>
+              <button
+                onClick={() => handlePresetPeriod('last6Months')}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                최근 6개월
+              </button>
+              <button
+                onClick={() => handlePresetPeriod('thisYear')}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                올해
+              </button>
+            </div>
+
+            {/* 직접 기간 선택 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">시작일</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  max={endDate}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">종료일</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate}
+                  max={formatDateString(new Date())}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* 선택된 기간 표시 */}
+            <div className="text-sm text-slate-600 bg-blue-50 px-3 py-2 rounded-lg">
+              선택 기간: <span className="font-medium text-blue-700">{startDate}</span> ~ <span className="font-medium text-blue-700">{endDate}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {loading ? (

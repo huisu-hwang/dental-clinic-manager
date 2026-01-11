@@ -53,7 +53,7 @@ export const DEFAULT_CATEGORIES: MenuCategorySetting[] = [
 export const DEFAULT_MENU_ITEMS: MenuItemSetting[] = [
   { id: 'home', label: '대시보드', visible: true, order: 0 },
   { id: 'daily-input', label: '일일보고서', visible: true, order: 1, categoryId: 'work' },
-  { id: 'attendance', label: '출근 관리', visible: true, order: 2, categoryId: 'work' },
+  { id: 'attendance', label: '근태관리', visible: true, order: 2, categoryId: 'work' },
   { id: 'leave', label: '연차 관리', visible: true, order: 3, categoryId: 'work' },
   { id: 'stats', label: '통계', visible: true, order: 4, categoryId: 'work' },
   { id: 'logs', label: '상세 기록', visible: true, order: 5, categoryId: 'work' },
