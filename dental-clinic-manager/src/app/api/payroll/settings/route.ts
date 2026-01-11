@@ -292,16 +292,16 @@ export async function POST(request: NextRequest) {
       result = data
     }
 
-    // 과거 급여명세서에도 적용하는 경우 - 완전히 재계산
+    // 과거 급여명세서에도 적용하는 경우 - 삭제 후 새로 생성
     let updatedStatementsCount = 0
     if (applyToPast) {
-      console.log('[API] applyToPast is true, recalculating past statements for employee:', employeeId)
+      console.log('[API] applyToPast is true, deleting and recreating past statements for employee:', employeeId)
       console.log('[API] Attendance options:', { deductLateMinutes, deductEarlyLeaveMinutes, includeOvertimePay })
 
-      // 해당 직원의 모든 급여명세서 조회 (연월 정보 포함)
+      // 해당 직원의 모든 급여명세서 조회 (전체 정보 포함)
       const { data: statements, error: fetchError } = await supabase
         .from('payroll_statements')
-        .select('id, payment_year, payment_month, payments, deductions')
+        .select('*')
         .eq('clinic_id', clinicId)
         .eq('employee_user_id', employeeId)
 
@@ -310,15 +310,29 @@ export async function POST(request: NextRequest) {
       if (fetchError) {
         console.error('[API] Error fetching past statements:', fetchError)
       } else if (statements && statements.length > 0) {
-        // 각 급여명세서 완전히 재계산
+        // 각 급여명세서 삭제 후 새로 생성
         for (const statement of statements) {
           try {
             const year = statement.payment_year
             const month = statement.payment_month
+            const statementId = statement.id
 
-            console.log(`[API] Recalculating statement for ${year}-${month}`)
+            console.log(`[API] Deleting and recreating statement for ${year}-${month}`)
 
-            // 1. 해당 월의 근태 데이터 조회
+            // 1. 기존 급여명세서 삭제
+            const { error: deleteError } = await supabase
+              .from('payroll_statements')
+              .delete()
+              .eq('id', statementId)
+
+            if (deleteError) {
+              console.error(`[API] Error deleting statement ${statementId}:`, deleteError)
+              continue
+            }
+
+            console.log(`[API] Deleted statement ${statementId} for ${year}-${month}`)
+
+            // 2. 해당 월의 근태 데이터 조회
             const attendanceSummary = await getAttendanceSummaryForMonth(
               supabase,
               employeeId,
@@ -336,11 +350,11 @@ export async function POST(request: NextRequest) {
               totalEarlyLeaveMinutes: attendanceSummary.totalEarlyLeaveMinutes
             })
 
-            // 2. 급여 기준 계산
+            // 3. 급여 기준 계산
             const basisAmount = salaryType === 'net' ? targetAmount : baseSalary
             const basis = calculatePayrollBasis(basisAmount || 0)
 
-            // 3. 근태 차감 계산 (새로운 옵션 적용)
+            // 4. 근태 차감 계산 (새로운 옵션 적용)
             const deductionOptions: AttendanceDeductionOptions = {
               deductLateMinutes: deductLateMinutes !== false,
               deductEarlyLeaveMinutes: deductEarlyLeaveMinutes !== false
@@ -360,7 +374,7 @@ export async function POST(request: NextRequest) {
               absentDeduction: attendanceDeduction.absentDeduction
             })
 
-            // 4. 급여 재계산
+            // 5. 급여 재계산
             const attendanceDeductionAmount = attendanceDeduction.totalDeduction
 
             // 세후 계약: targetAmount에서 근태 차감, 세전 계약: 기타공제에 추가
@@ -400,10 +414,23 @@ export async function POST(request: NextRequest) {
               netPay: calculationResult.netPay
             })
 
-            // 5. 급여명세서 업데이트
-            const { error: updateError } = await supabase
+            // 6. 지급일 계산
+            const lastDay = new Date(year, month, 0).getDate()
+            const paymentDay = Math.min(25, lastDay)
+            const paymentDate = `${year}-${String(month).padStart(2, '0')}-${String(paymentDay).padStart(2, '0')}`
+
+            // 7. 새 급여명세서 생성
+            const { error: insertError } = await supabase
               .from('payroll_statements')
-              .update({
+              .insert({
+                clinic_id: clinicId,
+                employee_user_id: employeeId,
+                payment_year: year,
+                payment_month: month,
+                payment_date: paymentDate,
+                employee_name: statement.employee_name,
+                employee_resident_number: statement.employee_resident_number,
+                hire_date: statement.hire_date,
                 salary_type: salaryType,
                 payments: calculationResult.payments,
                 total_payment: calculationResult.totalPayment,
@@ -411,22 +438,29 @@ export async function POST(request: NextRequest) {
                 total_deduction: calculationResult.totalDeduction,
                 net_pay: calculationResult.netPay,
                 non_taxable_total: calculationResult.nonTaxableTotal,
-                updated_at: new Date().toISOString()
+                work_info: {
+                  familyCount: familyCount || 1,
+                  childCount: childCount || 0,
+                  workDays: attendanceSummary.presentDays,
+                  totalWorkHours: Math.round(attendanceSummary.presentDays * 8)
+                },
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                created_by: updatedBy
               })
-              .eq('id', statement.id)
 
-            if (updateError) {
-              console.error(`[API] Error updating statement ${statement.id}:`, updateError)
+            if (insertError) {
+              console.error(`[API] Error creating new statement for ${year}-${month}:`, insertError)
             } else {
-              console.log(`[API] Successfully recalculated statement ${statement.id} for ${year}-${month}`)
+              console.log(`[API] Successfully recreated statement for ${year}-${month}`)
               updatedStatementsCount++
             }
           } catch (err) {
-            console.error(`[API] Error recalculating statement ${statement.id}:`, err)
+            console.error(`[API] Error processing statement ${statement.id}:`, err)
           }
         }
       }
-      console.log('[API] Total recalculated statements:', updatedStatementsCount)
+      console.log('[API] Total recreated statements:', updatedStatementsCount)
     }
 
     return NextResponse.json({

@@ -658,9 +658,6 @@ export default function PayrollSettings() {
               <AlertCircle className="w-4 h-4 mr-2" />
               근태 연동 설정
             </h4>
-            <p className="text-xs text-amber-700 mb-4">
-              근태 기록에 따른 급여 차감/수당 계산 옵션을 설정합니다. 설정을 변경하면 다음 급여명세서부터 적용됩니다.
-            </p>
             <div className="space-y-4">
               {/* 지각 차감 */}
               <label className="flex items-center justify-between">
