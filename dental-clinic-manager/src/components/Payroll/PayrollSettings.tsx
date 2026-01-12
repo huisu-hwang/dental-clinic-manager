@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { PayrollFormState, SalaryType } from '@/types/payroll'
 import { DEFAULT_PAYROLL_FORM_STATE } from '@/types/payroll'
@@ -62,6 +62,13 @@ export default function PayrollSettings() {
 
   // 적용 범위 선택 상태
   const [applyToPast, setApplyToPast] = useState(false)
+  const applyToPastRef = useRef(applyToPast)
+
+  // applyToPast 상태 변경 추적 및 ref 동기화
+  useEffect(() => {
+    console.log('[PayrollSettings] applyToPast state changed to:', applyToPast)
+    applyToPastRef.current = applyToPast
+  }, [applyToPast])
 
   // 직원 목록 로드
   useEffect(() => {
@@ -243,6 +250,10 @@ export default function PayrollSettings() {
 
   // 설정 저장
   const handleSave = async () => {
+    // Use ref value to ensure we get the latest state
+    const currentApplyToPast = applyToPastRef.current
+    console.log('[PayrollSettings] handleSave called, applyToPast state:', applyToPast, 'ref:', currentApplyToPast)
+
     if (!selectedEmployeeId || !user?.clinic_id) {
       setSaveMessage({ type: 'error', text: '직원을 선택해주세요.' })
       return
@@ -272,12 +283,12 @@ export default function PayrollSettings() {
         deductLateMinutes,
         deductEarlyLeaveMinutes,
         includeOvertimePay,
-        // 적용 범위 옵션
-        applyToPast,
+        // 적용 범위 옵션 - use ref for latest value
+        applyToPast: currentApplyToPast,
         updatedBy: user.id
       }
 
-      console.log('[PayrollSettings] Saving with applyToPast:', applyToPast, 'requestBody:', requestBody)
+      console.log('[PayrollSettings] Saving with applyToPast:', currentApplyToPast, 'requestBody:', requestBody)
 
       const response = await fetch('/api/payroll/settings', {
         method: 'POST',
@@ -292,9 +303,9 @@ export default function PayrollSettings() {
 
       if (result.success) {
         let message = '설정이 저장되었습니다.'
-        if (applyToPast && result.updatedStatementsCount > 0) {
+        if (currentApplyToPast && result.updatedStatementsCount > 0) {
           message = `설정이 저장되었습니다. ${result.updatedStatementsCount}개의 과거 급여명세서가 업데이트되었습니다.`
-        } else if (applyToPast) {
+        } else if (currentApplyToPast) {
           message = '설정이 저장되었습니다. 업데이트할 과거 급여명세서가 없습니다.'
         }
         setSaveMessage({ type: 'success', text: message })
@@ -302,6 +313,8 @@ export default function PayrollSettings() {
         setTimeout(() => {
           setSaveMessage(null)
         }, 3000)
+        // 저장 후 applyToPast 초기화 (다음 저장 시 다시 선택하도록)
+        setApplyToPast(false)
         // 저장된 설정 업데이트
         setSavedSettings(prev => ({
           ...prev,
@@ -731,28 +744,47 @@ export default function PayrollSettings() {
 
           {/* 적용 범위 선택 */}
           <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-            <h4 className="font-medium text-slate-800 mb-3">적용 범위</h4>
-            <div className="space-y-2">
-              <label className="flex items-center">
+            <h4 className="font-medium text-slate-800 mb-3">
+              적용 범위
+              <span className="ml-2 text-xs text-slate-400">(debug: applyToPast={String(applyToPast)})</span>
+            </h4>
+            <div className="space-y-3">
+              <label
+                className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors"
+                onClick={() => {
+                  console.log('[PayrollSettings] Label clicked: future only')
+                }}
+              >
                 <input
                   type="radio"
                   name="applyScope"
                   checked={!applyToPast}
-                  onChange={() => setApplyToPast(false)}
-                  className="mr-3 text-emerald-600 focus:ring-emerald-500"
+                  onChange={() => {
+                    console.log('[PayrollSettings] Radio onChange: Setting applyToPast to false')
+                    setApplyToPast(false)
+                  }}
+                  className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
                 />
                 <div>
                   <span className="text-sm font-medium text-slate-700">앞으로의 급여명세서에만 적용</span>
                   <p className="text-xs text-slate-500">다음 달부터 생성되는 급여명세서에 적용됩니다.</p>
                 </div>
               </label>
-              <label className="flex items-center">
+              <label
+                className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors"
+                onClick={() => {
+                  console.log('[PayrollSettings] Label clicked: apply to past')
+                }}
+              >
                 <input
                   type="radio"
                   name="applyScope"
                   checked={applyToPast}
-                  onChange={() => setApplyToPast(true)}
-                  className="mr-3 text-emerald-600 focus:ring-emerald-500"
+                  onChange={() => {
+                    console.log('[PayrollSettings] Radio onChange: Setting applyToPast to true')
+                    setApplyToPast(true)
+                  }}
+                  className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
                 />
                 <div>
                   <span className="text-sm font-medium text-slate-700">과거 급여명세서에도 적용</span>
