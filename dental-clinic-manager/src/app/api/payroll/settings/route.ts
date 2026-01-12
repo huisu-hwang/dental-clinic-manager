@@ -295,6 +295,13 @@ export async function POST(request: NextRequest) {
     // 과거 급여명세서에도 적용하는 경우 - 삭제 후 새로 생성
     let updatedStatementsCount = 0
     console.log('[API] applyToPast value:', applyToPast, 'type:', typeof applyToPast)
+    console.log('[API] Received attendance options from frontend:', {
+      deductLateMinutes,
+      deductEarlyLeaveMinutes,
+      includeOvertimePay,
+      deductLateMinutesType: typeof deductLateMinutes,
+      deductEarlyLeaveMinutesType: typeof deductEarlyLeaveMinutes
+    })
 
     if (applyToPast === true) {
       console.log('[API] applyToPast is true, deleting and recreating past statements for employee:', employeeId)
@@ -320,6 +327,7 @@ export async function POST(request: NextRequest) {
             const statementId = statement.id
 
             console.log(`[API] Deleting and recreating statement for ${year}-${month}`)
+            console.log(`[API] OLD values: netPay=${statement.net_pay}, totalDeduction=${statement.total_deduction}`)
 
             // 1. 기존 급여명세서 삭제
             const { error: deleteError } = await supabase
@@ -358,9 +366,10 @@ export async function POST(request: NextRequest) {
 
             // 4. 근태 차감 계산 (새로운 옵션 적용)
             const deductionOptions: AttendanceDeductionOptions = {
-              deductLateMinutes: deductLateMinutes !== false,
-              deductEarlyLeaveMinutes: deductEarlyLeaveMinutes !== false
+              deductLateMinutes: deductLateMinutes === true,
+              deductEarlyLeaveMinutes: deductEarlyLeaveMinutes === true
             }
+            console.log(`[API] Deduction options being used:`, deductionOptions)
             const attendanceDeduction = calculateAttendanceDeduction(
               basis,
               attendanceSummary,
@@ -413,7 +422,10 @@ export async function POST(request: NextRequest) {
             console.log(`[API] Recalculated payroll for ${year}-${month}:`, {
               totalPayment: calculationResult.totalPayment,
               totalDeduction: calculationResult.totalDeduction,
-              netPay: calculationResult.netPay
+              netPay: calculationResult.netPay,
+              attendanceDeductionAmount,
+              adjustedTargetAmount,
+              originalTargetAmount: targetAmount
             })
 
             // 6. 지급일 계산
