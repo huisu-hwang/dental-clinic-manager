@@ -111,8 +111,8 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
   }
 
   // 날짜 정규화
-  const normalizeDate = (date: any): string => {
-    if (!date) return ''
+  const normalizeDate = (date: any): string | undefined => {
+    if (!date) return undefined
 
     // Excel 날짜 시리얼 값 처리
     if (typeof date === 'number') {
@@ -122,6 +122,8 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
 
     // 문자열 날짜 처리
     const dateStr = date.toString().trim()
+    if (!dateStr) return undefined
+
     // YYYY-MM-DD 형식
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       return dateStr
@@ -141,12 +143,12 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
       return `${century}${dateStr.slice(0, 2)}-${dateStr.slice(2, 4)}-${dateStr.slice(4, 6)}`
     }
 
-    return dateStr
+    return undefined
   }
 
   // 성별 정규화
-  const normalizeGender = (gender: any): string => {
-    if (!gender) return ''
+  const normalizeGender = (gender: any): string | undefined => {
+    if (!gender) return undefined
 
     const genderStr = gender.toString().trim().toLowerCase()
 
@@ -159,7 +161,7 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
       return 'female'
     }
 
-    return ''
+    return undefined
   }
 
   // 파일 파싱
@@ -320,9 +322,14 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
                 value = normalizeDate(value)
               } else if (key === 'gender') {
                 value = normalizeGender(value)
+              } else if (typeof value === 'string') {
+                value = value.trim() || undefined
               }
 
-              patient[key] = value
+              // undefined가 아닌 값만 추가
+              if (value !== undefined && value !== '') {
+                patient[key] = value
+              }
             })
 
             // 필수 필드 검증
