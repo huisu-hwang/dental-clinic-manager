@@ -64,9 +64,8 @@ export default function PayrollSettings() {
   const [applyToPast, setApplyToPast] = useState(false)
   const applyToPastRef = useRef(applyToPast)
 
-  // applyToPast 상태 변경 추적 및 ref 동기화
+  // applyToPast ref 동기화
   useEffect(() => {
-    console.log('[PayrollSettings] applyToPast state changed to:', applyToPast)
     applyToPastRef.current = applyToPast
   }, [applyToPast])
 
@@ -250,9 +249,7 @@ export default function PayrollSettings() {
 
   // 설정 저장
   const handleSave = async () => {
-    // Use ref value to ensure we get the latest state
     const currentApplyToPast = applyToPastRef.current
-    console.log('[PayrollSettings] handleSave called, applyToPast state:', applyToPast, 'ref:', currentApplyToPast)
 
     if (!selectedEmployeeId || !user?.clinic_id) {
       setSaveMessage({ type: 'error', text: '직원을 선택해주세요.' })
@@ -288,8 +285,6 @@ export default function PayrollSettings() {
         updatedBy: user.id
       }
 
-      console.log('[PayrollSettings] Saving with applyToPast:', currentApplyToPast, 'requestBody:', requestBody)
-
       const response = await fetch('/api/payroll/settings', {
         method: 'POST',
         headers: {
@@ -299,7 +294,6 @@ export default function PayrollSettings() {
       })
 
       const result = await response.json()
-      console.log('[PayrollSettings] API response:', result)
 
       if (result.success) {
         let message = '설정이 저장되었습니다.'
@@ -313,8 +307,6 @@ export default function PayrollSettings() {
         setTimeout(() => {
           setSaveMessage(null)
         }, 3000)
-        // 저장 후 applyToPast 초기화 (다음 저장 시 다시 선택하도록)
-        setApplyToPast(false)
         // 저장된 설정 업데이트
         setSavedSettings(prev => ({
           ...prev,
@@ -744,25 +736,14 @@ export default function PayrollSettings() {
 
           {/* 적용 범위 선택 */}
           <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-            <h4 className="font-medium text-slate-800 mb-3">
-              적용 범위
-              <span className="ml-2 text-xs text-slate-400">(debug: applyToPast={String(applyToPast)})</span>
-            </h4>
+            <h4 className="font-medium text-slate-800 mb-3">적용 범위</h4>
             <div className="space-y-3">
-              <label
-                className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors"
-                onClick={() => {
-                  console.log('[PayrollSettings] Label clicked: future only')
-                }}
-              >
+              <label className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors">
                 <input
                   type="radio"
                   name="applyScope"
                   checked={!applyToPast}
-                  onChange={() => {
-                    console.log('[PayrollSettings] Radio onChange: Setting applyToPast to false')
-                    setApplyToPast(false)
-                  }}
+                  onChange={() => setApplyToPast(false)}
                   className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
                 />
                 <div>
@@ -770,20 +751,12 @@ export default function PayrollSettings() {
                   <p className="text-xs text-slate-500">다음 달부터 생성되는 급여명세서에 적용됩니다.</p>
                 </div>
               </label>
-              <label
-                className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors"
-                onClick={() => {
-                  console.log('[PayrollSettings] Label clicked: apply to past')
-                }}
-              >
+              <label className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors">
                 <input
                   type="radio"
                   name="applyScope"
                   checked={applyToPast}
-                  onChange={() => {
-                    console.log('[PayrollSettings] Radio onChange: Setting applyToPast to true')
-                    setApplyToPast(true)
-                  }}
+                  onChange={() => setApplyToPast(true)}
                   className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
                 />
                 <div>
