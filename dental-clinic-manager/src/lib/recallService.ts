@@ -15,7 +15,8 @@ import type {
   PatientRecallStatus,
   RecallPatientFilters,
   RecallStats,
-  ContactType
+  ContactType,
+  PaginatedResponse
 } from '@/types/recall'
 
 // ========================================
@@ -262,42 +263,92 @@ export const recallCampaignService = {
 // ========================================
 
 export const recallPatientService = {
-  // 환자 목록 조회
-  async getPatients(filters?: RecallPatientFilters): Promise<{ success: boolean; data?: RecallPatient[]; error?: string }> {
+  // 환자 목록 조회 (페이지네이션 지원)
+  async getPatients(filters?: RecallPatientFilters): Promise<{
+    success: boolean;
+    data?: PaginatedResponse<RecallPatient>;
+    error?: string
+  }> {
     const supabase = await ensureConnection()
     if (!supabase) return { success: false, error: 'Database connection not available' }
 
     const clinicId = await getCurrentClinicId()
     if (!clinicId) return { success: false, error: 'Clinic ID not found' }
 
+    const page = filters?.page || 1
+    const pageSize = filters?.pageSize || 20
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
     try {
-      let query = supabase
+      // 먼저 총 개수 조회
+      let countQuery = supabase
+        .from('recall_patients')
+        .select('id', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId)
+
+      // 필터 적용 (count 쿼리)
+      if (filters?.campaign_id) {
+        countQuery = countQuery.eq('campaign_id', filters.campaign_id)
+      }
+      if (filters?.status && filters.status !== 'all') {
+        countQuery = countQuery.eq('status', filters.status)
+      }
+      if (filters?.search) {
+        countQuery = countQuery.or(`patient_name.ilike.%${filters.search}%,phone_number.ilike.%${filters.search}%,chart_number.ilike.%${filters.search}%`)
+      }
+      if (filters?.dateFrom) {
+        countQuery = countQuery.gte('created_at', filters.dateFrom)
+      }
+      if (filters?.dateTo) {
+        countQuery = countQuery.lte('created_at', filters.dateTo)
+      }
+
+      const { count, error: countError } = await countQuery
+      if (countError) throw countError
+
+      const total = count || 0
+      const totalPages = Math.ceil(total / pageSize)
+
+      // 데이터 조회 (페이지네이션)
+      let dataQuery = supabase
         .from('recall_patients')
         .select('*, campaign:recall_campaigns(*)')
         .eq('clinic_id', clinicId)
         .order('created_at', { ascending: false })
+        .range(from, to)
 
-      // 필터 적용
+      // 필터 적용 (data 쿼리)
       if (filters?.campaign_id) {
-        query = query.eq('campaign_id', filters.campaign_id)
+        dataQuery = dataQuery.eq('campaign_id', filters.campaign_id)
       }
       if (filters?.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status)
+        dataQuery = dataQuery.eq('status', filters.status)
       }
       if (filters?.search) {
-        query = query.or(`patient_name.ilike.%${filters.search}%,phone_number.ilike.%${filters.search}%,chart_number.ilike.%${filters.search}%`)
+        dataQuery = dataQuery.or(`patient_name.ilike.%${filters.search}%,phone_number.ilike.%${filters.search}%,chart_number.ilike.%${filters.search}%`)
       }
       if (filters?.dateFrom) {
-        query = query.gte('created_at', filters.dateFrom)
+        dataQuery = dataQuery.gte('created_at', filters.dateFrom)
       }
       if (filters?.dateTo) {
-        query = query.lte('created_at', filters.dateTo)
+        dataQuery = dataQuery.lte('created_at', filters.dateTo)
       }
 
-      const { data, error } = await query
+      const { data, error } = await dataQuery
 
       if (error) throw error
-      return { success: true, data: data as RecallPatient[] }
+
+      return {
+        success: true,
+        data: {
+          data: data as RecallPatient[],
+          total,
+          page,
+          pageSize,
+          totalPages
+        }
+      }
     } catch (error) {
       return { success: false, error: extractErrorMessage(error) }
     }
@@ -432,6 +483,7 @@ export const recallPatientService = {
     try {
       const updates: Partial<RecallPatient> = {
         status,
+        recall_datetime: new Date().toISOString(), // 상태 변경 시 리콜 일시 기록
         ...appointmentInfo
       }
 
@@ -467,7 +519,10 @@ export const recallPatientService = {
     try {
       const { error } = await supabase
         .from('recall_patients')
-        .update({ status })
+        .update({
+          status,
+          recall_datetime: new Date().toISOString() // 상태 변경 시 리콜 일시 기록
+        })
         .in('id', ids)
 
       if (error) throw error

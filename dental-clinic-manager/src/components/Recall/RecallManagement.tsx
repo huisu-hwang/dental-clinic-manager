@@ -54,6 +54,12 @@ export default function RecallManagement() {
   const [stats, setStats] = useState<RecallStatsType | null>(null)
   const [filters, setFilters] = useState<RecallPatientFilters>({})
 
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalPatients, setTotalPatients] = useState(0)
+  const pageSize = 20
+
   // 선택 상태
   const [selectedPatients, setSelectedPatients] = useState<string[]>([])
 
@@ -94,18 +100,23 @@ export default function RecallManagement() {
     }
   }, [selectedCampaignId])
 
-  const loadPatients = useCallback(async () => {
+  const loadPatients = useCallback(async (page: number = currentPage) => {
     setIsLoading(true)
     const filterWithCampaign = {
       ...filters,
-      campaign_id: selectedCampaignId || undefined
+      campaign_id: selectedCampaignId || undefined,
+      page,
+      pageSize
     }
     const result = await recallService.patients.getPatients(filterWithCampaign)
     if (result.success && result.data) {
-      setPatients(result.data)
+      setPatients(result.data.data)
+      setTotalPages(result.data.totalPages)
+      setTotalPatients(result.data.total)
+      setCurrentPage(result.data.page)
     }
     setIsLoading(false)
-  }, [filters, selectedCampaignId])
+  }, [filters, selectedCampaignId, currentPage, pageSize])
 
   const loadStats = useCallback(async () => {
     const result = await recallService.patients.getStats(selectedCampaignId || undefined)
@@ -121,10 +132,17 @@ export default function RecallManagement() {
 
   useEffect(() => {
     if (selectedCampaignId) {
-      loadPatients()
+      setCurrentPage(1) // 필터 변경 시 첫 페이지로
+      loadPatients(1)
       loadStats()
     }
   }, [selectedCampaignId, filters])
+
+  // 페이지 변경
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    loadPatients(page)
+  }
 
   // 캠페인 생성
   const handleCreateCampaign = async (name: string) => {
@@ -499,6 +517,10 @@ export default function RecallManagement() {
                 filters={filters}
                 onFiltersChange={setFilters}
                 isLoading={isLoading}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalPatients={totalPatients}
+                onPageChange={handlePageChange}
               />
             </div>
           )}

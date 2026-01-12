@@ -89,6 +89,7 @@ export interface RecallPatient {
 
   // 리콜 상태
   status: PatientRecallStatus
+  recall_datetime?: string   // 리콜 처리 일시 (상태 변경 시 기록)
 
   // 예약 정보
   appointment_date?: string
@@ -390,6 +391,17 @@ export interface RecallPatientFilters {
   search?: string
   dateFrom?: string
   dateTo?: string
+  page?: number
+  pageSize?: number
+}
+
+// 페이지네이션 응답
+export interface PaginatedResponse<T> {
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
 // ========================================

@@ -12,6 +12,8 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Calendar,
   PhoneOff,
   PhoneMissed,
@@ -44,6 +46,11 @@ interface PatientListProps {
   filters: RecallPatientFilters
   onFiltersChange: (filters: RecallPatientFilters) => void
   isLoading?: boolean
+  // 페이지네이션
+  currentPage?: number
+  totalPages?: number
+  totalPatients?: number
+  onPageChange?: (page: number) => void
 }
 
 // 상태별 아이콘
@@ -68,7 +75,11 @@ export default function PatientList({
   onViewHistory,
   filters,
   onFiltersChange,
-  isLoading
+  isLoading,
+  currentPage = 1,
+  totalPages = 1,
+  totalPatients = 0,
+  onPageChange
 }: PatientListProps) {
   const [sortField, setSortField] = useState<'patient_name' | 'status' | 'last_contact_date'>('patient_name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
@@ -364,8 +375,19 @@ export default function PatientList({
                         </span>
                       )}
                     </div>
+                    {/* 리콜 일시 표시 */}
+                    {patient.recall_datetime && patient.status !== 'pending' && (
+                      <p className="text-xs text-indigo-600 mt-1">
+                        {new Date(patient.recall_datetime).toLocaleString('ko-KR', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    )}
                     {patient.contact_count > 0 && (
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 mt-0.5">
                         연락 {patient.contact_count}회
                       </p>
                     )}
@@ -437,14 +459,65 @@ export default function PatientList({
         </table>
       </div>
 
-      {/* 페이지네이션 (추후 구현) */}
-      {patients.length > 0 && (
-        <div className="p-4 border-t border-gray-200 flex items-center justify-between">
-          <span className="text-sm text-gray-600">
-            총 {patients.length}명
-          </span>
-        </div>
-      )}
+      {/* 페이지네이션 */}
+      <div className="p-4 border-t border-gray-200 flex items-center justify-between">
+        <span className="text-sm text-gray-600">
+          총 {totalPatients}명 중 {patients.length}명 표시
+        </span>
+
+        {totalPages > 1 && onPageChange && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-1">
+              {/* 페이지 번호들 */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  // 현재 페이지 주변 2개씩, 첫/끝 페이지 표시
+                  return page === 1 ||
+                    page === totalPages ||
+                    Math.abs(page - currentPage) <= 2
+                })
+                .map((page, index, arr) => {
+                  // 생략 부호 표시
+                  const showEllipsis = index > 0 && page - arr[index - 1] > 1
+
+                  return (
+                    <span key={page} className="flex items-center">
+                      {showEllipsis && (
+                        <span className="px-2 text-gray-400">...</span>
+                      )}
+                      <button
+                        onClick={() => onPageChange(page)}
+                        className={`min-w-[36px] h-9 px-3 rounded-lg text-sm font-medium transition-colors ${
+                          page === currentPage
+                            ? 'bg-indigo-600 text-white'
+                            : 'border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </span>
+                  )
+                })}
+            </div>
+
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
