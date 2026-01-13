@@ -53,6 +53,10 @@ interface SalarySetting {
   familyCount: number
   childCount: number
   otherDeductions: number
+  // 근태 차감/수당 옵션
+  deductLateMinutes: boolean
+  deductEarlyLeaveMinutes: boolean
+  includeOvertimePay: boolean
 }
 
 // 2025년 12월부터 시작하는 연월 옵션 생성
@@ -149,7 +153,11 @@ export default function PayrollForm() {
               employmentInsurance: item.employment_insurance || 0,
               familyCount: item.family_count || 1,
               childCount: item.child_count || 0,
-              otherDeductions: item.other_deductions || 0
+              otherDeductions: item.other_deductions || 0,
+              // 근태 차감/수당 옵션 (기본값: true)
+              deductLateMinutes: item.deduct_late_minutes !== false,
+              deductEarlyLeaveMinutes: item.deduct_early_leave_minutes !== false,
+              includeOvertimePay: item.include_overtime_pay !== false
             }
           })
           setSalarySettings(settings)
@@ -263,7 +271,20 @@ export default function PayrollForm() {
             monthlyWorkHours: basis.monthlyWorkHours
           })
 
-          currentAttendanceDeduction = calculateAttendanceDeduction(basis, currentAttendanceSummary)
+          // 설정에 따른 차감 옵션 적용
+          const deductionOptions = {
+            deductLateMinutes: settings.deductLateMinutes,
+            deductEarlyLeaveMinutes: settings.deductEarlyLeaveMinutes
+          }
+          console.log('[PayrollForm] 근태 차감 옵션:', deductionOptions)
+
+          currentAttendanceDeduction = calculateAttendanceDeduction(
+            basis,
+            currentAttendanceSummary,
+            undefined, // allowedAnnualLeave - 기본값 사용
+            undefined, // weeksWithAbsence - 자동 계산
+            deductionOptions
+          )
           setAttendanceDeduction(currentAttendanceDeduction)
 
           console.log('[PayrollForm] 근태 데이터 로드됨:', {
