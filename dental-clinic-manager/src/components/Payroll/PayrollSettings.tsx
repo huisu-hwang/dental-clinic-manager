@@ -64,8 +64,9 @@ export default function PayrollSettings() {
   const [applyToPast, setApplyToPast] = useState(false)
   const applyToPastRef = useRef(applyToPast)
 
-  // applyToPast ref 동기화
+  // applyToPast ref 동기화 및 상태 변경 추적
   useEffect(() => {
+    console.log('[PayrollSettings] applyToPast state changed to:', applyToPast)
     applyToPastRef.current = applyToPast
   }, [applyToPast])
 
@@ -757,14 +758,20 @@ export default function PayrollSettings() {
 
           {/* 적용 범위 선택 */}
           <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-            <h4 className="font-medium text-slate-800 mb-3">적용 범위</h4>
+            <h4 className="font-medium text-slate-800 mb-3">
+              적용 범위
+              <span className="ml-2 text-xs text-slate-400">(현재: {applyToPast ? '과거 포함' : '앞으로만'})</span>
+            </h4>
             <div className="space-y-3">
               <label className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors">
                 <input
                   type="radio"
                   name="applyScope"
                   checked={!applyToPast}
-                  onChange={() => setApplyToPast(false)}
+                  onChange={() => {
+                    console.log('[PayrollSettings] Radio: Setting applyToPast to false')
+                    setApplyToPast(false)
+                  }}
                   className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
                 />
                 <div>
@@ -777,7 +784,10 @@ export default function PayrollSettings() {
                   type="radio"
                   name="applyScope"
                   checked={applyToPast}
-                  onChange={() => setApplyToPast(true)}
+                  onChange={() => {
+                    console.log('[PayrollSettings] Radio: Setting applyToPast to true')
+                    setApplyToPast(true)
+                  }}
                   className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
                 />
                 <div>
