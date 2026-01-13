@@ -286,6 +286,7 @@ export default function PatientList({
                   )}
                 </button>
               </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">리콜 시간</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">예약 정보</th>
               <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">액션</th>
             </tr>
@@ -293,7 +294,7 @@ export default function PatientList({
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                   <div className="flex flex-col items-center gap-2">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                     <span>로딩 중...</span>
@@ -302,7 +303,7 @@ export default function PatientList({
               </tr>
             ) : sortedPatients.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                   <div className="flex flex-col items-center gap-2">
                     <User className="w-12 h-12 text-gray-300" />
                     <span>환자 목록이 없습니다.</span>
@@ -375,21 +376,35 @@ export default function PatientList({
                         </span>
                       )}
                     </div>
-                    {/* 리콜 일시 표시 */}
-                    {patient.recall_datetime && patient.status !== 'pending' && (
-                      <p className="text-xs text-indigo-600 mt-1">
-                        {new Date(patient.recall_datetime).toLocaleString('ko-KR', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    )}
                     {patient.contact_count > 0 && (
                       <p className="text-xs text-gray-400 mt-0.5">
                         연락 {patient.contact_count}회
                       </p>
+                    )}
+                  </td>
+
+                  {/* 리콜 시간 */}
+                  <td className="px-4 py-3">
+                    {patient.recall_datetime ? (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-indigo-500" />
+                        <div>
+                          <p className="text-sm text-gray-900">
+                            {new Date(patient.recall_datetime).toLocaleDateString('ko-KR', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </p>
+                          <p className="text-xs text-indigo-600">
+                            {new Date(patient.recall_datetime).toLocaleTimeString('ko-KR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
                     )}
                   </td>
 

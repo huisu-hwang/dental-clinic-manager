@@ -116,9 +116,15 @@ export async function POST(request: NextRequest) {
         }
       })
     } else {
+      // IP 인증 오류 체크 - 알리고 관리자 페이지에서 IP 등록 필요
+      let errorMessage = aligoResult.message || '문자 발송에 실패했습니다.'
+      if (errorMessage.includes('ip') || errorMessage.includes('IP') || errorMessage.includes('인증오류')) {
+        errorMessage = 'IP 인증 오류: 알리고 관리자 페이지(smartsms.aligo.in)에서 서버 IP를 등록해주세요.'
+      }
+
       return NextResponse.json({
         success: false,
-        error: aligoResult.message || '문자 발송에 실패했습니다.',
+        error: errorMessage,
         data: aligoResult
       })
     }

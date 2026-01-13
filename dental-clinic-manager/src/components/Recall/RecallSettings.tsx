@@ -254,6 +254,28 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
             </p>
           </div>
 
+          {/* IP 등록 안내 */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <h4 className="font-medium text-amber-900 mb-2 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              중요: 서버 IP 등록 필요
+            </h4>
+            <p className="text-sm text-amber-700 mb-2">
+              알리고 API를 사용하려면 서버 IP 주소를 알리고 관리자 페이지에 등록해야 합니다.
+              IP가 등록되지 않으면 &quot;인증오류입니다- ip&quot; 오류가 발생합니다.
+            </p>
+            <ol className="text-sm text-amber-700 list-decimal list-inside space-y-1">
+              <li>
+                <a href="https://smartsms.aligo.in" target="_blank" rel="noopener noreferrer" className="underline">
+                  알리고 관리자 페이지
+                </a>
+                에 로그인
+              </li>
+              <li>SMS API 관리 &gt; 발신 IP 관리 메뉴로 이동</li>
+              <li>이 서버의 공인 IP 주소를 추가</li>
+            </ol>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

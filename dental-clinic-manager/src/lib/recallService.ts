@@ -744,18 +744,23 @@ export const recallPatientService = {
         .eq('status', 'invalid_number')
 
       const total = totalCount || 0
+      const pending = pendingCount || 0
       const appointment = appointmentCount || 0
       const contacted = (smsSentCount || 0) + appointment + (noAnswerCount || 0)
       const rejected = (callRejectedCount || 0) + (visitRefusedCount || 0)
 
+      // 총처리 = 전체 - 대기중 (상태 변경된 환자만)
+      const processed = total - pending
+
       const stats: RecallStats = {
         total_patients: total,
-        pending_count: pendingCount || 0,
+        pending_count: pending,
         contacted_count: contacted,
         appointment_count: appointment,
         rejected_count: rejected,
         invalid_count: invalidCount || 0,
-        success_rate: total > 0 ? Math.round((appointment / total) * 100) : 0
+        // 성공률 = 예약성공 / 총처리
+        success_rate: processed > 0 ? Math.round((appointment / processed) * 100) : 0
       }
 
       return { success: true, data: stats }
