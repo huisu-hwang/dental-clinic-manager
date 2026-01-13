@@ -42,6 +42,8 @@ interface SalarySetting {
   deductLateMinutes: boolean
   deductEarlyLeaveMinutes: boolean
   includeOvertimePay: boolean
+  // 적용 범위 옵션
+  applyToPast: boolean
 }
 
 export default function PayrollSettings() {
@@ -119,7 +121,9 @@ export default function PayrollSettings() {
             // 근태 차감/수당 옵션 (기본값: true)
             deductLateMinutes: item.deduct_late_minutes !== false,
             deductEarlyLeaveMinutes: item.deduct_early_leave_minutes !== false,
-            includeOvertimePay: item.include_overtime_pay !== false
+            includeOvertimePay: item.include_overtime_pay !== false,
+            // 적용 범위 옵션 (기본값: false)
+            applyToPast: item.apply_to_past === true
           }
         })
         setSavedSettings(settings)
@@ -151,7 +155,8 @@ export default function PayrollSettings() {
           console.log('[PayrollSettings] Loading saved settings for employee:', selectedEmployeeId, {
             deductLateMinutes: settings.deductLateMinutes,
             deductEarlyLeaveMinutes: settings.deductEarlyLeaveMinutes,
-            includeOvertimePay: settings.includeOvertimePay
+            includeOvertimePay: settings.includeOvertimePay,
+            applyToPast: settings.applyToPast
           })
           setFormState(prev => ({
             ...prev,
@@ -173,6 +178,8 @@ export default function PayrollSettings() {
           setDeductLateMinutes(settings.deductLateMinutes)
           setDeductEarlyLeaveMinutes(settings.deductEarlyLeaveMinutes)
           setIncludeOvertimePay(settings.includeOvertimePay)
+          // 적용 범위 옵션 설정
+          setApplyToPast(settings.applyToPast)
         } else {
           // 2. 계약서에서 정보 추출
           const employee = employees.find(e => e.id === selectedEmployeeId)
@@ -211,6 +218,7 @@ export default function PayrollSettings() {
           setDeductLateMinutes(true)
           setDeductEarlyLeaveMinutes(true)
           setIncludeOvertimePay(true)
+          setApplyToPast(false)
         }
       } catch (error) {
         console.error('Error loading employee settings:', error)
@@ -342,7 +350,9 @@ export default function PayrollSettings() {
             // 근태 차감/수당 옵션
             deductLateMinutes,
             deductEarlyLeaveMinutes,
-            includeOvertimePay
+            includeOvertimePay,
+            // 적용 범위 옵션
+            applyToPast: currentApplyToPast
           }
         }))
       } else {

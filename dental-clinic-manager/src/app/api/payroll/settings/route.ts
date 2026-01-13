@@ -249,6 +249,8 @@ export async function POST(request: NextRequest) {
       deduct_late_minutes: deductLateMinutes !== undefined ? deductLateMinutes : true,
       deduct_early_leave_minutes: deductEarlyLeaveMinutes !== undefined ? deductEarlyLeaveMinutes : true,
       include_overtime_pay: includeOvertimePay !== undefined ? includeOvertimePay : true,
+      // 적용 범위 옵션
+      apply_to_past: applyToPast === true,
       updated_at: new Date().toISOString(),
       updated_by: updatedBy
     }
