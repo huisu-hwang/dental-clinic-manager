@@ -6,15 +6,26 @@ import {
   TrendingUp,
   Users,
   Phone,
-  MessageSquare,
   Calendar,
   CheckCircle,
   XCircle,
   Clock,
-  Percent
+  Percent,
+  Activity,
+  PhoneOff,
+  UserX,
+  AlertCircle
 } from 'lucide-react'
-import type { RecallStats as RecallStatsType, RecallContactLog } from '@/types/recall'
+import type { RecallStats as RecallStatsType, RecallPatient, PatientRecallStatus } from '@/types/recall'
 import { recallService } from '@/lib/recallService'
+import { RECALL_STATUS_LABELS, RECALL_STATUS_COLORS } from '@/types/recall'
+
+interface TodayActivityData {
+  totalChanges: number
+  appointmentsMade: number
+  statusChanges: { status: PatientRecallStatus; count: number }[]
+  recentPatients: RecallPatient[]
+}
 
 interface RecallStatsProps {
   campaignId?: string
@@ -23,12 +34,12 @@ interface RecallStatsProps {
 
 export default function RecallStats({ campaignId, campaignName }: RecallStatsProps) {
   const [stats, setStats] = useState<RecallStatsType | null>(null)
-  const [todayLogs, setTodayLogs] = useState<RecallContactLog[]>([])
+  const [todayActivity, setTodayActivity] = useState<TodayActivityData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     loadStats()
-    loadTodayLogs()
+    loadTodayActivity()
   }, [campaignId])
 
   const loadStats = async () => {
@@ -40,10 +51,28 @@ export default function RecallStats({ campaignId, campaignName }: RecallStatsPro
     setIsLoading(false)
   }
 
-  const loadTodayLogs = async () => {
-    const result = await recallService.contactLogs.getTodayContactLogs()
+  const loadTodayActivity = async () => {
+    const result = await recallService.patients.getTodayActivity(campaignId)
     if (result.success && result.data) {
-      setTodayLogs(result.data)
+      setTodayActivity(result.data)
+    }
+  }
+
+  // 상태별 아이콘 매핑
+  const getStatusIcon = (status: PatientRecallStatus) => {
+    switch (status) {
+      case 'appointment_made':
+        return <Calendar className="w-4 h-4" />
+      case 'no_answer':
+        return <PhoneOff className="w-4 h-4" />
+      case 'call_rejected':
+        return <Phone className="w-4 h-4" />
+      case 'visit_refused':
+        return <UserX className="w-4 h-4" />
+      case 'invalid_number':
+        return <AlertCircle className="w-4 h-4" />
+      default:
+        return <Activity className="w-4 h-4" />
     }
   }
 
@@ -74,11 +103,6 @@ export default function RecallStats({ campaignId, campaignName }: RecallStatsPro
   ].filter(d => d.value > 0)
 
   const total = chartData.reduce((sum, d) => sum + d.value, 0)
-
-  // 오늘 활동 통계
-  const todayCalls = todayLogs.filter(l => l.contact_type === 'call').length
-  const todaySms = todayLogs.filter(l => l.contact_type === 'sms').length
-  const todayAppointments = todayLogs.filter(l => l.result_status === 'appointment_made').length
 
   return (
     <div className="space-y-6">
@@ -197,48 +221,70 @@ export default function RecallStats({ campaignId, campaignName }: RecallStatsPro
             오늘 활동
           </h3>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <Phone className="w-6 h-6 text-green-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-green-900">{todayCalls}</p>
-              <p className="text-sm text-green-600">전화</p>
-            </div>
+          {todayActivity ? (
+            <>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="text-center p-4 bg-indigo-50 rounded-lg">
+                  <Activity className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-indigo-900">{todayActivity.totalChanges}</p>
+                  <p className="text-sm text-indigo-600">총 처리</p>
+                </div>
 
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <MessageSquare className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-blue-900">{todaySms}</p>
-              <p className="text-sm text-blue-600">문자</p>
-            </div>
-
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <Calendar className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-purple-900">{todayAppointments}</p>
-              <p className="text-sm text-purple-600">예약</p>
-            </div>
-          </div>
-
-          {/* 최근 활동 목록 */}
-          {todayLogs.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-sm font-medium text-gray-700 mb-2">최근 연락</p>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {todayLogs.slice(0, 5).map(log => (
-                  <div key={log.id} className="flex items-center gap-2 text-sm">
-                    {log.contact_type === 'call' ? (
-                      <Phone className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <MessageSquare className="w-4 h-4 text-blue-500" />
-                    )}
-                    <span className="font-medium">{log.patient?.patient_name}</span>
-                    <span className="text-gray-400 text-xs">
-                      {new Date(log.contact_date).toLocaleTimeString('ko-KR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </div>
-                ))}
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <Calendar className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-green-900">{todayActivity.appointmentsMade}</p>
+                  <p className="text-sm text-green-600">예약 성공</p>
+                </div>
               </div>
+
+              {/* 상태별 통계 */}
+              {todayActivity.statusChanges.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">상태별 처리 현황</p>
+                  <div className="flex flex-wrap gap-2">
+                    {todayActivity.statusChanges.map(({ status, count }) => (
+                      <div
+                        key={status}
+                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium ${RECALL_STATUS_COLORS[status]}`}
+                      >
+                        {getStatusIcon(status)}
+                        {RECALL_STATUS_LABELS[status]}: {count}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 최근 처리 환자 목록 */}
+              {todayActivity.recentPatients.length > 0 && (
+                <div className="pt-4 border-t border-gray-100">
+                  <p className="text-sm font-medium text-gray-700 mb-2">최근 처리 환자</p>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {todayActivity.recentPatients.slice(0, 5).map(patient => (
+                      <div key={patient.id} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(patient.status)}
+                          <span className="font-medium">{patient.patient_name}</span>
+                          <span className={`px-2 py-0.5 rounded text-xs ${RECALL_STATUS_COLORS[patient.status]}`}>
+                            {RECALL_STATUS_LABELS[patient.status]}
+                          </span>
+                        </div>
+                        <span className="text-gray-400 text-xs">
+                          {patient.recall_datetime && new Date(patient.recall_datetime).toLocaleTimeString('ko-KR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Activity className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <p>오늘 활동 내역이 없습니다.</p>
             </div>
           )}
         </div>

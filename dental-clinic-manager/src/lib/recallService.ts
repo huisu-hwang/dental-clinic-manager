@@ -563,7 +563,118 @@ export const recallPatientService = {
     }
   },
 
-  // 환자 통계 조회
+  // 오늘 활동 통계 조회 (recall_datetime 기반)
+  async getTodayActivity(campaignId?: string): Promise<{
+    success: boolean;
+    data?: {
+      totalChanges: number;
+      appointmentsMade: number;
+      statusChanges: { status: PatientRecallStatus; count: number }[];
+      recentPatients: RecallPatient[];
+    };
+    error?: string
+  }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, error: 'Clinic ID not found' }
+
+    const today = new Date().toISOString().split('T')[0]
+
+    try {
+      const baseFilter = campaignId
+        ? { clinic_id: clinicId, campaign_id: campaignId }
+        : { clinic_id: clinicId }
+
+      // 오늘 상태 변경된 총 환자 수
+      const { count: totalChanges } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .gte('recall_datetime', `${today}T00:00:00`)
+        .lte('recall_datetime', `${today}T23:59:59`)
+
+      // 오늘 예약 완료된 환자 수
+      const { count: appointmentsMade } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'appointment_made')
+        .gte('recall_datetime', `${today}T00:00:00`)
+        .lte('recall_datetime', `${today}T23:59:59`)
+
+      // 오늘 부재중 수
+      const { count: noAnswerCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'no_answer')
+        .gte('recall_datetime', `${today}T00:00:00`)
+        .lte('recall_datetime', `${today}T23:59:59`)
+
+      // 오늘 통화거부 수
+      const { count: callRejectedCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'call_rejected')
+        .gte('recall_datetime', `${today}T00:00:00`)
+        .lte('recall_datetime', `${today}T23:59:59`)
+
+      // 오늘 내원거부 수
+      const { count: visitRefusedCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'visit_refused')
+        .gte('recall_datetime', `${today}T00:00:00`)
+        .lte('recall_datetime', `${today}T23:59:59`)
+
+      // 오늘 없는번호 수
+      const { count: invalidNumberCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'invalid_number')
+        .gte('recall_datetime', `${today}T00:00:00`)
+        .lte('recall_datetime', `${today}T23:59:59`)
+
+      // 최근 상태 변경된 환자 목록 (최대 10명)
+      let recentQuery = supabase
+        .from('recall_patients')
+        .select('*')
+        .match(baseFilter)
+        .gte('recall_datetime', `${today}T00:00:00`)
+        .lte('recall_datetime', `${today}T23:59:59`)
+        .order('recall_datetime', { ascending: false })
+        .limit(10)
+
+      const { data: recentPatients } = await recentQuery
+
+      const statusChanges = [
+        { status: 'appointment_made' as PatientRecallStatus, count: appointmentsMade || 0 },
+        { status: 'no_answer' as PatientRecallStatus, count: noAnswerCount || 0 },
+        { status: 'call_rejected' as PatientRecallStatus, count: callRejectedCount || 0 },
+        { status: 'visit_refused' as PatientRecallStatus, count: visitRefusedCount || 0 },
+        { status: 'invalid_number' as PatientRecallStatus, count: invalidNumberCount || 0 }
+      ].filter(s => s.count > 0)
+
+      return {
+        success: true,
+        data: {
+          totalChanges: totalChanges || 0,
+          appointmentsMade: appointmentsMade || 0,
+          statusChanges,
+          recentPatients: (recentPatients as RecallPatient[]) || []
+        }
+      }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 환자 통계 조회 (정확한 count 쿼리 사용)
   async getStats(campaignId?: string): Promise<{ success: boolean; data?: RecallStats; error?: string }> {
     const supabase = await ensureConnection()
     if (!supabase) return { success: false, error: 'Database connection not available' }
@@ -572,30 +683,79 @@ export const recallPatientService = {
     if (!clinicId) return { success: false, error: 'Clinic ID not found' }
 
     try {
-      let query = supabase
+      // 각 상태별로 count 쿼리 실행
+      const baseFilter = campaignId
+        ? { clinic_id: clinicId, campaign_id: campaignId }
+        : { clinic_id: clinicId }
+
+      // 전체 환자 수
+      const { count: totalCount } = await supabase
         .from('recall_patients')
-        .select('status')
-        .eq('clinic_id', clinicId)
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
 
-      if (campaignId) {
-        query = query.eq('campaign_id', campaignId)
-      }
+      // 대기중
+      const { count: pendingCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'pending')
 
-      const { data, error } = await query
+      // 문자발송
+      const { count: smsSentCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'sms_sent')
 
-      if (error) throw error
+      // 예약완료
+      const { count: appointmentCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'appointment_made')
 
-      const patients = (data || []) as { status: string }[]
+      // 부재중
+      const { count: noAnswerCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'no_answer')
+
+      // 통화거부
+      const { count: callRejectedCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'call_rejected')
+
+      // 내원거부
+      const { count: visitRefusedCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'visit_refused')
+
+      // 없는번호
+      const { count: invalidCount } = await supabase
+        .from('recall_patients')
+        .select('*', { count: 'exact', head: true })
+        .match(baseFilter)
+        .eq('status', 'invalid_number')
+
+      const total = totalCount || 0
+      const appointment = appointmentCount || 0
+      const contacted = (smsSentCount || 0) + appointment + (noAnswerCount || 0)
+      const rejected = (callRejectedCount || 0) + (visitRefusedCount || 0)
+
       const stats: RecallStats = {
-        total_patients: patients.length,
-        pending_count: patients.filter(p => p.status === 'pending').length,
-        contacted_count: patients.filter(p => ['sms_sent', 'appointment_made', 'no_answer'].includes(p.status)).length,
-        appointment_count: patients.filter(p => p.status === 'appointment_made').length,
-        rejected_count: patients.filter(p => ['call_rejected', 'visit_refused'].includes(p.status)).length,
-        invalid_count: patients.filter(p => p.status === 'invalid_number').length,
-        success_rate: patients.length > 0
-          ? Math.round((patients.filter(p => p.status === 'appointment_made').length / patients.length) * 100)
-          : 0
+        total_patients: total,
+        pending_count: pendingCount || 0,
+        contacted_count: contacted,
+        appointment_count: appointment,
+        rejected_count: rejected,
+        invalid_count: invalidCount || 0,
+        success_rate: total > 0 ? Math.round((appointment / total) * 100) : 0
       }
 
       return { success: true, data: stats }
