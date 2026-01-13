@@ -147,6 +147,11 @@ export default function PayrollSettings() {
         // 1. 저장된 설정이 있으면 사용
         if (savedSettings[selectedEmployeeId]) {
           const settings = savedSettings[selectedEmployeeId]
+          console.log('[PayrollSettings] Loading saved settings for employee:', selectedEmployeeId, {
+            deductLateMinutes: settings.deductLateMinutes,
+            deductEarlyLeaveMinutes: settings.deductEarlyLeaveMinutes,
+            includeOvertimePay: settings.includeOvertimePay
+          })
           setFormState(prev => ({
             ...prev,
             salaryType: settings.salaryType,
@@ -250,6 +255,14 @@ export default function PayrollSettings() {
   // 설정 저장
   const handleSave = async () => {
     const currentApplyToPast = applyToPastRef.current
+
+    // Debug: 현재 근태 옵션 상태 확인
+    console.log('[PayrollSettings] Current attendance option states:', {
+      deductLateMinutes,
+      deductEarlyLeaveMinutes,
+      includeOvertimePay,
+      applyToPast: currentApplyToPast
+    })
 
     if (!selectedEmployeeId || !user?.clinic_id) {
       setSaveMessage({ type: 'error', text: '직원을 선택해주세요.' })
@@ -677,7 +690,11 @@ export default function PayrollSettings() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setDeductLateMinutes(!deductLateMinutes)}
+                  onClick={() => {
+                    const newValue = !deductLateMinutes
+                    console.log('[PayrollSettings] Toggle deductLateMinutes:', deductLateMinutes, '->', newValue)
+                    setDeductLateMinutes(newValue)
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     deductLateMinutes ? 'bg-emerald-600' : 'bg-slate-300'
                   }`}
@@ -698,7 +715,11 @@ export default function PayrollSettings() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setDeductEarlyLeaveMinutes(!deductEarlyLeaveMinutes)}
+                  onClick={() => {
+                    const newValue = !deductEarlyLeaveMinutes
+                    console.log('[PayrollSettings] Toggle deductEarlyLeaveMinutes:', deductEarlyLeaveMinutes, '->', newValue)
+                    setDeductEarlyLeaveMinutes(newValue)
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     deductEarlyLeaveMinutes ? 'bg-emerald-600' : 'bg-slate-300'
                   }`}
