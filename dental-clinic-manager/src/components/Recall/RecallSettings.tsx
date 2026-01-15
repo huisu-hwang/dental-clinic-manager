@@ -25,6 +25,86 @@ import type {
 import { recallService } from '@/lib/recallService'
 import { PHONE_PRESETS } from '@/types/phone'
 
+// 서버 IP 확인 컴포넌트
+function ServerIpChecker() {
+  const [serverIp, setServerIp] = useState<string | null>(null)
+  const [isChecking, setIsChecking] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const checkServerIp = async () => {
+    setIsChecking(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/recall/sms?check_ip=true')
+      const data = await response.json()
+      if (data.success) {
+        setServerIp(data.server_ip)
+      } else {
+        setError(data.error || 'IP 확인 실패')
+      }
+    } catch {
+      setError('서버 연결 실패')
+    }
+    setIsChecking(false)
+  }
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      <h4 className="font-medium text-amber-900 mb-2 flex items-center gap-2">
+        <AlertCircle className="w-5 h-5" />
+        중요: 서버 IP 등록 필요
+      </h4>
+      <p className="text-sm text-amber-700 mb-3">
+        알리고 API를 사용하려면 서버 IP 주소를 알리고 관리자 페이지에 등록해야 합니다.
+      </p>
+
+      {/* 서버 IP 확인 버튼 */}
+      <div className="bg-white rounded-lg p-3 mb-3">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={checkServerIp}
+            disabled={isChecking}
+            className="px-3 py-1.5 bg-amber-600 text-white text-sm rounded hover:bg-amber-700 disabled:bg-gray-300"
+          >
+            {isChecking ? '확인 중...' : '서버 IP 확인'}
+          </button>
+          {serverIp && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">서버 IP:</span>
+              <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono font-bold text-amber-700">
+                {serverIp}
+              </code>
+              <button
+                onClick={() => navigator.clipboard.writeText(serverIp)}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                복사
+              </button>
+            </div>
+          )}
+          {error && <span className="text-sm text-red-600">{error}</span>}
+        </div>
+        {serverIp && (
+          <p className="text-xs text-amber-600 mt-2">
+            ⚠️ 위 IP를 알리고 관리자 페이지에 등록하세요. 서버리스 환경(Vercel 등)에서는 IP가 변경될 수 있습니다.
+          </p>
+        )}
+      </div>
+
+      <ol className="text-sm text-amber-700 list-decimal list-inside space-y-1">
+        <li>
+          <a href="https://smartsms.aligo.in" target="_blank" rel="noopener noreferrer" className="underline">
+            알리고 관리자 페이지
+          </a>
+          에 로그인
+        </li>
+        <li>SMS API 관리 &gt; 발신 IP 관리 메뉴로 이동</li>
+        <li>위에서 확인한 서버 IP 주소를 추가</li>
+      </ol>
+    </div>
+  )
+}
+
 interface RecallSettingsProps {
   clinicId: string
   clinicName: string
@@ -255,26 +335,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
           </div>
 
           {/* IP 등록 안내 */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <h4 className="font-medium text-amber-900 mb-2 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5" />
-              중요: 서버 IP 등록 필요
-            </h4>
-            <p className="text-sm text-amber-700 mb-2">
-              알리고 API를 사용하려면 서버 IP 주소를 알리고 관리자 페이지에 등록해야 합니다.
-              IP가 등록되지 않으면 &quot;인증오류입니다- ip&quot; 오류가 발생합니다.
-            </p>
-            <ol className="text-sm text-amber-700 list-decimal list-inside space-y-1">
-              <li>
-                <a href="https://smartsms.aligo.in" target="_blank" rel="noopener noreferrer" className="underline">
-                  알리고 관리자 페이지
-                </a>
-                에 로그인
-              </li>
-              <li>SMS API 관리 &gt; 발신 IP 관리 메뉴로 이동</li>
-              <li>이 서버의 공인 IP 주소를 추가</li>
-            </ol>
-          </div>
+          <ServerIpChecker />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

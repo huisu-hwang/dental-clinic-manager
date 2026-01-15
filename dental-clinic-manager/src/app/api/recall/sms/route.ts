@@ -143,6 +143,26 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const clinicId = searchParams.get('clinic_id')
+    const checkIp = searchParams.get('check_ip')
+
+    // IP 확인 요청인 경우
+    if (checkIp === 'true') {
+      try {
+        // 외부 서비스로 서버의 공인 IP 확인
+        const ipResponse = await fetch('https://api.ipify.org?format=json')
+        const ipData = await ipResponse.json()
+        return NextResponse.json({
+          success: true,
+          server_ip: ipData.ip,
+          message: '이 IP를 알리고 관리자 페이지에 등록하세요.'
+        })
+      } catch {
+        return NextResponse.json({
+          success: false,
+          error: '서버 IP를 확인할 수 없습니다.'
+        })
+      }
+    }
 
     if (!clinicId) {
       return NextResponse.json(
