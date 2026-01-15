@@ -306,19 +306,17 @@ export default function RecallManagement() {
   const selectedPatientObjects = patients.filter(p => selectedPatients.includes(p.id))
 
   return (
-    <div className="space-y-6">
-      {/* 헤더 */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white">
+    <div className="max-w-6xl">
+      {/* 블루 그라데이션 헤더 */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <PhoneCall className="w-6 h-6" />
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">환자 리콜 관리</h1>
-              <p className="text-indigo-200 mt-1">
-                문자 발송 및 전화 리콜을 관리하세요
-              </p>
+              <h2 className="text-base sm:text-lg font-bold text-white">환자 리콜 관리</h2>
+              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Patient Recall Management</p>
             </div>
           </div>
 
@@ -326,10 +324,11 @@ export default function RecallManagement() {
           <div className="relative">
             <button
               onClick={() => setShowCampaignSelector(!showCampaignSelector)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-sm"
             >
-              <FolderOpen className="w-5 h-5" />
-              <span>{selectedCampaign?.name || '캠페인 선택'}</span>
+              <FolderOpen className="w-4 h-4" />
+              <span className="hidden sm:inline">{selectedCampaign?.name || '캠페인 선택'}</span>
+              <span className="sm:hidden">{selectedCampaign?.name ? selectedCampaign.name.substring(0, 8) : '캠페인'}</span>
               <ChevronDown className="w-4 h-4" />
             </button>
 
@@ -349,7 +348,7 @@ export default function RecallManagement() {
                         }
                         setShowCampaignSelector(false)
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg"
                     >
                       <Plus className="w-4 h-4" />
                       새 캠페인 만들기
@@ -369,7 +368,7 @@ export default function RecallManagement() {
                             setShowCampaignSelector(false)
                           }}
                           className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${
-                            selectedCampaignId === campaign.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'
+                            selectedCampaignId === campaign.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                           }`}
                         >
                           <p className="font-medium">{campaign.name}</p>
@@ -388,160 +387,160 @@ export default function RecallManagement() {
 
         {/* 통계 요약 */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
-            <div className="bg-white/10 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">{stats.total_patients}</p>
-              <p className="text-sm text-indigo-200">전체 환자</p>
+          <div className="grid grid-cols-5 gap-2 sm:gap-4 mt-4">
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-white">{stats.total_patients}</p>
+              <p className="text-xs text-blue-100">전체</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">{stats.pending_count}</p>
-              <p className="text-sm text-indigo-200">대기 중</p>
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-white">{stats.pending_count}</p>
+              <p className="text-xs text-blue-100">대기</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">{stats.contacted_count}</p>
-              <p className="text-sm text-indigo-200">연락 완료</p>
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-white">{stats.contacted_count}</p>
+              <p className="text-xs text-blue-100">연락</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">{stats.appointment_count}</p>
-              <p className="text-sm text-indigo-200">예약 성공</p>
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-white">{stats.appointment_count}</p>
+              <p className="text-xs text-blue-100">예약</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">{stats.success_rate}%</p>
-              <p className="text-sm text-indigo-200">성공률</p>
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-white">{stats.success_rate}%</p>
+              <p className="text-xs text-blue-100">성공률</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* 탭 네비게이션 */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="flex border-b border-gray-200">
+      {/* 서브 탭 네비게이션 */}
+      <div className="border-x border-b border-slate-200 bg-slate-50">
+        <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('patients')}
-            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-colors ${
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'patients'
-                ? 'text-indigo-600 border-b-2 border-indigo-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
             }`}
           >
-            <Users className="w-5 h-5" />
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             환자 목록
           </button>
           <button
             onClick={() => setActiveTab('stats')}
-            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-colors ${
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'stats'
-                ? 'text-indigo-600 border-b-2 border-indigo-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
             }`}
           >
-            <BarChart3 className="w-5 h-5" />
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             통계
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-colors ${
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'settings'
-                ? 'text-indigo-600 border-b-2 border-indigo-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
             }`}
           >
-            <Settings className="w-5 h-5" />
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             설정
           </button>
-        </div>
+        </nav>
+      </div>
 
-        {/* 탭 콘텐츠 */}
-        <div className="p-4">
-          {/* 환자 목록 탭 */}
-          {activeTab === 'patients' && (
-            <div className="space-y-4">
-              {/* 액션 버튼들 */}
-              <div className="flex flex-wrap items-center gap-3">
+      {/* 탭 콘텐츠 */}
+      <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6">
+        {/* 환자 목록 탭 */}
+        {activeTab === 'patients' && (
+          <div className="space-y-4">
+            {/* 액션 버튼들 */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <button
+                onClick={() => setShowUpload(true)}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">환자 업로드</span>
+                <span className="sm:hidden">업로드</span>
+              </button>
+
+              <button
+                onClick={() => setPatientAddModalOpen(true)}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">환자 추가</span>
+                <span className="sm:hidden">추가</span>
+              </button>
+
+              {selectedPatients.length > 0 && (
                 <button
-                  onClick={() => setShowUpload(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  onClick={handleBulkSms}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
                 >
-                  <Upload className="w-4 h-4" />
-                  환자 업로드
+                  <MessageSquare className="w-4 h-4" />
+                  문자 ({selectedPatients.length})
                 </button>
-
-                <button
-                  onClick={() => setPatientAddModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  환자 추가
-                </button>
-
-                {selectedPatients.length > 0 && (
-                  <>
-                    <button
-                      onClick={handleBulkSms}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      문자 발송 ({selectedPatients.length})
-                    </button>
-                  </>
-                )}
-
-                <button
-                  onClick={handleRefresh}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors ml-auto"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  새로고침
-                </button>
-              </div>
-
-              {/* 파일 업로드 */}
-              {showUpload && (
-                <PatientFileUpload
-                  onUpload={handleFileUpload}
-                  onCancel={() => setShowUpload(false)}
-                  isLoading={isUploading}
-                />
               )}
 
-              {/* 환자 목록 */}
-              <PatientList
-                patients={patients}
-                selectedPatients={selectedPatients}
-                onSelectPatient={handleSelectPatient}
-                onSelectAll={handleSelectAll}
-                onCallPatient={handleCallPatient}
-                onSmsPatient={handleSmsPatient}
-                onUpdateStatus={handleUpdateStatus}
-                onViewHistory={handleViewHistory}
-                filters={filters}
-                onFiltersChange={setFilters}
-                isLoading={isLoading}
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalPatients={totalPatients}
-                onPageChange={handlePageChange}
-              />
+              <button
+                onClick={handleRefresh}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors ml-auto text-sm"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="hidden sm:inline">새로고침</span>
+              </button>
             </div>
-          )}
 
-          {/* 통계 탭 */}
-          {activeTab === 'stats' && (
-            <RecallStats
-              campaignId={selectedCampaignId || undefined}
-              campaignName={selectedCampaign?.name}
-            />
-          )}
+            {/* 파일 업로드 */}
+            {showUpload && (
+              <PatientFileUpload
+                onUpload={handleFileUpload}
+                onCancel={() => setShowUpload(false)}
+                isLoading={isUploading}
+              />
+            )}
 
-          {/* 설정 탭 */}
-          {activeTab === 'settings' && (
-            <RecallSettings
-              clinicId={user?.clinic_id || ''}
-              clinicName={user?.clinic?.name || ''}
-              clinicPhone={user?.clinic?.phone || ''}
+            {/* 환자 목록 */}
+            <PatientList
+              patients={patients}
+              selectedPatients={selectedPatients}
+              onSelectPatient={handleSelectPatient}
+              onSelectAll={handleSelectAll}
+              onCallPatient={handleCallPatient}
+              onSmsPatient={handleSmsPatient}
+              onUpdateStatus={handleUpdateStatus}
+              onViewHistory={handleViewHistory}
+              filters={filters}
+              onFiltersChange={setFilters}
+              isLoading={isLoading}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalPatients={totalPatients}
+              onPageChange={handlePageChange}
             />
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* 통계 탭 */}
+        {activeTab === 'stats' && (
+          <RecallStats
+            campaignId={selectedCampaignId || undefined}
+            campaignName={selectedCampaign?.name}
+          />
+        )}
+
+        {/* 설정 탭 */}
+        {activeTab === 'settings' && (
+          <RecallSettings
+            clinicId={user?.clinic_id || ''}
+            clinicName={user?.clinic?.name || ''}
+            clinicPhone={user?.clinic?.phone || ''}
+          />
+        )}
       </div>
 
       {/* 모달들 */}
