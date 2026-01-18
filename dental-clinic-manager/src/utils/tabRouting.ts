@@ -19,6 +19,7 @@ const TAB_ROUTES: Record<string, string> = {
   'documents': '/dashboard?tab=documents',
   'payroll': '/dashboard?tab=payroll',
   'recall': '/dashboard?tab=recall',
+  'sns-generator': '/dashboard?tab=sns-generator',
   'settings': '/dashboard?tab=settings',
   'guide': '/dashboard?tab=guide',
   'menu-settings': '/dashboard?tab=menu-settings',
