@@ -64,7 +64,8 @@ export const DEFAULT_MENU_ITEMS: MenuItemSetting[] = [
   { id: 'documents', label: '문서 양식', visible: true, order: 10, categoryId: 'documents' },
   { id: 'vendors', label: '업체 연락처', visible: true, order: 11, categoryId: 'operations' },
   { id: 'settings', label: '재고 관리', visible: true, order: 12, categoryId: 'operations' },
-  { id: 'guide', label: '사용 안내', visible: true, order: 13 },
+  { id: 'recall', label: '리콜 관리', visible: true, order: 13, categoryId: 'operations' },
+  { id: 'guide', label: '사용 안내', visible: true, order: 14 },
 ]
 
 // 메뉴 ID 목록 (유효성 검사용)
@@ -104,6 +105,7 @@ export const AVAILABLE_CATEGORY_ICONS = [
   'Package',
   'Palette',
   'Phone',
+  'PhoneCall',
   'Scissors',
   'Shield',
   'Target',

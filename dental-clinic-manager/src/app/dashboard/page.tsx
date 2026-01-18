@@ -27,6 +27,7 @@ import ScheduleManagement from '@/components/Attendance/ScheduleManagement'
 import TeamStatus from '@/components/Attendance/TeamStatus'
 import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
 import { PayrollManagement } from '@/components/Payroll'
+import { RecallManagement } from '@/components/Recall'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
@@ -790,6 +791,11 @@ export default function DashboardPage() {
           {/* 급여 명세서 */}
           {activeTab === 'payroll' && (
             <PayrollManagement />
+          )}
+
+          {/* 환자 리콜 관리 */}
+          {activeTab === 'recall' && (
+            <RecallManagement />
           )}
 
           {/* 설정 */}
