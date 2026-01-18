@@ -43,6 +43,7 @@ export default function LogsSection({
   const [consultFilter, setConsultFilter] = useState<'all' | 'completed' | 'incomplete'>('all')
   const [consultSearch, setConsultSearch] = useState('')  // 환자명 검색
   const [giftSort, setGiftSort] = useState<'default' | 'type' | 'date'>('default')
+  const [giftSearch, setGiftSearch] = useState('')  // 선물 기록 환자명 검색
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<number>>(new Set())
 
@@ -111,7 +112,16 @@ export default function LogsSection({
     return true
   })
 
-  const sortedGiftLogs = [...giftLogs].sort((a, b) => {
+  // 선물 기록 환자명 필터링
+  const filteredGiftLogs = giftLogs.filter(log => {
+    const searchTerm = giftSearch.trim().toLowerCase()
+    if (searchTerm && !log.patient_name.toLowerCase().includes(searchTerm)) {
+      return false
+    }
+    return true
+  })
+
+  const sortedGiftLogs = [...filteredGiftLogs].sort((a, b) => {
     if (giftSort === 'type') {
       return a.gift_type.localeCompare(b.gift_type)
     }
@@ -346,47 +356,76 @@ export default function LogsSection({
 
         {/* 선물 증정 및 리뷰 상세 기록 */}
         <div>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
-                <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <div className="flex flex-col gap-2 sm:gap-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
+                  <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+                <h3 className="text-sm sm:text-base font-semibold text-slate-800">
+                  <span className="text-blue-600 mr-1">3.</span>
+                  선물 증정 및 리뷰 상세 기록
+                </h3>
               </div>
-              <h3 className="text-sm sm:text-base font-semibold text-slate-800">
-                <span className="text-blue-600 mr-1">3.</span>
-                선물 증정 및 리뷰 상세 기록
-              </h3>
+              <div className="flex gap-1 sm:gap-2 flex-wrap">
+                <button
+                  onClick={() => setGiftSort('default')}
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
+                    giftSort === 'default'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  기본순
+                </button>
+                <button
+                  onClick={() => setGiftSort('type')}
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
+                    giftSort === 'type'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  선물종류순
+                </button>
+                <button
+                  onClick={() => setGiftSort('date')}
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
+                    giftSort === 'date'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  최신순
+                </button>
+              </div>
             </div>
-            <div className="flex gap-1 sm:gap-2 flex-wrap">
-              <button
-                onClick={() => setGiftSort('default')}
-                className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
-                  giftSort === 'default'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                기본순
-              </button>
-              <button
-                onClick={() => setGiftSort('type')}
-                className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
-                  giftSort === 'type'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                선물종류순
-              </button>
-              <button
-                onClick={() => setGiftSort('date')}
-                className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
-                  giftSort === 'date'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                최신순
-              </button>
+            {/* 환자명 검색 */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="환자명 검색..."
+                  value={giftSearch}
+                  onChange={(e) => setGiftSearch(e.target.value)}
+                  className="w-full pl-8 sm:pl-9 pr-8 py-1.5 sm:py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+                {giftSearch && (
+                  <button
+                    onClick={() => setGiftSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+                    title="검색어 지우기"
+                  >
+                    <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </button>
+                )}
+              </div>
+              {giftSearch && (
+                <span className="text-xs sm:text-sm text-slate-500">
+                  {filteredGiftLogs.length}건 검색됨
+                </span>
+              )}
             </div>
           </div>
           <div className="border border-slate-200 rounded-lg overflow-hidden overflow-x-auto">
