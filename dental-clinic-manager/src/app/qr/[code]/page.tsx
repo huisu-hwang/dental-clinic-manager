@@ -193,7 +193,7 @@ export default function QRAttendancePage() {
           console.error('[QRAttendancePage] Location error:', error)
           resolve(null)
         },
-        { timeout: 5000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       )
     })
   }
