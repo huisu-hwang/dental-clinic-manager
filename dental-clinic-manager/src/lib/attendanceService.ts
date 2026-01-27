@@ -641,31 +641,66 @@ export async function validateQRCode(
     }
 
     // 위치 검증 (위치 정보가 있는 경우)
-    if (latitude && longitude && qrCode.latitude && qrCode.longitude) {
-      const distance = calculateDistance(
-        latitude,
-        longitude,
-        qrCode.latitude,
-        qrCode.longitude
-      )
+    // QR 코드의 좌표 대신 지점(clinic_branches)의 실제 좌표를 사용
+    if (latitude && longitude) {
+      // branch_id가 있는 경우: 해당 지점의 좌표로 검증
+      if (qrCode.branch_id) {
+        const branchResult = await getBranches({
+          clinic_id: qrCode.clinic_id,
+          is_active: true,
+        })
 
-      if (distance > qrCode.radius_meters) {
-        return {
-          is_valid: false,
-          error_message: `현재 위치가 병원에서 ${Math.round(distance)}m 떨어져 있습니다. ${qrCode.radius_meters}m 이내로 가까이 이동한 후 다시 시도해주세요.`,
-          distance_meters: Math.round(distance),
+        const targetBranch = branchResult.branches?.find(b => b.id === qrCode.branch_id)
+
+        if (targetBranch && targetBranch.latitude && targetBranch.longitude) {
+          const distance = calculateDistance(
+            latitude,
+            longitude,
+            targetBranch.latitude,
+            targetBranch.longitude
+          )
+
+          const radiusMeters = targetBranch.attendance_radius_meters || 100
+
+          if (distance > radiusMeters) {
+            return {
+              is_valid: false,
+              error_message: `현재 위치가 ${targetBranch.branch_name}에서 ${Math.round(distance)}m 떨어져 있습니다. ${radiusMeters}m 이내로 가까이 이동한 후 다시 시도해주세요.`,
+              distance_meters: Math.round(distance),
+            }
+          }
+
+          return {
+            is_valid: true,
+            clinic_id: qrCode.clinic_id,
+            branch_id: qrCode.branch_id,
+            distance_meters: Math.round(distance),
+          }
         }
       }
 
-      return {
-        is_valid: true,
-        clinic_id: qrCode.clinic_id,
-        branch_id: qrCode.branch_id || undefined,
-        distance_meters: Math.round(distance),
+      // branch_id가 없는 경우(통합 QR): 가장 가까운 지점으로 검증
+      const nearestBranch = await findNearestBranch(qrCode.clinic_id, latitude, longitude)
+
+      if (nearestBranch) {
+        if (nearestBranch.withinRadius) {
+          return {
+            is_valid: true,
+            clinic_id: qrCode.clinic_id,
+            branch_id: nearestBranch.branch.id,
+            distance_meters: nearestBranch.distance,
+          }
+        } else {
+          return {
+            is_valid: false,
+            error_message: `현재 위치가 가장 가까운 지점(${nearestBranch.branch.branch_name})에서 ${nearestBranch.distance}m 떨어져 있습니다. ${nearestBranch.branch.attendance_radius_meters}m 이내로 가까이 이동한 후 다시 시도해주세요.`,
+            distance_meters: nearestBranch.distance,
+          }
+        }
       }
     }
 
-    // 위치 정보가 없으면 QR 코드만 검증
+    // 위치 정보가 없거나 지점 정보가 없으면 QR 코드만 검증
     return {
       is_valid: true,
       clinic_id: qrCode.clinic_id,
