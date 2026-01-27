@@ -22,6 +22,9 @@ export interface User {
   approved_at?: string
 }
 
+// QR 코드 위치 검증 모드 타입
+export type QRLocationVerificationMode = 'required' | 'optional'
+
 export interface Clinic {
   id: string
   name: string
@@ -38,6 +41,7 @@ export interface Clinic {
   is_public: boolean
   allow_join_requests: boolean
   status: string
+  qr_location_verification_mode?: QRLocationVerificationMode  // QR 코드 위치 검증 모드
   created_at: string
   updated_at: string
 }

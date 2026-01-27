@@ -114,6 +114,7 @@ export interface QRCodeValidationResult {
   clinic_id?: string;
   branch_id?: string;
   distance_meters?: number;
+  location_verification_skipped?: boolean; // 위치 검증이 건너뛰어졌는지 여부 (optional 모드일 때 true)
 }
 
 /**
