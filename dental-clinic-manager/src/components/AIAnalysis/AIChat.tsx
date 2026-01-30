@@ -1,13 +1,37 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, Loader2, Sparkles, Trash2, Calendar } from 'lucide-react';
+import {
+  Send,
+  Bot,
+  User,
+  Loader2,
+  Sparkles,
+  Trash2,
+  Calendar,
+  Plus,
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  MoreVertical,
+  Edit2,
+  Check,
+  X
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import type { AIMessage } from '@/types/aiAnalysis';
 
 interface AIChatProps {
   clinicId: string;
+}
+
+interface ConversationSummary {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function AIChat({ clinicId }: AIChatProps) {
@@ -17,6 +41,16 @@ export default function AIChat({ clinicId }: AIChatProps) {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 대화 기록 관련 상태
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [editingTitleValue, setEditingTitleValue] = useState('');
+  const [showMenu, setShowMenu] = useState<string | null>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -34,6 +68,122 @@ export default function AIChat({ clinicId }: AIChatProps) {
     }
   }, [inputValue]);
 
+  // 대화 목록 불러오기
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      setIsLoadingConversations(true);
+      const response = await fetch('/api/ai-conversations');
+      if (response.ok) {
+        const data = await response.json();
+        setConversations(data.conversations || []);
+      }
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  };
+
+  // 특정 대화 불러오기
+  const loadConversation = async (conversationId: string) => {
+    try {
+      const response = await fetch(`/api/ai-conversations/${conversationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data.conversation.messages || []);
+        setCurrentConversationId(conversationId);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Failed to load conversation:', err);
+      setError('대화를 불러오는데 실패했습니다.');
+    }
+  };
+
+  // 대화 저장 (생성 또는 업데이트)
+  const saveConversation = async (newMessages: AIMessage[], autoTitle?: string) => {
+    if (newMessages.length === 0) return;
+
+    try {
+      setIsSaving(true);
+
+      if (currentConversationId) {
+        // 기존 대화 업데이트
+        await fetch(`/api/ai-conversations/${currentConversationId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: newMessages }),
+        });
+      } else {
+        // 새 대화 생성
+        const response = await fetch('/api/ai-conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: autoTitle,
+            messages: newMessages,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentConversationId(data.conversation.id);
+          // 목록 새로고침
+          loadConversations();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to save conversation:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 대화 제목 수정
+  const updateConversationTitle = async (conversationId: string, newTitle: string) => {
+    try {
+      const response = await fetch(`/api/ai-conversations/${conversationId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle }),
+      });
+
+      if (response.ok) {
+        setConversations(prev =>
+          prev.map(c => (c.id === conversationId ? { ...c, title: newTitle } : c))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to update title:', err);
+    }
+    setEditingTitleId(null);
+  };
+
+  // 대화 삭제
+  const deleteConversation = async (conversationId: string) => {
+    if (!confirm('이 대화를 삭제하시겠습니까?')) return;
+
+    try {
+      const response = await fetch(`/api/ai-conversations/${conversationId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setConversations(prev => prev.filter(c => c.id !== conversationId));
+        if (currentConversationId === conversationId) {
+          handleNewChat();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to delete conversation:', err);
+    }
+    setShowMenu(null);
+  };
+
   const generateId = () => {
     return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   };
@@ -49,7 +199,8 @@ export default function AIChat({ clinicId }: AIChatProps) {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputValue('');
     setIsLoading(true);
     setError(null);
@@ -87,17 +238,25 @@ export default function AIChat({ clinicId }: AIChatProps) {
       }
 
       // 응답으로 메시지 업데이트
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === assistantMessageId
-            ? {
-                ...msg,
-                content: data.message,
-                isLoading: false,
-              }
-            : msg
-        )
-      );
+      const finalMessages: AIMessage[] = [
+        ...updatedMessages,
+        {
+          id: assistantMessageId,
+          role: 'assistant',
+          content: data.message,
+          timestamp: new Date(),
+          isLoading: false,
+        },
+      ];
+
+      setMessages(finalMessages);
+
+      // 대화 자동 저장 (첫 메시지일 경우 제목 자동 생성)
+      const autoTitle = messages.length === 0 ? userMessage.content.slice(0, 30) : undefined;
+      await saveConversation(finalMessages, autoTitle);
+
+      // 목록 새로고침 (업데이트 시간 갱신을 위해)
+      loadConversations();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'AI 분석 중 오류가 발생했습니다.';
       setError(errorMessage);
@@ -119,8 +278,9 @@ export default function AIChat({ clinicId }: AIChatProps) {
     }
   };
 
-  const handleClearChat = () => {
+  const handleNewChat = () => {
     setMessages([]);
+    setCurrentConversationId(null);
     setError(null);
   };
 
@@ -128,6 +288,22 @@ export default function AIChat({ clinicId }: AIChatProps) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return '어제';
+    } else if (diffDays < 7) {
+      return `${diffDays}일 전`;
+    } else {
+      return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
     }
   };
 
@@ -139,111 +315,278 @@ export default function AIChat({ clinicId }: AIChatProps) {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">AI 데이터 분석</h2>
-            <p className="text-sm text-gray-500">병원 데이터를 분석하고 인사이트를 제공합니다</p>
-          </div>
-        </div>
-        {messages.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearChat}
-            className="text-gray-500 hover:text-red-500"
-          >
-            <Trash2 className="w-4 h-4 mr-1" />
-            대화 지우기
-          </Button>
+    <div className="flex h-full bg-gray-50 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* 사이드바 - 대화 기록 */}
+      <div
+        className={cn(
+          'bg-white border-r border-gray-200 flex flex-col transition-all duration-300',
+          isSidebarOpen ? 'w-72' : 'w-0'
+        )}
+      >
+        {isSidebarOpen && (
+          <>
+            {/* 사이드바 헤더 */}
+            <div className="p-4 border-b border-gray-200">
+              <Button
+                onClick={handleNewChat}
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                새 대화
+              </Button>
+            </div>
+
+            {/* 대화 목록 */}
+            <div className="flex-1 overflow-y-auto">
+              {isLoadingConversations ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className="text-center py-8 px-4">
+                  <MessageSquare className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                  <p className="text-sm text-gray-500">대화 기록이 없습니다</p>
+                </div>
+              ) : (
+                <div className="p-2 space-y-1">
+                  {conversations.map((conv) => (
+                    <div
+                      key={conv.id}
+                      className={cn(
+                        'group relative rounded-lg transition-colors',
+                        currentConversationId === conv.id
+                          ? 'bg-blue-50 border border-blue-200'
+                          : 'hover:bg-gray-100'
+                      )}
+                    >
+                      {editingTitleId === conv.id ? (
+                        <div className="flex items-center gap-1 p-2">
+                          <input
+                            type="text"
+                            value={editingTitleValue}
+                            onChange={(e) => setEditingTitleValue(e.target.value)}
+                            className="flex-1 text-sm px-2 py-1 border rounded"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                updateConversationTitle(conv.id, editingTitleValue);
+                              } else if (e.key === 'Escape') {
+                                setEditingTitleId(null);
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => updateConversationTitle(conv.id, editingTitleValue)}
+                            className="p-1 text-green-600 hover:bg-green-100 rounded"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setEditingTitleId(null)}
+                            className="p-1 text-gray-500 hover:bg-gray-200 rounded"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => loadConversation(conv.id)}
+                          className="w-full text-left p-3 pr-8"
+                        >
+                          <div className="flex items-start gap-2">
+                            <MessageSquare className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {conv.title}
+                              </p>
+                              <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                <Clock className="w-3 h-3" />
+                                {formatDate(conv.updated_at)}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      )}
+
+                      {/* 메뉴 버튼 */}
+                      {editingTitleId !== conv.id && (
+                        <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowMenu(showMenu === conv.id ? null : conv.id);
+                            }}
+                            className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 transition-opacity"
+                          >
+                            <MoreVertical className="w-4 h-4 text-gray-500" />
+                          </button>
+
+                          {/* 드롭다운 메뉴 */}
+                          {showMenu === conv.id && (
+                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingTitleId(conv.id);
+                                  setEditingTitleValue(conv.title);
+                                  setShowMenu(null);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                                이름 변경
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteConversation(conv.id);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                삭제
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 저장 상태 표시 */}
+            {isSaving && (
+              <div className="px-4 py-2 border-t border-gray-200 text-xs text-gray-500 flex items-center gap-2">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                저장 중...
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* 메시지 영역 */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="p-4 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl mb-6">
-              <Bot className="w-12 h-12 text-blue-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              무엇을 분석해 드릴까요?
-            </h3>
-            <p className="text-gray-500 mb-8 max-w-md">
-              Supabase에 저장된 모든 데이터에 접근하여 분석할 수 있습니다.
-              <br />
-              날짜 범위를 지정하거나 특정 기간의 데이터를 요청해 보세요.
-            </p>
+      {/* 사이드바 토글 버튼 */}
+      <button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-200 rounded-r-lg p-1.5 shadow-sm hover:bg-gray-50 transition-colors"
+        style={{ marginLeft: isSidebarOpen ? '288px' : '0' }}
+      >
+        {isSidebarOpen ? (
+          <ChevronLeft className="w-4 h-4 text-gray-500" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-gray-500" />
+        )}
+      </button>
 
-            {/* 예시 질문들 */}
-            <div className="w-full max-w-2xl">
-              <p className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                이런 질문을 해보세요
+      {/* 메인 채팅 영역 */}
+      <div className="flex-1 flex flex-col bg-white overflow-hidden">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">AI 데이터 분석</h2>
+              <p className="text-sm text-gray-500">병원 데이터를 분석하고 인사이트를 제공합니다</p>
+            </div>
+          </div>
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleNewChat}
+              className="text-gray-500 hover:text-blue-600"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              새 대화
+            </Button>
+          )}
+        </div>
+
+        {/* 메시지 영역 */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="p-4 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl mb-6">
+                <Bot className="w-12 h-12 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                무엇을 분석해 드릴까요?
+              </h3>
+              <p className="text-gray-500 mb-8 max-w-md">
+                Supabase에 저장된 모든 데이터에 접근하여 분석할 수 있습니다.
+                <br />
+                날짜 범위를 지정하거나 특정 기간의 데이터를 요청해 보세요.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {exampleQuestions.map((question, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setInputValue(question)}
-                    className="text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-sm text-gray-700"
-                  >
-                    {question}
-                  </button>
-                ))}
+
+              {/* 예시 질문들 */}
+              <div className="w-full max-w-2xl">
+                <p className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  이런 질문을 해보세요
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {exampleQuestions.map((question, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setInputValue(question)}
+                      className="text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-sm text-gray-700"
+                    >
+                      {question}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
-          ))
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* 에러 표시 */}
-      {error && (
-        <div className="mx-6 mb-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          {error}
+          ) : (
+            messages.map((message) => (
+              <MessageBubble key={message.id} message={message} />
+            ))
+          )}
+          <div ref={messagesEndRef} />
         </div>
-      )}
 
-      {/* 입력 영역 */}
-      <div className="border-t border-gray-200 p-4 bg-gray-50">
-        <form onSubmit={handleSubmit} className="flex gap-3">
-          <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="분석하고 싶은 내용을 입력하세요... (Shift+Enter로 줄바꿈)"
-              className="w-full min-h-[44px] max-h-[150px] px-4 py-3 pr-12 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none transition-all text-sm"
-              rows={1}
-              disabled={isLoading}
-            />
+        {/* 에러 표시 */}
+        {error && (
+          <div className="mx-6 mb-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
           </div>
-          <Button
-            type="submit"
-            disabled={!inputValue.trim() || isLoading}
-            className="h-[44px] px-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </Button>
-        </form>
-        <p className="text-xs text-gray-400 mt-2 text-center">
-          AI 분석 결과는 참고용이며, 실제 의사결정에는 추가적인 검토가 필요합니다.
-        </p>
+        )}
+
+        {/* 입력 영역 */}
+        <div className="border-t border-gray-200 p-4 bg-gray-50">
+          <form onSubmit={handleSubmit} className="flex gap-3">
+            <div className="flex-1 relative">
+              <textarea
+                ref={textareaRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="분석하고 싶은 내용을 입력하세요... (Shift+Enter로 줄바꿈)"
+                className="w-full min-h-[44px] max-h-[150px] px-4 py-3 pr-12 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none transition-all text-sm"
+                rows={1}
+                disabled={isLoading}
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={!inputValue.trim() || isLoading}
+              className="h-[44px] px-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </Button>
+          </form>
+          <p className="text-xs text-gray-400 mt-2 text-center">
+            AI 분석 결과는 참고용이며, 실제 의사결정에는 추가적인 검토가 필요합니다.
+          </p>
+        </div>
       </div>
     </div>
   );
