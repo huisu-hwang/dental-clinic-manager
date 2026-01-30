@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { AIMessage } from '@/types/aiAnalysis';
 
-// 대화 목록 조회
+// 대화 목록 조회 (대표 원장 전용)
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -12,6 +12,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: '인증이 필요합니다.' },
         { status: 401 }
+      );
+    }
+
+    // 대표 원장 권한 확인
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || userData?.role !== 'owner') {
+      return NextResponse.json(
+        { error: 'AI 데이터 분석 기능은 대표 원장만 사용할 수 있습니다.' },
+        { status: 403 }
       );
     }
 
@@ -43,7 +57,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 새 대화 생성
+// 새 대화 생성 (대표 원장 전용)
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -56,10 +70,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 사용자의 clinic_id 조회
+    // 사용자의 clinic_id와 role 조회
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('clinic_id')
+      .select('clinic_id, role')
       .eq('id', user.id)
       .single();
 
@@ -67,6 +81,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: '사용자 정보를 찾을 수 없습니다.' },
         { status: 404 }
+      );
+    }
+
+    // 대표 원장 권한 확인
+    if (userData.role !== 'owner') {
+      return NextResponse.json(
+        { error: 'AI 데이터 분석 기능은 대표 원장만 사용할 수 있습니다.' },
+        { status: 403 }
       );
     }
 

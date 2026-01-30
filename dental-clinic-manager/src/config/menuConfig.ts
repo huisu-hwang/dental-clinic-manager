@@ -22,6 +22,7 @@ export interface MenuConfigItem {
   order: number
   visible: boolean
   fixedPosition?: 'top' | 'bottom'
+  ownerOnly?: boolean  // 대표 원장 전용 메뉴
 }
 
 /**
@@ -99,10 +100,11 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: 'AI 데이터 분석',
     icon: 'Sparkles',
     route: '/dashboard?tab=ai-analysis',
-    permissions: ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'],
+    permissions: [],  // 권한 체크는 ownerOnly로 대체
     categoryId: 'work',
     order: 6,
     visible: true,
+    ownerOnly: true,  // 대표 원장 전용
   },
 
   // === 중간 고정 메뉴 ===
@@ -234,6 +236,13 @@ export const MENU_ICON_MAP: Record<string, string> = Object.fromEntries(
  */
 export const MENU_PERMISSIONS_MAP: Record<string, Permission[]> = Object.fromEntries(
   MENU_CONFIG.map(item => [item.id, item.permissions])
+)
+
+/**
+ * 대표 원장 전용 메뉴 맵 (TabNavigation.tsx에서 사용)
+ */
+export const MENU_OWNER_ONLY_MAP: Record<string, boolean> = Object.fromEntries(
+  MENU_CONFIG.filter(item => item.ownerOnly).map(item => [item.id, true])
 )
 
 /**

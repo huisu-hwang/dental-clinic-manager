@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useMenuSettings } from '@/hooks/useMenuSettings'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Permission } from '@/types/permissions'
 import type { MenuCategorySetting } from '@/types/menuSettings'
-import { MENU_ICON_MAP, MENU_PERMISSIONS_MAP } from '@/config/menuConfig'
+import { MENU_ICON_MAP, MENU_PERMISSIONS_MAP, MENU_OWNER_ONLY_MAP } from '@/config/menuConfig'
 import {
   Home,
   ClipboardList,
@@ -139,6 +140,8 @@ const categoryIconMap: Record<string, React.ElementType> = {
 export default function TabNavigation({ activeTab, onTabChange, onItemClick, skipAutoRedirect = false }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
   const { menuSettings, categorySettings, isLoading } = useMenuSettings()
+  const { user } = useAuth()
+  const isOwner = user?.role === 'owner'
 
   // 활성 탭이 속한 카테고리 찾기
   const getActiveCategoryId = (tabId: string): string | null => {
@@ -178,11 +181,15 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   // 권한에 따른 보이는 탭 필터링
   const visibleTabs = useMemo(() =>
     tabs.filter(tab => {
+      // 대표 원장 전용 메뉴 체크
+      if (MENU_OWNER_ONLY_MAP[tab.id] && !isOwner) {
+        return false
+      }
       if (!tab.requiredPermissions || tab.requiredPermissions.length === 0) {
         return true
       }
       return tab.requiredPermissions.some(perm => hasPermission(perm))
-    }), [tabs, hasPermission])
+    }), [tabs, hasPermission, isOwner])
 
   // 상단 고정 메뉴 (fixedPosition === 'top' 또는 categoryId가 없고 fixedPosition이 없는 기존 메뉴)
   const topFixedMenus = useMemo(() => {

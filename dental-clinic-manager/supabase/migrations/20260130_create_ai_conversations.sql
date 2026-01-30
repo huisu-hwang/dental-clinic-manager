@@ -30,41 +30,62 @@ COMMENT ON COLUMN ai_conversations.updated_at IS '마지막 업데이트 일시'
 -- RLS 활성화
 ALTER TABLE ai_conversations ENABLE ROW LEVEL SECURITY;
 
--- 정책: 같은 병원 소속의 자신의 대화만 조회 가능
+-- 정책: 대표 원장(owner)만 자신의 대화 조회 가능
 CREATE POLICY "ai_conversations_select_policy" ON ai_conversations
   FOR SELECT
   USING (
     user_id = auth.uid()
-    AND clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid()
+        AND role = 'owner'
+        AND clinic_id = ai_conversations.clinic_id
     )
   );
 
--- 정책: 같은 병원 소속 사용자는 자신의 대화를 생성할 수 있음
+-- 정책: 대표 원장(owner)만 대화 생성 가능
 CREATE POLICY "ai_conversations_insert_policy" ON ai_conversations
   FOR INSERT
   WITH CHECK (
     user_id = auth.uid()
-    AND clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid()
+        AND role = 'owner'
+        AND clinic_id = ai_conversations.clinic_id
     )
   );
 
--- 정책: 자신의 대화만 수정 가능
+-- 정책: 대표 원장(owner)만 자신의 대화 수정 가능
 CREATE POLICY "ai_conversations_update_policy" ON ai_conversations
   FOR UPDATE
   USING (
     user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid()
+        AND role = 'owner'
+    )
   )
   WITH CHECK (
     user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid()
+        AND role = 'owner'
+    )
   );
 
--- 정책: 자신의 대화만 삭제 가능
+-- 정책: 대표 원장(owner)만 자신의 대화 삭제 가능
 CREATE POLICY "ai_conversations_delete_policy" ON ai_conversations
   FOR DELETE
   USING (
     user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid()
+        AND role = 'owner'
+    )
   );
 
 -- 트리거 함수: updated_at 자동 업데이트

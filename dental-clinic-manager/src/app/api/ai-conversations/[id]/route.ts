@@ -6,7 +6,21 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-// 특정 대화 조회
+// 대표 원장 권한 확인 헬퍼 함수
+async function checkOwnerPermission(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data: userData, error } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+
+  if (error || userData?.role !== 'owner') {
+    return false;
+  }
+  return true;
+}
+
+// 특정 대화 조회 (대표 원장 전용)
 export async function GET(
   request: NextRequest,
   context: RouteContext
@@ -20,6 +34,15 @@ export async function GET(
       return NextResponse.json(
         { error: '인증이 필요합니다.' },
         { status: 401 }
+      );
+    }
+
+    // 대표 원장 권한 확인
+    const isOwner = await checkOwnerPermission(supabase, user.id);
+    if (!isOwner) {
+      return NextResponse.json(
+        { error: 'AI 데이터 분석 기능은 대표 원장만 사용할 수 있습니다.' },
+        { status: 403 }
       );
     }
 
@@ -53,7 +76,7 @@ export async function GET(
   }
 }
 
-// 대화 업데이트
+// 대화 업데이트 (대표 원장 전용)
 export async function PUT(
   request: NextRequest,
   context: RouteContext
@@ -67,6 +90,15 @@ export async function PUT(
       return NextResponse.json(
         { error: '인증이 필요합니다.' },
         { status: 401 }
+      );
+    }
+
+    // 대표 원장 권한 확인
+    const isOwner = await checkOwnerPermission(supabase, user.id);
+    if (!isOwner) {
+      return NextResponse.json(
+        { error: 'AI 데이터 분석 기능은 대표 원장만 사용할 수 있습니다.' },
+        { status: 403 }
       );
     }
 
@@ -111,7 +143,7 @@ export async function PUT(
   }
 }
 
-// 대화 삭제
+// 대화 삭제 (대표 원장 전용)
 export async function DELETE(
   request: NextRequest,
   context: RouteContext
@@ -125,6 +157,15 @@ export async function DELETE(
       return NextResponse.json(
         { error: '인증이 필요합니다.' },
         { status: 401 }
+      );
+    }
+
+    // 대표 원장 권한 확인
+    const isOwner = await checkOwnerPermission(supabase, user.id);
+    if (!isOwner) {
+      return NextResponse.json(
+        { error: 'AI 데이터 분석 기능은 대표 원장만 사용할 수 있습니다.' },
+        { status: 403 }
       );
     }
 
