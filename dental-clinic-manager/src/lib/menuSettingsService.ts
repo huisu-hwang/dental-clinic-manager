@@ -149,24 +149,26 @@ export async function getUserMenuSettings(
       if (cached) {
         console.log('[menuSettingsService] Using cached user menu settings')
 
-        // 새로운 메뉴가 추가되었을 수 있으므로 정규화 수행
+        // 새로운 메뉴가 추가되었을 수 있으므로 항상 정규화 수행
         const normalizedCategories = normalizeCategorySettings(cached.categories)
         const normalizedSettings = normalizeMenuSettings(cached.settings, normalizedCategories)
 
-        // 정규화된 설정이 캐시와 다르면 캐시 업데이트
-        if (normalizedSettings.length !== cached.settings.length) {
-          console.log('[menuSettingsService] New menu items detected, updating cache')
-          const updatedCache: UserMenuSettings = {
-            ...cached,
-            settings: normalizedSettings,
-            categories: normalizedCategories,
-            updated_at: new Date().toISOString()
-          }
-          setCachedUserMenuSettings(userId, updatedCache)
-          return { success: true, data: updatedCache }
+        // 정규화된 설정 생성 (항상 최신 메뉴 포함)
+        const normalizedData: UserMenuSettings = {
+          ...cached,
+          settings: normalizedSettings,
+          categories: normalizedCategories,
         }
 
-        return { success: true, data: cached }
+        // 캐시와 정규화된 설정이 다르면 캐시 업데이트
+        if (normalizedSettings.length !== cached.settings.length) {
+          console.log('[menuSettingsService] New menu items detected, updating cache')
+          normalizedData.updated_at = new Date().toISOString()
+          setCachedUserMenuSettings(userId, normalizedData)
+        }
+
+        // 항상 정규화된 설정 반환 (새 메뉴가 포함됨)
+        return { success: true, data: normalizedData }
       }
     }
 

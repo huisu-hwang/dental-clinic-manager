@@ -13,6 +13,7 @@ const TAB_ROUTES: Record<string, string> = {
   'bulletin': '/bulletin',
   'stats': '/dashboard?tab=stats',
   'logs': '/dashboard?tab=logs',
+  'ai-analysis': '/dashboard?tab=ai-analysis',
   'protocols': '/dashboard?tab=protocols',
   'contracts': '/dashboard/contracts',
   'vendors': '/dashboard?tab=vendors',
