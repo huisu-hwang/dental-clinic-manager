@@ -332,6 +332,28 @@ function LoadingScreen({ isAuthLoading }: { isAuthLoading: boolean }) {
 // 성공 화면
 function SuccessScreen({ message, actionType }: { message: string; actionType: string }) {
   const isCheckIn = actionType === 'check-in'
+  const [countdown, setCountdown] = useState(10)
+  const router = useRouter()
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          // 창 닫기 시도
+          window.close()
+          // window.close()가 작동하지 않으면 메인 페이지로 이동
+          setTimeout(() => {
+            router.push('/attendance')
+          }, 100)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [router])
 
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -378,12 +400,40 @@ function SuccessScreen({ message, actionType }: { message: string; actionType: s
           })}
         </p>
       </div>
+
+      {/* 자동 닫힘 안내 */}
+      <div className="mt-4 text-sm text-gray-400">
+        {countdown}초 후 자동으로 닫힙니다
+      </div>
     </div>
   )
 }
 
 // 오류 화면
 function ErrorScreen({ message }: { message: string }) {
+  const [countdown, setCountdown] = useState(10)
+  const router = useRouter()
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          // 창 닫기 시도
+          window.close()
+          // window.close()가 작동하지 않으면 메인 페이지로 이동
+          setTimeout(() => {
+            router.push('/attendance')
+          }, 100)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [router])
+
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
       {/* 아이콘 */}
@@ -433,6 +483,11 @@ function ErrorScreen({ message }: { message: string }) {
             • 관리자에게 문의해주세요
           </li>
         </ul>
+      </div>
+
+      {/* 자동 닫힘 안내 */}
+      <div className="mt-4 text-sm text-gray-400">
+        {countdown}초 후 자동으로 닫힙니다
       </div>
     </div>
   )

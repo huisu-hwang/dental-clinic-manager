@@ -640,6 +640,38 @@ export async function validateQRCode(
       }
     }
 
+    // 병원의 위치 검증 모드 확인
+    const { data: clinicData } = await supabase
+      .from('clinics')
+      .select('qr_location_verification_mode')
+      .eq('id', qrCode.clinic_id)
+      .single()
+
+    const locationVerificationMode = clinicData?.qr_location_verification_mode || 'required'
+
+    // 위치 검증 모드가 'optional'이면 위치 확인 없이 인증 통과
+    if (locationVerificationMode === 'optional') {
+      // branch_id 결정: QR 코드에 branch_id가 있으면 사용, 없으면 첫 번째 활성 지점 사용
+      let resolvedBranchId = qrCode.branch_id || undefined
+
+      if (!resolvedBranchId) {
+        const branchResult = await getBranches({
+          clinic_id: qrCode.clinic_id,
+          is_active: true,
+        })
+        if (branchResult.branches && branchResult.branches.length > 0) {
+          resolvedBranchId = branchResult.branches[0].id
+        }
+      }
+
+      return {
+        is_valid: true,
+        clinic_id: qrCode.clinic_id,
+        branch_id: resolvedBranchId,
+        location_verification_skipped: true, // 위치 검증이 건너뛰어졌음을 표시
+      }
+    }
+
     // 위치 검증 (위치 정보가 있는 경우)
     // QR 코드의 좌표 대신 지점(clinic_branches)의 실제 좌표를 사용
     if (latitude && longitude) {
