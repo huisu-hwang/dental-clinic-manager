@@ -49,28 +49,17 @@ export const DEFAULT_CATEGORIES: MenuCategorySetting[] = [
   { id: 'operations', label: '운영 관리', icon: 'Settings', order: 2, visible: true }
 ]
 
-// 기본 메뉴 목록 (TabNavigation.tsx의 tabs와 동일한 순서)
-export const DEFAULT_MENU_ITEMS: MenuItemSetting[] = [
-  { id: 'home', label: '대시보드', visible: true, order: 0 },
-  { id: 'daily-input', label: '일일보고서', visible: true, order: 1, categoryId: 'work' },
-  { id: 'attendance', label: '근태관리', visible: true, order: 2, categoryId: 'work' },
-  { id: 'leave', label: '연차 관리', visible: true, order: 3, categoryId: 'work' },
-  { id: 'stats', label: '통계', visible: true, order: 4, categoryId: 'work' },
-  { id: 'logs', label: '상세 기록', visible: true, order: 5, categoryId: 'work' },
-  { id: 'ai-analysis', label: 'AI 데이터 분석', visible: true, order: 6, categoryId: 'work' },
-  { id: 'bulletin', label: '병원 게시판', visible: true, order: 7 },
-  { id: 'protocols', label: '진료 프로토콜', visible: true, order: 8, categoryId: 'documents' },
-  { id: 'contracts', label: '근로계약서', visible: true, order: 9, categoryId: 'documents' },
-  { id: 'payroll', label: '급여 명세서', visible: true, order: 10, categoryId: 'documents' },
-  { id: 'documents', label: '문서 양식', visible: true, order: 11, categoryId: 'documents' },
-  { id: 'vendors', label: '업체 연락처', visible: true, order: 12, categoryId: 'operations' },
-  { id: 'settings', label: '재고 관리', visible: true, order: 13, categoryId: 'operations' },
-  { id: 'recall', label: '리콜 관리', visible: true, order: 14, categoryId: 'operations' },
-  { id: 'guide', label: '사용 안내', visible: true, order: 15 },
-]
+// 기본 메뉴 목록 - 중앙 설정에서 가져옴
+// 새 메뉴 추가 시 src/config/menuConfig.ts를 수정하세요
+import {
+  DEFAULT_MENU_ITEMS as MENU_ITEMS_FROM_CONFIG,
+  VALID_MENU_IDS as MENU_IDS_FROM_CONFIG,
+} from '@/config/menuConfig'
+
+export const DEFAULT_MENU_ITEMS: MenuItemSetting[] = MENU_ITEMS_FROM_CONFIG
 
 // 메뉴 ID 목록 (유효성 검사용)
-export const VALID_MENU_IDS = DEFAULT_MENU_ITEMS.map(item => item.id)
+export const VALID_MENU_IDS = MENU_IDS_FROM_CONFIG
 
 // 기본 카테고리 ID 목록 (유효성 검사용)
 export const DEFAULT_CATEGORY_IDS = DEFAULT_CATEGORIES.map(cat => cat.id)
