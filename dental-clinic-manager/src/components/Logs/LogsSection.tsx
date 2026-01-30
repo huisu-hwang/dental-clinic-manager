@@ -112,11 +112,15 @@ export default function LogsSection({
     return true
   })
 
-  // 선물 기록 환자명 필터링
+  // 선물 기록 환자명/비고 필터링
   const filteredGiftLogs = giftLogs.filter(log => {
     const searchTerm = giftSearch.trim().toLowerCase()
-    if (searchTerm && !log.patient_name.toLowerCase().includes(searchTerm)) {
-      return false
+    if (searchTerm) {
+      const matchesPatientName = log.patient_name.toLowerCase().includes(searchTerm)
+      const matchesNotes = log.notes?.toLowerCase().includes(searchTerm) || false
+      if (!matchesPatientName && !matchesNotes) {
+        return false
+      }
     }
     return true
   })
@@ -400,13 +404,13 @@ export default function LogsSection({
                 </button>
               </div>
             </div>
-            {/* 환자명 검색 */}
+            {/* 환자명/비고 검색 */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1 max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="환자명 검색..."
+                  placeholder="환자명/비고 검색..."
                   value={giftSearch}
                   onChange={(e) => setGiftSearch(e.target.value)}
                   className="w-full pl-8 sm:pl-9 pr-8 py-1.5 sm:py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
