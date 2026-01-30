@@ -51,7 +51,8 @@ import {
   Zap,
   SlidersHorizontal,
   Banknote,
-  PhoneCall
+  PhoneCall,
+  Sparkles
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -86,7 +87,8 @@ const iconMap: Record<string, React.ElementType> = {
   'settings': Package,
   'guide': HelpCircle,
   'menu-settings': SlidersHorizontal,
-  'recall': PhoneCall
+  'recall': PhoneCall,
+  'ai-analysis': Sparkles
 }
 
 // 카테고리 아이콘 매핑 - 모든 AVAILABLE_CATEGORY_ICONS 포함
@@ -144,7 +146,8 @@ const permissionsMap: Record<string, Permission[]> = {
   'settings': ['inventory_view'],
   'guide': ['guide_view'],
   'menu-settings': [],
-  'recall': ['daily_report_view']
+  'recall': ['daily_report_view'],
+  'ai-analysis': ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view']
 }
 
 export default function TabNavigation({ activeTab, onTabChange, onItemClick, skipAutoRedirect = false }: TabNavigationProps) {
