@@ -447,11 +447,11 @@ export async function collectDataForAnalysis(
       // 출퇴근 기록
       supabase
         .from('attendance_records')
-        .select('date, check_in_time, check_out_time, users!inner(name)')
+        .select('work_date, check_in_time, check_out_time, scheduled_start, scheduled_end, late_minutes, early_leave_minutes, overtime_minutes, total_work_minutes, status, users!inner(name)')
         .eq('clinic_id', clinicId)
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: true }),
+        .gte('work_date', startDate)
+        .lte('work_date', endDate)
+        .order('work_date', { ascending: true }),
 
       // 연차 신청 기록
       supabase
@@ -574,10 +574,17 @@ export async function collectDataForAnalysis(
         const users = record.users as unknown as { name: string } | { name: string }[] | null;
         const userName = Array.isArray(users) ? users[0]?.name : users?.name;
         return {
-          date: record.date,
+          date: record.work_date,
           user_name: userName || 'Unknown',
           check_in_time: record.check_in_time,
           check_out_time: record.check_out_time,
+          scheduled_start: record.scheduled_start,
+          scheduled_end: record.scheduled_end,
+          late_minutes: record.late_minutes || 0,
+          early_leave_minutes: record.early_leave_minutes || 0,
+          overtime_minutes: record.overtime_minutes || 0,
+          total_work_minutes: record.total_work_minutes,
+          status: record.status,
         };
       });
     }
@@ -738,7 +745,28 @@ ${JSON.stringify(data.cashRegisters, null, 2)}`);
   }
 
   if (data.attendanceRecords && data.attendanceRecords.length > 0) {
+    const totalLateMinutes = data.attendanceRecords.reduce((sum, r) => sum + (r.late_minutes || 0), 0);
+    const totalEarlyLeaveMinutes = data.attendanceRecords.reduce((sum, r) => sum + (r.early_leave_minutes || 0), 0);
+    const totalOvertimeMinutes = data.attendanceRecords.reduce((sum, r) => sum + (r.overtime_minutes || 0), 0);
+    const totalWorkMinutes = data.attendanceRecords.reduce((sum, r) => sum + (r.total_work_minutes || 0), 0);
+    const lateCount = data.attendanceRecords.filter((r) => r.late_minutes > 0).length;
+    const earlyLeaveCount = data.attendanceRecords.filter((r) => r.early_leave_minutes > 0).length;
+    const overtimeCount = data.attendanceRecords.filter((r) => r.overtime_minutes > 0).length;
+    const statusCount = data.attendanceRecords.reduce(
+      (acc, r) => {
+        const key = r.status || 'unknown';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
     summaryParts.push(`## 출퇴근 기록 요약 (${data.attendanceRecords.length}건)
+- 근태 상태별 분포: ${JSON.stringify(statusCount)}
+- 지각 횟수: ${lateCount}회 (총 ${totalLateMinutes}분, 약 ${(totalLateMinutes / 60).toFixed(1)}시간)
+- 조퇴 횟수: ${earlyLeaveCount}회 (총 ${totalEarlyLeaveMinutes}분, 약 ${(totalEarlyLeaveMinutes / 60).toFixed(1)}시간)
+- 초과근무 횟수: ${overtimeCount}회 (총 ${totalOvertimeMinutes}분, 약 ${(totalOvertimeMinutes / 60).toFixed(1)}시간)
+- 총 근무시간: ${totalWorkMinutes}분 (약 ${(totalWorkMinutes / 60).toFixed(1)}시간)
 
 ### 출퇴근 상세 데이터:
 ${JSON.stringify(data.attendanceRecords, null, 2)}`);

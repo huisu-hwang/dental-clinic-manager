@@ -151,6 +151,13 @@ export interface AttendanceData {
   user_name: string;
   check_in_time?: string;
   check_out_time?: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
+  late_minutes: number;
+  early_leave_minutes: number;
+  overtime_minutes: number;
+  total_work_minutes?: number;
+  status?: string;
 }
 
 export interface LeaveRequestData {
