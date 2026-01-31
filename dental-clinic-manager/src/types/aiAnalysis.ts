@@ -88,6 +88,20 @@ export interface CollectedData {
   cashRegisters?: CashRegisterData[];
   attendanceRecords?: AttendanceData[];
   leaveRequests?: LeaveRequestData[];
+  // 추가 데이터
+  giftInventory?: GiftInventoryData[];
+  inventoryLogs?: InventoryLogData[];
+  recallCampaigns?: RecallCampaignData[];
+  recallPatients?: RecallPatientData[];
+  recallContactLogs?: RecallContactLogData[];
+  specialNotesHistory?: SpecialNoteData[];
+  users?: UserData[];
+  announcements?: AnnouncementData[];
+  tasks?: TaskData[];
+  vendorContacts?: VendorContactData[];
+  protocols?: ProtocolData[];
+  contracts?: ContractData[];
+  leaveBalances?: LeaveBalanceData[];
 }
 
 export interface DailyReportData {
@@ -145,4 +159,111 @@ export interface LeaveRequestData {
   start_date: string;
   end_date: string;
   status: string;
+  reason?: string;
+}
+
+// 추가 데이터 타입
+export interface GiftInventoryData {
+  name: string;
+  stock: number;
+  category_id?: number;
+}
+
+export interface InventoryLogData {
+  timestamp: string;
+  name: string;
+  reason: string;
+  change: number;
+  old_stock: number;
+  new_stock: number;
+}
+
+export interface RecallCampaignData {
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  total_patients: number;
+  completed_patients?: number;
+}
+
+export interface RecallPatientData {
+  patient_name: string;
+  phone?: string;
+  last_visit?: string;
+  recall_date: string;
+  status: string;
+  contact_count: number;
+  booking_date?: string;
+}
+
+export interface RecallContactLogData {
+  contact_type: string;
+  result: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface SpecialNoteData {
+  date: string;
+  content: string;
+  created_at: string;
+  author: string;
+}
+
+export interface UserData {
+  name: string;
+  role: string;
+  position?: string;
+  status: string;
+  hire_date?: string;
+}
+
+export interface AnnouncementData {
+  title: string;
+  content: string;
+  is_pinned: boolean;
+  created_at: string;
+  author: string;
+}
+
+export interface TaskData {
+  title: string;
+  description?: string;
+  status: string;
+  priority?: string;
+  due_date?: string;
+  created_at: string;
+}
+
+export interface VendorContactData {
+  company_name: string;
+  category?: string;
+  contact_name?: string;
+  phone?: string;
+  notes?: string;
+}
+
+export interface ProtocolData {
+  title: string;
+  category?: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContractData {
+  status: string;
+  contract_start_date?: string;
+  contract_end_date?: string;
+  salary_type?: string;
+  created_at: string;
+}
+
+export interface LeaveBalanceData {
+  user_name: string;
+  total_days: number;
+  used_days: number;
+  remaining_days: number;
+  year: number;
 }

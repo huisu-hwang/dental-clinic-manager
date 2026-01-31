@@ -110,6 +110,119 @@ const DATABASE_SCHEMA: DatabaseSchema = {
         { name: 'new_stock', type: 'integer', description: '변경 후 재고' },
       ],
     },
+    {
+      name: 'recall_campaigns',
+      description: '리콜 캠페인 - 리콜 환자 관리 캠페인',
+      columns: [
+        { name: 'name', type: 'text', description: '캠페인 이름' },
+        { name: 'start_date', type: 'date', description: '시작일' },
+        { name: 'end_date', type: 'date', description: '종료일' },
+        { name: 'status', type: 'text', description: '상태' },
+        { name: 'total_patients', type: 'integer', description: '총 환자 수' },
+      ],
+    },
+    {
+      name: 'recall_patients',
+      description: '리콜 환자 목록 - 개별 환자 리콜 현황',
+      columns: [
+        { name: 'patient_name', type: 'text', description: '환자 이름' },
+        { name: 'phone', type: 'text', description: '연락처' },
+        { name: 'last_visit', type: 'date', description: '마지막 방문일' },
+        { name: 'recall_date', type: 'date', description: '리콜 예정일' },
+        { name: 'status', type: 'text', description: '리콜 상태' },
+        { name: 'contact_count', type: 'integer', description: '연락 시도 횟수' },
+      ],
+    },
+    {
+      name: 'recall_contact_logs',
+      description: '리콜 연락 기록 - 환자 연락 시도 이력',
+      columns: [
+        { name: 'contact_type', type: 'text', description: '연락 유형 (전화/문자)' },
+        { name: 'result', type: 'text', description: '연락 결과' },
+        { name: 'notes', type: 'text', description: '메모' },
+        { name: 'created_at', type: 'timestamp', description: '연락 시간' },
+      ],
+    },
+    {
+      name: 'special_notes_history',
+      description: '특이사항 히스토리 - 일일 보고서 특이사항 변경 이력',
+      columns: [
+        { name: 'date', type: 'date', description: '날짜' },
+        { name: 'content', type: 'text', description: '특이사항 내용' },
+        { name: 'created_at', type: 'timestamp', description: '작성 시간' },
+      ],
+    },
+    {
+      name: 'users',
+      description: '직원 정보',
+      columns: [
+        { name: 'name', type: 'text', description: '이름' },
+        { name: 'role', type: 'text', description: '역할 (owner/manager/staff)' },
+        { name: 'position', type: 'text', description: '직책' },
+        { name: 'status', type: 'text', description: '상태 (active/inactive)' },
+        { name: 'hire_date', type: 'date', description: '입사일' },
+      ],
+    },
+    {
+      name: 'announcements',
+      description: '공지사항 게시판',
+      columns: [
+        { name: 'title', type: 'text', description: '제목' },
+        { name: 'content', type: 'text', description: '내용' },
+        { name: 'is_pinned', type: 'boolean', description: '상단 고정 여부' },
+        { name: 'created_at', type: 'timestamp', description: '작성일' },
+      ],
+    },
+    {
+      name: 'tasks',
+      description: '업무 할당 게시판',
+      columns: [
+        { name: 'title', type: 'text', description: '업무 제목' },
+        { name: 'description', type: 'text', description: '업무 설명' },
+        { name: 'status', type: 'text', description: '상태' },
+        { name: 'priority', type: 'text', description: '우선순위' },
+        { name: 'due_date', type: 'date', description: '마감일' },
+      ],
+    },
+    {
+      name: 'vendor_contacts',
+      description: '업체 연락처',
+      columns: [
+        { name: 'company_name', type: 'text', description: '업체명' },
+        { name: 'category', type: 'text', description: '카테고리' },
+        { name: 'contact_name', type: 'text', description: '담당자명' },
+        { name: 'phone', type: 'text', description: '연락처' },
+      ],
+    },
+    {
+      name: 'protocols',
+      description: '진료 프로토콜',
+      columns: [
+        { name: 'title', type: 'text', description: '프로토콜 제목' },
+        { name: 'category', type: 'text', description: '카테고리' },
+        { name: 'content', type: 'text', description: '내용' },
+        { name: 'is_published', type: 'boolean', description: '공개 여부' },
+      ],
+    },
+    {
+      name: 'employment_contracts',
+      description: '근로계약서',
+      columns: [
+        { name: 'status', type: 'text', description: '계약 상태' },
+        { name: 'contract_start_date', type: 'date', description: '계약 시작일' },
+        { name: 'contract_end_date', type: 'date', description: '계약 종료일' },
+        { name: 'salary_type', type: 'text', description: '급여 유형' },
+      ],
+    },
+    {
+      name: 'employee_leave_balances',
+      description: '직원 연차 잔액',
+      columns: [
+        { name: 'total_days', type: 'decimal', description: '총 연차 일수' },
+        { name: 'used_days', type: 'decimal', description: '사용 연차 일수' },
+        { name: 'remaining_days', type: 'decimal', description: '잔여 연차 일수' },
+      ],
+    },
   ],
 };
 
@@ -246,7 +359,7 @@ export function parseDateRange(message: string): { startDate: string; endDate: s
   return null;
 }
 
-// Supabase에서 데이터 수집
+// Supabase에서 데이터 수집 (모든 테이블)
 export async function collectDataForAnalysis(
   supabaseUrl: string,
   supabaseKey: string,
@@ -263,87 +376,201 @@ export async function collectDataForAnalysis(
     new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0];
 
   try {
-    // 일일 보고서
-    const { data: dailyReports } = await supabase
-      .from('daily_reports')
-      .select('date, recall_count, recall_booking_count, consult_proceed, consult_hold, naver_review_count, special_notes')
-      .eq('clinic_id', clinicId)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: true });
+    // 병렬로 모든 데이터 수집
+    const [
+      dailyReportsResult,
+      consultLogsResult,
+      giftLogsResult,
+      happyCallLogsResult,
+      cashRegistersResult,
+      attendanceRecordsResult,
+      leaveRequestsResult,
+      giftInventoryResult,
+      inventoryLogsResult,
+      recallCampaignsResult,
+      recallPatientsResult,
+      recallContactLogsResult,
+      specialNotesResult,
+      usersResult,
+      announcementsResult,
+      tasksResult,
+      vendorContactsResult,
+      protocolsResult,
+      contractsResult,
+      leaveBalancesResult,
+    ] = await Promise.all([
+      // 일일 보고서
+      supabase
+        .from('daily_reports')
+        .select('date, recall_count, recall_booking_count, consult_proceed, consult_hold, naver_review_count, special_notes')
+        .eq('clinic_id', clinicId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true }),
 
-    if (dailyReports) {
-      data.dailyReports = dailyReports;
-    }
+      // 상담 기록
+      supabase
+        .from('consult_logs')
+        .select('date, patient_name, consult_content, consult_status, remarks')
+        .eq('clinic_id', clinicId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true }),
 
-    // 상담 기록
-    const { data: consultLogs } = await supabase
-      .from('consult_logs')
-      .select('date, patient_name, consult_content, consult_status, remarks')
-      .eq('clinic_id', clinicId)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: true });
+      // 선물 기록
+      supabase
+        .from('gift_logs')
+        .select('date, patient_name, gift_type, quantity, naver_review, notes')
+        .eq('clinic_id', clinicId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true }),
 
-    if (consultLogs) {
-      data.consultLogs = consultLogs;
-    }
+      // 해피콜 기록
+      supabase
+        .from('happy_call_logs')
+        .select('date, patient_name, treatment, notes')
+        .eq('clinic_id', clinicId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true }),
 
-    // 선물 기록
-    const { data: giftLogs } = await supabase
-      .from('gift_logs')
-      .select('date, patient_name, gift_type, quantity, naver_review, notes')
-      .eq('clinic_id', clinicId)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: true });
+      // 현금 출납 기록
+      supabase
+        .from('cash_register_logs')
+        .select('date, previous_balance, current_balance, balance_difference, notes')
+        .eq('clinic_id', clinicId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true }),
 
-    if (giftLogs) {
-      data.giftLogs = giftLogs;
-    }
+      // 출퇴근 기록
+      supabase
+        .from('attendance_records')
+        .select('date, check_in_time, check_out_time, users!inner(name)')
+        .eq('clinic_id', clinicId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true }),
 
-    // 해피콜 기록
-    const { data: happyCallLogs } = await supabase
-      .from('happy_call_logs')
-      .select('date, patient_name, treatment, notes')
-      .eq('clinic_id', clinicId)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: true });
+      // 연차 신청 기록
+      supabase
+        .from('leave_requests')
+        .select('leave_type, start_date, end_date, status, reason, users!inner(name)')
+        .eq('clinic_id', clinicId)
+        .or(`start_date.gte.${startDate},end_date.lte.${endDate}`)
+        .order('start_date', { ascending: true }),
 
-    if (happyCallLogs) {
-      data.happyCallLogs = happyCallLogs;
-    }
+      // 선물 재고 현황
+      supabase
+        .from('gift_inventory')
+        .select('name, stock, category_id')
+        .eq('clinic_id', clinicId),
 
-    // 현금 출납 기록
-    const { data: cashRegisters } = await supabase
-      .from('cash_register_logs')
-      .select('date, previous_balance, current_balance, balance_difference, notes')
-      .eq('clinic_id', clinicId)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: true });
+      // 재고 입출고 기록
+      supabase
+        .from('inventory_logs')
+        .select('timestamp, name, reason, change, old_stock, new_stock')
+        .eq('clinic_id', clinicId)
+        .gte('timestamp', `${startDate}T00:00:00`)
+        .lte('timestamp', `${endDate}T23:59:59`)
+        .order('timestamp', { ascending: true }),
 
-    if (cashRegisters) {
-      data.cashRegisters = cashRegisters;
-    }
+      // 리콜 캠페인
+      supabase
+        .from('recall_campaigns')
+        .select('name, start_date, end_date, status, total_patients, completed_patients')
+        .eq('clinic_id', clinicId)
+        .order('created_at', { ascending: false })
+        .limit(50),
 
-    // 출퇴근 기록 (직원 이름 포함)
-    const { data: attendanceRecords } = await supabase
-      .from('attendance_records')
-      .select(`
-        date,
-        check_in_time,
-        check_out_time,
-        users!inner(name)
-      `)
-      .eq('clinic_id', clinicId)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: true });
+      // 리콜 환자
+      supabase
+        .from('recall_patients')
+        .select('patient_name, phone, last_visit, recall_date, status, contact_count, booking_date')
+        .eq('clinic_id', clinicId)
+        .gte('recall_date', startDate)
+        .lte('recall_date', endDate)
+        .order('recall_date', { ascending: true }),
 
-    if (attendanceRecords) {
-      data.attendanceRecords = attendanceRecords.map((record) => {
+      // 리콜 연락 기록
+      supabase
+        .from('recall_contact_logs')
+        .select('contact_type, result, notes, created_at')
+        .eq('clinic_id', clinicId)
+        .gte('created_at', `${startDate}T00:00:00`)
+        .lte('created_at', `${endDate}T23:59:59`)
+        .order('created_at', { ascending: true }),
+
+      // 특이사항 히스토리
+      supabase
+        .from('special_notes_history')
+        .select('date, content, created_at, users!inner(name)')
+        .eq('clinic_id', clinicId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('created_at', { ascending: true }),
+
+      // 직원 정보
+      supabase
+        .from('users')
+        .select('name, role, position, status, hire_date')
+        .eq('clinic_id', clinicId)
+        .eq('status', 'active'),
+
+      // 공지사항
+      supabase
+        .from('announcements')
+        .select('title, content, is_pinned, created_at, users!inner(name)')
+        .eq('clinic_id', clinicId)
+        .gte('created_at', `${startDate}T00:00:00`)
+        .lte('created_at', `${endDate}T23:59:59`)
+        .order('created_at', { ascending: false }),
+
+      // 업무 할당
+      supabase
+        .from('tasks')
+        .select('title, description, status, priority, due_date, created_at')
+        .eq('clinic_id', clinicId)
+        .order('created_at', { ascending: false })
+        .limit(100),
+
+      // 업체 연락처
+      supabase
+        .from('vendor_contacts')
+        .select('company_name, category, contact_name, phone, notes')
+        .eq('clinic_id', clinicId),
+
+      // 프로토콜
+      supabase
+        .from('protocols')
+        .select('title, category, is_published, created_at, updated_at')
+        .eq('clinic_id', clinicId),
+
+      // 근로계약서
+      supabase
+        .from('employment_contracts')
+        .select('status, contract_start_date, contract_end_date, salary_type, created_at')
+        .eq('clinic_id', clinicId)
+        .order('created_at', { ascending: false }),
+
+      // 연차 잔액
+      supabase
+        .from('employee_leave_balances')
+        .select('total_days, used_days, remaining_days, year, users!inner(name)')
+        .eq('clinic_id', clinicId),
+    ]);
+
+    // 데이터 할당
+    if (dailyReportsResult.data) data.dailyReports = dailyReportsResult.data;
+    if (consultLogsResult.data) data.consultLogs = consultLogsResult.data;
+    if (giftLogsResult.data) data.giftLogs = giftLogsResult.data;
+    if (happyCallLogsResult.data) data.happyCallLogs = happyCallLogsResult.data;
+    if (cashRegistersResult.data) data.cashRegisters = cashRegistersResult.data;
+
+    // 출퇴근 기록 변환
+    if (attendanceRecordsResult.data) {
+      data.attendanceRecords = attendanceRecordsResult.data.map((record) => {
         const users = record.users as unknown as { name: string } | { name: string }[] | null;
         const userName = Array.isArray(users) ? users[0]?.name : users?.name;
         return {
@@ -355,22 +582,9 @@ export async function collectDataForAnalysis(
       });
     }
 
-    // 연차 신청 기록
-    const { data: leaveRequests } = await supabase
-      .from('leave_requests')
-      .select(`
-        leave_type,
-        start_date,
-        end_date,
-        status,
-        users!inner(name)
-      `)
-      .eq('clinic_id', clinicId)
-      .or(`start_date.gte.${startDate},end_date.lte.${endDate}`)
-      .order('start_date', { ascending: true });
-
-    if (leaveRequests) {
-      data.leaveRequests = leaveRequests.map((request) => {
+    // 연차 신청 변환
+    if (leaveRequestsResult.data) {
+      data.leaveRequests = leaveRequestsResult.data.map((request) => {
         const users = request.users as unknown as { name: string } | { name: string }[] | null;
         const userName = Array.isArray(users) ? users[0]?.name : users?.name;
         return {
@@ -379,9 +593,69 @@ export async function collectDataForAnalysis(
           start_date: request.start_date,
           end_date: request.end_date,
           status: request.status,
+          reason: request.reason,
         };
       });
     }
+
+    // 추가 데이터 할당
+    if (giftInventoryResult.data) data.giftInventory = giftInventoryResult.data;
+    if (inventoryLogsResult.data) data.inventoryLogs = inventoryLogsResult.data;
+    if (recallCampaignsResult.data) data.recallCampaigns = recallCampaignsResult.data;
+    if (recallPatientsResult.data) data.recallPatients = recallPatientsResult.data;
+    if (recallContactLogsResult.data) data.recallContactLogs = recallContactLogsResult.data;
+
+    // 특이사항 히스토리 변환
+    if (specialNotesResult.data) {
+      data.specialNotesHistory = specialNotesResult.data.map((note) => {
+        const users = note.users as unknown as { name: string } | { name: string }[] | null;
+        const userName = Array.isArray(users) ? users[0]?.name : users?.name;
+        return {
+          date: note.date,
+          content: note.content,
+          created_at: note.created_at,
+          author: userName || 'Unknown',
+        };
+      });
+    }
+
+    if (usersResult.data) data.users = usersResult.data;
+
+    // 공지사항 변환
+    if (announcementsResult.data) {
+      data.announcements = announcementsResult.data.map((ann) => {
+        const users = ann.users as unknown as { name: string } | { name: string }[] | null;
+        const userName = Array.isArray(users) ? users[0]?.name : users?.name;
+        return {
+          title: ann.title,
+          content: ann.content,
+          is_pinned: ann.is_pinned,
+          created_at: ann.created_at,
+          author: userName || 'Unknown',
+        };
+      });
+    }
+
+    if (tasksResult.data) data.tasks = tasksResult.data;
+    if (vendorContactsResult.data) data.vendorContacts = vendorContactsResult.data;
+    if (protocolsResult.data) data.protocols = protocolsResult.data;
+    if (contractsResult.data) data.contracts = contractsResult.data;
+
+    // 연차 잔액 변환
+    if (leaveBalancesResult.data) {
+      data.leaveBalances = leaveBalancesResult.data.map((balance) => {
+        const users = balance.users as unknown as { name: string } | { name: string }[] | null;
+        const userName = Array.isArray(users) ? users[0]?.name : users?.name;
+        return {
+          user_name: userName || 'Unknown',
+          total_days: balance.total_days,
+          used_days: balance.used_days,
+          remaining_days: balance.remaining_days,
+          year: balance.year,
+        };
+      });
+    }
+
   } catch (error) {
     console.error('Error collecting data for analysis:', error);
   }
@@ -478,6 +752,202 @@ ${JSON.stringify(data.attendanceRecords, null, 2)}`);
 
 ### 연차 상세 데이터:
 ${JSON.stringify(data.leaveRequests, null, 2)}`);
+  }
+
+  // 선물 재고 현황
+  if (data.giftInventory && data.giftInventory.length > 0) {
+    const totalStock = data.giftInventory.reduce((sum, g) => sum + (g.stock || 0), 0);
+    const lowStockItems = data.giftInventory.filter((g) => g.stock <= 5);
+    summaryParts.push(`## 선물 재고 현황 (${data.giftInventory.length}종)
+- 총 재고 수량: ${totalStock}개
+- 재고 부족 품목 (5개 이하): ${lowStockItems.length}종
+
+### 재고 상세 데이터:
+${JSON.stringify(data.giftInventory, null, 2)}`);
+  }
+
+  // 재고 입출고 기록
+  if (data.inventoryLogs && data.inventoryLogs.length > 0) {
+    const inflows = data.inventoryLogs.filter((l) => l.change > 0);
+    const outflows = data.inventoryLogs.filter((l) => l.change < 0);
+    summaryParts.push(`## 재고 입출고 기록 (${data.inventoryLogs.length}건)
+- 입고 기록: ${inflows.length}건
+- 출고 기록: ${outflows.length}건
+
+### 입출고 상세 데이터:
+${JSON.stringify(data.inventoryLogs, null, 2)}`);
+  }
+
+  // 리콜 캠페인
+  if (data.recallCampaigns && data.recallCampaigns.length > 0) {
+    const activeCampaigns = data.recallCampaigns.filter((c) => c.status === 'active');
+    const totalPatients = data.recallCampaigns.reduce((sum, c) => sum + (c.total_patients || 0), 0);
+    const completedPatients = data.recallCampaigns.reduce((sum, c) => sum + (c.completed_patients || 0), 0);
+    summaryParts.push(`## 리콜 캠페인 요약 (${data.recallCampaigns.length}개)
+- 진행 중 캠페인: ${activeCampaigns.length}개
+- 총 대상 환자: ${totalPatients}명
+- 완료된 환자: ${completedPatients}명 (완료율: ${totalPatients > 0 ? ((completedPatients / totalPatients) * 100).toFixed(1) : 0}%)
+
+### 캠페인 상세 데이터:
+${JSON.stringify(data.recallCampaigns, null, 2)}`);
+  }
+
+  // 리콜 환자
+  if (data.recallPatients && data.recallPatients.length > 0) {
+    const statusCount = data.recallPatients.reduce(
+      (acc, p) => {
+        acc[p.status] = (acc[p.status] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+    const bookedCount = data.recallPatients.filter((p) => p.booking_date).length;
+    summaryParts.push(`## 리콜 환자 현황 (${data.recallPatients.length}명)
+- 상태별 분포: ${JSON.stringify(statusCount)}
+- 예약 완료: ${bookedCount}명 (예약률: ${((bookedCount / data.recallPatients.length) * 100).toFixed(1)}%)
+
+### 리콜 환자 상세 데이터:
+${JSON.stringify(data.recallPatients, null, 2)}`);
+  }
+
+  // 리콜 연락 기록
+  if (data.recallContactLogs && data.recallContactLogs.length > 0) {
+    const resultCount = data.recallContactLogs.reduce(
+      (acc, l) => {
+        acc[l.result] = (acc[l.result] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+    summaryParts.push(`## 리콜 연락 기록 (${data.recallContactLogs.length}건)
+- 연락 결과별 분포: ${JSON.stringify(resultCount)}
+
+### 연락 상세 데이터:
+${JSON.stringify(data.recallContactLogs, null, 2)}`);
+  }
+
+  // 특이사항 히스토리
+  if (data.specialNotesHistory && data.specialNotesHistory.length > 0) {
+    summaryParts.push(`## 특이사항 히스토리 (${data.specialNotesHistory.length}건)
+
+### 특이사항 상세 데이터:
+${JSON.stringify(data.specialNotesHistory, null, 2)}`);
+  }
+
+  // 직원 정보
+  if (data.users && data.users.length > 0) {
+    const roleCount = data.users.reduce(
+      (acc, u) => {
+        acc[u.role] = (acc[u.role] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+    summaryParts.push(`## 직원 현황 (${data.users.length}명)
+- 역할별 분포: ${JSON.stringify(roleCount)}
+
+### 직원 상세 데이터:
+${JSON.stringify(data.users, null, 2)}`);
+  }
+
+  // 공지사항
+  if (data.announcements && data.announcements.length > 0) {
+    const pinnedCount = data.announcements.filter((a) => a.is_pinned).length;
+    summaryParts.push(`## 공지사항 (${data.announcements.length}건)
+- 상단 고정 공지: ${pinnedCount}건
+
+### 공지사항 상세 데이터:
+${JSON.stringify(data.announcements, null, 2)}`);
+  }
+
+  // 업무 할당
+  if (data.tasks && data.tasks.length > 0) {
+    const statusCount = data.tasks.reduce(
+      (acc, t) => {
+        const key = t.status || 'unknown';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+    const priorityCount = data.tasks.reduce(
+      (acc, t) => {
+        const key = t.priority || 'none';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+    summaryParts.push(`## 업무 할당 현황 (${data.tasks.length}건)
+- 상태별 분포: ${JSON.stringify(statusCount)}
+- 우선순위별 분포: ${JSON.stringify(priorityCount)}
+
+### 업무 상세 데이터:
+${JSON.stringify(data.tasks, null, 2)}`);
+  }
+
+  // 업체 연락처
+  if (data.vendorContacts && data.vendorContacts.length > 0) {
+    const categoryCount = data.vendorContacts.reduce(
+      (acc, v) => {
+        const key = v.category || 'uncategorized';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+    summaryParts.push(`## 업체 연락처 (${data.vendorContacts.length}개)
+- 카테고리별 분포: ${JSON.stringify(categoryCount)}
+
+### 업체 상세 데이터:
+${JSON.stringify(data.vendorContacts, null, 2)}`);
+  }
+
+  // 프로토콜
+  if (data.protocols && data.protocols.length > 0) {
+    const publishedCount = data.protocols.filter((p) => p.is_published).length;
+    const categoryCount = data.protocols.reduce(
+      (acc, p) => {
+        const key = p.category || 'uncategorized';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+    summaryParts.push(`## 진료 프로토콜 (${data.protocols.length}개)
+- 공개된 프로토콜: ${publishedCount}개
+- 카테고리별 분포: ${JSON.stringify(categoryCount)}
+
+### 프로토콜 상세 데이터:
+${JSON.stringify(data.protocols, null, 2)}`);
+  }
+
+  // 근로계약서
+  if (data.contracts && data.contracts.length > 0) {
+    const statusCount = data.contracts.reduce(
+      (acc, c) => {
+        acc[c.status] = (acc[c.status] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+    summaryParts.push(`## 근로계약서 현황 (${data.contracts.length}건)
+- 상태별 분포: ${JSON.stringify(statusCount)}
+
+### 계약 상세 데이터:
+${JSON.stringify(data.contracts, null, 2)}`);
+  }
+
+  // 연차 잔액
+  if (data.leaveBalances && data.leaveBalances.length > 0) {
+    const totalRemaining = data.leaveBalances.reduce((sum, b) => sum + (b.remaining_days || 0), 0);
+    const avgRemaining = totalRemaining / data.leaveBalances.length;
+    summaryParts.push(`## 직원 연차 잔액 현황 (${data.leaveBalances.length}명)
+- 총 잔여 연차: ${totalRemaining.toFixed(1)}일
+- 평균 잔여 연차: ${avgRemaining.toFixed(1)}일
+
+### 연차 잔액 상세 데이터:
+${JSON.stringify(data.leaveBalances, null, 2)}`);
   }
 
   if (summaryParts.length === 0 || (dateRange && summaryParts.length === 1)) {
