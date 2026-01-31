@@ -375,6 +375,8 @@ export async function collectDataForAnalysis(
     dateRange?.startDate ||
     new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0];
 
+  console.log(`[AI Analysis] Collecting data for clinic: ${clinicId}, range: ${startDate} ~ ${endDate}`);
+
   try {
     // 병렬로 모든 데이터 수집
     const [
@@ -663,8 +665,33 @@ export async function collectDataForAnalysis(
       });
     }
 
+    // 수집된 데이터 요약 로깅
+    const collectedSummary = {
+      dailyReports: data.dailyReports?.length || 0,
+      consultLogs: data.consultLogs?.length || 0,
+      giftLogs: data.giftLogs?.length || 0,
+      happyCallLogs: data.happyCallLogs?.length || 0,
+      cashRegisters: data.cashRegisters?.length || 0,
+      attendanceRecords: data.attendanceRecords?.length || 0,
+      leaveRequests: data.leaveRequests?.length || 0,
+      giftInventory: data.giftInventory?.length || 0,
+      inventoryLogs: data.inventoryLogs?.length || 0,
+      recallCampaigns: data.recallCampaigns?.length || 0,
+      recallPatients: data.recallPatients?.length || 0,
+      recallContactLogs: data.recallContactLogs?.length || 0,
+      specialNotesHistory: data.specialNotesHistory?.length || 0,
+      users: data.users?.length || 0,
+      announcements: data.announcements?.length || 0,
+      tasks: data.tasks?.length || 0,
+      vendorContacts: data.vendorContacts?.length || 0,
+      protocols: data.protocols?.length || 0,
+      contracts: data.contracts?.length || 0,
+      leaveBalances: data.leaveBalances?.length || 0,
+    };
+    console.log('[AI Analysis] Data collected:', JSON.stringify(collectedSummary));
+
   } catch (error) {
-    console.error('Error collecting data for analysis:', error);
+    console.error('[AI Analysis] Error collecting data:', error);
   }
 
   return data;
