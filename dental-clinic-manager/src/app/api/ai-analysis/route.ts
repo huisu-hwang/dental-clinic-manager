@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { performAnalysis } from '@/lib/aiAnalysisService';
+import { performAnalysisV2, parseDateRange } from '@/lib/aiAnalysisServiceV2';
 import type { AIAnalysisRequest, AIMessage } from '@/types/aiAnalysis';
 
 export const maxDuration = 60; // 최대 60초 실행 허용 (Vercel Pro)
@@ -63,21 +63,23 @@ export async function POST(request: NextRequest) {
       const { error: authError } = await supabase.auth.getUser(token);
       if (authError) {
         console.warn('Auth warning:', authError.message);
-        // 인증 실패해도 계속 진행 (클리닉 ID로 데이터 접근 제한)
       }
     }
 
-    // AI 분석 수행 (Service Role Key 사용하여 RLS 우회)
+    // 메시지에서 날짜 범위 파싱 (명시적으로 지정되지 않은 경우)
+    const parsedDateRange = dateRange || parseDateRange(message) || undefined;
+
+    // AI 분석 수행 (V2 - Agentic 방식)
     const analysisRequest: AIAnalysisRequest = {
       message,
       conversationHistory,
-      dateRange,
+      dateRange: parsedDateRange,
     };
 
-    const response = await performAnalysis(
+    const response = await performAnalysisV2(
       analysisRequest,
       supabaseUrl,
-      supabaseServiceKey || supabaseAnonKey, // Service Role Key 우선 사용
+      supabaseServiceKey || supabaseAnonKey,
       openaiApiKey,
       clinicId
     );
