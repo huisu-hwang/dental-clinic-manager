@@ -899,7 +899,7 @@ export async function performAnalysisV2(
       console.log(`[AI Analysis V2 Gemini] Iteration ${iteration}`);
 
       const response = await genAI.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.0-flash-001',
         contents: contents,
         config: {
           systemInstruction: systemPrompt,
@@ -974,7 +974,7 @@ export async function performAnalysisV2(
 
     // 최대 반복 도달 시 마지막 응답 반환
     const finalResponse = await genAI.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.0-flash-001',
       contents: contents,
       config: {
         systemInstruction: systemPrompt,
