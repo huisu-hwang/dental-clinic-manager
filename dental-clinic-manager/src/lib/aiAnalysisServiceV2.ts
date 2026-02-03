@@ -931,16 +931,9 @@ export async function performAnalysisV2(
         };
       }
 
-      // 모델 응답을 대화에 추가
-      contents.push({
-        role: 'model',
-        parts: parts.map(part => {
-          if (part.functionCall) {
-            return { functionCall: part.functionCall };
-          }
-          return { text: part.text || '' };
-        }) as Array<{ text: string }>,
-      });
+      // 모델 응답을 대화에 추가 (Gemini 3 Thought Signatures 보존을 위해 전체 content 추가)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      contents.push(candidate.content as any);
 
       // Function calls 처리
       const functionResponses: Array<{ functionResponse: { name: string; response: unknown } }> = [];
