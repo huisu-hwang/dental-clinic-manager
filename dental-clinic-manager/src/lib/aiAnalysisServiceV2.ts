@@ -794,20 +794,33 @@ function generateSystemPrompt(): string {
 ## 사용 가능한 테이블
 ${tableList}
 
+## 테이블 관계 (중요!)
+- attendance_records.user_id → users.id (출퇴근 기록의 직원 정보)
+- leave_requests.user_id → users.id (휴가 신청의 직원 정보)
+- employee_leave_balances.user_id → users.id (연차 잔액의 직원 정보)
+- employment_contracts.employee_user_id → users.id (근로계약서의 직원 정보)
+
 ## 분석 절차
 1. 사용자 질문 분석 - 무엇을 알고 싶어하는지 파악
 2. 필요한 테이블과 컬럼 결정
-3. get_database_schema 도구로 테이블 구조 확인 (필요시)
-4. query_table 또는 aggregate_data 도구로 데이터 조회
+3. **특정 직원(원장, 실장 등)의 데이터가 필요하면 반드시 users 테이블에서 해당 직원의 id를 먼저 조회**
+4. 조회한 user_id를 사용하여 다른 테이블(attendance_records 등) 조회
 5. 조회 결과를 분석하여 명확한 답변 제공
 
-## 중요 사항
+## 중요 사항 (반드시 준수!)
 - 항상 실제 데이터를 조회하여 답변하세요. 추측하지 마세요.
+- **user_id를 추측하지 마세요! "1"이나 임의의 값을 사용하지 말고, 반드시 users 테이블에서 먼저 조회하세요.**
 - 날짜 관련 질문은 date_range 파라미터를 활용하세요.
-- "원장"은 role='owner'인 사용자입니다.
-- "실장"은 role='manager'인 사용자입니다.
+- "원장"은 users 테이블에서 role='owner'인 사용자입니다. 먼저 users 테이블 조회 필요!
+- "실장"은 users 테이블에서 role='manager'인 사용자입니다. 먼저 users 테이블 조회 필요!
+- "부원장"은 users 테이블에서 role='vice_director'인 사용자입니다.
 - 지각 데이터는 attendance_records 테이블의 late_minutes 컬럼을 확인하세요.
 - 데이터가 없으면 "해당 기간에 데이터가 없습니다"라고 명확히 알려주세요.
+
+## 직원별 데이터 조회 예시
+원장의 출퇴근 기록을 조회하려면:
+1. 먼저 users 테이블에서 role='owner'인 사용자 조회: query_table(users, filters: [{column: "role", operator: "eq", value: "owner"}])
+2. 조회된 user의 id (예: "abc-123-...")를 사용하여 attendance_records 조회: query_table(attendance_records, filters: [{column: "user_id", operator: "eq", value: "abc-123-..."}])
 
 ## 응답 형식
 - 한국어로 응답합니다.
