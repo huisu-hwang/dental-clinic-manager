@@ -28,6 +28,7 @@ import TeamStatus from '@/components/Attendance/TeamStatus'
 import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
 import { PayrollManagement } from '@/components/Payroll'
 import { RecallManagement } from '@/components/Recall'
+import AIChat from '@/components/AIAnalysis/AIChat'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
@@ -796,6 +797,13 @@ export default function DashboardPage() {
           {/* 환자 리콜 관리 */}
           {activeTab === 'recall' && (
             <RecallManagement />
+          )}
+
+          {/* AI 데이터 분석 */}
+          {activeTab === 'ai-analysis' && user?.clinic_id && (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-[calc(100vh-180px)]">
+              <AIChat clinicId={user.clinic_id} />
+            </div>
           )}
 
           {/* 설정 */}

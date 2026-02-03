@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useMenuSettings } from '@/hooks/useMenuSettings'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Permission } from '@/types/permissions'
 import type { MenuCategorySetting } from '@/types/menuSettings'
+import { MENU_ICON_MAP, MENU_PERMISSIONS_MAP, MENU_OWNER_ONLY_MAP } from '@/config/menuConfig'
 import {
   Home,
   ClipboardList,
@@ -51,7 +53,8 @@ import {
   Zap,
   SlidersHorizontal,
   Banknote,
-  PhoneCall
+  PhoneCall,
+  Sparkles
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -70,37 +73,32 @@ interface Tab {
   fixedPosition?: 'top' | 'bottom'
 }
 
-const iconMap: Record<string, React.ElementType> = {
-  'home': Home,
-  'daily-input': ClipboardList,
-  'attendance': Clock,
-  'leave': CalendarDays,
-  'bulletin': Megaphone,
-  'stats': BarChart3,
-  'logs': History,
-  'protocols': BookOpen,
-  'vendors': Building2,
-  'contracts': FileSignature,
-  'documents': FileText,
-  'payroll': Banknote,
-  'settings': Package,
-  'guide': HelpCircle,
-  'menu-settings': SlidersHorizontal,
-  'recall': PhoneCall
-}
-
-// 카테고리 아이콘 매핑 - 모든 AVAILABLE_CATEGORY_ICONS 포함
-const categoryIconMap: Record<string, React.ElementType> = {
+// 아이콘 이름 -> 컴포넌트 매핑 (중앙 설정에서 사용)
+const iconNameToComponent: Record<string, React.ElementType> = {
+  'Home': Home,
+  'ClipboardList': ClipboardList,
+  'Clock': Clock,
+  'CalendarDays': CalendarDays,
+  'Megaphone': Megaphone,
+  'BarChart3': BarChart3,
+  'History': History,
+  'BookOpen': BookOpen,
+  'Building2': Building2,
+  'FileSignature': FileSignature,
+  'FileText': FileText,
+  'Banknote': Banknote,
+  'Package': Package,
+  'HelpCircle': HelpCircle,
+  'SlidersHorizontal': SlidersHorizontal,
+  'PhoneCall': PhoneCall,
+  'Sparkles': Sparkles,
   'Briefcase': Briefcase,
   'MessageSquare': MessageSquare,
   'FolderOpen': FolderOpen,
   'Settings': Settings,
   'Users': Users,
   'Calendar': Calendar,
-  'FileText': FileText,
-  'BarChart': BarChart3,
   'Heart': Heart,
-  'Building2': Building2,
   'Clipboard': Clipboard,
   'Star': Star,
   'Bell': Bell,
@@ -110,46 +108,40 @@ const categoryIconMap: Record<string, React.ElementType> = {
   'Flag': Flag,
   'Gift': Gift,
   'Globe': Globe,
-  'Home': Home,
   'Layers': Layers,
   'Layout': Layout,
   'List': List,
   'Mail': Mail,
   'Map': Map,
   'Monitor': Monitor,
-  'Package': Package,
   'Palette': Palette,
   'Phone': Phone,
   'Scissors': Scissors,
   'Shield': Shield,
   'Target': Target,
   'Truck': Truck,
-  'Zap': Zap,
-  'PhoneCall': PhoneCall
+  'Zap': Zap
 }
 
-const permissionsMap: Record<string, Permission[]> = {
-  'home': [],
-  'daily-input': ['daily_report_view'],
-  'attendance': ['attendance_check_in', 'attendance_view_own'],
-  'leave': ['leave_request_view_own', 'leave_balance_view_own'],
-  'bulletin': [],
-  'stats': ['stats_weekly_view', 'stats_monthly_view', 'stats_annual_view'],
-  'logs': ['logs_view'],
-  'protocols': ['protocol_view'],
-  'vendors': ['vendor_contacts_view'],
-  'contracts': ['contract_view'],
-  'documents': ['contract_view'],
-  'payroll': ['contract_view'],
-  'settings': ['inventory_view'],
-  'guide': ['guide_view'],
-  'menu-settings': [],
-  'recall': ['daily_report_view']
+// 메뉴 ID로 아이콘 컴포넌트 가져오기 (중앙 설정 MENU_ICON_MAP 사용)
+const getIconForMenu = (menuId: string): React.ElementType => {
+  const iconName = MENU_ICON_MAP[menuId]
+  return iconNameToComponent[iconName] || HelpCircle
 }
+
+// 카테고리 아이콘 매핑 (iconNameToComponent 재사용 + BarChart 추가)
+const categoryIconMap: Record<string, React.ElementType> = {
+  ...iconNameToComponent,
+  'BarChart': BarChart3  // 레거시 호환성
+}
+
+// 권한 매핑은 중앙 설정(MENU_PERMISSIONS_MAP)에서 가져옴
 
 export default function TabNavigation({ activeTab, onTabChange, onItemClick, skipAutoRedirect = false }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
   const { menuSettings, categorySettings, isLoading } = useMenuSettings()
+  const { user } = useAuth()
+  const isOwner = user?.role === 'owner'
 
   // 활성 탭이 속한 카테고리 찾기
   const getActiveCategoryId = (tabId: string): string | null => {
@@ -171,7 +163,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     }
   }, [activeTab, menuSettings])
 
-  // 탭 데이터 생성 (메뉴 설정 기반)
+  // 탭 데이터 생성 (메뉴 설정 기반, 중앙 설정에서 아이콘/권한 가져옴)
   const tabs = useMemo(() => {
     return menuSettings
       .filter(menu => menu.visible)
@@ -179,8 +171,8 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
       .map(menu => ({
         id: menu.id,
         label: menu.label,
-        icon: iconMap[menu.id] || HelpCircle,
-        requiredPermissions: permissionsMap[menu.id] || [],
+        icon: getIconForMenu(menu.id),
+        requiredPermissions: MENU_PERMISSIONS_MAP[menu.id] || [],
         categoryId: menu.categoryId,
         fixedPosition: menu.fixedPosition
       }))
@@ -189,11 +181,15 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   // 권한에 따른 보이는 탭 필터링
   const visibleTabs = useMemo(() =>
     tabs.filter(tab => {
+      // 대표 원장 전용 메뉴 체크
+      if (MENU_OWNER_ONLY_MAP[tab.id] && !isOwner) {
+        return false
+      }
       if (!tab.requiredPermissions || tab.requiredPermissions.length === 0) {
         return true
       }
       return tab.requiredPermissions.some(perm => hasPermission(perm))
-    }), [tabs, hasPermission])
+    }), [tabs, hasPermission, isOwner])
 
   // 상단 고정 메뉴 (fixedPosition === 'top' 또는 categoryId가 없고 fixedPosition이 없는 기존 메뉴)
   const topFixedMenus = useMemo(() => {
