@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     // Service Role Key 사용 (RLS 우회하여 모든 데이터 접근)
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const openaiApiKey = process.env.OPENAI_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json(
@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
       console.warn('SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다. ANON_KEY를 사용합니다.');
     }
 
-    if (!openaiApiKey) {
+    if (!geminiApiKey) {
       return NextResponse.json(
-        { error: 'OpenAI API 키가 설정되지 않았습니다. 환경 변수 OPENAI_API_KEY를 확인하세요.' },
+        { error: 'Gemini API 키가 설정되지 않았습니다. 환경 변수 GEMINI_API_KEY를 확인하세요.' },
         { status: 500 }
       );
     }
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       analysisRequest,
       supabaseUrl,
       supabaseServiceKey || supabaseAnonKey,
-      openaiApiKey,
+      geminiApiKey,
       clinicId
     );
 

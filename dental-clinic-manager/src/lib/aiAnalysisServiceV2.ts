@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import { GoogleGenAI, Type } from '@google/genai';
+import type { Schema } from '@google/genai';
 import type {
-  AIMessage,
   AIAnalysisRequest,
   AIAnalysisResponse,
 } from '@/types/aiAnalysis';
@@ -349,139 +349,139 @@ const DATABASE_SCHEMA = {
   },
 };
 
-// OpenAI Function Definitions
-const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
-  {
-    type: 'function',
-    function: {
-      name: 'get_database_schema',
-      description: '데이터베이스의 전체 스키마 정보를 조회합니다. 어떤 테이블이 있고 각 테이블에 어떤 컬럼이 있는지 확인할 수 있습니다.',
-      parameters: {
-        type: 'object',
-        properties: {
-          table_name: {
-            type: 'string',
-            description: '특정 테이블의 스키마만 조회하려면 테이블 이름을 입력하세요. 비워두면 전체 스키마를 반환합니다.',
-          },
-        },
-        required: [],
-      },
+// Gemini Function Declarations
+const getSchemaParams: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    table_name: {
+      type: Type.STRING,
+      description: '특정 테이블의 스키마만 조회하려면 테이블 이름을 입력하세요. 비워두면 전체 스키마를 반환합니다.',
     },
   },
-  {
-    type: 'function',
-    function: {
-      name: 'query_table',
-      description: '특정 테이블에서 데이터를 조회합니다. 필터 조건과 정렬을 지정할 수 있습니다.',
-      parameters: {
-        type: 'object',
+};
+
+const queryTableParams: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    table_name: {
+      type: Type.STRING,
+      description: '조회할 테이블 이름',
+    },
+    select_columns: {
+      type: Type.STRING,
+      description: '조회할 컬럼들 (쉼표로 구분). 예: "id, name, date". 조인이 필요하면 "*, users(name, role)" 형태로 작성. 비워두면 모든 컬럼 조회.',
+    },
+    filters: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
         properties: {
-          table_name: {
-            type: 'string',
-            description: '조회할 테이블 이름',
+          column: { type: Type.STRING, description: '필터링할 컬럼명' },
+          operator: {
+            type: Type.STRING,
+            description: '비교 연산자: eq(같음), neq(다름), gt(초과), gte(이상), lt(미만), lte(이하), like(포함), ilike(대소문자 무시 포함)',
           },
-          select_columns: {
-            type: 'string',
-            description: '조회할 컬럼들 (쉼표로 구분). 예: "id, name, date". 조인이 필요하면 "*, users(name, role)" 형태로 작성. 비워두면 모든 컬럼 조회.',
-          },
-          filters: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                column: { type: 'string', description: '필터링할 컬럼명' },
-                operator: {
-                  type: 'string',
-                  description: '비교 연산자: eq(같음), neq(다름), gt(초과), gte(이상), lt(미만), lte(이하), like(포함), ilike(대소문자 무시 포함)',
-                },
-                value: { type: 'string', description: '비교할 값' },
-              },
-              required: ['column', 'operator', 'value'],
-            },
-            description: '필터 조건 배열',
-          },
-          date_range: {
-            type: 'object',
-            properties: {
-              start_date: { type: 'string', description: '시작 날짜 (YYYY-MM-DD 형식)' },
-              end_date: { type: 'string', description: '종료 날짜 (YYYY-MM-DD 형식)' },
-            },
-            description: '날짜 범위 필터 (테이블의 날짜 컬럼에 자동 적용)',
-          },
-          order_by: {
-            type: 'object',
-            properties: {
-              column: { type: 'string', description: '정렬할 컬럼명' },
-              ascending: { type: 'boolean', description: '오름차순 여부 (기본: true)' },
-            },
-            description: '정렬 조건',
-          },
-          limit: {
-            type: 'integer',
-            description: '조회할 최대 행 수 (기본: 100)',
-          },
+          value: { type: Type.STRING, description: '비교할 값' },
         },
-        required: ['table_name'],
+        required: ['column', 'operator', 'value'],
       },
+      description: '필터 조건 배열',
+    },
+    date_range: {
+      type: Type.OBJECT,
+      properties: {
+        start_date: { type: Type.STRING, description: '시작 날짜 (YYYY-MM-DD 형식)' },
+        end_date: { type: Type.STRING, description: '종료 날짜 (YYYY-MM-DD 형식)' },
+      },
+      description: '날짜 범위 필터 (테이블의 날짜 컬럼에 자동 적용)',
+    },
+    order_by: {
+      type: Type.OBJECT,
+      properties: {
+        column: { type: Type.STRING, description: '정렬할 컬럼명' },
+        ascending: { type: Type.BOOLEAN, description: '오름차순 여부 (기본: true)' },
+      },
+      description: '정렬 조건',
+    },
+    limit: {
+      type: Type.NUMBER,
+      description: '조회할 최대 행 수 (기본: 100)',
     },
   },
-  {
-    type: 'function',
-    function: {
-      name: 'aggregate_data',
-      description: '테이블 데이터를 집계합니다 (합계, 평균, 개수 등).',
-      parameters: {
-        type: 'object',
-        properties: {
-          table_name: {
-            type: 'string',
-            description: '집계할 테이블 이름',
-          },
-          aggregations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                column: { type: 'string', description: '집계할 컬럼명' },
-                function: {
-                  type: 'string',
-                  description: '집계 함수: sum, avg, count, min, max',
-                },
-                alias: { type: 'string', description: '결과 별칭 (선택)' },
-              },
-              required: ['column', 'function'],
-            },
-            description: '집계 함수 배열',
-          },
-          group_by: {
-            type: 'array',
-            items: { type: 'string' },
-            description: '그룹화할 컬럼 배열',
-          },
-          filters: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                column: { type: 'string' },
-                operator: { type: 'string' },
-                value: { type: 'string' },
-              },
-            },
-            description: '필터 조건',
-          },
-          date_range: {
-            type: 'object',
-            properties: {
-              start_date: { type: 'string' },
-              end_date: { type: 'string' },
-            },
-            description: '날짜 범위 필터',
-          },
-        },
-        required: ['table_name', 'aggregations'],
-      },
+  required: ['table_name'],
+};
+
+const aggregateDataParams: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    table_name: {
+      type: Type.STRING,
+      description: '집계할 테이블 이름',
     },
+    aggregations: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          column: { type: Type.STRING, description: '집계할 컬럼명' },
+          function: {
+            type: Type.STRING,
+            description: '집계 함수: sum, avg, count, min, max',
+          },
+          alias: { type: Type.STRING, description: '결과 별칭 (선택)' },
+        },
+        required: ['column', 'function'],
+      },
+      description: '집계 함수 배열',
+    },
+    group_by: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description: '그룹화할 컬럼 배열',
+    },
+    filters: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          column: { type: Type.STRING },
+          operator: { type: Type.STRING },
+          value: { type: Type.STRING },
+        },
+      },
+      description: '필터 조건',
+    },
+    date_range: {
+      type: Type.OBJECT,
+      properties: {
+        start_date: { type: Type.STRING },
+        end_date: { type: Type.STRING },
+      },
+      description: '날짜 범위 필터',
+    },
+  },
+  required: ['table_name', 'aggregations'],
+};
+
+const geminiTools = [
+  {
+    functionDeclarations: [
+      {
+        name: 'get_database_schema',
+        description: '데이터베이스의 전체 스키마 정보를 조회합니다. 어떤 테이블이 있고 각 테이블에 어떤 컬럼이 있는지 확인할 수 있습니다.',
+        parameters: getSchemaParams,
+      },
+      {
+        name: 'query_table',
+        description: '특정 테이블에서 데이터를 조회합니다. 필터 조건과 정렬을 지정할 수 있습니다.',
+        parameters: queryTableParams,
+      },
+      {
+        name: 'aggregate_data',
+        description: '테이블 데이터를 집계합니다 (합계, 평균, 개수 등).',
+        parameters: aggregateDataParams,
+      },
+    ],
   },
 ];
 
@@ -832,53 +832,49 @@ ${tableList}
 async function processToolCall(
   supabase: SupabaseClient,
   clinicId: string,
-  toolCall: { id: string; type: string; function: { name: string; arguments: string } }
+  name: string,
+  args: Record<string, unknown>
 ): Promise<string> {
-  const { name, arguments: args } = toolCall.function;
-  const parsedArgs = JSON.parse(args);
-
-  console.log(`[AI Analysis] Tool call: ${name}`, parsedArgs);
+  console.log(`[AI Analysis] Tool call: ${name}`, args);
 
   switch (name) {
     case 'get_database_schema':
-      return getDatabaseSchema(parsedArgs.table_name);
+      return getDatabaseSchema(args.table_name as string | undefined);
 
     case 'query_table':
-      return await queryTable(supabase, clinicId, parsedArgs);
+      return await queryTable(supabase, clinicId, args as Parameters<typeof queryTable>[2]);
 
     case 'aggregate_data':
-      return await aggregateData(supabase, clinicId, parsedArgs);
+      return await aggregateData(supabase, clinicId, args as Parameters<typeof aggregateData>[2]);
 
     default:
       return JSON.stringify({ error: `Unknown tool: ${name}` });
   }
 }
 
-// 메인 분석 함수 (V2 - Agentic)
+// 메인 분석 함수 (V2 - Agentic with Gemini)
 export async function performAnalysisV2(
   request: AIAnalysisRequest,
   supabaseUrl: string,
   supabaseKey: string,
-  openaiApiKey: string,
+  geminiApiKey: string,
   clinicId: string
 ): Promise<AIAnalysisResponse> {
   const supabase = createClient(supabaseUrl, supabaseKey);
-  const openai = new OpenAI({ apiKey: openaiApiKey });
+  const genAI = new GoogleGenAI({ apiKey: geminiApiKey });
 
   const systemPrompt = generateSystemPrompt();
 
-  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: 'system', content: systemPrompt },
-  ];
+  // 대화 내역 구성
+  const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
 
   // 이전 대화 내역 추가
   if (request.conversationHistory && request.conversationHistory.length > 0) {
     for (const msg of request.conversationHistory) {
-      if (msg.role === 'user' || msg.role === 'assistant') {
-        messages.push({
-          role: msg.role,
-          content: msg.content,
-        });
+      if (msg.role === 'user') {
+        contents.push({ role: 'user', parts: [{ text: msg.content }] });
+      } else if (msg.role === 'assistant') {
+        contents.push({ role: 'model', parts: [{ text: msg.content }] });
       }
     }
   }
@@ -888,71 +884,115 @@ export async function performAnalysisV2(
   if (request.dateRange) {
     userMessage += `\n\n(참고: 분석 기간 ${request.dateRange.startDate} ~ ${request.dateRange.endDate})`;
   }
-  messages.push({ role: 'user', content: userMessage });
+  contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
-  console.log(`[AI Analysis V2] Starting analysis for clinic: ${clinicId}`);
-  console.log(`[AI Analysis V2] User message: ${request.message}`);
+  console.log(`[AI Analysis V2 Gemini] Starting analysis for clinic: ${clinicId}`);
+  console.log(`[AI Analysis V2 Gemini] User message: ${request.message}`);
 
   try {
-    // 최대 5번의 도구 호출 반복
-    const maxIterations = 5;
+    // 최대 10번의 도구 호출 반복 (Gemini는 더 많은 반복이 필요할 수 있음)
+    const maxIterations = 10;
     let iteration = 0;
 
     while (iteration < maxIterations) {
       iteration++;
-      console.log(`[AI Analysis V2] Iteration ${iteration}`);
+      console.log(`[AI Analysis V2 Gemini] Iteration ${iteration}`);
 
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages,
-        tools,
-        tool_choice: 'auto',
-        temperature: 0.3, // 더 결정적인 응답을 위해 낮춤
+      const response = await genAI.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: contents,
+        config: {
+          systemInstruction: systemPrompt,
+          tools: geminiTools,
+          temperature: 1.0, // Gemini 권장 온도
+        },
       });
 
-      const assistantMessage = completion.choices[0].message;
-      messages.push(assistantMessage);
-
-      // 도구 호출이 없으면 최종 응답
-      if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
-        console.log('[AI Analysis V2] Final response (no more tool calls)');
+      const candidate = response.candidates?.[0];
+      if (!candidate || !candidate.content) {
+        console.log('[AI Analysis V2 Gemini] No candidate content');
         return {
-          message: assistantMessage.content || '분석을 완료할 수 없습니다.',
+          message: '분석을 완료할 수 없습니다.',
         };
       }
 
-      // 도구 호출 처리
-      for (const toolCall of assistantMessage.tool_calls) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tc = toolCall as any;
-        const result = await processToolCall(supabase, clinicId, {
-          id: tc.id,
-          type: tc.type,
-          function: tc.function,
-        });
-        console.log(`[AI Analysis V2] Tool result for ${tc.function?.name}:`, result.substring(0, 500));
+      const parts = candidate.content.parts || [];
 
-        messages.push({
-          role: 'tool',
-          tool_call_id: tc.id,
-          content: result,
-        });
+      // Function call 확인
+      const functionCalls = parts.filter(part => part.functionCall);
+
+      if (functionCalls.length === 0) {
+        // 텍스트 응답 반환
+        const textParts = parts.filter(part => part.text);
+        const finalText = textParts.map(p => p.text).join('\n');
+        console.log('[AI Analysis V2 Gemini] Final response (no more function calls)');
+        return {
+          message: finalText || '분석을 완료할 수 없습니다.',
+        };
       }
+
+      // 모델 응답을 대화에 추가
+      contents.push({
+        role: 'model',
+        parts: parts.map(part => {
+          if (part.functionCall) {
+            return { functionCall: part.functionCall };
+          }
+          return { text: part.text || '' };
+        }) as Array<{ text: string }>,
+      });
+
+      // Function calls 처리
+      const functionResponses: Array<{ functionResponse: { name: string; response: unknown } }> = [];
+
+      for (const part of functionCalls) {
+        if (part.functionCall) {
+          const { name, args } = part.functionCall;
+          const result = await processToolCall(
+            supabase,
+            clinicId,
+            name || '',
+            (args || {}) as Record<string, unknown>
+          );
+          console.log(`[AI Analysis V2 Gemini] Tool result for ${name}:`, result.substring(0, 500));
+
+          functionResponses.push({
+            functionResponse: {
+              name: name || '',
+              response: JSON.parse(result),
+            },
+          });
+        }
+      }
+
+      // Function 응답을 대화에 추가
+      contents.push({
+        role: 'user',
+        parts: functionResponses as unknown as Array<{ text: string }>,
+      });
     }
 
     // 최대 반복 도달 시 마지막 응답 반환
-    const finalCompletion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages,
-      temperature: 0.3,
+    const finalResponse = await genAI.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: contents,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 1.0,
+      },
     });
 
+    const finalText = finalResponse.candidates?.[0]?.content?.parts
+      ?.filter(part => part.text)
+      .map(p => p.text)
+      .join('\n');
+
     return {
-      message: finalCompletion.choices[0].message.content || '분석을 완료할 수 없습니다.',
+      message: finalText || '분석을 완료할 수 없습니다.',
     };
 
   } catch (error) {
-    console.error('[AI Analysis V2] Error:', error);
+    console.error('[AI Analysis V2 Gemini] Error:', error);
     return {
       message: '',
       error: error instanceof Error ? error.message : 'AI 분석 중 오류가 발생했습니다.',
