@@ -20,7 +20,8 @@ import {
   TrendingUp,
   BarChart3,
   AlertCircle,
-  Flame
+  Flame,
+  Sparkles
 } from 'lucide-react'
 import Link from 'next/link'
 
