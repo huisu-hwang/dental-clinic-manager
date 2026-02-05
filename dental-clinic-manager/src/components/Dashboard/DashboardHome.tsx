@@ -21,7 +21,8 @@ import {
   BarChart3,
   AlertCircle,
   Flame,
-  Sparkles
+  Sparkles,
+  ArrowRight
 } from 'lucide-react'
 import Link from 'next/link'
 
