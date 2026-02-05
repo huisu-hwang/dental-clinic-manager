@@ -1,13 +1,6 @@
 import { NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 
-interface NewsItem {
-  title: string
-  link: string
-  source: string
-  date: string
-}
-
 interface CrawledArticle {
   id: number
   title: string
@@ -30,14 +23,12 @@ export async function GET(request: Request) {
 
     // 캐시 확인
     if (cachedLatest && cachedPopular && (now - cacheTimestamp) < CACHE_DURATION) {
+      console.log('[News API] Returning cached data')
       return returnResponse(cachedLatest, cachedPopular, type, true)
     }
 
-    // 실시간 크롤링
-    const [latest, popular] = await Promise.all([
-      crawlDailyDental('latest'),
-      crawlDailyDental('popular')
-    ])
+    // 실시간 크롤링 - 메인 페이지에서 모두 가져옴
+    const { latest, popular } = await crawlDailyDentalMainPage()
 
     // 캐시 업데이트
     if (latest.length > 0 || popular.length > 0) {
@@ -96,144 +87,146 @@ function returnResponse(
   })
 }
 
-// 치의신보 크롤링 함수
-async function crawlDailyDental(category: 'latest' | 'popular'): Promise<CrawledArticle[]> {
-  // 최신기사와 인기기사 모두 전체기사 페이지에서 가져옴
-  const url = 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1&view_type=sm'
+// 치의신보 메인 페이지에서 인기/최신 기사 모두 크롤링
+async function crawlDailyDentalMainPage(): Promise<{ latest: CrawledArticle[], popular: CrawledArticle[] }> {
+  // 메인 페이지에서 인기 기사와 최신 기사 모두 가져옴
+  const mainUrl = 'https://www.dailydental.co.kr/'
+  const listUrl = 'https://www.dailydental.co.kr/news/articleList.html?sc_section_code=S1N1&view_type=sm'
+
+  const latestArticles: CrawledArticle[] = []
+  const popularArticles: CrawledArticle[] = []
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Cache-Control': 'no-cache',
-      },
-      next: { revalidate: 600 } // 10분 캐시
-    })
-
-    if (!response.ok) {
-      console.error(`[News API] Failed to fetch ${category}:`, response.status)
-      return []
-    }
-
-    const html = await response.text()
-    const $ = cheerio.load(html)
-
-    const articles: CrawledArticle[] = []
-    const seenLinks = new Set<string>()
-
-    // 인기 게시물: "많이 본 뉴스" 섹션에서 가져오기
-    if (category === 'popular') {
-      // 방법 1: 'h2 a' 링크 텍스트로 찾기
-      $('h2 a').each((_, heading) => {
-        const $heading = $(heading)
-        if ($heading.text().includes('많이 본 뉴스')) {
-          // 상위 div를 찾아서 그 안의 ul > li > a 추출
-          const $container = $heading.closest('div').parent()
-          $container.find('ul li a[href*="article.html"]').each((index, element) => {
-            if (articles.length >= 5) return false
-
-            const $el = $(element)
-            const href = $el.attr('href')
-            // 텍스트에서 숫자 제거하고 제목만 추출
-            const text = $el.text().trim()
-            const titleMatch = text.match(/^\d+\s*(.+)$/)
-            const articleTitle = titleMatch ? titleMatch[1].trim() : text
-
-            if (!href || !articleTitle || articleTitle.length < 5) return
-
-            const fullLink = href.startsWith('http')
-              ? href
-              : `https://www.dailydental.co.kr${href}`
-
-            if (seenLinks.has(fullLink)) return
-            seenLinks.add(fullLink)
-
-            articles.push({
-              id: articles.length + 1,
-              title: articleTitle.substring(0, 100).trim(),
-              link: fullLink,
-              category
-            })
-          })
-        }
+    // 두 페이지를 병렬로 가져오기
+    const [mainResponse, listResponse] = await Promise.all([
+      fetch(mainUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Cache-Control': 'no-cache',
+        },
+        next: { revalidate: 600 }
+      }),
+      fetch(listUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Cache-Control': 'no-cache',
+        },
+        next: { revalidate: 600 }
       })
+    ])
 
-      // 방법 2: 첫 번째 방법이 실패한 경우 직접 패턴으로 찾기
-      if (articles.length === 0) {
-        // 숫자 + 제목 패턴의 링크 찾기
-        $('a[href*="article.html"]').each((_, element) => {
-          if (articles.length >= 5) return false
+    // 메인 페이지에서 인기 기사 크롤링
+    if (mainResponse.ok) {
+      const mainHtml = await mainResponse.text()
+      const $main = cheerio.load(mainHtml)
 
-          const $el = $(element)
-          const href = $el.attr('href')
-          const text = $el.text().trim()
+      // "많이 본 뉴스" 섹션의 rate_list에서 기사 추출
+      $main('ul.rate_list li a.ofe').each((index, element) => {
+        if (popularArticles.length >= 5) return false
 
-          // "1 제목" 형식인지 확인
-          const titleMatch = text.match(/^(\d+)\s+(.+)$/)
-          if (!titleMatch) return
+        const $el = $main(element)
+        const href = $el.attr('href')
+        const fullText = $el.text().trim()
 
-          const articleTitle = titleMatch[2].trim()
-          if (!href || !articleTitle || articleTitle.length < 5) return
-
-          const fullLink = href.startsWith('http')
-            ? href
-            : `https://www.dailydental.co.kr${href}`
-
-          if (seenLinks.has(fullLink)) return
-          seenLinks.add(fullLink)
-
-          articles.push({
-            id: articles.length + 1,
-            title: articleTitle.substring(0, 100).trim(),
-            link: fullLink,
-            category
-          })
-        })
-      }
-    }
-
-    // 최신 기사: 메인 기사 목록에서 가져오기
-    if (category === 'latest') {
-      // 기사 목록의 각 항목에서 h2 제목 추출
-      $('ul li').each((_, element) => {
-        if (articles.length >= 5) return false
-
-        const $el = $(element)
-        const $link = $el.find('a[href*="article.html"]').first()
-        const href = $link.attr('href')
-
-        // h2 태그에서 제목 추출
-        const $title = $link.find('h2')
-        const title = $title.text().trim()
+        // 숫자 + 제목 형식에서 제목만 추출 (예: "1불법 광고로..." → "불법 광고로...")
+        // span.i_rate 안에 숫자가 있고, 그 뒤에 제목
+        const $rank = $el.find('span.i_rate')
+        let title = fullText
+        if ($rank.length > 0) {
+          const rankText = $rank.text().trim()
+          title = fullText.replace(rankText, '').trim()
+        } else {
+          // span이 없으면 숫자로 시작하는지 확인
+          const titleMatch = fullText.match(/^\d+(.+)$/)
+          if (titleMatch) {
+            title = titleMatch[1].trim()
+          }
+        }
 
         if (!href || !title || title.length < 5) return
-
-        // 메뉴/버튼 텍스트 제외
-        const excludeTexts = ['로그인', '회원가입', '기사검색', '뉴스', '오피니언', '포토', '전체기사', '더보기', '기사목록', '디지털 치의신보', '많이 본 뉴스', '임상강좌']
-        if (excludeTexts.some(text => title.includes(text))) return
 
         const fullLink = href.startsWith('http')
           ? href
           : `https://www.dailydental.co.kr${href}`
 
-        if (seenLinks.has(fullLink)) return
-        seenLinks.add(fullLink)
-
-        articles.push({
-          id: articles.length + 1,
+        popularArticles.push({
+          id: popularArticles.length + 1,
           title: title.substring(0, 100).trim(),
           link: fullLink,
-          category
+          category: 'popular'
         })
       })
+
+      console.log(`[News API] Crawled popular: ${popularArticles.length} articles`)
     }
 
-    console.log(`[News API] Crawled ${category}: ${articles.length} articles`)
-    return articles.slice(0, 5)
+    // 기사 목록 페이지에서 최신 기사 크롤링
+    if (listResponse.ok) {
+      const listHtml = await listResponse.text()
+      const $list = cheerio.load(listHtml)
+      const seenLinks = new Set<string>()
+
+      // 제외할 텍스트
+      const excludeTexts = ['로그인', '회원가입', '기사검색', '전체기사', '더보기', '기사목록', '디지털 치의신보', '많이 본 뉴스', '임상강좌', '메뉴', '치의신보TV']
+
+      // 페이지 상단의 기사 링크들에서 최신 기사 추출
+      // article.html?no= 패턴을 가진 모든 링크 검색
+      $list('a[href*="article.html?no="]').each((_, element) => {
+        if (latestArticles.length >= 5) return false
+
+        const $el = $list(element)
+        const href = $el.attr('href')
+
+        if (!href) return
+
+        const fullLink = href.startsWith('http')
+          ? href
+          : `https://www.dailydental.co.kr${href}`
+
+        // 이미 추가된 링크는 건너뛰기
+        if (seenLinks.has(fullLink)) return
+
+        // 제목 추출 시도
+        let title = ''
+
+        // 1. 먼저 링크 내의 h2, h4 태그에서 제목 찾기
+        const $heading = $el.find('h2, h4')
+        if ($heading.length > 0) {
+          title = $heading.first().text().trim()
+        }
+
+        // 2. 없으면 링크 텍스트 직접 사용 (인기기사 링크 제외)
+        if (!title) {
+          const linkText = $el.text().trim()
+          // 숫자로 시작하면 인기기사 섹션이므로 건너뛰기
+          if (/^\d+/.test(linkText)) return
+          title = linkText
+        }
+
+        // 유효성 검사
+        if (!title || title.length < 5) return
+        if (excludeTexts.some(text => title.includes(text))) return
+
+        seenLinks.add(fullLink)
+
+        latestArticles.push({
+          id: latestArticles.length + 1,
+          title: title.substring(0, 100).trim(),
+          link: fullLink,
+          category: 'latest'
+        })
+      })
+
+      console.log(`[News API] Crawled latest: ${latestArticles.length} articles`)
+    }
+
+    return { latest: latestArticles, popular: popularArticles }
   } catch (error) {
-    console.error(`[News API] Crawl error (${category}):`, error)
-    return []
+    console.error('[News API] Crawl error:', error)
+    return { latest: [], popular: [] }
   }
 }
