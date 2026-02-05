@@ -22,7 +22,6 @@ import {
   AlertCircle,
   Flame
 } from 'lucide-react'
-import NewsAccordion from '@/components/News/NewsAccordion'
 
 // 날씨 아이콘 매핑
 const weatherIcons: Record<string, React.ReactNode> = {
@@ -76,21 +75,12 @@ interface WeatherData {
   tomorrow: TomorrowWeather
 }
 
-// 뉴스 데이터 타입
-interface NewsItem {
-  title: string
-  link: string
-  source: string
-  date: string
-}
-
-// DB 뉴스 기사 타입
-interface NewsArticle {
+// 크롤링된 뉴스 기사 타입
+interface CrawledArticle {
   id: number
   title: string
   link: string
-  category: string
-  created_at: string
+  category: 'latest' | 'popular'
 }
 
 export default function DashboardHome() {
@@ -108,14 +98,11 @@ export default function DashboardHome() {
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
 
-  // 뉴스 데이터
-  const [news, setNews] = useState<NewsItem[]>([])
+  // 치의신보 뉴스 데이터
+  const [latestArticles, setLatestArticles] = useState<CrawledArticle[]>([])
+  const [popularArticles, setPopularArticles] = useState<CrawledArticle[]>([])
   const [newsLoading, setNewsLoading] = useState(false)
-
-  // AI 요약 뉴스 데이터
-  const [latestArticles, setLatestArticles] = useState<NewsArticle[]>([])
-  const [popularArticles, setPopularArticles] = useState<NewsArticle[]>([])
-  const [articlesLoading, setArticlesLoading] = useState(false)
+  const [activeNewsTab, setActiveNewsTab] = useState<'popular' | 'latest'>('popular')
 
   // 오늘 보고서 요약 계산
   const todaySummary = useMemo(() => {
@@ -301,45 +288,15 @@ export default function DashboardHome() {
     }
   }
 
-  // 뉴스 로드
+  // 치의신보 뉴스 로드
   useEffect(() => {
-    loadNews()
-    loadArticlesWithSummary()
+    loadDentalNews()
   }, [])
 
-  const loadNews = async () => {
+  const loadDentalNews = async () => {
     setNewsLoading(true)
     try {
-      // API에서 치의신보 뉴스 가져오기
       const response = await fetch('/api/news/dental')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.news && data.news.length > 0) {
-          setNews(data.news)
-          return
-        }
-      }
-      // API 실패 시 폴백 데이터
-      const fallbackNews: NewsItem[] = [
-        { title: '치의신보 뉴스를 불러오는 중입니다...', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
-      ]
-      setNews(fallbackNews)
-    } catch {
-      // 에러 시 폴백
-      const fallbackNews: NewsItem[] = [
-        { title: '뉴스를 불러올 수 없습니다', link: 'https://www.dailydental.co.kr', source: '치의신보', date: new Date().toISOString().split('T')[0] },
-      ]
-      setNews(fallbackNews)
-    } finally {
-      setNewsLoading(false)
-    }
-  }
-
-  // AI 요약 포함 뉴스 로드
-  const loadArticlesWithSummary = async () => {
-    setArticlesLoading(true)
-    try {
-      const response = await fetch('/api/news/dental?withSummary=true')
       if (response.ok) {
         const data = await response.json()
         if (data.articles) {
@@ -348,9 +305,9 @@ export default function DashboardHome() {
         }
       }
     } catch (error) {
-      console.error('[DashboardHome] Error loading articles:', error)
+      console.error('[DashboardHome] Error loading dental news:', error)
     } finally {
-      setArticlesLoading(false)
+      setNewsLoading(false)
     }
   }
 
@@ -373,8 +330,7 @@ export default function DashboardHome() {
   const handleRefresh = () => {
     loadTeamStatus()
     loadWeather()
-    loadNews()
-    loadArticlesWithSummary()
+    loadDentalNews()
   }
 
   // 출근률 계산
@@ -577,71 +533,76 @@ export default function DashboardHome() {
               ) : null}
             </div>
 
-            {/* 뉴스 카드 (간단 목록) */}
+            {/* 치의신보 뉴스 카드 (탭 UI) */}
             <div className="bg-slate-50 rounded-lg overflow-hidden">
+              {/* 헤더 */}
               <div className="px-4 py-3 border-b border-slate-200">
                 <h3 className="text-sm font-semibold text-slate-700 flex items-center">
-                  <Newspaper className="w-4 h-4 text-slate-500 mr-1.5" />
-                  치과계 소식
+                  <Newspaper className="w-4 h-4 text-blue-500 mr-1.5" />
+                  치의신보
                 </h3>
               </div>
+
+              {/* 탭 버튼 */}
+              <div className="flex border-b border-slate-200">
+                <button
+                  onClick={() => setActiveNewsTab('popular')}
+                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                    activeNewsTab === 'popular'
+                      ? 'text-orange-600 border-b-2 border-orange-500 bg-white'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  인기 게시물
+                </button>
+                <button
+                  onClick={() => setActiveNewsTab('latest')}
+                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                    activeNewsTab === 'latest'
+                      ? 'text-blue-600 border-b-2 border-blue-500 bg-white'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Newspaper className="w-3.5 h-3.5" />
+                  최신 게시물
+                </button>
+              </div>
+
+              {/* 기사 목록 */}
               {newsLoading ? (
                 <div className="flex justify-center py-6">
                   <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
-              ) : news.length > 0 ? (
-                <div className="divide-y divide-slate-200">
-                  {news.map((item, index) => (
-                    <a
-                      key={index}
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-start gap-2 px-4 py-2.5 hover:bg-slate-100 transition-colors group"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-slate-700 line-clamp-2 group-hover:text-blue-600">{item.title}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{item.source}</p>
-                      </div>
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500 flex-shrink-0 mt-0.5" />
-                    </a>
-                  ))}
-                </div>
               ) : (
-                <div className="text-center py-6 text-slate-500">
-                  <p className="text-sm">뉴스를 불러올 수 없습니다.</p>
+                <div className="divide-y divide-slate-200">
+                  {(activeNewsTab === 'popular' ? popularArticles : latestArticles).length > 0 ? (
+                    (activeNewsTab === 'popular' ? popularArticles : latestArticles).map((article) => (
+                      <a
+                        key={article.id}
+                        href={article.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-start gap-2 px-4 py-2.5 hover:bg-slate-100 transition-colors group"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-slate-700 line-clamp-2 group-hover:text-blue-600">{article.title}</p>
+                        </div>
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500 flex-shrink-0 mt-0.5" />
+                      </a>
+                    ))
+                  ) : (
+                    <div className="text-center py-6 text-slate-500">
+                      <p className="text-sm">
+                        {activeNewsTab === 'popular' ? '인기 게시물이 없습니다.' : '최신 게시물이 없습니다.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
-
-        {/* 치의신보 브리핑 섹션 */}
-        {(latestArticles.length > 0 || popularArticles.length > 0 || articlesLoading) && (
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <div className="flex items-center gap-2 mb-4">
-              <Newspaper className="w-5 h-5 text-blue-500" />
-              <h3 className="text-base font-bold text-slate-800">치의신보 브리핑</h3>
-              <span className="text-xs text-slate-400 ml-2">오늘의 주요 소식</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <NewsAccordion
-                title="최신 뉴스"
-                icon={<Newspaper className="w-4 h-4 text-blue-500" />}
-                articles={latestArticles}
-                loading={articlesLoading}
-                emptyMessage="최신 기사가 없습니다."
-              />
-              <NewsAccordion
-                title="인기 게시물"
-                icon={<Flame className="w-4 h-4 text-orange-500" />}
-                articles={popularArticles}
-                loading={articlesLoading}
-                emptyMessage="인기 기사가 없습니다."
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
