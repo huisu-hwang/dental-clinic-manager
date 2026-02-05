@@ -1,13 +1,31 @@
 import { createClient } from './supabase/client'
 import { ensureConnection } from './supabase/connectionCheck'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftCategory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData, CashRegisterRowData, ProtocolPermission, ProtocolPermissionFormData } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
 const CLINIC_CACHE_KEY = 'dental_clinic_id'
 let cachedClinicId: string | null = null
 // Force recompile
+
+// Helper function to extract error message from various error types (including Supabase PostgrestError)
+const extractErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message
+  }
+  if (error && typeof error === 'object') {
+    // Handle Supabase PostgrestError which has message property
+    if ('message' in error && typeof (error as any).message === 'string') {
+      return (error as any).message
+    }
+    // Handle error object with error property
+    if ('error' in error && typeof (error as any).error === 'string') {
+      return (error as any).error
+    }
+  }
+  return 'Unknown error occurred'
+}
 
 const persistClinicId = (clinicId: string) => {
   cachedClinicId = clinicId
@@ -319,9 +337,11 @@ async function getCurrentClinicId(): Promise<string | null> {
 }
 
 export const dataService = {
-  // 공개된 병원 목록 검색
+  // 공개된 병원 목록 검색 (비로그인 사용자도 접근 가능)
   async searchPublicClinics() {
-    const supabase = await ensureConnection()
+    // 회원가입 시 호출되므로 ensureConnection() 대신 createClient() 사용
+    // ensureConnection()은 세션이 없으면 랜딩페이지로 리다이렉트하기 때문
+    const supabase = createClient()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
@@ -369,7 +389,7 @@ export const dataService = {
       return { success: true, data: userProfile }
     } catch (error: unknown) {
       console.error('Error fetching user profile by ID:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -403,6 +423,7 @@ export const dataService = {
           consultLogs: [],
           giftLogs: [],
           happyCallLogs: [],
+          cashRegisterLog: null,
           hasData: false
         }
       }
@@ -424,6 +445,7 @@ export const dataService = {
             consultLogs: [],
             giftLogs: [],
             happyCallLogs: [],
+            cashRegisterLog: null,
             hasData: false
           }
         }
@@ -497,6 +519,42 @@ export const dataService = {
         happyCallLogsResult = { data: [], error: err };
       }
 
+      // cash_register_logs 조회 (테이블이 없을 수 있음)
+      let cashRegisterLogResult;
+      try {
+        cashRegisterLogResult = await applyClinicFilter(
+          supabase
+            .from('cash_register_logs')
+            .select('*')
+            .eq('date', targetDate),
+          targetClinicId
+        ).maybeSingle();
+        console.log('[DataService] cash_register_logs fetched:', cashRegisterLogResult?.data ? 'found' : 'not found');
+      } catch (err) {
+        console.warn('[DataService] Error fetching cash_register_logs (table might not exist):', err);
+        cashRegisterLogResult = { data: null, error: err };
+      }
+
+      // special_notes_history에서 해당 날짜의 최신 특이사항 조회
+      let latestSpecialNote: { content: string; author_name: string } | null = null;
+      try {
+        const { data: specialNotesData } = await supabase
+          .from('special_notes_history')
+          .select('content, author_name')
+          .eq('clinic_id', targetClinicId)
+          .eq('report_date', targetDate)
+          .order('edited_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (specialNotesData) {
+          latestSpecialNote = specialNotesData;
+          console.log('[DataService] special_notes_history fetched for date:', targetDate);
+        }
+      } catch (err) {
+        console.warn('[DataService] Error fetching special_notes_history:', err);
+      }
+
       const { normalized: normalizedDailyReport, missingIds: dailyIdsToBackfill } = ensureClinicIds(
         dailyReportResult?.data ? [dailyReportResult.data as DailyReport] : [],
         targetClinicId
@@ -527,20 +585,47 @@ export const dataService = {
         void backfillClinicIds(supabase, 'happy_call_logs', targetClinicId, happyCallIdsToBackfill)
       }
 
+      // special_notes_history에서 가져온 값이 있으면 dailyReport에 설정
+      const hasSpecialNotes = latestSpecialNote !== null
+      const hasCashRegisterData = cashRegisterLogResult?.data !== null
       const hasData =
         normalizedDailyReport.length > 0 ||
         normalizedConsultLogs.length > 0 ||
         normalizedGiftLogs.length > 0 ||
-        normalizedHappyCallLogs.length > 0
+        normalizedHappyCallLogs.length > 0 ||
+        hasSpecialNotes ||
+        hasCashRegisterData
       console.log('[DataService] Data fetch complete. Has data:', hasData)
+
+      // dailyReport 객체 생성 (special_notes는 special_notes_history에서 가져옴)
+      let dailyReport = normalizedDailyReport[0] ?? null
+      if (dailyReport && latestSpecialNote) {
+        dailyReport = {
+          ...dailyReport,
+          special_notes: latestSpecialNote.content
+        }
+      } else if (!dailyReport && latestSpecialNote) {
+        // dailyReport가 없지만 특이사항만 있는 경우
+        dailyReport = {
+          date: targetDate,
+          clinic_id: targetClinicId,
+          recall_count: 0,
+          recall_booking_count: 0,
+          consult_proceed: 0,
+          consult_hold: 0,
+          naver_review_count: 0,
+          special_notes: latestSpecialNote.content
+        } as DailyReport
+      }
 
       return {
         success: true,
         data: {
-          dailyReport: normalizedDailyReport[0] ?? null,
+          dailyReport,
           consultLogs: normalizedConsultLogs,
           giftLogs: normalizedGiftLogs,
           happyCallLogs: normalizedHappyCallLogs,
+          cashRegisterLog: cashRegisterLogResult?.data || null,
           hasData
         }
       }
@@ -554,6 +639,7 @@ export const dataService = {
           consultLogs: [],
           giftLogs: [],
           happyCallLogs: [],
+          cashRegisterLog: null,
           hasData: false
         }
       }
@@ -568,6 +654,7 @@ export const dataService = {
     recallBookingCount: number
     recallBookingNames: string
     specialNotes: string
+    cashRegisterData?: CashRegisterRowData
   }) {
     const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
@@ -580,7 +667,8 @@ export const dataService = {
       recallCount,
       recallBookingCount,
       recallBookingNames,
-      specialNotes
+      specialNotes,
+      cashRegisterData
     } = data
 
     try {
@@ -612,12 +700,14 @@ export const dataService = {
             applyClinicFilter(supabase.from('consult_logs').delete().eq('date', date), clinicId),
             applyClinicFilter(supabase.from('gift_logs').delete().eq('date', date), clinicId),
             applyClinicFilter(supabase.from('happy_call_logs').delete().eq('date', date), clinicId),
+            applyClinicFilter(supabase.from('cash_register_logs').delete().eq('date', date), clinicId),
             supabase.from('daily_reports').delete().eq('id', report.id)
           ])
         }
       }
 
       // --- 4. 신규 데이터 생성 ---
+      // 참고: special_notes는 special_notes_history 테이블에만 저장됨
       const dailyReport = {
         clinic_id: clinicId,
         date,
@@ -627,7 +717,6 @@ export const dataService = {
         consult_proceed: validConsults.filter(c => c.consult_status === 'O').length,
         consult_hold: validConsults.filter(c => c.consult_status === 'X').length,
         naver_review_count: validGifts.filter(g => g.naver_review === 'O').length,
-        special_notes: specialNotes.trim() || null,
       }
 
       const { error: dailyReportError } = await supabase.from('daily_reports').insert([dailyReport] as any)
@@ -652,9 +741,11 @@ export const dataService = {
           date,
           patient_name: row.patient_name,
           gift_type: row.gift_type,
+          quantity: row.quantity || 1,  // quantity 필드 추가!
           naver_review: row.naver_review,
           notes: row.notes ?? ''
         }))
+        console.log('[DataService] Saving gift_logs with quantity:', JSON.stringify(giftData))
         const { error } = await supabase.from('gift_logs').insert(giftData as any)
         if (error) throw new Error(`선물 기록 저장 실패: ${error.message}`)
       }
@@ -669,6 +760,107 @@ export const dataService = {
         }))
         const { error } = await supabase.from('happy_call_logs').insert(happyCallData as any)
         if (error) throw new Error(`해피콜 기록 저장 실패: ${error.message}`)
+      }
+
+      // --- 5. 현금 출납 기록 저장 ---
+      if (cashRegisterData) {
+        console.log('[DataService] Saving cash register log:', JSON.stringify(cashRegisterData))
+
+        // 전일 이월액 총액 계산
+        const previousBalance =
+          (cashRegisterData.prev_bill_50000 || 0) * 50000 +
+          (cashRegisterData.prev_bill_10000 || 0) * 10000 +
+          (cashRegisterData.prev_bill_5000 || 0) * 5000 +
+          (cashRegisterData.prev_bill_1000 || 0) * 1000 +
+          (cashRegisterData.prev_coin_500 || 0) * 500 +
+          (cashRegisterData.prev_coin_100 || 0) * 100
+
+        // 금일 잔액 총액 계산
+        const currentBalance =
+          (cashRegisterData.curr_bill_50000 || 0) * 50000 +
+          (cashRegisterData.curr_bill_10000 || 0) * 10000 +
+          (cashRegisterData.curr_bill_5000 || 0) * 5000 +
+          (cashRegisterData.curr_bill_1000 || 0) * 1000 +
+          (cashRegisterData.curr_coin_500 || 0) * 500 +
+          (cashRegisterData.curr_coin_100 || 0) * 100
+
+        const balanceDifference = currentBalance - previousBalance
+
+        const cashRegisterRecord = {
+          clinic_id: clinicId,
+          date,
+          prev_bill_50000: cashRegisterData.prev_bill_50000 || 0,
+          prev_bill_10000: cashRegisterData.prev_bill_10000 || 0,
+          prev_bill_5000: cashRegisterData.prev_bill_5000 || 0,
+          prev_bill_1000: cashRegisterData.prev_bill_1000 || 0,
+          prev_coin_500: cashRegisterData.prev_coin_500 || 0,
+          prev_coin_100: cashRegisterData.prev_coin_100 || 0,
+          previous_balance: previousBalance,
+          curr_bill_50000: cashRegisterData.curr_bill_50000 || 0,
+          curr_bill_10000: cashRegisterData.curr_bill_10000 || 0,
+          curr_bill_5000: cashRegisterData.curr_bill_5000 || 0,
+          curr_bill_1000: cashRegisterData.curr_bill_1000 || 0,
+          curr_coin_500: cashRegisterData.curr_coin_500 || 0,
+          curr_coin_100: cashRegisterData.curr_coin_100 || 0,
+          current_balance: currentBalance,
+          balance_difference: balanceDifference,
+          notes: cashRegisterData.notes || ''
+        }
+
+        const { error } = await supabase.from('cash_register_logs').insert([cashRegisterRecord] as any)
+        if (error) {
+          console.error('[DataService] Cash register log save failed:', error)
+          // 현금 출납 기록 저장 실패는 전체 저장을 실패시키지 않음
+        } else {
+          console.log('[DataService] Cash register log saved successfully')
+        }
+      }
+
+      // --- 6. 특이사항 히스토리 저장 ---
+      const trimmedSpecialNotes = specialNotes?.trim()
+      if (trimmedSpecialNotes) {
+        try {
+          // 현재 사용자 정보 가져오기
+          const { data: { user } } = await supabase.auth.getUser()
+          let authorName = '알 수 없음'
+
+          if (user) {
+            const { data: userProfile } = await supabase
+              .from('users')
+              .select('name')
+              .eq('id', user.id)
+              .single()
+
+            if (userProfile?.name) {
+              authorName = userProfile.name
+            }
+          }
+
+          // 오늘 날짜와 비교하여 과거 날짜 수정인지 확인
+          const today = new Date().toISOString().split('T')[0]
+          const isPastDateEdit = date < today
+
+          const { error: historyError } = await supabase
+            .from('special_notes_history')
+            .insert({
+              clinic_id: clinicId,
+              report_date: date,
+              content: trimmedSpecialNotes,
+              author_id: user?.id || null,
+              author_name: authorName,
+              is_past_date_edit: isPastDateEdit,
+              edited_at: new Date().toISOString()
+            })
+
+          if (historyError) {
+            // 히스토리 저장 실패는 로그만 남기고 전체 저장은 성공으로 처리
+            console.error('[DataService] Failed to save special notes history:', historyError)
+          } else {
+            console.log(`[DataService] Special notes history saved (isPastDateEdit: ${isPastDateEdit})`)
+          }
+        } catch (historyError) {
+          console.error('[DataService] Error saving special notes history:', historyError)
+        }
       }
 
       return { success: true }
@@ -776,7 +968,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error(`Error deleting report for date ${date}:`, error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -913,7 +1105,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error updating stock:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -954,7 +1146,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error adding gift item:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -981,7 +1173,162 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting gift item:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // ========================================
+  // 선물 카테고리 관리 함수들
+  // ========================================
+
+  // 선물 카테고리 목록 조회
+  async getGiftCategories() {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('gift_categories')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: true })
+
+      if (error) throw error
+
+      return { data: data as GiftCategory[], error: null }
+    } catch (error: unknown) {
+      console.error('Error fetching gift categories:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 카테고리 추가
+  async addGiftCategory(name: string, description?: string, color?: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      // 현재 최대 display_order 가져오기
+      const { data: existingCategories } = await supabase
+        .from('gift_categories')
+        .select('display_order')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: false })
+        .limit(1)
+
+      const maxOrder = existingCategories?.[0]?.display_order || 0
+
+      const { data, error } = await supabase
+        .from('gift_categories')
+        .insert([{
+          clinic_id: clinicId,
+          name,
+          description: description || '',
+          color: color || '#3b82f6',
+          display_order: maxOrder + 1
+        }] as any)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data: data as GiftCategory, error: null }
+    } catch (error: unknown) {
+      console.error('Error adding gift category:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 카테고리 수정
+  async updateGiftCategory(id: number, updates: { name?: string; description?: string; color?: string }) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('gift_categories')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('clinic_id', clinicId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data: data as GiftCategory, error: null }
+    } catch (error: unknown) {
+      console.error('Error updating gift category:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 카테고리 삭제
+  async deleteGiftCategory(id: number) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('gift_categories')
+        .delete()
+        .eq('id', id)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting gift category:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 선물 아이템의 카테고리 변경
+  async updateGiftItemCategory(giftId: number, categoryId: number | null) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await supabase
+        .from('gift_inventory')
+        .update({ category_id: categoryId })
+        .eq('id', giftId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating gift item category:', error)
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1099,7 +1446,7 @@ export const dataService = {
       }
     } catch (error: unknown) {
       console.error('Error fixing inventory data:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1124,7 +1471,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('Error updating user profile:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1149,7 +1496,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching user profile:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1171,7 +1518,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching all clinics:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1193,7 +1540,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching all users:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1233,7 +1580,7 @@ export const dataService = {
       }
     } catch (error: unknown) {
       console.error('Error fetching system statistics:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1259,7 +1606,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting clinic:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1285,7 +1632,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting user:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1321,12 +1668,12 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('[updateUserPermissions] Error updating user permissions:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
-  // 직원 정보 업데이트 (주소, 주민번호 등)
-  async updateStaffInfo(userId: string, updates: { name?: string; phone?: string; address?: string; resident_registration_number?: string }) {
+  // 직원 정보 업데이트 (주소, 주민번호, 입사일 등)
+  async updateStaffInfo(userId: string, updates: { name?: string; phone?: string; address?: string; resident_registration_number?: string; hire_date?: string }) {
     const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
@@ -1360,7 +1707,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('[updateStaffInfo] Error updating staff info:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1428,7 +1775,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error rejecting user:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1449,7 +1796,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error updating clinic status:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1469,7 +1816,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching users by clinic:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1551,7 +1898,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching protocol categories:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1630,7 +1977,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('Error updating protocol category:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1655,7 +2002,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting protocol category:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1711,7 +2058,7 @@ export const dataService = {
       return { data: protocols || [] }
     } catch (error: unknown) {
       console.error('[getProtocols] Error fetching protocols:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1815,7 +2162,7 @@ export const dataService = {
       return { data: { ...typedProtocol, created_by_user: createdByUser } }
     } catch (error: unknown) {
       console.error('[getProtocolById] Error fetching protocol by ID:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1931,7 +2278,7 @@ export const dataService = {
       if (error && typeof error === 'object') {
         console.error('[createProtocol] Error details:', JSON.stringify(error, null, 2))
       }
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -1990,7 +2337,10 @@ export const dataService = {
       }
 
       if (formData.title) updateData.title = formData.title
-      if (formData.category_id !== undefined) updateData.category_id = formData.category_id
+      if (formData.category_id !== undefined) {
+        // 빈 문자열은 null로 변환 (UUID 타입에 빈 문자열 전달 시 오류 방지)
+        updateData.category_id = formData.category_id || null
+      }
       if (formData.status) updateData.status = formData.status
       if (formData.tags) updateData.tags = formData.tags
 
@@ -2007,7 +2357,7 @@ export const dataService = {
       return { success: true, data: protocol }
     } catch (error: unknown) {
       console.error('Error updating protocol:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2032,7 +2382,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('Error deleting protocol:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2072,7 +2422,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('Error fetching protocol versions:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2171,7 +2521,7 @@ export const dataService = {
       return { success: true, data: newVersion }
     } catch (error: unknown) {
       console.error('Error restoring protocol version:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2202,7 +2552,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('[DataService] Error verifying password:', error)
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { success: false, error: extractErrorMessage(error) }
     }
   },
 
@@ -2227,7 +2577,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('[DataService] Error updating password:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2320,7 +2670,7 @@ export const dataService = {
       return { data: null, error: 'No authenticated user' }
     } catch (error: unknown) {
       console.error('[DataService] Error getting session:', error)
-      return { data: null, error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { data: null, error: extractErrorMessage(error) }
     }
   },
 
@@ -2372,7 +2722,7 @@ export const dataService = {
       return { data: data as ClinicBranch[], total_count: data?.length || 0 }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching branches:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2398,7 +2748,7 @@ export const dataService = {
       return { data }
     } catch (error: unknown) {
       console.error('[DataService] Error fetching branch:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2442,7 +2792,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('[DataService] Error creating branch:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2481,7 +2831,7 @@ export const dataService = {
       return { success: true, data }
     } catch (error: unknown) {
       console.error('[DataService] Error updating branch:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2508,7 +2858,7 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('[DataService] Error deleting branch:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
     }
   },
 
@@ -2535,7 +2885,1353 @@ export const dataService = {
       return { success: true }
     } catch (error: unknown) {
       console.error('[DataService] Error hard deleting branch:', error)
-      return { error: error instanceof Error ? error.message : 'Unknown error occurred' }
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // ========================================
+  // 기타 특이사항 히스토리 함수들
+  // Special Notes History Functions
+  // ========================================
+
+  // 특이사항 히스토리 저장
+  async saveSpecialNotesHistory(params: {
+    date: string
+    content: string
+    authorId: string
+    authorName: string
+    isPastDateEdit?: boolean
+  }): Promise<{ success?: boolean; data?: SpecialNotesHistory; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { date, content, authorId, authorName, isPastDateEdit } = params
+
+      // 내용이 비어있으면 저장하지 않음
+      if (!content || !content.trim()) {
+        console.log('[DataService] Empty special notes, skipping history save')
+        return { success: true }
+      }
+
+      const { data, error } = await (supabase
+        .from('special_notes_history') as any)
+        .insert([{
+          clinic_id: clinicId,
+          report_date: date,
+          content: content.trim(),
+          author_id: authorId,
+          author_name: authorName,
+          is_past_date_edit: isPastDateEdit || false,
+          edited_at: new Date().toISOString()
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      console.log('[DataService] Special notes history saved:', data.id)
+      return { success: true, data: data as SpecialNotesHistory }
+    } catch (error: unknown) {
+      console.error('[DataService] Error saving special notes history:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 특이사항 히스토리 조회 (날짜 범위)
+  async getSpecialNotesHistory(params?: {
+    startDate?: string
+    endDate?: string
+    limit?: number
+    offset?: number
+  }): Promise<{ success?: boolean; data?: SpecialNotesHistory[]; total?: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      let query = supabase
+        .from('special_notes_history')
+        .select('*', { count: 'exact' })
+        .eq('clinic_id', clinicId)
+        .order('report_date', { ascending: false })
+        .order('edited_at', { ascending: false })
+
+      // 날짜 범위 필터
+      if (params?.startDate) {
+        query = query.gte('report_date', params.startDate)
+      }
+      if (params?.endDate) {
+        query = query.lte('report_date', params.endDate)
+      }
+
+      // 페이지네이션
+      if (params?.limit) {
+        query = query.limit(params.limit)
+      }
+      if (params?.offset) {
+        query = query.range(params.offset, (params.offset + (params.limit || 50)) - 1)
+      }
+
+      const { data, error, count } = await query
+
+      if (error) throw error
+
+      return {
+        success: true,
+        data: data as SpecialNotesHistory[],
+        total: count || 0
+      }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching special notes history:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 특이사항 검색
+  async searchSpecialNotes(params: {
+    query: string
+    startDate?: string
+    endDate?: string
+    limit?: number
+  }): Promise<{ success?: boolean; data?: SpecialNotesHistory[]; total?: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const searchQuery = params.query.trim()
+      if (!searchQuery) {
+        return { success: true, data: [], total: 0 }
+      }
+
+      let query = supabase
+        .from('special_notes_history')
+        .select('*', { count: 'exact' })
+        .eq('clinic_id', clinicId)
+        .ilike('content', `%${searchQuery}%`)
+        .order('report_date', { ascending: false })
+        .order('edited_at', { ascending: false })
+
+      // 날짜 범위 필터
+      if (params.startDate) {
+        query = query.gte('report_date', params.startDate)
+      }
+      if (params.endDate) {
+        query = query.lte('report_date', params.endDate)
+      }
+
+      // 결과 제한
+      if (params.limit) {
+        query = query.limit(params.limit)
+      }
+
+      const { data, error, count } = await query
+
+      if (error) throw error
+
+      console.log(`[DataService] Special notes search found ${count} results for query: "${searchQuery}"`)
+      return {
+        success: true,
+        data: data as SpecialNotesHistory[],
+        total: count || 0
+      }
+    } catch (error: unknown) {
+      console.error('[DataService] Error searching special notes:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 특정 날짜의 특이사항 히스토리 조회 (수정 이력 확인용)
+  async getSpecialNotesHistoryByDate(date: string): Promise<{ success?: boolean; data?: SpecialNotesHistory[]; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { data, error } = await supabase
+        .from('special_notes_history')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .eq('report_date', date)
+        .order('edited_at', { ascending: false })
+
+      if (error) throw error
+
+      return { success: true, data: data as SpecialNotesHistory[] }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching special notes history by date:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 날짜별 최신 특이사항 조회 (그룹화된 결과)
+  async getLatestSpecialNotesByDate(params?: {
+    startDate?: string
+    endDate?: string
+    limit?: number
+  }): Promise<{ success?: boolean; data?: Array<{ date: string; latestNote: SpecialNotesHistory; editCount: number }>; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      // 먼저 모든 히스토리를 가져옴
+      let query = supabase
+        .from('special_notes_history')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('report_date', { ascending: false })
+        .order('edited_at', { ascending: false })
+
+      if (params?.startDate) {
+        query = query.gte('report_date', params.startDate)
+      }
+      if (params?.endDate) {
+        query = query.lte('report_date', params.endDate)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      // 클라이언트에서 날짜별로 그룹화
+      const groupedByDate = new Map<string, SpecialNotesHistory[]>()
+
+      for (const note of (data as SpecialNotesHistory[])) {
+        const existing = groupedByDate.get(note.report_date) || []
+        existing.push(note)
+        groupedByDate.set(note.report_date, existing)
+      }
+
+      // 각 날짜의 최신 노트와 수정 횟수 계산
+      const result = Array.from(groupedByDate.entries()).map(([date, notes]) => ({
+        date,
+        latestNote: notes[0], // 이미 edited_at 내림차순으로 정렬됨
+        editCount: notes.length
+      }))
+
+      // limit 적용
+      const limitedResult = params?.limit ? result.slice(0, params.limit) : result
+
+      return { success: true, data: limitedResult }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching latest special notes by date:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // daily_reports에서 특이사항 목록 조회 (fallback용)
+  async getSpecialNotesFromDailyReports(params?: {
+    startDate?: string
+    endDate?: string
+    limit?: number
+  }): Promise<{ success?: boolean; data?: Array<{ date: string; content: string; clinic_id: string }>; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      let query = supabase
+        .from('daily_reports')
+        .select('date, special_notes, clinic_id')
+        .eq('clinic_id', clinicId)
+        .not('special_notes', 'is', null)
+        .neq('special_notes', '')
+        .order('date', { ascending: false })
+
+      if (params?.startDate) {
+        query = query.gte('date', params.startDate)
+      }
+      if (params?.endDate) {
+        query = query.lte('date', params.endDate)
+      }
+      if (params?.limit) {
+        query = query.limit(params.limit)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      type DailyReportWithNotes = { date: string; special_notes: string | null; clinic_id: string }
+      const result = (data as DailyReportWithNotes[] || [])
+        .filter(item => item.special_notes && item.special_notes.trim())
+        .map(item => ({
+          date: item.date,
+          content: item.special_notes!.trim(),
+          clinic_id: item.clinic_id
+        }))
+
+      console.log(`[DataService] Fetched ${result.length} special notes from daily_reports`)
+      return { success: true, data: result }
+    } catch (error: unknown) {
+      console.error('[DataService] Error fetching special notes from daily_reports:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // ========================================
+  // 상담 상태 변경 (진행보류 → 진행)
+  // ========================================
+
+  /**
+   * 진행보류 상담을 진행 완료로 변경
+   *
+   * 동작:
+   * 1. 원래 consult_logs의 상태를 'X' → 'O'로 변경
+   * 2. 원래 날짜의 daily_reports 통계 업데이트 (consult_hold -1, consult_proceed +1)
+   * 3. 오늘 날짜의 consult_logs에 새 기록 추가 (상태 변경 이력)
+   * 4. 오늘 날짜의 daily_reports 통계 업데이트 또는 생성
+   *
+   * @param consultId - 변경할 상담 로그의 ID
+   * @returns 성공 여부 및 업데이트된 데이터
+   */
+  async updateConsultStatusToCompleted(consultId: number) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      console.log('[updateConsultStatusToCompleted] Starting update for consultId:', consultId)
+
+      // 1. 원래 상담 기록 조회
+      const { data: originalConsult, error: fetchError } = await supabase
+        .from('consult_logs')
+        .select('*')
+        .eq('id', consultId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (fetchError || !originalConsult) {
+        console.error('[updateConsultStatusToCompleted] Consult not found:', fetchError)
+        throw new Error('상담 기록을 찾을 수 없습니다.')
+      }
+
+      // 이미 진행 완료인 경우
+      if (originalConsult.consult_status === 'O') {
+        return { success: true, message: '이미 진행 완료된 상담입니다.' }
+      }
+
+      const originalDate = originalConsult.date
+      const today = new Date().toISOString().split('T')[0]
+
+      console.log('[updateConsultStatusToCompleted] Original date:', originalDate, 'Today:', today)
+
+      // 2. 원래 상담 기록의 상태를 'O'로 변경
+      const { error: updateError } = await supabase
+        .from('consult_logs')
+        .update({ consult_status: 'O' })
+        .eq('id', consultId)
+
+      if (updateError) {
+        console.error('[updateConsultStatusToCompleted] Failed to update consult status:', updateError)
+        throw new Error('상담 상태 변경에 실패했습니다.')
+      }
+
+      console.log('[updateConsultStatusToCompleted] Consult status updated to O')
+
+      // 3. 원래 날짜의 daily_reports 통계 업데이트
+      const { data: originalReport } = await supabase
+        .from('daily_reports')
+        .select('*')
+        .eq('date', originalDate)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (originalReport) {
+        const newConsultProceed = (originalReport.consult_proceed || 0) + 1
+        const newConsultHold = Math.max((originalReport.consult_hold || 0) - 1, 0)
+
+        const { error: reportUpdateError } = await supabase
+          .from('daily_reports')
+          .update({
+            consult_proceed: newConsultProceed,
+            consult_hold: newConsultHold
+          })
+          .eq('id', originalReport.id)
+
+        if (reportUpdateError) {
+          console.error('[updateConsultStatusToCompleted] Failed to update original report:', reportUpdateError)
+        } else {
+          console.log('[updateConsultStatusToCompleted] Original date report updated:', {
+            consult_proceed: newConsultProceed,
+            consult_hold: newConsultHold
+          })
+        }
+      }
+
+      // 4. 오늘 날짜의 daily_reports 확인/생성 및 상태 변경 기록 추가
+      const { data: todayReport } = await supabase
+        .from('daily_reports')
+        .select('*')
+        .eq('date', today)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (todayReport) {
+        // 기존 오늘 보고서가 있으면 consult_proceed +1 (원래 날짜와 다른 경우에만)
+        if (originalDate !== today) {
+          const { error: todayUpdateError } = await supabase
+            .from('daily_reports')
+            .update({
+              consult_proceed: (todayReport.consult_proceed || 0) + 1
+            })
+            .eq('id', todayReport.id)
+
+          if (todayUpdateError) {
+            console.error('[updateConsultStatusToCompleted] Failed to update today report:', todayUpdateError)
+          } else {
+            console.log('[updateConsultStatusToCompleted] Today report updated')
+          }
+        }
+      } else {
+        // 오늘 보고서가 없으면 새로 생성
+        const { error: insertReportError } = await supabase
+          .from('daily_reports')
+          .insert([{
+            clinic_id: clinicId,
+            date: today,
+            recall_count: 0,
+            recall_booking_count: 0,
+            consult_proceed: originalDate !== today ? 1 : 0,
+            consult_hold: 0,
+            naver_review_count: 0
+          }])
+
+        if (insertReportError) {
+          console.error('[updateConsultStatusToCompleted] Failed to create today report:', insertReportError)
+        } else {
+          console.log('[updateConsultStatusToCompleted] New today report created')
+        }
+      }
+
+      // 5. 오늘 날짜에 상담 기록 추가 (일일 보고서 환자 상담 결과에 직접 표시)
+      const { error: insertLogError } = await supabase
+        .from('consult_logs')
+        .insert([{
+          clinic_id: clinicId,
+          date: today,
+          patient_name: originalConsult.patient_name,
+          consult_content: originalConsult.consult_content,
+          consult_status: 'O' as const,
+          remarks: originalConsult.remarks || ''
+        }])
+
+      if (insertLogError) {
+        console.error('[updateConsultStatusToCompleted] Failed to insert today consult log:', insertLogError)
+      } else {
+        console.log('[updateConsultStatusToCompleted] Today consult log entry created')
+      }
+
+      return {
+        success: true,
+        originalDate,
+        patientName: originalConsult.patient_name,
+        consultContent: originalConsult.consult_content
+      }
+    } catch (error: unknown) {
+      console.error('[updateConsultStatusToCompleted] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // ========================================
+  // 업체 연락처 관리 (Vendor Contacts)
+  // ========================================
+
+  // 업체 연락처 카테고리 목록 조회
+  async getVendorCategories(): Promise<{ data: VendorCategory[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { data: null, error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('vendor_categories')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: true })
+
+      if (error) {
+        console.error('[getVendorCategories] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as VendorCategory[], error: null }
+    } catch (error: unknown) {
+      console.error('[getVendorCategories] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 카테고리 생성
+  async createVendorCategory(categoryData: VendorCategoryFormData): Promise<{ data: VendorCategory | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { data: null, error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      // 현재 최대 display_order 조회
+      const { data: maxOrderData } = await supabase
+        .from('vendor_categories')
+        .select('display_order')
+        .eq('clinic_id', clinicId)
+        .order('display_order', { ascending: false })
+        .limit(1)
+        .single()
+
+      const nextOrder = (maxOrderData?.display_order || 0) + 1
+
+      const { data, error } = await supabase
+        .from('vendor_categories')
+        .insert({
+          clinic_id: clinicId,
+          name: categoryData.name,
+          description: categoryData.description,
+          color: categoryData.color,
+          display_order: nextOrder
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[createVendorCategory] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as VendorCategory, error: null }
+    } catch (error: unknown) {
+      console.error('[createVendorCategory] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 카테고리 수정
+  async updateVendorCategory(categoryId: string, categoryData: Partial<VendorCategoryFormData>): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('vendor_categories')
+        .update({
+          ...categoryData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', categoryId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[updateVendorCategory] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[updateVendorCategory] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 카테고리 삭제
+  async deleteVendorCategory(categoryId: string): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      // 해당 카테고리에 속한 연락처들의 category_id를 null로 변경
+      await supabase
+        .from('vendor_contacts')
+        .update({ category_id: null })
+        .eq('category_id', categoryId)
+        .eq('clinic_id', clinicId)
+
+      const { error } = await supabase
+        .from('vendor_categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[deleteVendorCategory] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[deleteVendorCategory] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 목록 조회
+  async getVendorContacts(options?: {
+    categoryId?: string;
+    searchQuery?: string;
+    isFavorite?: boolean;
+  }): Promise<{ data: VendorContact[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { data: null, error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      let query = supabase
+        .from('vendor_contacts')
+        .select(`
+          *,
+          category:vendor_categories(*)
+        `)
+        .eq('clinic_id', clinicId)
+
+      // 카테고리 필터
+      if (options?.categoryId) {
+        query = query.eq('category_id', options.categoryId)
+      }
+
+      // 즐겨찾기 필터
+      if (options?.isFavorite !== undefined) {
+        query = query.eq('is_favorite', options.isFavorite)
+      }
+
+      // 검색어 필터 (회사명, 담당자, 전화번호)
+      if (options?.searchQuery) {
+        const searchTerm = `%${options.searchQuery}%`
+        query = query.or(`company_name.ilike.${searchTerm},contact_person.ilike.${searchTerm},phone.ilike.${searchTerm},phone2.ilike.${searchTerm}`)
+      }
+
+      const { data, error } = await query.order('is_favorite', { ascending: false }).order('company_name', { ascending: true }).limit(1000)
+
+      if (error) {
+        console.error('[getVendorContacts] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as VendorContact[], error: null }
+    } catch (error: unknown) {
+      console.error('[getVendorContacts] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 단건 조회
+  async getVendorContact(contactId: string): Promise<{ data: VendorContact | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { data: null, error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('vendor_contacts')
+        .select(`
+          *,
+          category:vendor_categories(*)
+        `)
+        .eq('id', contactId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (error) {
+        console.error('[getVendorContact] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as VendorContact, error: null }
+    } catch (error: unknown) {
+      console.error('[getVendorContact] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 생성
+  async createVendorContact(contactData: VendorContactFormData): Promise<{ data: VendorContact | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { data: null, error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('vendor_contacts')
+        .insert({
+          clinic_id: clinicId,
+          company_name: contactData.company_name,
+          category_id: contactData.category_id || null,
+          contact_person: contactData.contact_person || null,
+          phone: contactData.phone,
+          phone2: contactData.phone2 || null,
+          email: contactData.email || null,
+          address: contactData.address || null,
+          notes: contactData.notes || null,
+          is_favorite: contactData.is_favorite || false
+        })
+        .select(`
+          *,
+          category:vendor_categories(*)
+        `)
+        .single()
+
+      if (error) {
+        console.error('[createVendorContact] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as VendorContact, error: null }
+    } catch (error: unknown) {
+      console.error('[createVendorContact] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 수정
+  async updateVendorContact(contactId: string, contactData: Partial<VendorContactFormData>): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('vendor_contacts')
+        .update({
+          ...contactData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', contactId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[updateVendorContact] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[updateVendorContact] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 삭제
+  async deleteVendorContact(contactId: string): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('vendor_contacts')
+        .delete()
+        .eq('id', contactId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[deleteVendorContact] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[deleteVendorContact] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 즐겨찾기 토글
+  async toggleVendorContactFavorite(contactId: string, isFavorite: boolean): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { error: '병원 정보를 찾을 수 없습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('vendor_contacts')
+        .update({
+          is_favorite: isFavorite,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', contactId)
+        .eq('clinic_id', clinicId)
+
+      if (error) {
+        console.error('[toggleVendorContactFavorite] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[toggleVendorContactFavorite] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 업체 연락처 일괄 등록
+  async importVendorContacts(contacts: VendorContactImportData[]): Promise<{ success: number; failed: number; errors: string[] }> {
+    const result = { success: 0, failed: 0, errors: [] as string[] }
+
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { success: 0, failed: contacts.length, errors: ['Supabase client not available'] }
+      }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        return { success: 0, failed: contacts.length, errors: ['병원 정보를 찾을 수 없습니다.'] }
+      }
+
+      // 기존 카테고리 조회
+      const { data: existingCategories } = await supabase
+        .from('vendor_categories')
+        .select('*')
+        .eq('clinic_id', clinicId)
+
+      const categoryMap = new Map<string, string>()
+      existingCategories?.forEach((cat: VendorCategory) => {
+        categoryMap.set(cat.name.toLowerCase(), cat.id)
+      })
+
+      // 새로 생성해야 할 카테고리 목록
+      const newCategories = new Set<string>()
+      contacts.forEach(contact => {
+        if (contact.category_name && !categoryMap.has(contact.category_name.toLowerCase())) {
+          newCategories.add(contact.category_name)
+        }
+      })
+
+      // 새 카테고리 생성
+      const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16']
+      let colorIndex = 0
+      for (const categoryName of newCategories) {
+        const { data: newCategory } = await supabase
+          .from('vendor_categories')
+          .insert({
+            clinic_id: clinicId,
+            name: categoryName,
+            color: colors[colorIndex % colors.length],
+            display_order: categoryMap.size + 1
+          })
+          .select()
+          .single()
+
+        if (newCategory) {
+          categoryMap.set(categoryName.toLowerCase(), newCategory.id)
+        }
+        colorIndex++
+      }
+
+      // 연락처 일괄 등록
+      for (const contact of contacts) {
+        if (!contact.company_name) {
+          result.failed++
+          result.errors.push('업체명이 없는 데이터가 있습니다.')
+          continue
+        }
+
+        const categoryId = contact.category_name
+          ? categoryMap.get(contact.category_name.toLowerCase()) || null
+          : null
+
+        // extra_data가 있으면 notes에 추가
+        let notes = contact.notes || ''
+        if (contact.extra_data && Object.keys(contact.extra_data).length > 0) {
+          const extraInfo = Object.entries(contact.extra_data)
+            .filter(([, value]) => value && value.trim())
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(' | ')
+          if (extraInfo) {
+            notes = notes ? `${notes}\n[추가정보] ${extraInfo}` : `[추가정보] ${extraInfo}`
+          }
+        }
+
+        const { error } = await supabase
+          .from('vendor_contacts')
+          .insert({
+            clinic_id: clinicId,
+            company_name: contact.company_name,
+            category_id: categoryId,
+            contact_person: contact.contact_person || null,
+            phone: contact.phone || '',
+            phone2: contact.phone2 || null,
+            email: contact.email || null,
+            address: contact.address || null,
+            notes: notes || null,
+            is_favorite: false
+          })
+
+        if (error) {
+          result.failed++
+          result.errors.push(`${contact.company_name}: ${error.message}`)
+        } else {
+          result.success++
+        }
+      }
+
+      return result
+    } catch (error: unknown) {
+      console.error('[importVendorContacts] Error:', error)
+      return { success: result.success, failed: contacts.length - result.success, errors: [extractErrorMessage(error)] }
+    }
+  },
+
+  // ==========================================
+  // 프로토콜 권한 관리 (Protocol Permissions)
+  // ==========================================
+
+  /**
+   * 특정 프로토콜의 권한 목록 조회
+   */
+  async getProtocolPermissions(protocolId: string): Promise<{ data: ProtocolPermission[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      // 권한 목록 조회
+      const { data: permissions, error: permError } = await supabase
+        .from('protocol_permissions')
+        .select('*')
+        .eq('protocol_id', protocolId)
+        .order('created_at', { ascending: false })
+
+      if (permError) {
+        console.error('[getProtocolPermissions] Error:', permError)
+        return { data: null, error: permError.message }
+      }
+
+      if (!permissions || permissions.length === 0) {
+        return { data: [], error: null }
+      }
+
+      // 사용자 ID 목록 추출
+      const userIds = [...new Set([
+        ...permissions.map((p: { user_id: string }) => p.user_id),
+        ...permissions.map((p: { granted_by: string }) => p.granted_by)
+      ])]
+
+      // 사용자 정보 조회
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('id, name, email, role')
+        .in('id', userIds)
+
+      if (userError) {
+        console.error('[getProtocolPermissions] User fetch error:', userError)
+        // 사용자 정보 없이 권한만 반환
+        return { data: permissions as ProtocolPermission[], error: null }
+      }
+
+      // 사용자 정보를 Map으로 변환
+      const userMap = new Map<string, { id: string; name: string; email: string; role: string }>()
+      users?.forEach((u: { id: string; name: string; email: string; role: string }) => {
+        userMap.set(u.id, u)
+      })
+
+      // 권한에 사용자 정보 추가
+      const permissionsWithUsers = permissions.map((p: ProtocolPermission) => ({
+        ...p,
+        user: userMap.get(p.user_id),
+        granted_by_user: userMap.get(p.granted_by) ? { id: userMap.get(p.granted_by)!.id, name: userMap.get(p.granted_by)!.name } : undefined
+      }))
+
+      return { data: permissionsWithUsers as ProtocolPermission[], error: null }
+    } catch (error: unknown) {
+      console.error('[getProtocolPermissions] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 특정 사용자의 특정 프로토콜에 대한 권한 조회
+   */
+  async getUserProtocolPermission(protocolId: string, userId: string): Promise<{ data: ProtocolPermission | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .select('*')
+        .eq('protocol_id', protocolId)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (error) {
+        console.error('[getUserProtocolPermission] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as ProtocolPermission | null, error: null }
+    } catch (error: unknown) {
+      console.error('[getUserProtocolPermission] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 프로토콜 권한 설정 (생성 또는 업데이트)
+   */
+  async setProtocolPermission(
+    protocolId: string,
+    permission: ProtocolPermissionFormData,
+    grantedBy: string
+  ): Promise<{ data: ProtocolPermission | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      // upsert 사용 (protocol_id + user_id 유니크 제약조건 활용)
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .upsert({
+          protocol_id: protocolId,
+          user_id: permission.user_id,
+          can_view: permission.can_view,
+          can_edit: permission.can_edit,
+          can_create: permission.can_create,
+          can_delete: permission.can_delete,
+          granted_by: grantedBy
+        }, {
+          onConflict: 'protocol_id,user_id'
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[setProtocolPermission] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as ProtocolPermission, error: null }
+    } catch (error: unknown) {
+      console.error('[setProtocolPermission] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 프로토콜 권한 삭제
+   */
+  async deleteProtocolPermission(protocolId: string, userId: string): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('protocol_permissions')
+        .delete()
+        .eq('protocol_id', protocolId)
+        .eq('user_id', userId)
+
+      if (error) {
+        console.error('[deleteProtocolPermission] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[deleteProtocolPermission] Exception:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 프로토콜 권한 일괄 설정
+   */
+  async setProtocolPermissionsBatch(
+    protocolId: string,
+    permissions: ProtocolPermissionFormData[],
+    grantedBy: string
+  ): Promise<{ data: ProtocolPermission[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const permissionsToUpsert = permissions.map(p => ({
+        protocol_id: protocolId,
+        user_id: p.user_id,
+        can_view: p.can_view,
+        can_edit: p.can_edit,
+        can_create: p.can_create,
+        can_delete: p.can_delete,
+        granted_by: grantedBy
+      }))
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .upsert(permissionsToUpsert, {
+          onConflict: 'protocol_id,user_id'
+        })
+        .select()
+
+      if (error) {
+        console.error('[setProtocolPermissionsBatch] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as ProtocolPermission[], error: null }
+    } catch (error: unknown) {
+      console.error('[setProtocolPermissionsBatch] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 프로토콜의 모든 권한 삭제
+   */
+  async deleteAllProtocolPermissions(protocolId: string): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('protocol_permissions')
+        .delete()
+        .eq('protocol_id', protocolId)
+
+      if (error) {
+        console.error('[deleteAllProtocolPermissions] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[deleteAllProtocolPermissions] Exception:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 사용자가 접근 가능한 프로토콜 ID 목록 조회
+   */
+  async getUserAccessibleProtocolIds(userId: string): Promise<{ data: string[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .select('protocol_id')
+        .eq('user_id', userId)
+        .eq('can_view', true)
+
+      if (error) {
+        console.error('[getUserAccessibleProtocolIds] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      const protocolIds = data?.map((p: { protocol_id: string }) => p.protocol_id) || []
+      return { data: protocolIds, error: null }
+    } catch (error: unknown) {
+      console.error('[getUserAccessibleProtocolIds] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 사용자가 수정 가능한 프로토콜 ID 목록 조회
+   */
+  async getUserEditableProtocolIds(userId: string): Promise<{ data: string[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .select('protocol_id')
+        .eq('user_id', userId)
+        .eq('can_edit', true)
+
+      if (error) {
+        console.error('[getUserEditableProtocolIds] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      const protocolIds = data?.map((p: { protocol_id: string }) => p.protocol_id) || []
+      return { data: protocolIds, error: null }
+    } catch (error: unknown) {
+      console.error('[getUserEditableProtocolIds] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 사용자가 삭제 가능한 프로토콜 ID 목록 조회
+   */
+  async getUserDeletableProtocolIds(userId: string): Promise<{ data: string[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .select('protocol_id')
+        .eq('user_id', userId)
+        .eq('can_delete', true)
+
+      if (error) {
+        console.error('[getUserDeletableProtocolIds] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      const protocolIds = data?.map((p: { protocol_id: string }) => p.protocol_id) || []
+      return { data: protocolIds, error: null }
+    } catch (error: unknown) {
+      console.error('[getUserDeletableProtocolIds] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 클리닉의 직원 목록 조회 (권한 부여 대상)
+   * 대표원장(owner)을 제외한 모든 직원을 반환
+   */
+  async getClinicStaffForPermission(clinicId: string): Promise<{ data: Array<{ id: string, name: string, email: string, role: string }> | null, error: string | null }> {
+    try {
+      console.log('[getClinicStaffForPermission] Called with clinicId:', clinicId)
+
+      if (!clinicId) {
+        console.error('[getClinicStaffForPermission] clinicId is empty or undefined')
+        return { data: [], error: 'clinicId가 없습니다.' }
+      }
+
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      // 대표원장(owner)을 제외한 모든 직원 조회 (status 필터 제거)
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, role, status')
+        .eq('clinic_id', clinicId)
+        .neq('role', 'owner')  // 대표원장 제외 (대표원장은 자동으로 모든 권한 보유)
+        .order('name', { ascending: true })
+
+      console.log('[getClinicStaffForPermission] Query result - data:', data, 'error:', error)
+
+      if (error) {
+        console.error('[getClinicStaffForPermission] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      // 승인된 직원만 필터링 (approved 또는 active)
+      const filteredData = (data || []).filter((user: { id: string; name: string; email: string; role: string; status: string | null }) =>
+        user.status === 'approved' || user.status === 'active' || !user.status
+      )
+
+      console.log('[getClinicStaffForPermission] Total staff:', data?.length || 0, 'Filtered:', filteredData.length)
+
+      return { data: filteredData, error: null }
+    } catch (error: unknown) {
+      console.error('[getClinicStaffForPermission] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
     }
   }
 }

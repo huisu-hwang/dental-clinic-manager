@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -10,23 +10,31 @@ import StatsContainer from '@/components/Stats/StatsContainer'
 import LogsSection from '@/components/Logs/LogsSection'
 import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
-import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode } from 'lucide-react'
+import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 } from 'lucide-react'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
+import MenuSettings from '@/components/Management/MenuSettings'
+import LeaveManagement from '@/components/Leave/LeaveManagement'
+import VendorContactManagement from '@/components/Vendor/VendorContactManagement'
+import DocumentTemplates from '@/components/Document/DocumentTemplates'
 import Toast from '@/components/ui/Toast'
 import SetupGuide from '@/components/Setup/SetupGuide'
 import DatabaseVerifier from '@/components/Debug/DatabaseVerifier'
 import CheckInOut from '@/components/Attendance/CheckInOut'
+import DashboardHome from '@/components/Dashboard/DashboardHome'
 import AttendanceHistory from '@/components/Attendance/AttendanceHistory'
 import AttendanceStats from '@/components/Attendance/AttendanceStats'
 import ScheduleManagement from '@/components/Attendance/ScheduleManagement'
 import TeamStatus from '@/components/Attendance/TeamStatus'
 import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
+import { PayrollManagement } from '@/components/Payroll'
+import { RecallManagement } from '@/components/Recall'
+import AIChat from '@/components/AIAnalysis/AIChat'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
 import { getStatsForDateRange } from '@/utils/statsUtils'
 import { inspectDatabase } from '@/utils/dbInspector'
-import type { ConsultRowData, GiftRowData, HappyCallRowData } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog, CashRegisterRowData } from '@/types'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
@@ -47,8 +55,8 @@ export default function DashboardPage() {
   const canManageQR = hasPermission('qr_code_manage')
 
   // URL 쿼리 파라미터에서 활성 탭 읽기
-  const activeTab = searchParams.get('tab') || 'daily-input'
-  const [statsSubTab, setStatsSubTab] = useState<'weekly' | 'monthly' | 'annual'>('weekly')
+  const activeTab = searchParams.get('tab') || 'home'
+  const [statsSubTab, setStatsSubTab] = useState<'weekly' | 'monthly' | 'annual' | 'custom'>('weekly')
   const [attendanceSubTab, setAttendanceSubTab] = useState<'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'>('checkin')
   const [dbStatus, setDbStatus] = useState<'connected' | 'connecting' | 'error'>('connecting')
   const [toast, setToast] = useState<{
@@ -62,6 +70,23 @@ export default function DashboardPage() {
   const [monthSelector, setMonthSelector] = useState(() => getCurrentMonthString())
   const [yearSelector, setYearSelector] = useState(() => new Date().getFullYear().toString())
 
+  // 사용자 지정 기간 선택
+  const getDefaultDateRange = () => {
+    const today = new Date()
+    const oneMonthAgo = new Date(today)
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+    return {
+      start: oneMonthAgo.toISOString().split('T')[0],
+      end: today.toISOString().split('T')[0]
+    }
+  }
+  const [customStartDate, setCustomStartDate] = useState(() => getDefaultDateRange().start)
+  const [customEndDate, setCustomEndDate] = useState(() => getDefaultDateRange().end)
+
+  // 일일보고서에서 현재 입력 중인 선물 데이터 (재고 관리 실시간 반영용)
+  const [currentGiftRows, setCurrentGiftRows] = useState<GiftRowData[]>([])
+  const [currentReportDate, setCurrentReportDate] = useState<string>('')
+
   console.log('Current selectors:', { weekSelector, monthSelector, yearSelector })
 
   const {
@@ -69,12 +94,26 @@ export default function DashboardPage() {
     consultLogs,
     giftLogs,
     giftInventory,
+    giftCategories,
     inventoryLogs,
+    cashRegisterLogs,
     loading,
     error,
     refetch,
+    silentRefetch,
     refetchInventory
   } = useSupabaseData(user?.clinic_id ?? null)
+
+  // giftLogs 기반 선물별 총 사용량 계산 (모든 날짜 포함)
+  const baseUsageByGift = useMemo(() => {
+    const usage: Record<string, number> = {}
+    for (const log of giftLogs) {
+      if (log.gift_type && log.gift_type !== '없음') {
+        usage[log.gift_type] = (usage[log.gift_type] || 0) + (log.quantity || 1)
+      }
+    }
+    return usage
+  }, [giftLogs])
 
   useEffect(() => {
     if (loading) {
@@ -108,6 +147,7 @@ export default function DashboardPage() {
     recallBookingCount: number
     recallBookingNames: string
     specialNotes: string
+    cashRegisterData?: CashRegisterRowData
   }) => {
     if (!canCreateReport && !canEditReport) {
       showToast('보고서를 저장할 권한이 없습니다.', 'error')
@@ -196,6 +236,50 @@ export default function DashboardPage() {
     }
   }
 
+  // 선물 아이템의 카테고리 변경
+  const handleUpdateGiftCategory = async (giftId: number, categoryId: number | null) => {
+    const result = await dataService.updateGiftItemCategory(giftId, categoryId)
+    if (result.error) {
+      showToast(`카테고리 변경 실패: ${result.error}`, 'error')
+    } else {
+      showToast('선물 카테고리가 변경되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
+  // 카테고리 추가
+  const handleAddCategory = async (name: string, description?: string, color?: string) => {
+    const result = await dataService.addGiftCategory(name, description, color)
+    if (result.error) {
+      showToast(`카테고리 추가 실패: ${result.error}`, 'error')
+    } else {
+      showToast('카테고리가 추가되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
+  // 카테고리 수정
+  const handleUpdateCategory = async (id: number, updates: { name?: string; description?: string; color?: string }) => {
+    const result = await dataService.updateGiftCategory(id, updates)
+    if (result.error) {
+      showToast(`카테고리 수정 실패: ${result.error}`, 'error')
+    } else {
+      showToast('카테고리가 수정되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
+  // 카테고리 삭제
+  const handleDeleteCategory = async (id: number) => {
+    const result = await dataService.deleteGiftCategory(id)
+    if (result.error) {
+      showToast(`카테고리 삭제 실패: ${result.error}`, 'error')
+    } else {
+      showToast('카테고리가 삭제되었습니다.', 'success')
+      refetchInventory()
+    }
+  }
+
   const handleRecalculateStats = async (date: string) => {
     const result = await dataService.recalculateDailyReportStats(date)
     if (result.error) {
@@ -206,11 +290,37 @@ export default function DashboardPage() {
     }
   }
 
+  // 일일보고서에서 선물 데이터 변경 시 호출
+  const handleGiftRowsChange = (date: string, giftRows: GiftRowData[]) => {
+    setCurrentReportDate(date)
+    setCurrentGiftRows(giftRows)
+  }
+
+  const handleUpdateConsultStatus = async (consultId: number): Promise<{ success?: boolean; error?: string }> => {
+    try {
+      const result = await dataService.updateConsultStatusToCompleted(consultId)
+      if (result.error) {
+        showToast(`상태 변경 실패: ${result.error}`, 'error')
+        return { error: result.error }
+      } else {
+        const message = result.patientName
+          ? `${result.patientName} 환자의 상담이 진행 완료로 변경되었습니다.`
+          : '상담 상태가 변경되었습니다.'
+        showToast(message, 'success')
+        refetch() // 데이터 새로고침
+        return { success: true }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      showToast(`상태 변경 실패: ${errorMessage}`, 'error')
+      return { error: errorMessage }
+    }
+  }
 
   // 통계 계산
   const getStats = (periodType: 'weekly' | 'monthly' | 'annual', value: string) => {
     const periodData = getDatesForPeriod(periodType, value)
-    return getStatsForDateRange(dailyReports, giftLogs, periodData.startDate, periodData.endDate)
+    return getStatsForDateRange(dailyReports, giftLogs, periodData.startDate, periodData.endDate, giftInventory, giftCategories)
   }
 
   // 연도 옵션 생성 (현재 연도와 데이터가 있는 연도들)
@@ -239,11 +349,21 @@ export default function DashboardPage() {
 
   return (
     <>
+          {/* 대시보드 홈 */}
+          {activeTab === 'home' && (
+            <DashboardHome />
+          )}
+
           {/* 일일 보고서 입력 */}
           {activeTab === 'daily-input' && (
             <DailyInputForm
               giftInventory={giftInventory}
+              giftCategories={giftCategories}
+              giftLogs={giftLogs}
+              baseUsageByGift={baseUsageByGift}
               onSaveReport={handleSaveReport}
+              onSaveSuccess={silentRefetch}
+              onGiftRowsChange={handleGiftRowsChange}
               canCreate={canCreateReport}
               canEdit={canEditReport}
               currentUser={user ?? undefined}
@@ -253,8 +373,8 @@ export default function DashboardPage() {
           {/* 출근 관리 */}
           {activeTab === 'attendance' && (
             <div className="space-y-4">
-              {/* 출근 관리 서브 탭 네비게이션 */}
-              <div className="bg-white border-b border-gray-200 rounded-t-lg">
+              {/* 출근 관리 서브 탭 네비게이션 - 스크롤 시 고정 */}
+              <div className="sticky top-14 z-10 bg-white border-b border-gray-200 rounded-t-lg">
                 <div className="px-4 sm:px-6 lg:px-8">
                   <nav className="flex space-x-8 overflow-x-auto" aria-label="Tabs">
                     {canCheckIn && (
@@ -368,57 +488,99 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* 연차 관리 */}
+          {activeTab === 'leave' && user && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              <LeaveManagement currentUser={user} />
+            </div>
+          )}
+
           {/* 통계 */}
           {activeTab === 'stats' && (
-            <div className="space-y-4">
-              {/* Stats Sub-tab Navigation */}
-              <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                <nav className="flex space-x-4">
+            <div className="space-y-0">
+              {/* 통계 헤더 - 스크롤 시 고정 */}
+              <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">통계</h2>
+                    <p className="text-blue-100 text-sm">Statistics</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 통계 서브 탭 네비게이션 - 스크롤 시 고정 */}
+              <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
+                <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
                   <button
                     onClick={() => setStatsSubTab('weekly')}
-                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                       statsSubTab === 'weekly'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                     }`}
                   >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                     주간 통계
                   </button>
                   <button
                     onClick={() => setStatsSubTab('monthly')}
-                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                       statsSubTab === 'monthly'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                     }`}
                   >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
                     월간 통계
                   </button>
                   <button
                     onClick={() => setStatsSubTab('annual')}
-                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                       statsSubTab === 'annual'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                     }`}
                   >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                    </svg>
                     연간 통계
+                  </button>
+                  <button
+                    onClick={() => setStatsSubTab('custom')}
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+                      statsSubTab === 'custom'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    기간 지정
                   </button>
                 </nav>
               </div>
 
-              {/* Stats Content */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+              {/* 통계 콘텐츠 */}
+              <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
                 {statsSubTab === 'weekly' && (
                   <>
-                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                      <h2 className="text-xl font-bold">주간 통계</h2>
+                    <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="week-selector" className="mr-2">주 선택:</label>
+                        <label htmlFor="week-selector" className="mr-2 text-sm text-slate-600">주 선택:</label>
                         <input
                           type="week"
                           id="week-selector"
-                          className="p-2 border border-slate-300 rounded-md"
+                          className="p-2 border border-slate-300 rounded-md text-sm"
                           value={weekSelector}
                           onChange={(e) => setWeekSelector(e.target.value)}
                         />
@@ -438,21 +600,23 @@ export default function DashboardPage() {
                       revenueByManager: {},
                       consultProceedRate: 0,
                       recallSuccessRate: 0,
-                      giftCounts: {}
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
                     } : getStats('weekly', weekSelector)} />
                   </>
                 )}
 
                 {statsSubTab === 'monthly' && (
                   <>
-                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                      <h2 className="text-xl font-bold">월간 통계</h2>
+                    <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="month-selector" className="mr-2">월 선택:</label>
+                        <label htmlFor="month-selector" className="mr-2 text-sm text-slate-600">월 선택:</label>
                         <input
                           type="month"
                           id="month-selector"
-                          className="p-2 border border-slate-300 rounded-md"
+                          className="p-2 border border-slate-300 rounded-md text-sm"
                           value={monthSelector}
                           onChange={(e) => setMonthSelector(e.target.value)}
                         />
@@ -472,20 +636,22 @@ export default function DashboardPage() {
                       revenueByManager: {},
                       consultProceedRate: 0,
                       recallSuccessRate: 0,
-                      giftCounts: {}
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
                     } : getStats('monthly', monthSelector)} />
                   </>
                 )}
 
                 {statsSubTab === 'annual' && (
                   <>
-                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                      <h2 className="text-xl font-bold">연간 통계</h2>
+                    <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="year-selector" className="mr-2">연도 선택:</label>
+                        <label htmlFor="year-selector" className="mr-2 text-sm text-slate-600">연도 선택:</label>
                         <select
                           id="year-selector"
-                          className="p-2 border border-slate-300 rounded-md"
+                          className="p-2 border border-slate-300 rounded-md text-sm"
                           value={yearSelector}
                           onChange={(e) => setYearSelector(e.target.value)}
                         >
@@ -509,8 +675,78 @@ export default function DashboardPage() {
                       revenueByManager: {},
                       consultProceedRate: 0,
                       recallSuccessRate: 0,
-                      giftCounts: {}
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
                     } : getStats('annual', yearSelector)} />
+                  </>
+                )}
+
+                {statsSubTab === 'custom' && (
+                  <>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="custom-start-date" className="text-sm font-medium text-slate-600 whitespace-nowrap">시작일:</label>
+                          <input
+                            type="date"
+                            id="custom-start-date"
+                            className="p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={customStartDate}
+                            onChange={(e) => setCustomStartDate(e.target.value)}
+                            max={customEndDate}
+                          />
+                        </div>
+                        <span className="hidden sm:block text-slate-400">~</span>
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="custom-end-date" className="text-sm font-medium text-slate-600 whitespace-nowrap">종료일:</label>
+                          <input
+                            type="date"
+                            id="custom-end-date"
+                            className="p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={customEndDate}
+                            onChange={(e) => setCustomEndDate(e.target.value)}
+                            min={customStartDate}
+                          />
+                        </div>
+                      </div>
+                      <div className="text-sm text-slate-500">
+                        {(() => {
+                          const start = new Date(customStartDate)
+                          const end = new Date(customEndDate)
+                          const diffTime = Math.abs(end.getTime() - start.getTime())
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+                          return `${diffDays}일 간의 통계`
+                        })()}
+                      </div>
+                    </div>
+                    <StatsContainer stats={loading ? {
+                      naver_review_count: 0,
+                      consult_proceed: 0,
+                      consult_hold: 0,
+                      recall_count: 0,
+                      recall_booking_count: 0,
+                      totalConsults: 0,
+                      totalGifts: 0,
+                      totalRevenue: 0,
+                      consultsByManager: {},
+                      giftsByManager: {},
+                      revenueByManager: {},
+                      consultProceedRate: 0,
+                      recallSuccessRate: 0,
+                      giftCounts: {},
+                      giftCountsByCategory: {},
+                      returningPatientGiftCount: 0,
+                      reviewToReturningGiftRate: 0
+                    } : getStatsForDateRange(
+                      dailyReports,
+                      giftLogs,
+                      new Date(customStartDate + 'T00:00:00'),
+                      new Date(customEndDate + 'T23:59:59'),
+                      giftInventory,
+                      giftCategories
+                    )} />
                   </>
                 )}
               </div>
@@ -524,8 +760,10 @@ export default function DashboardPage() {
               consultLogs={consultLogs}
               giftLogs={giftLogs}
               inventoryLogs={inventoryLogs}
+              cashRegisterLogs={cashRegisterLogs}
               onDeleteReport={handleDeleteReport}
               onRecalculateStats={handleRecalculateStats}
+              onUpdateConsultStatus={handleUpdateConsultStatus}
               canDelete={canDeleteReport}
             />
           )}
@@ -541,13 +779,49 @@ export default function DashboardPage() {
             )
           )}
 
+          {/* 업체 연락처 */}
+          {activeTab === 'vendors' && (
+            <VendorContactManagement />
+          )}
+
+          {/* 문서 양식 */}
+          {activeTab === 'documents' && (
+            <DocumentTemplates />
+          )}
+
+          {/* 급여 명세서 */}
+          {activeTab === 'payroll' && (
+            <PayrollManagement />
+          )}
+
+          {/* 환자 리콜 관리 */}
+          {activeTab === 'recall' && (
+            <RecallManagement />
+          )}
+
+          {/* AI 데이터 분석 */}
+          {activeTab === 'ai-analysis' && user?.clinic_id && (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-[calc(100vh-180px)]">
+              <AIChat clinicId={user.clinic_id} />
+            </div>
+          )}
+
           {/* 설정 */}
           {activeTab === 'settings' && (
             <InventoryManagement
               giftInventory={giftInventory}
+              giftCategories={giftCategories}
+              giftLogs={giftLogs}
+              baseUsageByGift={baseUsageByGift}
+              currentGiftRows={currentGiftRows}
+              currentReportDate={currentReportDate}
               onAddGiftItem={handleAddGiftItem}
               onUpdateStock={handleUpdateStock}
               onDeleteGiftItem={handleDeleteGiftItem}
+              onUpdateGiftCategory={handleUpdateGiftCategory}
+              onAddCategory={handleAddCategory}
+              onUpdateCategory={handleUpdateCategory}
+              onDeleteCategory={handleDeleteCategory}
             />
           )}
 
@@ -619,6 +893,11 @@ export default function DashboardPage() {
                  </div>
               </footer>
             </div>
+          )}
+
+          {/* 메뉴 설정 */}
+          {activeTab === 'menu-settings' && (
+            <MenuSettings />
           )}
 
       <Toast

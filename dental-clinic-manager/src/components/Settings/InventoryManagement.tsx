@@ -1,39 +1,149 @@
 'use client'
 
-import { useState } from 'react'
-import type { GiftInventory } from '@/types'
+import { useState, useMemo } from 'react'
+import { Settings, Package, Plus, Edit3, Trash2, AlertTriangle, Tag, X } from 'lucide-react'
+import type { GiftInventory, GiftLog, GiftRowData, GiftCategory } from '@/types'
 
 interface InventoryManagementProps {
   giftInventory: GiftInventory[]
-  onAddGiftItem: (name: string, stock: number) => void
+  giftCategories: GiftCategory[]
+  giftLogs?: GiftLog[]  // 저장된 선물 사용 기록 (현재 날짜 사용량 계산용)
+  baseUsageByGift?: Record<string, number>  // 전체 giftLogs 기반 사용량 (dashboard에서 계산)
+  currentGiftRows?: GiftRowData[]  // 일일보고서에서 현재 입력 중인 선물 데이터
+  currentReportDate?: string       // 현재 입력 중인 보고서 날짜
+  onAddGiftItem: (name: string, stock: number, categoryId?: number) => void
   onUpdateStock: (id: number, quantity: number) => void
   onDeleteGiftItem: (id: number, name: string) => void
+  onUpdateGiftCategory: (giftId: number, categoryId: number | null) => void
+  onAddCategory: (name: string, description?: string, color?: string) => void
+  onUpdateCategory: (id: number, updates: { name?: string; description?: string; color?: string }) => void
+  onDeleteCategory: (id: number) => void
 }
+
+const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
+  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
+    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+      <Icon className="w-4 h-4" />
+    </div>
+    <h3 className="text-base font-semibold text-slate-800">
+      <span className="text-blue-600 mr-1">{number}.</span>
+      {title}
+    </h3>
+  </div>
+)
+
+// 색상 프리셋
+const COLOR_PRESETS = [
+  '#22c55e', // green
+  '#3b82f6', // blue
+  '#a855f7', // purple
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#06b6d4', // cyan
+  '#ec4899', // pink
+  '#64748b', // slate
+]
 
 export default function InventoryManagement({
   giftInventory,
+  giftCategories,
+  giftLogs = [],
+  baseUsageByGift = {},
+  currentGiftRows = [],
+  currentReportDate = '',
   onAddGiftItem,
   onUpdateStock,
-  onDeleteGiftItem
+  onDeleteGiftItem,
+  onUpdateGiftCategory,
+  onAddCategory,
+  onUpdateCategory,
+  onDeleteCategory
 }: InventoryManagementProps) {
   const [newGiftName, setNewGiftName] = useState('')
   const [newGiftStock, setNewGiftStock] = useState(0)
+  const [newGiftCategoryId, setNewGiftCategoryId] = useState<number | undefined>(undefined)
   const [stockUpdates, setStockUpdates] = useState<Record<number, number>>({})
+
+  // 카테고리 관련 state
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryDescription, setNewCategoryDescription] = useState('')
+  const [newCategoryColor, setNewCategoryColor] = useState('#3b82f6')
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null)
+  const [editingCategoryName, setEditingCategoryName] = useState('')
+  const [editingCategoryDescription, setEditingCategoryDescription] = useState('')
+  const [editingCategoryColor, setEditingCategoryColor] = useState('')
+
+  // 현재 날짜의 저장된 사용량 계산 (baseUsageByGift에서 제외할 양)
+  const currentDateSavedUsage = useMemo(() => {
+    const usage: Record<string, number> = {}
+    for (const log of giftLogs) {
+      if (log.gift_type && log.gift_type !== '없음' && log.date === currentReportDate) {
+        usage[log.gift_type] = (usage[log.gift_type] || 0) + (log.quantity || 1)
+      }
+    }
+    return usage
+  }, [giftLogs, currentReportDate])
+
+  // 현재 입력 중인 giftRows 사용량 계산
+  const currentInputUsage = useMemo(() => {
+    const usage: Record<string, number> = {}
+    for (const row of currentGiftRows) {
+      if (row.gift_type && row.gift_type !== '없음' && row.patient_name?.trim()) {
+        usage[row.gift_type] = (usage[row.gift_type] || 0) + (row.quantity || 1)
+      }
+    }
+    return usage
+  }, [currentGiftRows])
+
+  // 실제 남은 재고 계산 함수
+  // 공식: 실제 재고 = 입고 재고 - 전체 사용량 + 현재 날짜 저장 사용량 - 현재 입력 사용량
+  // (현재 날짜 저장 사용량은 현재 입력으로 대체되므로 더해줌)
+  const getActualStock = (item: GiftInventory) => {
+    const totalSavedUsage = baseUsageByGift[item.name] || 0      // 전체 저장 사용량
+    const currentDateUsage = currentDateSavedUsage[item.name] || 0  // 현재 날짜 저장 사용량
+    const currentUsage = currentInputUsage[item.name] || 0       // 현재 입력 사용량
+    return item.stock - totalSavedUsage + currentDateUsage - currentUsage
+  }
+
+  // UI 표시용 사용량 계산 (전체 사용량 - 현재 날짜 저장 + 현재 입력)
+  const usedQuantityByGift = useMemo(() => {
+    const usage: Record<string, number> = {}
+    // baseUsageByGift 복사
+    for (const [name, qty] of Object.entries(baseUsageByGift)) {
+      usage[name] = qty
+    }
+    // 현재 날짜 저장 사용량 제외 (현재 입력으로 대체됨)
+    for (const [name, qty] of Object.entries(currentDateSavedUsage)) {
+      usage[name] = (usage[name] || 0) - qty
+    }
+    // 현재 입력 추가
+    for (const [name, qty] of Object.entries(currentInputUsage)) {
+      usage[name] = (usage[name] || 0) + qty
+    }
+    return usage
+  }, [baseUsageByGift, currentDateSavedUsage, currentInputUsage])
+
+  // 카테고리 ID로 카테고리 찾기
+  const getCategoryById = (categoryId: number | null | undefined) => {
+    if (!categoryId) return null
+    return giftCategories.find(c => c.id === categoryId) || null
+  }
 
   const handleAddGift = () => {
     if (!newGiftName.trim()) {
       alert('선물 이름을 입력해주세요.')
       return
     }
-    
+
     if (giftInventory.find(g => g.name === newGiftName.trim())) {
       alert('이미 존재하는 선물 종류입니다.')
       return
     }
 
-    onAddGiftItem(newGiftName.trim(), newGiftStock)
+    onAddGiftItem(newGiftName.trim(), newGiftStock, newGiftCategoryId)
     setNewGiftName('')
     setNewGiftStock(0)
+    setNewGiftCategoryId(undefined)
   }
 
   const handleStockUpdate = (id: number) => {
@@ -47,76 +157,358 @@ export default function InventoryManagement({
     setStockUpdates(prev => ({ ...prev, [id]: 0 }))
   }
 
-  return (
-    <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200 space-y-6">
-      <h2 className="text-2xl font-bold border-b pb-4">설정</h2>
-      
-      <div>
-        <h3 className="text-xl font-semibold mb-3">선물 및 재고 관리</h3>
-        
-        {/* 새 선물 추가 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4 p-4 border rounded-md bg-slate-50">
-          <input
-            type="text"
-            placeholder="새 선물 이름 (예: 치실)"
-            className="w-full p-2 border border-slate-300 rounded-md"
-            value={newGiftName}
-            onChange={(e) => setNewGiftName(e.target.value)}
-          />
-          <input
-            type="number"
-            placeholder="초기 재고 수량"
-            className="w-full p-2 border border-slate-300 rounded-md"
-            value={newGiftStock}
-            onChange={(e) => setNewGiftStock(parseInt(e.target.value) || 0)}
-          />
-          <button
-            onClick={handleAddGift}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md"
-          >
-            신규 추가
-          </button>
-        </div>
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) {
+      alert('카테고리 이름을 입력해주세요.')
+      return
+    }
 
-        {/* 기존 선물 목록 */}
-        <div className="space-y-2">
-          {giftInventory.map(item => (
-            <div key={item.id} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center bg-slate-100 p-2 rounded-md">
-              <span className="md:col-span-2 font-semibold">{item.name}</span>
-              <span className="text-sm">
-                현재 재고: <span className="font-bold text-blue-600">{item.stock}</span> 개
-              </span>
-              <input
-                type="number"
-                placeholder="추가/차감 수량 (음수 가능)"
-                className="w-full p-2 border rounded-md"
-                value={stockUpdates[item.id] || ''}
-                onChange={(e) => setStockUpdates(prev => ({
-                  ...prev,
-                  [item.id]: parseInt(e.target.value) || 0
-                }))}
-              />
-              <button
-                onClick={() => handleStockUpdate(item.id)}
-                className="bg-green-500 text-white p-2 rounded-md hover:bg-green-600 text-sm"
-              >
-                재고 수정
-              </button>
-              <button
-                onClick={() => {
-                  if (confirm(`'${item.name}' 선물을 삭제하시겠습니까? 관련 재고 기록도 모두 사라집니다.`)) {
-                    onDeleteGiftItem(item.id, item.name)
-                  }
-                }}
-                className="bg-red-500 text-white p-2 rounded-md hover:bg-red-600 text-sm"
-              >
-                삭제
-              </button>
-            </div>
-          ))}
+    if (giftCategories.find(c => c.name === newCategoryName.trim())) {
+      alert('이미 존재하는 카테고리입니다.')
+      return
+    }
+
+    onAddCategory(newCategoryName.trim(), newCategoryDescription.trim(), newCategoryColor)
+    setNewCategoryName('')
+    setNewCategoryDescription('')
+    setNewCategoryColor('#3b82f6')
+  }
+
+  const handleStartEditCategory = (category: GiftCategory) => {
+    setEditingCategoryId(category.id)
+    setEditingCategoryName(category.name)
+    setEditingCategoryDescription(category.description || '')
+    setEditingCategoryColor(category.color)
+  }
+
+  const handleSaveEditCategory = () => {
+    if (!editingCategoryId) return
+
+    if (!editingCategoryName.trim()) {
+      alert('카테고리 이름을 입력해주세요.')
+      return
+    }
+
+    onUpdateCategory(editingCategoryId, {
+      name: editingCategoryName.trim(),
+      description: editingCategoryDescription.trim(),
+      color: editingCategoryColor
+    })
+    setEditingCategoryId(null)
+    setEditingCategoryName('')
+    setEditingCategoryDescription('')
+    setEditingCategoryColor('')
+  }
+
+  const handleCancelEditCategory = () => {
+    setEditingCategoryId(null)
+    setEditingCategoryName('')
+    setEditingCategoryDescription('')
+    setEditingCategoryColor('')
+  }
+
+  return (
+    <div>
+      {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
+      <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+            <Settings className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white">재고 관리</h2>
+            <p className="text-blue-100 text-sm">Inventory Management</p>
+          </div>
         </div>
       </div>
 
+      {/* 콘텐츠 영역 */}
+      <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6 space-y-8">
+        {/* 선물 카테고리 관리 */}
+        <div>
+          <SectionHeader number={1} title="선물 카테고리 관리" icon={Tag} />
+
+          {/* 카테고리 추가 폼 */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200 mb-4">
+            <input
+              type="text"
+              placeholder="카테고리 이름 (예: 임플란트 환자 선물)"
+              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="설명 (선택사항)"
+              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={newCategoryDescription}
+              onChange={(e) => setNewCategoryDescription(e.target.value)}
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-600">색상:</span>
+              <div className="flex gap-1">
+                {COLOR_PRESETS.map(color => (
+                  <button
+                    key={color}
+                    className={`w-6 h-6 rounded-full border-2 transition-all ${
+                      newCategoryColor === color ? 'border-slate-800 scale-110' : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setNewCategoryColor(color)}
+                  />
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={handleAddCategory}
+              className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              카테고리 추가
+            </button>
+          </div>
+
+          {/* 카테고리 목록 */}
+          {giftCategories.length === 0 ? (
+            <div className="text-center py-6 bg-slate-50 rounded-lg">
+              <Tag className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+              <p className="text-slate-600">등록된 카테고리가 없습니다.</p>
+              <p className="text-slate-500 text-sm">위에서 새 카테고리를 추가해주세요.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {giftCategories.map(category => (
+                <div
+                  key={category.id}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
+                >
+                  {editingCategoryId === category.id ? (
+                    // 편집 모드
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
+                      <input
+                        type="text"
+                        className="w-full p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={editingCategoryName}
+                        onChange={(e) => setEditingCategoryName(e.target.value)}
+                      />
+                      <input
+                        type="text"
+                        placeholder="설명"
+                        className="w-full p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={editingCategoryDescription}
+                        onChange={(e) => setEditingCategoryDescription(e.target.value)}
+                      />
+                      <div className="flex items-center gap-1">
+                        {COLOR_PRESETS.map(color => (
+                          <button
+                            key={color}
+                            className={`w-5 h-5 rounded-full border-2 transition-all ${
+                              editingCategoryColor === color ? 'border-slate-800 scale-110' : 'border-transparent'
+                            }`}
+                            style={{ backgroundColor: color }}
+                            onClick={() => setEditingCategoryColor(color)}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveEditCategory}
+                          className="flex-1 flex items-center justify-center bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 text-sm transition-colors"
+                        >
+                          저장
+                        </button>
+                        <button
+                          onClick={handleCancelEditCategory}
+                          className="flex items-center justify-center bg-slate-500 text-white p-2 rounded-lg hover:bg-slate-600 text-sm transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // 보기 모드
+                    <>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <div>
+                          <span className="font-medium text-slate-800">{category.name}</span>
+                          {category.description && (
+                            <p className="text-xs text-slate-500">{category.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleStartEditCategory(category)}
+                          className="flex items-center justify-center bg-slate-200 text-slate-700 p-2 rounded-lg hover:bg-slate-300 text-sm transition-colors"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`'${category.name}' 카테고리를 삭제하시겠습니까? 이 카테고리를 사용하는 선물들의 카테고리는 초기화됩니다.`)) {
+                              onDeleteCategory(category.id)
+                            }
+                          }}
+                          className="flex items-center justify-center bg-red-100 text-red-600 p-2 rounded-lg hover:bg-red-200 text-sm transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 새 선물 추가 */}
+        <div>
+          <SectionHeader number={2} title="신규 선물 추가" icon={Plus} />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <input
+              type="text"
+              placeholder="새 선물 이름 (예: 치실)"
+              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={newGiftName}
+              onChange={(e) => setNewGiftName(e.target.value)}
+            />
+            <input
+              type="number"
+              placeholder="초기 재고 수량"
+              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={newGiftStock}
+              onChange={(e) => setNewGiftStock(parseInt(e.target.value) || 0)}
+            />
+            <select
+              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              value={newGiftCategoryId || ''}
+              onChange={(e) => setNewGiftCategoryId(e.target.value ? parseInt(e.target.value) : undefined)}
+            >
+              <option value="">카테고리 선택 (선택사항)</option>
+              {giftCategories.map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleAddGift}
+              className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              신규 추가
+            </button>
+          </div>
+        </div>
+
+        {/* 선물 및 재고 관리 */}
+        <div>
+          <SectionHeader number={3} title="선물 및 재고 관리" icon={Package} />
+          {giftInventory.length === 0 ? (
+            <div className="text-center py-8 bg-slate-50 rounded-lg">
+              <Package className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">등록된 선물이 없습니다.</p>
+              <p className="text-slate-500 text-sm">위에서 새 선물을 추가해주세요.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {giftInventory.map(item => {
+                const actualStock = getActualStock(item)
+                const usedQty = usedQuantityByGift[item.name] || 0
+                const isLowStock = actualStock <= 3 && actualStock > 0
+                const isOutOfStock = actualStock <= 0
+                const category = getCategoryById(item.category_id)
+
+                return (
+                  <div key={item.id} className={`grid grid-cols-1 md:grid-cols-7 gap-3 items-center p-4 rounded-lg border ${isOutOfStock ? 'bg-red-50 border-red-200' : isLowStock ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className="md:col-span-2">
+                      <div className="flex items-center gap-2">
+                        {category && (
+                          <span
+                            className="text-lg font-bold leading-none"
+                            style={{ color: category.color }}
+                          >
+                            ●
+                          </span>
+                        )}
+                        <span className="font-semibold text-slate-800">{item.name}</span>
+                      </div>
+                      {isOutOfStock && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mt-1">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          재고 없음
+                        </span>
+                      )}
+                      {isLowStock && !isOutOfStock && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 mt-1">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          재고 부족
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm">
+                      <div className="text-slate-600">
+                        입고 재고: <span className="font-medium">{item.stock}</span>개
+                      </div>
+                      <div className="text-slate-600">
+                        사용량: <span className="font-medium text-orange-600">-{usedQty}</span>개
+                      </div>
+                      <div className={`font-bold ${isOutOfStock ? 'text-red-600' : isLowStock ? 'text-amber-600' : 'text-blue-600'}`}>
+                        실제 남은 재고: {actualStock}개
+                      </div>
+                    </div>
+                    <select
+                      className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+                      value={item.category_id || ''}
+                      onChange={(e) => onUpdateGiftCategory(item.id, e.target.value ? parseInt(e.target.value) : null)}
+                    >
+                      <option value="">카테고리 없음</option>
+                      {giftCategories.map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="추가/차감 수량"
+                      className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      value={stockUpdates[item.id] || ''}
+                      onChange={(e) => setStockUpdates(prev => ({
+                        ...prev,
+                        [item.id]: parseInt(e.target.value) || 0
+                      }))}
+                    />
+                    <button
+                      onClick={() => handleStockUpdate(item.id)}
+                      className="flex items-center justify-center bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 text-sm transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4 mr-1" />
+                      재고 수정
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`'${item.name}' 선물을 삭제하시겠습니까? 관련 재고 기록도 모두 사라집니다.`)) {
+                          onDeleteGiftItem(item.id, item.name)
+                        }
+                      }}
+                      className="flex items-center justify-center bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 text-sm transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      삭제
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

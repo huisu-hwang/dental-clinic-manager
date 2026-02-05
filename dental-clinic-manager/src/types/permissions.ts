@@ -53,6 +53,15 @@ export type Permission =
   | 'leave_balance_manage'   // 연차 잔여 수동 조정 (관리자)
   | 'leave_workflow_manage'  // 승인 프로세스 관리 (관리자)
   | 'leave_type_manage'      // 연차 종류 관리 (관리자)
+  // 알림 관리 권한
+  | 'notification_view'      // 알림 조회
+  | 'notification_manage'    // 알림 생성/수정/삭제
+  // 업체 연락처 관리 권한
+  | 'vendor_contacts_view'   // 업체 연락처 조회
+  | 'vendor_contacts_create' // 업체 연락처 생성
+  | 'vendor_contacts_edit'   // 업체 연락처 수정
+  | 'vendor_contacts_delete' // 업체 연락처 삭제
+  | 'vendor_contacts_import' // 업체 연락처 일괄 등록
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -75,7 +84,11 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_approve_step1', 'leave_approve_step2', 'leave_approve_final',
     'leave_policy_view', 'leave_policy_manage',
     'leave_balance_view_own', 'leave_balance_view_all', 'leave_balance_manage',
-    'leave_workflow_manage', 'leave_type_manage'
+    'leave_workflow_manage', 'leave_type_manage',
+    // 알림 관리 (모든 권한)
+    'notification_view', 'notification_manage',
+    // 업체 연락처 관리 (모든 권한)
+    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit', 'vendor_contacts_delete', 'vendor_contacts_import'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -95,7 +108,11 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_request_create', 'leave_request_view_own', 'leave_request_view_all', 'leave_request_cancel',
     'leave_approve_step1', 'leave_approve_step2',
     'leave_policy_view',
-    'leave_balance_view_own', 'leave_balance_view_all'
+    'leave_balance_view_own', 'leave_balance_view_all',
+    // 알림 조회
+    'notification_view',
+    // 업체 연락처 관리 (삭제, 일괄 등록 제외)
+    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
@@ -114,7 +131,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_request_create', 'leave_request_view_own', 'leave_request_view_all', 'leave_request_cancel',
     'leave_approve_step1',
     'leave_policy_view',
-    'leave_balance_view_own', 'leave_balance_view_all'
+    'leave_balance_view_own', 'leave_balance_view_all',
+    // 업체 연락처 관리 (조회, 생성, 수정)
+    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit'
   ],
   team_leader: [
     // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
@@ -131,7 +150,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 연차 관리 (신청 및 조회)
     'leave_request_create', 'leave_request_view_own', 'leave_request_view_all', 'leave_request_cancel',
     'leave_policy_view',
-    'leave_balance_view_own', 'leave_balance_view_all'
+    'leave_balance_view_own', 'leave_balance_view_all',
+    // 업체 연락처 관리 (조회, 생성)
+    'vendor_contacts_view', 'vendor_contacts_create'
   ],
   staff: [
     // 일반 직원은 프로토콜 조회, 본인 출퇴근, 본인 연차만 가능
@@ -148,7 +169,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 연차 관리 (본인만)
     'leave_request_create', 'leave_request_view_own', 'leave_request_cancel',
     'leave_policy_view',
-    'leave_balance_view_own'
+    'leave_balance_view_own',
+    // 업체 연락처 관리 (조회만)
+    'vendor_contacts_view'
   ]
 }
 
@@ -221,6 +244,17 @@ export const PERMISSION_GROUPS = {
     { key: 'leave_workflow_manage', label: '승인 프로세스 관리' },
     { key: 'leave_type_manage', label: '연차 종류 관리' }
   ],
+  '알림 관리': [
+    { key: 'notification_view', label: '알림 조회' },
+    { key: 'notification_manage', label: '알림 관리' }
+  ],
+  '업체 연락처': [
+    { key: 'vendor_contacts_view', label: '연락처 조회' },
+    { key: 'vendor_contacts_create', label: '연락처 생성' },
+    { key: 'vendor_contacts_edit', label: '연락처 수정' },
+    { key: 'vendor_contacts_delete', label: '연락처 삭제' },
+    { key: 'vendor_contacts_import', label: '일괄 등록' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -280,5 +314,14 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'leave_balance_view_all': '전체 직원의 연차 잔여 현황을 조회할 수 있습니다.',
   'leave_balance_manage': '직원의 연차 잔여를 수동으로 조정할 수 있습니다.',
   'leave_workflow_manage': '연차 승인 프로세스를 설정하고 관리할 수 있습니다.',
-  'leave_type_manage': '연차 종류를 추가하고 관리할 수 있습니다.'
+  'leave_type_manage': '연차 종류를 추가하고 관리할 수 있습니다.',
+  // 알림 관리 권한 설명
+  'notification_view': '병원 알림을 조회할 수 있습니다.',
+  'notification_manage': '병원 알림을 생성, 수정, 삭제할 수 있습니다.',
+  // 업체 연락처 관리 권한 설명
+  'vendor_contacts_view': '업체 연락처를 조회할 수 있습니다.',
+  'vendor_contacts_create': '새로운 업체 연락처를 등록할 수 있습니다.',
+  'vendor_contacts_edit': '업체 연락처 정보를 수정할 수 있습니다.',
+  'vendor_contacts_delete': '업체 연락처를 삭제할 수 있습니다.',
+  'vendor_contacts_import': '엑셀/CSV 파일로 업체 연락처를 일괄 등록할 수 있습니다.'
 }

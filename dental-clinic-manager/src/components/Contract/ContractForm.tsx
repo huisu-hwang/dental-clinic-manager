@@ -5,7 +5,7 @@
  * Form for creating new employment contracts with auto-fill functionality
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { contractService } from '@/lib/contractService'
 import { workScheduleService } from '@/lib/workScheduleService'
@@ -15,6 +15,7 @@ import type { User } from '@/types/auth'
 import type { UserProfile } from '@/contexts/AuthContext'
 import { formatResidentNumber } from '@/utils/residentNumberUtils'
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
+import type { DaySchedule, WorkSchedule, DayName } from '@/types/workSchedule'
 
 interface ContractFormProps {
   currentUser: UserProfile
@@ -68,7 +69,9 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
           employee_name: selectedEmployee.name,
           employee_address: selectedEmployee.address || '',
           employee_phone: selectedEmployee.phone || '',
-          employee_resident_number: decryptedResidentNumber || ''
+          employee_resident_number: decryptedResidentNumber || '',
+          // 직원의 입사일이 있으면 계약 시작일에 자동 입력
+          ...(selectedEmployee.hire_date && { employment_period_start: selectedEmployee.hire_date })
         }))
 
         // 2. 직원의 근무 스케줄 조회
@@ -120,6 +123,50 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
     }
+  }
+
+  // 주당 근무일수 계산
+  const calculateWorkDaysPerWeek = useCallback((schedule: WorkSchedule): number => {
+    return Object.values(schedule).filter(day => day.isWorking).length
+  }, [])
+
+  // 요일별 근무 여부 토글
+  const handleDayWorkingToggle = (dayKey: DayName, isWorking: boolean) => {
+    setFormData(prev => {
+      const currentSchedule = prev.work_hours_detail as WorkSchedule
+      const updatedSchedule: WorkSchedule = {
+        ...currentSchedule,
+        [dayKey]: {
+          ...currentSchedule[dayKey],
+          isWorking,
+          // 근무 안 함으로 변경 시 시간도 초기화
+          ...(isWorking ? {} : { start: null, end: null, breakStart: null, breakEnd: null })
+        }
+      }
+      return {
+        ...prev,
+        work_hours_detail: updatedSchedule,
+        work_days_per_week: calculateWorkDaysPerWeek(updatedSchedule)
+      }
+    })
+  }
+
+  // 요일별 시간 변경
+  const handleDayTimeChange = (dayKey: DayName, field: keyof DaySchedule, value: string) => {
+    setFormData(prev => {
+      const currentSchedule = prev.work_hours_detail as WorkSchedule
+      const updatedSchedule: WorkSchedule = {
+        ...currentSchedule,
+        [dayKey]: {
+          ...currentSchedule[dayKey],
+          [field]: value || null
+        }
+      }
+      return {
+        ...prev,
+        work_hours_detail: updatedSchedule
+      }
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -242,6 +289,13 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         {/* Contract Period */}
         <div className="border border-gray-200 p-4 rounded-lg">
           <h3 className="text-lg font-semibold mb-3">근로 기간</h3>
+          {selectedEmployee?.hire_date && formData.employment_period_start === selectedEmployee.hire_date && (
+            <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-700">
+                직원의 입사일({selectedEmployee.hire_date})이 계약 시작일에 자동으로 입력되었습니다.
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -363,29 +417,84 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
             <>
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                 <p className="text-sm text-blue-800">
-                  ✅ <span className="font-semibold">{selectedEmployee.name}</span>님의 개인 근무 스케줄이 자동으로 반영되었습니다.
-                  (주 {formData.work_days_per_week || 0}일 근무)
+                  <span className="font-semibold">{selectedEmployee.name}</span>님의 개인 근무 스케줄이 자동으로 반영되었습니다.
+                  필요시 아래에서 수정할 수 있습니다.
+                  (주 <span className="font-semibold">{formData.work_days_per_week || 0}일</span> 근무)
                 </p>
               </div>
 
-              {/* 요일별 스케줄 표시 */}
-              <div className="grid grid-cols-1 gap-3">
+              {/* 요일별 스케줄 수정 가능 */}
+              <div className="space-y-3">
                 {[
-                  { key: 'monday', label: '월요일' },
-                  { key: 'tuesday', label: '화요일' },
-                  { key: 'wednesday', label: '수요일' },
-                  { key: 'thursday', label: '목요일' },
-                  { key: 'friday', label: '금요일' },
-                  { key: 'saturday', label: '토요일' },
-                  { key: 'sunday', label: '일요일' },
+                  { key: 'monday' as DayName, label: '월요일' },
+                  { key: 'tuesday' as DayName, label: '화요일' },
+                  { key: 'wednesday' as DayName, label: '수요일' },
+                  { key: 'thursday' as DayName, label: '목요일' },
+                  { key: 'friday' as DayName, label: '금요일' },
+                  { key: 'saturday' as DayName, label: '토요일' },
+                  { key: 'sunday' as DayName, label: '일요일' },
                 ].map(({ key, label }) => {
-                  const daySchedule = formData.work_hours_detail?.[key as keyof typeof formData.work_hours_detail]
+                  const daySchedule = formData.work_hours_detail?.[key]
+                  const isWorking = daySchedule?.isWorking ?? false
                   return (
-                    <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <span className="font-medium text-gray-700 w-20">{label}</span>
-                      <span className="text-gray-900 flex-1 text-right">
-                        {daySchedule ? formatDaySchedule(daySchedule) : '미설정'}
-                      </span>
+                    <div key={key} className={`p-3 rounded-md border ${isWorking ? 'bg-white border-gray-300' : 'bg-gray-100 border-gray-200'}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isWorking}
+                            onChange={(e) => handleDayWorkingToggle(key, e.target.checked)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                          />
+                          <span className={`font-medium ${isWorking ? 'text-gray-900' : 'text-gray-500'}`}>
+                            {label}
+                          </span>
+                        </label>
+                        {!isWorking && (
+                          <span className="text-sm text-gray-500">휴무</span>
+                        )}
+                      </div>
+
+                      {isWorking && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">시작</label>
+                            <input
+                              type="time"
+                              value={daySchedule?.start || ''}
+                              onChange={(e) => handleDayTimeChange(key, 'start', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">종료</label>
+                            <input
+                              type="time"
+                              value={daySchedule?.end || ''}
+                              onChange={(e) => handleDayTimeChange(key, 'end', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">휴게 시작</label>
+                            <input
+                              type="time"
+                              value={daySchedule?.breakStart || ''}
+                              onChange={(e) => handleDayTimeChange(key, 'breakStart', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">휴게 종료</label>
+                            <input
+                              type="time"
+                              value={daySchedule?.breakEnd || ''}
+                              onChange={(e) => handleDayTimeChange(key, 'breakEnd', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -496,9 +605,12 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       </form>
 
       {/* Info Notice */}
-      <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+      <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-2">
         <p className="text-sm text-yellow-800">
           <span className="font-semibold">📝 안내:</span> 근로계약서 생성 후 원장과 근로자가 각각 서명해야 계약이 완료됩니다.
+        </p>
+        <p className="text-sm text-yellow-800">
+          <span className="font-semibold">📅 입사일 연동:</span> 계약 완료 시 계약 시작일이 직원의 입사일로 자동 설정됩니다.
         </p>
       </div>
     </div>

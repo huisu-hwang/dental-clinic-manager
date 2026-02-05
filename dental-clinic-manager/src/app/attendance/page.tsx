@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Clock, ClipboardList, BarChart3, Calendar, Users, QrCode } from 'lucide-react'
 import CheckInOut from '@/components/Attendance/CheckInOut'
 import AttendanceHistory from '@/components/Attendance/AttendanceHistory'
 import AttendanceStats from '@/components/Attendance/AttendanceStats'
@@ -12,26 +13,59 @@ import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
+import { getTabRoute } from '@/utils/tabRouting'
 
 type TabType = 'checkin' | 'history' | 'stats' | 'schedule' | 'team' | 'qr'
 
+// 서브 탭 설정
+const subTabs = [
+  { id: 'checkin', label: '출퇴근 체크', icon: Clock, permission: 'attendance_check_in' },
+  { id: 'history', label: '출퇴근 기록', icon: ClipboardList, permission: 'attendance_view_own' },
+  { id: 'stats', label: '근태 통계', icon: BarChart3, permission: 'attendance_stats_view' },
+  { id: 'schedule', label: '스케줄 관리', icon: Calendar, permission: 'schedule_manage' },
+  { id: 'team', label: '팀 현황', icon: Users, permission: 'attendance_view_all' },
+  { id: 'qr', label: 'QR 코드', icon: QrCode, permission: 'qr_code_manage' },
+] as const
+
 export default function AttendancePage() {
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const { user, logout, loading } = useAuth()
   const { hasPermission } = usePermissions()
   const [activeTab, setActiveTab] = useState<TabType>('checkin')
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  // 사용자 상태 체크 - 퇴사자, 승인대기, 거절된 사용자 리다이렉트
+  useEffect(() => {
+    if (!loading && user) {
+      if (user.status === 'resigned') {
+        console.log('[AttendancePage] User is resigned, redirecting to /resigned')
+        router.replace('/resigned')
+        return
+      }
+      if (user.status === 'pending' || user.status === 'rejected') {
+        console.log('[AttendancePage] User is pending/rejected, redirecting to /pending-approval')
+        router.replace('/pending-approval')
+        return
+      }
+    }
+  }, [user, loading, router])
+
+  // 모바일 메뉴가 열려 있을 때 스크롤 방지
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isMobileMenuOpen])
 
   // 메인 탭 네비게이션 핸들러
   const handleMainTabChange = (tab: string) => {
     if (tab === 'attendance') return // Already on attendance page
-    if (tab === 'daily-input') router.push('/dashboard')
-    else if (tab === 'contracts') router.push('/dashboard/contracts')
-    else if (tab === 'stats') router.push('/dashboard?tab=stats')
-    else if (tab === 'logs') router.push('/dashboard?tab=logs')
-    else if (tab === 'protocols') router.push('/dashboard?tab=protocols')
-    else if (tab === 'settings') router.push('/dashboard?tab=settings')
-    else if (tab === 'guide') router.push('/dashboard?tab=guide')
-    else router.push('/dashboard')
+    router.push(getTabRoute(tab))
   }
 
   // 권한 체크
@@ -42,7 +76,8 @@ export default function AttendancePage() {
   const canViewTeam = hasPermission('attendance_view_all')
   const canManageQR = hasPermission('qr_code_manage')
 
-  if (!user) {
+  // 로딩 중이거나 권한 없는 사용자는 로딩 표시
+  if (loading || !user || user.status === 'resigned' || user.status === 'pending' || user.status === 'rejected') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -54,138 +89,111 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="container mx-auto p-4 md:p-8">
-        {/* Header */}
-        <Header
-          dbStatus="connected"
-          user={user}
-          onLogout={() => logout()}
+    <div className="min-h-screen bg-slate-100">
+      {/* Header - 상단 고정, 중앙 정렬 */}
+      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200">
+        <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
+          <Header
+            dbStatus="connected"
+            user={user}
+            onLogout={() => logout()}
+            onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            isMenuOpen={isMobileMenuOpen}
+          />
+        </div>
+      </div>
+
+      {/* 모바일 메뉴 오버레이 */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
         />
+      )}
 
-        {/* Main Tab Navigation */}
-        <TabNavigation activeTab="attendance" onTabChange={handleMainTabChange} />
+      {/* 좌측 사이드바 - 모바일에서는 슬라이드 메뉴 */}
+      <aside
+        className={`
+          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3
+          transition-transform duration-300 ease-in-out
+          lg:left-[max(0px,calc(50%-700px))]
+          ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
+        `}
+      >
+        <TabNavigation
+          activeTab="attendance"
+          onTabChange={handleMainTabChange}
+          onItemClick={() => setIsMobileMenuOpen(false)}
+          skipAutoRedirect={true}
+        />
+      </aside>
 
-        {/* 페이지 제목 */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">출근 관리</h1>
-          <p className="mt-1 text-sm text-slate-600">출퇴근 기록과 근태를 관리합니다.</p>
-        </div>
+      {/* 메인 콘텐츠 */}
+      <div className="pt-14">
+        <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
+          <div className="max-w-6xl">
+            {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
+            <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold text-white">근태관리</h2>
+                    <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Attendance Management</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        {/* 탭 네비게이션 */}
-        <div className="bg-white border-b border-gray-200 rounded-t-lg">
-          <div className="px-4 sm:px-6 lg:px-8">
-            <nav className="flex space-x-8 overflow-x-auto" aria-label="Tabs">
-            {canCheckIn && (
-              <button
-                onClick={() => setActiveTab('checkin')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === 'checkin'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                출퇴근 체크
-              </button>
-            )}
+            {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
+            <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
+              <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
+                {subTabs.map((tab) => {
+                  const hasTabPermission =
+                    (tab.id === 'checkin' && canCheckIn) ||
+                    (tab.id === 'history' && canViewHistory) ||
+                    (tab.id === 'stats' && canViewStats) ||
+                    (tab.id === 'schedule' && canManageSchedule) ||
+                    (tab.id === 'team' && canViewTeam) ||
+                    (tab.id === 'qr' && canManageQR)
 
-            {canViewHistory && (
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === 'history'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                출퇴근 기록
-              </button>
-            )}
+                  if (!hasTabPermission) return null
 
-            {canViewStats && (
-              <button
-                onClick={() => setActiveTab('stats')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === 'stats'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                근태 통계
-              </button>
-            )}
+                  const Icon = tab.icon
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? 'bg-white text-blue-600 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                      <span className="hidden xs:inline sm:inline">{tab.label}</span>
+                      <span className="xs:hidden sm:hidden">{tab.label.split(' ')[0]}</span>
+                    </button>
+                  )
+                })}
+              </nav>
+            </div>
 
-            {canManageSchedule && (
-              <button
-                onClick={() => setActiveTab('schedule')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === 'schedule'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                스케줄 관리
-              </button>
-            )}
-
-            {canViewTeam && (
-              <button
-                onClick={() => setActiveTab('team')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === 'team'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                팀 출퇴근 현황
-              </button>
-            )}
-
-            {canManageQR && (
-              <button
-                onClick={() => setActiveTab('qr')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === 'qr'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                </svg>
-                QR 코드 관리
-              </button>
-            )}
-          </nav>
+            {/* 탭 콘텐츠 */}
+            <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6">
+              <div key={activeTab} className="tab-content">
+                {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
+                {activeTab === 'history' && canViewHistory && <AttendanceHistory />}
+                {activeTab === 'stats' && canViewStats && <AttendanceStats />}
+                {activeTab === 'schedule' && canManageSchedule && <ScheduleManagement />}
+                {activeTab === 'team' && canViewTeam && <TeamStatus />}
+                {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* 탭 콘텐츠 */}
-        <div className="bg-white rounded-b-lg shadow-sm">
-          <div className="p-6">
-            {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
-            {activeTab === 'history' && canViewHistory && <AttendanceHistory />}
-            {activeTab === 'stats' && canViewStats && <AttendanceStats />}
-            {activeTab === 'schedule' && canManageSchedule && <ScheduleManagement />}
-            {activeTab === 'team' && canViewTeam && <TeamStatus />}
-            {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
-          </div>
-        </div>
+        </main>
       </div>
     </div>
   )

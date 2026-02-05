@@ -1,5 +1,99 @@
 @import "tailwindcss";
 
+/* 스크롤바 유무에 따른 레이아웃 이동 방지 */
+html {
+  overflow-y: scroll;
+}
+
+/* 모바일 스크롤바 숨기기 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 모바일 터치 최적화 */
+@media (max-width: 1023px) {
+  /* 모바일에서 터치 영역 최적화 */
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 모바일에서 입력 필드 확대 방지 */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="week"],
+  input[type="month"],
+  input[type="time"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* iOS Chrome 입력 필드 텍스트 색상 문제 해결 */
+/* 다크 모드에서도 입력 필드는 항상 검정 텍스트 유지 */
+input,
+textarea,
+select {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+/* iOS Chrome 테이블 텍스트 색상 문제 해결 */
+/* 테이블 셀 텍스트가 회색으로 보이는 문제 방지 */
+table,
+table th,
+table td,
+table tbody,
+table thead {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+/* placeholder 스타일 */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+  -webkit-text-fill-color: #9ca3af !important;
+  opacity: 1;
+}
+
+/* disabled 상태 스타일 */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+}
+
+/* 안전 영역 (노치, 홈 버튼 등) */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* 메뉴 전환 시 부드러운 화면 효과 */
+.tab-content {
+  animation: fadeIn 0.15s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -28,6 +122,30 @@ body {
 /* Tiptap Editor Styles */
 .ProseMirror {
   min-height: 400px;
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+}
+
+/* 인라인 스타일로 색상이 지정된 요소는 해당 색상 사용 */
+/* currentColor는 요소 자체의 color 속성 값을 참조 */
+.ProseMirror [style*="color"],
+.ProseMirror span[style] {
+  -webkit-text-fill-color: currentColor !important;
+}
+
+/* 프로토콜 에디터 콘텐츠 영역 - iOS Chrome 다크모드 대응 */
+/* 기본 텍스트는 검정색, 인라인 스타일 색상은 유지 */
+.protocol-editor-content,
+.prose {
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+}
+
+.protocol-editor-content [style*="color"],
+.protocol-editor-content span[style],
+.prose [style*="color"],
+.prose span[style] {
+  -webkit-text-fill-color: currentColor !important;
 }
 
 .ProseMirror:focus {
@@ -302,6 +420,199 @@ body {
 
   /* Remove margins for better print layout */
   @page {
-    margin: 1cm;
+    size: A4;
+    margin: 10mm;
+  }
+
+  /* Document Template Print Styles - fit in one page */
+  .document-print-area,
+  .document-print-area * {
+    visibility: visible !important;
+  }
+
+  .document-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-height: 277mm; /* A4 height (297mm) - margins (20mm) */
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden;
+    page-break-inside: avoid;
+    page-break-after: avoid;
+    page-break-before: avoid;
+  }
+
+  /* Ensure document fits in one page with proper scaling */
+  .document-print-area > div {
+    transform-origin: top left;
+    max-height: 277mm;
+  }
+
+  /* Scale down document content to fit one page */
+  .document-print-area h1 {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.375rem !important;
+  }
+
+  .document-print-area h3 {
+    font-size: 0.75rem !important;
+    margin-bottom: 0.2rem !important;
+    margin-top: 0.2rem !important;
+  }
+
+  .document-print-area section {
+    margin-bottom: 0.375rem !important;
+    margin-top: 0.375rem !important;
+  }
+
+  .document-print-area table {
+    font-size: 0.625rem !important;
+  }
+
+  .document-print-area td,
+  .document-print-area th {
+    padding: 0.2rem 0.375rem !important;
+  }
+
+  .document-print-area p {
+    font-size: 0.625rem !important;
+    line-height: 1.3 !important;
+    margin: 0.15rem 0 !important;
+  }
+
+  .document-print-area .text-2xl {
+    font-size: 1rem !important;
+  }
+
+  .document-print-area .text-lg {
+    font-size: 0.75rem !important;
+  }
+
+  .document-print-area .text-base {
+    font-size: 0.625rem !important;
+  }
+
+  .document-print-area .text-sm {
+    font-size: 0.5625rem !important;
+  }
+
+  .document-print-area .text-xs {
+    font-size: 0.5rem !important;
+  }
+
+  .document-print-area .leading-8,
+  .document-print-area .leading-7,
+  .document-print-area .leading-6 {
+    line-height: 1.3 !important;
+  }
+
+  .document-print-area .leading-relaxed {
+    line-height: 1.3 !important;
+  }
+
+  .document-print-area .space-y-8 > * + *,
+  .document-print-area .space-y-6 > * + * {
+    margin-top: 0.375rem !important;
+  }
+
+  .document-print-area .space-y-4 > * + * {
+    margin-top: 0.2rem !important;
+  }
+
+  .document-print-area .mb-12,
+  .document-print-area .mb-10 {
+    margin-bottom: 0.375rem !important;
+  }
+
+  .document-print-area .mb-8,
+  .document-print-area .mb-6 {
+    margin-bottom: 0.25rem !important;
+  }
+
+  .document-print-area .mb-4 {
+    margin-bottom: 0.2rem !important;
+  }
+
+  .document-print-area .my-12,
+  .document-print-area .my-8 {
+    margin-top: 0.375rem !important;
+    margin-bottom: 0.375rem !important;
+  }
+
+  .document-print-area .my-6 {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  .document-print-area .mt-16,
+  .document-print-area .mt-12 {
+    margin-top: 0.5rem !important;
+  }
+
+  .document-print-area .mt-8 {
+    margin-top: 0.375rem !important;
+  }
+
+  .document-print-area .pt-8,
+  .document-print-area .pt-6 {
+    padding-top: 0.25rem !important;
+  }
+
+  .document-print-area .pt-4 {
+    padding-top: 0.2rem !important;
+  }
+
+  .document-print-area .p-8 {
+    padding: 0.25rem !important;
+  }
+
+  .document-print-area .p-4 {
+    padding: 0.2rem !important;
+  }
+
+  .document-print-area .p-3 {
+    padding: 0.15rem !important;
+  }
+
+  .document-print-area .min-h-\[100px\] {
+    min-height: 40px !important;
+  }
+
+  .document-print-area .min-h-\[60px\] {
+    min-height: 25px !important;
+  }
+
+  .document-print-area img {
+    height: 1.25rem !important;
+  }
+
+  .document-print-area .border {
+    border-width: 0.5px !important;
+  }
+
+  .document-print-area .border-t-2,
+  .document-print-area .border-b-2 {
+    border-width: 1px !important;
+  }
+
+  .document-print-area .rounded-lg {
+    border-radius: 0.25rem !important;
+  }
+
+  /* Legal notice section - make it more compact */
+  .document-print-area .bg-slate-50 {
+    padding: 0.2rem !important;
+  }
+
+  .document-print-area ul {
+    margin: 0 !important;
+    padding-left: 1rem !important;
+  }
+
+  .document-print-area li {
+    margin: 0 !important;
+    line-height: 1.2 !important;
   }
 }

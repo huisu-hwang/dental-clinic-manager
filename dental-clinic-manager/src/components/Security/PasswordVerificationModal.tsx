@@ -9,12 +9,13 @@ interface PasswordVerificationModalProps {
   isOpen: boolean
   onVerified: () => void
   onCancel: () => void
-  purpose: 'contract' | 'profile'
+  purpose: 'contract' | 'profile' | 'payroll'
 }
 
 const PURPOSE_LABELS = {
   contract: '근로계약서',
   profile: '계정 정보',
+  payroll: '급여 명세서',
 }
 
 export default function PasswordVerificationModal({

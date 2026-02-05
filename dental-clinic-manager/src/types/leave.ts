@@ -27,6 +27,9 @@ export interface LeavePolicy {
   // 출근율 요건
   min_attendance_rate: number; // 최소 출근율 (%)
 
+  // 결재 프로세스 설정
+  require_manager_approval: boolean | ManagerApprovalByRank; // 실장 결재 포함 여부 (직급별 설정 가능)
+
   // 활성화 상태
   is_active: boolean;
   is_default: boolean; // 기본 정책 여부
@@ -34,6 +37,16 @@ export interface LeavePolicy {
   created_at: string;
   updated_at: string;
   created_by?: string;
+}
+
+/**
+ * 직급별 실장 결재 포함 여부
+ * Rank-based Manager Approval Settings
+ */
+export interface ManagerApprovalByRank {
+  vice_director: boolean; // 부원장 - 실장 결재 포함 여부
+  team_leader: boolean; // 팀장 - 실장 결재 포함 여부
+  staff: boolean; // 직원 - 실장 결재 포함 여부
 }
 
 /**
@@ -60,6 +73,7 @@ export interface LeavePolicyInput {
   carryover_max_days?: number;
   carryover_expiry_months: number;
   min_attendance_rate: number;
+  require_manager_approval?: boolean | ManagerApprovalByRank; // 실장 결재 포함 여부 (직급별 설정 가능)
   is_default?: boolean;
 }
 
@@ -183,8 +197,20 @@ export interface EmployeeLeaveBalance {
   // 연차 현황
   total_days: number; // 총 부여 연차 일수
   used_days: number; // 사용한 연차 일수
-  pending_days: number; // 승인 대기 중인 연차 일수
+  pending_days: number; // 승인 대기 중인 연차 일수 (사용 예정)
   remaining_days: number; // 잔여 연차 일수
+
+  // 특별휴가 사용 현황 (연차와 별도 관리)
+  family_event_days?: number; // 경조사 휴가 사용 일수
+  unpaid_days?: number; // 무급휴가 사용 일수
+
+  // 종류별 사용 내역 (UI 표시용)
+  used_by_type?: Record<LeaveTypeCode, number>; // 종류별 사용 완료 일수
+  pending_by_type?: Record<LeaveTypeCode, number>; // 종류별 사용 예정 일수
+
+  // 입사일 기준 연차 기간
+  leave_period_start?: string; // 연차 기간 시작일 (입사일 기준)
+  leave_period_end?: string; // 연차 기간 종료일 (입사일 기준 + 1년 - 1일)
 
   // 이월 연차
   carryover_days: number; // 이월 연차 일수

@@ -7,6 +7,7 @@ import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import type { Session } from '@supabase/supabase-js'
 import { clinicHoursService } from './clinicHoursService'
 import { refreshSessionWithTimeout } from './sessionUtils'
+import { userNotificationService } from './userNotificationService'
 import type {
   EmploymentContract,
   ContractTemplate,
@@ -21,6 +22,7 @@ import type {
   ContractStatus,
   SignerType
 } from '@/types/contract'
+import { generateContractHash } from '@/utils/documentLegalUtils'
 import type { User } from '@/types/auth'
 import { encryptResidentNumber, decryptResidentNumber } from '@/utils/encryptionUtils'
 
@@ -136,9 +138,8 @@ class ContractService {
         }
       }
 
-      // Get clinic hours for weekly work schedule
-      const { data: clinicHoursData } = await clinicHoursService.getClinicHours(employee.clinic_id)
-      const weeklyWorkHours: Record<number, {
+      // Get clinic hours for weekly work schedule (fallback if no custom schedule provided)
+      let weeklyWorkHours: Record<number, {
         is_open: boolean
         open_time: string | null
         close_time: string | null
@@ -146,16 +147,54 @@ class ContractService {
         break_end: string | null
       }> = {}
 
-      if (clinicHoursData) {
-        clinicHoursData.forEach(hours => {
-          weeklyWorkHours[hours.day_of_week] = {
-            is_open: hours.is_open,
-            open_time: hours.open_time,
-            close_time: hours.close_time,
-            break_start: hours.break_start,
-            break_end: hours.break_end
+      // Check if form has custom work_hours_detail (edited by user)
+      const customWorkHoursDetail = data.contract_data.work_hours_detail as Record<string, {
+        start: string | null
+        end: string | null
+        breakStart: string | null
+        breakEnd: string | null
+        isWorking: boolean
+      }> | undefined
+
+      if (customWorkHoursDetail) {
+        // Convert work_hours_detail format to weekly_work_hours format
+        const dayNameToNumber: Record<string, number> = {
+          sunday: 0,
+          monday: 1,
+          tuesday: 2,
+          wednesday: 3,
+          thursday: 4,
+          friday: 5,
+          saturday: 6
+        }
+
+        Object.entries(customWorkHoursDetail).forEach(([dayName, schedule]) => {
+          const dayNumber = dayNameToNumber[dayName]
+          if (dayNumber !== undefined && schedule) {
+            weeklyWorkHours[dayNumber] = {
+              is_open: schedule.isWorking,
+              open_time: schedule.start,
+              close_time: schedule.end,
+              break_start: schedule.breakStart,
+              break_end: schedule.breakEnd
+            }
           }
         })
+      } else {
+        // Fallback to clinic hours if no custom schedule
+        const { data: clinicHoursData } = await clinicHoursService.getClinicHours(employee.clinic_id)
+
+        if (clinicHoursData) {
+          clinicHoursData.forEach(hours => {
+            weeklyWorkHours[hours.day_of_week] = {
+              is_open: hours.is_open,
+              open_time: hours.open_time,
+              close_time: hours.close_time,
+              break_start: hours.break_start,
+              break_end: hours.break_end
+            }
+          })
+        }
       }
 
       // Prepare contract data with auto-filled employee info
@@ -216,6 +255,20 @@ class ContractService {
       if (insertError) {
         console.error('Contract insert error:', insertError)
         return { success: false, error: insertError.message }
+      }
+
+      // 계약서 생성 시 계약 시작일을 직원의 입사일로 자동 설정
+      if (contractData.employment_period_start && data.employee_user_id) {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ hire_date: contractData.employment_period_start })
+          .eq('id', data.employee_user_id)
+
+        if (updateError) {
+          console.warn('[contractService] Failed to update hire_date:', updateError)
+        } else {
+          console.log(`[contractService] Updated hire_date for user ${data.employee_user_id} to ${contractData.employment_period_start}`)
+        }
       }
 
       return { success: true, contract: contract as EmploymentContract }
@@ -419,7 +472,8 @@ class ContractService {
    */
   async updateContractStatus(
     contractId: string,
-    status: ContractStatus
+    status: ContractStatus,
+    sendNotification: boolean = false
   ): Promise<CreateContractResponse> {
     const supabase = getSupabase()
     if (!supabase) {
@@ -445,6 +499,33 @@ class ContractService {
 
       if (error) {
         return { success: false, error: error.message }
+      }
+
+      // 알림 전송 (선택적)
+      if (sendNotification && data) {
+        try {
+          const contract = data as EmploymentContract
+          const contractData = contract.contract_data as ContractData
+          const employeeName = contractData?.employee_name || '직원'
+
+          if (status === 'pending_employee_signature' && contract.employee_user_id) {
+            // 직원에게 서명 요청 알림
+            await userNotificationService.notifyContractSignatureRequired(
+              contract.employee_user_id,
+              employeeName,
+              contractId
+            )
+          } else if (status === 'pending_employer_signature' && contract.employer_user_id) {
+            // 원장에게 서명 요청 알림
+            await userNotificationService.notifyContractSignatureRequired(
+              contract.employer_user_id,
+              employeeName,
+              contractId
+            )
+          }
+        } catch (notifyError) {
+          console.error('[contractService.updateContractStatus] Notification error:', notifyError)
+        }
       }
 
       return { success: true, contract: data as EmploymentContract }
@@ -485,6 +566,30 @@ class ContractService {
 
       if (error) {
         return { success: false, error: error.message }
+      }
+
+      // 계약서 취소 알림
+      try {
+        if (data) {
+          const contract = data as EmploymentContract
+          const contractData = contract.contract_data as ContractData
+          const employeeName = contractData?.employee_name || '직원'
+
+          // 취소자가 아닌 상대방에게 알림
+          const recipientIds = [contract.employee_user_id, contract.employer_user_id]
+            .filter(id => id && id !== cancelledBy) as string[]
+
+          if (recipientIds.length > 0) {
+            await userNotificationService.notifyContractCancelled(
+              recipientIds,
+              employeeName,
+              contractId,
+              reason
+            )
+          }
+        }
+      } catch (notifyError) {
+        console.error('[contractService.cancelContract] Notification error:', notifyError)
       }
 
       return { success: true, contract: data as EmploymentContract }
@@ -538,7 +643,17 @@ class ContractService {
         return { success: false, error: 'Not authenticated' }
       }
 
-      // Insert signature
+      // 서명 시점 문서 해시 생성 (무결성 검증용)
+      const contractData = contract.contract_data as ContractData
+      let documentHash: string | null = null
+      try {
+        documentHash = await generateContractHash(contractData)
+        console.log('[contractService] Document hash generated:', documentHash.substring(0, 16) + '...')
+      } catch (hashError) {
+        console.warn('[contractService] Document hash generation failed:', hashError)
+      }
+
+      // Insert signature with document hash and legal consent
       const { data: signature, error: signError } = await supabase
         .from('contract_signatures')
         .insert({
@@ -550,7 +665,9 @@ class ContractService {
           ip_address: data.ip_address,
           device_info: data.device_info,
           user_agent: data.user_agent,
-          is_verified: true
+          is_verified: true,
+          document_hash: documentHash,
+          legal_consent_agreed: data.legal_consent_agreed ?? true
         })
         .select()
         .single()
@@ -568,6 +685,16 @@ class ContractService {
 
       if (hasEmployerSignature && hasEmployeeSignature) {
         newStatus = 'completed'
+
+        // 계약 완료 시 직원의 입사일을 계약 시작일로 자동 설정
+        const contractData = contract.contract_data as ContractData
+        if (contractData.employment_period_start && contract.employee_user_id) {
+          await supabase
+            .from('users')
+            .update({ hire_date: contractData.employment_period_start })
+            .eq('id', contract.employee_user_id)
+          console.log(`[contractService] Updated hire_date for user ${contract.employee_user_id} to ${contractData.employment_period_start}`)
+        }
       } else if (data.signer_type === 'employer') {
         newStatus = 'pending_employee_signature'
       } else if (data.signer_type === 'employee') {
@@ -577,6 +704,43 @@ class ContractService {
       // Update contract status if changed
       if (newStatus !== contract.status) {
         await this.updateContractStatus(data.contract_id, newStatus)
+      }
+
+      // 알림 생성
+      try {
+        const contractData = contract.contract_data as ContractData
+        const employeeName = contractData.employee_name || '직원'
+
+        if (newStatus === 'completed') {
+          // 계약 완료: 양측에게 완료 알림
+          const userIds = [contract.employee_user_id, contract.employer_user_id].filter(Boolean) as string[]
+          await userNotificationService.notifyContractCompleted(
+            userIds,
+            employeeName,
+            data.contract_id
+          )
+        } else if (newStatus === 'pending_employer_signature') {
+          // 직원이 서명 완료 → 원장에게 서명 요청 알림
+          if (contract.employer_user_id) {
+            await userNotificationService.notifyContractSignatureRequired(
+              contract.employer_user_id,
+              employeeName,
+              data.contract_id
+            )
+          }
+        } else if (newStatus === 'pending_employee_signature') {
+          // 원장이 서명 완료 → 직원에게 서명 요청 알림
+          if (contract.employee_user_id) {
+            await userNotificationService.notifyContractSignatureRequired(
+              contract.employee_user_id,
+              employeeName,
+              data.contract_id
+            )
+          }
+        }
+      } catch (notifyError) {
+        console.error('[contractService.signContract] Notification error:', notifyError)
+        // 알림 실패해도 서명은 성공으로 처리
       }
 
       return {

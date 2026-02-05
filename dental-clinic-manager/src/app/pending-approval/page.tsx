@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 export default function PendingApprovalPage() {
   const router = useRouter()
-  const { user, loading } = useAuth()
+  const { user, loading, logout } = useAuth()
   const [clinicInfo, setClinicInfo] = useState<any>(null)
   const [checkingStatus, setCheckingStatus] = useState(false)
 
@@ -120,12 +120,8 @@ export default function PendingApprovalPage() {
     }
   }
 
-  const handleLogout = async () => {
-    const supabase = getSupabase()
-    if (supabase) {
-      await supabase.auth.signOut()
-    }
-    router.push('/')
+  const handleLogout = () => {
+    logout()
   }
 
   // AuthContext의 loading 중이거나 user가 없으면 로딩 표시
@@ -150,7 +146,7 @@ export default function PendingApprovalPage() {
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold">🦷</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">덴탈매니저</h1>
+            <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
           </div>
         </div>
 

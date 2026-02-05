@@ -1,0 +1,597 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import {
+  Users,
+  Upload,
+  MessageSquare,
+  Phone,
+  BarChart3,
+  Settings,
+  Plus,
+  RefreshCw,
+  ChevronDown,
+  FolderOpen,
+  Trash2,
+  Edit,
+  PhoneCall
+} from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import type {
+  RecallCampaign,
+  RecallPatient,
+  RecallPatientUploadData,
+  RecallPatientFilters,
+  RecallStats as RecallStatsType,
+  PatientRecallStatus
+} from '@/types/recall'
+import { recallService } from '@/lib/recallService'
+import PatientFileUpload from './PatientFileUpload'
+import PatientList from './PatientList'
+import PatientAddModal from './PatientAddModal'
+import SmsSendModal from './SmsSendModal'
+import CallModal from './CallModal'
+import StatusUpdateModal from './StatusUpdateModal'
+import ContactHistoryModal from './ContactHistoryModal'
+import RecallStats from './RecallStats'
+import RecallSettings from './RecallSettings'
+import Toast from '@/components/ui/Toast'
+
+type TabType = 'patients' | 'stats' | 'settings'
+
+export default function RecallManagement() {
+  const { user } = useAuth()
+
+  // 탭 및 뷰 상태
+  const [activeTab, setActiveTab] = useState<TabType>('patients')
+  const [showUpload, setShowUpload] = useState(false)
+  const [showCampaignSelector, setShowCampaignSelector] = useState(false)
+
+  // 데이터 상태
+  const [campaigns, setCampaigns] = useState<RecallCampaign[]>([])
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
+  const [patients, setPatients] = useState<RecallPatient[]>([])
+  const [stats, setStats] = useState<RecallStatsType | null>(null)
+  const [filters, setFilters] = useState<RecallPatientFilters>({})
+
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalPatients, setTotalPatients] = useState(0)
+  const pageSize = 20
+
+  // 선택 상태
+  const [selectedPatients, setSelectedPatients] = useState<string[]>([])
+
+  // 모달 상태
+  const [smsModalOpen, setSmsModalOpen] = useState(false)
+  const [patientAddModalOpen, setPatientAddModalOpen] = useState(false)
+  const [callModalPatient, setCallModalPatient] = useState<RecallPatient | null>(null)
+  const [statusModalPatient, setStatusModalPatient] = useState<RecallPatient | null>(null)
+  const [historyModalPatient, setHistoryModalPatient] = useState<RecallPatient | null>(null)
+
+  // 로딩 상태
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUploading, setIsUploading] = useState(false)
+
+  // 토스트
+  const [toast, setToast] = useState<{
+    show: boolean
+    message: string
+    type: 'success' | 'error' | 'warning' | 'info'
+  }>({ show: false, message: '', type: 'info' })
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setToast({ show: true, message, type })
+  }
+
+  // 현재 선택된 캠페인
+  const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId)
+
+  // 데이터 로드
+  const loadCampaigns = useCallback(async () => {
+    const result = await recallService.campaigns.getCampaigns()
+    if (result.success && result.data) {
+      setCampaigns(result.data)
+      // 첫 번째 캠페인 자동 선택
+      if (result.data.length > 0 && !selectedCampaignId) {
+        setSelectedCampaignId(result.data[0].id)
+      }
+    }
+  }, [selectedCampaignId])
+
+  const loadPatients = useCallback(async (page: number = currentPage) => {
+    setIsLoading(true)
+    const filterWithCampaign = {
+      ...filters,
+      campaign_id: selectedCampaignId || undefined,
+      page,
+      pageSize
+    }
+    const result = await recallService.patients.getPatients(filterWithCampaign)
+    if (result.success && result.data) {
+      setPatients(result.data.data)
+      setTotalPages(result.data.totalPages)
+      setTotalPatients(result.data.total)
+      setCurrentPage(result.data.page)
+    }
+    setIsLoading(false)
+  }, [filters, selectedCampaignId, currentPage, pageSize])
+
+  const loadStats = useCallback(async () => {
+    const result = await recallService.patients.getStats(selectedCampaignId || undefined)
+    if (result.success && result.data) {
+      setStats(result.data)
+    }
+  }, [selectedCampaignId])
+
+  // 초기 로드
+  useEffect(() => {
+    loadCampaigns()
+  }, [])
+
+  useEffect(() => {
+    if (selectedCampaignId) {
+      setCurrentPage(1) // 필터 변경 시 첫 페이지로
+      loadPatients(1)
+      loadStats()
+    }
+  }, [selectedCampaignId, filters])
+
+  // 페이지 변경
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    loadPatients(page)
+  }
+
+  // 캠페인 생성
+  const handleCreateCampaign = async (name: string) => {
+    const result = await recallService.campaigns.createCampaign({ name })
+    if (result.success && result.data) {
+      await loadCampaigns()
+      setSelectedCampaignId(result.data.id)
+      showToast('새 캠페인이 생성되었습니다.', 'success')
+      return result.data
+    } else {
+      showToast(result.error || '캠페인 생성에 실패했습니다.', 'error')
+      return null
+    }
+  }
+
+  // 파일 업로드
+  const handleFileUpload = async (uploadedPatients: RecallPatientUploadData[], filename: string) => {
+    setIsUploading(true)
+
+    try {
+      // 캠페인이 없으면 새로 생성
+      let campaignId = selectedCampaignId
+      if (!campaignId) {
+        const campaignName = filename.replace(/\.[^/.]+$/, '') || `리콜 ${new Date().toLocaleDateString('ko-KR')}`
+        const newCampaign = await handleCreateCampaign(campaignName)
+        if (!newCampaign) {
+          setIsUploading(false)
+          return
+        }
+        campaignId = newCampaign.id
+      }
+
+      // 환자 일괄 등록
+      const result = await recallService.patients.addPatientsBulk(
+        uploadedPatients,
+        campaignId,
+        filename
+      )
+
+      if (result.success) {
+        showToast(`${result.insertedCount}명의 환자가 등록되었습니다.`, 'success')
+        setShowUpload(false)
+        loadPatients()
+        loadStats()
+        loadCampaigns()
+      } else {
+        showToast(result.error || '환자 등록에 실패했습니다.', 'error')
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      showToast('업로드 중 오류가 발생했습니다.', 'error')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  // 환자 선택
+  const handleSelectPatient = (id: string) => {
+    setSelectedPatients(prev =>
+      prev.includes(id)
+        ? prev.filter(p => p !== id)
+        : [...prev, id]
+    )
+  }
+
+  const handleSelectAll = (selected: boolean) => {
+    setSelectedPatients(selected ? patients.map(p => p.id) : [])
+  }
+
+  // 선택된 환자들에게 문자 발송
+  const handleBulkSms = () => {
+    if (selectedPatients.length === 0) {
+      showToast('환자를 선택해주세요.', 'warning')
+      return
+    }
+    setSmsModalOpen(true)
+  }
+
+  // 개별 문자 발송
+  const handleSmsPatient = (patient: RecallPatient) => {
+    setSelectedPatients([patient.id])
+    setSmsModalOpen(true)
+  }
+
+  // 문자 발송 완료
+  const handleSmsComplete = async (successCount: number, failCount: number) => {
+    // 선택된 환자들 상태 업데이트
+    if (successCount > 0) {
+      await recallService.patients.updatePatientStatusBulk(selectedPatients, 'sms_sent')
+      loadPatients()
+      loadStats()
+    }
+    setSelectedPatients([])
+  }
+
+  // 전화 걸기
+  const handleCallPatient = (patient: RecallPatient) => {
+    setCallModalPatient(patient)
+  }
+
+  // 전화 완료
+  const handleCallComplete = () => {
+    loadPatients()
+    loadStats()
+  }
+
+  // 상태 변경 (직접 상태 전달 시 바로 업데이트, 없으면 모달 열기)
+  const handleUpdateStatus = async (patient: RecallPatient, newStatus?: PatientRecallStatus) => {
+    if (newStatus) {
+      // 낙관적 업데이트: 먼저 UI를 즉시 업데이트
+      const previousStatus = patient.status
+      setPatients(prev => prev.map(p =>
+        p.id === patient.id ? { ...p, status: newStatus } : p
+      ))
+
+      // 백그라운드에서 서버 업데이트
+      const result = await recallService.patients.updatePatientStatus(patient.id, newStatus)
+      if (result.success) {
+        // 통계만 업데이트 (환자 목록은 이미 업데이트됨)
+        loadStats()
+      } else {
+        // 실패 시 이전 상태로 복원
+        setPatients(prev => prev.map(p =>
+          p.id === patient.id ? { ...p, status: previousStatus } : p
+        ))
+        showToast(result.error || '상태 변경에 실패했습니다.', 'error')
+      }
+    } else {
+      // 모달로 상태 변경
+      setStatusModalPatient(patient)
+    }
+  }
+
+  // 상태 변경 완료
+  const handleStatusUpdateComplete = () => {
+    loadPatients()
+    loadStats()
+  }
+
+  // 이력 보기
+  const handleViewHistory = (patient: RecallPatient) => {
+    setHistoryModalPatient(patient)
+  }
+
+  // 새로고침
+  const handleRefresh = () => {
+    loadPatients()
+    loadStats()
+    showToast('새로고침되었습니다.', 'info')
+  }
+
+  // 환자 추가 완료
+  const handlePatientAddComplete = () => {
+    loadPatients()
+    loadStats()
+    loadCampaigns()
+    showToast('환자가 추가되었습니다.', 'success')
+  }
+
+  // 선택된 환자 객체들
+  const selectedPatientObjects = patients.filter(p => selectedPatients.includes(p.id))
+
+  return (
+    <div className="max-w-6xl">
+      {/* 블루 그라데이션 헤더 */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-white">환자 리콜 관리</h2>
+              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Patient Recall Management</p>
+            </div>
+          </div>
+
+          {/* 캠페인 선택 */}
+          <div className="relative">
+            <button
+              onClick={() => setShowCampaignSelector(!showCampaignSelector)}
+              className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-sm"
+            >
+              <FolderOpen className="w-4 h-4" />
+              <span className="hidden sm:inline">{selectedCampaign?.name || '캠페인 선택'}</span>
+              <span className="sm:hidden">{selectedCampaign?.name ? selectedCampaign.name.substring(0, 8) : '캠페인'}</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+
+            {showCampaignSelector && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowCampaignSelector(false)}
+                />
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
+                  <div className="px-3 py-2 border-b border-gray-100">
+                    <button
+                      onClick={async () => {
+                        const name = prompt('새 캠페인 이름을 입력하세요:')
+                        if (name) {
+                          await handleCreateCampaign(name)
+                        }
+                        setShowCampaignSelector(false)
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg"
+                    >
+                      <Plus className="w-4 h-4" />
+                      새 캠페인 만들기
+                    </button>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {campaigns.length === 0 ? (
+                      <p className="px-4 py-3 text-sm text-gray-500 text-center">
+                        캠페인이 없습니다
+                      </p>
+                    ) : (
+                      campaigns.map(campaign => (
+                        <button
+                          key={campaign.id}
+                          onClick={() => {
+                            setSelectedCampaignId(campaign.id)
+                            setShowCampaignSelector(false)
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${
+                            selectedCampaignId === campaign.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                          }`}
+                        >
+                          <p className="font-medium">{campaign.name}</p>
+                          <p className="text-xs text-gray-400">
+                            {campaign.total_patients}명 | {new Date(campaign.created_at).toLocaleDateString('ko-KR')}
+                          </p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 통계 요약 */}
+        {stats && (
+          <div className="grid grid-cols-5 gap-2 sm:gap-4 mt-4">
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-white">{stats.total_patients}</p>
+              <p className="text-xs text-blue-100">전체</p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-white">{stats.pending_count}</p>
+              <p className="text-xs text-blue-100">대기</p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-white">{stats.contacted_count}</p>
+              <p className="text-xs text-blue-100">연락</p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-white">{stats.appointment_count}</p>
+              <p className="text-xs text-blue-100">예약</p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-white">{stats.success_rate}%</p>
+              <p className="text-xs text-blue-100">성공률</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 서브 탭 네비게이션 */}
+      <div className="border-x border-b border-slate-200 bg-slate-50">
+        <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
+          <button
+            onClick={() => setActiveTab('patients')}
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+              activeTab === 'patients'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            환자 목록
+          </button>
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+              activeTab === 'stats'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            통계
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+              activeTab === 'settings'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            설정
+          </button>
+        </nav>
+      </div>
+
+      {/* 탭 콘텐츠 */}
+      <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6">
+        {/* 환자 목록 탭 */}
+        {activeTab === 'patients' && (
+          <div className="space-y-4">
+            {/* 액션 버튼들 */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <button
+                onClick={() => setShowUpload(true)}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">환자 업로드</span>
+                <span className="sm:hidden">업로드</span>
+              </button>
+
+              <button
+                onClick={() => setPatientAddModalOpen(true)}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">환자 추가</span>
+                <span className="sm:hidden">추가</span>
+              </button>
+
+              {selectedPatients.length > 0 && (
+                <button
+                  onClick={handleBulkSms}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  문자 ({selectedPatients.length})
+                </button>
+              )}
+
+              <button
+                onClick={handleRefresh}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors ml-auto text-sm"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="hidden sm:inline">새로고침</span>
+              </button>
+            </div>
+
+            {/* 파일 업로드 */}
+            {showUpload && (
+              <PatientFileUpload
+                onUpload={handleFileUpload}
+                onCancel={() => setShowUpload(false)}
+                isLoading={isUploading}
+              />
+            )}
+
+            {/* 환자 목록 */}
+            <PatientList
+              patients={patients}
+              selectedPatients={selectedPatients}
+              onSelectPatient={handleSelectPatient}
+              onSelectAll={handleSelectAll}
+              onCallPatient={handleCallPatient}
+              onSmsPatient={handleSmsPatient}
+              onUpdateStatus={handleUpdateStatus}
+              onViewHistory={handleViewHistory}
+              filters={filters}
+              onFiltersChange={setFilters}
+              isLoading={isLoading}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalPatients={totalPatients}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
+
+        {/* 통계 탭 */}
+        {activeTab === 'stats' && (
+          <RecallStats
+            campaignId={selectedCampaignId || undefined}
+            campaignName={selectedCampaign?.name}
+          />
+        )}
+
+        {/* 설정 탭 */}
+        {activeTab === 'settings' && (
+          <RecallSettings
+            clinicId={user?.clinic_id || ''}
+            clinicName={user?.clinic?.name || ''}
+            clinicPhone={user?.clinic?.phone || ''}
+          />
+        )}
+      </div>
+
+      {/* 모달들 */}
+      <PatientAddModal
+        isOpen={patientAddModalOpen}
+        onClose={() => setPatientAddModalOpen(false)}
+        campaignId={selectedCampaignId || undefined}
+        onAddComplete={handlePatientAddComplete}
+      />
+
+      <SmsSendModal
+        isOpen={smsModalOpen}
+        onClose={() => {
+          setSmsModalOpen(false)
+          setSelectedPatients([])
+        }}
+        patients={selectedPatientObjects}
+        clinicName={user?.clinic?.name || ''}
+        clinicPhone={user?.clinic?.phone || ''}
+        clinicId={user?.clinic_id || ''}
+        onSendComplete={handleSmsComplete}
+      />
+
+      <CallModal
+        isOpen={!!callModalPatient}
+        onClose={() => setCallModalPatient(null)}
+        patient={callModalPatient}
+        clinicId={user?.clinic_id || ''}
+        onCallComplete={handleCallComplete}
+      />
+
+      <StatusUpdateModal
+        isOpen={!!statusModalPatient}
+        onClose={() => setStatusModalPatient(null)}
+        patient={statusModalPatient}
+        onUpdateComplete={handleStatusUpdateComplete}
+      />
+
+      <ContactHistoryModal
+        isOpen={!!historyModalPatient}
+        onClose={() => setHistoryModalPatient(null)}
+        patient={historyModalPatient}
+      />
+
+      {/* 토스트 */}
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, show: false }))}
+      />
+    </div>
+  )
+}

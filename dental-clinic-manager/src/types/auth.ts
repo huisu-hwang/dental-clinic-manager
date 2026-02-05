@@ -9,6 +9,7 @@ export interface User {
   phone?: string
   address?: string  // 근로계약서 작성용
   resident_registration_number?: string  // 근로계약서 작성용 (주민등록번호)
+  hire_date?: string  // 입사일 (연차 계산 기준일) YYYY-MM-DD
   role: string
   status: string
   clinic_id?: string
@@ -20,6 +21,9 @@ export interface User {
   approved_by?: string
   approved_at?: string
 }
+
+// QR 코드 위치 검증 모드 타입
+export type QRLocationVerificationMode = 'required' | 'optional'
 
 export interface Clinic {
   id: string
@@ -37,6 +41,7 @@ export interface Clinic {
   is_public: boolean
   allow_join_requests: boolean
   status: string
+  qr_location_verification_mode?: QRLocationVerificationMode  // QR 코드 위치 검증 모드
   created_at: string
   updated_at: string
 }
@@ -73,6 +78,21 @@ export interface AuditLog {
   ipAddress?: string
   userAgent?: string
   createdAt: Date
+}
+
+// 사용자 활동 기록 타입
+export type ActivityType = 'login' | 'logout' | 'page_view' | 'action' | 'access'
+
+export interface UserActivityLog {
+  id: string
+  user_id: string
+  clinic_id?: string
+  activity_type: ActivityType
+  activity_description: string
+  ip_address?: string
+  user_agent?: string
+  metadata?: Record<string, any>
+  created_at: string
 }
 
 export interface Permission {

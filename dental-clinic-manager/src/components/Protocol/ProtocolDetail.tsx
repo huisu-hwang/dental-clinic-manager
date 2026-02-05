@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { XMarkIcon, PencilIcon, TrashIcon, ClockIcon, TagIcon, FolderIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PencilIcon, TrashIcon, ClockIcon, TagIcon, FolderIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
 import EnhancedTiptapEditor from './EnhancedTiptapEditor'
 import ProtocolVersionHistory from './ProtocolVersionHistory'
 import ProtocolStepViewer from './ProtocolStepViewer'
+import ProtocolPermissionManager from './ProtocolPermissionManager'
 import { dataService } from '@/lib/dataService'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Protocol, ProtocolVersion } from '@/types'
 
 interface ProtocolDetailProps {
@@ -23,15 +25,29 @@ export default function ProtocolDetail({
   onDelete
 }: ProtocolDetailProps) {
   const { hasPermission } = usePermissions()
+  const { user } = useAuth()
   const [protocol, setProtocol] = useState<Protocol | null>(null)
   const [versions, setVersions] = useState<ProtocolVersion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'content' | 'history'>('content')
+  const [showPermissionManager, setShowPermissionManager] = useState(false)
+  const [hasEditPermission, setHasEditPermission] = useState(false)
+  const [hasDeletePermission, setHasDeletePermission] = useState(false)
 
-  const canEdit = hasPermission('protocol_edit') || hasPermission('protocol_create')
-  const canDelete = hasPermission('protocol_delete')
   const canViewHistory = hasPermission('protocol_history_view')
+  const isOwner = user?.role === 'owner'
+  // 대표원장이거나, 전역 수정 권한이 있거나, 개별 프로토콜 수정 권한이 있거나, 본인이 생성한 프로토콜인 경우 수정 가능
+  const canEdit = isOwner ||
+    hasPermission('protocol_edit') ||
+    hasPermission('protocol_create') ||
+    hasEditPermission ||
+    (protocol && protocol.created_by === user?.id)
+  // 대표원장이거나, 전역 삭제 권한이 있거나, 개별 프로토콜 삭제 권한이 있거나, 본인이 생성한 프로토콜인 경우 삭제 가능
+  const canDelete = isOwner ||
+    hasPermission('protocol_delete') ||
+    hasDeletePermission ||
+    (protocol && protocol.created_by === user?.id)
 
   const fetchProtocol = useCallback(async () => {
     try {
@@ -43,6 +59,15 @@ export default function ProtocolDetail({
         setProtocol(null)
       } else {
         setProtocol((result.data as Protocol | null) ?? null)
+
+        // 개별 권한 확인 (대표원장이 아닌 경우에만)
+        if (user && user.role !== 'owner') {
+          const permResult = await dataService.getUserProtocolPermission(protocolId, user.id)
+          if (!permResult.error && permResult.data) {
+            setHasEditPermission(permResult.data.can_edit)
+            setHasDeletePermission(permResult.data.can_delete)
+          }
+        }
       }
     } catch (err) {
       console.error('프로토콜 조회 오류:', err)
@@ -51,7 +76,7 @@ export default function ProtocolDetail({
     } finally {
       setLoading(false)
     }
-  }, [protocolId])
+  }, [protocolId, user])
 
   const fetchVersions = useCallback(async () => {
     const result = await dataService.getProtocolVersions(protocolId)
@@ -212,6 +237,15 @@ export default function ProtocolDetail({
           </div>
 
           <div className="flex items-center gap-2 ml-4">
+            {isOwner && (
+              <button
+                onClick={() => setShowPermissionManager(true)}
+                className="p-2 text-purple-600 hover:bg-purple-50 rounded-md"
+                title="접근 권한 관리"
+              >
+                <ShieldCheckIcon className="h-5 w-5" />
+              </button>
+            )}
             {canEdit && (
               <button
                 onClick={() => onEdit(protocol)}
@@ -319,6 +353,20 @@ export default function ProtocolDetail({
           </button>
         </div>
       </div>
+
+      {/* Permission Manager Modal */}
+      {showPermissionManager && protocol && user && (
+        <ProtocolPermissionManager
+          protocolId={protocol.id}
+          protocolTitle={protocol.title}
+          clinicId={protocol.clinic_id}
+          currentUserId={user.id}
+          onClose={() => setShowPermissionManager(false)}
+          onSave={() => {
+            // 권한 저장 후 프로토콜 재조회 (필요시)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -53,7 +53,10 @@ export interface AttendanceQRCode {
   clinic_id: string;
   branch_id?: string | null; // 지점 ID (선택)
   qr_code: string; // QR 코드 값 (UUID)
-  valid_date: string; // YYYY-MM-DD 형식
+  valid_date: string; // YYYY-MM-DD 형식 (시작 날짜)
+  valid_until?: string | null; // YYYY-MM-DD 형식 (종료 날짜, null이면 valid_date와 동일)
+  validity_type?: string | null; // 유효 기간 타입 (daily, weekly, monthly, custom)
+  validity_days?: number | null; // 유효 기간 (일 수)
   latitude?: number | null; // 병원/지점 위도
   longitude?: number | null; // 병원/지점 경도
   radius_meters: number; // 인증 허용 반경 (미터)
@@ -61,6 +64,21 @@ export interface AttendanceQRCode {
   created_at: string;
   expires_at: string;
 }
+
+/**
+ * QR 코드 유효 기간 타입
+ */
+export type QRCodeValidityType = 'daily' | 'weekly' | 'monthly' | 'custom';
+
+/**
+ * QR 코드 유효 기간 옵션
+ */
+export const QR_CODE_VALIDITY_OPTIONS: { value: QRCodeValidityType; label: string; days: number }[] = [
+  { value: 'daily', label: '매일 (1일)', days: 1 },
+  { value: 'weekly', label: '매주 (7일)', days: 7 },
+  { value: 'monthly', label: '매월 (30일)', days: 30 },
+  { value: 'custom', label: '사용자 지정', days: 0 },
+];
 
 /**
  * QR 코드 생성 DTO
@@ -71,6 +89,9 @@ export interface QRCodeGenerateInput {
   latitude?: number;
   longitude?: number;
   radius_meters?: number;
+  validity_type?: QRCodeValidityType;  // 유효 기간 타입
+  validity_days?: number;   // 사용자 지정 유효 기간 (일)
+  force_regenerate?: boolean;  // 기존 QR 코드 만료 전에도 강제로 재생성
 }
 
 /**
@@ -93,6 +114,7 @@ export interface QRCodeValidationResult {
   clinic_id?: string;
   branch_id?: string;
   distance_meters?: number;
+  location_verification_skipped?: boolean; // 위치 검증이 건너뛰어졌는지 여부 (optional 모드일 때 true)
 }
 
 /**
@@ -318,6 +340,8 @@ export interface TeamAttendanceStatus {
   not_checked_in: number;
   on_leave: number;
   late_count: number;
+  early_leave_count: number;
+  overtime_count: number;
   employees: {
     user_id: string;
     user_name: string;
@@ -328,6 +352,8 @@ export interface TeamAttendanceStatus {
     scheduled_end?: string | null;
     late_minutes: number;
     early_leave_minutes: number;
+    overtime_minutes: number;
+    total_work_minutes?: number | null;
   }[];
 }
 
@@ -351,6 +377,12 @@ export interface AttendanceEditRequest {
   status?: AttendanceStatus;
   notes?: string;
   edited_by: string;
+  // 가상 결근 기록 생성 시 필요한 필드
+  user_id?: string;
+  clinic_id?: string;
+  work_date?: string;
+  scheduled_start?: string | null;
+  scheduled_end?: string | null;
 }
 
 /**

@@ -8,26 +8,84 @@ import type { ClinicHours, ClinicHoliday, ClinicHoursInput, ClinicHolidayInput }
 export const clinicHoursService = {
   /**
    * 병원의 진료시간 조회
+   * API 라우트를 통해 서버 측에서 처리 (RLS 우회)
    */
   async getClinicHours(clinicId: string) {
-    const supabase = getSupabase()
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') }
+    try {
+      console.log('[clinicHoursService] Fetching clinic hours via API for clinic:', clinicId)
+
+      const response = await fetch(`/api/clinic-hours?clinicId=${encodeURIComponent(clinicId)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('[clinicHoursService] API error:', result.error)
+        return { data: null, error: new Error(result.error || 'Failed to fetch clinic hours') }
+      }
+
+      console.log('[clinicHoursService] API success, fetched hours:', result.data?.length || 0)
+      return { data: result.data as ClinicHours[] | null, error: null }
+
+    } catch (error) {
+      console.error('[clinicHoursService] Error fetching clinic hours:', error)
+      return { data: null, error: error as Error }
     }
-
-    const { data, error } = await supabase
-      .from('clinic_hours')
-      .select('*')
-      .eq('clinic_id', clinicId)
-      .order('day_of_week')
-
-    return { data: data as ClinicHours[] | null, error }
   },
 
   /**
    * 병원 진료시간 업데이트 (전체 요일)
+   * API 라우트를 통해 서버 측에서 처리 (RLS 우회)
+   * @param clinicId 병원 ID
+   * @param hoursData 진료시간 데이터
+   * @param userId 현재 로그인한 사용자 ID
    */
-  async updateClinicHours(clinicId: string, hoursData: ClinicHoursInput[]) {
+  async updateClinicHours(clinicId: string, hoursData: ClinicHoursInput[], userId?: string) {
+    // userId가 없으면 에러
+    if (!userId) {
+      return { data: null, error: new Error('User ID is required') }
+    }
+
+    try {
+      // API 라우트를 통해 서버 측에서 처리 (service_role 사용)
+      console.log('[clinicHoursService] Calling API route with userId:', userId)
+
+      const response = await fetch('/api/clinic-hours', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clinicId,
+          hoursData,
+          userId,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('[clinicHoursService] API error:', result.error)
+        return { data: null, error: new Error(result.error || 'Failed to update clinic hours') }
+      }
+
+      console.log('[clinicHoursService] API success:', result)
+      return { data: result.data as ClinicHours[] | null, error: null }
+
+    } catch (error) {
+      console.error('[clinicHoursService] Error updating clinic hours:', error)
+      return { data: null, error: error as Error }
+    }
+  },
+
+  /**
+   * 기존 방식으로 진료시간 업데이트 (RPC 함수 없을 때 폴백)
+   */
+  async updateClinicHoursFallback(clinicId: string, hoursData: ClinicHoursInput[]) {
     const supabase = getSupabase()
     if (!supabase) {
       return { data: null, error: new Error('Supabase client not available') }

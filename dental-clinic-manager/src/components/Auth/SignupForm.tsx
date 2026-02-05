@@ -9,6 +9,7 @@ import {
   autoFormatResidentNumber,
   sanitizeResidentNumberInput
 } from '@/utils/residentNumberUtils'
+import { autoFormatPhoneNumber } from '@/utils/phoneUtils'
 
 interface SignupFormProps {
   onBackToLanding: () => void
@@ -332,7 +333,7 @@ export default function SignupForm({
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold">🦷</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">덴탈매니저</h1>
+            <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
           </div>
           <h2 className="text-3xl font-bold text-slate-800 mb-2">회원가입</h2>
           <p className="text-slate-600">치과 정보를 입력하여 계정을 생성하세요</p>
@@ -388,9 +389,13 @@ export default function SignupForm({
                   id="phone"
                   name="phone"
                   value={formData.phone}
-                  onChange={handleInputChange}
+                  onChange={(e) => {
+                    const formatted = autoFormatPhoneNumber(e.target.value);
+                    setFormData(prev => ({ ...prev, phone: formatted.value }));
+                  }}
                   className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   placeholder="010-1234-5678"
+                  maxLength={13}
                   required
                   disabled={loading}
                 />
@@ -595,9 +600,13 @@ export default function SignupForm({
                       id="clinicPhone"
                       name="clinicPhone"
                       value={formData.clinicPhone}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const formatted = autoFormatPhoneNumber(e.target.value);
+                        setFormData(prev => ({ ...prev, clinicPhone: formatted.value }));
+                      }}
                       className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                       placeholder="02-1234-5678"
+                      maxLength={13}
                       disabled={loading}
                     />
                   </div>

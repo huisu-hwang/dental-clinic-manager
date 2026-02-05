@@ -22,10 +22,299 @@ import type {
   AttendanceStatus,
 } from '@/types/attendance'
 import type { ClinicBranch } from '@/types/branch'
+import type { WorkSchedule, DayName } from '@/types/workSchedule'
+import { DEFAULT_WORK_SCHEDULE, DAY_OF_WEEK_TO_NAME } from '@/types/workSchedule'
+import { calculateAnnualLeaveDays } from '@/lib/leaveService'
+import { getPublicHolidaySet } from '@/lib/holidayService'
+
+/**
+ * 한국 시간대 기준 오늘 날짜 반환 (YYYY-MM-DD 형식)
+ * toISOString()은 UTC를 반환하므로 한국 시간(UTC+9)에서 오전 0시~8시59분에는
+ * 전날 날짜가 반환되는 문제를 해결
+ */
+function getKoreanDateString(date: Date = new Date()): string {
+  return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+}
+
+/**
+ * 한국 시간대 기준 현재 시간 반환 (HH:MM:SS 형식)
+ */
+function getKoreanTimeString(date: Date = new Date()): string {
+  return date.toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+}
+
+/**
+ * 지각 여부 및 지각 시간 계산
+ * @param checkInTime 출근 시간 (ISO 8601 형식)
+ * @param scheduledStart 예정 출근 시간 (HH:MM:SS 형식)
+ * @returns { isLate: boolean, lateMinutes: number, status: 'present' | 'late' }
+ */
+function calculateLateStatus(
+  checkInTime: string,
+  scheduledStart: string | undefined
+): { isLate: boolean; lateMinutes: number; status: 'present' | 'late' } {
+  const toleranceMinutes = 0 // 허용 범위 없음 - 1분이라도 늦으면 지각
+
+  // 예정 출근 시간이 없으면 정상 출근으로 처리
+  if (!scheduledStart) {
+    return { isLate: false, lateMinutes: 0, status: 'present' }
+  }
+
+  // 출근 시간을 한국 시간으로 변환 (HH:MM:SS 형식)
+  const checkInDate = new Date(checkInTime)
+  const actualStartTime = getKoreanTimeString(checkInDate)
+
+  // 시간 문자열을 분 단위로 변환
+  const timeToMinutes = (timeStr: string): number => {
+    const parts = timeStr.split(':')
+    const hours = parseInt(parts[0], 10)
+    const minutes = parseInt(parts[1], 10)
+    return hours * 60 + minutes
+  }
+
+  const actualMinutes = timeToMinutes(actualStartTime)
+  const scheduledMinutes = timeToMinutes(scheduledStart)
+
+  // 지각 계산 (허용 범위 초과 시)
+  const lateMinutes = actualMinutes - scheduledMinutes - toleranceMinutes
+
+  if (lateMinutes > 0) {
+    return {
+      isLate: true,
+      lateMinutes: actualMinutes - scheduledMinutes, // 실제 지각 시간 (허용 범위 제외하지 않음)
+      status: 'late'
+    }
+  }
+
+  return { isLate: false, lateMinutes: 0, status: 'present' }
+}
+
+/**
+ * 날짜 문자열(YYYY-MM-DD)에서 로컬 시간대 기준 요일 반환
+ * new Date("YYYY-MM-DD")는 UTC로 해석되어 시간대에 따라 요일이 달라질 수 있음
+ */
+function getDayOfWeekFromDateString(dateString: string): number {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const localDate = new Date(year, month - 1, day) // 로컬 시간대 자정
+  return localDate.getDay()
+}
+
+/**
+ * 유효 기간(일수) 계산 함수
+ */
+function calculateValidityDays(validity_type?: string, validity_days?: number): number {
+  switch (validity_type) {
+    case 'daily':
+      return 1
+    case 'weekly':
+      return 7
+    case 'monthly':
+      return 30
+    case 'custom':
+      return validity_days && validity_days > 0 ? validity_days : 1
+    default:
+      return 1 // 기본값: 1일
+  }
+}
+
+/**
+ * 날짜를 YYYY-MM-DD 형식으로 변환
+ */
+function formatDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * 직원 근무 스케줄 기반 해당 월의 소정 근로일수 계산
+ * @param year 연도
+ * @param month 월
+ * @param workSchedule 직원 근무 스케줄 (없으면 기본 스케줄 사용)
+ * @param holidayDates 공휴일 날짜 Set (YYYY-MM-DD 형식)
+ * @param endDate 종료일 (옵션) - 이 날짜까지만 계산 (오늘 이후 날짜 제외용)
+ */
+function getScheduledWorkDaysFromSchedule(
+  year: number,
+  month: number,
+  workSchedule?: WorkSchedule,
+  holidayDates?: Set<string>,
+  endDate?: Date
+): number {
+  const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
+  const daysInMonth = new Date(year, month, 0).getDate()
+  let workDays = 0
+
+  // 종료일 결정: endDate가 있으면 해당 월 내에서 min(endDate, 월말)
+  let lastDay = daysInMonth
+  if (endDate) {
+    const endYear = endDate.getFullYear()
+    const endMonth = endDate.getMonth() + 1
+    if (endYear === year && endMonth === month) {
+      lastDay = Math.min(endDate.getDate(), daysInMonth)
+    } else if (endYear < year || (endYear === year && endMonth < month)) {
+      // 종료일이 해당 월보다 이전이면 0일
+      return 0
+    }
+    // 종료일이 해당 월보다 이후면 전체 월 계산
+  }
+
+  for (let day = 1; day <= lastDay; day++) {
+    const date = new Date(year, month - 1, day)
+    const dateStr = formatDateString(date)
+    const dayOfWeek = date.getDay()
+    const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+
+    // 공휴일이면 근무일에서 제외
+    if (holidayDates && holidayDates.has(dateStr)) {
+      continue
+    }
+
+    // 해당 요일이 근무일인지 확인
+    if (schedule[dayName]?.isWorking) {
+      workDays++
+    }
+  }
+
+  return workDays
+}
+
+/**
+ * 직원별 근태 통계 계산 (직원 근무 스케줄 기반)
+ * - 근무일: 직원 근무 스케줄 기반 해당 월의 총 근무해야 하는 일수
+ * - 출근일: 출근 기록이 있는 일수 (present, late, early_leave)
+ * - 결근일: 지나간 근무일 중 출근하지 않은 날 (미래 날짜 제외)
+ *
+ * @param records 근태 기록 배열
+ * @param totalWorkDays 해당 월 총 근무일수 (표시용)
+ * @param year 연도 (연차 계산용)
+ * @param month 월 (연차 계산용)
+ * @param hireDate 입사일 (연차 계산용, 옵션)
+ * @param passedWorkDays 지나간 근무일수 (결근 계산용, 옵션 - 없으면 totalWorkDays 사용)
+ */
+function calculateAttendanceStatsFromRecords(
+  records: AttendanceRecord[],
+  totalWorkDays: number,
+  year?: number,
+  month?: number,
+  hireDate?: string,
+  passedWorkDays?: number
+): {
+  presentDays: number
+  absentDays: number
+  leaveDays: number
+  holidayDays: number
+  lateCount: number
+  totalLateMinutes: number
+  earlyLeaveCount: number
+  totalEarlyLeaveMinutes: number
+  overtimeCount: number
+  totalOvertimeMinutes: number
+  totalWorkMinutes: number
+} {
+  // 출근 기록이 있는 날짜 집합 (중복 방지)
+  const presentDates = new Set<string>()
+  const leaveDates = new Set<string>()
+
+  let holidayDays = 0
+  let lateCount = 0
+  let totalLateMinutes = 0
+  let earlyLeaveCount = 0
+  let totalEarlyLeaveMinutes = 0
+  let overtimeCount = 0
+  let totalOvertimeMinutes = 0
+  let totalWorkMinutes = 0
+
+  for (const record of records) {
+    const recordDate = record.work_date
+
+    // 출근 상태 처리 (present, late, early_leave 모두 출근으로 간주)
+    switch (record.status) {
+      case 'present':
+      case 'late':
+      case 'early_leave':
+        if (!presentDates.has(recordDate)) {
+          presentDates.add(recordDate)
+        }
+        break
+      case 'leave':
+        if (!leaveDates.has(recordDate)) {
+          leaveDates.add(recordDate)
+        }
+        break
+      case 'holiday':
+        holidayDays++
+        break
+    }
+
+    // 지각 집계: late_minutes > 0 기준 (상세 기록 표시와 일치)
+    if (record.late_minutes && record.late_minutes > 0) {
+      lateCount++
+      totalLateMinutes += record.late_minutes
+    }
+
+    // 조퇴 집계: early_leave_minutes > 0 기준 (상세 기록 표시와 일치)
+    if (record.early_leave_minutes && record.early_leave_minutes > 0) {
+      earlyLeaveCount++
+      totalEarlyLeaveMinutes += record.early_leave_minutes
+    }
+
+    // 초과근무 집계
+    if (record.overtime_minutes && record.overtime_minutes > 0) {
+      overtimeCount++
+      totalOvertimeMinutes += record.overtime_minutes
+    }
+
+    // 총 근무 시간 집계
+    totalWorkMinutes += record.total_work_minutes || 0
+  }
+
+  const presentDays = presentDates.size
+  const leaveDays = leaveDates.size
+
+  // 연차 정보 조회 (입사일 기준 근로기준법 계산)
+  // 1년 미만: 월 1일 (최대 11일)
+  // 1년 이상: 15일 기본 + 2년마다 1일 추가 (최대 25일)
+  let allowedAnnualLeave = 15 // 기본값
+
+  if (hireDate && year && month) {
+    const referenceDate = new Date(year, month - 1, 1) // 해당 월의 시작일 기준
+    const hireDateObj = new Date(hireDate)
+    allowedAnnualLeave = calculateAnnualLeaveDays(hireDateObj, referenceDate)
+  }
+
+  const paidLeaveDays = Math.min(leaveDays, allowedAnnualLeave)
+
+  // 결근일 = 지나간 근무일 - 출근일 - 유급연차사용일
+  // passedWorkDays가 있으면 사용, 없으면 totalWorkDays 사용 (과거 월의 경우)
+  const workDaysForAbsentCalc = passedWorkDays !== undefined ? passedWorkDays : totalWorkDays
+  const absentDays = Math.max(0, workDaysForAbsentCalc - presentDays - paidLeaveDays)
+
+  return {
+    presentDays,
+    absentDays,
+    leaveDays,
+    holidayDays,
+    lateCount,
+    totalLateMinutes,
+    earlyLeaveCount,
+    totalEarlyLeaveMinutes,
+    overtimeCount,
+    totalOvertimeMinutes,
+    totalWorkMinutes
+  }
+}
 
 /**
  * QR 코드 생성 함수
- * 병원별로 일일 QR 코드를 생성합니다.
+ * 병원별로 QR 코드를 생성합니다. 유효 기간을 사용자가 지정할 수 있습니다.
  */
 export async function generateDailyQRCode(
   input: QRCodeGenerateInput
@@ -36,18 +325,41 @@ export async function generateDailyQRCode(
   }
 
   try {
-    const { clinic_id, branch_id, latitude, longitude, radius_meters = 100 } = input
+    const {
+      clinic_id,
+      branch_id,
+      latitude,
+      longitude,
+      radius_meters = 100,
+      validity_type = 'daily',
+      validity_days: customValidityDays,
+      force_regenerate = false
+    } = input
 
     // 오늘 날짜
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
-    // 이미 오늘 생성된 QR 코드가 있는지 확인
+    // 유효 기간 계산
+    const validityDays = calculateValidityDays(validity_type, customValidityDays)
+
+    // 종료 날짜 계산
+    const validUntilDate = new Date()
+    validUntilDate.setDate(validUntilDate.getDate() + validityDays - 1)
+    const validUntil = validUntilDate.toISOString().split('T')[0]
+
+    // 만료 시간 계산 (종료 날짜의 다음 날 00:00)
+    const expiresAtDate = new Date(validUntilDate)
+    expiresAtDate.setDate(expiresAtDate.getDate() + 1)
+    expiresAtDate.setHours(0, 0, 0, 0)
+    const expiresAt = expiresAtDate.toISOString()
+
+    // 현재 유효한 QR 코드가 있는지 확인 (오늘이 유효 기간 내에 있는 코드)
     let existingQRQuery = supabase
       .from('attendance_qr_codes')
       .select('*')
       .eq('clinic_id', clinic_id)
-      .eq('valid_date', today)
       .eq('is_active', true)
+      .lte('valid_date', today) // 시작일이 오늘 이전이거나 오늘
 
     // branch_id 조건 추가 (하위 호환성 유지)
     if (branch_id) {
@@ -56,11 +368,30 @@ export async function generateDailyQRCode(
       existingQRQuery = existingQRQuery.is('branch_id', null)
     }
 
-    const { data: existingQR, error: checkError } = await existingQRQuery.single()
+    const { data: existingQRList, error: checkError } = await existingQRQuery
 
-    if (existingQR) {
-      // 이미 존재하면 반환
-      return { success: true, qrCode: existingQR as AttendanceQRCode }
+    // 유효한 기존 QR 코드 찾기
+    if (existingQRList && existingQRList.length > 0) {
+      for (const existingQR of existingQRList) {
+        const qrValidUntil = existingQR.valid_until || existingQR.valid_date
+        if (qrValidUntil >= today) {
+          // 강제 재생성 옵션인 경우 기존 QR 코드를 비활성화
+          if (force_regenerate) {
+            await supabase
+              .from('attendance_qr_codes')
+              .update({ is_active: false })
+              .eq('id', existingQR.id)
+            // 기존 코드 비활성화 후 새 코드 생성으로 진행
+            break
+          }
+          // 유효한 QR 코드가 있으면 반환
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+          if (!existingQR.qr_code.startsWith('http')) {
+            existingQR.qr_code = `${baseUrl}/qr/${existingQR.qr_code}`
+          }
+          return { success: true, qrCode: existingQR as AttendanceQRCode }
+        }
+      }
     }
 
     // 새 QR 코드 생성 (URL 기반 - 핸드폰 카메라 직접 스캔 가능)
@@ -76,10 +407,14 @@ export async function generateDailyQRCode(
         branch_id, // 지점 ID 포함
         qr_code: uuid, // UUID만 저장 (URL은 프론트엔드에서 동적 생성)
         valid_date: today,
+        valid_until: validUntil,
+        validity_type,
+        validity_days: validityDays,
         latitude,
         longitude,
         radius_meters,
         is_active: true,
+        expires_at: expiresAt,
       })
       .select()
       .single()
@@ -103,6 +438,7 @@ export async function generateDailyQRCode(
 
 /**
  * QR 코드 조회 함수
+ * 오늘 유효한 QR 코드를 조회합니다 (유효 기간 범위 내)
  */
 export async function getQRCodeForToday(
   clinicId: string,
@@ -114,14 +450,16 @@ export async function getQRCodeForToday(
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
+    // 오늘이 유효 기간 내에 있는 QR 코드 조회
     let query = supabase
       .from('attendance_qr_codes')
       .select('*')
       .eq('clinic_id', clinicId)
-      .eq('valid_date', today)
       .eq('is_active', true)
+      .lte('valid_date', today) // 시작일이 오늘 이전이거나 오늘
+      .order('created_at', { ascending: false })
 
     // branch_id 조건 추가 (하위 호환성 유지)
     if (branchId) {
@@ -130,22 +468,32 @@ export async function getQRCodeForToday(
       query = query.is('branch_id', null)
     }
 
-    const { data, error } = await query.single()
+    const { data: qrList, error } = await query
 
-    if (error || !data) {
-      return { success: false, error: 'QR code not found for today' }
+    if (error) {
+      console.error('[getQRCodeForToday] Query error:', error)
+      return { success: false, error: error.message }
     }
 
-    // DB에 저장된 UUID를 URL 형식으로 변환
+    if (!qrList || qrList.length === 0) {
+      return { success: false, error: 'QR code not found' }
+    }
+
+    // 유효 기간 내의 QR 코드 찾기
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-    const qrCode = data as AttendanceQRCode
 
-    // qr_code가 이미 URL 형식이 아니면 변환
-    if (!qrCode.qr_code.startsWith('http')) {
-      qrCode.qr_code = `${baseUrl}/qr/${qrCode.qr_code}`
+    for (const qr of qrList) {
+      const validUntil = qr.valid_until || qr.valid_date
+      if (validUntil >= today) {
+        // qr_code가 이미 URL 형식이 아니면 변환
+        if (!qr.qr_code.startsWith('http')) {
+          qr.qr_code = `${baseUrl}/qr/${qr.qr_code}`
+        }
+        return { success: true, qrCode: qr as AttendanceQRCode }
+      }
     }
 
-    return { success: true, qrCode }
+    return { success: false, error: 'No valid QR code found for today' }
   } catch (error: any) {
     console.error('[getQRCodeForToday] Error:', error)
     return { success: false, error: error.message }
@@ -274,43 +622,117 @@ export async function validateQRCode(
       .single()
 
     if (qrError || !qrData) {
-      return { is_valid: false, error_message: 'Invalid or expired QR code' }
+      console.error('[validateQRCode] QR code not found or inactive:', qrError)
+      return { is_valid: false, error_message: 'QR 코드를 찾을 수 없거나 비활성화되었습니다. QR 코드가 올바른지 확인하거나 관리자에게 문의해주세요.' }
     }
 
     const qrCode = qrData as AttendanceQRCode
 
-    // 날짜 검증 (오늘만 유효)
-    const today = new Date().toISOString().split('T')[0]
-    if (qrCode.valid_date !== today) {
-      return { is_valid: false, error_message: 'QR code expired. Please scan today\'s QR code.' }
+    // 날짜 검증 (유효 기간 범위 확인)
+    const today = getKoreanDateString()
+    const validFrom = qrCode.valid_date
+    const validUntil = qrCode.valid_until || qrCode.valid_date // valid_until이 없으면 당일만 유효
+
+    if (today < validFrom || today > validUntil) {
+      return {
+        is_valid: false,
+        error_message: `QR 코드가 만료되었습니다. 이 QR 코드는 ${validFrom}부터 ${validUntil}까지 유효합니다. 관리자에게 새로운 QR 코드를 요청해주세요.`
+      }
     }
 
-    // 위치 검증 (위치 정보가 있는 경우)
-    if (latitude && longitude && qrCode.latitude && qrCode.longitude) {
-      const distance = calculateDistance(
-        latitude,
-        longitude,
-        qrCode.latitude,
-        qrCode.longitude
-      )
+    // 병원의 위치 검증 모드 확인
+    const { data: clinicData } = await supabase
+      .from('clinics')
+      .select('qr_location_verification_mode')
+      .eq('id', qrCode.clinic_id)
+      .single()
 
-      if (distance > qrCode.radius_meters) {
-        return {
-          is_valid: false,
-          error_message: `You are ${Math.round(distance)}m away from the clinic. Please come closer (within ${qrCode.radius_meters}m).`,
-          distance_meters: Math.round(distance),
+    const locationVerificationMode = clinicData?.qr_location_verification_mode || 'required'
+
+    // 위치 검증 모드가 'optional'이면 위치 확인 없이 인증 통과
+    if (locationVerificationMode === 'optional') {
+      // branch_id 결정: QR 코드에 branch_id가 있으면 사용, 없으면 첫 번째 활성 지점 사용
+      let resolvedBranchId = qrCode.branch_id || undefined
+
+      if (!resolvedBranchId) {
+        const branchResult = await getBranches({
+          clinic_id: qrCode.clinic_id,
+          is_active: true,
+        })
+        if (branchResult.branches && branchResult.branches.length > 0) {
+          resolvedBranchId = branchResult.branches[0].id
         }
       }
 
       return {
         is_valid: true,
         clinic_id: qrCode.clinic_id,
-        branch_id: qrCode.branch_id || undefined,
-        distance_meters: Math.round(distance),
+        branch_id: resolvedBranchId,
+        location_verification_skipped: true, // 위치 검증이 건너뛰어졌음을 표시
       }
     }
 
-    // 위치 정보가 없으면 QR 코드만 검증
+    // 위치 검증 (위치 정보가 있는 경우)
+    // QR 코드의 좌표 대신 지점(clinic_branches)의 실제 좌표를 사용
+    if (latitude && longitude) {
+      // branch_id가 있는 경우: 해당 지점의 좌표로 검증
+      if (qrCode.branch_id) {
+        const branchResult = await getBranches({
+          clinic_id: qrCode.clinic_id,
+          is_active: true,
+        })
+
+        const targetBranch = branchResult.branches?.find(b => b.id === qrCode.branch_id)
+
+        if (targetBranch && targetBranch.latitude && targetBranch.longitude) {
+          const distance = calculateDistance(
+            latitude,
+            longitude,
+            targetBranch.latitude,
+            targetBranch.longitude
+          )
+
+          const radiusMeters = targetBranch.attendance_radius_meters || 100
+
+          if (distance > radiusMeters) {
+            return {
+              is_valid: false,
+              error_message: `현재 위치가 ${targetBranch.branch_name}에서 ${Math.round(distance)}m 떨어져 있습니다. ${radiusMeters}m 이내로 가까이 이동한 후 다시 시도해주세요.`,
+              distance_meters: Math.round(distance),
+            }
+          }
+
+          return {
+            is_valid: true,
+            clinic_id: qrCode.clinic_id,
+            branch_id: qrCode.branch_id,
+            distance_meters: Math.round(distance),
+          }
+        }
+      }
+
+      // branch_id가 없는 경우(통합 QR): 가장 가까운 지점으로 검증
+      const nearestBranch = await findNearestBranch(qrCode.clinic_id, latitude, longitude)
+
+      if (nearestBranch) {
+        if (nearestBranch.withinRadius) {
+          return {
+            is_valid: true,
+            clinic_id: qrCode.clinic_id,
+            branch_id: nearestBranch.branch.id,
+            distance_meters: nearestBranch.distance,
+          }
+        } else {
+          return {
+            is_valid: false,
+            error_message: `현재 위치가 가장 가까운 지점(${nearestBranch.branch.branch_name})에서 ${nearestBranch.distance}m 떨어져 있습니다. ${nearestBranch.branch.attendance_radius_meters}m 이내로 가까이 이동한 후 다시 시도해주세요.`,
+            distance_meters: nearestBranch.distance,
+          }
+        }
+      }
+    }
+
+    // 위치 정보가 없거나 지점 정보가 없으면 QR 코드만 검증
     return {
       is_valid: true,
       clinic_id: qrCode.clinic_id,
@@ -334,7 +756,9 @@ async function getUserScheduleForDate(
   if (!supabase) return null
 
   try {
-    const dayOfWeek = new Date(date).getDay()
+    // 날짜 문자열에서 로컬 시간대 기준으로 요일 계산
+    // new Date("YYYY-MM-DD")는 UTC로 해석되어 시간대에 따라 요일이 달라질 수 있음
+    const dayOfWeek = getDayOfWeekFromDateString(date)
 
     // 요일 숫자를 요일명으로 매핑
     const dayMap: Record<number, string> = {
@@ -367,9 +791,26 @@ async function getUserScheduleForDate(
       return null
     }
 
-    // HH:MM 형식을 HH:MM:SS로 변환
-    const start_time = daySchedule.start ? `${daySchedule.start}:00` : undefined
-    const end_time = daySchedule.end ? `${daySchedule.end}:00` : undefined
+    // 시간 형식을 HH:MM:SS로 정규화하는 함수
+    const normalizeTimeFormat = (time: string | undefined): string | undefined => {
+      if (!time) return undefined
+
+      // 이미 HH:MM:SS 형식인지 확인 (콜론이 2개면 이미 초까지 포함)
+      const colonCount = (time.match(/:/g) || []).length
+      if (colonCount === 2) {
+        // 이미 HH:MM:SS 형식이면 그대로 반환
+        return time
+      } else if (colonCount === 1) {
+        // HH:MM 형식이면 :00 추가
+        return `${time}:00`
+      }
+
+      // 예상치 못한 형식이면 그대로 반환 (에러 방지)
+      return time
+    }
+
+    const start_time = normalizeTimeFormat(daySchedule.start)
+    const end_time = normalizeTimeFormat(daySchedule.end)
 
     return {
       start_time,
@@ -408,7 +849,7 @@ export async function autoCheckInOut(request: {
     }
 
     // 오늘 날짜
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
     // 오늘 출퇴근 기록 확인
     const { data: todayRecord } = await supabase
@@ -462,7 +903,7 @@ export async function autoCheckInOut(request: {
 export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckResponse> {
   const supabase = createClient()
   if (!supabase) {
-    return { success: false, message: 'Database connection not available' }
+    return { success: false, message: '데이터베이스 연결을 사용할 수 없습니다. 네트워크 연결을 확인하거나 관리자에게 문의해주세요.' }
   }
 
   try {
@@ -480,7 +921,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
     if (!validation.is_valid) {
       return {
         success: false,
-        message: validation.error_message || 'QR code validation failed',
+        message: validation.error_message || 'QR 코드 검증에 실패했습니다. 올바른 QR 코드인지 확인해주세요.',
       }
     }
 
@@ -532,6 +973,14 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 
     const checkInTime = new Date().toISOString()
 
+    // 지각 여부 계산 (트리거에 의존하지 않고 직접 계산)
+    const lateStatus = calculateLateStatus(checkInTime, schedule?.start_time)
+    console.log('[checkIn] 지각 계산 결과:', {
+      checkInTime,
+      scheduledStart: schedule?.start_time,
+      ...lateStatus
+    })
+
     // 출근 기록 저장 또는 업데이트
     if (existingRecord) {
       // 기존 레코드 업데이트
@@ -544,7 +993,10 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
           check_in_device_info: device_info,
           scheduled_start: schedule?.start_time,
           scheduled_end: schedule?.end_time,
-          branch_id: finalBranchId, // 자동 감지된 또는 QR의 branch_id
+          branch_id: finalBranchId,
+          // 지각 정보 직접 저장 (트리거 의존성 제거)
+          late_minutes: lateStatus.lateMinutes,
+          status: lateStatus.status,
         })
         .eq('id', existingRecord.id)
         .select()
@@ -552,7 +1004,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 
       if (updateError) {
         console.error('[checkIn] Update error:', updateError)
-        return { success: false, message: updateError.message }
+        return { success: false, message: `출근 기록 업데이트 실패: ${updateError.message}` }
       }
 
       return {
@@ -567,7 +1019,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
         .insert({
           user_id,
           clinic_id: validation.clinic_id,
-          branch_id: finalBranchId, // 자동 감지된 또는 QR의 branch_id
+          branch_id: finalBranchId,
           work_date,
           check_in_time: checkInTime,
           check_in_latitude: latitude,
@@ -575,13 +1027,16 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
           check_in_device_info: device_info,
           scheduled_start: schedule?.start_time,
           scheduled_end: schedule?.end_time,
+          // 지각 정보 직접 저장 (트리거 의존성 제거)
+          late_minutes: lateStatus.lateMinutes,
+          status: lateStatus.status,
         })
         .select()
         .single()
 
       if (insertError) {
         console.error('[checkIn] Insert error:', insertError)
-        return { success: false, message: insertError.message }
+        return { success: false, message: `출근 기록 생성 실패: ${insertError.message}` }
       }
 
       return {
@@ -592,7 +1047,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
     }
   } catch (error: any) {
     console.error('[checkIn] Unexpected error:', error)
-    return { success: false, message: error.message || 'Check-in failed' }
+    return { success: false, message: error.message || '출근 처리 중 예기치 않은 오류가 발생했습니다. 관리자에게 문의해주세요.' }
   }
 }
 
@@ -602,7 +1057,7 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
 export async function checkOut(request: CheckOutRequest): Promise<AttendanceCheckResponse> {
   const supabase = createClient()
   if (!supabase) {
-    return { success: false, message: 'Database connection not available' }
+    return { success: false, message: '데이터베이스 연결을 사용할 수 없습니다. 네트워크 연결을 확인하거나 관리자에게 문의해주세요.' }
   }
 
   try {
@@ -620,7 +1075,7 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
     if (!validation.is_valid) {
       return {
         success: false,
-        message: validation.error_message || 'QR code validation failed',
+        message: validation.error_message || 'QR 코드 검증에 실패했습니다. 올바른 QR 코드인지 확인해주세요.',
       }
     }
 
@@ -671,7 +1126,7 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
 
     if (updateError) {
       console.error('[checkOut] Update error:', updateError)
-      return { success: false, message: updateError.message }
+      return { success: false, message: `퇴근 기록 업데이트 실패: ${updateError.message}` }
     }
 
     return {
@@ -681,7 +1136,7 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
     }
   } catch (error: any) {
     console.error('[checkOut] Unexpected error:', error)
-    return { success: false, message: error.message || 'Check-out failed' }
+    return { success: false, message: error.message || '퇴근 처리 중 예기치 않은 오류가 발생했습니다. 관리자에게 문의해주세요.' }
   }
 }
 
@@ -748,6 +1203,7 @@ export async function getAttendanceRecords(
 
 /**
  * 특정 사용자의 오늘 출퇴근 기록 조회
+ * 기존 기록의 지각 여부가 잘못된 경우 재계산하여 업데이트
  */
 export async function getTodayAttendance(
   userId: string
@@ -758,7 +1214,7 @@ export async function getTodayAttendance(
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKoreanDateString()
 
     const { data, error } = await supabase
       .from('attendance_records')
@@ -770,6 +1226,40 @@ export async function getTodayAttendance(
     if (error) {
       console.error('[getTodayAttendance] Error:', error)
       return { success: false, error: error.message }
+    }
+
+    // 기록이 있고, 출근 시간과 예정 출근 시간이 있는 경우 지각 여부 재계산
+    if (data && data.check_in_time && data.scheduled_start) {
+      const lateStatus = calculateLateStatus(data.check_in_time, data.scheduled_start)
+
+      // 현재 저장된 상태와 다르면 업데이트
+      if (data.status !== lateStatus.status || data.late_minutes !== lateStatus.lateMinutes) {
+        console.log('[getTodayAttendance] 지각 상태 재계산 및 업데이트:', {
+          recordId: data.id,
+          oldStatus: data.status,
+          newStatus: lateStatus.status,
+          oldLateMinutes: data.late_minutes,
+          newLateMinutes: lateStatus.lateMinutes
+        })
+
+        const { data: updatedRecord, error: updateError } = await supabase
+          .from('attendance_records')
+          .update({
+            late_minutes: lateStatus.lateMinutes,
+            status: lateStatus.status,
+          })
+          .eq('id', data.id)
+          .select()
+          .single()
+
+        if (updateError) {
+          console.error('[getTodayAttendance] Update error:', updateError)
+          // 업데이트 실패해도 기존 데이터 반환
+          return { success: true, record: data as AttendanceRecord }
+        }
+
+        return { success: true, record: updatedRecord as AttendanceRecord }
+      }
     }
 
     return { success: true, record: data as AttendanceRecord | undefined }
@@ -890,6 +1380,8 @@ export async function getTeamAttendanceStatus(
           not_checked_in: 0,
           on_leave: 0,
           late_count: 0,
+          early_leave_count: 0,
+          overtime_count: 0,
           employees: [],
         },
       }
@@ -922,6 +1414,8 @@ export async function getTeamAttendanceStatus(
       scheduled_end?: string | null
       late_minutes: number
       early_leave_minutes: number
+      overtime_minutes: number
+      total_work_minutes?: number | null
     }
 
     const employees: EmployeeStatusItem[] = (users || []).map((user: { id: string; name: string; role: string }) => {
@@ -937,13 +1431,17 @@ export async function getTeamAttendanceStatus(
         scheduled_end: record?.scheduled_end,
         late_minutes: record?.late_minutes || 0,
         early_leave_minutes: record?.early_leave_minutes || 0,
+        overtime_minutes: record?.overtime_minutes || 0,
+        total_work_minutes: record?.total_work_minutes,
       }
     })
 
     const checkedIn = employees.filter((e) => e.check_in_time).length
     const checkedOut = employees.filter((e) => e.check_out_time).length
     const onLeave = employees.filter((e) => e.status === 'leave').length
-    const lateCount = employees.filter((e) => e.status === 'late').length
+    const lateCount = employees.filter((e) => e.late_minutes > 0).length
+    const earlyLeaveCount = employees.filter((e) => e.early_leave_minutes > 0).length
+    const overtimeCount = employees.filter((e) => e.overtime_minutes > 0).length
 
     return {
       success: true,
@@ -955,6 +1453,8 @@ export async function getTeamAttendanceStatus(
         not_checked_in: employees.length - checkedIn - onLeave,
         on_leave: onLeave,
         late_count: lateCount,
+        early_leave_count: earlyLeaveCount,
+        overtime_count: overtimeCount,
         employees,
       },
     }
@@ -966,6 +1466,7 @@ export async function getTeamAttendanceStatus(
 
 /**
  * 출퇴근 기록 수정 (관리자용)
+ * 가상 결근 기록(ID가 'absent-'로 시작)의 경우 새 기록을 생성합니다.
  */
 export async function editAttendanceRecord(
   request: AttendanceEditRequest
@@ -976,8 +1477,94 @@ export async function editAttendanceRecord(
   }
 
   try {
-    const { record_id, check_in_time, check_out_time, status, notes, edited_by } = request
+    const {
+      record_id,
+      check_in_time,
+      check_out_time,
+      status,
+      notes,
+      edited_by,
+      user_id,
+      clinic_id,
+      work_date,
+      scheduled_start,
+      scheduled_end,
+    } = request
 
+    // 가상 결근 기록인지 확인 (ID가 'absent-'로 시작)
+    const isVirtualAbsentRecord = record_id.startsWith('absent-')
+
+    if (isVirtualAbsentRecord) {
+      // 가상 결근 기록을 실제 기록으로 생성
+      if (!user_id || !clinic_id || !work_date) {
+        return {
+          success: false,
+          error: '결근 기록을 수정하려면 user_id, clinic_id, work_date가 필요합니다.',
+        }
+      }
+
+      // 정상 출근으로 변경 시 출퇴근 시간 자동 설정
+      let finalCheckInTime = check_in_time
+      let finalCheckOutTime = check_out_time
+
+      if (status === 'present' || status === 'late' || status === 'early_leave') {
+        // 출퇴근 시간이 제공되지 않으면 스케줄 기반 자동 설정
+        if (!finalCheckInTime && scheduled_start) {
+          const [hours, minutes] = scheduled_start.split(':')
+          const checkInDate = new Date(work_date)
+          checkInDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0)
+          finalCheckInTime = checkInDate.toISOString()
+        }
+        if (!finalCheckOutTime && scheduled_end) {
+          const [hours, minutes] = scheduled_end.split(':')
+          const checkOutDate = new Date(work_date)
+          checkOutDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0)
+          finalCheckOutTime = checkOutDate.toISOString()
+        }
+      }
+
+      // 새 기록 생성
+      const insertData: any = {
+        user_id,
+        clinic_id,
+        work_date,
+        status: status || 'present',
+        scheduled_start,
+        scheduled_end,
+        is_manually_edited: true,
+        edited_by,
+        edited_at: new Date().toISOString(),
+        notes,
+      }
+
+      if (finalCheckInTime) insertData.check_in_time = finalCheckInTime
+      if (finalCheckOutTime) insertData.check_out_time = finalCheckOutTime
+
+      // 총 근무 시간 계산
+      if (finalCheckInTime && finalCheckOutTime) {
+        const checkIn = new Date(finalCheckInTime)
+        const checkOut = new Date(finalCheckOutTime)
+        const totalMinutes = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60))
+        if (totalMinutes > 0) {
+          insertData.total_work_minutes = totalMinutes
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .insert(insertData)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[editAttendanceRecord] Insert error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true, record: data as AttendanceRecord }
+    }
+
+    // 기존 기록 업데이트
     const updateData: any = {
       is_manually_edited: true,
       edited_by,
@@ -1008,6 +1595,903 @@ export async function editAttendanceRecord(
   }
 }
 
+/**
+ * 모든 직원의 월별 통계 조회 (관리자용)
+ * 직원별 근무 스케줄 기반으로 정확한 근태 통계 계산
+ *
+ * 계산 로직:
+ * - 근무일: 직원 근무 스케줄 기반 해당 월의 총 근무해야 하는 일수
+ * - 출근일: 출근 기록이 있는 일수 (present, late, early_leave)
+ * - 결근일: 근무일 - 출근일 - 연차사용일
+ */
+export async function getAllUsersMonthlyStatistics(
+  clinicId: string,
+  year: number,
+  month: number,
+  branchId?: string
+): Promise<{
+  success: boolean
+  statistics?: (AttendanceStatistics & { user_name: string })[]
+  error?: string
+}> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    // 해당 월의 법정 공휴일 조회 (결근 처리 제외용)
+    const publicHolidays = getPublicHolidaySet(year, month, true)
+
+    // 해당 클리닉의 활성 직원 목록 조회 (work_schedule, hire_date 포함)
+    let usersQuery = supabase
+      .from('users')
+      .select('id, name, work_schedule, hire_date')
+      .eq('clinic_id', clinicId)
+      .eq('status', 'active')
+
+    if (branchId) {
+      usersQuery = usersQuery.or(`primary_branch_id.eq.${branchId},primary_branch_id.is.null`)
+    }
+
+    const { data: users, error: usersError } = await usersQuery
+
+    if (usersError) {
+      return { success: false, error: usersError.message }
+    }
+
+    if (!users || users.length === 0) {
+      return { success: true, statistics: [] }
+    }
+
+    // 해당 월의 모든 출퇴근 기록 조회
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
+
+    const userIds = users.map((u: { id: string; name: string; work_schedule?: WorkSchedule; hire_date?: string }) => u.id)
+
+    const { data: allRecords, error: recordsError } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .in('user_id', userIds)
+      .gte('work_date', startDate)
+      .lte('work_date', endDate)
+
+    if (recordsError) {
+      return { success: false, error: recordsError.message }
+    }
+
+    // 사용자별 기록 그룹화
+    const recordsByUser = new Map<string, AttendanceRecord[]>()
+    for (const record of allRecords || []) {
+      const userRecords = recordsByUser.get(record.user_id) || []
+      userRecords.push(record)
+      recordsByUser.set(record.user_id, userRecords)
+    }
+
+    // 오늘 날짜 (결근 계산 시 미래 날짜 제외용)
+    const today = new Date()
+    today.setHours(23, 59, 59, 999) // 오늘 하루 전체 포함
+
+    // 현재 월인지 확인
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month
+
+    // 각 직원별 통계 계산
+    const statistics: (AttendanceStatistics & { user_name: string })[] = users.map(
+      (user: { id: string; name: string; work_schedule?: WorkSchedule; hire_date?: string }) => {
+        // 직원 근무 스케줄 기반 근무일수 계산 (공휴일 제외)
+        const workSchedule = user.work_schedule as WorkSchedule | undefined
+        const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule, publicHolidays)
+
+        // 지나간 근무일수 계산 (결근 계산용 - 현재 월이면 오늘까지만, 과거 월이면 전체)
+        const passedWorkDays = isCurrentMonth
+          ? getScheduledWorkDaysFromSchedule(year, month, workSchedule, publicHolidays, today)
+          : totalWorkDays
+
+        // 해당 직원의 출퇴근 기록
+        const userRecords = recordsByUser.get(user.id) || []
+
+        // 통계 계산 (입사일 기반 연차 계산 포함, 지나간 근무일수 전달)
+        const stats = calculateAttendanceStatsFromRecords(userRecords, totalWorkDays, year, month, user.hire_date, passedWorkDays)
+
+        // 출근율 계산
+        const attendanceRate = totalWorkDays > 0
+          ? Math.round(((stats.presentDays + stats.leaveDays) / totalWorkDays) * 1000) / 10
+          : 0
+
+        // 평균 계산
+        const avgWorkMinutesPerDay = stats.presentDays > 0
+          ? Math.round(stats.totalWorkMinutes / stats.presentDays)
+          : 0
+        const avgLateMinutes = stats.lateCount > 0
+          ? Math.round(stats.totalLateMinutes / stats.lateCount)
+          : 0
+        const avgEarlyLeaveMinutes = stats.earlyLeaveCount > 0
+          ? Math.round(stats.totalEarlyLeaveMinutes / stats.earlyLeaveCount)
+          : 0
+        const avgOvertimeMinutes = stats.overtimeCount > 0
+          ? Math.round(stats.totalOvertimeMinutes / stats.overtimeCount)
+          : 0
+
+        return {
+          id: '',
+          user_id: user.id,
+          clinic_id: clinicId,
+          year,
+          month,
+          total_work_days: totalWorkDays,
+          present_days: stats.presentDays,
+          absent_days: stats.absentDays,
+          leave_days: stats.leaveDays,
+          holiday_days: stats.holidayDays,
+          late_count: stats.lateCount,
+          total_late_minutes: stats.totalLateMinutes,
+          avg_late_minutes: avgLateMinutes,
+          early_leave_count: stats.earlyLeaveCount,
+          total_early_leave_minutes: stats.totalEarlyLeaveMinutes,
+          avg_early_leave_minutes: avgEarlyLeaveMinutes,
+          overtime_count: stats.overtimeCount,
+          total_overtime_minutes: stats.totalOvertimeMinutes,
+          avg_overtime_minutes: avgOvertimeMinutes,
+          total_work_minutes: stats.totalWorkMinutes,
+          avg_work_minutes_per_day: avgWorkMinutesPerDay,
+          attendance_rate: attendanceRate,
+          last_calculated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          user_name: user.name,
+        }
+      }
+    )
+
+    return {
+      success: true,
+      statistics: statistics.sort((a, b) =>
+        a.user_name.localeCompare(b.user_name, 'ko')
+      ),
+    }
+  } catch (error: any) {
+    console.error('[getAllUsersMonthlyStatistics] Error:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 특정 직원의 월별 상세 기록 조회 (관리자용)
+ * 결근 날짜도 포함하여 반환 (근무 예정일 중 기록이 없는 날)
+ */
+export async function getUserMonthlyRecords(
+  userId: string,
+  year: number,
+  month: number
+): Promise<{
+  success: boolean
+  records?: AttendanceRecord[]
+  error?: string
+}> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
+
+    // 1. 사용자 정보 및 근무 스케줄 조회
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, clinic_id, work_schedule')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !userData) {
+      return { success: false, error: userError?.message || 'User not found' }
+    }
+
+    // 2. 공휴일 정보 조회
+    const publicHolidays = getPublicHolidaySet(year, month, true)
+
+    // 3. 실제 출근 기록 조회
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('work_date', startDate)
+      .lte('work_date', endDate)
+      .order('work_date', { ascending: true })
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    // 4. 기존 기록을 날짜별 Map으로 변환
+    const recordsByDate = new Map<string, AttendanceRecord>()
+    for (const record of data || []) {
+      recordsByDate.set(record.work_date, record)
+    }
+
+    // 5. 근무 스케줄에 따른 근무 예정일 계산 및 결근 날짜 추가
+    const workSchedule = userData.work_schedule as WorkSchedule | undefined
+    const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
+    const allRecords: AttendanceRecord[] = []
+
+    // 오늘 날짜 (결근은 오늘 이전까지만)
+    const today = new Date()
+    const todayStr = getKoreanDateString(today)
+
+    for (let day = 1; day <= lastDay; day++) {
+      const date = new Date(year, month - 1, day)
+      const dateStr = formatDateString(date)
+      const dayOfWeek = date.getDay()
+      const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+
+      // 공휴일이면 건너뜀
+      if (publicHolidays.has(dateStr)) {
+        continue
+      }
+
+      // 근무일이 아니면 건너뜀
+      if (!schedule[dayName]?.isWorking) {
+        continue
+      }
+
+      // 기존 기록이 있으면 그대로 사용
+      const existingRecord = recordsByDate.get(dateStr)
+      if (existingRecord) {
+        allRecords.push(existingRecord)
+      } else if (dateStr <= todayStr) {
+        // 기록이 없고 오늘 이전인 근무 예정일 = 결근
+        allRecords.push({
+          id: `absent-${dateStr}`,
+          user_id: userId,
+          clinic_id: userData.clinic_id,
+          branch_id: null,
+          work_date: dateStr,
+          check_in_time: null,
+          check_out_time: null,
+          check_in_latitude: null,
+          check_in_longitude: null,
+          check_out_latitude: null,
+          check_out_longitude: null,
+          check_in_device_info: null,
+          check_out_device_info: null,
+          scheduled_start: schedule[dayName]?.start || null,
+          scheduled_end: schedule[dayName]?.end || null,
+          status: 'absent' as AttendanceStatus,
+          late_minutes: 0,
+          early_leave_minutes: 0,
+          overtime_minutes: 0,
+          total_work_minutes: 0,
+          is_manually_edited: false,
+          edited_by: null,
+          edited_at: null,
+          notes: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as AttendanceRecord)
+      }
+    }
+
+    // 날짜순 정렬
+    allRecords.sort((a, b) => a.work_date.localeCompare(b.work_date))
+
+    return { success: true, records: allRecords }
+  } catch (error: any) {
+    console.error('[getUserMonthlyRecords] Error:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 모든 직원의 월별 통계 일괄 갱신 (관리자용)
+ */
+export async function refreshAllUsersMonthlyStatistics(
+  clinicId: string,
+  year: number,
+  month: number,
+  branchId?: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    // 해당 클리닉의 활성 직원 목록 조회
+    let usersQuery = supabase
+      .from('users')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('status', 'active')
+
+    if (branchId) {
+      usersQuery = usersQuery.or(`primary_branch_id.eq.${branchId},primary_branch_id.is.null`)
+    }
+
+    const { data: users, error: usersError } = await usersQuery
+
+    if (usersError) {
+      return { success: false, error: usersError.message }
+    }
+
+    if (!users || users.length === 0) {
+      return { success: true }
+    }
+
+    // 각 직원의 통계 갱신
+    for (const user of users) {
+      await supabase.rpc('update_monthly_statistics', {
+        p_user_id: user.id,
+        p_year: year,
+        p_month: month,
+      })
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('[refreshAllUsersMonthlyStatistics] Error:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 기간별 근태 통계 계산 (시작일~종료일)
+ * 특정 기간 내의 근태 통계를 계산합니다.
+ */
+function calculateDateRangeStats(
+  records: AttendanceRecord[],
+  totalWorkDays: number,
+  passedWorkDays: number
+): {
+  presentDays: number
+  absentDays: number
+  leaveDays: number
+  holidayDays: number
+  lateCount: number
+  totalLateMinutes: number
+  earlyLeaveCount: number
+  totalEarlyLeaveMinutes: number
+  overtimeCount: number
+  totalOvertimeMinutes: number
+  totalWorkMinutes: number
+} {
+  // 출근 기록이 있는 날짜 집합 (중복 방지)
+  const presentDates = new Set<string>()
+  const leaveDates = new Set<string>()
+
+  let holidayDays = 0
+  let lateCount = 0
+  let totalLateMinutes = 0
+  let earlyLeaveCount = 0
+  let totalEarlyLeaveMinutes = 0
+  let overtimeCount = 0
+  let totalOvertimeMinutes = 0
+  let totalWorkMinutes = 0
+
+  for (const record of records) {
+    const recordDate = record.work_date
+
+    switch (record.status) {
+      case 'present':
+        if (!presentDates.has(recordDate)) {
+          presentDates.add(recordDate)
+        }
+        break
+      case 'late':
+        if (!presentDates.has(recordDate)) {
+          presentDates.add(recordDate)
+        }
+        lateCount++
+        totalLateMinutes += record.late_minutes || 0
+        break
+      case 'early_leave':
+        if (!presentDates.has(recordDate)) {
+          presentDates.add(recordDate)
+        }
+        earlyLeaveCount++
+        totalEarlyLeaveMinutes += record.early_leave_minutes || 0
+        break
+      case 'leave':
+        if (!leaveDates.has(recordDate)) {
+          leaveDates.add(recordDate)
+        }
+        break
+      case 'holiday':
+        holidayDays++
+        break
+    }
+
+    // 초과근무 집계
+    if (record.overtime_minutes && record.overtime_minutes > 0) {
+      overtimeCount++
+      totalOvertimeMinutes += record.overtime_minutes
+    }
+
+    // 총 근무 시간 집계
+    totalWorkMinutes += record.total_work_minutes || 0
+  }
+
+  const presentDays = presentDates.size
+  const leaveDays = leaveDates.size
+  const absentDays = Math.max(0, passedWorkDays - presentDays - leaveDays)
+
+  return {
+    presentDays,
+    absentDays,
+    leaveDays,
+    holidayDays,
+    lateCount,
+    totalLateMinutes,
+    earlyLeaveCount,
+    totalEarlyLeaveMinutes,
+    overtimeCount,
+    totalOvertimeMinutes,
+    totalWorkMinutes
+  }
+}
+
+/**
+ * 기간별 근무일수 계산
+ * 시작일부터 종료일까지의 근무 예정일수를 계산합니다.
+ */
+function getScheduledWorkDaysForDateRange(
+  startDate: string,
+  endDate: string,
+  workSchedule?: WorkSchedule,
+  holidayDates?: Set<string>,
+  passedEndDate?: Date // 지나간 근무일 계산용
+): { totalWorkDays: number; passedWorkDays: number } {
+  const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const today = passedEndDate || new Date()
+  today.setHours(23, 59, 59, 999)
+
+  let totalWorkDays = 0
+  let passedWorkDays = 0
+
+  const current = new Date(start)
+  while (current <= end) {
+    const dateStr = formatDateString(current)
+    const dayOfWeek = current.getDay()
+    const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+
+    // 공휴일이면 건너뜀
+    if (holidayDates && holidayDates.has(dateStr)) {
+      current.setDate(current.getDate() + 1)
+      continue
+    }
+
+    // 해당 요일이 근무일인지 확인
+    if (schedule[dayName]?.isWorking) {
+      totalWorkDays++
+      if (current <= today) {
+        passedWorkDays++
+      }
+    }
+
+    current.setDate(current.getDate() + 1)
+  }
+
+  return { totalWorkDays, passedWorkDays }
+}
+
+/**
+ * 기간별 공휴일 Set 생성
+ */
+function getPublicHolidaysForDateRange(startDate: string, endDate: string): Set<string> {
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const holidays = new Set<string>()
+
+  // 시작 월부터 종료 월까지 순회
+  const currentMonth = new Date(start.getFullYear(), start.getMonth(), 1)
+  const endMonth = new Date(end.getFullYear(), end.getMonth(), 1)
+
+  while (currentMonth <= endMonth) {
+    const year = currentMonth.getFullYear()
+    const month = currentMonth.getMonth() + 1
+    const monthHolidays = getPublicHolidaySet(year, month, true)
+    monthHolidays.forEach(h => holidays.add(h))
+    currentMonth.setMonth(currentMonth.getMonth() + 1)
+  }
+
+  return holidays
+}
+
+/**
+ * 개인 기간별 근태 통계 조회
+ * 시작일~종료일 범위의 근태 통계를 계산합니다.
+ */
+export async function getStatisticsForDateRange(
+  userId: string,
+  startDate: string,
+  endDate: string
+): Promise<{
+  success: boolean
+  statistics?: AttendanceStatistics
+  error?: string
+}> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    // 사용자 정보 조회
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, clinic_id, work_schedule, hire_date')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !userData) {
+      return { success: false, error: userError?.message || 'User not found' }
+    }
+
+    // 기간 내 공휴일 조회
+    const publicHolidays = getPublicHolidaysForDateRange(startDate, endDate)
+
+    // 기간별 근무일수 계산
+    const workSchedule = userData.work_schedule as WorkSchedule | undefined
+    const { totalWorkDays, passedWorkDays } = getScheduledWorkDaysForDateRange(
+      startDate,
+      endDate,
+      workSchedule,
+      publicHolidays
+    )
+
+    // 기간 내 출퇴근 기록 조회
+    const { data: records, error: recordsError } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('work_date', startDate)
+      .lte('work_date', endDate)
+      .order('work_date', { ascending: true })
+
+    if (recordsError) {
+      return { success: false, error: recordsError.message }
+    }
+
+    // 통계 계산
+    const stats = calculateDateRangeStats(records || [], totalWorkDays, passedWorkDays)
+
+    // 출근율 계산
+    const attendanceRate = totalWorkDays > 0
+      ? Math.round(((stats.presentDays + stats.leaveDays) / totalWorkDays) * 1000) / 10
+      : 0
+
+    // 평균 계산
+    const avgWorkMinutesPerDay = stats.presentDays > 0
+      ? Math.round(stats.totalWorkMinutes / stats.presentDays)
+      : 0
+    const avgLateMinutes = stats.lateCount > 0
+      ? Math.round(stats.totalLateMinutes / stats.lateCount)
+      : 0
+    const avgEarlyLeaveMinutes = stats.earlyLeaveCount > 0
+      ? Math.round(stats.totalEarlyLeaveMinutes / stats.earlyLeaveCount)
+      : 0
+    const avgOvertimeMinutes = stats.overtimeCount > 0
+      ? Math.round(stats.totalOvertimeMinutes / stats.overtimeCount)
+      : 0
+
+    const statistics: AttendanceStatistics = {
+      id: '',
+      user_id: userId,
+      clinic_id: userData.clinic_id,
+      year: new Date(startDate).getFullYear(),
+      month: new Date(startDate).getMonth() + 1,
+      total_work_days: totalWorkDays,
+      present_days: stats.presentDays,
+      absent_days: stats.absentDays,
+      leave_days: stats.leaveDays,
+      holiday_days: stats.holidayDays,
+      late_count: stats.lateCount,
+      total_late_minutes: stats.totalLateMinutes,
+      avg_late_minutes: avgLateMinutes,
+      early_leave_count: stats.earlyLeaveCount,
+      total_early_leave_minutes: stats.totalEarlyLeaveMinutes,
+      avg_early_leave_minutes: avgEarlyLeaveMinutes,
+      overtime_count: stats.overtimeCount,
+      total_overtime_minutes: stats.totalOvertimeMinutes,
+      avg_overtime_minutes: avgOvertimeMinutes,
+      total_work_minutes: stats.totalWorkMinutes,
+      avg_work_minutes_per_day: avgWorkMinutesPerDay,
+      attendance_rate: attendanceRate,
+      last_calculated_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    return { success: true, statistics }
+  } catch (error: any) {
+    console.error('[getStatisticsForDateRange] Error:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 전체 직원 기간별 근태 통계 조회 (관리자용)
+ * 시작일~종료일 범위의 모든 직원 근태 통계를 계산합니다.
+ */
+export async function getAllUsersStatisticsForDateRange(
+  clinicId: string,
+  startDate: string,
+  endDate: string,
+  branchId?: string
+): Promise<{
+  success: boolean
+  statistics?: (AttendanceStatistics & { user_name: string })[]
+  error?: string
+}> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    // 기간 내 공휴일 조회
+    const publicHolidays = getPublicHolidaysForDateRange(startDate, endDate)
+
+    // 해당 클리닉의 활성 직원 목록 조회
+    let usersQuery = supabase
+      .from('users')
+      .select('id, name, work_schedule, hire_date')
+      .eq('clinic_id', clinicId)
+      .eq('status', 'active')
+
+    if (branchId) {
+      usersQuery = usersQuery.or(`primary_branch_id.eq.${branchId},primary_branch_id.is.null`)
+    }
+
+    const { data: users, error: usersError } = await usersQuery
+
+    if (usersError) {
+      return { success: false, error: usersError.message }
+    }
+
+    if (!users || users.length === 0) {
+      return { success: true, statistics: [] }
+    }
+
+    // 기간 내 모든 출퇴근 기록 조회
+    const userIds = users.map((u: { id: string }) => u.id)
+
+    const { data: allRecords, error: recordsError } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .in('user_id', userIds)
+      .gte('work_date', startDate)
+      .lte('work_date', endDate)
+
+    if (recordsError) {
+      return { success: false, error: recordsError.message }
+    }
+
+    // 사용자별 기록 그룹화
+    const recordsByUser = new Map<string, AttendanceRecord[]>()
+    for (const record of allRecords || []) {
+      const userRecords = recordsByUser.get(record.user_id) || []
+      userRecords.push(record)
+      recordsByUser.set(record.user_id, userRecords)
+    }
+
+    // 각 직원별 통계 계산
+    const statistics: (AttendanceStatistics & { user_name: string })[] = users.map(
+      (user: { id: string; name: string; work_schedule?: WorkSchedule; hire_date?: string }) => {
+        // 직원 근무 스케줄 기반 근무일수 계산
+        const workSchedule = user.work_schedule as WorkSchedule | undefined
+        const { totalWorkDays, passedWorkDays } = getScheduledWorkDaysForDateRange(
+          startDate,
+          endDate,
+          workSchedule,
+          publicHolidays
+        )
+
+        // 해당 직원의 출퇴근 기록
+        const userRecords = recordsByUser.get(user.id) || []
+
+        // 통계 계산
+        const stats = calculateDateRangeStats(userRecords, totalWorkDays, passedWorkDays)
+
+        // 출근율 계산
+        const attendanceRate = totalWorkDays > 0
+          ? Math.round(((stats.presentDays + stats.leaveDays) / totalWorkDays) * 1000) / 10
+          : 0
+
+        // 평균 계산
+        const avgWorkMinutesPerDay = stats.presentDays > 0
+          ? Math.round(stats.totalWorkMinutes / stats.presentDays)
+          : 0
+        const avgLateMinutes = stats.lateCount > 0
+          ? Math.round(stats.totalLateMinutes / stats.lateCount)
+          : 0
+        const avgEarlyLeaveMinutes = stats.earlyLeaveCount > 0
+          ? Math.round(stats.totalEarlyLeaveMinutes / stats.earlyLeaveCount)
+          : 0
+        const avgOvertimeMinutes = stats.overtimeCount > 0
+          ? Math.round(stats.totalOvertimeMinutes / stats.overtimeCount)
+          : 0
+
+        return {
+          id: '',
+          user_id: user.id,
+          clinic_id: clinicId,
+          year: new Date(startDate).getFullYear(),
+          month: new Date(startDate).getMonth() + 1,
+          total_work_days: totalWorkDays,
+          present_days: stats.presentDays,
+          absent_days: stats.absentDays,
+          leave_days: stats.leaveDays,
+          holiday_days: stats.holidayDays,
+          late_count: stats.lateCount,
+          total_late_minutes: stats.totalLateMinutes,
+          avg_late_minutes: avgLateMinutes,
+          early_leave_count: stats.earlyLeaveCount,
+          total_early_leave_minutes: stats.totalEarlyLeaveMinutes,
+          avg_early_leave_minutes: avgEarlyLeaveMinutes,
+          overtime_count: stats.overtimeCount,
+          total_overtime_minutes: stats.totalOvertimeMinutes,
+          avg_overtime_minutes: avgOvertimeMinutes,
+          total_work_minutes: stats.totalWorkMinutes,
+          avg_work_minutes_per_day: avgWorkMinutesPerDay,
+          attendance_rate: attendanceRate,
+          last_calculated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          user_name: user.name,
+        }
+      }
+    )
+
+    return {
+      success: true,
+      statistics: statistics.sort((a, b) =>
+        a.user_name.localeCompare(b.user_name, 'ko')
+      ),
+    }
+  } catch (error: any) {
+    console.error('[getAllUsersStatisticsForDateRange] Error:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 특정 직원의 기간별 상세 기록 조회 (관리자용)
+ */
+export async function getUserRecordsForDateRange(
+  userId: string,
+  startDate: string,
+  endDate: string
+): Promise<{
+  success: boolean
+  records?: AttendanceRecord[]
+  error?: string
+}> {
+  const supabase = createClient()
+  if (!supabase) {
+    return { success: false, error: 'Database connection not available' }
+  }
+
+  try {
+    // 사용자 정보 및 근무 스케줄 조회
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, clinic_id, work_schedule')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !userData) {
+      return { success: false, error: userError?.message || 'User not found' }
+    }
+
+    // 공휴일 정보 조회
+    const publicHolidays = getPublicHolidaysForDateRange(startDate, endDate)
+
+    // 실제 출근 기록 조회
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('work_date', startDate)
+      .lte('work_date', endDate)
+      .order('work_date', { ascending: true })
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    // 기존 기록을 날짜별 Map으로 변환
+    const recordsByDate = new Map<string, AttendanceRecord>()
+    for (const record of data || []) {
+      recordsByDate.set(record.work_date, record)
+    }
+
+    // 근무 스케줄에 따른 근무 예정일 계산 및 결근 날짜 추가
+    const workSchedule = userData.work_schedule as WorkSchedule | undefined
+    const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
+    const allRecords: AttendanceRecord[] = []
+
+    // 오늘 날짜 (결근은 오늘 이전까지만)
+    const today = new Date()
+    const todayStr = getKoreanDateString(today)
+
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const current = new Date(start)
+
+    while (current <= end) {
+      const dateStr = formatDateString(current)
+      const dayOfWeek = current.getDay()
+      const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+
+      // 공휴일이면 건너뜀
+      if (publicHolidays.has(dateStr)) {
+        current.setDate(current.getDate() + 1)
+        continue
+      }
+
+      // 근무일이 아니면 건너뜀
+      if (!schedule[dayName]?.isWorking) {
+        current.setDate(current.getDate() + 1)
+        continue
+      }
+
+      // 기존 기록이 있으면 그대로 사용
+      const existingRecord = recordsByDate.get(dateStr)
+      if (existingRecord) {
+        allRecords.push(existingRecord)
+      } else if (dateStr <= todayStr) {
+        // 기록이 없고 오늘 이전인 근무 예정일 = 결근
+        allRecords.push({
+          id: `absent-${dateStr}`,
+          user_id: userId,
+          clinic_id: userData.clinic_id,
+          branch_id: null,
+          work_date: dateStr,
+          check_in_time: null,
+          check_out_time: null,
+          check_in_latitude: null,
+          check_in_longitude: null,
+          check_out_latitude: null,
+          check_out_longitude: null,
+          check_in_device_info: null,
+          check_out_device_info: null,
+          scheduled_start: schedule[dayName]?.start || null,
+          scheduled_end: schedule[dayName]?.end || null,
+          status: 'absent' as AttendanceStatus,
+          late_minutes: 0,
+          early_leave_minutes: 0,
+          overtime_minutes: 0,
+          total_work_minutes: 0,
+          is_manually_edited: false,
+          edited_by: null,
+          edited_at: null,
+          notes: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as AttendanceRecord)
+      }
+
+      current.setDate(current.getDate() + 1)
+    }
+
+    // 날짜순 정렬
+    allRecords.sort((a, b) => a.work_date.localeCompare(b.work_date))
+
+    return { success: true, records: allRecords }
+  } catch (error: any) {
+    console.error('[getUserRecordsForDateRange] Error:', error)
+    return { success: false, error: error.message }
+  }
+}
+
 export const attendanceService = {
   generateDailyQRCode,
   getQRCodeForToday,
@@ -1021,4 +2505,10 @@ export const attendanceService = {
   updateMonthlyStatistics,
   getTeamAttendanceStatus,
   editAttendanceRecord,
+  getAllUsersMonthlyStatistics,
+  getUserMonthlyRecords,
+  refreshAllUsersMonthlyStatistics,
+  getStatisticsForDateRange,
+  getAllUsersStatisticsForDateRange,
+  getUserRecordsForDateRange,
 }

@@ -1,0 +1,355 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { dataService } from '@/lib/dataService'
+import type { SpecialNotesHistory as SpecialNotesHistoryType } from '@/types'
+
+interface GroupedNote {
+  date: string
+  latestNote: SpecialNotesHistoryType
+  editCount: number
+}
+
+export default function SpecialNotesHistory() {
+  const [notes, setNotes] = useState<GroupedNote[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<SpecialNotesHistoryType[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [expandedDate, setExpandedDate] = useState<string | null>(null)
+  const [dateHistory, setDateHistory] = useState<SpecialNotesHistoryType[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+
+  // 초기 데이터 로드 (special_notes_history 테이블에서만 조회)
+  const loadNotes = useCallback(async () => {
+    setLoading(true)
+    try {
+      console.log('[SpecialNotesHistory] Loading notes from special_notes_history...')
+      const result = await dataService.getLatestSpecialNotesByDate({
+        limit: 100
+      })
+
+      if (result.success && result.data && result.data.length > 0) {
+        console.log(`[SpecialNotesHistory] Loaded ${result.data.length} notes from history table`)
+        setNotes(result.data)
+      } else {
+        console.log('[SpecialNotesHistory] No data found')
+        setNotes([])
+      }
+    } catch (error) {
+      console.error('[SpecialNotesHistory] Error loading notes:', error)
+      setNotes([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // 컴포넌트 마운트 시 항상 최신 데이터 로드
+  useEffect(() => {
+    loadNotes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 의도적으로 빈 의존성 배열 사용 - 마운트 시에만 실행
+
+  // 검색 처리
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      setIsSearching(false)
+      return
+    }
+
+    setIsSearching(true)
+    try {
+      const result = await dataService.searchSpecialNotes({
+        query: searchQuery.trim(),
+        limit: 50
+      })
+
+      if (result.success && result.data) {
+        setSearchResults(result.data)
+      }
+    } catch (error) {
+      console.error('[SpecialNotesHistory] Search error:', error)
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  // Enter 키 검색
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch()
+    }
+  }
+
+  // 검색 초기화
+  const clearSearch = () => {
+    setSearchQuery('')
+    setSearchResults([])
+  }
+
+  // 특정 날짜의 수정 이력 보기
+  const handleExpandDate = async (date: string) => {
+    if (expandedDate === date) {
+      setExpandedDate(null)
+      setDateHistory([])
+      return
+    }
+
+    setExpandedDate(date)
+    setLoadingHistory(true)
+
+    try {
+      const result = await dataService.getSpecialNotesHistoryByDate(date)
+      if (result.success && result.data) {
+        setDateHistory(result.data)
+      }
+    } catch (error) {
+      console.error('[SpecialNotesHistory] Error loading date history:', error)
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  // 날짜 포맷팅
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'short'
+    })
+  }
+
+  // 시간 포맷팅
+  const formatDateTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  // 검색 결과 표시
+  const renderSearchResults = () => {
+    if (searchResults.length === 0) {
+      return (
+        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm">
+          &quot;{searchQuery}&quot;에 대한 검색 결과가 없습니다.
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-2 sm:space-y-3">
+        <div className="text-xs sm:text-sm text-gray-500 mb-2">
+          검색 결과: {searchResults.length}건
+        </div>
+        {searchResults.map((note) => (
+          <div
+            key={note.id}
+            className="p-3 sm:p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
+          >
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-0 mb-2">
+              <span className="font-medium text-blue-600 text-sm sm:text-base">{formatDate(note.report_date)}</span>
+              <div className="flex items-center gap-2">
+                {note.is_past_date_edit && (
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs bg-orange-100 text-orange-700 rounded">
+                    과거 날짜 수정
+                  </span>
+                )}
+                <span className="text-xs text-gray-500">
+                  작성: {formatAuthorName(note.author_name)}
+                </span>
+              </div>
+            </div>
+            <p className="text-gray-700 whitespace-pre-wrap text-sm">{note.content}</p>
+            <div className="mt-2 text-xs text-gray-400">
+              수정 시점: {formatDateTime(note.edited_at)}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // 작성자 표시 헬퍼 함수
+  const formatAuthorName = (authorName: string | null | undefined) => {
+    if (!authorName || authorName === '-' || authorName === '알 수 없음') {
+      return '(작성자 정보 없음)'
+    }
+    if (authorName === '기존 데이터') {
+      return '(마이그레이션 데이터)'
+    }
+    return authorName
+  }
+
+  // 기본 목록 표시
+  const renderNotesList = () => {
+    if (notes.length === 0) {
+      return (
+        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm">
+          기록된 특이사항이 없습니다.
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-2 sm:space-y-3">
+        {notes.map(({ date, latestNote, editCount }) => (
+          <div key={date} className="border border-slate-200 rounded-lg bg-white overflow-hidden">
+            {/* 메인 카드 */}
+            <div
+              className={`p-3 sm:p-4 cursor-pointer hover:bg-slate-50 transition-colors ${
+                expandedDate === date ? 'bg-slate-50' : ''
+              }`}
+              onClick={() => editCount > 1 && handleExpandDate(date)}
+            >
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-0 mb-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-blue-600 text-sm sm:text-base">{formatDate(date)}</span>
+                  {editCount > 1 && (
+                    <button
+                      className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleExpandDate(date)
+                      }}
+                    >
+                      {expandedDate === date ? '이력 접기' : `수정 이력 ${editCount}개`}
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {latestNote.is_past_date_edit && (
+                    <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs bg-orange-100 text-orange-700 rounded">
+                      과거 날짜 수정
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-500">
+                    작성자: {formatAuthorName(latestNote.author_name)}
+                  </span>
+                </div>
+              </div>
+              <p className="text-gray-700 whitespace-pre-wrap text-sm">{latestNote.content}</p>
+              <div className="mt-2 text-xs text-gray-400">
+                {editCount > 1 ? '최종 수정' : '작성'}: {formatDateTime(latestNote.edited_at)}
+              </div>
+            </div>
+
+            {/* 수정 이력 확장 패널 */}
+            {expandedDate === date && (
+              <div className="border-t border-slate-200 bg-slate-50 p-3 sm:p-4">
+                <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">수정 이력</h4>
+                {loadingHistory ? (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    이력 로딩 중...
+                  </div>
+                ) : (
+                  <div className="space-y-2 sm:space-y-3">
+                    {dateHistory.map((history, index) => (
+                      <div
+                        key={history.id}
+                        className={`p-2 sm:p-3 rounded-lg ${
+                          index === 0
+                            ? 'bg-blue-50 border border-blue-200'
+                            : 'bg-white border border-slate-200'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0 mb-2">
+                          <div className="flex items-center gap-2">
+                            {index === 0 && (
+                              <span className="px-1.5 sm:px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                                현재
+                              </span>
+                            )}
+                            {history.is_past_date_edit && (
+                              <span className="px-1.5 sm:px-2 py-0.5 text-xs bg-orange-100 text-orange-700 rounded">
+                                과거 수정
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {formatAuthorName(history.author_name)} | {formatDateTime(history.edited_at)}
+                          </span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-gray-600 whitespace-pre-wrap">
+                          {history.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
+      {/* 검색 및 새로고침 영역 */}
+      <div className="bg-slate-50 p-2 sm:p-3 border-b border-slate-200">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="특이사항 내용 검색..."
+              className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSearch}
+              disabled={isSearching || !searchQuery.trim()}
+              className="flex-1 sm:flex-none px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSearching ? '검색 중...' : '검색'}
+            </button>
+            <button
+              onClick={loadNotes}
+              disabled={loading}
+              className="flex-1 sm:flex-none text-xs sm:text-sm px-3 py-1.5 sm:py-2 text-gray-600 hover:text-gray-800 bg-white border border-slate-300 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              {loading ? '로딩 중...' : '새로고침'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 결과 표시 영역 */}
+      <div className="max-h-96 overflow-y-auto p-2 sm:p-3">
+        {loading ? (
+          <div className="text-center py-8 text-gray-500">
+            데이터 로딩 중...
+          </div>
+        ) : searchQuery && searchResults.length > 0 ? (
+          renderSearchResults()
+        ) : searchQuery && !isSearching ? (
+          renderSearchResults()
+        ) : (
+          renderNotesList()
+        )}
+      </div>
+    </div>
+  )
+}

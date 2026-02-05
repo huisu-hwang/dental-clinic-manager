@@ -5,7 +5,7 @@
  * 비밀번호를 재확인하고 일정 시간 동안 유효한 세션을 생성합니다.
  */
 
-export type SecuritySessionType = 'contract' | 'profile';
+export type SecuritySessionType = 'contract' | 'profile' | 'payroll';
 
 const SESSION_DURATION = 10 * 60 * 1000; // 10분
 const STORAGE_PREFIX = 'security_session_';
@@ -80,7 +80,7 @@ export function clearSecuritySession(type: SecuritySessionType): void {
  * 모든 보안 세션 삭제
  */
 export function clearAllSecuritySessions(): void {
-  const types: SecuritySessionType[] = ['contract', 'profile'];
+  const types: SecuritySessionType[] = ['contract', 'profile', 'payroll'];
   types.forEach(type => clearSecuritySession(type));
   console.log('[SecuritySession] Cleared all security sessions');
 }

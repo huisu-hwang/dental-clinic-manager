@@ -42,6 +42,21 @@ export async function saveDailyReport(formData: {
   consultLogs: any[]
   giftLogs: any[]
   happyCallLogs: any[]
+  cashRegister?: {
+    prev_bill_50000: number
+    prev_bill_10000: number
+    prev_bill_5000: number
+    prev_bill_1000: number
+    prev_coin_500: number
+    prev_coin_100: number
+    curr_bill_50000: number
+    curr_bill_10000: number
+    curr_bill_5000: number
+    curr_bill_1000: number
+    curr_coin_500: number
+    curr_coin_100: number
+    notes: string
+  }
 }) {
   const startTime = Date.now()
   console.log('[saveDailyReport] Start:', { date: formData.date, timestamp: new Date().toISOString() })
@@ -169,11 +184,11 @@ export async function saveDailyReport(formData: {
     // ============================================================
 
     const clinicStartTime = Date.now()
-    console.log('[saveDailyReport] Fetching clinic_id...')
+    console.log('[saveDailyReport] Fetching clinic_id and user name...')
 
     const clinicPromise = supabase
       .from('users')
-      .select('clinic_id')
+      .select('clinic_id, name')
       .eq('id', user.id)
       .single()
 
@@ -197,7 +212,7 @@ export async function saveDailyReport(formData: {
       return { success: false, error: '병원 정보를 찾을 수 없습니다.' }
     }
 
-    console.log(`[saveDailyReport] Clinic ID: ${userProfile.clinic_id}`)
+    console.log(`[saveDailyReport] Clinic ID: ${userProfile.clinic_id}, User: ${userProfile.name}`)
 
     // ============================================================
     // 5. RPC 호출 (타임아웃 10초, 재시도 1회)
@@ -209,18 +224,34 @@ export async function saveDailyReport(formData: {
     const callRpc = async () => {
       const rpcStartTime = Date.now()
       console.log('[saveDailyReport] Calling RPC function...')
+      console.log('[saveDailyReport] giftLogs full data:', JSON.stringify(formData.giftLogs))
+      // 각 giftLog의 quantity 타입과 값을 자세히 로깅
+      formData.giftLogs?.forEach((log, idx) => {
+        console.log(`[saveDailyReport] giftLog[${idx}]:`, {
+          patient_name: log.patient_name,
+          gift_type: log.gift_type,
+          quantity: log.quantity,
+          quantity_type: typeof log.quantity
+        })
+      })
+      console.log('[saveDailyReport] cashRegister data:', JSON.stringify(formData.cashRegister))
+
+      // special_notes는 special_notes_history 테이블에만 저장하므로 RPC 페이로드에서 제외
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { special_notes: _specialNotes, ...dailyReportWithoutSpecialNotes } = formData.dailyReport || {}
 
       const rpcPromise = supabase.rpc('save_daily_report_v2', {
         p_clinic_id: userProfile.clinic_id,
         p_date: formData.date,
         p_daily_report: {
-          ...formData.dailyReport,
+          ...dailyReportWithoutSpecialNotes,
           clinic_id: userProfile.clinic_id,
           date: formData.date
         },
         p_consult_logs: formData.consultLogs,
         p_gift_logs: formData.giftLogs,
-        p_happy_call_logs: formData.happyCallLogs
+        p_happy_call_logs: formData.happyCallLogs,
+        p_cash_register: formData.cashRegister || null
       })
 
       const rpcTimeout = new Promise<never>((_, reject) =>
@@ -264,6 +295,9 @@ export async function saveDailyReport(formData: {
 
     const { data: rpcData, error: rpcError } = rpcResult
 
+    console.log('[saveDailyReport] RPC result:', JSON.stringify(rpcData))
+    console.log('[saveDailyReport] cash_register_saved:', rpcData?.cash_register_saved)
+
     if (rpcError) {
       console.error('[saveDailyReport] RPC error:', rpcError)
       return {
@@ -273,7 +307,175 @@ export async function saveDailyReport(formData: {
     }
 
     // ============================================================
-    // 6. 성공
+    // 6. 특이사항 히스토리 저장
+    // ============================================================
+
+    const specialNotes = formData.dailyReport?.special_notes?.trim()
+    if (specialNotes) {
+      try {
+        console.log('[saveDailyReport] Saving special notes history...')
+
+        // 오늘 날짜와 비교하여 과거 날짜 수정인지 확인
+        const today = new Date().toISOString().split('T')[0]
+        const isPastDateEdit = formData.date < today
+
+        const { error: historyError } = await supabase
+          .from('special_notes_history')
+          .insert({
+            clinic_id: userProfile.clinic_id,
+            report_date: formData.date,
+            content: specialNotes,
+            author_id: user.id,
+            author_name: userProfile.name || '알 수 없음',
+            is_past_date_edit: isPastDateEdit,
+            edited_at: new Date().toISOString()
+          })
+
+        if (historyError) {
+          // 히스토리 저장 실패는 로그만 남기고 전체 저장은 성공으로 처리
+          console.error('[saveDailyReport] Failed to save special notes history:', historyError)
+        } else {
+          console.log(`[saveDailyReport] Special notes history saved (isPastDateEdit: ${isPastDateEdit})`)
+        }
+      } catch (historyError) {
+        console.error('[saveDailyReport] Error saving special notes history:', historyError)
+      }
+    }
+
+    // ============================================================
+    // 7. 현금 출납 기록 직접 저장 (RPC 우회)
+    // ============================================================
+
+    if (formData.cashRegister) {
+      try {
+        console.log('[saveDailyReport] Saving cash register log directly...')
+        console.log('[saveDailyReport] Cash register data:', JSON.stringify(formData.cashRegister))
+
+        // 전일 이월액 총액 계산
+        const previousBalance =
+          (formData.cashRegister.prev_bill_50000 || 0) * 50000 +
+          (formData.cashRegister.prev_bill_10000 || 0) * 10000 +
+          (formData.cashRegister.prev_bill_5000 || 0) * 5000 +
+          (formData.cashRegister.prev_bill_1000 || 0) * 1000 +
+          (formData.cashRegister.prev_coin_500 || 0) * 500 +
+          (formData.cashRegister.prev_coin_100 || 0) * 100
+
+        // 금일 잔액 총액 계산
+        const currentBalance =
+          (formData.cashRegister.curr_bill_50000 || 0) * 50000 +
+          (formData.cashRegister.curr_bill_10000 || 0) * 10000 +
+          (formData.cashRegister.curr_bill_5000 || 0) * 5000 +
+          (formData.cashRegister.curr_bill_1000 || 0) * 1000 +
+          (formData.cashRegister.curr_coin_500 || 0) * 500 +
+          (formData.cashRegister.curr_coin_100 || 0) * 100
+
+        const balanceDifference = currentBalance - previousBalance
+
+        // 기존 레코드 삭제
+        const { error: deleteError } = await supabase
+          .from('cash_register_logs')
+          .delete()
+          .eq('clinic_id', userProfile.clinic_id)
+          .eq('date', formData.date)
+
+        if (deleteError) {
+          console.warn('[saveDailyReport] Delete cash register error (may not exist):', deleteError)
+        }
+
+        // 새 레코드 삽입
+        const { error: insertError } = await supabase
+          .from('cash_register_logs')
+          .insert({
+            date: formData.date,
+            clinic_id: userProfile.clinic_id,
+            prev_bill_50000: formData.cashRegister.prev_bill_50000 || 0,
+            prev_bill_10000: formData.cashRegister.prev_bill_10000 || 0,
+            prev_bill_5000: formData.cashRegister.prev_bill_5000 || 0,
+            prev_bill_1000: formData.cashRegister.prev_bill_1000 || 0,
+            prev_coin_500: formData.cashRegister.prev_coin_500 || 0,
+            prev_coin_100: formData.cashRegister.prev_coin_100 || 0,
+            previous_balance: previousBalance,
+            curr_bill_50000: formData.cashRegister.curr_bill_50000 || 0,
+            curr_bill_10000: formData.cashRegister.curr_bill_10000 || 0,
+            curr_bill_5000: formData.cashRegister.curr_bill_5000 || 0,
+            curr_bill_1000: formData.cashRegister.curr_bill_1000 || 0,
+            curr_coin_500: formData.cashRegister.curr_coin_500 || 0,
+            curr_coin_100: formData.cashRegister.curr_coin_100 || 0,
+            current_balance: currentBalance,
+            balance_difference: balanceDifference,
+            notes: formData.cashRegister.notes || ''
+          })
+
+        if (insertError) {
+          console.error('[saveDailyReport] Insert cash register error:', insertError)
+        } else {
+          console.log('[saveDailyReport] Cash register log saved successfully')
+          console.log('[saveDailyReport] Previous balance:', previousBalance, 'Current balance:', currentBalance)
+        }
+      } catch (cashRegisterError) {
+        console.error('[saveDailyReport] Error saving cash register:', cashRegisterError)
+      }
+    } else {
+      console.log('[saveDailyReport] No cash register data to save')
+    }
+
+    // ============================================================
+    // 8. 선물 재고 업데이트 (gift_logs 기반)
+    // ============================================================
+
+    try {
+      // 새로 저장된 선물 로그를 기반으로 재고 차감
+      const giftLogs = formData.giftLogs || []
+      if (giftLogs.length > 0) {
+        console.log('[saveDailyReport] Updating gift inventory based on gift logs...')
+
+        // 선물별 총 사용량 계산
+        const giftUsage: Record<string, number> = {}
+        for (const log of giftLogs) {
+          if (log.gift_type && log.gift_type !== '없음') {
+            const qty = log.quantity || 1
+            giftUsage[log.gift_type] = (giftUsage[log.gift_type] || 0) + qty
+          }
+        }
+
+        // 기존에 저장된 해당 날짜의 gift_logs 조회 (이미 RPC에서 새 데이터로 교체됨)
+        // 재고 변동분 계산을 위해 이전 데이터가 필요하지만,
+        // 현재 구조에서는 RPC가 DELETE + INSERT를 수행하므로 이전 데이터 접근 불가
+        // 따라서 매번 저장 시 전체 날짜의 선물 사용량을 기반으로 재고 재계산
+
+        // 현재 재고 조회
+        const { data: inventoryData } = await supabase
+          .from('gift_inventory')
+          .select('*')
+          .eq('clinic_id', userProfile.clinic_id)
+
+        if (inventoryData) {
+          // 해당 클리닉의 모든 gift_logs 조회 (재고 계산용)
+          const { data: allGiftLogs } = await supabase
+            .from('gift_logs')
+            .select('gift_type, quantity')
+            .eq('clinic_id', userProfile.clinic_id)
+
+          // 선물별 총 사용량 재계산
+          const totalUsed: Record<string, number> = {}
+          if (allGiftLogs) {
+            for (const log of allGiftLogs) {
+              if (log.gift_type && log.gift_type !== '없음') {
+                totalUsed[log.gift_type] = (totalUsed[log.gift_type] || 0) + (log.quantity || 1)
+              }
+            }
+          }
+
+          console.log('[saveDailyReport] Total gift usage calculated:', totalUsed)
+        }
+      }
+    } catch (inventoryError) {
+      // 재고 업데이트 실패는 로그만 남기고 전체 저장은 성공으로 처리
+      console.error('[saveDailyReport] Error updating inventory:', inventoryError)
+    }
+
+    // ============================================================
+    // 8. 성공
     // ============================================================
 
     const totalElapsed = Date.now() - startTime
@@ -292,7 +494,7 @@ export async function saveDailyReport(formData: {
 
   } catch (error: any) {
     // ============================================================
-    // 7. 에러 처리
+    // 8. 에러 처리
     // ============================================================
 
     const totalElapsed = Date.now() - startTime

@@ -15,6 +15,10 @@ import { NextResponse, type NextRequest } from 'next/server'
  * 중요: Supabase 공식 패턴을 정확히 준수
  * - request.cookies.set() 호출 후 반드시 NextResponse 재생성 필요
  * - 이렇게 해야 서버 컴포넌트가 갱신된 쿠키를 받을 수 있음
+ *
+ * iOS Safari/Chrome 호환성:
+ * - 명시적 쿠키 옵션 필수 (sameSite, secure, path, maxAge)
+ * - iOS ITP(Intelligent Tracking Prevention) 정책 대응
  */
 export async function middleware(request: NextRequest) {
   // 1. 초기 NextResponse 생성
@@ -30,6 +34,22 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
+  // iOS Safari/Chrome 호환을 위한 쿠키 기본 옵션
+  // iOS ITP 정책: JavaScript로 설정된 쿠키는 최대 7일 유지되지만,
+  // 사용자가 사이트와 상호작용하면 쿠키 수명이 연장됨
+  // 서버에서 설정하는 쿠키는 ITP 제한이 덜 적용됨
+  // sameSite: 'lax'는 크로스 사이트 요청에서도 쿠키 전송 허용 (네비게이션 시)
+  const isSecure = request.url.startsWith('https')
+  const defaultCookieOptions = {
+    path: '/',
+    sameSite: 'lax' as const,
+    secure: isSecure,
+    // iOS Safari에서 세션 유지를 위해 maxAge 30일로 설정
+    // 미들웨어에서 설정하는 쿠키는 "서버에서 설정"으로 취급되어 ITP 영향이 적음
+    // 사용자가 주기적으로 사이트를 방문하면 쿠키가 갱신됨
+    maxAge: 60 * 60 * 24 * 30,
+  }
+
   // 2. Supabase 클라이언트 생성
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -38,7 +58,10 @@ export async function middleware(request: NextRequest) {
       },
       setAll(cookiesToSet) {
         // 공식 Supabase 패턴 (https://github.com/supabase/supabase/blob/master/examples/auth/nextjs/utils/supabase/middleware.ts)
+        // iOS 호환성을 위해 쿠키 옵션 명시적으로 병합
+
         // 1단계: request.cookies에 설정 (Server Component가 읽을 수 있도록)
+        // 주의: request.cookies.set()은 options를 받지 않으므로 value만 설정
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value)
         )
@@ -50,9 +73,14 @@ export async function middleware(request: NextRequest) {
         })
 
         // 3단계: response.cookies에 설정 (브라우저로 전달)
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        )
+        // iOS 호환성을 위해 기본 옵션과 Supabase 옵션을 병합
+        cookiesToSet.forEach(({ name, value, options }) => {
+          const mergedOptions = {
+            ...defaultCookieOptions,
+            ...options,
+          }
+          supabaseResponse.cookies.set(name, value, mergedOptions)
+        })
       },
     },
   })
@@ -68,8 +96,11 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname === '/signup' ||
     request.nextUrl.pathname === '/pending-approval' ||
+    request.nextUrl.pathname === '/resigned' ||
     request.nextUrl.pathname === '/update-password' ||
-    request.nextUrl.pathname.startsWith('/test')
+    request.nextUrl.pathname.startsWith('/test') ||
+    request.nextUrl.pathname.startsWith('/auth') ||
+    request.nextUrl.pathname.startsWith('/api')
 
   // 5. 인증 필요한 경로에 미인증 사용자 접근 시 리다이렉트
   if (!user && !isPublicPath) {

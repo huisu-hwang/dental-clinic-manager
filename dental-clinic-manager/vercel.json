@@ -4,5 +4,15 @@
       "maxDuration": 60
     }
   },
-  "regions": ["icn1"]
+  "regions": ["icn1"],
+  "crons": [
+    {
+      "path": "/api/cron/process-resignations",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/news",
+      "schedule": "0 23 * * *"
+    }
+  ]
 }

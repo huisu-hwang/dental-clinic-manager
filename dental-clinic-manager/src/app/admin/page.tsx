@@ -84,7 +84,7 @@ export default function AdminDashboard() {
               <ShieldCheckIcon className="h-8 w-8 text-yellow-400" />
               <div>
                 <h1 className="text-xl font-bold">마스터 관리자</h1>
-                <p className="text-sm text-slate-400">덴탈매니저 시스템 관리</p>
+                <p className="text-sm text-slate-400">클리닉 매니저 시스템 관리</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import ClinicSelectionForm from './ClinicSelectionForm'
 import { authService } from '@/lib/authService'
+import { autoFormatPhoneNumber } from '@/utils/phoneUtils'
 
 interface EnhancedSignupFormProps {
   onBackToLanding: () => void
@@ -176,7 +177,7 @@ export default function EnhancedSignupForm({
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold">🦷</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">덴탈매니저</h1>
+            <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
           </div>
           <h2 className="text-3xl font-bold text-slate-800 mb-2">새 병원 등록</h2>
           <p className="text-slate-600">병원 정보를 입력하여 계정을 생성하세요</p>
@@ -327,9 +328,13 @@ export default function EnhancedSignupForm({
                       id="clinicPhone"
                       name="clinicPhone"
                       value={formData.clinicPhone}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const formatted = autoFormatPhoneNumber(e.target.value);
+                        setFormData(prev => ({ ...prev, clinicPhone: formatted.value }));
+                      }}
                       className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                       placeholder="02-1234-5678"
+                      maxLength={13}
                       disabled={loading}
                     />
                   </div>

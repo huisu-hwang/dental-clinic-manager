@@ -1,9 +1,13 @@
 'use client'
 
-import { Shield, LogOut, User, Cog, Crown, Clock } from 'lucide-react'
+import { Shield, LogOut, User, Cog, Crown, Menu, X, UserX } from 'lucide-react'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 
 import type { UserProfile } from '@/contexts/AuthContext'
+import type { TodayNotification } from '@/types/notification'
+import HeaderNotificationBanner from './HeaderNotificationBanner'
+import UserNotificationDropdown from './UserNotificationDropdown'
 
 interface HeaderProps {
   dbStatus?: 'connected' | 'connecting' | 'error'
@@ -11,15 +15,51 @@ interface HeaderProps {
   onLogout?: () => void
   showManagementLink?: boolean
   onProfileClick?: () => void
+  onMenuToggle?: () => void
+  isMenuOpen?: boolean
+  notifications?: TodayNotification[]
+  onDismissNotification?: (notificationId: string) => Promise<boolean>
 }
 
-export default function Header({ dbStatus = 'connected', user, onLogout, showManagementLink = true, onProfileClick }: HeaderProps) {
-  // 디버깅: user 정보 로그
-  console.log('[Header] User info:', {
-    user,
-    role: user?.role,
-    isMaster: user?.role === 'master_admin'
-  })
+export default function Header({
+  dbStatus = 'connected',
+  user,
+  onLogout,
+  showManagementLink = true,
+  onProfileClick,
+  onMenuToggle,
+  isMenuOpen = false,
+  notifications = [],
+  onDismissNotification
+}: HeaderProps) {
+  const [isAutoLoginEnabled, setIsAutoLoginEnabled] = useState(false)
+
+  // 자동 로그인 설정 상태 확인
+  useEffect(() => {
+    const checkAutoLogin = () => {
+      const autoLogin = localStorage.getItem('autoLogin') === 'true'
+      setIsAutoLoginEnabled(autoLogin)
+    }
+
+    checkAutoLogin()
+
+    // localStorage 변경 감지 (다른 탭에서 변경된 경우)
+    window.addEventListener('storage', checkAutoLogin)
+    return () => window.removeEventListener('storage', checkAutoLogin)
+  }, [])
+
+  // 자동 로그인 토글
+  const handleToggleAutoLogin = () => {
+    const newState = !isAutoLoginEnabled
+    if (newState) {
+      localStorage.setItem('autoLogin', 'true')
+      console.log('[Header] Auto login enabled')
+    } else {
+      localStorage.removeItem('autoLogin')
+      console.log('[Header] Auto login disabled')
+    }
+    setIsAutoLoginEnabled(newState)
+  }
 
   const getStatusColor = () => {
     switch (dbStatus) {
@@ -32,7 +72,7 @@ export default function Header({ dbStatus = 'connected', user, onLogout, showMan
 
   const getStatusText = () => {
     switch (dbStatus) {
-      case 'connected': return '실시간 연결됨'
+      case 'connected': return '연결됨'
       case 'error': return '연결 실패'
       case 'connecting': return '연결 중...'
       default: return '상태 확인 중'
@@ -40,38 +80,73 @@ export default function Header({ dbStatus = 'connected', user, onLogout, showMan
   }
 
   return (
-    <header className="mb-8 flex flex-wrap justify-between items-center gap-4 shadow-md">
-      <div>
-        <Link href="/dashboard" className="group">
-          <div className="flex items-center space-x-4 cursor-pointer transition-transform duration-200 hover:scale-105">
-            <Shield className="w-10 h-10 text-blue-500 group-hover:text-blue-600 transition-colors" />
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">덴탈매니저</h1>
+    <header className="flex justify-between items-center gap-2 w-full">
+      {/* 왼쪽: 햄버거 메뉴 + 로고 */}
+      <div className="flex items-center gap-2 min-w-0">
+        {/* 모바일 햄버거 메뉴 버튼 */}
+        {onMenuToggle && (
+          <button
+            onClick={onMenuToggle}
+            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0"
+            aria-label={isMenuOpen ? '메뉴 닫기' : '메뉴 열기'}
+          >
+            {isMenuOpen ? (
+              <X className="w-6 h-6 text-slate-600" />
+            ) : (
+              <Menu className="w-6 h-6 text-slate-600" />
+            )}
+          </button>
+        )}
+
+        <Link href="/dashboard" className="group min-w-0">
+          <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer transition-transform duration-200 hover:scale-[1.02]">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors truncate">클리닉 매니저</h1>
               {user && (
-                <p className="text-sm text-slate-600 mt-1">
-                  {user.clinic?.name || user.clinicName} - {user.clinic?.ownerName || user.clinicOwnerName}
+                <p className="text-xs text-slate-500 truncate hidden sm:block">
+                  {user.clinic?.name || user.clinicName}
                 </p>
               )}
             </div>
           </div>
         </Link>
       </div>
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2 text-sm">
-          <div className={`w-3 h-3 rounded-full ${getStatusColor()}`}></div>
+
+      {/* 중앙: 알림 배너 (데스크탑에서만 표시) */}
+      <div className="hidden md:flex flex-1 justify-center min-w-0">
+        <HeaderNotificationBanner
+          notifications={notifications}
+          onDismissNotification={onDismissNotification}
+        />
+      </div>
+
+      {/* 오른쪽: 상태 및 버튼들 */}
+      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        {/* 연결 상태 - 데스크탑에서만 표시 */}
+        <div className="hidden md:flex items-center space-x-2 text-xs bg-slate-100 px-2 sm:px-3 py-1.5 rounded-full">
+          <div className={`w-2 h-2 rounded-full ${getStatusColor()} ${dbStatus === 'connecting' ? 'animate-pulse' : ''}`}></div>
           <span className="text-slate-600">{getStatusText()}</span>
         </div>
+
+        {/* 모바일: 연결 상태 점만 표시 */}
+        <div className="md:hidden flex items-center">
+          <div className={`w-2 h-2 rounded-full ${getStatusColor()} ${dbStatus === 'connecting' ? 'animate-pulse' : ''}`}></div>
+        </div>
+
         {user && onLogout && (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-1">
             {/* Master Admin Link */}
             {user.role === 'master_admin' && (
               <Link
                 href="/master"
-                className="flex items-center space-x-1 px-3 py-2 text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-purple-200 transform hover:scale-105"
+                className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
                 title="마스터 관리"
               >
-                <Crown className="w-4 h-4 transition-transform hover:rotate-12" />
-                <span className="font-medium">마스터</span>
+                <Crown className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+                <span className="hidden sm:inline">마스터</span>
               </Link>
             )}
 
@@ -79,31 +154,56 @@ export default function Header({ dbStatus = 'connected', user, onLogout, showMan
             {showManagementLink && user.role === 'owner' && (
               <Link
                 href="/management"
-                className="flex items-center space-x-1 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-blue-200 transform hover:scale-105"
+                className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
                 title="병원 관리"
               >
-                <Cog className="w-4 h-4 transition-transform hover:rotate-12" />
-                <span className="font-medium">관리</span>
+                <Cog className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                <span className="hidden sm:inline">관리</span>
               </Link>
             )}
 
+            {/* 사용자 알림 드롭다운 */}
+            <UserNotificationDropdown />
+
+            {/* 프로필 버튼 */}
             <button
               onClick={onProfileClick || (() => console.log('Profile click - no handler'))}
-              className="flex items-center space-x-2 px-3 py-1 bg-slate-100 hover:bg-slate-200 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-slate-300 transform hover:scale-105"
-              title="계정 정보 - 클릭하여 프로필 보기"
-              style={{ cursor: 'pointer' }}
+              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all duration-200"
+              title="계정 정보"
             >
-              <User className="w-4 h-4 text-slate-600 hover:text-slate-800 transition-colors" />
-              <span className="text-sm text-slate-700 hover:text-slate-900 font-medium transition-colors">{user.name || user.userId}</span>
+              <User className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+              <span className="hidden sm:inline">{user.name || user.userId}</span>
             </button>
+
+            {/* 자동 로그인 토글 버튼 */}
+            <button
+              onClick={handleToggleAutoLogin}
+              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium hover:bg-slate-100 rounded-lg transition-all duration-200"
+              title={isAutoLoginEnabled ? "자동 로그인 켜짐" : "자동 로그인 꺼짐"}
+            >
+              <span className="hidden lg:inline text-slate-600 text-xs">자동로그인</span>
+              {/* 토글 스위치 */}
+              <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
+                isAutoLoginEnabled ? 'bg-blue-600' : 'bg-slate-300'
+              }`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                  isAutoLoginEnabled ? 'translate-x-4' : 'translate-x-0.5'
+                }`} />
+              </div>
+            </button>
+
+            {/* 구분선 */}
+            <div className="hidden sm:block w-px h-5 bg-slate-200 mx-1" />
+
+            {/* 로그아웃 버튼 */}
             <button
               type="button"
               onClick={onLogout}
-              className="flex items-center space-x-1 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 hover:shadow-md rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-red-200 transform hover:scale-105"
+              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
               title="로그아웃"
             >
-              <LogOut className="w-4 h-4 transition-transform hover:rotate-12" />
-              <span className="font-medium">로그아웃</span>
+              <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
+              <span className="hidden sm:inline">로그아웃</span>
             </button>
           </div>
         )}
