@@ -141,9 +141,9 @@ async function fetchArticles(url: string, category: 'latest' | 'popular'): Promi
     // 치의신보 기사 목록 파싱 (여러 선택자 시도)
     const selectors = [
       '.list-titles a',
-      '.list-block a[href*="articleView"]',
-      '.article-list a[href*="articleView"]',
-      'a[href*="/news/articleView.html"]'
+      '.list-block a[href*="article.html"]',
+      '.article-list a[href*="article.html"]',
+      'a[href*="/news/article.html?no="]'
     ]
 
     for (const selector of selectors) {
