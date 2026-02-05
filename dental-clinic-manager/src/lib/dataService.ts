@@ -1,7 +1,7 @@
 import { createClient } from './supabase/client'
 import { ensureConnection } from './supabase/connectionCheck'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftCategory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData, CashRegisterRowData } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftCategory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData, CashRegisterRowData, ProtocolPermission, ProtocolPermissionFormData } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
@@ -3860,6 +3860,378 @@ export const dataService = {
     } catch (error: unknown) {
       console.error('[importVendorContacts] Error:', error)
       return { success: result.success, failed: contacts.length - result.success, errors: [extractErrorMessage(error)] }
+    }
+  },
+
+  // ==========================================
+  // 프로토콜 권한 관리 (Protocol Permissions)
+  // ==========================================
+
+  /**
+   * 특정 프로토콜의 권한 목록 조회
+   */
+  async getProtocolPermissions(protocolId: string): Promise<{ data: ProtocolPermission[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      // 권한 목록 조회
+      const { data: permissions, error: permError } = await supabase
+        .from('protocol_permissions')
+        .select('*')
+        .eq('protocol_id', protocolId)
+        .order('created_at', { ascending: false })
+
+      if (permError) {
+        console.error('[getProtocolPermissions] Error:', permError)
+        return { data: null, error: permError.message }
+      }
+
+      if (!permissions || permissions.length === 0) {
+        return { data: [], error: null }
+      }
+
+      // 사용자 ID 목록 추출
+      const userIds = [...new Set([
+        ...permissions.map((p: { user_id: string }) => p.user_id),
+        ...permissions.map((p: { granted_by: string }) => p.granted_by)
+      ])]
+
+      // 사용자 정보 조회
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('id, name, email, role')
+        .in('id', userIds)
+
+      if (userError) {
+        console.error('[getProtocolPermissions] User fetch error:', userError)
+        // 사용자 정보 없이 권한만 반환
+        return { data: permissions as ProtocolPermission[], error: null }
+      }
+
+      // 사용자 정보를 Map으로 변환
+      const userMap = new Map<string, { id: string; name: string; email: string; role: string }>()
+      users?.forEach((u: { id: string; name: string; email: string; role: string }) => {
+        userMap.set(u.id, u)
+      })
+
+      // 권한에 사용자 정보 추가
+      const permissionsWithUsers = permissions.map((p: ProtocolPermission) => ({
+        ...p,
+        user: userMap.get(p.user_id),
+        granted_by_user: userMap.get(p.granted_by) ? { id: userMap.get(p.granted_by)!.id, name: userMap.get(p.granted_by)!.name } : undefined
+      }))
+
+      return { data: permissionsWithUsers as ProtocolPermission[], error: null }
+    } catch (error: unknown) {
+      console.error('[getProtocolPermissions] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 특정 사용자의 특정 프로토콜에 대한 권한 조회
+   */
+  async getUserProtocolPermission(protocolId: string, userId: string): Promise<{ data: ProtocolPermission | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .select('*')
+        .eq('protocol_id', protocolId)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (error) {
+        console.error('[getUserProtocolPermission] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as ProtocolPermission | null, error: null }
+    } catch (error: unknown) {
+      console.error('[getUserProtocolPermission] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 프로토콜 권한 설정 (생성 또는 업데이트)
+   */
+  async setProtocolPermission(
+    protocolId: string,
+    permission: ProtocolPermissionFormData,
+    grantedBy: string
+  ): Promise<{ data: ProtocolPermission | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      // upsert 사용 (protocol_id + user_id 유니크 제약조건 활용)
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .upsert({
+          protocol_id: protocolId,
+          user_id: permission.user_id,
+          can_view: permission.can_view,
+          can_edit: permission.can_edit,
+          can_create: permission.can_create,
+          can_delete: permission.can_delete,
+          granted_by: grantedBy
+        }, {
+          onConflict: 'protocol_id,user_id'
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[setProtocolPermission] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as ProtocolPermission, error: null }
+    } catch (error: unknown) {
+      console.error('[setProtocolPermission] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 프로토콜 권한 삭제
+   */
+  async deleteProtocolPermission(protocolId: string, userId: string): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('protocol_permissions')
+        .delete()
+        .eq('protocol_id', protocolId)
+        .eq('user_id', userId)
+
+      if (error) {
+        console.error('[deleteProtocolPermission] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[deleteProtocolPermission] Exception:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 프로토콜 권한 일괄 설정
+   */
+  async setProtocolPermissionsBatch(
+    protocolId: string,
+    permissions: ProtocolPermissionFormData[],
+    grantedBy: string
+  ): Promise<{ data: ProtocolPermission[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const permissionsToUpsert = permissions.map(p => ({
+        protocol_id: protocolId,
+        user_id: p.user_id,
+        can_view: p.can_view,
+        can_edit: p.can_edit,
+        can_create: p.can_create,
+        can_delete: p.can_delete,
+        granted_by: grantedBy
+      }))
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .upsert(permissionsToUpsert, {
+          onConflict: 'protocol_id,user_id'
+        })
+        .select()
+
+      if (error) {
+        console.error('[setProtocolPermissionsBatch] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data as ProtocolPermission[], error: null }
+    } catch (error: unknown) {
+      console.error('[setProtocolPermissionsBatch] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 프로토콜의 모든 권한 삭제
+   */
+  async deleteAllProtocolPermissions(protocolId: string): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { error } = await supabase
+        .from('protocol_permissions')
+        .delete()
+        .eq('protocol_id', protocolId)
+
+      if (error) {
+        console.error('[deleteAllProtocolPermissions] Error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error: unknown) {
+      console.error('[deleteAllProtocolPermissions] Exception:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 사용자가 접근 가능한 프로토콜 ID 목록 조회
+   */
+  async getUserAccessibleProtocolIds(userId: string): Promise<{ data: string[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .select('protocol_id')
+        .eq('user_id', userId)
+        .eq('can_view', true)
+
+      if (error) {
+        console.error('[getUserAccessibleProtocolIds] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      const protocolIds = data?.map((p: { protocol_id: string }) => p.protocol_id) || []
+      return { data: protocolIds, error: null }
+    } catch (error: unknown) {
+      console.error('[getUserAccessibleProtocolIds] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 사용자가 수정 가능한 프로토콜 ID 목록 조회
+   */
+  async getUserEditableProtocolIds(userId: string): Promise<{ data: string[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .select('protocol_id')
+        .eq('user_id', userId)
+        .eq('can_edit', true)
+
+      if (error) {
+        console.error('[getUserEditableProtocolIds] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      const protocolIds = data?.map((p: { protocol_id: string }) => p.protocol_id) || []
+      return { data: protocolIds, error: null }
+    } catch (error: unknown) {
+      console.error('[getUserEditableProtocolIds] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 사용자가 삭제 가능한 프로토콜 ID 목록 조회
+   */
+  async getUserDeletableProtocolIds(userId: string): Promise<{ data: string[] | null, error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      const { data, error } = await supabase
+        .from('protocol_permissions')
+        .select('protocol_id')
+        .eq('user_id', userId)
+        .eq('can_delete', true)
+
+      if (error) {
+        console.error('[getUserDeletableProtocolIds] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      const protocolIds = data?.map((p: { protocol_id: string }) => p.protocol_id) || []
+      return { data: protocolIds, error: null }
+    } catch (error: unknown) {
+      console.error('[getUserDeletableProtocolIds] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 클리닉의 직원 목록 조회 (권한 부여 대상)
+   * 대표원장(owner)을 제외한 모든 직원을 반환
+   */
+  async getClinicStaffForPermission(clinicId: string): Promise<{ data: Array<{ id: string, name: string, email: string, role: string }> | null, error: string | null }> {
+    try {
+      console.log('[getClinicStaffForPermission] Called with clinicId:', clinicId)
+
+      if (!clinicId) {
+        console.error('[getClinicStaffForPermission] clinicId is empty or undefined')
+        return { data: [], error: 'clinicId가 없습니다.' }
+      }
+
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      // 대표원장(owner)을 제외한 모든 직원 조회 (status 필터 제거)
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, role, status')
+        .eq('clinic_id', clinicId)
+        .neq('role', 'owner')  // 대표원장 제외 (대표원장은 자동으로 모든 권한 보유)
+        .order('name', { ascending: true })
+
+      console.log('[getClinicStaffForPermission] Query result - data:', data, 'error:', error)
+
+      if (error) {
+        console.error('[getClinicStaffForPermission] Error:', error)
+        return { data: null, error: error.message }
+      }
+
+      // 승인된 직원만 필터링 (approved 또는 active)
+      const filteredData = (data || []).filter((user: { id: string; name: string; email: string; role: string; status: string | null }) =>
+        user.status === 'approved' || user.status === 'active' || !user.status
+      )
+
+      console.log('[getClinicStaffForPermission] Total staff:', data?.length || 0, 'Filtered:', filteredData.length)
+
+      return { data: filteredData, error: null }
+    } catch (error: unknown) {
+      console.error('[getClinicStaffForPermission] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
     }
   }
 }

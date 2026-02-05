@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { PayrollFormState, SalaryType } from '@/types/payroll'
 import { DEFAULT_PAYROLL_FORM_STATE } from '@/types/payroll'
@@ -42,6 +42,8 @@ interface SalarySetting {
   deductLateMinutes: boolean
   deductEarlyLeaveMinutes: boolean
   includeOvertimePay: boolean
+  // 적용 범위 옵션
+  applyToPast: boolean
 }
 
 export default function PayrollSettings() {
@@ -59,6 +61,16 @@ export default function PayrollSettings() {
   const [deductLateMinutes, setDeductLateMinutes] = useState(true)
   const [deductEarlyLeaveMinutes, setDeductEarlyLeaveMinutes] = useState(true)
   const [includeOvertimePay, setIncludeOvertimePay] = useState(true)
+
+  // 적용 범위 선택 상태
+  const [applyToPast, setApplyToPast] = useState(false)
+  const applyToPastRef = useRef(applyToPast)
+
+  // applyToPast ref 동기화 및 상태 변경 추적
+  useEffect(() => {
+    console.log('[PayrollSettings] applyToPast state changed to:', applyToPast)
+    applyToPastRef.current = applyToPast
+  }, [applyToPast])
 
   // 직원 목록 로드
   useEffect(() => {
@@ -109,7 +121,9 @@ export default function PayrollSettings() {
             // 근태 차감/수당 옵션 (기본값: true)
             deductLateMinutes: item.deduct_late_minutes !== false,
             deductEarlyLeaveMinutes: item.deduct_early_leave_minutes !== false,
-            includeOvertimePay: item.include_overtime_pay !== false
+            includeOvertimePay: item.include_overtime_pay !== false,
+            // 적용 범위 옵션 (기본값: false)
+            applyToPast: item.apply_to_past === true
           }
         })
         setSavedSettings(settings)
@@ -118,6 +132,11 @@ export default function PayrollSettings() {
       console.error('Error loading salary settings:', error)
     }
   }
+
+  // 직원 선택 시 메시지 초기화
+  useEffect(() => {
+    setSaveMessage(null)
+  }, [selectedEmployeeId])
 
   // 직원 선택 시 설정 로드
   useEffect(() => {
@@ -128,12 +147,17 @@ export default function PayrollSettings() {
       }
 
       setLoadingEmployee(true)
-      setSaveMessage(null)
 
       try {
         // 1. 저장된 설정이 있으면 사용
         if (savedSettings[selectedEmployeeId]) {
           const settings = savedSettings[selectedEmployeeId]
+          console.log('[PayrollSettings] Loading saved settings for employee:', selectedEmployeeId, {
+            deductLateMinutes: settings.deductLateMinutes,
+            deductEarlyLeaveMinutes: settings.deductEarlyLeaveMinutes,
+            includeOvertimePay: settings.includeOvertimePay,
+            applyToPast: settings.applyToPast
+          })
           setFormState(prev => ({
             ...prev,
             salaryType: settings.salaryType,
@@ -154,6 +178,8 @@ export default function PayrollSettings() {
           setDeductLateMinutes(settings.deductLateMinutes)
           setDeductEarlyLeaveMinutes(settings.deductEarlyLeaveMinutes)
           setIncludeOvertimePay(settings.includeOvertimePay)
+          // 적용 범위 옵션 설정
+          setApplyToPast(settings.applyToPast)
         } else {
           // 2. 계약서에서 정보 추출
           const employee = employees.find(e => e.id === selectedEmployeeId)
@@ -192,6 +218,7 @@ export default function PayrollSettings() {
           setDeductLateMinutes(true)
           setDeductEarlyLeaveMinutes(true)
           setIncludeOvertimePay(true)
+          setApplyToPast(false)
         }
       } catch (error) {
         console.error('Error loading employee settings:', error)
@@ -236,6 +263,16 @@ export default function PayrollSettings() {
 
   // 설정 저장
   const handleSave = async () => {
+    const currentApplyToPast = applyToPastRef.current
+
+    // Debug: 현재 근태 옵션 상태 확인
+    console.log('[PayrollSettings] Current attendance option states:', {
+      deductLateMinutes,
+      deductEarlyLeaveMinutes,
+      includeOvertimePay,
+      applyToPast: currentApplyToPast
+    })
+
     if (!selectedEmployeeId || !user?.clinic_id) {
       setSaveMessage({ type: 'error', text: '직원을 선택해주세요.' })
       return
@@ -245,39 +282,53 @@ export default function PayrollSettings() {
     setSaveMessage(null)
 
     try {
+      const requestBody = {
+        clinicId: user.clinic_id,
+        employeeId: selectedEmployeeId,
+        salaryType: formState.salaryType,
+        targetAmount: formState.targetAmount,
+        baseSalary: formState.baseSalary,
+        mealAllowance: formState.mealAllowance,
+        vehicleAllowance: formState.vehicleAllowance,
+        bonus: formState.bonus,
+        nationalPension: formState.nationalPension,
+        healthInsurance: formState.healthInsurance,
+        longTermCare: formState.longTermCare,
+        employmentInsurance: formState.employmentInsurance,
+        familyCount: formState.familyCount,
+        childCount: formState.childCount,
+        otherDeductions: formState.otherDeductions,
+        // 근태 차감/수당 옵션
+        deductLateMinutes,
+        deductEarlyLeaveMinutes,
+        includeOvertimePay,
+        // 적용 범위 옵션 - use ref for latest value
+        applyToPast: currentApplyToPast,
+        updatedBy: user.id
+      }
+
       const response = await fetch('/api/payroll/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          clinicId: user.clinic_id,
-          employeeId: selectedEmployeeId,
-          salaryType: formState.salaryType,
-          targetAmount: formState.targetAmount,
-          baseSalary: formState.baseSalary,
-          mealAllowance: formState.mealAllowance,
-          vehicleAllowance: formState.vehicleAllowance,
-          bonus: formState.bonus,
-          nationalPension: formState.nationalPension,
-          healthInsurance: formState.healthInsurance,
-          longTermCare: formState.longTermCare,
-          employmentInsurance: formState.employmentInsurance,
-          familyCount: formState.familyCount,
-          childCount: formState.childCount,
-          otherDeductions: formState.otherDeductions,
-          // 근태 차감/수당 옵션
-          deductLateMinutes,
-          deductEarlyLeaveMinutes,
-          includeOvertimePay,
-          updatedBy: user.id
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const result = await response.json()
 
       if (result.success) {
-        setSaveMessage({ type: 'success', text: '급여 설정이 저장되었습니다.' })
+        let message = '설정이 저장되었습니다.'
+        if (currentApplyToPast && result.updatedStatementsCount > 0) {
+          message = `설정이 저장되었습니다. ${result.updatedStatementsCount}개의 과거 급여명세서가 업데이트되었습니다.`
+        } else if (currentApplyToPast) {
+          message = '설정이 저장되었습니다. 업데이트할 과거 급여명세서가 없습니다.'
+        }
+        setSaveMessage({ type: 'success', text: message })
+        // 3초 후 성공 메시지 자동 숨기기
+        setTimeout(() => {
+          setSaveMessage(null)
+        }, 3000)
         // 저장된 설정 업데이트
         setSavedSettings(prev => ({
           ...prev,
@@ -299,7 +350,9 @@ export default function PayrollSettings() {
             // 근태 차감/수당 옵션
             deductLateMinutes,
             deductEarlyLeaveMinutes,
-            includeOvertimePay
+            includeOvertimePay,
+            // 적용 범위 옵션
+            applyToPast: currentApplyToPast
           }
         }))
       } else {
@@ -639,9 +692,6 @@ export default function PayrollSettings() {
               <AlertCircle className="w-4 h-4 mr-2" />
               근태 연동 설정
             </h4>
-            <p className="text-xs text-amber-700 mb-4">
-              근태 기록에 따른 급여 차감/수당 계산 옵션을 설정합니다. 설정을 변경하면 다음 급여명세서부터 적용됩니다.
-            </p>
             <div className="space-y-4">
               {/* 지각 차감 */}
               <label className="flex items-center justify-between">
@@ -651,7 +701,11 @@ export default function PayrollSettings() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setDeductLateMinutes(!deductLateMinutes)}
+                  onClick={() => {
+                    const newValue = !deductLateMinutes
+                    console.log('[PayrollSettings] Toggle deductLateMinutes:', deductLateMinutes, '->', newValue)
+                    setDeductLateMinutes(newValue)
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     deductLateMinutes ? 'bg-emerald-600' : 'bg-slate-300'
                   }`}
@@ -672,7 +726,11 @@ export default function PayrollSettings() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setDeductEarlyLeaveMinutes(!deductEarlyLeaveMinutes)}
+                  onClick={() => {
+                    const newValue = !deductEarlyLeaveMinutes
+                    console.log('[PayrollSettings] Toggle deductEarlyLeaveMinutes:', deductEarlyLeaveMinutes, '->', newValue)
+                    setDeductEarlyLeaveMinutes(newValue)
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     deductEarlyLeaveMinutes ? 'bg-emerald-600' : 'bg-slate-300'
                   }`}
@@ -708,19 +766,66 @@ export default function PayrollSettings() {
             </div>
           </div>
 
-          {/* 저장 메시지 */}
-          {saveMessage && (
-            <div className={`mt-4 p-3 rounded-md ${
-              saveMessage.type === 'success'
-                ? 'bg-green-50 border border-green-200 text-green-700'
-                : 'bg-red-50 border border-red-200 text-red-700'
-            }`}>
-              {saveMessage.text}
+          {/* 적용 범위 선택 */}
+          <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+            <h4 className="font-medium text-slate-800 mb-3">
+              적용 범위
+              <span className="ml-2 text-xs text-slate-400">(현재: {applyToPast ? '과거 포함' : '앞으로만'})</span>
+            </h4>
+            <div className="space-y-3">
+              <label className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors">
+                <input
+                  type="radio"
+                  name="applyScope"
+                  checked={!applyToPast}
+                  onChange={() => {
+                    console.log('[PayrollSettings] Radio: Setting applyToPast to false')
+                    setApplyToPast(false)
+                  }}
+                  className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-slate-700">앞으로의 급여명세서에만 적용</span>
+                  <p className="text-xs text-slate-500">다음 달부터 생성되는 급여명세서에 적용됩니다.</p>
+                </div>
+              </label>
+              <label className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors">
+                <input
+                  type="radio"
+                  name="applyScope"
+                  checked={applyToPast}
+                  onChange={() => {
+                    console.log('[PayrollSettings] Radio: Setting applyToPast to true')
+                    setApplyToPast(true)
+                  }}
+                  className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-slate-700">과거 급여명세서에도 적용</span>
+                  <p className="text-xs text-slate-500">이미 생성된 모든 급여명세서도 함께 수정됩니다.</p>
+                </div>
+              </label>
             </div>
-          )}
+          </div>
 
-          {/* 저장 버튼 */}
-          <div className="mt-6 flex justify-end">
+          {/* 저장 버튼 및 메시지 */}
+          <div className="mt-6 flex items-center justify-end gap-4">
+            {/* 저장 메시지 */}
+            {saveMessage && (
+              <div className={`flex items-center px-4 py-2 rounded-md text-sm font-medium animate-fade-in ${
+                saveMessage.type === 'success'
+                  ? 'bg-green-100 border border-green-300 text-green-700'
+                  : 'bg-red-100 border border-red-300 text-red-700'
+              }`}>
+                {saveMessage.type === 'success' ? (
+                  <Check className="w-4 h-4 mr-2" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                )}
+                {saveMessage.text}
+              </div>
+            )}
+
             <button
               type="button"
               onClick={handleSave}

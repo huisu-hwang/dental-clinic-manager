@@ -306,6 +306,50 @@ export interface ProtocolListItem {
   tags: string[];
 }
 
+// 프로토콜 개별 권한 타입
+export interface ProtocolPermission {
+  id: string;
+  protocol_id: string;
+  user_id: string;
+  can_view: boolean;
+  can_edit: boolean;
+  can_create: boolean;
+  can_delete: boolean;
+  granted_by: string;
+  created_at: string;
+  updated_at: string;
+  // 조인된 사용자 정보
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  granted_by_user?: {
+    id: string;
+    name: string;
+  };
+}
+
+// 프로토콜 권한 생성/수정 폼 데이터
+export interface ProtocolPermissionFormData {
+  user_id: string;
+  can_view: boolean;
+  can_edit: boolean;
+  can_create: boolean;
+  can_delete: boolean;
+}
+
+// 프로토콜 권한이 있는 사용자 목록 (UI 표시용)
+export interface ProtocolPermissionWithUser extends ProtocolPermission {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+}
+
 // ========================================
 // Clinic Hours Types
 // ========================================
@@ -323,3 +367,9 @@ export * from './vendor'
 // ========================================
 
 export * from './phone'
+
+// ========================================
+// Patient Recall Types
+// ========================================
+
+export * from './recall'

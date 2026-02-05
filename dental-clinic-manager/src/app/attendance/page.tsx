@@ -140,7 +140,7 @@ export default function AttendancePage() {
                     <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-bold text-white">출근 관리</h2>
+                    <h2 className="text-base sm:text-lg font-bold text-white">근태관리</h2>
                     <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Attendance Management</p>
                   </div>
                 </div>

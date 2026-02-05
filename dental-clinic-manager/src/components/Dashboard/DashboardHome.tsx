@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Flame
 } from 'lucide-react'
+import Link from 'next/link'
 
 // 날씨 아이콘 매핑
 const weatherIcons: Record<string, React.ReactNode> = {
@@ -601,6 +602,24 @@ export default function DashboardHome() {
                 </div>
               )}
             </div>
+
+            {/* AI 데이터 분석 바로가기 */}
+            <Link href="/dashboard/ai-analysis" className="block">
+              <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg p-4 text-white hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl group">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">AI 데이터 분석</h3>
+                      <p className="text-xs text-white/80 mt-0.5">자연어로 병원 데이터 분석</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 opacity-70 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </Link>
           </div>
         </div>
       </div>

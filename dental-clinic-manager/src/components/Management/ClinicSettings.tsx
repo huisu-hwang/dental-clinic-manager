@@ -11,6 +11,7 @@ import {
   BellIcon,
   PhoneIcon,
   CalendarDaysIcon,
+  QrCodeIcon,
 } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
 import type { UserProfile } from '@/contexts/AuthContext'
@@ -18,6 +19,9 @@ import ClinicHoursSettings from './ClinicHoursSettings'
 import NotificationSettings from './NotificationSettings'
 import PhoneDialSettingsInline from './PhoneDialSettingsInline'
 import HolidaySettings from './HolidaySettings'
+
+// QR 위치 검증 모드 타입
+type QRLocationVerificationMode = 'required' | 'optional'
 
 // Clinic 타입을 이 파일에 직접 정의
 interface Clinic {
@@ -34,6 +38,7 @@ interface Clinic {
   max_users: number;
   subscription_tier: string;
   subscription_expires_at?: string;
+  qr_location_verification_mode?: QRLocationVerificationMode;
   created_at: string;
   updated_at: string;
 }
@@ -43,7 +48,7 @@ interface ClinicSettingsProps {
 }
 
 export default function ClinicSettings({ currentUser }: ClinicSettingsProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'hours' | 'holidays' | 'notifications' | 'phone'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'hours' | 'holidays' | 'notifications' | 'phone' | 'attendance'>('info')
   const [clinic, setClinic] = useState<Clinic | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -64,6 +69,7 @@ export default function ClinicSettings({ currentUser }: ClinicSettingsProps) {
   isPublic: boolean;
   allowJoinRequests: boolean;
   maxUsers: number;
+  qrLocationVerificationMode: QRLocationVerificationMode;
 }
 
 const [formData, setFormData] = useState<ClinicFormData>({
@@ -76,7 +82,8 @@ const [formData, setFormData] = useState<ClinicFormData>({
     description: '',
     isPublic: false,
     allowJoinRequests: true,
-    maxUsers: 5
+    maxUsers: 5,
+    qrLocationVerificationMode: 'required'
   })
 
   useEffect(() => {
@@ -118,7 +125,8 @@ const [formData, setFormData] = useState<ClinicFormData>({
           description: (data as any).description || '',
           isPublic: (data as any).is_public || false,
           allowJoinRequests: (data as any).allow_join_requests !== false,
-          maxUsers: (data as any).max_users || 5
+          maxUsers: (data as any).max_users || 5,
+          qrLocationVerificationMode: (data as any).qr_location_verification_mode || 'required'
         })
       }
     } catch (err) {
@@ -166,6 +174,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
           is_public: formData.isPublic,
           allow_join_requests: formData.allowJoinRequests,
           max_users: formData.maxUsers,
+          qr_location_verification_mode: formData.qrLocationVerificationMode,
           updated_at: new Date().toISOString()
         })
         .eq('id', currentUser.clinic_id)
@@ -264,6 +273,17 @@ const [formData, setFormData] = useState<ClinicFormData>({
           >
             <PhoneIcon className="h-5 w-5" />
             전화 설정
+          </button>
+          <button
+            onClick={() => setActiveTab('attendance')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
+              activeTab === 'attendance'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <QrCodeIcon className="h-5 w-5" />
+            출퇴근 설정
           </button>
         </div>
       </div>
@@ -572,6 +592,118 @@ const [formData, setFormData] = useState<ClinicFormData>({
         <>
           {/* 전화 설정 탭 */}
           <PhoneDialSettingsInline />
+        </>
+      ) : activeTab === 'attendance' ? (
+        <>
+          {/* 출퇴근 설정 탭 */}
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">QR 코드 출퇴근 설정</h3>
+              <p className="text-sm text-slate-600 mb-6">
+                직원들이 QR 코드로 출퇴근 인증 시 위치 확인 여부를 설정합니다.
+              </p>
+
+              {/* 위치 검증 모드 선택 */}
+              <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                <h4 className="font-medium text-slate-800 mb-4">위치 검증 모드</h4>
+
+                <div className="space-y-4">
+                  <label className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200 cursor-pointer hover:border-blue-300 transition-colors">
+                    <input
+                      type="radio"
+                      name="qrLocationVerificationMode"
+                      value="required"
+                      checked={formData.qrLocationVerificationMode === 'required'}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        qrLocationVerificationMode: e.target.value as QRLocationVerificationMode
+                      }))}
+                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      disabled={saving || !isOwner}
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-slate-800">위치 확인 필수</div>
+                      <p className="text-sm text-slate-500 mt-1">
+                        직원이 근무지 근처(설정된 반경 내)에 있을 때만 QR 코드 출퇴근 인증이 가능합니다.
+                        위치 정보가 확인되지 않으면 인증이 거부됩니다.
+                      </p>
+                      <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        기본 설정
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200 cursor-pointer hover:border-blue-300 transition-colors">
+                    <input
+                      type="radio"
+                      name="qrLocationVerificationMode"
+                      value="optional"
+                      checked={formData.qrLocationVerificationMode === 'optional'}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        qrLocationVerificationMode: e.target.value as QRLocationVerificationMode
+                      }))}
+                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      disabled={saving || !isOwner}
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-slate-800">위치 확인 없이 인증</div>
+                      <p className="text-sm text-slate-500 mt-1">
+                        직원의 위치와 상관없이 QR 코드를 스캔하면 출퇴근 인증이 완료됩니다.
+                        재택근무, 외근 등 다양한 근무 형태에 유용합니다.
+                      </p>
+                      <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        위치 제한 없음
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                {!isOwner && (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                    <p className="text-sm text-amber-700">
+                      이 설정은 대표 원장님만 변경할 수 있습니다.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 안내 사항 */}
+              <div className="mt-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-800 mb-2">안내 사항</h4>
+                <ul className="space-y-1 text-sm text-blue-700">
+                  <li>• &apos;위치 확인 필수&apos; 모드에서는 지점별로 설정된 위치와 반경 내에서만 인증됩니다.</li>
+                  <li>• &apos;위치 확인 없이 인증&apos; 모드로 변경하면 모든 직원이 어디서든 QR 코드로 출퇴근 인증이 가능합니다.</li>
+                  <li>• 설정 변경은 즉시 적용되며, 기존 출퇴근 기록에는 영향을 주지 않습니다.</li>
+                </ul>
+              </div>
+
+              {/* 저장 버튼 */}
+              {isOwner && (
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={handleSubmit}
+                    disabled={saving}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-6 rounded-md transition-colors"
+                  >
+                    {saving ? '저장 중...' : '설정 저장'}
+                  </button>
+                </div>
+              )}
+
+              {/* 성공/에러 메시지 */}
+              {error && (
+                <div className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="mt-4 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
+                  {success}
+                </div>
+              )}
+            </div>
+          </div>
         </>
       ) : null}
       </div>

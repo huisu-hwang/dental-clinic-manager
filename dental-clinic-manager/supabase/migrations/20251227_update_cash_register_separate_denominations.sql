@@ -119,7 +119,10 @@ BEGIN
   DELETE FROM consult_logs WHERE clinic_id = p_clinic_id AND date = p_date::date;
   DELETE FROM gift_logs WHERE clinic_id = p_clinic_id AND date = p_date::date;
   DELETE FROM happy_call_logs WHERE clinic_id = p_clinic_id AND date = p_date::date;
-  DELETE FROM cash_register_logs WHERE clinic_id = p_clinic_id AND date = p_date::date;
+  -- cash_register_logs는 p_cash_register가 있을 때만 삭제 (기존 데이터 보존)
+  IF p_cash_register IS NOT NULL THEN
+    DELETE FROM cash_register_logs WHERE clinic_id = p_clinic_id AND date = p_date::date;
+  END IF;
 
   INSERT INTO daily_reports
   SELECT * FROM jsonb_populate_record(null::daily_reports, p_daily_report);

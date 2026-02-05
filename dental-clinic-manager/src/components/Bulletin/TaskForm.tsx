@@ -8,6 +8,7 @@ import { taskService } from '@/lib/bulletinService'
 import { ensureConnection } from '@/lib/supabase/connectionCheck'
 import type { Task, TaskPriority, CreateTaskDto } from '@/types/bulletin'
 import { TASK_PRIORITY_LABELS } from '@/types/bulletin'
+import EnhancedTiptapEditor from '@/components/Protocol/EnhancedTiptapEditor'
 
 interface TaskFormProps {
   task?: Task | null
@@ -205,12 +206,10 @@ export default function TaskForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             상세 내용
           </label>
-          <textarea
-            value={formData.description || ''}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          <EnhancedTiptapEditor
+            content={formData.description || ''}
+            onChange={(description) => setFormData({ ...formData, description })}
             placeholder="업무에 대한 상세 설명을 입력하세요"
-            rows={6}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </div>
 

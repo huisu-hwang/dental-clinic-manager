@@ -11,13 +11,15 @@ import {
   Eye,
   Pencil,
   Trash2,
-  Filter
+  Filter,
+  ShieldCheck
 } from 'lucide-react'
 import { dataService } from '@/lib/dataService'
 import { usePermissions } from '@/hooks/usePermissions'
 import ProtocolForm from '../Protocol/ProtocolForm'
 import ProtocolDetail from '../Protocol/ProtocolDetail'
 import ProtocolCategoryManager from '../Protocol/ProtocolCategoryManager'
+import ProtocolPermissionManager from '../Protocol/ProtocolPermissionManager'
 import type { UserProfile } from '@/contexts/AuthContext'
 import type { Protocol, ProtocolCategory, ProtocolFormData } from '@/types'
 
@@ -43,10 +45,62 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
+  const [showPermissionManager, setShowPermissionManager] = useState(false)
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null)
   const [editingProtocol, setEditingProtocol] = useState<Protocol | null>(null)
+  const [permissionProtocol, setPermissionProtocol] = useState<Protocol | null>(null)
+
+  // 개별 권한 상태
+  const [editableProtocolIds, setEditableProtocolIds] = useState<Set<string>>(new Set())
+  const [deletableProtocolIds, setDeletableProtocolIds] = useState<Set<string>>(new Set())
 
   const canEdit = hasPermission('protocol_create') || hasPermission('protocol_edit')
+  const isOwner = currentUser.role === 'owner'
+
+  // 사용자의 개별 프로토콜 권한 로드
+  const fetchUserPermissions = async () => {
+    if (isOwner || !currentUser.id) return // 대표원장은 모든 권한 보유
+
+    try {
+      const [editResult, deleteResult] = await Promise.all([
+        dataService.getUserEditableProtocolIds(currentUser.id),
+        dataService.getUserDeletableProtocolIds(currentUser.id)
+      ])
+
+      if (!editResult.error && editResult.data) {
+        setEditableProtocolIds(new Set(editResult.data))
+      }
+      if (!deleteResult.error && deleteResult.data) {
+        setDeletableProtocolIds(new Set(deleteResult.data))
+      }
+    } catch (err) {
+      console.error('[ProtocolManagement] Failed to fetch user permissions:', err)
+    }
+  }
+
+  // 특정 프로토콜에 대한 수정 권한 확인
+  const canEditProtocol = (protocol: Protocol): boolean => {
+    // 대표원장은 모든 프로토콜 수정 가능
+    if (isOwner) return true
+    // 전역 수정 권한이 있으면 수정 가능
+    if (canEdit) return true
+    // 본인이 작성한 프로토콜은 수정 가능
+    if (protocol.created_by === currentUser.id) return true
+    // 개별 수정 권한이 있으면 수정 가능
+    return editableProtocolIds.has(protocol.id)
+  }
+
+  // 특정 프로토콜에 대한 삭제 권한 확인
+  const canDeleteProtocol = (protocol: Protocol): boolean => {
+    // 대표원장은 모든 프로토콜 삭제 가능
+    if (isOwner) return true
+    // 전역 수정 권한이 있으면 삭제 가능 (기존 동작 유지)
+    if (canEdit) return true
+    // 본인이 작성한 프로토콜은 삭제 가능
+    if (protocol.created_by === currentUser.id) return true
+    // 개별 삭제 권한이 있으면 삭제 가능
+    return deletableProtocolIds.has(protocol.id)
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -57,7 +111,8 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
       try {
         await Promise.all([
           fetchProtocols(),
-          fetchCategories()
+          fetchCategories(),
+          fetchUserPermissions()
         ])
         if (isMounted) {
           setInitialLoadDone(true)
@@ -109,8 +164,22 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
         setError(result.error)
       } else {
-        setProtocols((result.data as Protocol[] | undefined) ?? [])
-        console.log('[ProtocolManagement] Protocols loaded:', (result.data as Protocol[] | undefined)?.length || 0)
+        let loadedProtocols = (result.data as Protocol[] | undefined) ?? []
+
+        // 대표원장이 아닌 경우 개별 권한이 있는 프로토콜만 필터링
+        if (!isOwner && currentUser.id) {
+          const permResult = await dataService.getUserAccessibleProtocolIds(currentUser.id)
+          if (!permResult.error && permResult.data) {
+            const accessibleIds = new Set(permResult.data)
+            // 프로토콜 생성자 본인의 프로토콜은 항상 접근 가능
+            loadedProtocols = loadedProtocols.filter(
+              p => p.created_by === currentUser.id || accessibleIds.has(p.id)
+            )
+          }
+        }
+
+        setProtocols(loadedProtocols)
+        console.log('[ProtocolManagement] Protocols loaded:', loadedProtocols.length)
       }
     } catch (err) {
       console.error('[ProtocolManagement] Exception:', err)
@@ -506,26 +575,41 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                         >
                           <Eye className="w-5 h-5" />
                         </button>
-                        {canEdit && (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleEditProtocol(protocol)
-                              }}
-                              className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                              title="수정"
-                            >
-                              <Pencil className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteProtocolDirect(protocol, e)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="삭제"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </>
+                        {isOwner && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setPermissionProtocol(protocol)
+                              setShowPermissionManager(true)
+                            }}
+                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="접근 권한 관리"
+                          >
+                            <ShieldCheck className="w-5 h-5" />
+                          </button>
+                        )}
+                        {/* 수정 권한이 있는 경우 수정 버튼 표시 */}
+                        {canEditProtocol(protocol) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditProtocol(protocol)
+                            }}
+                            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                            title="수정"
+                          >
+                            <Pencil className="w-5 h-5" />
+                          </button>
+                        )}
+                        {/* 삭제 권한이 있는 경우 삭제 버튼 표시 */}
+                        {canDeleteProtocol(protocol) && (
+                          <button
+                            onClick={(e) => handleDeleteProtocolDirect(protocol, e)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
                         )}
                       </div>
                     </div>
@@ -577,6 +661,23 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 }}
                 onEdit={handleEditProtocol}
                 onDelete={handleDeleteProtocol}
+              />
+            )}
+
+            {/* Permission Manager Modal */}
+            {showPermissionManager && permissionProtocol && (
+              <ProtocolPermissionManager
+                protocolId={permissionProtocol.id}
+                protocolTitle={permissionProtocol.title}
+                clinicId={currentUser.clinic_id || ''}
+                currentUserId={currentUser.id}
+                onClose={() => {
+                  setShowPermissionManager(false)
+                  setPermissionProtocol(null)
+                }}
+                onSave={() => {
+                  // 권한 저장 후 필요시 목록 갱신
+                }}
               />
             )}
           </div>

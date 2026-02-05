@@ -1096,6 +1096,15 @@ export function calculateAttendanceDeduction(
   // 기본 옵션 설정
   const deductLate = options?.deductLateMinutes !== false
   const deductEarlyLeave = options?.deductEarlyLeaveMinutes !== false
+
+  console.log('[calculateAttendanceDeduction] Options received:', {
+    options,
+    deductLate,
+    deductEarlyLeave,
+    lateMinutes: attendance.totalLateMinutes,
+    earlyLeaveMinutes: attendance.totalEarlyLeaveMinutes
+  })
+
   const details: DeductionDetail[] = []
   let totalDeduction = 0
 
@@ -1265,6 +1274,13 @@ export function calculateAttendanceDeduction(
   // 연차 사용은 차감 대상이 아님 (이미 presentDays에서 제외되어 있음)
   // =====================================================================
   // 유급휴가는 급여에서 차감하지 않음 (만근 처리)
+
+  console.log('[calculateAttendanceDeduction] Final result:', {
+    lateDeduction,
+    earlyLeaveDeduction,
+    absentDeduction,
+    totalDeduction
+  })
 
   return {
     scheduledWorkDays: attendance.totalWorkDays,

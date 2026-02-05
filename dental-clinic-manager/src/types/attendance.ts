@@ -114,6 +114,7 @@ export interface QRCodeValidationResult {
   clinic_id?: string;
   branch_id?: string;
   distance_meters?: number;
+  location_verification_skipped?: boolean; // 위치 검증이 건너뛰어졌는지 여부 (optional 모드일 때 true)
 }
 
 /**
@@ -376,6 +377,12 @@ export interface AttendanceEditRequest {
   status?: AttendanceStatus;
   notes?: string;
   edited_by: string;
+  // 가상 결근 기록 생성 시 필요한 필드
+  user_id?: string;
+  clinic_id?: string;
+  work_date?: string;
+  scheduled_start?: string | null;
+  scheduled_end?: string | null;
 }
 
 /**

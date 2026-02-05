@@ -68,9 +68,9 @@ export default function CheckInOut() {
           setLocationError(errorMessage) // 기존 locationError 상태도 유지
         },
         {
-          timeout: 10000, // 10초 타임아웃
-          enableHighAccuracy: false, // 빠른 응답 우선
-          maximumAge: 60000, // 1분간 캐시 사용
+          timeout: 15000, // 15초 타임아웃 (GPS 신호 획득 시간 확보)
+          enableHighAccuracy: true, // GPS 기반 고정밀 위치 사용
+          maximumAge: 0, // 캐시된 위치 사용 안 함 (정확한 현재 위치 필요)
         }
       )
     } else {
