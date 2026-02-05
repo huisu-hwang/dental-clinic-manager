@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { performAnalysisV2, parseDateRange } from '@/lib/aiAnalysisServiceV2';
-import type { AIAnalysisRequest, AIMessage } from '@/types/aiAnalysis';
+import type { AIAnalysisRequest, AIMessage, FileAttachment } from '@/types/aiAnalysis';
 
 export const maxDuration = 60; // 최대 60초 실행 허용 (Vercel Pro)
 
@@ -34,11 +34,12 @@ export async function POST(request: NextRequest) {
 
     // 요청 본문 파싱
     const body = await request.json();
-    const { message, conversationHistory, dateRange, clinicId } = body as {
+    const { message, conversationHistory, dateRange, clinicId, attachedFiles } = body as {
       message: string;
       conversationHistory?: AIMessage[];
       dateRange?: { startDate: string; endDate: string };
       clinicId: string;
+      attachedFiles?: FileAttachment[];
     };
 
     if (!message || message.trim() === '') {
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
       message,
       conversationHistory,
       dateRange: parsedDateRange,
+      attachedFiles,
     };
 
     const response = await performAnalysisV2(
