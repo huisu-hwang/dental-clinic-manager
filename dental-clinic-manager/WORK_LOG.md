@@ -4,6 +4,122 @@
 
 ---
 
+## 2025-11-21 [버그 수정] 일일 보고서 예약 성공 환자명 저장 안 되는 문제 해결
+
+**키워드:** #버그수정 #일일보고서 #데이터흐름 #타입정의 #근본원인해결
+
+### 📋 작업 내용
+- 일일 보고서의 "예약 성공 환자명" 필드가 저장되지 않는 문제 해결
+- dashboard/page.tsx의 handleSaveReport 타입에 recallBookingNames 추가
+- dataService.ts의 saveReport 함수에 recallBookingNames 파라미터 및 저장 로직 추가
+- 전체 데이터 흐름(Form → Handler → Service → DB) 복구
+
+### 🐛 문제
+
+**증상:**
+- 일일 보고서에서 "예약 성공 환자명" 입력 후 저장해도 데이터베이스에 저장되지 않음
+- 페이지 새로고침 시 입력한 내용이 사라짐
+
+**발견 경로:**
+- 사용자 보고: 예약 성공 환자명 입력이 저장되지 않음
+
+### 🔍 근본 원인 (5 Whys 분석)
+
+**1. Why?** 예약 성공 환자명이 저장되지 않는가?
+→ dataService.ts에서 dailyReport 객체에 recall_booking_names 필드가 없기 때문
+
+**2. Why?** recall_booking_names 필드를 추가하지 않았는가?
+→ dataService.saveReport 함수 파라미터에 recallBookingNames가 없기 때문
+
+**3. Why?** 파라미터에 recallBookingNames가 없는가?
+→ dashboard/page.tsx의 handleSaveReport 타입 정의에 recallBookingNames가 누락되었기 때문
+
+**4. Why?** 타입 정의에 누락되었는가?
+→ 20251111_add_recall_booking_names.sql 마이그레이션으로 컬럼을 추가했지만, 코드를 업데이트하지 않았기 때문
+
+**5. Why (근본 원인)?** 코드를 업데이트하지 않았는가?
+→ 데이터베이스 스키마 변경 시 전체 데이터 흐름(Form → Handler → Service → DB)을 체크하지 않았기 때문
+
+### ✅ 해결 방법
+
+**1. dashboard/page.tsx (src/app/dashboard/page.tsx:109)**
+```typescript
+// Before
+const handleSaveReport = async (data: {
+  recallCount: number
+  recallBookingCount: number
+  specialNotes: string
+}) => {
+
+// After
+const handleSaveReport = async (data: {
+  recallCount: number
+  recallBookingCount: number
+  recallBookingNames: string  // ✅ 추가
+  specialNotes: string
+}) => {
+```
+
+**2. dataService.ts (src/lib/dataService.ts:569, 582, 626)**
+```typescript
+// 파라미터 타입에 추가
+async saveReport(data: {
+  ...
+  recallBookingNames: string  // ✅ 추가
+  ...
+}) {
+
+// destructuring에 추가
+const {
+  ...
+  recallBookingNames,  // ✅ 추가
+  ...
+} = data
+
+// dailyReport 객체에 추가
+const dailyReport = {
+  ...
+  recall_booking_names: recallBookingNames.trim() || null,  // ✅ 추가
+  ...
+}
+```
+
+### 🧪 테스트 결과
+
+**빌드 테스트:**
+- ✅ npm run build 성공
+- ✅ TypeScript 컴파일 에러 없음
+- ⚠️ ESLint 경고는 기존과 동일 (무관)
+
+**코드 리뷰 체크리스트:**
+- ✅ 보안: SQL Injection 방어, XSS 방어, 민감 정보 노출 없음
+- ✅ 성능: 불필요한 리렌더링 없음, N+1 쿼리 없음
+- ✅ 가독성: 명확한 변수명, 일관된 코드 스타일
+- ✅ 테스트: 에지 케이스 처리 (.trim() || null)
+- ✅ 호환성: 하위 호환성 유지, 기존 API 영향 없음
+
+### 💡 배운 점
+
+**문제 패턴:**
+- 데이터베이스 스키마 변경 시 전체 데이터 흐름을 체크하지 않으면 누락 발생
+
+**재발 방지:**
+1. 스키마 변경 시 데이터 흐름 체크리스트 작성:
+   - [ ] DB 마이그레이션
+   - [ ] 타입 정의 (TypeScript interfaces)
+   - [ ] 컴포넌트 (Form)
+   - [ ] 핸들러 (page.tsx)
+   - [ ] 서비스 (dataService.ts)
+   - [ ] API (Server Actions)
+2. TypeScript strict mode로 컴파일 에러 활용
+3. 타입 정의를 먼저 업데이트하여 누락 감지
+
+**참고 자료:**
+- 마이그레이션 파일: `supabase/migrations/20251111_add_recall_booking_names.sql`
+- 관련 컴포넌트: `src/components/DailyInput/DailyInputForm.tsx:231`
+
+---
+
 ## 2025-11-20 [버그 수정] 승인 대기 페이지 깜빡임 근본 원인 해결
 
 **키워드:** #버그수정 #깜빡임 #Hydration #근본원인해결 #사용자경험

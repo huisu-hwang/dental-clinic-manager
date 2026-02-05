@@ -4,7 +4,9 @@ import type { Schema } from '@google/genai';
 import type {
   AIAnalysisRequest,
   AIAnalysisResponse,
+  FileAttachment,
 } from '@/types/aiAnalysis';
+import { buildFileContext } from '@/lib/fileParsingUtils';
 
 // 데이터베이스 스키마 정의 (AI가 이해할 수 있는 형태) - 실제 DB 마이그레이션과 일치
 const DATABASE_SCHEMA = {
@@ -825,7 +827,18 @@ ${tableList}
 ## 응답 형식
 - 한국어로 응답합니다.
 - 수치 데이터는 명확하게 표시합니다.
-- 분석 결과와 함께 의미있는 인사이트를 제공합니다.`;
+- 분석 결과와 함께 의미있는 인사이트를 제공합니다.
+
+## 첨부 파일 분석 기능
+사용자가 Excel, CSV, PDF, TXT 파일을 첨부하면 해당 파일의 내용이 [ATTACHED_FILE: 파일명] 형식으로 제공됩니다.
+- 테이블 데이터 (Excel, CSV): 컬럼명, 샘플 데이터(최대 10행), 전체 행 수가 제공됩니다.
+- 텍스트 데이터 (PDF, TXT): 텍스트 내용 미리보기(최대 5,000자)가 제공됩니다.
+
+### 첨부 파일 분석 시 주의사항
+- 첨부 파일 데이터와 Supabase의 기존 데이터를 함께 분석할 수 있습니다.
+- 예: "첨부한 환자 목록과 DB의 리콜 환자를 비교해줘" - 첨부 파일의 환자명/연락처와 recall_patients 테이블을 비교
+- 파일 데이터가 제공된 경우, 해당 데이터를 기반으로 요약, 통계 분석, 인사이트 도출을 수행할 수 있습니다.
+- 파일에 민감한 정보가 있을 수 있으므로 개인정보 보호에 주의하세요.`;
 }
 
 // 도구 호출 처리
@@ -884,6 +897,13 @@ export async function performAnalysisV2(
   if (request.dateRange) {
     userMessage += `\n\n(참고: 분석 기간 ${request.dateRange.startDate} ~ ${request.dateRange.endDate})`;
   }
+
+  // 첨부 파일 컨텍스트 추가
+  if (request.attachedFiles && request.attachedFiles.length > 0) {
+    const fileContext = buildFileContext(request.attachedFiles);
+    userMessage += `\n\n=== 첨부 파일 데이터 ===${fileContext}`;
+  }
+
   contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
   console.log(`[AI Analysis V2 Gemini] Starting analysis for clinic: ${clinicId}`);

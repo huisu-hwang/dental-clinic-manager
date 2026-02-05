@@ -2,6 +2,34 @@
 // AI Data Analysis Chat Types
 // ========================================
 
+// 파일 첨부 관련 타입
+export interface FileAttachment {
+  id: string;
+  name: string;
+  type: 'excel' | 'csv' | 'pdf' | 'text';
+  size: number;
+  parsedData: ParsedFileData;
+}
+
+export interface ParsedFileData {
+  // 테이블 데이터 (Excel, CSV)
+  tableData?: {
+    headers: string[];
+    rows: Record<string, unknown>[];
+    totalRows: number;
+    sampleRows: Record<string, unknown>[]; // 미리보기용 샘플 (최대 10행)
+  };
+  // 텍스트 데이터 (TXT, MD, PDF)
+  textData?: {
+    content: string;
+    preview: string; // 미리보기 (최대 5,000자)
+    totalLength: number;
+    pageCount?: number; // PDF용
+  };
+  // 파일 요약 정보
+  summary: string;
+}
+
 export interface AIMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -9,6 +37,7 @@ export interface AIMessage {
   timestamp: Date;
   isLoading?: boolean;
   error?: string;
+  attachments?: FileAttachment[];
 }
 
 export interface AIConversation {
@@ -28,6 +57,7 @@ export interface AIAnalysisRequest {
     startDate: string;
     endDate: string;
   };
+  attachedFiles?: FileAttachment[];
 }
 
 export interface AIAnalysisResponse {

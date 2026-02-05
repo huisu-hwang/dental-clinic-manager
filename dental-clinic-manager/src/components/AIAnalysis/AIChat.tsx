@@ -17,11 +17,17 @@ import {
   MoreVertical,
   Edit2,
   Check,
-  X
+  X,
+  Paperclip,
+  FileSpreadsheet,
+  FileText,
+  File,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
-import type { AIMessage } from '@/types/aiAnalysis';
+import type { AIMessage, FileAttachment } from '@/types/aiAnalysis';
+import { parseFile, formatFileSize, validateFile } from '@/lib/fileParsingUtils';
 
 interface AIChatProps {
   clinicId: string;
@@ -51,6 +57,12 @@ export default function AIChat({ clinicId }: AIChatProps) {
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [editingTitleValue, setEditingTitleValue] = useState('');
   const [showMenu, setShowMenu] = useState<string | null>(null);
+
+  // 파일 첨부 관련 상태
+  const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -197,6 +209,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
       role: 'user',
       content: inputValue.trim(),
       timestamp: new Date(),
+      attachments: attachedFiles.length > 0 ? [...attachedFiles] : undefined,
     };
 
     const updatedMessages = [...messages, userMessage];
@@ -228,6 +241,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
           message: userMessage.content,
           conversationHistory: messages,
           clinicId,
+          attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,
         }),
       });
 
@@ -250,6 +264,9 @@ export default function AIChat({ clinicId }: AIChatProps) {
       ];
 
       setMessages(finalMessages);
+
+      // 첨부 파일 초기화 (전송 완료 후)
+      setAttachedFiles([]);
 
       // 대화 자동 저장 (첫 메시지일 경우 제목 자동 생성)
       const autoTitle = messages.length === 0 ? userMessage.content.slice(0, 30) : undefined;
@@ -282,6 +299,71 @@ export default function AIChat({ clinicId }: AIChatProps) {
     setMessages([]);
     setCurrentConversationId(null);
     setError(null);
+    setAttachedFiles([]);
+    setFileError(null);
+  };
+
+  // 파일 첨부 핸들러
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 입력 초기화
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    setFileError(null);
+
+    // 유효성 검사
+    const validation = validateFile(file);
+    if (!validation.valid) {
+      setFileError(validation.error || '파일을 처리할 수 없습니다.');
+      return;
+    }
+
+    // 이미 첨부된 파일인지 확인
+    if (attachedFiles.some(f => f.name === file.name)) {
+      setFileError('이미 첨부된 파일입니다.');
+      return;
+    }
+
+    // 최대 3개 파일 제한
+    if (attachedFiles.length >= 3) {
+      setFileError('최대 3개의 파일까지 첨부할 수 있습니다.');
+      return;
+    }
+
+    try {
+      setIsParsingFile(true);
+      const parsedFile = await parseFile(file);
+      setAttachedFiles(prev => [...prev, parsedFile]);
+    } catch (err) {
+      setFileError(err instanceof Error ? err.message : '파일 파싱 중 오류가 발생했습니다.');
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
+  // 첨부 파일 제거
+  const handleRemoveFile = (fileId: string) => {
+    setAttachedFiles(prev => prev.filter(f => f.id !== fileId));
+    setFileError(null);
+  };
+
+  // 파일 아이콘 선택
+  const getFileIcon = (type: FileAttachment['type']) => {
+    switch (type) {
+      case 'excel':
+      case 'csv':
+        return <FileSpreadsheet className="w-4 h-4 text-green-600" />;
+      case 'pdf':
+        return <File className="w-4 h-4 text-red-600" />;
+      case 'text':
+        return <FileText className="w-4 h-4 text-blue-600" />;
+      default:
+        return <File className="w-4 h-4 text-gray-600" />;
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -558,14 +640,84 @@ export default function AIChat({ clinicId }: AIChatProps) {
 
         {/* 입력 영역 */}
         <div className="border-t border-gray-200 p-4 bg-gray-50">
+          {/* 첨부 파일 미리보기 */}
+          {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {attachedFiles.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+                >
+                  {getFileIcon(file.type)}
+                  <div className="flex flex-col">
+                    <span className="font-medium text-gray-900 truncate max-w-[150px]" title={file.name}>
+                      {file.name}
+                    </span>
+                    <span className="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFile(file.id)}
+                    className="ml-1 text-gray-400 hover:text-red-500 transition-colors"
+                    title="파일 제거"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 파일 에러 메시지 */}
+          {fileError && (
+            <div className="flex items-center gap-2 p-2 mb-3 bg-red-50 text-red-700 rounded-lg text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{fileError}</span>
+              <button
+                type="button"
+                onClick={() => setFileError(null)}
+                className="ml-auto text-red-500 hover:text-red-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="flex gap-3">
+            {/* 파일 첨부 버튼 */}
+            <div className="flex items-end">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv,.pdf,.txt,.md"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading || isParsingFile}
+                className="h-[44px] px-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                title="파일 첨부 (Excel, CSV, PDF, TXT)"
+              >
+                {isParsingFile ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Paperclip className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
+
             <div className="flex-1 relative">
               <textarea
                 ref={textareaRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="분석하고 싶은 내용을 입력하세요... (Shift+Enter로 줄바꿈)"
+                placeholder={attachedFiles.length > 0
+                  ? "첨부한 파일과 함께 분석할 내용을 입력하세요..."
+                  : "분석하고 싶은 내용을 입력하세요... (Shift+Enter로 줄바꿈)"}
                 className="w-full min-h-[44px] max-h-[150px] px-4 py-3 pr-12 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none transition-all text-sm"
                 rows={1}
                 disabled={isLoading}
@@ -585,6 +737,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
           </form>
           <p className="text-xs text-gray-400 mt-2 text-center">
             AI 분석 결과는 참고용이며, 실제 의사결정에는 추가적인 검토가 필요합니다.
+            {attachedFiles.length === 0 && ' | 클립 아이콘으로 Excel, CSV, PDF, TXT 파일 첨부 가능'}
           </p>
         </div>
       </div>
@@ -596,6 +749,22 @@ export default function AIChat({ clinicId }: AIChatProps) {
 function MessageBubble({ message }: { message: AIMessage }) {
   const isUser = message.role === 'user';
   const isError = !!message.error;
+  const hasAttachments = message.attachments && message.attachments.length > 0;
+
+  // 파일 아이콘 선택
+  const getFileIcon = (type: FileAttachment['type']) => {
+    switch (type) {
+      case 'excel':
+      case 'csv':
+        return <FileSpreadsheet className="w-3 h-3" />;
+      case 'pdf':
+        return <File className="w-3 h-3" />;
+      case 'text':
+        return <FileText className="w-3 h-3" />;
+      default:
+        return <File className="w-3 h-3" />;
+    }
+  };
 
   return (
     <div
@@ -621,26 +790,47 @@ function MessageBubble({ message }: { message: AIMessage }) {
       </div>
 
       {/* 메시지 내용 */}
-      <div
-        className={cn(
-          'max-w-[80%] rounded-2xl px-4 py-3',
-          isUser
-            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
-            : isError
-              ? 'bg-red-50 border border-red-200 text-red-700'
-              : 'bg-gray-100 text-gray-900'
-        )}
-      >
-        {message.isLoading ? (
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">분석 중...</span>
+      <div className={cn('max-w-[80%]', isUser ? 'text-right' : 'text-left')}>
+        {/* 첨부 파일 표시 (사용자 메시지) */}
+        {hasAttachments && (
+          <div className={cn(
+            'flex flex-wrap gap-1 mb-2',
+            isUser ? 'justify-end' : 'justify-start'
+          )}>
+            {message.attachments!.map((file) => (
+              <div
+                key={file.id}
+                className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                title={file.parsedData.summary}
+              >
+                {getFileIcon(file.type)}
+                <span className="truncate max-w-[100px]">{file.name}</span>
+              </div>
+            ))}
           </div>
-        ) : (
-          <div className="text-sm whitespace-pre-wrap leading-relaxed">
-            <MessageContent content={message.content} isUser={isUser} />
-          </div>
         )}
+
+        <div
+          className={cn(
+            'rounded-2xl px-4 py-3 inline-block',
+            isUser
+              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+              : isError
+                ? 'bg-red-50 border border-red-200 text-red-700'
+                : 'bg-gray-100 text-gray-900'
+          )}
+        >
+          {message.isLoading ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">분석 중...</span>
+            </div>
+          ) : (
+            <div className="text-sm whitespace-pre-wrap leading-relaxed text-left">
+              <MessageContent content={message.content} isUser={isUser} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

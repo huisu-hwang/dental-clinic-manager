@@ -12,10 +12,32 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type')
-  const next = searchParams.get('next') ?? '/'
+  const code = searchParams.get('code')
+  let next = searchParams.get('next') ?? '/'
 
-  console.log('[Auth Callback] Processing email verification', { token_hash, type })
+  // 비밀번호 재설정(recovery) 타입인 경우 강제로 비밀번호 변경 페이지로 이동
+  if (type === 'recovery') {
+    console.log('[Auth Callback] Recovery type detected, forcing next to /update-password')
+    next = '/update-password'
+  }
 
+  console.log('[Auth Callback] Processing auth callback', { hasTokenHash: !!token_hash, hasCode: !!code, type, next })
+
+  // 1. PKCE Code Flow 처리
+  if (code) {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (!error) {
+      console.log('[Auth Callback] Code exchange successful, redirecting to:', next)
+      return NextResponse.redirect(new URL(next, request.url))
+    }
+    
+    console.error('[Auth Callback] Code exchange failed:', error)
+    return NextResponse.redirect(new URL('/auth/auth-code-error', request.url))
+  }
+
+  // 2. Implicit/MagicLink Flow 처리 (token_hash)
   if (token_hash && type) {
     const supabase = await createClient()
 
