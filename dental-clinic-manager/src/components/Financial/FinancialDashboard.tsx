@@ -11,6 +11,7 @@ import {
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import RevenueForm from './RevenueForm'
 import ExpenseForm from './ExpenseForm'
+import CodefSyncPanel from './CodefSyncPanel'
 import {
   TrendingUp,
   TrendingDown,
@@ -271,6 +272,14 @@ export default function FinancialDashboard() {
               지출 추가
             </button>
           </div>
+
+          {/* CODEF 홈택스 연동 패널 */}
+          <CodefSyncPanel
+            clinicId={clinicId}
+            year={selectedYear}
+            month={selectedMonth}
+            onSyncComplete={loadData}
+          />
 
           {/* 지출 내역 테이블 */}
           <div className="bg-white rounded-xl shadow-sm border">
