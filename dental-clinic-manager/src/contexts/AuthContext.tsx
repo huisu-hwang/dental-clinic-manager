@@ -251,48 +251,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
 
               if (event === 'SIGNED_IN' && session?.user) {
+                // 주의: onAuthStateChange 콜백은 Supabase 내부 세션 잠금(lock)이
+                // 유지된 상태에서 실행됩니다. 콜백 내에서 Supabase DB 쿼리나
+                // getUserProfileById() 등을 직접 await하면, 해당 쿼리가 내부적으로
+                // getSession()을 호출하여 동일한 잠금을 재취득하려 하므로
+                // 데드락이 발생합니다.
+                // setTimeout(0)으로 다음 이벤트 루프에서 실행하여 잠금 해제 후
+                // 프로필을 안전하게 조회합니다.
                 if (!isLoggingOut) {
-                  const result = await dataService.getUserProfileById(session.user.id)
-                  if (result.success && result.data) {
-                    // 승인 대기/거절된 사용자 체크 (세션 유지)
-                    if (result.data.status === 'pending' || result.data.status === 'rejected') {
-                      console.warn('[AuthContext] SIGNED_IN event - User status:', result.data.status)
+                  const userId = session.user.id
+                  setTimeout(async () => {
+                    try {
+                      const result = await dataService.getUserProfileById(userId)
+                      if (result.success && result.data) {
+                        if (result.data.status === 'pending' || result.data.status === 'rejected') {
+                          console.warn('[AuthContext] SIGNED_IN event - User status:', result.data.status)
+                          setUser(result.data)
+                          if (window.location.pathname !== '/pending-approval') {
+                            router.push('/pending-approval')
+                          }
+                          return
+                        }
 
-                      // pending/rejected 사용자도 user state 설정 (페이지에서 사용자 정보 표시용)
-                      setUser(result.data)
+                        if (result.data.status === 'resigned') {
+                          console.warn('[AuthContext] SIGNED_IN event - User has resigned')
+                          setUser(result.data)
+                          if (window.location.pathname !== '/resigned') {
+                            router.push('/resigned')
+                          }
+                          return
+                        }
 
-                      // 세션 유지 (signOut 제거) - 사용자가 안내 페이지를 볼 수 있도록
-                      if (window.location.pathname !== '/pending-approval') {
-                        router.push('/pending-approval')
+                        if (result.data.clinic?.status === 'suspended') {
+                          alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
+                          await supabase.auth.signOut()
+                          window.location.href = '/'
+                          return
+                        }
+
+                        setUser(result.data)
+                        if (result.data.clinic_id) {
+                          dataService.setCachedClinicId(result.data.clinic_id)
+                        }
                       }
-                      return
+                    } catch (err) {
+                      console.warn('[AuthContext] Failed to load user profile on SIGNED_IN:', err)
                     }
-
-                    // 퇴사한 사용자 체크 (세션 유지, 다른 병원 가입 가능)
-                    if (result.data.status === 'resigned') {
-                      console.warn('[AuthContext] SIGNED_IN event - User has resigned')
-
-                      setUser(result.data)
-
-                      if (window.location.pathname !== '/resigned') {
-                        router.push('/resigned')
-                      }
-                      return
-                    }
-
-                    // 소속 병원이 중지된 경우 로그아웃
-                    if (result.data.clinic?.status === 'suspended') {
-                      alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
-                      await supabase.auth.signOut()
-                      window.location.href = '/'
-                      return
-                    }
-
-                    setUser(result.data)
-                    if (result.data.clinic_id) {
-                      dataService.setCachedClinicId(result.data.clinic_id)
-                    }
-                  }
+                  }, 0)
                 }
               } else if (event === 'SIGNED_OUT') {
                 setUser(null)
@@ -302,32 +307,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               } else if (event === 'TOKEN_REFRESHED') {
                 console.log('[AuthContext] Token refreshed successfully')
                 // 토큰 갱신 시 세션 유지 확인을 위해 프로필 다시 로드
-                // 주의: dataService.getUserProfileById()는 ensureConnection()을 호출하고,
-                // ensureConnection()은 getSession()을 호출합니다.
-                // 하지만 이 콜백은 _callRefreshToken → _notifyAllSubscribers → Promise.all 체인
-                // 내부에서 실행되므로, getSession()이 진행 중인 리프레시 완료를 기다리면서
-                // 리프레시는 이 콜백 완료를 기다리는 순환 참조(데드락)가 발생합니다.
-                // 따라서 supabase 클라이언트를 직접 사용하여 프로필을 조회합니다.
+                // setTimeout(0)으로 다음 이벤트 루프에서 실행하여
+                // Supabase 내부 세션 잠금 해제 후 안전하게 조회합니다.
                 if (session?.user) {
-                   console.log('[AuthContext] Refreshing user profile after token refresh...')
-                   try {
-                     const { data, error } = await supabase
-                       .from('users')
-                       .select(`
-                         *,
-                         clinics (*)
-                       `)
-                       .eq('id', session.user.id)
-                       .maybeSingle()
-
-                     if (!error && data) {
-                       const userProfile = { ...(data as any), clinic: (data as any).clinics }
-                       delete (userProfile as any).clinics
-                       setUser(userProfile)
-                     }
-                   } catch (err) {
-                     console.warn('[AuthContext] Failed to refresh user profile after token refresh:', err)
-                   }
+                  const userId = session.user.id
+                  setTimeout(async () => {
+                    try {
+                      console.log('[AuthContext] Refreshing user profile after token refresh...')
+                      const result = await dataService.getUserProfileById(userId)
+                      if (result.success && result.data) {
+                        setUser(result.data)
+                      }
+                    } catch (err) {
+                      console.warn('[AuthContext] Failed to refresh user profile after token refresh:', err)
+                    }
+                  }, 0)
                 }
               } else if (event === 'USER_UPDATED') {
                 console.log('[AuthContext] User updated')
