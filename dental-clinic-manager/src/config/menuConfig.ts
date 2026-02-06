@@ -191,6 +191,17 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     order: 14,
     visible: true,
   },
+  {
+    id: 'financial',
+    label: '경영 현황',
+    icon: 'BarChart3',
+    route: '/dashboard/financial',
+    permissions: [],
+    categoryId: 'operations',
+    order: 15,
+    visible: true,
+    ownerOnly: true,  // 대표 원장 전용
+  },
 
   // === 하단 고정 메뉴 ===
   {
@@ -199,7 +210,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     icon: 'HelpCircle',
     route: '/dashboard?tab=guide',
     permissions: ['guide_view'],
-    order: 15,
+    order: 16,
     visible: true,
   },
   {
@@ -208,7 +219,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     icon: 'SlidersHorizontal',
     route: '/dashboard?tab=menu-settings',
     permissions: [],
-    order: 16,
+    order: 17,
     visible: false,  // 기본적으로 숨김
   },
 ]
