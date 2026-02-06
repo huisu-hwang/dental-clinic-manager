@@ -302,11 +302,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               } else if (event === 'TOKEN_REFRESHED') {
                 console.log('[AuthContext] Token refreshed successfully')
                 // 토큰 갱신 시 세션 유지 확인을 위해 프로필 다시 로드
+                // 주의: dataService.getUserProfileById()는 ensureConnection()을 호출하고,
+                // ensureConnection()은 getSession()을 호출합니다.
+                // 하지만 이 콜백은 _callRefreshToken → _notifyAllSubscribers → Promise.all 체인
+                // 내부에서 실행되므로, getSession()이 진행 중인 리프레시 완료를 기다리면서
+                // 리프레시는 이 콜백 완료를 기다리는 순환 참조(데드락)가 발생합니다.
+                // 따라서 supabase 클라이언트를 직접 사용하여 프로필을 조회합니다.
                 if (session?.user) {
                    console.log('[AuthContext] Refreshing user profile after token refresh...')
-                   const result = await dataService.getUserProfileById(session.user.id)
-                   if (result.success && result.data) {
-                     setUser(result.data)
+                   try {
+                     const { data, error } = await supabase
+                       .from('users')
+                       .select(`
+                         *,
+                         clinics (*)
+                       `)
+                       .eq('id', session.user.id)
+                       .maybeSingle()
+
+                     if (!error && data) {
+                       const userProfile = { ...(data as any), clinic: (data as any).clinics }
+                       delete (userProfile as any).clinics
+                       setUser(userProfile)
+                     }
+                   } catch (err) {
+                     console.warn('[AuthContext] Failed to refresh user profile after token refresh:', err)
                    }
                 }
               } else if (event === 'USER_UPDATED') {
