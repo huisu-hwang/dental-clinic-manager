@@ -10,9 +10,9 @@ export enum CodefServiceType {
   SANDBOX = 2,    // 샌드박스
 }
 
-// 기관 코드 (홈택스)
+// 기관 코드
 export const CODEF_ORGANIZATION = {
-  HOMETAX: '0002',  // 국세청 홈택스
+  HOMETAX: '0004',  // 국세청 홈택스 (공공기관)
 } as const;
 
 // API 엔드포인트
