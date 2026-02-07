@@ -47,7 +47,7 @@ export interface CodefAccountCreateRequest {
   clientType: string;           // 클라이언트 타입 (P: 개인, B: 사업자)
   organization: string;         // 기관코드
   loginType: string;            // 로그인 타입 (0: 인증서, 1: ID/PW)
-  id: string;                   // 로그인 ID (홈택스 부서사용자 ID)
+  id: string;                   // 로그인 ID (홈택스 본인 계정 아이디)
   password: string;             // 로그인 비밀번호 (암호화 필요)
   identity?: string;            // 주민등록번호 앞 6자리 또는 사업자등록번호 (YYMMDD or 10자리)
   birthDate?: string;           // 생년월일 (YYYYMMDD)
@@ -188,7 +188,7 @@ export interface CodefConfig {
 // 홈택스 연동 설정
 export interface HometaxConnectionConfig {
   connectedId: string | null;   // CODEF 연결 ID
-  userId: string;               // 홈택스 부서사용자 ID
+  userId: string;               // 홈택스 본인 계정 아이디
   isConnected: boolean;
   lastSyncDate: string | null;
   syncStatus: 'idle' | 'syncing' | 'success' | 'error';

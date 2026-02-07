@@ -110,7 +110,7 @@ export default function CodefSyncPanel({
   // 홈택스 계정 연결
   const handleConnect = async () => {
     if (!hometaxId || !hometaxPassword) {
-      setFormError('홈택스 부서사용자 ID와 비밀번호를 입력해주세요.')
+      setFormError('홈택스 아이디와 비밀번호를 입력해주세요.')
       return
     }
 
@@ -281,7 +281,7 @@ export default function CodefSyncPanel({
                 <div>
                   <p className="font-medium text-gray-700">홈택스 미연결</p>
                   <p className="text-sm text-gray-500">
-                    홈택스 부서사용자 계정을 연결하면 자동으로 데이터를 가져올 수 있습니다.
+                    홈택스 계정을 연결하면 자동으로 데이터를 가져올 수 있습니다.
                   </p>
                 </div>
               </>
@@ -310,19 +310,19 @@ export default function CodefSyncPanel({
       {/* 연결 폼 */}
       {showConnectForm && !connection.isConnected && (
         <div className="border rounded-lg p-4 mb-4 bg-blue-50">
-          <h4 className="font-medium mb-3">홈택스 부서사용자 계정 연결</h4>
+          <h4 className="font-medium mb-3">홈택스 계정 연결</h4>
 
           <div className="space-y-3">
             <div>
               <label className="block text-sm text-gray-600 mb-1">
-                부서사용자 ID
+                홈택스 아이디
               </label>
               <input
                 type="text"
                 value={hometaxId}
                 onChange={e => setHometaxId(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="홈택스에서 발급받은 부서사용자 ID"
+                placeholder="홈택스 로그인 아이디"
               />
             </div>
 
@@ -335,7 +335,7 @@ export default function CodefSyncPanel({
                 value={hometaxPassword}
                 onChange={e => setHometaxPassword(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="부서사용자 비밀번호"
+                placeholder="홈택스 로그인 비밀번호"
               />
             </div>
 
@@ -394,7 +394,7 @@ export default function CodefSyncPanel({
           </div>
 
           <p className="mt-3 text-xs text-gray-500">
-            * 홈택스 &gt; My홈택스 &gt; 인증관리 &gt; 부서사용자 관리에서 조회전용 부서사용자를 발급받으세요.
+            * 홈택스(hometax.go.kr) 본인 계정의 아이디와 비밀번호를 입력해주세요.
           </p>
         </div>
       )}

@@ -85,8 +85,8 @@ async function getServiceTypeConstant(serviceType: number) {
 
 /**
  * CODEF 계정 등록 (Connected ID 발급)
- * @param userId 홈택스 부서사용자 ID
- * @param password 홈택스 부서사용자 비밀번호
+ * @param userId 홈택스 본인 계정 아이디
+ * @param password 홈택스 본인 계정 비밀번호
  * @param identity 대표자 주민등록번호 앞 6자리 (YYMMDD) 또는 사업자등록번호
  */
 export async function createCodefAccount(
@@ -107,7 +107,7 @@ export async function createCodefAccount(
     const accountInfo: Record<string, string> = {
       countryCode: 'KR',
       businessType: 'NT',  // 공공기관
-      clientType: 'B',     // 사업자
+      clientType: 'P',     // 개인 (원장 본인 계정)
       organization: CODEF_ORGANIZATION.HOMETAX,
       loginType: '1',      // ID/PW 로그인
       id: userId,
@@ -162,7 +162,7 @@ export async function addCodefAccount(
     const accountInfo: Record<string, string> = {
       countryCode: 'KR',
       businessType: 'NT',
-      clientType: 'B',
+      clientType: 'P',     // 개인 (원장 본인 계정)
       organization: CODEF_ORGANIZATION.HOMETAX,
       loginType: '1',
       id: userId,
@@ -212,7 +212,7 @@ export async function deleteCodefAccount(
         {
           countryCode: 'KR',
           businessType: 'NT',
-          clientType: 'B',
+          clientType: 'P',     // 개인 (원장 본인 계정)
           organization: CODEF_ORGANIZATION.HOMETAX,
           loginType: '1',
         },
