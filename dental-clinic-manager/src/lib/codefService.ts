@@ -166,25 +166,34 @@ async function callCodefApi<T>(
 
 /**
  * CODEF 계정 등록 (Connected ID 발급)
+ * @param userId 홈택스 부서사용자 ID
+ * @param password 홈택스 부서사용자 비밀번호
+ * @param identity 대표자 주민등록번호 앞 6자리 (YYMMDD) 또는 사업자등록번호 (10자리)
  */
 export async function createCodefAccount(
   userId: string,
-  password: string
+  password: string,
+  identity?: string
 ): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
   const encryptedPassword = await encryptRSA(password);
 
+  const accountInfo: Record<string, string> = {
+    countryCode: 'KR',
+    businessType: 'NT',  // 공공기관
+    clientType: 'B',     // 사업자
+    organization: CODEF_ORGANIZATION.HOMETAX,
+    loginType: '1',      // ID/PW 로그인
+    id: userId,
+    password: encryptedPassword,
+  };
+
+  // identity 파라미터 추가 (홈택스 로그인 시 필요할 수 있음)
+  if (identity) {
+    accountInfo.identity = identity;
+  }
+
   const params = {
-    accountList: [
-      {
-        countryCode: 'KR',
-        businessType: 'NT',  // 공공기관
-        clientType: 'B',     // 사업자
-        organization: CODEF_ORGANIZATION.HOMETAX,
-        loginType: '1',      // ID/PW 로그인
-        id: userId,
-        password: encryptedPassword,
-      },
-    ],
+    accountList: [accountInfo],
   };
 
   return callCodefApi(CODEF_ENDPOINTS.ACCOUNT_CREATE, params);
@@ -196,23 +205,28 @@ export async function createCodefAccount(
 export async function addCodefAccount(
   connectedId: string,
   userId: string,
-  password: string
+  password: string,
+  identity?: string
 ): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
   const encryptedPassword = await encryptRSA(password);
 
+  const accountInfo: Record<string, string> = {
+    countryCode: 'KR',
+    businessType: 'NT',
+    clientType: 'B',
+    organization: CODEF_ORGANIZATION.HOMETAX,
+    loginType: '1',
+    id: userId,
+    password: encryptedPassword,
+  };
+
+  if (identity) {
+    accountInfo.identity = identity;
+  }
+
   const params = {
     connectedId,
-    accountList: [
-      {
-        countryCode: 'KR',
-        businessType: 'NT',
-        clientType: 'B',
-        organization: CODEF_ORGANIZATION.HOMETAX,
-        loginType: '1',
-        id: userId,
-        password: encryptedPassword,
-      },
-    ],
+    accountList: [accountInfo],
   };
 
   return callCodefApi(CODEF_ENDPOINTS.ACCOUNT_ADD, params);

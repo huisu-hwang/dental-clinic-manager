@@ -49,6 +49,8 @@ export interface CodefAccountCreateRequest {
   loginType: string;            // 로그인 타입 (0: 인증서, 1: ID/PW)
   id: string;                   // 로그인 ID (홈택스 부서사용자 ID)
   password: string;             // 로그인 비밀번호 (암호화 필요)
+  identity?: string;            // 주민등록번호 앞 6자리 또는 사업자등록번호 (YYMMDD or 10자리)
+  birthDate?: string;           // 생년월일 (YYYYMMDD)
 }
 
 // CODEF 계정 등록 응답

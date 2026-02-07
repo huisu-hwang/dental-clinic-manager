@@ -64,6 +64,7 @@ export default function CodefSyncPanel({
   // 연결 폼 상태
   const [hometaxId, setHometaxId] = useState('')
   const [hometaxPassword, setHometaxPassword] = useState('')
+  const [identity, setIdentity] = useState('')  // 대표자 생년월일 또는 사업자등록번호
   const [formError, setFormError] = useState('')
 
   // 연결 상태 확인
@@ -113,6 +114,11 @@ export default function CodefSyncPanel({
       return
     }
 
+    if (!identity) {
+      setFormError('대표자 생년월일 또는 사업자등록번호를 입력해주세요.')
+      return
+    }
+
     setConnecting(true)
     setFormError('')
 
@@ -124,6 +130,7 @@ export default function CodefSyncPanel({
           clinicId,
           userId: hometaxId,
           password: hometaxPassword,
+          identity: identity.replace(/[^0-9]/g, ''),  // 숫자만 추출
         }),
       })
 
@@ -139,6 +146,7 @@ export default function CodefSyncPanel({
         setShowConnectForm(false)
         setHometaxId('')
         setHometaxPassword('')
+        setIdentity('')
       } else {
         setFormError(result.error || '연결에 실패했습니다.')
       }
@@ -331,6 +339,22 @@ export default function CodefSyncPanel({
               />
             </div>
 
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                대표자 생년월일 또는 사업자등록번호
+              </label>
+              <input
+                type="text"
+                value={identity}
+                onChange={e => setIdentity(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="예: 800101 또는 123-45-67890"
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                홈택스 로그인 시 입력하는 대표자 생년월일 6자리 또는 사업자등록번호
+              </p>
+            </div>
+
             {formError && (
               <div className="flex items-center gap-2 text-red-600 text-sm">
                 <AlertCircle className="w-4 h-4" />
@@ -360,6 +384,7 @@ export default function CodefSyncPanel({
                 onClick={() => {
                   setShowConnectForm(false)
                   setFormError('')
+                  setIdentity('')
                 }}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
               >

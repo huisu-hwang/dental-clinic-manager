@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { clinicId, userId, password } = body;
+    const { clinicId, userId, password, identity } = body;
 
     if (!clinicId || !userId || !password) {
       return NextResponse.json(
@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // CODEF 계정 등록
-    const result = await createCodefAccount(userId, password);
+    // CODEF 계정 등록 (identity: 대표자 생년월일 6자리 또는 사업자등록번호)
+    const result = await createCodefAccount(userId, password, identity);
 
     if (result.result.code !== 'CF-00000') {
       return NextResponse.json(
