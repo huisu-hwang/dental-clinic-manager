@@ -118,6 +118,16 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     visible: true,
   },
 
+  {
+    id: 'community',
+    label: '커뮤니티',
+    icon: 'MessageCircle',
+    route: '/community',
+    permissions: [],
+    order: 7.5,
+    visible: true,
+  },
+
   // === 문서 · 자료 카테고리 ===
   {
     id: 'protocols',

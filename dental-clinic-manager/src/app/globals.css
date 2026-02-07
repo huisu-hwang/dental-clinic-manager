@@ -601,6 +601,24 @@ body {
     border-radius: 0.25rem !important;
   }
 
+  /* Community content - hide on print */
+  .community-content {
+    display: none !important;
+  }
+
+  body::after {
+    content: '';
+  }
+
+  .community-print-block::after {
+    content: '이 콘텐츠는 인쇄할 수 없습니다.';
+    display: block;
+    text-align: center;
+    padding: 100px;
+    font-size: 24px;
+    visibility: visible;
+  }
+
   /* Legal notice section - make it more compact */
   .document-print-area .bg-slate-50 {
     padding: 0.2rem !important;
