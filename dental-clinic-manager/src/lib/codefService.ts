@@ -24,20 +24,35 @@ let EasyCodefUtil: any = null;
 async function loadEasyCodef() {
   if (!EasyCodef) {
     const easycodef = await import('easycodef-node');
-    EasyCodef = easycodef.default || easycodef.EasyCodef;
-    EasyCodefConstant = easycodef.EasyCodefConstant;
-    EasyCodefUtil = easycodef.EasyCodefUtil;
+    EasyCodef = easycodef.EasyCodef || (easycodef.default && easycodef.default.EasyCodef);
+    EasyCodefConstant = easycodef.EasyCodefConstant || (easycodef.default && easycodef.default.EasyCodefConstant);
+    EasyCodefUtil = easycodef.EasyCodefUtil || (easycodef.default && easycodef.default.EasyCodefUtil);
   }
   return { EasyCodef, EasyCodefConstant, EasyCodefUtil };
 }
 
 // 환경변수에서 설정 로드
 const getCodefConfig = () => {
+  const serviceTypeEnv = (process.env.CODEF_SERVICE_TYPE || 'SANDBOX').toUpperCase();
+  let serviceType: number;
+  switch (serviceTypeEnv) {
+    case 'PRODUCT':
+    case '0':
+      serviceType = 0;
+      break;
+    case 'DEMO':
+    case '1':
+      serviceType = 1;
+      break;
+    default:
+      serviceType = 2; // SANDBOX
+  }
+
   return {
     clientId: process.env.CODEF_CLIENT_ID || '',
     clientSecret: process.env.CODEF_CLIENT_SECRET || '',
     publicKey: process.env.CODEF_PUBLIC_KEY || '',
-    serviceType: parseInt(process.env.CODEF_SERVICE_TYPE || '2', 10), // 0: 정식, 1: 데모, 2: 샌드박스
+    serviceType,
   };
 };
 
@@ -71,7 +86,7 @@ async function getServiceTypeConstant(serviceType: number) {
 
   switch (serviceType) {
     case 0:
-      return EasyCodefConstant.SERVICE_TYPE_PRODUCT;
+      return EasyCodefConstant.SERVICE_TYPE_API;
     case 1:
       return EasyCodefConstant.SERVICE_TYPE_DEMO;
     default:
@@ -87,12 +102,12 @@ async function getServiceTypeConstant(serviceType: number) {
  * CODEF 계정 등록 (Connected ID 발급)
  * @param userId 홈택스 본인 계정 아이디
  * @param password 홈택스 본인 계정 비밀번호
- * @param identity 대표자 주민등록번호 앞 6자리 (YYMMDD) 또는 사업자등록번호
+ * @param identity 대표자 주민등록번호 앞 6자리 (YYMMDD) 또는 사업자등록번호 (loginType '1'에서 필수)
  */
 export async function createCodefAccount(
   userId: string,
   password: string,
-  identity?: string
+  identity: string
 ): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
   try {
     const { codef, serviceType } = await createCodefInstance();
@@ -112,12 +127,8 @@ export async function createCodefAccount(
       loginType: '1',      // ID/PW 로그인
       id: userId,
       password: encryptedPassword,
+      identity: identity,  // 주민번호 앞6자리 또는 사업자등록번호 (필수)
     };
-
-    // identity 파라미터 추가 (필요한 경우)
-    if (identity) {
-      accountInfo.identity = identity;
-    }
 
     const param = {
       accountList: [accountInfo],
@@ -149,7 +160,7 @@ export async function addCodefAccount(
   connectedId: string,
   userId: string,
   password: string,
-  identity?: string
+  identity: string
 ): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
   try {
     const { codef, serviceType } = await createCodefInstance();
@@ -167,11 +178,8 @@ export async function addCodefAccount(
       loginType: '1',
       id: userId,
       password: encryptedPassword,
+      identity: identity,  // 주민번호 앞6자리 또는 사업자등록번호 (필수)
     };
-
-    if (identity) {
-      accountInfo.identity = identity;
-    }
 
     const param = {
       connectedId,

@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { clinicId, userId, password, identity } = body;
 
-    if (!clinicId || !userId || !password) {
+    if (!clinicId || !userId || !password || !identity) {
       return NextResponse.json(
-        { success: false, error: '필수 파라미터가 누락되었습니다.' },
+        { success: false, error: '필수 파라미터가 누락되었습니다. (clinicId, userId, password, identity)' },
         { status: 400 }
       );
     }
