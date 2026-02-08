@@ -14,7 +14,11 @@ import {
   FolderOpen,
   Trash2,
   Edit,
-  PhoneCall
+  PhoneCall,
+  UserX,
+  Heart,
+  ShieldOff,
+  Undo2
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
@@ -305,6 +309,41 @@ export default function RecallManagement() {
     }
   }
 
+  // 일괄 리콜 제외
+  const handleBulkExclude = async (reason: RecallExcludeReason) => {
+    if (selectedPatients.length === 0) {
+      showToast('환자를 선택해주세요.', 'warning')
+      return
+    }
+    const label = reason === 'family' ? '친인척/가족' : '비우호적'
+    const result = await recallService.patients.updateExcludeReasonBulk(selectedPatients, reason)
+    if (result.success) {
+      showToast(`${selectedPatients.length}명이 리콜 제외(${label})되었습니다.`, 'success')
+      setSelectedPatients([])
+      loadPatients()
+      loadStats()
+    } else {
+      showToast(result.error || '일괄 제외에 실패했습니다.', 'error')
+    }
+  }
+
+  // 일괄 리콜 복원
+  const handleBulkRestore = async () => {
+    if (selectedPatients.length === 0) {
+      showToast('환자를 선택해주세요.', 'warning')
+      return
+    }
+    const result = await recallService.patients.updateExcludeReasonBulk(selectedPatients, null)
+    if (result.success) {
+      showToast(`${selectedPatients.length}명이 리콜 대상으로 복원되었습니다.`, 'success')
+      setSelectedPatients([])
+      loadPatients()
+      loadStats()
+    } else {
+      showToast(result.error || '일괄 복원에 실패했습니다.', 'error')
+    }
+  }
+
   // 새로고침
   const handleRefresh = () => {
     loadPatients()
@@ -494,13 +533,53 @@ export default function RecallManagement() {
                 <span className="sm:hidden">추가</span>
               </button>
 
-              {selectedPatients.length > 0 && (
+              {selectedPatients.length > 0 && !filters.showExcluded && (
+                <>
+                  <button
+                    onClick={handleBulkSms}
+                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    문자 ({selectedPatients.length})
+                  </button>
+
+                  {/* 일괄 제외 드롭다운 */}
+                  <div className="relative group">
+                    <button
+                      className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors text-sm"
+                    >
+                      <UserX className="w-4 h-4" />
+                      제외 ({selectedPatients.length})
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                    <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-30 hidden group-hover:block">
+                      <button
+                        onClick={() => handleBulkExclude('family')}
+                        className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
+                      >
+                        <Heart className="w-4 h-4 text-amber-500" />
+                        친인척/가족
+                      </button>
+                      <button
+                        onClick={() => handleBulkExclude('unfavorable')}
+                        className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
+                      >
+                        <ShieldOff className="w-4 h-4 text-rose-500" />
+                        비우호적
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 제외 환자 목록에서: 일괄 복원 */}
+              {selectedPatients.length > 0 && filters.showExcluded && (
                 <button
-                  onClick={handleBulkSms}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                  onClick={handleBulkRestore}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
                 >
-                  <MessageSquare className="w-4 h-4" />
-                  문자 ({selectedPatients.length})
+                  <Undo2 className="w-4 h-4" />
+                  복원 ({selectedPatients.length})
                 </button>
               )}
 
