@@ -449,37 +449,58 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 />
               </div>
 
-              <div className="flex flex-wrap gap-3">
-                <div className="flex items-center space-x-2">
-                  <Filter className="w-4 h-4 text-slate-500" />
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">모든 상태</option>
-                    <option value="active">활성</option>
-                    <option value="draft">작성중</option>
-                    <option value="archived">보관됨</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Folder className="w-4 h-4 text-slate-500" />
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">모든 카테고리</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="flex items-center space-x-2">
+                <Filter className="w-4 h-4 text-slate-500" />
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">모든 상태</option>
+                  <option value="active">활성</option>
+                  <option value="draft">작성중</option>
+                  <option value="archived">보관됨</option>
+                </select>
               </div>
+
+              {/* 카테고리 버튼 필터 */}
+              {categories.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+                      selectedCategory === 'all'
+                        ? 'bg-slate-800 text-white border-slate-800'
+                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Folder className="w-3.5 h-3.5 mr-1.5" />
+                    전체
+                  </button>
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => setSelectedCategory(selectedCategory === category.id ? 'all' : category.id)}
+                      className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+                        selectedCategory === category.id
+                          ? 'text-white border-transparent'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                      style={
+                        selectedCategory === category.id
+                          ? { backgroundColor: category.color, borderColor: category.color }
+                          : { color: category.color }
+                      }
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full mr-1.5 flex-shrink-0"
+                        style={{ backgroundColor: selectedCategory === category.id ? 'rgba(255,255,255,0.7)' : category.color }}
+                      />
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {error && (
