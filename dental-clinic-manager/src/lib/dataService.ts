@@ -4233,5 +4233,114 @@ export const dataService = {
       console.error('[getClinicStaffForPermission] Exception:', error)
       return { data: null, error: extractErrorMessage(error) }
     }
+  },
+
+  /**
+   * 클리닉의 모든 프로토콜 권한을 일괄 조회 (권한 현황 대시보드용)
+   * 프로토콜 정보와 사용자 정보를 JOIN하여 반환
+   */
+  async getAllProtocolPermissions(clinicId: string): Promise<{
+    data: Array<{
+      id: string
+      protocol_id: string
+      user_id: string
+      can_view: boolean
+      can_edit: boolean
+      can_create: boolean
+      can_delete: boolean
+      granted_by: string
+      created_at: string
+      updated_at: string
+      user_name: string
+      user_email: string
+      user_role: string
+      protocol_title: string
+      protocol_status: string
+    }> | null
+    error: string | null
+  }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) {
+        return { data: null, error: '데이터베이스 연결에 실패했습니다.' }
+      }
+
+      // 1. 해당 클리닉의 모든 프로토콜 ID 조회
+      const { data: protocols, error: protocolError } = await supabase
+        .from('protocols')
+        .select('id, title, status')
+        .eq('clinic_id', clinicId)
+
+      if (protocolError) {
+        console.error('[getAllProtocolPermissions] Protocol fetch error:', protocolError)
+        return { data: null, error: protocolError.message }
+      }
+
+      if (!protocols || protocols.length === 0) {
+        return { data: [], error: null }
+      }
+
+      const protocolIds = protocols.map((p: { id: string }) => p.id)
+      const protocolMap = new Map(protocols.map((p: { id: string; title: string; status: string }) => [p.id, p]))
+
+      // 2. 해당 프로토콜들의 모든 권한 레코드를 한 번에 조회
+      const { data: permissions, error: permError } = await supabase
+        .from('protocol_permissions')
+        .select('*')
+        .in('protocol_id', protocolIds)
+
+      if (permError) {
+        console.error('[getAllProtocolPermissions] Permission fetch error:', permError)
+        return { data: null, error: permError.message }
+      }
+
+      if (!permissions || permissions.length === 0) {
+        return { data: [], error: null }
+      }
+
+      // 3. 사용자 ID 목록 추출 후 사용자 정보 조회
+      const userIds = [...new Set(permissions.map((p: { user_id: string }) => p.user_id))]
+
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('id, name, email, role')
+        .in('id', userIds)
+
+      if (userError) {
+        console.error('[getAllProtocolPermissions] User fetch error:', userError)
+        return { data: null, error: userError.message }
+      }
+
+      const userMap = new Map((users || []).map((u: { id: string; name: string; email: string; role: string }) => [u.id, u]))
+
+      // 4. 데이터 합치기
+      const result = permissions.map((perm: any) => {
+        const user = userMap.get(perm.user_id) as { id: string; name: string; email: string; role: string } | undefined
+        const protocol = protocolMap.get(perm.protocol_id) as { id: string; title: string; status: string } | undefined
+
+        return {
+          id: perm.id,
+          protocol_id: perm.protocol_id,
+          user_id: perm.user_id,
+          can_view: perm.can_view,
+          can_edit: perm.can_edit,
+          can_create: perm.can_create ?? false,
+          can_delete: perm.can_delete ?? false,
+          granted_by: perm.granted_by,
+          created_at: perm.created_at,
+          updated_at: perm.updated_at,
+          user_name: user?.name || '알 수 없음',
+          user_email: user?.email || '',
+          user_role: user?.role || '',
+          protocol_title: protocol?.title || '알 수 없음',
+          protocol_status: protocol?.status || ''
+        }
+      })
+
+      return { data: result, error: null }
+    } catch (error: unknown) {
+      console.error('[getAllProtocolPermissions] Exception:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
   }
 }

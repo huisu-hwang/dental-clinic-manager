@@ -18,11 +18,17 @@ import {
   PhoneOff,
   PhoneMissed,
   Ban,
-  History
+  History,
+  UserX,
+  Heart,
+  ShieldOff,
+  Undo2,
+  EyeOff
 } from 'lucide-react'
 import type {
   RecallPatient,
   PatientRecallStatus,
+  RecallExcludeReason,
   RecallPatientFilters
 } from '@/types/recall'
 import {
@@ -30,6 +36,8 @@ import {
   RECALL_STATUS_COLORS,
   MANUAL_STATUS_OPTIONS,
   GENDER_LABELS,
+  EXCLUDE_REASON_LABELS,
+  EXCLUDE_REASON_COLORS,
   calculateAge
 } from '@/types/recall'
 import { displayPhoneNumber } from '@/lib/phoneCallService'
@@ -43,6 +51,7 @@ interface PatientListProps {
   onSmsPatient: (patient: RecallPatient) => void
   onUpdateStatus: (patient: RecallPatient, newStatus?: PatientRecallStatus) => void
   onViewHistory: (patient: RecallPatient) => void
+  onExcludePatient: (patient: RecallPatient, reason: RecallExcludeReason | null) => void
   filters: RecallPatientFilters
   onFiltersChange: (filters: RecallPatientFilters) => void
   isLoading?: boolean
@@ -73,6 +82,7 @@ export default function PatientList({
   onSmsPatient,
   onUpdateStatus,
   onViewHistory,
+  onExcludePatient,
   filters,
   onFiltersChange,
   isLoading,
@@ -182,6 +192,23 @@ export default function PatientList({
             ))}
           </select>
 
+          {/* 제외 환자 보기 토글 */}
+          <button
+            onClick={() => onFiltersChange({
+              ...filters,
+              showExcluded: !filters.showExcluded
+            })}
+            className={`px-4 py-2 border rounded-lg flex items-center gap-2 text-sm transition-colors ${
+              filters.showExcluded
+                ? 'border-rose-400 bg-rose-50 text-rose-700'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+            title={filters.showExcluded ? '일반 환자 보기' : '제외 환자 보기'}
+          >
+            <EyeOff className="w-4 h-4" />
+            {filters.showExcluded ? '제외 환자' : '제외 목록'}
+          </button>
+
           {/* 필터 토글 */}
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -197,7 +224,7 @@ export default function PatientList({
 
         {/* 확장 필터 */}
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm text-gray-600 mb-1">등록일 (시작)</label>
               <input
@@ -216,9 +243,36 @@ export default function PatientList({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               />
             </div>
+            {filters.showExcluded && (
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">제외 사유</label>
+                <select
+                  value={filters.excludeReason || 'all'}
+                  onChange={(e) => onFiltersChange({ ...filters, excludeReason: e.target.value as RecallExcludeReason | 'all' })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="all">전체</option>
+                  <option value="family">지인</option>
+                  <option value="unfavorable">비우호적</option>
+                </select>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* 제외 환자 보기 모드 배너 */}
+      {filters.showExcluded && (
+        <div className="p-3 bg-rose-50 border-b border-rose-100 flex items-center gap-2">
+          <EyeOff className="w-4 h-4 text-rose-500" />
+          <span className="text-sm text-rose-700 font-medium">
+            리콜 제외 환자 목록을 보고 있습니다
+          </span>
+          <span className="text-xs text-rose-500">
+            (이 환자들은 리콜 통계 및 대상에서 제외됩니다)
+          </span>
+        </div>
+      )}
 
       {/* 선택 정보 및 액션 */}
       {selectedPatients.length > 0 && (
@@ -342,6 +396,12 @@ export default function PatientList({
                               {formatAgeGender(patient)}
                             </span>
                           )}
+                          {patient.exclude_reason && (
+                            <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-medium ${EXCLUDE_REASON_COLORS[patient.exclude_reason]}`}>
+                              {patient.exclude_reason === 'family' ? <Heart className="w-3 h-3" /> : <ShieldOff className="w-3 h-3" />}
+                              {EXCLUDE_REASON_LABELS[patient.exclude_reason]}
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-500">{displayPhoneNumber(patient.phone_number)}</p>
                         {patient.chart_number && (
@@ -444,27 +504,91 @@ export default function PatientList({
                   {/* 액션 */}
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={() => onCallPatient(patient)}
-                        title="전화 걸기"
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                      >
-                        <Phone className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => onSmsPatient(patient)}
-                        title="문자 보내기"
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <MessageSquare className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => onViewHistory(patient)}
-                        title="연락 이력"
-                        className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        <History className="w-5 h-5" />
-                      </button>
+                      {patient.exclude_reason ? (
+                        /* 제외 환자: 전화 + 문자 + 이력 + 복원 */
+                        <>
+                          <button
+                            onClick={() => onCallPatient(patient)}
+                            title="전화 걸기"
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          >
+                            <Phone className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => onSmsPatient(patient)}
+                            title="문자 보내기"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <MessageSquare className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => onViewHistory(patient)}
+                            title="연락 이력"
+                            className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                          >
+                            <History className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => onExcludePatient(patient, null)}
+                            title="리콜 대상으로 복원"
+                            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          >
+                            <Undo2 className="w-5 h-5" />
+                          </button>
+                        </>
+                      ) : (
+                        /* 일반 환자: 기존 액션 + 제외 버튼 */
+                        <>
+                          <button
+                            onClick={() => onCallPatient(patient)}
+                            title="전화 걸기"
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          >
+                            <Phone className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => onSmsPatient(patient)}
+                            title="문자 보내기"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <MessageSquare className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => onViewHistory(patient)}
+                            title="연락 이력"
+                            className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                          >
+                            <History className="w-5 h-5" />
+                          </button>
+                          {/* 제외 드롭다운 */}
+                          <div className="relative group">
+                            <button
+                              title="리콜 제외"
+                              className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            >
+                              <UserX className="w-5 h-5" />
+                            </button>
+                            <div className="absolute right-0 top-full pt-1 z-30 hidden group-hover:block">
+                              <div className="w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                                <button
+                                  onClick={() => onExcludePatient(patient, 'family')}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
+                                >
+                                  <Heart className="w-4 h-4 text-amber-500" />
+                                  지인
+                                </button>
+                                <button
+                                  onClick={() => onExcludePatient(patient, 'unfavorable')}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
+                                >
+                                  <ShieldOff className="w-4 h-4 text-rose-500" />
+                                  비우호적
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

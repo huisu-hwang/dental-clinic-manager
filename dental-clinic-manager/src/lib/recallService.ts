@@ -13,6 +13,7 @@ import type {
   AligoSettings,
   AligoSettingsFormData,
   PatientRecallStatus,
+  RecallExcludeReason,
   RecallPatientFilters,
   RecallStats,
   ContactType,
@@ -303,6 +304,17 @@ export const recallPatientService = {
       if (filters?.dateTo) {
         countQuery = countQuery.lte('created_at', filters.dateTo)
       }
+      // 제외 환자 필터링
+      if (filters?.showExcluded) {
+        // 제외된 환자만 보기
+        countQuery = countQuery.not('exclude_reason', 'is', null)
+        if (filters?.excludeReason && filters.excludeReason !== 'all') {
+          countQuery = countQuery.eq('exclude_reason', filters.excludeReason)
+        }
+      } else {
+        // 기본: 제외되지 않은 환자만 보기
+        countQuery = countQuery.is('exclude_reason', null)
+      }
 
       const { count, error: countError } = await countQuery
       if (countError) throw countError
@@ -333,6 +345,15 @@ export const recallPatientService = {
       }
       if (filters?.dateTo) {
         dataQuery = dataQuery.lte('created_at', filters.dateTo)
+      }
+      // 제외 환자 필터링
+      if (filters?.showExcluded) {
+        dataQuery = dataQuery.not('exclude_reason', 'is', null)
+        if (filters?.excludeReason && filters.excludeReason !== 'all') {
+          dataQuery = dataQuery.eq('exclude_reason', filters.excludeReason)
+        }
+      } else {
+        dataQuery = dataQuery.is('exclude_reason', null)
       }
 
       const { data, error } = await dataQuery
@@ -532,6 +553,60 @@ export const recallPatientService = {
     }
   },
 
+  // 환자 리콜 제외 설정/해제
+  async updateExcludeReason(
+    id: string,
+    excludeReason: RecallExcludeReason | null
+  ): Promise<{ success: boolean; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    try {
+      const { error } = await supabase
+        .from('recall_patients')
+        .update({ exclude_reason: excludeReason })
+        .eq('id', id)
+
+      if (error) throw error
+
+      // 캠페인 통계 업데이트
+      const { data: patient } = await supabase
+        .from('recall_patients')
+        .select('campaign_id')
+        .eq('id', id)
+        .single()
+
+      if (patient?.campaign_id) {
+        await recallCampaignService.updateCampaignStats(patient.campaign_id)
+      }
+
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 일괄 리콜 제외 설정
+  async updateExcludeReasonBulk(
+    ids: string[],
+    excludeReason: RecallExcludeReason | null
+  ): Promise<{ success: boolean; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    try {
+      const { error } = await supabase
+        .from('recall_patients')
+        .update({ exclude_reason: excludeReason })
+        .in('id', ids)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
   // 환자 삭제
   async deletePatient(id: string): Promise<{ success: boolean; error?: string }> {
     const supabase = await ensureConnection()
@@ -688,17 +763,19 @@ export const recallPatientService = {
         ? { clinic_id: clinicId, campaign_id: campaignId }
         : { clinic_id: clinicId }
 
-      // 전체 환자 수
+      // 전체 환자 수 (제외 환자 미포함)
       const { count: totalCount } = await supabase
         .from('recall_patients')
         .select('*', { count: 'exact', head: true })
         .match(baseFilter)
+        .is('exclude_reason', null)
 
       // 대기중
       const { count: pendingCount } = await supabase
         .from('recall_patients')
         .select('*', { count: 'exact', head: true })
         .match(baseFilter)
+        .is('exclude_reason', null)
         .eq('status', 'pending')
 
       // 문자발송
@@ -706,6 +783,7 @@ export const recallPatientService = {
         .from('recall_patients')
         .select('*', { count: 'exact', head: true })
         .match(baseFilter)
+        .is('exclude_reason', null)
         .eq('status', 'sms_sent')
 
       // 예약완료
@@ -713,6 +791,7 @@ export const recallPatientService = {
         .from('recall_patients')
         .select('*', { count: 'exact', head: true })
         .match(baseFilter)
+        .is('exclude_reason', null)
         .eq('status', 'appointment_made')
 
       // 부재중
@@ -720,6 +799,7 @@ export const recallPatientService = {
         .from('recall_patients')
         .select('*', { count: 'exact', head: true })
         .match(baseFilter)
+        .is('exclude_reason', null)
         .eq('status', 'no_answer')
 
       // 통화거부
@@ -727,6 +807,7 @@ export const recallPatientService = {
         .from('recall_patients')
         .select('*', { count: 'exact', head: true })
         .match(baseFilter)
+        .is('exclude_reason', null)
         .eq('status', 'call_rejected')
 
       // 내원거부
@@ -734,6 +815,7 @@ export const recallPatientService = {
         .from('recall_patients')
         .select('*', { count: 'exact', head: true })
         .match(baseFilter)
+        .is('exclude_reason', null)
         .eq('status', 'visit_refused')
 
       // 없는번호
@@ -741,6 +823,7 @@ export const recallPatientService = {
         .from('recall_patients')
         .select('*', { count: 'exact', head: true })
         .match(baseFilter)
+        .is('exclude_reason', null)
         .eq('status', 'invalid_number')
 
       const total = totalCount || 0

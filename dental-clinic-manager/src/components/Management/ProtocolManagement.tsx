@@ -20,6 +20,7 @@ import ProtocolForm from '../Protocol/ProtocolForm'
 import ProtocolDetail from '../Protocol/ProtocolDetail'
 import ProtocolCategoryManager from '../Protocol/ProtocolCategoryManager'
 import ProtocolPermissionManager from '../Protocol/ProtocolPermissionManager'
+import ProtocolPermissionOverview from '../Protocol/ProtocolPermissionOverview'
 import type { UserProfile } from '@/contexts/AuthContext'
 import type { Protocol, ProtocolCategory, ProtocolFormData } from '@/types'
 
@@ -30,7 +31,7 @@ interface ProtocolManagementProps {
 
 export default function ProtocolManagement({ currentUser, hideHeader = false }: ProtocolManagementProps) {
   const { hasPermission } = usePermissions()
-  const [activeSubTab, setActiveSubTab] = useState<'list' | 'categories'>('list')
+  const [activeSubTab, setActiveSubTab] = useState<'list' | 'categories' | 'permissions'>('list')
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [protocols, setProtocols] = useState<Protocol[]>([])
   const [categories, setCategories] = useState<ProtocolCategory[]>([])
@@ -369,9 +370,9 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
         </div>
       )}
 
-      {/* 서브 탭 네비게이션 - hideHeader가 true면 숨김, 스크롤 시 고정 */}
-      {!hideHeader && (
-        <div className="sticky top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
+      <div className={hideHeader ? '' : 'bg-white border-x border-b border-slate-200 rounded-b-xl p-6'}>
+        {/* 서브 탭 네비게이션 - 항상 콘텐츠 영역 내부에 표시 */}
+        <div className={`border-b border-slate-200 bg-slate-50 rounded-t-lg mb-6 px-2 pt-2 ${hideHeader ? '' : '-mx-6 -mt-6'}`}>
           <nav className="flex space-x-1 p-2" aria-label="Tabs">
             <button
               onClick={() => setActiveSubTab('list')}
@@ -395,11 +396,21 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
               <Folder className="w-4 h-4 mr-2" />
               카테고리 관리
             </button>
+            {isOwner && (
+              <button
+                onClick={() => setActiveSubTab('permissions')}
+                className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  activeSubTab === 'permissions'
+                    ? 'bg-white text-purple-700 shadow-sm border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                권한 현황
+              </button>
+            )}
           </nav>
         </div>
-      )}
-
-      <div className={hideHeader ? '' : 'bg-white border-x border-b border-slate-200 rounded-b-xl p-6'}>
         {/* Protocol List Tab */}
         {activeSubTab === 'list' && (
           <div className="space-y-6">
@@ -409,7 +420,10 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
                   <FileText className="w-4 h-4" />
                 </div>
-                <h3 className="text-base font-semibold text-slate-800">프로토콜 목록</h3>
+                <h3 className="text-base font-semibold text-slate-800">
+                  프로토콜 목록
+                  {!loading && <span className="text-sm font-normal text-slate-500 ml-1">({protocols.length})</span>}
+                </h3>
               </div>
               {canEdit && (
                 <button
@@ -435,37 +449,58 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 />
               </div>
 
-              <div className="flex flex-wrap gap-3">
-                <div className="flex items-center space-x-2">
-                  <Filter className="w-4 h-4 text-slate-500" />
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">모든 상태</option>
-                    <option value="active">활성</option>
-                    <option value="draft">작성중</option>
-                    <option value="archived">보관됨</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Folder className="w-4 h-4 text-slate-500" />
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">모든 카테고리</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="flex items-center space-x-2">
+                <Filter className="w-4 h-4 text-slate-500" />
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">모든 상태</option>
+                  <option value="active">활성</option>
+                  <option value="draft">작성중</option>
+                  <option value="archived">보관됨</option>
+                </select>
               </div>
+
+              {/* 카테고리 버튼 필터 */}
+              {categories.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+                      selectedCategory === 'all'
+                        ? 'bg-slate-800 text-white border-slate-800'
+                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Folder className="w-3.5 h-3.5 mr-1.5" />
+                    전체
+                  </button>
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => setSelectedCategory(selectedCategory === category.id ? 'all' : category.id)}
+                      className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+                        selectedCategory === category.id
+                          ? 'text-white border-transparent'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                      style={
+                        selectedCategory === category.id
+                          ? { backgroundColor: category.color, borderColor: category.color }
+                          : { color: category.color }
+                      }
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full mr-1.5 flex-shrink-0"
+                        style={{ backgroundColor: selectedCategory === category.id ? 'rgba(255,255,255,0.7)' : category.color }}
+                      />
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {error && (
@@ -489,10 +524,15 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
             ) : protocols.length === 0 ? (
               <div className="text-center py-12 bg-slate-50 rounded-lg">
                 <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-600 mb-2">
+                <p className="text-slate-600 mb-1">
                   {searchTerm || selectedStatus !== 'all' || selectedCategory !== 'all'
                     ? '검색 조건에 맞는 프로토콜이 없습니다.'
                     : '아직 작성된 프로토콜이 없습니다.'}
+                </p>
+                <p className="text-sm text-slate-400">
+                  {searchTerm || selectedStatus !== 'all' || selectedCategory !== 'all'
+                    ? '다른 검색 조건을 시도하거나 필터를 초기화해 보세요.'
+                    : '새 프로토콜을 작성하여 진료 절차를 체계적으로 관리하세요.'}
                 </p>
                 {canEdit && !searchTerm && selectedStatus === 'all' && selectedCategory === 'all' && (
                   <button
@@ -690,6 +730,14 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
               fetchCategories()
               fetchProtocols()
             }}
+          />
+        )}
+
+        {/* Permission Overview Tab (owner only) */}
+        {activeSubTab === 'permissions' && isOwner && (
+          <ProtocolPermissionOverview
+            clinicId={currentUser.clinic_id || ''}
+            currentUserId={currentUser.id}
           />
         )}
       </div>
