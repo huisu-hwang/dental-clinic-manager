@@ -299,7 +299,7 @@ export default function RecallManagement() {
     const result = await recallService.patients.updateExcludeReason(patient.id, reason)
     if (result.success) {
       if (reason) {
-        const label = reason === 'family' ? '친인척/가족' : '비우호적'
+        const label = reason === 'family' ? '지인' : '비우호적'
         showToast(`${patient.patient_name}님이 리콜 제외(${label})되었습니다.`, 'success')
       } else {
         showToast(`${patient.patient_name}님이 리콜 대상으로 복원되었습니다.`, 'success')
@@ -639,21 +639,23 @@ export default function RecallManagement() {
                         <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
                       </div>
                     ) : (
-                      <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-30 hidden group-hover:block">
-                        <button
-                          onClick={() => handleBulkExclude('family')}
-                          className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
-                        >
-                          <Heart className="w-4 h-4 text-amber-500" />
-                          친인척/가족
-                        </button>
-                        <button
-                          onClick={() => handleBulkExclude('unfavorable')}
-                          className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
-                        >
-                          <ShieldOff className="w-4 h-4 text-rose-500" />
-                          비우호적
-                        </button>
+                      <div className="absolute left-0 top-full pt-1 z-30 hidden group-hover:block">
+                        <div className="w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                          <button
+                            onClick={() => handleBulkExclude('family')}
+                            className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
+                          >
+                            <Heart className="w-4 h-4 text-amber-500" />
+                            지인
+                          </button>
+                          <button
+                            onClick={() => handleBulkExclude('unfavorable')}
+                            className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
+                          >
+                            <ShieldOff className="w-4 h-4 text-rose-500" />
+                            비우호적
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -751,7 +753,7 @@ export default function RecallManagement() {
                       onChange={(e) => setExcludeUploadReason(e.target.value as RecallExcludeReason)}
                       className="px-3 py-1.5 text-sm border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-amber-500"
                     >
-                      <option value="family">친인척/가족</option>
+                      <option value="family">지인</option>
                       <option value="unfavorable">비우호적</option>
                     </select>
                   </div>

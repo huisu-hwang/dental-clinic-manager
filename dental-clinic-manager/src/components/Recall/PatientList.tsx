@@ -252,7 +252,7 @@ export default function PatientList({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 >
                   <option value="all">전체</option>
-                  <option value="family">친인척/가족</option>
+                  <option value="family">지인</option>
                   <option value="unfavorable">비우호적</option>
                 </select>
               </div>
@@ -568,21 +568,23 @@ export default function PatientList({
                             >
                               <UserX className="w-5 h-5" />
                             </button>
-                            <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-30 hidden group-hover:block">
-                              <button
-                                onClick={() => onExcludePatient(patient, 'family')}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
-                              >
-                                <Heart className="w-4 h-4 text-amber-500" />
-                                친인척/가족
-                              </button>
-                              <button
-                                onClick={() => onExcludePatient(patient, 'unfavorable')}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
-                              >
-                                <ShieldOff className="w-4 h-4 text-rose-500" />
-                                비우호적
-                              </button>
+                            <div className="absolute right-0 top-full pt-1 z-30 hidden group-hover:block">
+                              <div className="w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                                <button
+                                  onClick={() => onExcludePatient(patient, 'family')}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
+                                >
+                                  <Heart className="w-4 h-4 text-amber-500" />
+                                  지인
+                                </button>
+                                <button
+                                  onClick={() => onExcludePatient(patient, 'unfavorable')}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
+                                >
+                                  <ShieldOff className="w-4 h-4 text-rose-500" />
+                                  비우호적
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </>

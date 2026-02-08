@@ -370,7 +370,7 @@ export const GENDER_LABELS: Record<Gender, string> = {
 
 // 리콜 제외 사유 레이블
 export const EXCLUDE_REASON_LABELS: Record<RecallExcludeReason, string> = {
-  family: '친인척/가족',
+  family: '지인',
   unfavorable: '비우호적'
 }
 
