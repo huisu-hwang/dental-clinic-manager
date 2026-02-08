@@ -43,6 +43,19 @@ interface PermissionData {
   can_delete: boolean
 }
 
+interface StaffMember {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
+interface ProtocolItem {
+  id: string
+  title: string
+  status: string
+}
+
 const ROLE_LABELS: Record<string, string> = {
   owner: '대표원장',
   vice_director: '부원장',
@@ -89,6 +102,8 @@ export default function ProtocolPermissionOverview({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [permissions, setPermissions] = useState<PermissionRecord[]>([])
+  const [allStaff, setAllStaff] = useState<StaffMember[]>([])
+  const [allProtocols, setAllProtocols] = useState<ProtocolItem[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('staff')
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -102,57 +117,64 @@ export default function ProtocolPermissionOverview({
     position: { x: number; y: number }
   } | null>(null)
 
-  const fetchPermissions = useCallback(async () => {
+  const fetchAllData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const result = await dataService.getAllProtocolPermissions(clinicId)
-      if (result.error) {
-        setError(result.error)
+      const [permResult, staffResult, protocolResult] = await Promise.all([
+        dataService.getAllProtocolPermissions(clinicId),
+        dataService.getClinicStaffForPermission(clinicId),
+        dataService.getProtocols(clinicId)
+      ])
+
+      if (permResult.error) {
+        setError(permResult.error)
       } else {
-        setPermissions(result.data || [])
+        setPermissions(permResult.data || [])
+      }
+
+      if (staffResult.error) {
+        console.error('[PermissionOverview] Staff fetch error:', staffResult.error)
+      } else {
+        setAllStaff(staffResult.data || [])
+      }
+
+      if (protocolResult.error) {
+        console.error('[PermissionOverview] Protocol fetch error:', protocolResult.error)
+      } else {
+        const protocols = (protocolResult.data || []) as Array<{ id: string; title: string; status: string }>
+        setAllProtocols(protocols.map(p => ({ id: p.id, title: p.title, status: p.status })))
       }
     } catch (err) {
-      setError('권한 데이터를 불러오는 중 오류가 발생했습니다.')
+      setError('데이터를 불러오는 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
   }, [clinicId])
 
   useEffect(() => {
-    fetchPermissions()
-  }, [fetchPermissions])
+    fetchAllData()
+  }, [fetchAllData])
 
-  // Derive unique staff and protocols
-  const { staffList, protocolList } = useMemo(() => {
-    const staffMap = new Map<string, { id: string; name: string; email: string; role: string }>()
-    const protocolMap = new Map<string, { id: string; title: string; status: string }>()
-
-    for (const p of permissions) {
-      if (!staffMap.has(p.user_id)) {
-        staffMap.set(p.user_id, { id: p.user_id, name: p.user_name, email: p.user_email, role: p.user_role })
-      }
-      if (!protocolMap.has(p.protocol_id)) {
-        protocolMap.set(p.protocol_id, { id: p.protocol_id, title: p.protocol_title, status: p.protocol_status })
-      }
-    }
-
-    const staffList = Array.from(staffMap.values()).sort((a, b) => {
+  // Sort staff by role then name
+  const sortedStaff = useMemo(() => {
+    return [...allStaff].sort((a, b) => {
       const roleA = ROLE_ORDER[a.role] ?? 99
       const roleB = ROLE_ORDER[b.role] ?? 99
       if (roleA !== roleB) return roleA - roleB
       return a.name.localeCompare(b.name, 'ko')
     })
+  }, [allStaff])
 
-    const protocolList = Array.from(protocolMap.values()).sort((a, b) => {
+  // Sort protocols by status then title
+  const sortedProtocols = useMemo(() => {
+    return [...allProtocols].sort((a, b) => {
       const statusA = STATUS_ORDER[a.status] ?? 99
       const statusB = STATUS_ORDER[b.status] ?? 99
       if (statusA !== statusB) return statusA - statusB
       return a.title.localeCompare(b.title, 'ko')
     })
-
-    return { staffList, protocolList }
-  }, [permissions])
+  }, [allProtocols])
 
   // Build permission lookup map: `${userId}:${protocolId}` -> PermissionData
   const permLookup = useMemo(() => {
@@ -170,38 +192,39 @@ export default function ProtocolPermissionOverview({
 
   // Filter by search term
   const filteredStaff = useMemo(() => {
-    if (!searchTerm) return staffList
+    if (!searchTerm) return sortedStaff
     const term = searchTerm.toLowerCase()
-    return staffList.filter(s =>
+    return sortedStaff.filter(s =>
       s.name.toLowerCase().includes(term) ||
       (ROLE_LABELS[s.role] || '').toLowerCase().includes(term)
     )
-  }, [staffList, searchTerm])
+  }, [sortedStaff, searchTerm])
 
   const filteredProtocols = useMemo(() => {
-    if (!searchTerm) return protocolList
+    if (!searchTerm) return sortedProtocols
     const term = searchTerm.toLowerCase()
-    return protocolList.filter(p =>
+    return sortedProtocols.filter(p =>
       p.title.toLowerCase().includes(term)
     )
-  }, [protocolList, searchTerm])
+  }, [sortedProtocols, searchTerm])
 
   // Summary stats
   const stats = useMemo(() => {
-    const uniqueProtocols = new Set(permissions.map(p => p.protocol_id))
-    const uniqueStaff = new Set(permissions.map(p => p.user_id))
-    // Count protocols that have at least one permission set
     const protocolsWithPerms = new Set(
       permissions.filter(p => p.can_view || p.can_edit || p.can_create || p.can_delete)
         .map(p => p.protocol_id)
     )
+    const staffWithPerms = new Set(
+      permissions.filter(p => p.can_view || p.can_edit || p.can_create || p.can_delete)
+        .map(p => p.user_id)
+    )
     return {
-      totalProtocols: uniqueProtocols.size,
+      totalProtocols: allProtocols.length,
       protocolsWithPerms: protocolsWithPerms.size,
-      totalStaff: uniqueStaff.size,
-      totalPermissions: permissions.length
+      totalStaff: staffWithPerms.size,
+      totalPermissions: permissions.filter(p => p.can_view || p.can_edit || p.can_create || p.can_delete).length
     }
-  }, [permissions])
+  }, [permissions, allProtocols])
 
   const handleCellClick = (
     staffId: string,
@@ -249,18 +272,15 @@ export default function ProtocolPermissionOverview({
       }
     }
 
-    // Update local state without re-fetching
+    // Update local state
     setPermissions(prev => {
-      const key = `${staffId}:${protocolId}`
       const existing = prev.find(p => p.user_id === staffId && p.protocol_id === protocolId)
 
       if (!hasAnyPerm) {
-        // Remove record
         return prev.filter(p => !(p.user_id === staffId && p.protocol_id === protocolId))
       }
 
       if (existing) {
-        // Update existing record
         return prev.map(p =>
           p.user_id === staffId && p.protocol_id === protocolId
             ? { ...p, ...newPerms }
@@ -268,10 +288,24 @@ export default function ProtocolPermissionOverview({
         )
       }
 
-      // This is a new permission that wasn't in the list before.
-      // We need to refetch to get the proper record with all fields.
-      fetchPermissions()
-      return prev
+      // New permission - construct a local record from known data
+      const staff = allStaff.find(s => s.id === staffId)
+      const protocol = allProtocols.find(p => p.id === protocolId)
+      const newRecord: PermissionRecord = {
+        id: `temp-${Date.now()}`,
+        protocol_id: protocolId,
+        user_id: staffId,
+        ...newPerms,
+        granted_by: currentUserId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_name: staff?.name || '알 수 없음',
+        user_email: staff?.email || '',
+        user_role: staff?.role || '',
+        protocol_title: protocol?.title || '알 수 없음',
+        protocol_status: protocol?.status || ''
+      }
+      return [...prev, newRecord]
     })
 
     setEditorState(null)
@@ -286,8 +320,6 @@ export default function ProtocolPermissionOverview({
       { active: p.can_create, color: 'bg-purple-500', title: '생성' },
       { active: p.can_delete, color: 'bg-red-500', title: '삭제' }
     ]
-
-    const hasAny = dots.some(d => d.active)
 
     return (
       <div className="flex items-center justify-center gap-1" title={
@@ -321,6 +353,9 @@ export default function ProtocolPermissionOverview({
     )
   }
 
+  const displayStaff = searchTerm ? filteredStaff : sortedStaff
+  const displayProtocols = searchTerm ? filteredProtocols : sortedProtocols
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -332,7 +367,7 @@ export default function ProtocolPermissionOverview({
           <h3 className="text-base font-semibold text-slate-800">권한 현황 대시보드</h3>
         </div>
         <button
-          onClick={fetchPermissions}
+          onClick={fetchAllData}
           className="flex items-center px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
         >
           <RefreshCw className="w-4 h-4 mr-1.5" />
@@ -425,14 +460,28 @@ export default function ProtocolPermissionOverview({
       </div>
 
       {/* Matrix */}
-      {permissions.length === 0 ? (
+      {displayStaff.length === 0 || displayProtocols.length === 0 ? (
         <div className="text-center py-12 bg-slate-50 rounded-lg">
           <ShieldCheck className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500 mb-1">아직 설정된 권한이 없습니다.</p>
-          <p className="text-sm text-slate-400">프로토콜 목록에서 개별 프로토콜의 권한을 설정해 주세요.</p>
+          <p className="text-slate-500 mb-1">
+            {allStaff.length === 0 && allProtocols.length === 0
+              ? '직원과 프로토콜이 없습니다.'
+              : allStaff.length === 0
+                ? '권한을 부여할 직원이 없습니다.'
+                : allProtocols.length === 0
+                  ? '등록된 프로토콜이 없습니다.'
+                  : '검색 결과가 없습니다.'}
+          </p>
+          <p className="text-sm text-slate-400">
+            {allStaff.length === 0
+              ? '승인된 직원이 등록되면 여기에 표시됩니다.'
+              : allProtocols.length === 0
+                ? '프로토콜을 먼저 작성해 주세요.'
+                : '다른 검색어를 시도해 보세요.'}
+          </p>
         </div>
       ) : viewMode === 'staff' ? (
-        /* Staff-Centric Matrix */
+        /* Staff-Centric Matrix: rows=staff, cols=protocols */
         <div className="border border-slate-200 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-max">
@@ -441,7 +490,7 @@ export default function ProtocolPermissionOverview({
                   <th className="sticky left-0 z-10 bg-slate-50 text-left px-4 py-3 text-sm font-medium text-slate-600 border-b border-r border-slate-200 min-w-[180px]">
                     직원 (직급)
                   </th>
-                  {(searchTerm ? filteredProtocols : protocolList).map(protocol => (
+                  {displayProtocols.map(protocol => (
                     <th
                       key={protocol.id}
                       className="text-center px-3 py-3 text-xs font-medium text-slate-600 border-b border-slate-200 min-w-[100px]"
@@ -457,7 +506,7 @@ export default function ProtocolPermissionOverview({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredStaff.map(staff => (
+                {displayStaff.map(staff => (
                   <tr key={staff.id} className="hover:bg-slate-50/50">
                     <td className="sticky left-0 z-10 bg-white px-4 py-3 border-r border-slate-200">
                       <div>
@@ -465,7 +514,7 @@ export default function ProtocolPermissionOverview({
                         <span className="text-xs text-slate-500">{ROLE_LABELS[staff.role] || staff.role}</span>
                       </div>
                     </td>
-                    {(searchTerm ? filteredProtocols : protocolList).map(protocol => {
+                    {displayProtocols.map(protocol => {
                       const perm = permLookup.get(`${staff.id}:${protocol.id}`)
                       return (
                         <td
@@ -484,7 +533,7 @@ export default function ProtocolPermissionOverview({
           </div>
         </div>
       ) : (
-        /* Protocol-Centric Matrix */
+        /* Protocol-Centric Matrix: rows=protocols, cols=staff */
         <div className="border border-slate-200 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-max">
@@ -493,7 +542,7 @@ export default function ProtocolPermissionOverview({
                   <th className="sticky left-0 z-10 bg-slate-50 text-left px-4 py-3 text-sm font-medium text-slate-600 border-b border-r border-slate-200 min-w-[200px]">
                     프로토콜 (상태)
                   </th>
-                  {(searchTerm ? filteredStaff : staffList).map(staff => (
+                  {displayStaff.map(staff => (
                     <th
                       key={staff.id}
                       className="text-center px-3 py-3 text-xs font-medium text-slate-600 border-b border-slate-200 min-w-[100px]"
@@ -509,7 +558,7 @@ export default function ProtocolPermissionOverview({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredProtocols.map(protocol => (
+                {displayProtocols.map(protocol => (
                   <tr key={protocol.id} className="hover:bg-slate-50/50">
                     <td className="sticky left-0 z-10 bg-white px-4 py-3 border-r border-slate-200">
                       <div className="flex items-center gap-2">
@@ -521,7 +570,7 @@ export default function ProtocolPermissionOverview({
                         </span>
                       </div>
                     </td>
-                    {(searchTerm ? filteredStaff : staffList).map(staff => {
+                    {displayStaff.map(staff => {
                       const perm = permLookup.get(`${staff.id}:${protocol.id}`)
                       return (
                         <td
