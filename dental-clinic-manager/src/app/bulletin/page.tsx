@@ -86,6 +86,9 @@ export default function BulletinPage() {
   // 관리자 권한 확인
   const isAdmin = !!(user?.role && ['master_admin', 'owner', 'vice_director', 'manager', 'team_leader'].includes(user.role))
 
+  // 마스터 관리자는 소속 병원이 없어 게시판 이용 불가
+  const isMasterAdmin = user?.role === 'master_admin'
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -193,17 +196,33 @@ export default function BulletinPage() {
 
             {/* 탭 콘텐츠 */}
             <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6">
-              <div key={activeTab} className="tab-content">
-                {activeTab === 'announcements' && (
-                  <AnnouncementList canCreate={isAdmin} />
-                )}
-                {activeTab === 'documents' && (
-                  <DocumentList canCreate={isAdmin} />
-                )}
-                {activeTab === 'tasks' && (
-                  <TaskList canCreate={isAdmin} />
-                )}
-              </div>
+              {isMasterAdmin ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                    <Megaphone className="w-8 h-8 text-purple-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">마스터 관리자 계정</h3>
+                  <p className="text-gray-500 text-sm max-w-md mb-4">
+                    병원 게시판은 소속 병원별로 운영됩니다.<br />
+                    마스터 관리자 계정은 특정 병원에 소속되어 있지 않아 게시판을 이용할 수 없습니다.
+                  </p>
+                  <p className="text-gray-400 text-xs">
+                    커뮤니티 게시판 관리는 <button onClick={() => router.push('/master')} className="text-purple-600 hover:text-purple-800 font-medium underline">마스터 관리자 대시보드</button>에서 이용하세요.
+                  </p>
+                </div>
+              ) : (
+                <div key={activeTab} className="tab-content">
+                  {activeTab === 'announcements' && (
+                    <AnnouncementList canCreate={isAdmin} />
+                  )}
+                  {activeTab === 'documents' && (
+                    <DocumentList canCreate={isAdmin} />
+                  )}
+                  {activeTab === 'tasks' && (
+                    <TaskList canCreate={isAdmin} />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </main>

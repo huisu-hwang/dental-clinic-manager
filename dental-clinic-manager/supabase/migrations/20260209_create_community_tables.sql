@@ -50,11 +50,15 @@ CREATE TABLE IF NOT EXISTS community_posts (
   CONSTRAINT community_posts_category_check CHECK (category IN ('free', 'advice', 'info', 'humor', 'daily', 'career'))
 );
 
-CREATE INDEX idx_community_posts_profile_id ON community_posts(profile_id);
-CREATE INDEX idx_community_posts_category ON community_posts(category);
-CREATE INDEX idx_community_posts_created_at ON community_posts(created_at DESC);
-CREATE INDEX idx_community_posts_like_count ON community_posts(like_count DESC);
-CREATE INDEX idx_community_posts_is_pinned ON community_posts(is_pinned) WHERE is_pinned = TRUE;
+-- 동적 카테고리 지원을 위해 CHECK 제약 제거
+-- (community_categories 테이블에서 카테고리를 동적으로 관리)
+ALTER TABLE community_posts DROP CONSTRAINT IF EXISTS community_posts_category_check;
+
+CREATE INDEX IF NOT EXISTS idx_community_posts_profile_id ON community_posts(profile_id);
+CREATE INDEX IF NOT EXISTS idx_community_posts_category ON community_posts(category);
+CREATE INDEX IF NOT EXISTS idx_community_posts_created_at ON community_posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_community_posts_like_count ON community_posts(like_count DESC);
+CREATE INDEX IF NOT EXISTS idx_community_posts_is_pinned ON community_posts(is_pinned) WHERE is_pinned = TRUE;
 
 -- ============================================
 -- 3. community_comments (댓글/대댓글)

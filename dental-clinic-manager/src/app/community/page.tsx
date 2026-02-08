@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'

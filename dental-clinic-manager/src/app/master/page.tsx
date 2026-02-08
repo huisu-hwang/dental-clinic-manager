@@ -8,7 +8,9 @@ import { UserIcon, BuildingOffice2Icon, ChartBarIcon, UsersIcon, ClockIcon } fro
 import type { UserActivityLog } from '@/types/auth'
 import Header from '@/components/Layout/Header'
 
-type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics'
+import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
+
+type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community'
 
 export default function MasterAdminPage() {
   const router = useRouter()
@@ -522,6 +524,20 @@ export default function MasterAdminPage() {
               <ChartBarIcon className="w-5 h-5 inline-block mr-2" />
               통계
             </button>
+            <button
+              onClick={() => setActiveTab('community')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'community'
+                  ? 'border-purple-600 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
+              </svg>
+              커뮤니티 관리
+            </button>
           </div>
         </div>
       </div>
@@ -845,6 +861,18 @@ export default function MasterAdminPage() {
                   <span className="text-sm font-medium">{users.filter(u => u.role === 'staff').length}</span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'community' && (
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-semibold">커뮤니티 게시판 관리</h2>
+              <p className="text-sm text-gray-500 mt-1">게시판 주제(카테고리)를 추가, 수정, 삭제하고 순서를 변경할 수 있습니다.</p>
+            </div>
+            <div className="p-6">
+              <AdminCategoryManager />
             </div>
           </div>
         )}

@@ -42,8 +42,14 @@ ON CONFLICT (slug) DO NOTHING;
 -- ============================================
 -- 3. community_posts.category CHECK 제약 제거
 --    (동적 카테고리를 지원하기 위해)
+--    community_posts 테이블이 아직 없으면 스킵
 -- ============================================
-ALTER TABLE community_posts DROP CONSTRAINT IF EXISTS community_posts_category_check;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'community_posts') THEN
+    ALTER TABLE community_posts DROP CONSTRAINT IF EXISTS community_posts_category_check;
+  END IF;
+END $$;
 
 -- ============================================
 -- 4. RLS 활성화 및 정책
@@ -75,6 +81,15 @@ CREATE POLICY "community_categories_delete_admin" ON community_categories
 -- ============================================
 -- 5. updated_at 자동 갱신 트리거
 -- ============================================
+-- 트리거 함수가 아직 없으면 생성 (20260209 마이그레이션보다 먼저 실행될 수 있음)
+CREATE OR REPLACE FUNCTION update_community_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER trigger_community_categories_updated_at
   BEFORE UPDATE ON community_categories
   FOR EACH ROW EXECUTE FUNCTION update_community_updated_at();
