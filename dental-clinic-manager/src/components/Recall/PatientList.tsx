@@ -505,14 +505,37 @@ export default function PatientList({
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                       {patient.exclude_reason ? (
-                        /* 제외 환자: 복원 버튼 */
-                        <button
-                          onClick={() => onExcludePatient(patient, null)}
-                          title="리콜 대상으로 복원"
-                          className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                        >
-                          <Undo2 className="w-5 h-5" />
-                        </button>
+                        /* 제외 환자: 전화 + 문자 + 이력 + 복원 */
+                        <>
+                          <button
+                            onClick={() => onCallPatient(patient)}
+                            title="전화 걸기"
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          >
+                            <Phone className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => onSmsPatient(patient)}
+                            title="문자 보내기"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <MessageSquare className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => onViewHistory(patient)}
+                            title="연락 이력"
+                            className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                          >
+                            <History className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => onExcludePatient(patient, null)}
+                            title="리콜 대상으로 복원"
+                            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          >
+                            <Undo2 className="w-5 h-5" />
+                          </button>
+                        </>
                       ) : (
                         /* 일반 환자: 기존 액션 + 제외 버튼 */
                         <>

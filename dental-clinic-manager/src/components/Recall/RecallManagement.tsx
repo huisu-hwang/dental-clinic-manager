@@ -50,6 +50,8 @@ export default function RecallManagement() {
   // 탭 및 뷰 상태
   const [activeTab, setActiveTab] = useState<TabType>('patients')
   const [showUpload, setShowUpload] = useState(false)
+  const [showExcludeUpload, setShowExcludeUpload] = useState(false)
+  const [excludeUploadReason, setExcludeUploadReason] = useState<RecallExcludeReason>('family')
   const [showCampaignSelector, setShowCampaignSelector] = useState(false)
 
   // 데이터 상태
@@ -344,6 +346,68 @@ export default function RecallManagement() {
     }
   }
 
+  // 제외 환자 파일 업로드
+  const handleExcludeFileUpload = async (uploadedPatients: RecallPatientUploadData[], filename: string) => {
+    setIsUploading(true)
+
+    try {
+      // 캠페인이 없으면 새로 생성
+      let campaignId = selectedCampaignId
+      if (!campaignId) {
+        const campaignName = filename.replace(/\.[^/.]+$/, '') || `리콜 ${new Date().toLocaleDateString('ko-KR')}`
+        const newCampaign = await handleCreateCampaign(campaignName)
+        if (!newCampaign) {
+          setIsUploading(false)
+          return
+        }
+        campaignId = newCampaign.id
+      }
+
+      // 환자 일괄 등록
+      const result = await recallService.patients.addPatientsBulk(
+        uploadedPatients,
+        campaignId,
+        filename
+      )
+
+      if (result.success && result.insertedCount && result.insertedCount > 0) {
+        // 등록된 환자들을 조회하여 ID 가져오기 (최근 등록된 환자들)
+        const patientsResult = await recallService.patients.getPatients({
+          campaign_id: campaignId,
+          page: 1,
+          pageSize: result.insertedCount,
+          showExcluded: false
+        })
+
+        if (patientsResult.success && patientsResult.data) {
+          // 방금 등록한 환자들 (pending 상태, exclude_reason이 null인)
+          const newPatientIds = patientsResult.data.data
+            .filter(p => !p.exclude_reason)
+            .slice(0, result.insertedCount)
+            .map(p => p.id)
+
+          if (newPatientIds.length > 0) {
+            await recallService.patients.updateExcludeReasonBulk(newPatientIds, excludeUploadReason)
+          }
+        }
+
+        const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'
+        showToast(`${result.insertedCount}명이 제외 환자(${label})로 등록되었습니다.`, 'success')
+        setShowExcludeUpload(false)
+        loadPatients()
+        loadStats()
+        loadCampaigns()
+      } else {
+        showToast(result.error || '환자 등록에 실패했습니다.', 'error')
+      }
+    } catch (error) {
+      console.error('Exclude upload error:', error)
+      showToast('업로드 중 오류가 발생했습니다.', 'error')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
   // 새로고침
   const handleRefresh = () => {
     loadPatients()
@@ -533,53 +597,123 @@ export default function RecallManagement() {
                 <span className="sm:hidden">추가</span>
               </button>
 
-              {selectedPatients.length > 0 && !filters.showExcluded && (
+              {/* 일반 환자 목록: 문자 + 제외 버튼 (항상 표시) */}
+              {!filters.showExcluded && (
                 <>
-                  <button
-                    onClick={handleBulkSms}
-                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    문자 ({selectedPatients.length})
-                  </button>
-
-                  {/* 일괄 제외 드롭다운 */}
                   <div className="relative group">
                     <button
-                      className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors text-sm"
+                      onClick={selectedPatients.length > 0 ? handleBulkSms : undefined}
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+                        selectedPatients.length > 0
+                          ? 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'
+                          : 'bg-purple-200 text-purple-400 cursor-default'
+                      }`}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      문자 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
+                    </button>
+                    {selectedPatients.length === 0 && (
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                        환자를 선택한 후 클릭하세요
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 일괄 제외 드롭다운 (항상 표시) */}
+                  <div className="relative group">
+                    <button
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+                        selectedPatients.length > 0
+                          ? 'bg-rose-600 text-white hover:bg-rose-700 cursor-pointer'
+                          : 'bg-rose-200 text-rose-400 cursor-default'
+                      }`}
                     >
                       <UserX className="w-4 h-4" />
-                      제외 ({selectedPatients.length})
-                      <ChevronDown className="w-3 h-3" />
+                      제외 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
+                      {selectedPatients.length > 0 && <ChevronDown className="w-3 h-3" />}
                     </button>
-                    <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-30 hidden group-hover:block">
-                      <button
-                        onClick={() => handleBulkExclude('family')}
-                        className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
-                      >
-                        <Heart className="w-4 h-4 text-amber-500" />
-                        친인척/가족
-                      </button>
-                      <button
-                        onClick={() => handleBulkExclude('unfavorable')}
-                        className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
-                      >
-                        <ShieldOff className="w-4 h-4 text-rose-500" />
-                        비우호적
-                      </button>
-                    </div>
+                    {selectedPatients.length === 0 ? (
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                        환자를 선택한 후 클릭하세요
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                      </div>
+                    ) : (
+                      <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-30 hidden group-hover:block">
+                        <button
+                          onClick={() => handleBulkExclude('family')}
+                          className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
+                        >
+                          <Heart className="w-4 h-4 text-amber-500" />
+                          친인척/가족
+                        </button>
+                        <button
+                          onClick={() => handleBulkExclude('unfavorable')}
+                          className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
+                        >
+                          <ShieldOff className="w-4 h-4 text-rose-500" />
+                          비우호적
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
 
-              {/* 제외 환자 목록에서: 일괄 복원 */}
-              {selectedPatients.length > 0 && filters.showExcluded && (
+              {/* 제외 환자 목록: 복원 + 문자 버튼 (항상 표시) */}
+              {filters.showExcluded && (
+                <>
+                  <div className="relative group">
+                    <button
+                      onClick={selectedPatients.length > 0 ? handleBulkSms : undefined}
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+                        selectedPatients.length > 0
+                          ? 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'
+                          : 'bg-purple-200 text-purple-400 cursor-default'
+                      }`}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      문자 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
+                    </button>
+                    {selectedPatients.length === 0 && (
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                        환자를 선택한 후 클릭하세요
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative group">
+                    <button
+                      onClick={selectedPatients.length > 0 ? handleBulkRestore : undefined}
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+                        selectedPatients.length > 0
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
+                          : 'bg-emerald-200 text-emerald-400 cursor-default'
+                      }`}
+                    >
+                      <Undo2 className="w-4 h-4" />
+                      복원 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
+                    </button>
+                    {selectedPatients.length === 0 && (
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                        환자를 선택한 후 클릭하세요
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* 제외 환자 파일 업로드 버튼 */}
+              {filters.showExcluded && (
                 <button
-                  onClick={handleBulkRestore}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+                  onClick={() => setShowExcludeUpload(true)}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
                 >
-                  <Undo2 className="w-4 h-4" />
-                  복원 ({selectedPatients.length})
+                  <Upload className="w-4 h-4" />
+                  <span className="hidden sm:inline">제외 환자 업로드</span>
+                  <span className="sm:hidden">업로드</span>
                 </button>
               )}
 
@@ -599,6 +733,35 @@ export default function RecallManagement() {
                 onCancel={() => setShowUpload(false)}
                 isLoading={isUploading}
               />
+            )}
+
+            {/* 제외 환자 파일 업로드 */}
+            {showExcludeUpload && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <UserX className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800">제외 환자 파일 업로드</p>
+                    <p className="text-xs text-amber-600">업로드된 환자가 자동으로 리콜 제외 처리됩니다.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-amber-700">제외 사유:</label>
+                    <select
+                      value={excludeUploadReason}
+                      onChange={(e) => setExcludeUploadReason(e.target.value as RecallExcludeReason)}
+                      className="px-3 py-1.5 text-sm border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="family">친인척/가족</option>
+                      <option value="unfavorable">비우호적</option>
+                    </select>
+                  </div>
+                </div>
+                <PatientFileUpload
+                  onUpload={handleExcludeFileUpload}
+                  onCancel={() => setShowExcludeUpload(false)}
+                  isLoading={isUploading}
+                />
+              </div>
             )}
 
             {/* 환자 목록 */}
