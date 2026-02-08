@@ -79,19 +79,28 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres  # Transaction Mo
 
 ## 개발 프로세스
 
+### 필수: 빌드-테스트-푸시 사이클 (모든 기능 구현 시 적용)
+**모든 기능 구현 후 반드시 아래 사이클을 정상 작동할 때까지 반복한 뒤 GitHub에 푸시한다.**
+
+1. 코드 구현
+2. `npm run build` 실행 → 빌드 에러 확인
+3. 빌드 에러 발생 시 → 에러 수정 → 2번으로 돌아감
+4. 빌드 성공 시 → 코드 리뷰 (로직 검증)
+5. 문제 발견 시 → 수정 → 2번으로 돌아감
+6. 모든 검증 통과 → Git commit & push
+
 ### 일반 기능 개발
 1. TodoWrite로 계획 수립
-2. 테스트 주도 개발 (TDD)
-3. 코드 리뷰 (Self-Review)
-4. Git commit & push
+2. 코드 구현
+3. **빌드-테스트-푸시 사이클 실행 (정상 작동까지 반복)**
+4. Git commit & push to GitHub
 
 ### 버그 수정
 1. 오류 재현 및 로그 확인
 2. 5 Whys로 근본 원인 분석
 3. 코드 수정
-4. 수정 검증
-5. 코드 리뷰 (Self-Review)
-6. Git commit & push
+4. **빌드-테스트-푸시 사이클 실행 (정상 작동까지 반복)**
+5. Git commit & push to GitHub
 
 ---
 
@@ -182,4 +191,4 @@ EOF
 
 ---
 
-**마지막 업데이트: 2026-01-13**
+**마지막 업데이트: 2026-02-08**
