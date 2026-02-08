@@ -1,13 +1,20 @@
 // 커뮤니티 게시판 타입 정의
 
-// 커뮤니티 카테고리
-export type CommunityCategory =
-  | 'free'        // 자유게시판
-  | 'advice'      // 질문/조언
-  | 'info'        // 정보공유
-  | 'humor'       // 유머
-  | 'daily'       // 일상
-  | 'career'      // 커리어
+// 커뮤니티 카테고리 (동적 관리 - DB 기반)
+export type CommunityCategory = string
+
+// 카테고리 아이템 (DB 테이블 매핑)
+export interface CommunityCategoryItem {
+  id: string
+  slug: string
+  label: string
+  color_bg: string
+  color_text: string
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
 
 // 신고 사유
 export type ReportReason =
@@ -171,6 +178,24 @@ export interface CreateReportDto {
   detail?: string
 }
 
+// DTO: 카테고리 생성
+export interface CreateCategoryDto {
+  slug: string
+  label: string
+  color_bg?: string
+  color_text?: string
+}
+
+// DTO: 카테고리 수정
+export interface UpdateCategoryDto {
+  slug?: string
+  label?: string
+  color_bg?: string
+  color_text?: string
+  is_active?: boolean
+  sort_order?: number
+}
+
 // DTO: 제재 발급
 export interface IssuePenaltyDto {
   profile_id: string
@@ -179,8 +204,8 @@ export interface IssuePenaltyDto {
   duration_days?: number
 }
 
-// 라벨 상수
-export const COMMUNITY_CATEGORY_LABELS: Record<CommunityCategory, string> = {
+// 라벨 상수 (폴백용 기본값)
+export const COMMUNITY_CATEGORY_LABELS: Record<string, string> = {
   free: '자유게시판',
   advice: '질문/조언',
   info: '정보공유',
@@ -211,12 +236,25 @@ export const REPORT_STATUS_LABELS: Record<ReportStatus, string> = {
   dismissed: '기각',
 }
 
-// 카테고리 색상
-export const COMMUNITY_CATEGORY_COLORS: Record<CommunityCategory, string> = {
+// 카테고리 색상 (폴백용 기본값)
+export const COMMUNITY_CATEGORY_COLORS: Record<string, string> = {
   free: 'bg-gray-100 text-gray-700',
   advice: 'bg-blue-100 text-blue-700',
   info: 'bg-green-100 text-green-700',
   humor: 'bg-yellow-100 text-yellow-700',
   daily: 'bg-purple-100 text-purple-700',
   career: 'bg-orange-100 text-orange-700',
+}
+
+// 동적 카테고리 헬퍼: CommunityCategoryItem[] → Record<string, string> 변환
+export function buildCategoryLabels(categories: CommunityCategoryItem[]): Record<string, string> {
+  const labels: Record<string, string> = {}
+  categories.forEach((cat) => { labels[cat.slug] = cat.label })
+  return labels
+}
+
+export function buildCategoryColors(categories: CommunityCategoryItem[]): Record<string, string> {
+  const colors: Record<string, string> = {}
+  categories.forEach((cat) => { colors[cat.slug] = `${cat.color_bg} ${cat.color_text}` })
+  return colors
 }

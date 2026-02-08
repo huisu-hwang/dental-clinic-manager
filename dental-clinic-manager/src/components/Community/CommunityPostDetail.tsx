@@ -18,14 +18,18 @@ interface CommunityPostDetailProps {
   postId: string
   myProfileId: string | null
   nickname: string
+  labelMap?: Record<string, string>
+  colorMap?: Record<string, string>
   onBack: () => void
   onEdit: (post: CommunityPost) => void
   onDeleted: () => void
 }
 
 export default function CommunityPostDetail({
-  postId, myProfileId, nickname, onBack, onEdit, onDeleted,
+  postId, myProfileId, nickname, labelMap, colorMap, onBack, onEdit, onDeleted,
 }: CommunityPostDetailProps) {
+  const labels = labelMap || COMMUNITY_CATEGORY_LABELS
+  const colors = colorMap || COMMUNITY_CATEGORY_COLORS
   const [post, setPost] = useState<CommunityPost | null>(null)
   const [poll, setPoll] = useState<CommunityPoll | null>(null)
   const [loading, setLoading] = useState(true)
@@ -127,8 +131,8 @@ export default function CommunityPostDetail({
         <div className="p-4 sm:p-6">
           {/* 카테고리 & 제목 */}
           <div className="mb-4">
-            <span className={`text-xs px-2 py-0.5 rounded-full ${COMMUNITY_CATEGORY_COLORS[post.category]}`}>
-              {COMMUNITY_CATEGORY_LABELS[post.category]}
+            <span className={`text-xs px-2 py-0.5 rounded-full ${colors[post.category] || 'bg-gray-100 text-gray-700'}`}>
+              {labels[post.category] || post.category}
             </span>
             <h1 className="text-xl font-bold text-gray-900 mt-2">{post.title}</h1>
           </div>

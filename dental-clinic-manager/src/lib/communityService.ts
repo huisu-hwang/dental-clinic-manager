@@ -13,11 +13,14 @@ import type {
   CommunityReport,
   CommunityPenalty,
   CommunityCategory,
+  CommunityCategoryItem,
   CreatePostDto,
   UpdatePostDto,
   CreateCommentDto,
   CreateReportDto,
   IssuePenaltyDto,
+  CreateCategoryDto,
+  UpdateCategoryDto,
   ReportStatus,
 } from '@/types/community'
 
@@ -1174,6 +1177,167 @@ export const communityAdminService = {
   },
 }
 
+// =====================================================
+// 카테고리 서비스
+// =====================================================
+export const communityCategoryService = {
+  /**
+   * 카테고리 목록 조회 (활성 카테고리만 또는 전체)
+   */
+  async getCategories(includeInactive: boolean = false): Promise<{ data: CommunityCategoryItem[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      let query = (supabase as any)
+        .from('community_categories')
+        .select('*')
+        .order('sort_order', { ascending: true })
+
+      if (!includeInactive) {
+        query = query.eq('is_active', true)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[communityCategoryService.getCategories] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 카테고리 생성 (master_admin)
+   */
+  async createCategory(input: CreateCategoryDto): Promise<{ data: CommunityCategoryItem | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      // 현재 최대 sort_order 조회
+      const { data: maxOrder } = await (supabase as any)
+        .from('community_categories')
+        .select('sort_order')
+        .order('sort_order', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      const nextOrder = (maxOrder?.sort_order ?? -1) + 1
+
+      const { data, error } = await (supabase as any)
+        .from('community_categories')
+        .insert({
+          slug: input.slug,
+          label: input.label,
+          color_bg: input.color_bg || 'bg-gray-100',
+          color_text: input.color_text || 'text-gray-700',
+          sort_order: nextOrder,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[communityCategoryService.createCategory] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 카테고리 수정 (master_admin)
+   */
+  async updateCategory(id: string, input: UpdateCategoryDto): Promise<{ data: CommunityCategoryItem | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const updateData: any = {}
+      if (input.slug !== undefined) updateData.slug = input.slug
+      if (input.label !== undefined) updateData.label = input.label
+      if (input.color_bg !== undefined) updateData.color_bg = input.color_bg
+      if (input.color_text !== undefined) updateData.color_text = input.color_text
+      if (input.is_active !== undefined) updateData.is_active = input.is_active
+      if (input.sort_order !== undefined) updateData.sort_order = input.sort_order
+
+      const { data, error } = await (supabase as any)
+        .from('community_categories')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[communityCategoryService.updateCategory] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 카테고리 삭제 (master_admin)
+   * 해당 카테고리의 게시글이 있으면 삭제 불가
+   */
+  async deleteCategory(id: string, slug: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      // 해당 카테고리를 사용하는 게시글이 있는지 확인
+      const { count } = await (supabase as any)
+        .from('community_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('category', slug)
+
+      if (count && count > 0) {
+        return { success: false, error: `이 주제에 ${count}개의 게시글이 있어 삭제할 수 없습니다. 먼저 비활성화를 사용하세요.` }
+      }
+
+      const { error } = await (supabase as any)
+        .from('community_categories')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[communityCategoryService.deleteCategory] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 카테고리 순서 변경 (master_admin)
+   */
+  async reorderCategories(orderedIds: { id: string; sort_order: number }[]): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      for (const item of orderedIds) {
+        const { error } = await (supabase as any)
+          .from('community_categories')
+          .update({ sort_order: item.sort_order })
+          .eq('id', item.id)
+
+        if (error) throw error
+      }
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[communityCategoryService.reorderCategories] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+}
+
 // 통합 export
 export const communityService = {
   profiles: communityProfileService,
@@ -1182,6 +1346,7 @@ export const communityService = {
   polls: communityPollService,
   reports: communityReportService,
   admin: communityAdminService,
+  categories: communityCategoryService,
 }
 
 export default communityService

@@ -5,20 +5,19 @@ import { ChevronLeft, Loader2, Plus, X, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { communityPostService } from '@/lib/communityService'
-import type { CommunityCategory, CommunityPost, CreatePostDto } from '@/types/community'
-import { COMMUNITY_CATEGORY_LABELS } from '@/types/community'
+import type { CommunityCategory, CommunityPost, CommunityCategoryItem, CreatePostDto } from '@/types/community'
 
 interface CommunityPostFormProps {
   profileId: string
   editingPost?: CommunityPost | null
+  categories: CommunityCategoryItem[]
+  labelMap: Record<string, string>
   onSubmit: () => void
   onCancel: () => void
 }
 
-const categories: CommunityCategory[] = ['free', 'advice', 'info', 'humor', 'daily', 'career']
-
-export default function CommunityPostForm({ profileId, editingPost, onSubmit, onCancel }: CommunityPostFormProps) {
-  const [category, setCategory] = useState<CommunityCategory>(editingPost?.category || 'free')
+export default function CommunityPostForm({ profileId, editingPost, categories, labelMap, onSubmit, onCancel }: CommunityPostFormProps) {
+  const [category, setCategory] = useState<CommunityCategory>(editingPost?.category || (categories[0]?.slug || 'free'))
   const [title, setTitle] = useState(editingPost?.title || '')
   const [content, setContent] = useState(editingPost?.content || '')
   const [submitting, setSubmitting] = useState(false)
@@ -101,7 +100,7 @@ export default function CommunityPostForm({ profileId, editingPost, onSubmit, on
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {categories.map((cat) => (
-                <option key={cat} value={cat}>{COMMUNITY_CATEGORY_LABELS[cat]}</option>
+                <option key={cat.slug} value={cat.slug}>{labelMap[cat.slug] || cat.label}</option>
               ))}
             </select>
           </div>

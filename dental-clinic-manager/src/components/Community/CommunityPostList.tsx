@@ -5,18 +5,21 @@ import { Search, Plus, ChevronLeft, ChevronRight, AlertCircle, MessageCircle, Tr
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { communityPostService } from '@/lib/communityService'
-import type { CommunityPost, CommunityCategory } from '@/types/community'
+import type { CommunityPost, CommunityCategory, CommunityCategoryItem } from '@/types/community'
 import CategoryFilter from './CategoryFilter'
 import CommunityPostCard from './CommunityPostCard'
 
 interface CommunityPostListProps {
   profileId: string | null
   isBanned: boolean
+  categories: CommunityCategoryItem[]
+  labelMap: Record<string, string>
+  colorMap: Record<string, string>
   onPostClick: (post: CommunityPost) => void
   onNewPost: () => void
 }
 
-export default function CommunityPostList({ profileId, isBanned, onPostClick, onNewPost }: CommunityPostListProps) {
+export default function CommunityPostList({ profileId, isBanned, categories, labelMap, colorMap, onPostClick, onNewPost }: CommunityPostListProps) {
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -87,7 +90,7 @@ export default function CommunityPostList({ profileId, isBanned, onPostClick, on
       </div>
 
       {/* 카테고리 필터 */}
-      <CategoryFilter selected={selectedCategory} onChange={(cat) => { setSelectedCategory(cat); setPage(1) }} />
+      <CategoryFilter selected={selectedCategory} onChange={(cat) => { setSelectedCategory(cat); setPage(1) }} categories={categories} labelMap={labelMap} colorMap={colorMap} />
 
       {/* 검색 */}
       <form onSubmit={handleSearch} className="flex gap-2">
@@ -125,7 +128,7 @@ export default function CommunityPostList({ profileId, isBanned, onPostClick, on
         <>
           <div className="bg-white rounded-lg border border-gray-200">
             {posts.map((post) => (
-              <CommunityPostCard key={post.id} post={post} onClick={onPostClick} />
+              <CommunityPostCard key={post.id} post={post} onClick={onPostClick} labelMap={labelMap} colorMap={colorMap} />
             ))}
           </div>
 

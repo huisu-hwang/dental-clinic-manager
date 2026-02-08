@@ -8,6 +8,7 @@ import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { communityProfileService } from '@/lib/communityService'
 import type { CommunityProfile, CommunityPost } from '@/types/community'
+import { useCommunityCategories } from '@/hooks/useCommunityCategories'
 import NicknameSetupModal from '@/components/Community/NicknameSetupModal'
 import CommunityPostList from '@/components/Community/CommunityPostList'
 import CommunityPostDetail from '@/components/Community/CommunityPostDetail'
@@ -23,6 +24,9 @@ export default function CommunityPage() {
   const router = useRouter()
   const { user, logout, loading: authLoading } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  // 동적 카테고리
+  const { categories, labelMap, colorMap } = useCommunityCategories()
 
   // 커뮤니티 상태
   const [profile, setProfile] = useState<CommunityProfile | null>(null)
@@ -216,6 +220,9 @@ export default function CommunityPage() {
                     <CommunityPostList
                       profileId={profile?.id || null}
                       isBanned={!!isBanned}
+                      categories={categories}
+                      labelMap={labelMap}
+                      colorMap={colorMap}
                       onPostClick={handlePostClick}
                       onNewPost={handleNewPost}
                     />
@@ -225,6 +232,8 @@ export default function CommunityPage() {
                       postId={selectedPostId}
                       myProfileId={profile?.id || null}
                       nickname={profile?.nickname || ''}
+                      labelMap={labelMap}
+                      colorMap={colorMap}
                       onBack={() => setViewMode('list')}
                       onEdit={handleEditPost}
                       onDeleted={handlePostDeleted}
@@ -234,6 +243,8 @@ export default function CommunityPage() {
                     <CommunityPostForm
                       profileId={profile.id}
                       editingPost={editingPost}
+                      categories={categories}
+                      labelMap={labelMap}
                       onSubmit={handleFormSubmit}
                       onCancel={() => setViewMode('list')}
                     />
@@ -245,7 +256,7 @@ export default function CommunityPage() {
             {/* 우측 사이드바 (데스크톱) */}
             <div className="hidden xl:block w-72 space-y-4">
               {profile && <ProfileCard profile={profile} />}
-              <PopularPostsSidebar onPostClick={handlePostClick} />
+              <PopularPostsSidebar onPostClick={handlePostClick} labelMap={labelMap} />
             </div>
           </div>
         </main>

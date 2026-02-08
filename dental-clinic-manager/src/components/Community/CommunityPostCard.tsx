@@ -7,9 +7,13 @@ import { COMMUNITY_CATEGORY_LABELS, COMMUNITY_CATEGORY_COLORS } from '@/types/co
 interface CommunityPostCardProps {
   post: CommunityPost
   onClick: (post: CommunityPost) => void
+  labelMap?: Record<string, string>
+  colorMap?: Record<string, string>
 }
 
-export default function CommunityPostCard({ post, onClick }: CommunityPostCardProps) {
+export default function CommunityPostCard({ post, onClick, labelMap, colorMap }: CommunityPostCardProps) {
+  const labels = labelMap || COMMUNITY_CATEGORY_LABELS
+  const colors = colorMap || COMMUNITY_CATEGORY_COLORS
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -36,8 +40,8 @@ export default function CommunityPostCard({ post, onClick }: CommunityPostCardPr
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs px-2 py-0.5 rounded-full ${COMMUNITY_CATEGORY_COLORS[post.category]}`}>
-              {COMMUNITY_CATEGORY_LABELS[post.category]}
+            <span className={`text-xs px-2 py-0.5 rounded-full ${colors[post.category] || 'bg-gray-100 text-gray-700'}`}>
+              {labels[post.category] || post.category}
             </span>
             {post.has_poll && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">투표</span>

@@ -8,9 +8,11 @@ import { COMMUNITY_CATEGORY_LABELS } from '@/types/community'
 
 interface PopularPostsSidebarProps {
   onPostClick: (post: CommunityPost) => void
+  labelMap?: Record<string, string>
 }
 
-export default function PopularPostsSidebar({ onPostClick }: PopularPostsSidebarProps) {
+export default function PopularPostsSidebar({ onPostClick, labelMap }: PopularPostsSidebarProps) {
+  const labels = labelMap || COMMUNITY_CATEGORY_LABELS
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -42,7 +44,7 @@ export default function PopularPostsSidebar({ onPostClick }: PopularPostsSidebar
             <div className="flex-1 min-w-0">
               <p className="text-sm text-gray-800 truncate">{post.title}</p>
               <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
-                <span>{COMMUNITY_CATEGORY_LABELS[post.category]}</span>
+                <span>{labels[post.category] || post.category}</span>
                 <span className="flex items-center gap-0.5">
                   <Heart className="w-3 h-3" />{post.like_count}
                 </span>
