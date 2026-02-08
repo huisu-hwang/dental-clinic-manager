@@ -23,7 +23,8 @@ import type {
   RecallPatientUploadData,
   RecallPatientFilters,
   RecallStats as RecallStatsType,
-  PatientRecallStatus
+  PatientRecallStatus,
+  RecallExcludeReason
 } from '@/types/recall'
 import { recallService } from '@/lib/recallService'
 import PatientFileUpload from './PatientFileUpload'
@@ -287,6 +288,23 @@ export default function RecallManagement() {
     setHistoryModalPatient(patient)
   }
 
+  // 리콜 제외/복원
+  const handleExcludePatient = async (patient: RecallPatient, reason: RecallExcludeReason | null) => {
+    const result = await recallService.patients.updateExcludeReason(patient.id, reason)
+    if (result.success) {
+      if (reason) {
+        const label = reason === 'family' ? '친인척/가족' : '비우호적'
+        showToast(`${patient.patient_name}님이 리콜 제외(${label})되었습니다.`, 'success')
+      } else {
+        showToast(`${patient.patient_name}님이 리콜 대상으로 복원되었습니다.`, 'success')
+      }
+      loadPatients()
+      loadStats()
+    } else {
+      showToast(result.error || '처리에 실패했습니다.', 'error')
+    }
+  }
+
   // 새로고침
   const handleRefresh = () => {
     loadPatients()
@@ -514,6 +532,7 @@ export default function RecallManagement() {
               onSmsPatient={handleSmsPatient}
               onUpdateStatus={handleUpdateStatus}
               onViewHistory={handleViewHistory}
+              onExcludePatient={handleExcludePatient}
               filters={filters}
               onFiltersChange={setFilters}
               isLoading={isLoading}

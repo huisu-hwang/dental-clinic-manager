@@ -13,6 +13,9 @@ export type PatientRecallStatus =
   | 'visit_refused'        // 내원 거부
   | 'invalid_number'       // 없는 번호
 
+// 리콜 제외 사유
+export type RecallExcludeReason = 'family' | 'unfavorable'
+
 // 수동으로 선택 가능한 상태 (문자발송 제외)
 export const MANUAL_STATUS_OPTIONS: PatientRecallStatus[] = [
   'pending',
@@ -87,6 +90,9 @@ export interface RecallPatient {
   treatment_type?: string
   notes?: string
 
+  // 리콜 제외
+  exclude_reason?: RecallExcludeReason | null  // null=일반, family=친인척/가족, unfavorable=비우호적
+
   // 리콜 상태
   status: PatientRecallStatus
   recall_datetime?: string   // 리콜 처리 일시 (상태 변경 시 기록)
@@ -131,6 +137,7 @@ export interface RecallPatientFormData {
   last_visit_date?: string
   treatment_type?: string
   notes?: string
+  exclude_reason?: RecallExcludeReason | null
 }
 
 // ========================================
@@ -361,6 +368,18 @@ export const GENDER_LABELS: Record<Gender, string> = {
   other: '기타'
 }
 
+// 리콜 제외 사유 레이블
+export const EXCLUDE_REASON_LABELS: Record<RecallExcludeReason, string> = {
+  family: '친인척/가족',
+  unfavorable: '비우호적'
+}
+
+// 리콜 제외 사유 색상
+export const EXCLUDE_REASON_COLORS: Record<RecallExcludeReason, string> = {
+  family: 'bg-amber-100 text-amber-700',
+  unfavorable: 'bg-rose-100 text-rose-700'
+}
+
 // ========================================
 // 나이 계산 유틸리티
 // ========================================
@@ -393,6 +412,8 @@ export interface RecallPatientFilters {
   dateTo?: string
   page?: number
   pageSize?: number
+  showExcluded?: boolean              // true: 제외 환자만, false: 일반 환자만 (기본)
+  excludeReason?: RecallExcludeReason | 'all'  // 제외 사유 필터
 }
 
 // 페이지네이션 응답
