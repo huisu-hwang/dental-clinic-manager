@@ -177,6 +177,8 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .single();
 
+    const configured = isCodefConfigured();
+
     if (error || !connection) {
       return NextResponse.json({
         success: true,
@@ -184,6 +186,7 @@ export async function GET(request: NextRequest) {
           isConnected: false,
           connectedId: null,
           lastSyncDate: null,
+          isConfigured: configured,
         },
       });
     }
@@ -196,6 +199,7 @@ export async function GET(request: NextRequest) {
         hometaxUserId: connection.hometax_user_id,
         connectedAt: connection.connected_at,
         lastSyncDate: connection.last_sync_date,
+        isConfigured: configured,
       },
     });
   } catch (error) {

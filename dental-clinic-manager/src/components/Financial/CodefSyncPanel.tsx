@@ -22,6 +22,7 @@ interface CodefConnection {
   hometaxUserId?: string
   connectedAt?: string
   lastSyncDate?: string
+  isConfigured?: boolean
 }
 
 interface SyncLog {
@@ -64,7 +65,7 @@ export default function CodefSyncPanel({
   // 연결 폼 상태
   const [hometaxId, setHometaxId] = useState('')
   const [hometaxPassword, setHometaxPassword] = useState('')
-  const [identity, setIdentity] = useState('')  // 대표자 생년월일 또는 사업자등록번호
+  const [identity, setIdentity] = useState('')  // 대표자 주민등록번호 앞 7자리
   const [formError, setFormError] = useState('')
 
   // 연결 상태 확인
@@ -115,7 +116,14 @@ export default function CodefSyncPanel({
     }
 
     if (!identity) {
-      setFormError('대표자 생년월일 또는 사업자등록번호를 입력해주세요.')
+      setFormError('대표자 주민등록번호 앞 7자리를 입력해주세요.')
+      return
+    }
+
+    // 주민등록번호 앞 7자리 형식 검증 (숫자만 7자리)
+    const identityDigits = identity.replace(/[^0-9]/g, '')
+    if (identityDigits.length !== 7) {
+      setFormError('주민등록번호 앞 7자리를 정확히 입력해주세요. (예: 8106091)')
       return
     }
 
@@ -341,17 +349,24 @@ export default function CodefSyncPanel({
 
             <div>
               <label className="block text-sm text-gray-600 mb-1">
-                대표자 생년월일 또는 사업자등록번호
+                대표자 주민등록번호 앞 7자리
               </label>
               <input
                 type="text"
                 value={identity}
-                onChange={e => setIdentity(e.target.value)}
+                onChange={e => {
+                  // 숫자와 하이픈만 허용, 최대 8자 (하이픈 포함)
+                  const val = e.target.value.replace(/[^0-9-]/g, '')
+                  if (val.replace(/[^0-9]/g, '').length <= 7) {
+                    setIdentity(val)
+                  }
+                }}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="예: 800101 또는 123-45-67890"
+                placeholder="예: 810609-1 또는 8106091"
+                maxLength={8}
               />
               <p className="mt-1 text-xs text-gray-400">
-                홈택스 로그인 시 입력하는 대표자 생년월일 6자리 또는 사업자등록번호
+                홈택스 2차 인증에 사용되는 주민등록번호 앞 6자리 + 성별 구분 1자리
               </p>
             </div>
 
@@ -487,8 +502,8 @@ export default function CodefSyncPanel({
         </div>
       )}
 
-      {/* 안내 메시지 */}
-      {!connection.isConnected && (
+      {/* 안내 메시지 - API 키가 설정되지 않은 경우에만 표시 */}
+      {!connection.isConnected && connection.isConfigured === false && (
         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
             <strong>CODEF API 안내:</strong> 홈택스 연동을 위해서는 CODEF API 키가 필요합니다.
