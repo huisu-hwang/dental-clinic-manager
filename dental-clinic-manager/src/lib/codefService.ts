@@ -71,7 +71,10 @@ const getCodefConfig = () => {
       break;
     case 'DEMO':
     case '1':
-      serviceType = 1;
+      // 홈택스(NT) businessType은 DEMO 환경에서 지원되지 않음 → SANDBOX 사용
+      // 실제 홈택스 연동이 필요하면 CODEF_SERVICE_TYPE=0 (PRODUCT) 설정 필요
+      console.warn('CODEF: DEMO 환경은 홈택스(NT)를 지원하지 않아 SANDBOX로 자동 전환됩니다. 실제 연동은 PRODUCT(0) 필요.');
+      serviceType = 2; // SANDBOX로 전환
       break;
     default:
       serviceType = 2; // SANDBOX
