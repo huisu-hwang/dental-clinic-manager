@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server';
 import {
   createCodefAccount,
   updateCodefAccount,
+  getConnectedIdList,
   deleteCodefAccount,
   isCodefConfigured,
 } from '@/lib/codefService';
@@ -76,29 +77,47 @@ export async function POST(request: NextRequest) {
       console.log('CODEF createAccount result:', JSON.stringify(createResult.result));
 
       if (createResult.result.code !== 'CF-00000') {
-        // createAccount 실패 시 updateAccount로 재시도 (CODEF에 이미 등록된 경우)
+        // CF-04000: 이미 등록된 계정 → connectedId 목록에서 찾아 updateAccount 시도
         if (createResult.result.code === 'CF-04000') {
-          console.log('CODEF: CF-04000 (이미 등록된 계정), updateAccount 대신 에러 반환');
-          // 이미 등록된 계정인 경우 사용자에게 안내
+          console.log('CODEF: CF-04000 (이미 등록된 계정), connectedIdList 조회 후 updateAccount 시도');
+          const idListResult = await getConnectedIdList();
+          const connectedIds = idListResult.data?.connectedIdList || [];
+          console.log('CODEF connectedIdList:', connectedIds);
+
+          if (connectedIds.length > 0) {
+            // 첫 번째 connectedId로 updateAccount 시도
+            for (const existingId of connectedIds) {
+              const updateResult = await updateCodefAccount(existingId, userId, password, identity);
+              console.log('CODEF updateAccount result for', existingId, ':', JSON.stringify(updateResult.result));
+              if (updateResult.result.code === 'CF-00000') {
+                connectedId = existingId;
+                break;
+              }
+            }
+          }
+
+          if (!connectedId) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: '이미 등록된 홈택스 계정입니다. 자동 업데이트에 실패했습니다. 관리자에게 문의하세요.',
+                code: createResult.result.code,
+              },
+              { status: 400 }
+            );
+          }
+        } else {
+          const errorMsg = createResult.result.extraMessage
+            ? `${createResult.result.message} (${createResult.result.extraMessage})`
+            : createResult.result.message || 'CODEF 계정 연결에 실패했습니다.';
           return NextResponse.json(
-            {
-              success: false,
-              error: '이미 등록된 홈택스 계정입니다. 기존 연결을 해제한 후 다시 시도해주세요.',
-              code: createResult.result.code,
-            },
+            { success: false, error: errorMsg, code: createResult.result.code },
             { status: 400 }
           );
         }
-
-        const errorMsg = createResult.result.extraMessage
-          ? `${createResult.result.message} (${createResult.result.extraMessage})`
-          : createResult.result.message || 'CODEF 계정 연결에 실패했습니다.';
-        return NextResponse.json(
-          { success: false, error: errorMsg, code: createResult.result.code },
-          { status: 400 }
-        );
+      } else {
+        connectedId = createResult.data?.connectedId;
       }
-      connectedId = createResult.data?.connectedId;
     }
 
     if (!connectedId) {

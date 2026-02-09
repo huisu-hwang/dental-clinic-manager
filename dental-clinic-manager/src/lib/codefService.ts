@@ -142,6 +142,33 @@ async function getServiceTypeConstant(serviceType: number) {
 // ============================================
 
 /**
+ * CODEF 등록된 connectedId 목록 조회
+ */
+export async function getConnectedIdList(): Promise<CodefApiResponse<{ connectedIdList: string[] }>> {
+  try {
+    const { codef, serviceType } = await createCodefInstance();
+    const serviceTypeConstant = await getServiceTypeConstant(serviceType);
+
+    const response = await codef.getConnectedIdList(serviceTypeConstant, {});
+    const result = typeof response === 'string' ? JSON.parse(response) : response;
+
+    return result;
+  } catch (error: any) {
+    const errMsg = error instanceof Error ? error.message : (typeof error === 'string' ? error : JSON.stringify(error));
+    console.error('CODEF getConnectedIdList error:', errMsg);
+    return {
+      result: {
+        code: 'CF-99999',
+        extraMessage: '',
+        message: errMsg || 'connectedId 목록 조회 중 오류가 발생했습니다.',
+        transactionId: '',
+      },
+      data: { connectedIdList: [] },
+    };
+  }
+}
+
+/**
  * CODEF 계정 등록 (Connected ID 발급)
  * @param userId 홈택스 본인 계정 아이디
  * @param password 홈택스 본인 계정 비밀번호
