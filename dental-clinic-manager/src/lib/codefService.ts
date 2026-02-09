@@ -167,13 +167,14 @@ export async function createCodefAccount(
     const result = typeof response === 'string' ? JSON.parse(response) : response;
 
     return result;
-  } catch (error) {
-    console.error('CODEF createAccount error:', error);
+  } catch (error: any) {
+    const errMsg = error instanceof Error ? error.message : (typeof error === 'string' ? error : JSON.stringify(error));
+    console.error('CODEF createAccount error:', errMsg, error);
     return {
       result: {
         code: 'CF-99999',
-        extraMessage: '',
-        message: error instanceof Error ? error.message : '계정 등록 중 오류가 발생했습니다.',
+        extraMessage: String(error?.stack || ''),
+        message: errMsg || '계정 등록 중 오류가 발생했습니다.',
         transactionId: '',
       },
       data: null as any,
