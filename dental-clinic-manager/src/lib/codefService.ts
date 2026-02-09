@@ -103,7 +103,8 @@ const getCodefConfig = () => {
       break;
     case 'DEMO':
     case '1':
-      serviceType = 1;
+      // DEMO 환경은 NT(홈택스) 상품 API 미지원 → SANDBOX로 전환
+      serviceType = 2;
       break;
     default:
       serviceType = 2;
@@ -677,10 +678,16 @@ export function isCodefConfigured(): boolean {
 }
 
 export function getCodefServiceType(): string {
-  const config = getCodefConfig();
-  switch (config.serviceType) {
-    case 0: return '정식';
-    case 1: return '데모';
-    default: return '샌드박스';
+  const envType = (process.env.CODEF_SERVICE_TYPE || 'SANDBOX').trim().toUpperCase();
+  // 실제 환경변수 기준으로 표시 (DEMO→SANDBOX 자동 전환과 무관하게)
+  switch (envType) {
+    case 'PRODUCT':
+    case '0':
+      return '정식';
+    case 'DEMO':
+    case '1':
+      return '데모(샌드박스)';
+    default:
+      return '샌드박스';
   }
 }
