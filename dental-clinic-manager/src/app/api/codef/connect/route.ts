@@ -5,14 +5,22 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import {
   createCodefAccount,
   updateCodefAccount,
   getConnectedIdList,
   deleteCodefAccount,
   isCodefConfigured,
+  getCodefServiceType,
 } from '@/lib/codefService';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+function getServiceClient() {
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
 
 // POST: 홈택스 계정 연결
 export async function POST(request: NextRequest) {
@@ -35,9 +43,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // DB에서 기존 연결 정보 확인
-    const supabaseCheck = await createClient();
-    const { data: existingConnection } = await supabaseCheck
+    // DB에서 기존 연결 정보 확인 (service_role로 RLS 우회)
+    const supabase = getServiceClient();
+    const { data: existingConnection } = await supabase
       .from('codef_connections')
       .select('connected_id')
       .eq('clinic_id', clinicId)
@@ -133,8 +141,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // DB에 연결 정보 저장
-    const { error: dbError } = await supabaseCheck
+    // DB에 연결 정보 저장 (service_role로 RLS 우회)
+    const { error: dbError } = await supabase
       .from('codef_connections')
       .upsert(
         {
@@ -150,13 +158,19 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       console.error('DB save error:', dbError);
-      // DB 저장 실패해도 연결은 성공한 것으로 처리
+      return NextResponse.json(
+        { success: false, error: 'CODEF 연결은 성공했으나 DB 저장에 실패했습니다. 다시 시도해주세요.', details: dbError.message },
+        { status: 500 }
+      );
     }
+
+    const serviceType = getCodefServiceType();
 
     return NextResponse.json({
       success: true,
       data: {
         connectedId,
+        serviceType,
         message: '홈택스 계정이 성공적으로 연결되었습니다.',
       },
     });
@@ -182,8 +196,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // DB에서 Connected ID 조회
-    const supabase = await createClient();
+    // DB에서 Connected ID 조회 (service_role로 RLS 우회)
+    const supabase = getServiceClient();
     const { data: connection, error: fetchError } = await supabase
       .from('codef_connections')
       .select('connected_id')
@@ -245,7 +259,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = getServiceClient();
     const { data: connection, error } = await supabase
       .from('codef_connections')
       .select('*')
@@ -254,6 +268,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     const configured = isCodefConfigured();
+    const serviceType = getCodefServiceType();
 
     if (error || !connection) {
       return NextResponse.json({
@@ -263,6 +278,7 @@ export async function GET(request: NextRequest) {
           connectedId: null,
           lastSyncDate: null,
           isConfigured: configured,
+          serviceType,
         },
       });
     }
@@ -276,6 +292,7 @@ export async function GET(request: NextRequest) {
         connectedAt: connection.connected_at,
         lastSyncDate: connection.last_sync_date,
         isConfigured: configured,
+        serviceType,
       },
     });
   } catch (error) {

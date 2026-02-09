@@ -5,7 +5,7 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import {
   syncHometaxData,
   getTaxInvoicePurchase,
@@ -15,7 +15,15 @@ import {
   convertCashReceiptToExpense,
   convertBusinessCardToExpense,
   isCodefConfigured,
+  getCodefServiceType,
 } from '@/lib/codefService';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+function getServiceClient() {
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
 
 // POST: 홈택스 데이터 동기화
 export async function POST(request: NextRequest) {
@@ -38,9 +46,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = getServiceClient();
 
-    // Connected ID 조회
+    // Connected ID 조회 (service_role로 RLS 우회)
     const { data: connection, error: connError } = await supabase
       .from('codef_connections')
       .select('connected_id')
@@ -68,11 +76,26 @@ export async function POST(request: NextRequest) {
       businessCard: { synced: 0, errors: [] as string[] },
     };
 
-    // 기본 카테고리 ID 조회 (또는 생성)
-    const { data: categories } = await supabase
+    // 기본 카테고리 ID 조회
+    let { data: categories } = await supabase
       .from('expense_categories')
       .select('id, type')
       .eq('clinic_id', clinicId);
+
+    // 카테고리가 없으면 기본 카테고리 자동 생성
+    if (!categories || categories.length === 0) {
+      const defaultCategories = [
+        { clinic_id: clinicId, name: '재료비', type: 'material' },
+        { clinic_id: clinicId, name: '임대료', type: 'rent' },
+        { clinic_id: clinicId, name: '인건비', type: 'labor' },
+        { clinic_id: clinicId, name: '기타', type: 'other' },
+      ];
+      const { data: created } = await supabase
+        .from('expense_categories')
+        .insert(defaultCategories)
+        .select('id, type');
+      categories = created || [];
+    }
 
     const getCategoryId = (type: string): string => {
       const category = categories?.find(c => c.type === type);
@@ -234,13 +257,20 @@ export async function POST(request: NextRequest) {
       ...results.businessCard.errors,
     ];
 
+    const serviceType = getCodefServiceType();
+    let message = `${totalSynced}건의 데이터가 동기화되었습니다.`;
+    if (totalSynced === 0 && serviceType === '샌드박스') {
+      message = '동기화된 데이터가 없습니다. 현재 샌드박스(테스트) 모드에서는 실제 홈택스 데이터를 조회할 수 없습니다. 실제 데이터 연동을 위해서는 CODEF 정식(PRODUCT) 서비스가 필요합니다.';
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         totalSynced,
         details: results,
         errors: allErrors,
-        message: `${totalSynced}건의 데이터가 동기화되었습니다.`,
+        serviceType,
+        message,
       },
     });
   } catch (error) {
@@ -266,7 +296,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = getServiceClient();
     const { data: logs, error } = await supabase
       .from('codef_sync_logs')
       .select('*')

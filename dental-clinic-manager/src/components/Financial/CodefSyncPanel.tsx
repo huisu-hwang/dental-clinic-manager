@@ -23,6 +23,7 @@ interface CodefConnection {
   connectedAt?: string
   lastSyncDate?: string
   isConfigured?: boolean
+  serviceType?: string
 }
 
 interface SyncLog {
@@ -270,7 +271,14 @@ export default function CodefSyncPanel({
                   <Link2 className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-green-800">홈택스 연결됨</p>
+                  <p className="font-medium text-green-800">
+                    홈택스 연결됨
+                    {connection.serviceType && connection.serviceType !== '정식' && (
+                      <span className="ml-2 text-xs font-normal px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">
+                        {connection.serviceType} 모드
+                      </span>
+                    )}
+                  </p>
                   <p className="text-sm text-green-600">
                     {connection.hometaxUserId && `ID: ${connection.hometaxUserId}`}
                     {connection.lastSyncDate && (
@@ -410,6 +418,16 @@ export default function CodefSyncPanel({
 
           <p className="mt-3 text-xs text-gray-500">
             * 홈택스(hometax.go.kr) 본인 계정의 아이디와 비밀번호를 입력해주세요.
+          </p>
+        </div>
+      )}
+
+      {/* SANDBOX 모드 안내 */}
+      {connection.isConnected && connection.serviceType === '샌드박스' && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+          <p className="text-sm text-amber-800">
+            <strong>테스트 모드:</strong> 현재 샌드박스(테스트) 모드로 연결되어 있습니다.
+            실제 홈택스 데이터는 조회되지 않으며, CODEF 정식(PRODUCT) 서비스 가입 후 실제 데이터 연동이 가능합니다.
           </p>
         </div>
       )}
