@@ -12,12 +12,132 @@
 
 ## 목차
 
+- [2026-02-07](#2026-02-07)
+  - [CODEF API 홈택스 자동 연동 기능 구현](#2026-02-07-기능-개발-codef-api-홈택스-자동-연동-기능-구현)
 - [2025-11-06](#2025-11-06)
   - [Chrome DevTools MCP 필수화 문서 업데이트](#2025-11-06-문서화-chrome-devtools-mcp-필수화-문서-업데이트)
   - [Connection Timeout으로 인한 3분 후 기능 오작동 문제 해결 (근본 원인)](#2025-11-06-버그-수정-connection-timeout으로-인한-3분-후-기능-오작동-문제-해결-근본-원인)
   - [작업 문서화 가이드 추가](#2025-11-06-문서화-작업-문서화-가이드-추가)
   - [근본 원인 해결 원칙 추가](#2025-11-06-문서화-근본-원인-해결-원칙-추가)
   - [세션 만료 시 무한 로딩 문제 해결](#2025-11-06-버그-수정-세션-만료-시-무한-로딩-문제-해결)
+
+---
+
+## 2026-02-07 [기능 개발] CODEF API 홈택스 자동 연동 기능 구현
+
+**키워드:** #CODEF #홈택스 #API연동 #세금계산서 #현금영수증 #사업자카드 #easycodef-node #경영현황
+
+### 📋 작업 내용
+- 홈택스 데이터 자동 조회를 위한 CODEF API 연동 구현
+- 세금계산서, 현금영수증, 사업자카드 사용내역 자동 동기화
+- 경영 현황 대시보드에 홈택스 연동 패널 추가
+
+### 🎯 목적
+- 수동으로 지출 내역을 입력하는 번거로움 제거
+- 홈택스 부서사용자 계정 연결로 자동 데이터 수집
+- 재무 관리 효율성 향상
+
+### ✅ 구현된 파일
+
+**1. 타입 정의**
+- `src/types/codef.ts` - CODEF API 타입, 기관코드, 엔드포인트 정의
+
+**2. 서비스 레이어**
+- `src/lib/codefService.ts` - easycodef-node 라이브러리 사용
+  - `createCodefAccount()` - Connected ID 발급
+  - `getTaxInvoicePurchase()` - 매입 세금계산서 조회
+  - `getCashReceiptPurchase()` - 매입 현금영수증 조회
+  - `getBusinessCardHistory()` - 사업자카드 내역 조회
+  - `syncHometaxData()` - 전체 동기화
+
+**3. API 라우트**
+- `src/app/api/codef/connect/route.ts`
+  - POST: 홈택스 계정 연결 (Connected ID 발급)
+  - DELETE: 계정 연결 해제
+  - GET: 연결 상태 확인
+- `src/app/api/codef/sync/route.ts`
+  - POST: 데이터 동기화 실행
+  - GET: 동기화 이력 조회
+
+**4. UI 컴포넌트**
+- `src/components/Financial/CodefSyncPanel.tsx`
+  - 연결 상태 표시
+  - 홈택스 계정 연결 폼 (ID, PW, 대표자 생년월일)
+  - 동기화 버튼 (전체/세금계산서/현금영수증/카드)
+  - 동기화 이력 표시
+
+**5. 데이터베이스**
+- `supabase/migrations/20260206_create_codef_tables.sql`
+  - `codef_connections` - 연결 정보 테이블
+  - `codef_sync_logs` - 동기화 이력 테이블
+  - RLS 정책 적용
+
+### 🔧 주요 수정 이력
+
+**1차 구현 (2026-02-06)**
+- 기본 CODEF API 연동 구현
+- 직접 HTTP 요청 방식 사용
+
+**2차 수정 (2026-02-07)**
+- identity 파라미터 추가 (대표자 생년월일/사업자번호)
+- 홈택스 로그인 시 주민번호 인증 요구 대응
+
+**3차 수정 (2026-02-07)**
+- 홈택스 기관코드 수정: `0002` → `0004` (공공기관)
+- easycodef-node 라이브러리 직접 사용으로 변경
+- 토큰 관리, RSA 암호화 라이브러리 자동 처리
+
+### ⚠️ 현재 상태: 테스트 대기 중
+
+**필요한 설정:**
+```env
+CODEF_CLIENT_ID=발급받은_클라이언트_ID
+CODEF_CLIENT_SECRET=발급받은_시크릿
+CODEF_PUBLIC_KEY=발급받은_RSA_공개키
+CODEF_SERVICE_TYPE=2  # 0: 정식, 1: 데모, 2: 샌드박스
+```
+
+**다음 단계:**
+1. CODEF 가입 (https://codef.io)
+2. API 키 발급 (샌드박스용)
+3. Vercel 환경변수에 실제 값 입력
+4. 홈택스 연결 테스트
+5. 정식 서비스 전환 시 사업자 인증 필요
+
+### 📊 결과 및 영향
+
+**완료:**
+- ✅ 코드 구현 완료
+- ✅ Supabase 마이그레이션 적용
+- ✅ Vercel Preview 배포 완료
+- ✅ 환경변수 키 추가 (값은 빈 상태)
+
+**미완료:**
+- ⏳ CODEF API 키 발급 필요
+- ⏳ 실제 홈택스 연결 테스트
+
+### 💡 배운 점 / 참고 사항
+
+**기술적 포인트:**
+- CODEF 홈택스 기관코드: `0004` (공공기관)
+- easycodef-node 라이브러리가 토큰, RSA 암호화 자동 처리
+- businessType: `NT` (공공기관), clientType: `B` (사업자)
+- loginType: `1` (ID/PW 방식)
+
+**주의사항:**
+- 홈택스 로그인 시 대표자 생년월일 또는 사업자등록번호 필요
+- 샌드박스(SERVICE_TYPE=2)에서는 테스트 데이터만 조회됨
+- 정식 서비스는 CODEF에서 사업자 인증 필요
+
+**참고 문서:**
+- [CODEF 개발가이드](https://developer.codef.io)
+- [easycodef-node GitHub](https://github.com/codef-io/easycodef-node)
+- [홈택스 부서사용자 발급](https://hometax.go.kr)
+
+### 📎 관련 커밋
+- `22d9e2a` - feat: CODEF API 홈택스 자동 연동 기능 구현
+- `ed3148d` - fix: CODEF 홈택스 계정 연결 시 identity 파라미터 추가
+- `f8fb549` - fix: CODEF API 기관코드 수정 및 easycodef-node 라이브러리 사용
 
 ---
 

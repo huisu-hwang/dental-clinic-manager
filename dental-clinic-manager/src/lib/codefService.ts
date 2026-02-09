@@ -37,7 +37,24 @@ async function loadEasyCodef() {
  * easycodef-node의 encryptRSA 대신 사용
  */
 function encryptRSAWithForge(publicKeyBase64: string, plainText: string): string {
-  const pemKey = '-----BEGIN PUBLIC KEY-----\n' + publicKeyBase64 + '\n-----END PUBLIC KEY-----';
+  // 공개키 정리: 공백, 개행 제거
+  let cleanKey = publicKeyBase64.replace(/[\s\n\r]/g, '');
+
+  // SPKI 헤더 검증 및 자동 수정: 잘못된 SPKI 헤더 패턴 감지
+  // 정상: ...OCAQ8AMIIBCgK... (RSA 2048 SPKI 표준 헤더)
+  // 비정상: ...OCAQIIBCgK... (3자 누락)
+  if (cleanKey.includes('OCAQIIBCgK') && !cleanKey.includes('OCAQ8AMIIBCgK')) {
+    cleanKey = cleanKey.replace('OCAQIIBCgK', 'OCAQ8AMIIBCgK');
+    console.warn('CODEF: RSA 공개키 SPKI 헤더가 자동 수정되었습니다.');
+  }
+
+  // base64 길이 검증 (4의 배수)
+  if (cleanKey.length % 4 !== 0) {
+    throw new Error(`RSA 공개키가 올바르지 않습니다. (base64 길이: ${cleanKey.length}, 4의 배수여야 함)`);
+  }
+
+  const formattedKey = cleanKey.match(/.{1,64}/g)?.join('\n') || cleanKey;
+  const pemKey = '-----BEGIN PUBLIC KEY-----\n' + formattedKey + '\n-----END PUBLIC KEY-----';
   const publicKey = forge.pki.publicKeyFromPem(pemKey);
   const encrypted = publicKey.encrypt(plainText, 'RSAES-PKCS1-V1_5');
   return forge.util.encode64(encrypted);
