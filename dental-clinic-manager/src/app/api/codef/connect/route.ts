@@ -79,13 +79,14 @@ export async function POST(request: NextRequest) {
       if (createResult.result.code !== 'CF-00000') {
         // CF-04000: 이미 등록된 계정 → connectedId 목록에서 찾아 updateAccount 시도
         if (createResult.result.code === 'CF-04000') {
-          console.log('CODEF: CF-04000 (이미 등록된 계정), connectedIdList 조회 후 updateAccount 시도');
+          // CF-04000: 이미 등록된 계정 → connectedId 목록에서 기존 ID를 가져와서 재사용
+          console.log('CODEF: CF-04000 (이미 등록된 계정), connectedIdList 조회');
           const idListResult = await getConnectedIdList();
           const connectedIds = idListResult.data?.connectedIdList || [];
           console.log('CODEF connectedIdList:', connectedIds);
 
           if (connectedIds.length > 0) {
-            // 첫 번째 connectedId로 updateAccount 시도
+            // 먼저 updateAccount 시도, 실패해도 기존 connectedId 재사용
             for (const existingId of connectedIds) {
               const updateResult = await updateCodefAccount(existingId, userId, password, identity);
               console.log('CODEF updateAccount result for', existingId, ':', JSON.stringify(updateResult.result));
@@ -94,13 +95,18 @@ export async function POST(request: NextRequest) {
                 break;
               }
             }
+            // updateAccount가 실패해도 기존 connectedId 사용 (계정은 이미 존재하므로)
+            if (!connectedId) {
+              console.log('CODEF: updateAccount 실패했지만, 기존 connectedId를 재사용합니다:', connectedIds[0]);
+              connectedId = connectedIds[0];
+            }
           }
 
           if (!connectedId) {
             return NextResponse.json(
               {
                 success: false,
-                error: '이미 등록된 홈택스 계정입니다. 자동 업데이트에 실패했습니다. 관리자에게 문의하세요.',
+                error: '이미 등록된 홈택스 계정이 있으나, 연결 ID를 찾을 수 없습니다. 관리자에게 문의하세요.',
                 code: createResult.result.code,
               },
               { status: 400 }
