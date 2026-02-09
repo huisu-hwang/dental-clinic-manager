@@ -62,7 +62,7 @@ function encryptRSAWithForge(publicKeyBase64: string, plainText: string): string
 
 // 환경변수에서 설정 로드
 const getCodefConfig = () => {
-  const serviceTypeEnv = (process.env.CODEF_SERVICE_TYPE || 'SANDBOX').toUpperCase();
+  const serviceTypeEnv = (process.env.CODEF_SERVICE_TYPE || 'SANDBOX').trim().toUpperCase();
   let serviceType: number;
   switch (serviceTypeEnv) {
     case 'PRODUCT':
@@ -77,10 +77,24 @@ const getCodefConfig = () => {
       serviceType = 2; // SANDBOX
   }
 
+  // 환경변수 값 trim 처리
+  let clientId = (process.env.CODEF_CLIENT_ID || '').trim();
+  let clientSecret = (process.env.CODEF_CLIENT_SECRET || '').trim();
+  const publicKey = (process.env.CODEF_PUBLIC_KEY || '').trim();
+
+  // CLIENT_SECRET 자동 수정: UUID 형식(36자) 뒤에 추가된 잘못된 문자 제거
+  // (환경변수 복사-붙여넣기 시 PUBLIC_KEY 일부가 SECRET에 붙는 오류 대응)
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  const uuidMatch = clientSecret.match(uuidPattern);
+  if (uuidMatch && clientSecret.length > 36) {
+    console.warn(`CODEF: CLIENT_SECRET에서 UUID 이후 불필요한 문자가 감지되어 자동 수정되었습니다. (원래 길이: ${clientSecret.length})`);
+    clientSecret = uuidMatch[0];
+  }
+
   return {
-    clientId: process.env.CODEF_CLIENT_ID || '',
-    clientSecret: process.env.CODEF_CLIENT_SECRET || '',
-    publicKey: process.env.CODEF_PUBLIC_KEY || '',
+    clientId,
+    clientSecret,
+    publicKey,
     serviceType,
   };
 };
