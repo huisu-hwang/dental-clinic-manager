@@ -2,55 +2,54 @@
 // 코드에프 (CODEF) API 서비스
 // easycodef-node 라이브러리 사용 + node-forge RSA 암호화
 // Created: 2026-02-06
-// Updated: 2026-02-09
+// Updated: 2026-02-09 - PDF 문서 기반 엔드포인트/파라미터 전면 수정
 // ============================================
 
 import {
-  CodefServiceType,
   CodefApiResponse,
   CodefAccountCreateResponse,
-  TaxInvoiceItem,
-  CashReceiptItem,
-  BusinessCardItem,
+  TaxInvoiceStatisticsItem,
+  CashReceiptPurchaseItem,
+  CashReceiptSalesItem,
   SyncResult,
   CODEF_ORGANIZATION,
+  CODEF_ENDPOINTS,
 } from '@/types/codef';
 import forge from 'node-forge';
+import crypto from 'crypto';
 
 // easycodef-node 라이브러리 동적 import
 let EasyCodef: any = null;
 let EasyCodefConstant: any = null;
-let EasyCodefUtil: any = null;
 
 async function loadEasyCodef() {
   if (!EasyCodef) {
     const easycodef = await import('easycodef-node');
     EasyCodef = easycodef.EasyCodef || (easycodef.default && easycodef.default.EasyCodef);
     EasyCodefConstant = easycodef.EasyCodefConstant || (easycodef.default && easycodef.default.EasyCodefConstant);
-    EasyCodefUtil = easycodef.EasyCodefUtil || (easycodef.default && easycodef.default.EasyCodefUtil);
   }
-  return { EasyCodef, EasyCodefConstant, EasyCodefUtil };
+  return { EasyCodef, EasyCodefConstant };
 }
+
+// ============================================
+// 암호화 유틸리티
+// ============================================
 
 /**
  * node-forge를 사용한 RSA 암호화 (OpenSSL 3.0 호환)
- * easycodef-node의 encryptRSA 대신 사용
+ * CODEF API 전송용 비밀번호 암호화
  */
 function encryptRSAWithForge(publicKeyBase64: string, plainText: string): string {
-  // 공개키 정리: 공백, 개행 제거
   let cleanKey = publicKeyBase64.replace(/[\s\n\r]/g, '');
 
-  // SPKI 헤더 검증 및 자동 수정: 잘못된 SPKI 헤더 패턴 감지
-  // 정상: ...OCAQ8AMIIBCgK... (RSA 2048 SPKI 표준 헤더)
-  // 비정상: ...OCAQIIBCgK... (3자 누락)
+  // SPKI 헤더 자동 수정
   if (cleanKey.includes('OCAQIIBCgK') && !cleanKey.includes('OCAQ8AMIIBCgK')) {
     cleanKey = cleanKey.replace('OCAQIIBCgK', 'OCAQ8AMIIBCgK');
     console.warn('CODEF: RSA 공개키 SPKI 헤더가 자동 수정되었습니다.');
   }
 
-  // base64 길이 검증 (4의 배수)
   if (cleanKey.length % 4 !== 0) {
-    throw new Error(`RSA 공개키가 올바르지 않습니다. (base64 길이: ${cleanKey.length}, 4의 배수여야 함)`);
+    throw new Error(`RSA 공개키가 올바르지 않습니다. (base64 길이: ${cleanKey.length})`);
   }
 
   const formattedKey = cleanKey.match(/.{1,64}/g)?.join('\n') || cleanKey;
@@ -60,7 +59,40 @@ function encryptRSAWithForge(publicKeyBase64: string, plainText: string): string
   return forge.util.encode64(encrypted);
 }
 
-// 환경변수에서 설정 로드
+/**
+ * AES-256-GCM 암호화 (DB 저장용 비밀번호 암호화)
+ */
+export function encryptPasswordForStorage(plainText: string): string {
+  const secret = process.env.CODEF_CLIENT_SECRET || 'default-secret-key-for-encryption';
+  const key = crypto.scryptSync(secret, 'codef-pw-salt', 32);
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  let encrypted = cipher.update(plainText, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag().toString('hex');
+  return `${iv.toString('hex')}:${authTag}:${encrypted}`;
+}
+
+/**
+ * AES-256-GCM 복호화 (DB에서 비밀번호 읽기)
+ */
+export function decryptPasswordFromStorage(encryptedText: string): string {
+  const secret = process.env.CODEF_CLIENT_SECRET || 'default-secret-key-for-encryption';
+  const key = crypto.scryptSync(secret, 'codef-pw-salt', 32);
+  const [ivHex, authTagHex, encryptedData] = encryptedText.split(':');
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
+
+// ============================================
+// CODEF 설정
+// ============================================
+
 const getCodefConfig = () => {
   const serviceTypeEnv = (process.env.CODEF_SERVICE_TYPE || 'SANDBOX').trim().toUpperCase();
   let serviceType: number;
@@ -71,38 +103,26 @@ const getCodefConfig = () => {
       break;
     case 'DEMO':
     case '1':
-      // 홈택스(NT) businessType은 DEMO 환경에서 지원되지 않음 → SANDBOX 사용
-      // 실제 홈택스 연동이 필요하면 CODEF_SERVICE_TYPE=0 (PRODUCT) 설정 필요
-      console.warn('CODEF: DEMO 환경은 홈택스(NT)를 지원하지 않아 SANDBOX로 자동 전환됩니다. 실제 연동은 PRODUCT(0) 필요.');
-      serviceType = 2; // SANDBOX로 전환
+      serviceType = 1;
       break;
     default:
-      serviceType = 2; // SANDBOX
+      serviceType = 2;
   }
 
-  // 환경변수 값 trim 처리
   let clientId = (process.env.CODEF_CLIENT_ID || '').trim();
   let clientSecret = (process.env.CODEF_CLIENT_SECRET || '').trim();
   const publicKey = (process.env.CODEF_PUBLIC_KEY || '').trim();
 
   // CLIENT_SECRET 자동 수정: UUID 형식(36자) 뒤에 추가된 잘못된 문자 제거
-  // (환경변수 복사-붙여넣기 시 PUBLIC_KEY 일부가 SECRET에 붙는 오류 대응)
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
   const uuidMatch = clientSecret.match(uuidPattern);
   if (uuidMatch && clientSecret.length > 36) {
-    console.warn(`CODEF: CLIENT_SECRET에서 UUID 이후 불필요한 문자가 감지되어 자동 수정되었습니다. (원래 길이: ${clientSecret.length})`);
     clientSecret = uuidMatch[0];
   }
 
-  return {
-    clientId,
-    clientSecret,
-    publicKey,
-    serviceType,
-  };
+  return { clientId, clientSecret, publicKey, serviceType };
 };
 
-// CODEF 인스턴스 생성
 async function createCodefInstance() {
   const { EasyCodef, EasyCodefConstant } = await loadEasyCodef();
   const config = getCodefConfig();
@@ -114,29 +134,21 @@ async function createCodefInstance() {
   const codef = new EasyCodef();
   codef.setPublicKey(config.publicKey);
 
-  // 서비스 타입에 따라 클라이언트 정보 설정
   if (config.serviceType === 0) {
-    // 정식
     codef.setClientInfo(config.clientId, config.clientSecret);
   } else {
-    // 데모/샌드박스
     codef.setClientInfoForDemo(config.clientId, config.clientSecret);
   }
 
   return { codef, serviceType: config.serviceType };
 }
 
-// 서비스 타입 상수 가져오기
 async function getServiceTypeConstant(serviceType: number) {
   const { EasyCodefConstant } = await loadEasyCodef();
-
   switch (serviceType) {
-    case 0:
-      return EasyCodefConstant.SERVICE_TYPE_API;
-    case 1:
-      return EasyCodefConstant.SERVICE_TYPE_DEMO;
-    default:
-      return EasyCodefConstant.SERVICE_TYPE_SANDBOX;
+    case 0: return EasyCodefConstant.SERVICE_TYPE_API;
+    case 1: return EasyCodefConstant.SERVICE_TYPE_DEMO;
+    default: return EasyCodefConstant.SERVICE_TYPE_SANDBOX;
   }
 }
 
@@ -144,368 +156,249 @@ async function getServiceTypeConstant(serviceType: number) {
 // 계정 관리 API
 // ============================================
 
-/**
- * CODEF 등록된 connectedId 목록 조회
- */
 export async function getConnectedIdList(): Promise<CodefApiResponse<{ connectedIdList: string[] }>> {
   try {
     const { codef, serviceType } = await createCodefInstance();
     const serviceTypeConstant = await getServiceTypeConstant(serviceType);
-
     const response = await codef.getConnectedIdList(serviceTypeConstant, {});
-    const result = typeof response === 'string' ? JSON.parse(response) : response;
-
-    return result;
+    return typeof response === 'string' ? JSON.parse(response) : response;
   } catch (error: any) {
-    const errMsg = error instanceof Error ? error.message : (typeof error === 'string' ? error : JSON.stringify(error));
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error('CODEF getConnectedIdList error:', errMsg);
     return {
-      result: {
-        code: 'CF-99999',
-        extraMessage: '',
-        message: errMsg || 'connectedId 목록 조회 중 오류가 발생했습니다.',
-        transactionId: '',
-      },
+      result: { code: 'CF-99999', extraMessage: '', message: errMsg, transactionId: '' },
       data: { connectedIdList: [] },
     };
   }
 }
 
-/**
- * CODEF 계정 등록 (Connected ID 발급)
- * @param userId 홈택스 본인 계정 아이디
- * @param password 홈택스 본인 계정 비밀번호
- * @param identity 대표자 주민등록번호 앞 6자리 (YYMMDD) 또는 사업자등록번호 (loginType '1'에서 필수)
- */
 export async function createCodefAccount(
-  userId: string,
-  password: string,
-  identity: string
+  userId: string, password: string, identity: string
 ): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
   try {
     const { codef, serviceType } = await createCodefInstance();
     const config = getCodefConfig();
     const serviceTypeConstant = await getServiceTypeConstant(serviceType);
-
-    // 비밀번호 RSA 암호화 (node-forge 사용 - OpenSSL 3.0 호환)
     const encryptedPassword = encryptRSAWithForge(config.publicKey, password);
 
-    // 계정 정보 설정
-    const accountInfo: Record<string, string> = {
-      countryCode: 'KR',
-      businessType: 'NT',  // 공공기관
-      clientType: 'P',     // 개인 (원장 본인 계정)
-      organization: CODEF_ORGANIZATION.HOMETAX,
-      loginType: '1',      // ID/PW 로그인
-      id: userId,
-      password: encryptedPassword,
-      identity: identity,  // 주민번호 앞7자리 또는 사업자등록번호 (필수)
-    };
-
     const param = {
-      accountList: [accountInfo],
+      accountList: [{
+        countryCode: 'KR',
+        businessType: 'NT',
+        clientType: 'P',
+        organization: CODEF_ORGANIZATION.HOMETAX,
+        loginType: '1',
+        id: userId,
+        password: encryptedPassword,
+        identity: identity,
+      }],
     };
 
-    // 계정 생성 요청
     const response = await codef.createAccount(serviceTypeConstant, param);
-    const result = typeof response === 'string' ? JSON.parse(response) : response;
-
-    return result;
+    return typeof response === 'string' ? JSON.parse(response) : response;
   } catch (error: any) {
-    const errMsg = error instanceof Error ? error.message : (typeof error === 'string' ? error : JSON.stringify(error));
-    console.error('CODEF createAccount error:', errMsg, error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('CODEF createAccount error:', errMsg);
     return {
-      result: {
-        code: 'CF-99999',
-        extraMessage: String(error?.stack || ''),
-        message: errMsg || '계정 등록 중 오류가 발생했습니다.',
-        transactionId: '',
-      },
+      result: { code: 'CF-99999', extraMessage: String(error?.stack || ''), message: errMsg, transactionId: '' },
       data: null as any,
     };
   }
 }
 
-/**
- * CODEF 계정 업데이트 (기존 connectedId의 계정 정보 갱신)
- */
 export async function updateCodefAccount(
-  connectedId: string,
-  userId: string,
-  password: string,
-  identity: string
+  connectedId: string, userId: string, password: string, identity: string
 ): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
   try {
     const { codef, serviceType } = await createCodefInstance();
     const config = getCodefConfig();
     const serviceTypeConstant = await getServiceTypeConstant(serviceType);
-
     const encryptedPassword = encryptRSAWithForge(config.publicKey, password);
-
-    const accountInfo: Record<string, string> = {
-      countryCode: 'KR',
-      businessType: 'NT',
-      clientType: 'P',
-      organization: CODEF_ORGANIZATION.HOMETAX,
-      loginType: '1',
-      id: userId,
-      password: encryptedPassword,
-      identity: identity,
-    };
 
     const param = {
       connectedId,
-      accountList: [accountInfo],
+      accountList: [{
+        countryCode: 'KR',
+        businessType: 'NT',
+        clientType: 'P',
+        organization: CODEF_ORGANIZATION.HOMETAX,
+        loginType: '1',
+        id: userId,
+        password: encryptedPassword,
+        identity: identity,
+      }],
     };
 
     const response = await codef.updateAccount(serviceTypeConstant, param);
-    const result = typeof response === 'string' ? JSON.parse(response) : response;
-
-    return result;
+    return typeof response === 'string' ? JSON.parse(response) : response;
   } catch (error: any) {
-    const errMsg = error instanceof Error ? error.message : (typeof error === 'string' ? error : JSON.stringify(error));
-    console.error('CODEF updateAccount error:', errMsg, error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('CODEF updateAccount error:', errMsg);
     return {
-      result: {
-        code: 'CF-99999',
-        extraMessage: String(error?.stack || ''),
-        message: errMsg || '계정 업데이트 중 오류가 발생했습니다.',
-        transactionId: '',
-      },
+      result: { code: 'CF-99999', extraMessage: String(error?.stack || ''), message: errMsg, transactionId: '' },
       data: null as any,
     };
   }
 }
 
-/**
- * CODEF 계정 추가
- */
 export async function addCodefAccount(
-  connectedId: string,
-  userId: string,
-  password: string,
-  identity: string
+  connectedId: string, userId: string, password: string, identity: string
 ): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
   try {
     const { codef, serviceType } = await createCodefInstance();
     const config = getCodefConfig();
     const serviceTypeConstant = await getServiceTypeConstant(serviceType);
-
     const encryptedPassword = encryptRSAWithForge(config.publicKey, password);
-
-    const accountInfo: Record<string, string> = {
-      countryCode: 'KR',
-      businessType: 'NT',
-      clientType: 'P',     // 개인 (원장 본인 계정)
-      organization: CODEF_ORGANIZATION.HOMETAX,
-      loginType: '1',
-      id: userId,
-      password: encryptedPassword,
-      identity: identity,  // 주민번호 앞6자리 또는 사업자등록번호 (필수)
-    };
 
     const param = {
       connectedId,
-      accountList: [accountInfo],
+      accountList: [{
+        countryCode: 'KR',
+        businessType: 'NT',
+        clientType: 'P',
+        organization: CODEF_ORGANIZATION.HOMETAX,
+        loginType: '1',
+        id: userId,
+        password: encryptedPassword,
+        identity: identity,
+      }],
     };
 
     const response = await codef.addAccount(serviceTypeConstant, param);
-    const result = typeof response === 'string' ? JSON.parse(response) : response;
-
-    return result;
-  } catch (error) {
+    return typeof response === 'string' ? JSON.parse(response) : response;
+  } catch (error: any) {
     console.error('CODEF addAccount error:', error);
     return {
-      result: {
-        code: 'CF-99999',
-        extraMessage: '',
-        message: error instanceof Error ? error.message : '계정 추가 중 오류가 발생했습니다.',
-        transactionId: '',
-      },
+      result: { code: 'CF-99999', extraMessage: '', message: error instanceof Error ? error.message : '계정 추가 실패', transactionId: '' },
       data: null as any,
     };
   }
 }
 
-/**
- * CODEF 계정 삭제
- */
-export async function deleteCodefAccount(
-  connectedId: string
-): Promise<CodefApiResponse<unknown>> {
+export async function deleteCodefAccount(connectedId: string): Promise<CodefApiResponse<unknown>> {
   try {
     const { codef, serviceType } = await createCodefInstance();
     const serviceTypeConstant = await getServiceTypeConstant(serviceType);
 
     const param = {
       connectedId,
-      accountList: [
-        {
-          countryCode: 'KR',
-          businessType: 'NT',
-          clientType: 'P',     // 개인 (원장 본인 계정)
-          organization: CODEF_ORGANIZATION.HOMETAX,
-          loginType: '1',
-        },
-      ],
+      accountList: [{
+        countryCode: 'KR',
+        businessType: 'NT',
+        clientType: 'P',
+        organization: CODEF_ORGANIZATION.HOMETAX,
+        loginType: '1',
+      }],
     };
 
     const response = await codef.deleteAccount(serviceTypeConstant, param);
-    const result = typeof response === 'string' ? JSON.parse(response) : response;
-
-    return result;
+    return typeof response === 'string' ? JSON.parse(response) : response;
   } catch (error) {
     console.error('CODEF deleteAccount error:', error);
     return {
-      result: {
-        code: 'CF-99999',
-        extraMessage: '',
-        message: error instanceof Error ? error.message : '계정 삭제 중 오류가 발생했습니다.',
-        transactionId: '',
-      },
+      result: { code: 'CF-99999', extraMessage: '', message: error instanceof Error ? error.message : '계정 삭제 실패', transactionId: '' },
       data: null,
     };
   }
 }
 
 // ============================================
-// 상품 조회 API
+// 상품 조회 API (PDF 문서 기반 정확한 엔드포인트)
 // ============================================
 
-/**
- * CODEF 상품 요청 공통 함수
- */
-async function requestProduct<T>(
-  productUrl: string,
-  params: object
-): Promise<CodefApiResponse<T>> {
+async function requestProduct<T>(productUrl: string, params: object): Promise<CodefApiResponse<T>> {
   try {
     const { codef, serviceType } = await createCodefInstance();
     const serviceTypeConstant = await getServiceTypeConstant(serviceType);
-
+    console.log(`CODEF requestProduct: ${productUrl}`, JSON.stringify(params).substring(0, 200));
     const response = await codef.requestProduct(productUrl, serviceTypeConstant, params);
     const result = typeof response === 'string' ? JSON.parse(response) : response;
-
+    console.log(`CODEF response code: ${result?.result?.code}, message: ${result?.result?.message}`);
     return result;
   } catch (error) {
     console.error('CODEF requestProduct error:', error);
     return {
-      result: {
-        code: 'CF-99999',
-        extraMessage: '',
-        message: error instanceof Error ? error.message : '상품 조회 중 오류가 발생했습니다.',
-        transactionId: '',
-      },
+      result: { code: 'CF-99999', extraMessage: '', message: error instanceof Error ? error.message : '상품 조회 실패', transactionId: '' },
       data: null as any,
     };
   }
 }
 
 /**
- * 매출 세금계산서 조회
+ * 전자세금계산서 기간별 매출/매입 통계
+ * Endpoint: /v1/kr/public/nt/tax-invoice/sales-purchase-statistics
+ * Organization: 0002
+ * 직접 인증 방식 (loginType=1, userId, userPassword)
  */
-export async function getTaxInvoiceSales(
-  connectedId: string,
-  startDate: string,
-  endDate: string
-): Promise<TaxInvoiceItem[]> {
+export async function getTaxInvoiceStatistics(
+  hometaxId: string,
+  hometaxPassword: string,
+  yearMonth: string  // YYYYMM 형식
+): Promise<TaxInvoiceStatisticsItem[]> {
+  const config = getCodefConfig();
+  const encryptedPassword = encryptRSAWithForge(config.publicKey, hometaxPassword);
+
   const params = {
-    connectedId,
-    organization: CODEF_ORGANIZATION.HOMETAX,
-    inquiryType: '01',  // 매출
-    startDate: startDate.replace(/-/g, ''),
-    endDate: endDate.replace(/-/g, ''),
+    organization: CODEF_ORGANIZATION.HOMETAX,  // 0002
+    loginType: '1',          // ID/PW 로그인
+    userId: hometaxId,
+    userPassword: encryptedPassword,
+    inquiryType: '01',       // 01: 전자세금계산서
+    searchType: '01',        // 01: 월별
+    startDate: yearMonth,    // YYYYMM
+    endDate: yearMonth,      // YYYYMM (같은 달)
+    type: '1',               // 1: 상세포함 (거래처별 명세)
+    identity: '',
+    telecom: '',
   };
 
-  const response = await requestProduct<any>(
-    '/v1/kr/public/nt/tax-invoice/sales',
+  const response = await requestProduct<TaxInvoiceStatisticsItem[] | TaxInvoiceStatisticsItem>(
+    CODEF_ENDPOINTS.TAX_INVOICE_STATISTICS,
     params
   );
 
   if (response.result.code !== 'CF-00000') {
-    console.error('Tax invoice sales error:', response.result);
+    console.error('Tax invoice statistics error:', response.result);
     return [];
   }
 
-  return response.data?.resTaxInvoiceList || [];
+  // 응답이 배열일 수도, 단건일 수도 있음
+  const data = response.data;
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object') return [data as TaxInvoiceStatisticsItem];
+  return [];
 }
 
 /**
- * 매입 세금계산서 조회
+ * 현금영수증 매입내역
+ * Endpoint: /v1/kr/public/nt/cash-receipt/purchase-details
+ * Organization: 0003
+ * 직접 인증 방식 (loginType=1, id, userPassword)
  */
-export async function getTaxInvoicePurchase(
-  connectedId: string,
-  startDate: string,
-  endDate: string
-): Promise<TaxInvoiceItem[]> {
+export async function getCashReceiptPurchaseDetails(
+  hometaxId: string,
+  hometaxPassword: string,
+  startDate: string,  // YYYYMMDD
+  endDate: string     // YYYYMMDD
+): Promise<CashReceiptPurchaseItem[]> {
+  const config = getCodefConfig();
+  const encryptedPassword = encryptRSAWithForge(config.publicKey, hometaxPassword);
+
   const params = {
-    connectedId,
-    organization: CODEF_ORGANIZATION.HOMETAX,
-    inquiryType: '02',  // 매입
-    startDate: startDate.replace(/-/g, ''),
-    endDate: endDate.replace(/-/g, ''),
+    organization: CODEF_ORGANIZATION.CASH_RECEIPT,  // 0003
+    loginType: '1',          // ID/PW 로그인
+    id: hometaxId,
+    userPassword: encryptedPassword,
+    startDate: startDate,    // YYYYMMDD
+    endDate: endDate,        // YYYYMMDD
+    orderBy: '0',            // 최신순
+    inquiryType: '0',        // 전체
+    identity: '',
+    telecom: '',
   };
 
-  const response = await requestProduct<any>(
-    '/v1/kr/public/nt/tax-invoice/purchase',
-    params
-  );
-
-  if (response.result.code !== 'CF-00000') {
-    console.error('Tax invoice purchase error:', response.result);
-    return [];
-  }
-
-  return response.data?.resTaxInvoiceList || [];
-}
-
-/**
- * 매출 현금영수증 조회
- */
-export async function getCashReceiptSales(
-  connectedId: string,
-  startDate: string,
-  endDate: string
-): Promise<CashReceiptItem[]> {
-  const params = {
-    connectedId,
-    organization: CODEF_ORGANIZATION.HOMETAX,
-    inquiryType: '01',
-    startDate: startDate.replace(/-/g, ''),
-    endDate: endDate.replace(/-/g, ''),
-  };
-
-  const response = await requestProduct<any>(
-    '/v1/kr/public/nt/cash-receipt/sales',
-    params
-  );
-
-  if (response.result.code !== 'CF-00000') {
-    console.error('Cash receipt sales error:', response.result);
-    return [];
-  }
-
-  return response.data?.resCashReceiptList || [];
-}
-
-/**
- * 매입 현금영수증 조회
- */
-export async function getCashReceiptPurchase(
-  connectedId: string,
-  startDate: string,
-  endDate: string
-): Promise<CashReceiptItem[]> {
-  const params = {
-    connectedId,
-    organization: CODEF_ORGANIZATION.HOMETAX,
-    inquiryType: '02',
-    startDate: startDate.replace(/-/g, ''),
-    endDate: endDate.replace(/-/g, ''),
-  };
-
-  const response = await requestProduct<any>(
-    '/v1/kr/public/nt/cash-receipt/purchase',
+  const response = await requestProduct<CashReceiptPurchaseItem[] | CashReceiptPurchaseItem>(
+    CODEF_ENDPOINTS.CASH_RECEIPT_PURCHASE,
     params
   );
 
@@ -514,46 +407,101 @@ export async function getCashReceiptPurchase(
     return [];
   }
 
-  return response.data?.resCashReceiptList || [];
+  const data = response.data;
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object' && 'resUsedDate' in (data as any)) return [data as CashReceiptPurchaseItem];
+  return [];
 }
 
 /**
- * 사업자카드 사용내역 조회
+ * 현금영수증 매출내역
+ * Endpoint: /v1/kr/public/nt/cash-receipt/sales-details
+ * Organization: 0003
+ * 직접 인증 방식 (loginType=1, id, userPassword)
  */
-export async function getBusinessCardHistory(
-  connectedId: string,
-  startDate: string,
-  endDate: string
-): Promise<BusinessCardItem[]> {
+export async function getCashReceiptSalesDetails(
+  hometaxId: string,
+  hometaxPassword: string,
+  startDate: string,  // YYYYMMDD
+  endDate: string     // YYYYMMDD
+): Promise<CashReceiptSalesItem[]> {
+  const config = getCodefConfig();
+  const encryptedPassword = encryptRSAWithForge(config.publicKey, hometaxPassword);
+
   const params = {
-    connectedId,
-    organization: CODEF_ORGANIZATION.HOMETAX,
-    startDate: startDate.replace(/-/g, ''),
-    endDate: endDate.replace(/-/g, ''),
+    organization: CODEF_ORGANIZATION.CASH_RECEIPT,  // 0003
+    loginType: '1',          // ID/PW 로그인
+    id: hometaxId,
+    userPassword: encryptedPassword,
+    startDate: startDate,    // YYYYMMDD
+    endDate: endDate,        // YYYYMMDD
+    orderBy: '0',            // 최신순
+    identity: '',
+    telecom: '',
   };
 
-  const response = await requestProduct<any>(
-    '/v1/kr/public/nt/business-card/use-history',
+  const response = await requestProduct<CashReceiptSalesItem[] | CashReceiptSalesItem>(
+    CODEF_ENDPOINTS.CASH_RECEIPT_SALES,
     params
   );
 
   if (response.result.code !== 'CF-00000') {
-    console.error('Business card error:', response.result);
+    console.error('Cash receipt sales error:', response.result);
     return [];
   }
 
-  return response.data?.resCardUseList || [];
+  const data = response.data;
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object' && 'resUsedDate' in (data as any)) return [data as CashReceiptSalesItem];
+  return [];
+}
+
+// ============================================
+// 하위 호환성 유지 함수 (기존 sync 라우트 import 대응)
+// ============================================
+
+export async function getTaxInvoiceSales(
+  connectedId: string, startDate: string, endDate: string
+): Promise<any[]> {
+  console.warn('getTaxInvoiceSales: deprecated - use getTaxInvoiceStatistics instead');
+  return [];
+}
+
+export async function getTaxInvoicePurchase(
+  connectedId: string, startDate: string, endDate: string
+): Promise<any[]> {
+  console.warn('getTaxInvoicePurchase: deprecated - use getTaxInvoiceStatistics instead');
+  return [];
+}
+
+export async function getCashReceiptSales(
+  connectedId: string, startDate: string, endDate: string
+): Promise<any[]> {
+  console.warn('getCashReceiptSales: deprecated - use getCashReceiptSalesDetails instead');
+  return [];
+}
+
+export async function getCashReceiptPurchase(
+  connectedId: string, startDate: string, endDate: string
+): Promise<any[]> {
+  console.warn('getCashReceiptPurchase: deprecated - use getCashReceiptPurchaseDetails instead');
+  return [];
+}
+
+export async function getBusinessCardHistory(
+  connectedId: string, startDate: string, endDate: string
+): Promise<any[]> {
+  console.warn('getBusinessCardHistory: deprecated - card approval requires separate card company connection');
+  return [];
 }
 
 // ============================================
 // 통합 동기화 함수
 // ============================================
 
-/**
- * 홈택스 데이터 전체 동기화
- */
 export async function syncHometaxData(
-  connectedId: string,
+  hometaxId: string,
+  hometaxPassword: string,
   year: number,
   month: number
 ): Promise<SyncResult> {
@@ -563,46 +511,41 @@ export async function syncHometaxData(
     taxInvoicePurchase: 0,
     cashReceiptSales: 0,
     cashReceiptPurchase: 0,
-    businessCard: 0,
   };
 
-  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const yearMonth = `${year}${String(month).padStart(2, '0')}`;
+  const startDate = `${year}${String(month).padStart(2, '0')}01`;
   const lastDay = new Date(year, month, 0).getDate();
-  const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+  const endDate = `${year}${String(month).padStart(2, '0')}${lastDay}`;
 
+  // 1. 세금계산서 매출/매입 통계
   try {
-    const taxInvoiceSales = await getTaxInvoiceSales(connectedId, startDate, endDate);
-    syncedCount.taxInvoiceSales = taxInvoiceSales.length;
+    const taxStats = await getTaxInvoiceStatistics(hometaxId, hometaxPassword, yearMonth);
+    for (const item of taxStats) {
+      if (item.resType === '0') {
+        syncedCount.taxInvoiceSales += parseInt(item.resNumber, 10) || 0;
+      } else if (item.resType === '1') {
+        syncedCount.taxInvoicePurchase += parseInt(item.resNumber, 10) || 0;
+      }
+    }
   } catch (error) {
-    errors.push(`매출 세금계산서 조회 실패: ${error}`);
+    errors.push(`세금계산서 통계 조회 실패: ${error}`);
   }
 
+  // 2. 현금영수증 매입내역
   try {
-    const taxInvoicePurchase = await getTaxInvoicePurchase(connectedId, startDate, endDate);
-    syncedCount.taxInvoicePurchase = taxInvoicePurchase.length;
+    const cashPurchase = await getCashReceiptPurchaseDetails(hometaxId, hometaxPassword, startDate, endDate);
+    syncedCount.cashReceiptPurchase = cashPurchase.length;
   } catch (error) {
-    errors.push(`매입 세금계산서 조회 실패: ${error}`);
+    errors.push(`현금영수증 매입 조회 실패: ${error}`);
   }
 
+  // 3. 현금영수증 매출내역
   try {
-    const cashReceiptSales = await getCashReceiptSales(connectedId, startDate, endDate);
-    syncedCount.cashReceiptSales = cashReceiptSales.length;
+    const cashSales = await getCashReceiptSalesDetails(hometaxId, hometaxPassword, startDate, endDate);
+    syncedCount.cashReceiptSales = cashSales.length;
   } catch (error) {
-    errors.push(`매출 현금영수증 조회 실패: ${error}`);
-  }
-
-  try {
-    const cashReceiptPurchase = await getCashReceiptPurchase(connectedId, startDate, endDate);
-    syncedCount.cashReceiptPurchase = cashReceiptPurchase.length;
-  } catch (error) {
-    errors.push(`매입 현금영수증 조회 실패: ${error}`);
-  }
-
-  try {
-    const businessCard = await getBusinessCardHistory(connectedId, startDate, endDate);
-    syncedCount.businessCard = businessCard.length;
-  } catch (error) {
-    errors.push(`사업자카드 내역 조회 실패: ${error}`);
+    errors.push(`현금영수증 매출 조회 실패: ${error}`);
   }
 
   return {
@@ -614,104 +557,130 @@ export async function syncHometaxData(
 }
 
 // ============================================
-// 변환 함수
+// 변환 함수 (세금계산서 통계 → 요약 데이터)
 // ============================================
 
-/**
- * 세금계산서를 지출 데이터로 변환
- */
-export function convertTaxInvoiceToExpense(
-  invoice: TaxInvoiceItem,
-  categoryId: string
-): {
-  amount: number;
-  description: string;
-  vendor_name: string;
-  has_tax_invoice: boolean;
-  tax_invoice_number: string;
-  tax_invoice_date: string;
-  is_hometax_synced: boolean;
-} {
+export function convertTaxInvoiceStatsToSummary(items: TaxInvoiceStatisticsItem[]) {
+  let salesSupplyValue = 0;
+  let salesTaxAmt = 0;
+  let salesCount = 0;
+  let purchaseSupplyValue = 0;
+  let purchaseTaxAmt = 0;
+  let purchaseCount = 0;
+
+  for (const item of items) {
+    const supplyValue = parseInt(item.resSupplyValue, 10) || 0;
+    const taxAmt = parseInt(item.resTaxAmt || '0', 10) || 0;
+    const count = parseInt(item.resNumber, 10) || 0;
+
+    if (item.resType === '0') {  // 매출
+      salesSupplyValue += supplyValue;
+      salesTaxAmt += taxAmt;
+      salesCount += count;
+    } else if (item.resType === '1') {  // 매입
+      purchaseSupplyValue += supplyValue;
+      purchaseTaxAmt += taxAmt;
+      purchaseCount += count;
+    }
+  }
+
   return {
-    amount: parseInt(invoice.grandTotal, 10) || 0,
-    description: invoice.itemName || '세금계산서',
-    vendor_name: invoice.supplierCorpName,
+    sales: { supplyValue: salesSupplyValue, taxAmt: salesTaxAmt, count: salesCount },
+    purchase: { supplyValue: purchaseSupplyValue, taxAmt: purchaseTaxAmt, count: purchaseCount },
+  };
+}
+
+/**
+ * 현금영수증 매입내역을 지출 데이터로 변환
+ */
+export function convertCashReceiptPurchaseToExpense(item: CashReceiptPurchaseItem) {
+  return {
+    amount: parseInt(item.resTotalAmount, 10) || 0,
+    description: `현금영수증 매입 - ${item.resApprovalNo}`,
+    vendor_name: item.resMemberStoreName || item.resCompanyNm || '',
+    has_tax_invoice: false,
+    tax_invoice_number: item.resApprovalNo,
+    tax_invoice_date: formatCodefDate(item.resUsedDate),
+    payment_method: 'cash' as const,
+    is_hometax_synced: true,
+    hometax_sync_date: new Date().toISOString(),
+  };
+}
+
+/**
+ * 세금계산서 매입 거래처별 상세를 지출 데이터로 변환
+ */
+export function convertTaxInvoicePurchaseToExpense(
+  partner: { resCompanyIdentityNo: string; resCompanyNm: string; resNumber: string; resSupplyValue: string; resTaxAmt?: string },
+  yearMonth: string
+) {
+  const supplyValue = parseInt(partner.resSupplyValue, 10) || 0;
+  const taxAmt = parseInt(partner.resTaxAmt || '0', 10) || 0;
+  return {
+    amount: supplyValue + taxAmt,
+    description: `세금계산서 매입 - ${partner.resCompanyNm} (${partner.resNumber}건)`,
+    vendor_name: partner.resCompanyNm,
     has_tax_invoice: true,
-    tax_invoice_number: invoice.issueId,
-    tax_invoice_date: formatCodefDate(invoice.issueDate),
+    tax_invoice_number: partner.resCompanyIdentityNo,
+    tax_invoice_date: `${yearMonth.slice(0, 4)}-${yearMonth.slice(4, 6)}-01`,
+    payment_method: 'transfer' as const,
+    is_hometax_synced: true,
+    hometax_sync_date: new Date().toISOString(),
+  };
+}
+
+// 하위 호환성: 기존 import에서 사용
+export function convertTaxInvoiceToExpense(invoice: any, categoryId: string) {
+  return {
+    amount: parseInt(invoice.grandTotal || '0', 10) || 0,
+    description: invoice.itemName || '세금계산서',
+    vendor_name: invoice.supplierCorpName || '',
+    has_tax_invoice: true,
+    tax_invoice_number: invoice.issueId || '',
+    tax_invoice_date: formatCodefDate(invoice.issueDate || ''),
     is_hometax_synced: true,
   };
 }
 
-/**
- * 현금영수증을 지출 데이터로 변환
- */
-export function convertCashReceiptToExpense(
-  receipt: CashReceiptItem,
-  categoryId: string
-): {
-  amount: number;
-  description: string;
-  vendor_name: string;
-  is_hometax_synced: boolean;
-} {
+export function convertCashReceiptToExpense(receipt: any, categoryId: string) {
   return {
-    amount: parseInt(receipt.totalAmount, 10) || 0,
-    description: `현금영수증 - ${receipt.approvalNumber}`,
-    vendor_name: receipt.franchiseeName,
+    amount: parseInt(receipt.totalAmount || '0', 10) || 0,
+    description: `현금영수증 - ${receipt.approvalNumber || ''}`,
+    vendor_name: receipt.franchiseeName || '',
     is_hometax_synced: true,
   };
 }
 
-/**
- * 사업자카드 내역을 지출 데이터로 변환
- */
-export function convertBusinessCardToExpense(
-  card: BusinessCardItem,
-  categoryId: string
-): {
-  amount: number;
-  description: string;
-  vendor_name: string;
-  payment_method: 'card';
-  is_business_card: boolean;
-  is_hometax_synced: boolean;
-} {
+export function convertBusinessCardToExpense(card: any, categoryId: string) {
   return {
-    amount: parseInt(card.totalAmount, 10) || 0,
-    description: `사업자카드 - ${card.approvalNumber}`,
-    vendor_name: card.merchantName,
-    payment_method: 'card',
+    amount: parseInt(card.totalAmount || '0', 10) || 0,
+    description: `사업자카드 - ${card.approvalNumber || ''}`,
+    vendor_name: card.merchantName || '',
+    payment_method: 'card' as const,
     is_business_card: true,
     is_hometax_synced: true,
   };
 }
 
+// ============================================
 // 유틸리티 함수
+// ============================================
+
 function formatCodefDate(dateStr: string): string {
   if (!dateStr || dateStr.length !== 8) return '';
   return `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`;
 }
 
-/**
- * CODEF 설정 확인
- */
 export function isCodefConfigured(): boolean {
   const config = getCodefConfig();
   return !!(config.clientId && config.clientSecret && config.publicKey);
 }
 
-/**
- * CODEF 서비스 타입 반환
- */
 export function getCodefServiceType(): string {
   const config = getCodefConfig();
   switch (config.serviceType) {
-    case 0:
-      return '정식';
-    case 1:
-      return '데모';
-    default:
-      return '샌드박스';
+    case 0: return '정식';
+    case 1: return '데모';
+    default: return '샌드박스';
   }
 }

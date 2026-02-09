@@ -1,6 +1,7 @@
 // ============================================
 // 코드에프 (CODEF) API 타입 정의
 // Created: 2026-02-06
+// Updated: 2026-02-09 - PDF 문서 기반 전면 수정
 // ============================================
 
 // 서비스 타입
@@ -12,22 +13,27 @@ export enum CodefServiceType {
 
 // 기관 코드
 export const CODEF_ORGANIZATION = {
-  HOMETAX: '0002',  // 국세청 홈택스 (공공기관 NT)
+  HOMETAX: '0002',         // 국세청 홈택스 (세금계산서)
+  CASH_RECEIPT: '0003',    // 국세청 현금영수증
+  CREDIT_CARD_SALES: '0006', // 국세청 신용카드 매출
 } as const;
 
-// API 엔드포인트
+// API 엔드포인트 (PDF 문서 기반 정확한 경로)
 export const CODEF_ENDPOINTS = {
-  // 홈택스 전자세금계산서
-  TAX_INVOICE_SALES: '/v1/kr/public/nt/tax-invoice/sales',           // 매출 세금계산서
-  TAX_INVOICE_PURCHASE: '/v1/kr/public/nt/tax-invoice/purchase',     // 매입 세금계산서
-  TAX_INVOICE_LIST: '/v1/kr/public/nt/tax-invoice/list',             // 세금계산서 목록
+  // 전자세금계산서 기간별 매출/매입 통계 (#아이디, #공동인증서, #금융인증서, #추가인증, #간편인증)
+  TAX_INVOICE_STATISTICS: '/v1/kr/public/nt/tax-invoice/sales-purchase-statistics',
 
-  // 홈택스 현금영수증
-  CASH_RECEIPT_SALES: '/v1/kr/public/nt/cash-receipt/sales',         // 매출 현금영수증
-  CASH_RECEIPT_PURCHASE: '/v1/kr/public/nt/cash-receipt/purchase',   // 매입 현금영수증
+  // 현금영수증 매입내역 (#아이디, #공동인증서, #추가인증, #간편인증)
+  CASH_RECEIPT_PURCHASE: '/v1/kr/public/nt/cash-receipt/purchase-details',
 
-  // 홈택스 사업자카드
-  BUSINESS_CARD: '/v1/kr/public/nt/business-card/use-history',       // 사업자카드 사용내역
+  // 현금영수증 매출내역 (#아이디, #공동인증서, #금융인증서, #추가인증, #간편인증)
+  CASH_RECEIPT_SALES: '/v1/kr/public/nt/cash-receipt/sales-details',
+
+  // 신용카드 매출자료 조회 (#공동인증서 전용 - 인증서 필요)
+  CREDIT_CARD_SALES: '/v1/kr/public/nt/tax-payment/credit-card-sales-data-list',
+
+  // 승인내역 (#connectedId - 카드사별 별도 연결 필요)
+  CARD_APPROVAL: '/v1/kr/card/p/account/approval-list',
 
   // 계정 관리
   ACCOUNT_CREATE: '/v1/account/create',
@@ -37,23 +43,20 @@ export const CODEF_ENDPOINTS = {
   ACCOUNT_LIST: '/v1/account/list',
 } as const;
 
-// CODEF 인증 타입
-export type CodefAuthType = 'password' | 'cert';
+// ============================================
+// CODEF 공통 타입
+// ============================================
 
-// CODEF 계정 등록 요청
-export interface CodefAccountCreateRequest {
-  countryCode: string;          // 국가코드 (KR)
-  businessType: string;         // 비즈니스 타입 (BK: 은행, CD: 카드, NT: 공공)
-  clientType: string;           // 클라이언트 타입 (P: 개인, B: 사업자)
-  organization: string;         // 기관코드
-  loginType: string;            // 로그인 타입 (0: 인증서, 1: ID/PW)
-  id: string;                   // 로그인 ID (홈택스 본인 계정 아이디)
-  password: string;             // 로그인 비밀번호 (암호화 필요)
-  identity?: string;            // 주민등록번호 앞 6자리 또는 사업자등록번호 (YYMMDD or 10자리)
-  birthDate?: string;           // 생년월일 (YYYYMMDD)
+export interface CodefApiResponse<T = unknown> {
+  result: {
+    code: string;               // CF-00000: 성공
+    extraMessage: string;
+    message: string;
+    transactionId: string;
+  };
+  data: T;
 }
 
-// CODEF 계정 등록 응답
 export interface CodefAccountCreateResponse {
   result: {
     code: string;
@@ -62,7 +65,7 @@ export interface CodefAccountCreateResponse {
     transactionId: string;
   };
   data: {
-    connectedId: string;        // 연결 ID (이후 API 호출에 사용)
+    connectedId: string;
     accountList: Array<{
       organization: string;
       loginType: string;
@@ -71,113 +74,201 @@ export interface CodefAccountCreateResponse {
   };
 }
 
-// CODEF API 기본 응답
-export interface CodefApiResponse<T = unknown> {
-  result: {
-    code: string;               // 결과 코드 (CF-00000: 성공)
-    extraMessage: string;
-    message: string;
-    transactionId: string;
-  };
-  data: T;
+// ============================================
+// 전자세금계산서 기간별 매출/매입 통계
+// Endpoint: /v1/kr/public/nt/tax-invoice/sales-purchase-statistics
+// Organization: 0002
+// ============================================
+
+export interface TaxInvoiceStatisticsItem {
+  resType: string;              // "0": 매출, "1": 매입
+  resYearMonth: string;         // 발급월별/분기별/년도별 텍스트 (ex. "2022/01", "2022년 1기 예정")
+  resPartnerCnt: string;        // 총거래처수
+  resNumber: string;            // 총매수
+  resSupplyValue: string;       // 총공급가액
+  resTaxAmt?: string;           // 총세액 (inquiryType="01"인 경우만)
+  resPartnerSpecList?: TaxInvoicePartnerSpec[]; // type="1"인 경우 제공
 }
 
-// 세금계산서 조회 요청
-export interface TaxInvoiceListRequest {
-  connectedId: string;          // 연결 ID
-  organization: string;         // 기관코드 (0002: 홈택스)
-  inquiryType: string;          // 조회구분 (01: 매출, 02: 매입)
-  startDate: string;            // 시작일자 (YYYYMMDD)
-  endDate: string;              // 종료일자 (YYYYMMDD)
-  supplierRegNumber?: string;   // 공급자 사업자번호
-  buyerRegNumber?: string;      // 공급받는자 사업자번호
+export interface TaxInvoicePartnerSpec {
+  resCompanyIdentityNo: string; // 거래처사업자번호
+  resCompanyNm: string;         // 상호(사업장명)
+  resNumber: string;            // 발급건수
+  resSupplyValue: string;       // 공급가액
+  resTaxAmt?: string;           // 세액
 }
 
-// 세금계산서 항목
+// ============================================
+// 현금영수증 매입내역
+// Endpoint: /v1/kr/public/nt/cash-receipt/purchase-details
+// Organization: 0003
+// ============================================
+
+export interface CashReceiptPurchaseItem {
+  resUserNm: string;            // 성명 (사용자명)
+  resCompanyNm?: string;        // 상호(사업장명)
+  resCompanyIdentityNo: string; // 사업자등록번호
+  resUsedDate: string;          // 매입일자 (YYYYMMDD)
+  resUsedTime: string;          // 매입일시 (HHmmss)
+  resTransTypeNm: string;       // 거래구분 (승인거래, 취소거래 등)
+  resDeductDescription: string; // 공제여부 (공제, 불공제)
+  resMemberStoreName?: string;  // 가맹점명
+  resApprovalNo: string;        // 승인번호
+  resMemberStoreCorpNo: string; // 가맹점 사업자번호
+  resSupplyValue: string;       // 공급가액
+  resVAT: string;               // 부가세
+  resTip: string;               // 봉사료
+  resIDMeans: string;           // 신분확인 수단 (발급수단)
+  resTotalAmount: string;       // 합계금액 (매입금액)
+  commStartDate: string;        // 시작일자
+  commEndDate: string;          // 종료일자
+}
+
+// ============================================
+// 현금영수증 매출내역
+// Endpoint: /v1/kr/public/nt/cash-receipt/sales-details
+// Organization: 0003
+// ============================================
+
+export interface CashReceiptSalesItem {
+  resUsedDate: string;          // 매출일자 (YYYYMMDD)
+  resUsedTime: string;          // 매출일시 (HHmmss)
+  resTransTypeNm: string;       // 거래구분
+  resIssueType: string;         // 발행구분
+  resApprovalNo: string;        // 승인번호
+  resSupplyValue: string;       // 공급가액
+  resVAT: string;               // 부가세
+  resTip: string;               // 봉사료
+  resIDMeans: string;           // 신분확인 수단 (발급수단)
+  resTotalAmount: string;       // 합계금액 (총금액)
+  resCompanyIdentityNo: string; // 사업자등록번호
+  resCompanyNm: string;         // 상호(사업장명)
+  commStartDate: string;        // 시작일자
+  commEndDate: string;          // 종료일자
+  resUseType?: string;          // 용도구분 (ex. "소비자소득공제용")
+  resNote?: string;             // 비고 (ex. "일반거래")
+}
+
+// ============================================
+// 신용카드 매출자료 조회 (공동인증서 전용)
+// Endpoint: /v1/kr/public/nt/tax-payment/credit-card-sales-data-list
+// Organization: 0006
+// ============================================
+
+export interface CreditCardSalesHistoryItem {
+  resYearMonth: string;         // 승인년월 YYYYMM
+  resCount: string;             // 건수(통수)
+  resTotalAmount: string;       // 합계금액 (매출액계)
+  resPaymentAmt: string;       // 결제금액 (신용카드 결제)
+  resPaymentAmt1: string;       // 결제금액1 (구매전용카드 결제)
+  resCashBack: string;          // 봉사료
+}
+
+export interface CreditCardSalesTotalItem {
+  resQuarter: string;           // 승인분기
+  resType: string;              // 자료구분
+  resCount: string;             // 건수(통수)
+  resTotalAmount: string;       // 합계금액 (매출액계)
+}
+
+export interface CreditCardSalesData {
+  resSalesHistoryList: CreditCardSalesHistoryItem[];  // 신용카드/제로페이 매출 자료
+  resTotalList: CreditCardSalesTotalItem[];            // 매출자료구분별 합계
+  resSalesHistoryList1: Array<{                        // 판매(결제)대행 매출자료
+    resYearMonth: string;
+    resCount: string;
+    resSalesAmount: string;
+    resCompanyNm: string;
+  }>;
+}
+
+// ============================================
+// 카드 승인내역 (#connectedId)
+// Endpoint: /v1/kr/card/p/account/approval-list
+// ============================================
+
+export interface CardApprovalItem {
+  resUsedDate: string;          // 사용일자 (YYYYMMDD)
+  resUsedTime: string;          // 사용일시
+  resCardNo: string;            // 카드번호 (마스킹)
+  resCardNo1?: string;          // 카드번호1
+  resCardName: string;          // 카드명
+  resMemberStoreName: string;   // 가맹점명
+  resUsedAmount: string;        // 이용금액
+  resPaymentType: string;       // 결제방법 ("1":일시불, "2":할부, "3":그외)
+  resInstallmentMonth?: string; // 할부개월
+  resApprovalNo: string;        // 승인번호
+  resPaymentDueDate?: string;   // 결제예정일
+  resHomeForeignType: string;   // 국내/외 구분 ("1":국내, "2":해외)
+  resMemberStoreCorpNo?: string; // 가맹점 사업자번호
+  resMemberStoreType?: string;  // 가맹점 업종
+  resMemberStoreTelNo?: string; // 가맹점 전화번호
+  resMemberStoreAddr?: string;  // 가맹점 주소
+  resMemberStoreNo?: string;    // 가맹점번호
+  resCancelYN: string;          // 취소여부 ("0":정상, "1":취소, "2":부분취소, "3":거절)
+  resCancelAmount?: string;     // 취소금액
+  resVAT?: string;              // 부가세
+  resCashBack?: string;         // 봉사료
+  resKRWAmt?: string;           // 원화금액
+  resAccountCurrency: string;   // 통화코드 (KRW, JPY, USD, EUR)
+  commStartDate: string;        // 시작일자
+  commEndDate: string;          // 종료일자
+}
+
+// ============================================
+// 하위 호환성 유지를 위한 레거시 타입
+// ============================================
+
+// 기존 코드에서 사용하던 타입 - TaxInvoiceItem 매핑
 export interface TaxInvoiceItem {
-  issueId: string;              // 승인번호
-  issueDate: string;            // 발급일자
-  sendDate: string;             // 전송일자
-  supplierCorpNum: string;      // 공급자 사업자번호
-  supplierCorpName: string;     // 공급자 상호
-  supplierCeoName: string;      // 공급자 대표자명
-  buyerCorpNum: string;         // 공급받는자 사업자번호
-  buyerCorpName: string;        // 공급받는자 상호
-  buyerCeoName: string;         // 공급받는자 대표자명
-  totalAmount: string;          // 공급가액
-  taxAmount: string;            // 세액
-  grandTotal: string;           // 합계금액
-  itemName: string;             // 품목명
-  invoiceType: string;          // 세금계산서 종류
-  chargeDirection: string;      // 청구방향 (01: 청구, 02: 영수)
+  issueId: string;
+  issueDate: string;
+  sendDate: string;
+  supplierCorpNum: string;
+  supplierCorpName: string;
+  supplierCeoName: string;
+  buyerCorpNum: string;
+  buyerCorpName: string;
+  buyerCeoName: string;
+  totalAmount: string;
+  taxAmount: string;
+  grandTotal: string;
+  itemName: string;
+  invoiceType: string;
+  chargeDirection: string;
 }
 
-// 세금계산서 목록 응답
-export interface TaxInvoiceListResponse {
-  resInquiryType: string;
-  resResultCount: string;
-  resTaxInvoiceList: TaxInvoiceItem[];
-}
-
-// 현금영수증 조회 요청
-export interface CashReceiptListRequest {
-  connectedId: string;
-  organization: string;
-  inquiryType: string;          // 조회구분 (01: 매출, 02: 매입)
-  startDate: string;
-  endDate: string;
-}
-
-// 현금영수증 항목
+// 기존 CashReceiptItem - 하위 호환성
 export interface CashReceiptItem {
-  tradeDate: string;            // 거래일자
-  tradeTime: string;            // 거래시간
-  franchiseeName: string;       // 가맹점명
-  franchiseeRegNumber: string;  // 가맹점 사업자번호
-  totalAmount: string;          // 총금액
-  supplyAmount: string;         // 공급가액
-  taxAmount: string;            // 부가세
-  serviceAmount: string;        // 봉사료
-  approvalNumber: string;       // 승인번호
-  tradeType: string;            // 거래유형 (승인/취소)
+  tradeDate: string;
+  tradeTime: string;
+  franchiseeName: string;
+  franchiseeRegNumber: string;
+  totalAmount: string;
+  supplyAmount: string;
+  taxAmount: string;
+  serviceAmount: string;
+  approvalNumber: string;
+  tradeType: string;
 }
 
-// 현금영수증 목록 응답
-export interface CashReceiptListResponse {
-  resInquiryType: string;
-  resResultCount: string;
-  resCashReceiptList: CashReceiptItem[];
-}
-
-// 사업자카드 사용내역 요청
-export interface BusinessCardRequest {
-  connectedId: string;
-  organization: string;
-  startDate: string;
-  endDate: string;
-  cardNo?: string;              // 카드번호 (선택)
-}
-
-// 사업자카드 사용내역 항목
+// 기존 BusinessCardItem - 하위 호환성
 export interface BusinessCardItem {
-  cardNo: string;               // 카드번호
-  cardCompany: string;          // 카드사
-  useDate: string;              // 사용일자
-  useTime: string;              // 사용시간
-  merchantName: string;         // 가맹점명
-  merchantRegNumber: string;    // 가맹점 사업자번호
-  totalAmount: string;          // 이용금액
-  approvalNumber: string;       // 승인번호
-  approvalStatus: string;       // 승인상태
+  cardNo: string;
+  cardCompany: string;
+  useDate: string;
+  useTime: string;
+  merchantName: string;
+  merchantRegNumber: string;
+  totalAmount: string;
+  approvalNumber: string;
+  approvalStatus: string;
 }
 
-// 사업자카드 사용내역 응답
-export interface BusinessCardResponse {
-  resResultCount: string;
-  resCardUseList: BusinessCardItem[];
-}
+// ============================================
+// 설정 및 기타 타입
+// ============================================
 
-// CODEF 설정 인터페이스
 export interface CodefConfig {
   clientId: string;
   clientSecret: string;
@@ -185,17 +276,15 @@ export interface CodefConfig {
   serviceType: CodefServiceType;
 }
 
-// 홈택스 연동 설정
 export interface HometaxConnectionConfig {
-  connectedId: string | null;   // CODEF 연결 ID
-  userId: string;               // 홈택스 본인 계정 아이디
+  connectedId: string | null;
+  userId: string;
   isConnected: boolean;
   lastSyncDate: string | null;
   syncStatus: 'idle' | 'syncing' | 'success' | 'error';
   errorMessage: string | null;
 }
 
-// 동기화 결과
 export interface SyncResult {
   success: boolean;
   syncedCount: {
@@ -203,24 +292,22 @@ export interface SyncResult {
     taxInvoicePurchase: number;
     cashReceiptSales: number;
     cashReceiptPurchase: number;
-    businessCard: number;
   };
   errors: string[];
   syncDate: string;
 }
 
-// 데이터베이스 저장용 타입
 export interface CodefSyncRecord {
   id: string;
   clinic_id: string;
-  connected_id: string;
-  sync_type: 'tax_invoice' | 'cash_receipt' | 'business_card';
-  sync_direction: 'sales' | 'purchase';
-  start_date: string;
-  end_date: string;
-  synced_count: number;
-  status: 'pending' | 'completed' | 'failed';
-  error_message: string | null;
-  created_at: string;
-  updated_at: string;
+  year: number;
+  month: number;
+  sync_type: string;
+  tax_invoice_sales_count: number;
+  tax_invoice_purchase_count: number;
+  cash_receipt_sales_count: number;
+  cash_receipt_purchase_count: number;
+  total_synced: number;
+  errors: string[];
+  synced_at: string;
 }

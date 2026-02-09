@@ -13,6 +13,7 @@ import {
   deleteCodefAccount,
   isCodefConfigured,
   getCodefServiceType,
+  encryptPasswordForStorage,
 } from '@/lib/codefService';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -141,6 +142,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 비밀번호 AES 암호화 후 DB 저장 (sync 시 복호화하여 CODEF API 호출)
+    const encryptedPw = encryptPasswordForStorage(password);
+
     // DB에 연결 정보 저장 (service_role로 RLS 우회)
     const { error: dbError } = await supabase
       .from('codef_connections')
@@ -149,6 +153,7 @@ export async function POST(request: NextRequest) {
           clinic_id: clinicId,
           connected_id: connectedId,
           hometax_user_id: userId,
+          encrypted_password: encryptedPw,
           is_active: true,
           connected_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
