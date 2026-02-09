@@ -33,14 +33,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // CODEF 계정 등록 (identity: 대표자 생년월일 6자리 또는 사업자등록번호)
+    // CODEF 계정 등록 (identity: 주민등록번호 앞 7자리 또는 사업자등록번호)
     const result = await createCodefAccount(userId, password, identity);
 
+    console.log('CODEF createAccount result:', JSON.stringify(result.result));
+
     if (result.result.code !== 'CF-00000') {
+      const errorMsg = result.result.extraMessage
+        ? `${result.result.message} (${result.result.extraMessage})`
+        : result.result.message || 'CODEF 계정 연결에 실패했습니다.';
+
       return NextResponse.json(
         {
           success: false,
-          error: result.result.message || 'CODEF 계정 연결에 실패했습니다.',
+          error: errorMsg,
           code: result.result.code,
         },
         { status: 400 }
@@ -177,6 +183,8 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .single();
 
+    const configured = isCodefConfigured();
+
     if (error || !connection) {
       return NextResponse.json({
         success: true,
@@ -184,6 +192,7 @@ export async function GET(request: NextRequest) {
           isConnected: false,
           connectedId: null,
           lastSyncDate: null,
+          isConfigured: configured,
         },
       });
     }
@@ -196,6 +205,7 @@ export async function GET(request: NextRequest) {
         hometaxUserId: connection.hometax_user_id,
         connectedAt: connection.connected_at,
         lastSyncDate: connection.last_sync_date,
+        isConfigured: configured,
       },
     });
   } catch (error) {

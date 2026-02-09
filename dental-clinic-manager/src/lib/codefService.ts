@@ -1,8 +1,8 @@
 // ============================================
 // 코드에프 (CODEF) API 서비스
-// easycodef-node 라이브러리 사용
+// easycodef-node 라이브러리 사용 + node-forge RSA 암호화
 // Created: 2026-02-06
-// Updated: 2026-02-07
+// Updated: 2026-02-09
 // ============================================
 
 import {
@@ -15,6 +15,7 @@ import {
   SyncResult,
   CODEF_ORGANIZATION,
 } from '@/types/codef';
+import forge from 'node-forge';
 
 // easycodef-node 라이브러리 동적 import
 let EasyCodef: any = null;
@@ -29,6 +30,34 @@ async function loadEasyCodef() {
     EasyCodefUtil = easycodef.EasyCodefUtil || (easycodef.default && easycodef.default.EasyCodefUtil);
   }
   return { EasyCodef, EasyCodefConstant, EasyCodefUtil };
+}
+
+/**
+ * node-forge를 사용한 RSA 암호화 (OpenSSL 3.0 호환)
+ * easycodef-node의 encryptRSA 대신 사용
+ */
+function encryptRSAWithForge(publicKeyBase64: string, plainText: string): string {
+  // 공개키 정리: 공백, 개행 제거
+  let cleanKey = publicKeyBase64.replace(/[\s\n\r]/g, '');
+
+  // SPKI 헤더 검증 및 자동 수정: 잘못된 SPKI 헤더 패턴 감지
+  // 정상: ...OCAQ8AMIIBCgK... (RSA 2048 SPKI 표준 헤더)
+  // 비정상: ...OCAQIIBCgK... (3자 누락)
+  if (cleanKey.includes('OCAQIIBCgK') && !cleanKey.includes('OCAQ8AMIIBCgK')) {
+    cleanKey = cleanKey.replace('OCAQIIBCgK', 'OCAQ8AMIIBCgK');
+    console.warn('CODEF: RSA 공개키 SPKI 헤더가 자동 수정되었습니다.');
+  }
+
+  // base64 길이 검증 (4의 배수)
+  if (cleanKey.length % 4 !== 0) {
+    throw new Error(`RSA 공개키가 올바르지 않습니다. (base64 길이: ${cleanKey.length}, 4의 배수여야 함)`);
+  }
+
+  const formattedKey = cleanKey.match(/.{1,64}/g)?.join('\n') || cleanKey;
+  const pemKey = '-----BEGIN PUBLIC KEY-----\n' + formattedKey + '\n-----END PUBLIC KEY-----';
+  const publicKey = forge.pki.publicKeyFromPem(pemKey);
+  const encrypted = publicKey.encrypt(plainText, 'RSAES-PKCS1-V1_5');
+  return forge.util.encode64(encrypted);
 }
 
 // 환경변수에서 설정 로드
@@ -111,12 +140,11 @@ export async function createCodefAccount(
 ): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
   try {
     const { codef, serviceType } = await createCodefInstance();
-    const { EasyCodefUtil } = await loadEasyCodef();
     const config = getCodefConfig();
     const serviceTypeConstant = await getServiceTypeConstant(serviceType);
 
-    // 비밀번호 RSA 암호화
-    const encryptedPassword = EasyCodefUtil.encryptRSA(config.publicKey, password);
+    // 비밀번호 RSA 암호화 (node-forge 사용 - OpenSSL 3.0 호환)
+    const encryptedPassword = encryptRSAWithForge(config.publicKey, password);
 
     // 계정 정보 설정
     const accountInfo: Record<string, string> = {
@@ -127,7 +155,7 @@ export async function createCodefAccount(
       loginType: '1',      // ID/PW 로그인
       id: userId,
       password: encryptedPassword,
-      identity: identity,  // 주민번호 앞6자리 또는 사업자등록번호 (필수)
+      identity: identity,  // 주민번호 앞7자리 또는 사업자등록번호 (필수)
     };
 
     const param = {
@@ -139,13 +167,14 @@ export async function createCodefAccount(
     const result = typeof response === 'string' ? JSON.parse(response) : response;
 
     return result;
-  } catch (error) {
-    console.error('CODEF createAccount error:', error);
+  } catch (error: any) {
+    const errMsg = error instanceof Error ? error.message : (typeof error === 'string' ? error : JSON.stringify(error));
+    console.error('CODEF createAccount error:', errMsg, error);
     return {
       result: {
         code: 'CF-99999',
-        extraMessage: '',
-        message: error instanceof Error ? error.message : '계정 등록 중 오류가 발생했습니다.',
+        extraMessage: String(error?.stack || ''),
+        message: errMsg || '계정 등록 중 오류가 발생했습니다.',
         transactionId: '',
       },
       data: null as any,
@@ -164,11 +193,10 @@ export async function addCodefAccount(
 ): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
   try {
     const { codef, serviceType } = await createCodefInstance();
-    const { EasyCodefUtil } = await loadEasyCodef();
     const config = getCodefConfig();
     const serviceTypeConstant = await getServiceTypeConstant(serviceType);
 
-    const encryptedPassword = EasyCodefUtil.encryptRSA(config.publicKey, password);
+    const encryptedPassword = encryptRSAWithForge(config.publicKey, password);
 
     const accountInfo: Record<string, string> = {
       countryCode: 'KR',
