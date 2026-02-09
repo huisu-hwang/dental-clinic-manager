@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
   createCodefAccount,
+  updateCodefAccount,
   deleteCodefAccount,
   isCodefConfigured,
 } from '@/lib/codefService';
@@ -33,27 +34,72 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // CODEF 계정 등록 (identity: 주민등록번호 앞 7자리 또는 사업자등록번호)
-    const result = await createCodefAccount(userId, password, identity);
+    // DB에서 기존 연결 정보 확인
+    const supabaseCheck = await createClient();
+    const { data: existingConnection } = await supabaseCheck
+      .from('codef_connections')
+      .select('connected_id')
+      .eq('clinic_id', clinicId)
+      .eq('is_active', true)
+      .single();
 
-    console.log('CODEF createAccount result:', JSON.stringify(result.result));
+    let connectedId: string | null = null;
 
-    if (result.result.code !== 'CF-00000') {
-      const errorMsg = result.result.extraMessage
-        ? `${result.result.message} (${result.result.extraMessage})`
-        : result.result.message || 'CODEF 계정 연결에 실패했습니다.';
+    if (existingConnection?.connected_id) {
+      // 기존 연결이 있으면 계정 업데이트 시도
+      console.log('CODEF: 기존 connectedId 발견, updateAccount 시도:', existingConnection.connected_id);
+      const updateResult = await updateCodefAccount(existingConnection.connected_id, userId, password, identity);
+      console.log('CODEF updateAccount result:', JSON.stringify(updateResult.result));
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: errorMsg,
-          code: result.result.code,
-        },
-        { status: 400 }
-      );
+      if (updateResult.result.code === 'CF-00000') {
+        connectedId = existingConnection.connected_id;
+      } else {
+        // 업데이트 실패 시 새로 생성 시도
+        console.log('CODEF: updateAccount 실패, createAccount 시도');
+        const createResult = await createCodefAccount(userId, password, identity);
+        console.log('CODEF createAccount result:', JSON.stringify(createResult.result));
+
+        if (createResult.result.code !== 'CF-00000') {
+          const errorMsg = createResult.result.extraMessage
+            ? `${createResult.result.message} (${createResult.result.extraMessage})`
+            : createResult.result.message || 'CODEF 계정 연결에 실패했습니다.';
+          return NextResponse.json(
+            { success: false, error: errorMsg, code: createResult.result.code },
+            { status: 400 }
+          );
+        }
+        connectedId = createResult.data?.connectedId;
+      }
+    } else {
+      // 기존 연결이 없으면 새로 생성
+      const createResult = await createCodefAccount(userId, password, identity);
+      console.log('CODEF createAccount result:', JSON.stringify(createResult.result));
+
+      if (createResult.result.code !== 'CF-00000') {
+        // createAccount 실패 시 updateAccount로 재시도 (CODEF에 이미 등록된 경우)
+        if (createResult.result.code === 'CF-04000') {
+          console.log('CODEF: CF-04000 (이미 등록된 계정), updateAccount 대신 에러 반환');
+          // 이미 등록된 계정인 경우 사용자에게 안내
+          return NextResponse.json(
+            {
+              success: false,
+              error: '이미 등록된 홈택스 계정입니다. 기존 연결을 해제한 후 다시 시도해주세요.',
+              code: createResult.result.code,
+            },
+            { status: 400 }
+          );
+        }
+
+        const errorMsg = createResult.result.extraMessage
+          ? `${createResult.result.message} (${createResult.result.extraMessage})`
+          : createResult.result.message || 'CODEF 계정 연결에 실패했습니다.';
+        return NextResponse.json(
+          { success: false, error: errorMsg, code: createResult.result.code },
+          { status: 400 }
+        );
+      }
+      connectedId = createResult.data?.connectedId;
     }
-
-    const connectedId = result.data?.connectedId;
 
     if (!connectedId) {
       return NextResponse.json(
@@ -63,8 +109,7 @@ export async function POST(request: NextRequest) {
     }
 
     // DB에 연결 정보 저장
-    const supabase = await createClient();
-    const { error: dbError } = await supabase
+    const { error: dbError } = await supabaseCheck
       .from('codef_connections')
       .upsert(
         {

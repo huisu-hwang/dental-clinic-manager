@@ -197,6 +197,57 @@ export async function createCodefAccount(
 }
 
 /**
+ * CODEF 계정 업데이트 (기존 connectedId의 계정 정보 갱신)
+ */
+export async function updateCodefAccount(
+  connectedId: string,
+  userId: string,
+  password: string,
+  identity: string
+): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
+  try {
+    const { codef, serviceType } = await createCodefInstance();
+    const config = getCodefConfig();
+    const serviceTypeConstant = await getServiceTypeConstant(serviceType);
+
+    const encryptedPassword = encryptRSAWithForge(config.publicKey, password);
+
+    const accountInfo: Record<string, string> = {
+      countryCode: 'KR',
+      businessType: 'NT',
+      clientType: 'P',
+      organization: CODEF_ORGANIZATION.HOMETAX,
+      loginType: '1',
+      id: userId,
+      password: encryptedPassword,
+      identity: identity,
+    };
+
+    const param = {
+      connectedId,
+      accountList: [accountInfo],
+    };
+
+    const response = await codef.updateAccount(serviceTypeConstant, param);
+    const result = typeof response === 'string' ? JSON.parse(response) : response;
+
+    return result;
+  } catch (error: any) {
+    const errMsg = error instanceof Error ? error.message : (typeof error === 'string' ? error : JSON.stringify(error));
+    console.error('CODEF updateAccount error:', errMsg, error);
+    return {
+      result: {
+        code: 'CF-99999',
+        extraMessage: String(error?.stack || ''),
+        message: errMsg || '계정 업데이트 중 오류가 발생했습니다.',
+        transactionId: '',
+      },
+      data: null as any,
+    };
+  }
+}
+
+/**
  * CODEF 계정 추가
  */
 export async function addCodefAccount(
