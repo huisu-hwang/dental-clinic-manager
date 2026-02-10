@@ -19,7 +19,6 @@ import {
   FileText,
   Upload,
   X,
-  ChevronDown,
   Settings,
   PhoneCall,
   FileSpreadsheet,
@@ -926,21 +925,6 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               />
             </div>
 
-            {/* 카테고리 필터 */}
-            <div className="relative">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="appearance-none w-full sm:w-auto pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
-              >
-                <option value="">전체 카테고리</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-
             {/* 즐겨찾기 필터 */}
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
@@ -953,6 +937,40 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-yellow-400' : ''}`} />
               <span>즐겨찾기</span>
             </button>
+          </div>
+
+          {/* 카테고리 필터 버튼 */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button
+              onClick={() => setSelectedCategory('')}
+              className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                selectedCategory === ''
+                  ? 'bg-slate-800 text-white border-slate-800'
+                  : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              전체
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(selectedCategory === cat.id ? '' : cat.id)}
+                className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                  selectedCategory === cat.id
+                    ? 'text-white border-transparent'
+                    : 'bg-white border-slate-300 hover:border-slate-400 text-slate-600'
+                }`}
+                style={selectedCategory === cat.id ? { backgroundColor: cat.color, borderColor: cat.color } : undefined}
+              >
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
+                    style={{ backgroundColor: cat.color }}
+                  />
+                  {cat.name}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
