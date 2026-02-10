@@ -397,17 +397,42 @@ export default function PhoneDialSettingsInline() {
         </div>
       )}
 
-      {/* 도움말 */}
+      {/* 한국 환경 가이드 */}
+      <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <p className="font-semibold mb-2">추천 설정 안내</p>
+            <div className="space-y-2 text-amber-700">
+              <p><strong>IP 전화기 사용 시 (추천)</strong></p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Yealink, Grandstream, Snom 등 → &quot;IP 전화기&quot; 선택 후 제조사 프리셋 적용</li>
+                <li>Ericsson-LG iPECS (한국 기업용) → iPECS 프리셋 선택</li>
+                <li>전화기 IP 주소는 전화기 설정 메뉴에서 확인 가능</li>
+              </ul>
+              <p className="mt-2"><strong>소프트폰 사용 시</strong></p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>PC에 소프트폰 앱 설치 → &quot;기본 전화&quot; 또는 &quot;SIP&quot; 선택</li>
+              </ul>
+              <p className="mt-2 text-xs text-amber-600">
+                * KT/LG U+/SK 인터넷 전화는 전용 프로그램 필요 (웹 연동 미지원)
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 사용 방법 */}
       <div className="p-4 bg-blue-50 rounded-lg">
         <div className="flex items-start gap-2">
           <HelpCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-700">
-            <p className="font-medium mb-1">사용 방법</p>
+            <p className="font-medium mb-1">연결 방식 설명</p>
             <ul className="list-disc list-inside space-y-1 text-blue-600">
-              <li><strong>기본 전화:</strong> 스마트폰이나 소프트폰 앱 사용</li>
-              <li><strong>Skype:</strong> Skype 앱이 설치된 경우</li>
-              <li><strong>SIP:</strong> SIP 클라이언트 앱 사용</li>
-              <li><strong>IP 전화기:</strong> 네트워크 연결된 IP 전화기</li>
+              <li><strong>기본 전화:</strong> 스마트폰이나 소프트폰 앱으로 연결 (tel: 프로토콜)</li>
+              <li><strong>Skype:</strong> Skype 앱이 설치된 PC에서 사용</li>
+              <li><strong>SIP:</strong> SIP 클라이언트 앱(MicroSIP 등)으로 연결</li>
+              <li><strong>IP 전화기:</strong> 같은 네트워크의 IP 전화기에 HTTP로 다이얼 명령 전송</li>
             </ul>
           </div>
         </div>

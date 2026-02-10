@@ -4,12 +4,13 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// VoIP 제공업체별 API 엔드포인트 (예시)
+// VoIP 제공업체별 API 엔드포인트
+// 참고: 한국 3대 통신사(KT/LG/SK)의 인터넷 전화 API는 웹앱에서 직접 사용 불가합니다.
+// - KT 통화매니저: Windows COM DLL 기반 (데스크톱 앱 전용)
+// - LG U+ / SK Broadband: 로컬 에이전트 기반 (CID 전용, 클릭투콜 미지원)
+// 웹앱에서의 클릭투콜은 IP 전화기 HTTP API(전화 설정 > IP 전화기)를 사용하세요.
 const VOIP_ENDPOINTS: Record<string, string> = {
-  kt_bizmeka: 'https://api.bizmeka.com/v1/call',
-  lg_uplus: 'https://api.uplus.co.kr/voip/call',
-  sk_bizring: 'https://api.skbizring.com/call',
-  samsung_voip: 'https://api.samsung.com/voip/dial'
+  // 향후 공식 API를 제공하는 업체가 있을 경우 여기에 추가
 }
 
 export async function POST(request: NextRequest) {
