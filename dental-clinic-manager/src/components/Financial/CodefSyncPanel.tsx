@@ -14,6 +14,8 @@ import {
   CreditCard,
   History,
   Settings,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react'
 
 interface CodefConnection {
@@ -23,6 +25,7 @@ interface CodefConnection {
   connectedAt?: string
   lastSyncDate?: string
   isConfigured?: boolean
+  serviceType?: string
 }
 
 interface SyncLog {
@@ -30,9 +33,14 @@ interface SyncLog {
   year: number
   month: number
   sync_type: string
-  tax_invoice_count: number
-  cash_receipt_count: number
-  business_card_count: number
+  tax_invoice_sales_count: number
+  tax_invoice_purchase_count: number
+  cash_receipt_sales_count: number
+  cash_receipt_purchase_count: number
+  // 하위 호환성
+  tax_invoice_count?: number
+  cash_receipt_count?: number
+  business_card_count?: number
   errors: string[]
   synced_at: string
 }
@@ -227,6 +235,26 @@ export default function CodefSyncPanel({
     }
   }
 
+  // 동기화 로그에서 건수 표시 헬퍼
+  const getSyncLogCounts = (log: SyncLog) => {
+    // 새 형식 (매출/매입 구분)
+    if (log.tax_invoice_sales_count !== undefined) {
+      return {
+        taxInvoiceSales: log.tax_invoice_sales_count || 0,
+        taxInvoicePurchase: log.tax_invoice_purchase_count || 0,
+        cashReceiptSales: log.cash_receipt_sales_count || 0,
+        cashReceiptPurchase: log.cash_receipt_purchase_count || 0,
+      }
+    }
+    // 하위 호환성 (기존 형식)
+    return {
+      taxInvoiceSales: 0,
+      taxInvoicePurchase: log.tax_invoice_count || 0,
+      cashReceiptSales: 0,
+      cashReceiptPurchase: log.cash_receipt_count || 0,
+    }
+  }
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -270,7 +298,14 @@ export default function CodefSyncPanel({
                   <Link2 className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-green-800">홈택스 연결됨</p>
+                  <p className="font-medium text-green-800">
+                    홈택스 연결됨
+                    {connection.serviceType && connection.serviceType !== '정식' && (
+                      <span className="ml-2 text-xs font-normal px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">
+                        {connection.serviceType} 모드
+                      </span>
+                    )}
+                  </p>
                   <p className="text-sm text-green-600">
                     {connection.hometaxUserId && `ID: ${connection.hometaxUserId}`}
                     {connection.lastSyncDate && (
@@ -414,6 +449,16 @@ export default function CodefSyncPanel({
         </div>
       )}
 
+      {/* 데모/샌드박스 모드 안내 */}
+      {connection.isConnected && connection.serviceType && connection.serviceType !== '정식' && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+          <p className="text-sm text-amber-800">
+            <strong>{connection.serviceType} 모드:</strong> 현재 {connection.serviceType} 모드로 연결되어 있습니다.
+            실제 홈택스 데이터 연동을 위해서는 CODEF 정식(PRODUCT) 서비스 가입이 필요합니다.
+          </p>
+        </div>
+      )}
+
       {/* 동기화 버튼들 */}
       {connection.isConnected && (
         <div className="space-y-3">
@@ -440,30 +485,30 @@ export default function CodefSyncPanel({
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => handleSync('taxInvoice')}
               disabled={syncing}
               className="px-3 py-2 border rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
             >
               <FileText className="w-4 h-4 text-blue-600" />
-              세금계산서
+              세금계산서 (매출/매입)
             </button>
             <button
-              onClick={() => handleSync('cashReceipt')}
+              onClick={() => handleSync('cashReceiptPurchase')}
+              disabled={syncing}
+              className="px-3 py-2 border rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+            >
+              <Receipt className="w-4 h-4 text-orange-600" />
+              현금영수증 매입
+            </button>
+            <button
+              onClick={() => handleSync('cashReceiptSales')}
               disabled={syncing}
               className="px-3 py-2 border rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
             >
               <Receipt className="w-4 h-4 text-green-600" />
-              현금영수증
-            </button>
-            <button
-              onClick={() => handleSync('businessCard')}
-              disabled={syncing}
-              className="px-3 py-2 border rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
-            >
-              <CreditCard className="w-4 h-4 text-purple-600" />
-              사업자카드
+              현금영수증 매출
             </button>
           </div>
         </div>
@@ -474,30 +519,48 @@ export default function CodefSyncPanel({
         <div className="mt-4 border-t pt-4">
           <h4 className="text-sm font-medium mb-2">최근 동기화 이력</h4>
           <div className="space-y-2">
-            {syncLogs.map(log => (
-              <div
-                key={log.id}
-                className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded"
-              >
-                <span className="text-gray-600">
-                  {log.year}년 {log.month}월 ({log.sync_type})
-                </span>
-                <div className="flex items-center gap-4">
-                  <span className="text-blue-600">
-                    세금계산서 {log.tax_invoice_count}건
-                  </span>
-                  <span className="text-green-600">
-                    현금영수증 {log.cash_receipt_count}건
-                  </span>
-                  <span className="text-purple-600">
-                    카드 {log.business_card_count}건
-                  </span>
-                  <span className="text-gray-400">
-                    {new Date(log.synced_at).toLocaleString('ko-KR')}
-                  </span>
+            {syncLogs.map(log => {
+              const counts = getSyncLogCounts(log)
+              const total = counts.taxInvoiceSales + counts.taxInvoicePurchase
+                + counts.cashReceiptSales + counts.cashReceiptPurchase
+              return (
+                <div
+                  key={log.id}
+                  className="text-sm p-3 bg-gray-50 rounded"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-gray-700 font-medium">
+                      {log.year}년 {log.month}월
+                      <span className="ml-1 text-gray-400 font-normal">({log.sync_type})</span>
+                    </span>
+                    <span className="text-gray-400 text-xs">
+                      {new Date(log.synced_at).toLocaleString('ko-KR')}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    <span className="text-blue-600 flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      세금계산서 매출 {counts.taxInvoiceSales}건
+                    </span>
+                    <span className="text-blue-500 flex items-center gap-1">
+                      <TrendingDown className="w-3 h-3" />
+                      매입 {counts.taxInvoicePurchase}건
+                    </span>
+                    <span className="text-green-600 flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      현금영수증 매출 {counts.cashReceiptSales}건
+                    </span>
+                    <span className="text-orange-600 flex items-center gap-1">
+                      <TrendingDown className="w-3 h-3" />
+                      매입 {counts.cashReceiptPurchase}건
+                    </span>
+                    <span className="text-gray-500 ml-auto">
+                      합계 {total}건
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -513,7 +576,7 @@ export default function CodefSyncPanel({
               rel="noopener noreferrer"
               className="ml-1 text-blue-600 hover:underline"
             >
-              CODEF 가입하기 →
+              CODEF 가입하기
             </a>
           </p>
         </div>

@@ -71,7 +71,28 @@ export function makeCalltoCall(phoneNumber: string): void {
   window.open(`callto:${formattedNumber}`, '_self')
 }
 
+// 서버 프록시를 통한 IP 전화기 다이얼
+async function makeHttpCallViaProxy(
+  phoneNumber: string,
+  settings: NonNullable<PhoneDialSettings['httpSettings']>
+): Promise<{ success: boolean; error?: string }> {
+  const response = await fetch('/api/phone/dial', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      host: settings.host,
+      port: settings.port || 80,
+      pathTemplate: settings.pathTemplate,
+      method: settings.method || 'GET',
+      phoneNumber,
+      auth: settings.auth,
+    })
+  })
+  return await response.json()
+}
+
 // IP 전화기 HTTP API를 통한 전화 걸기
+// 서버 프록시 경유 → 실패 시 직접 no-cors fetch 폴백
 export async function makeHttpCall(
   phoneNumber: string,
   settings: PhoneDialSettings['httpSettings']
@@ -81,6 +102,18 @@ export async function makeHttpCall(
   }
 
   const formattedNumber = formatPhoneNumber(phoneNumber)
+
+  // 1차: 서버 프록시 경유 (CORS 우회)
+  try {
+    const proxyResult = await makeHttpCallViaProxy(formattedNumber, settings)
+    if (proxyResult.success) {
+      return proxyResult
+    }
+  } catch (proxyError) {
+    console.warn('[makeHttpCall] Proxy failed, trying direct no-cors fetch:', proxyError)
+  }
+
+  // 2차: 직접 no-cors fetch 폴백
   const port = settings.port || 80
   const path = settings.pathTemplate.replace('{number}', formattedNumber)
   const url = `http://${settings.host}:${port}${path}`
@@ -88,10 +121,9 @@ export async function makeHttpCall(
   try {
     const fetchOptions: RequestInit = {
       method: settings.method || 'GET',
-      mode: 'no-cors', // IP 전화기는 CORS를 지원하지 않을 수 있음
+      mode: 'no-cors',
     }
 
-    // 인증 정보가 있는 경우
     if (settings.auth?.username && settings.auth?.password) {
       const authString = btoa(`${settings.auth.username}:${settings.auth.password}`)
       fetchOptions.headers = {
@@ -100,12 +132,10 @@ export async function makeHttpCall(
     }
 
     await fetch(url, fetchOptions)
-
-    // no-cors 모드에서는 응답을 읽을 수 없으므로 성공으로 간주
     return { success: true }
   } catch (error) {
     console.error('[makeHttpCall] Error:', error)
-    return { success: false, error: '전화 연결에 실패했습니다.' }
+    return { success: false, error: '전화 연결에 실패했습니다. IP 주소와 포트를 확인하세요.' }
   }
 }
 

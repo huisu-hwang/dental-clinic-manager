@@ -158,7 +158,38 @@ function dialWithSip(phoneNumber: string): DialResult {
 }
 
 /**
+ * 서버 프록시를 통한 IP 전화기 다이얼
+ */
+async function dialViaProxy(
+  phoneNumber: string,
+  httpSettings: NonNullable<PhoneDialSettings['httpSettings']>
+): Promise<DialResult> {
+  const response = await fetch('/api/phone/dial', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      host: httpSettings.host,
+      port: httpSettings.port || 80,
+      pathTemplate: httpSettings.pathTemplate,
+      method: httpSettings.method || 'GET',
+      phoneNumber,
+      auth: httpSettings.auth,
+    })
+  })
+
+  const result = await response.json()
+  return {
+    success: result.success,
+    message: result.success
+      ? `전화기로 ${phoneNumber} 다이얼 요청을 보냈습니다.`
+      : (result.error || '전화 연결에 실패했습니다.'),
+    error: result.error
+  }
+}
+
+/**
  * HTTP API로 전화 걸기 (IP 전화기)
+ * 서버 프록시 경유 → 실패 시 직접 no-cors fetch 폴백
  */
 async function dialWithHttp(
   phoneNumber: string,
@@ -174,39 +205,46 @@ async function dialWithHttp(
     }
   }
 
+  // 1차: 서버 프록시 경유 (CORS 우회)
+  try {
+    const proxyResult = await dialViaProxy(phoneNumber, httpSettings)
+    if (proxyResult.success) {
+      return proxyResult
+    }
+  } catch (proxyError) {
+    console.warn('[dialWithHttp] Proxy failed, trying direct no-cors:', proxyError)
+  }
+
+  // 2차: 직접 no-cors fetch 폴백
   const port = httpSettings.port || 80
   const path = httpSettings.pathTemplate.replace('{number}', encodeURIComponent(phoneNumber))
   const url = `http://${httpSettings.host}:${port}${path}`
   const method = httpSettings.method || 'GET'
 
   try {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    }
+    const headers: HeadersInit = {}
 
-    // Basic 인증
     if (httpSettings.auth?.username) {
       const credentials = btoa(`${httpSettings.auth.username}:${httpSettings.auth.password || ''}`)
       headers['Authorization'] = `Basic ${credentials}`
     }
 
-    const response = await fetch(url, {
+    await fetch(url, {
       method,
       headers,
-      mode: 'no-cors' // CORS 우회 (IP 전화기는 보통 CORS 설정이 없음)
+      mode: 'no-cors'
     })
 
-    // no-cors 모드에서는 응답을 읽을 수 없으므로 성공으로 간주
     return {
       success: true,
-      message: `전화기로 ${phoneNumber} 다이얼 요청을 보냈습니다.`
+      message: `전화기로 ${phoneNumber} 다이얼 요청을 보냈습니다. (응답 확인 불가)`
     }
   } catch (error) {
-    // 네트워크 오류여도 전화기가 요청을 받았을 수 있음
     console.error('Phone dial HTTP request error:', error)
     return {
-      success: true, // 요청은 보냈으므로 일단 성공으로 처리
-      message: `전화기로 다이얼 요청을 보냈습니다. (응답 확인 불가)`
+      success: false,
+      message: '전화기 연결에 실패했습니다. IP 주소와 포트를 확인하세요.',
+      error: String(error)
     }
   }
 }

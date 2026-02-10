@@ -61,9 +61,9 @@ export const PHONE_PRESETS: PhonePreset[] = [
   {
     id: 'yealink',
     name: 'Yealink',
-    description: 'Yealink IP 전화기',
+    description: 'Yealink IP 전화기 (Action URI)',
     settings: {
-      pathTemplate: '/servlet?key=number={number}&outgoing_uri=',
+      pathTemplate: '/cgi-bin/ConfigManApp.com?number={number}&outgoing_uri=',
       method: 'GET'
     }
   },
@@ -72,26 +72,9 @@ export const PHONE_PRESETS: PhonePreset[] = [
     name: 'Grandstream',
     description: 'Grandstream IP 전화기',
     settings: {
-      pathTemplate: '/cgi-bin/api-make_call?phonenumber={number}',
-      method: 'GET'
-    }
-  },
-  {
-    id: 'cisco',
-    name: 'Cisco',
-    description: 'Cisco IP 전화기',
-    settings: {
-      pathTemplate: '/CGI/Execute?XML=<CiscoIPPhoneExecute><ExecuteItem Priority="0" URL="Dial:{number}"/></CiscoIPPhoneExecute>',
-      method: 'POST'
-    }
-  },
-  {
-    id: 'polycom',
-    name: 'Polycom',
-    description: 'Polycom IP 전화기',
-    settings: {
-      pathTemplate: '/api/v1/callctrl/dial?number={number}',
-      method: 'POST'
+      pathTemplate: '/cgi-bin/api-make_call?phonenumber={number}&account=0',
+      method: 'GET',
+      auth: { username: 'admin', password: 'admin' }
     }
   },
   {
@@ -101,6 +84,24 @@ export const PHONE_PRESETS: PhonePreset[] = [
     settings: {
       pathTemplate: '/command.htm?number={number}',
       method: 'GET'
+    }
+  },
+  {
+    id: 'cisco',
+    name: 'Cisco',
+    description: 'Cisco IP 전화기 (XML API)',
+    settings: {
+      pathTemplate: '/CGI/Execute?XML=<CiscoIPPhoneExecute><ExecuteItem Priority="0" URL="Dial:{number}"/></CiscoIPPhoneExecute>',
+      method: 'POST'
+    }
+  },
+  {
+    id: 'ipecs',
+    name: 'Ericsson-LG iPECS',
+    description: 'iPECS IP 전화기 (한국 기업용)',
+    settings: {
+      pathTemplate: '/api/v1/call?number={number}',
+      method: 'POST'
     }
   },
   {

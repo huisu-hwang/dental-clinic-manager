@@ -18,6 +18,7 @@ import {
 import type { RecallPatient, PatientRecallStatus } from '@/types/recall'
 import { RECALL_STATUS_LABELS } from '@/types/recall'
 import { makePhoneCall, detectDeviceType, displayPhoneNumber } from '@/lib/phoneCallService'
+import { loadPhoneDialSettings } from '@/utils/phoneDialer'
 import { recallContactLogService, recallPatientService } from '@/lib/recallService'
 
 interface CallModalProps {
@@ -68,8 +69,10 @@ export default function CallModal({
     setError(null)
 
     try {
+      const settings = loadPhoneDialSettings()
       const result = await makePhoneCall(patient.phone_number, {
         deviceType,
+        settings,
         clinicId
       })
 
