@@ -57,6 +57,12 @@ export default function QRAttendancePage() {
     // 3. 오늘의 출퇴근 상태 확인
     try {
       const todayResult = await attendanceService.getTodayAttendance(user.id)
+
+      if (!todayResult.success) {
+        console.error('[QRAttendancePage] getTodayAttendance failed:', todayResult.error)
+        // DB 조회 실패 시에도 출근 시도 (checkIn 내부에서 중복 체크함)
+      }
+
       const todayRecord = todayResult.record
 
       // 이미 퇴근한 경우
