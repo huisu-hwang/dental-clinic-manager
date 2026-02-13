@@ -12,31 +12,23 @@ import {
   Save
 } from 'lucide-react'
 import {
-  PhoneDialSettings,
   PhoneDialProtocol,
   DEFAULT_PHONE_DIAL_SETTINGS,
   PHONE_PRESETS
 } from '@/types/phone'
 import {
-  savePhoneDialSettings,
-  loadPhoneDialSettings,
   testPhoneConnection,
   dialPhone
 } from '@/utils/phoneDialer'
+import { usePhoneDialSettings } from '@/hooks/usePhoneDialSettings'
 
 export default function PhoneDialSettingsInline() {
-  const [settings, setSettings] = useState<PhoneDialSettings>(DEFAULT_PHONE_DIAL_SETTINGS)
+  const { settings, setSettings, saveSettings, isLoading, isFromDb } = usePhoneDialSettings()
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [testing, setTesting] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<string>('')
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [saved, setSaved] = useState(false)
-
-  // 설정 불러오기
-  useEffect(() => {
-    const loaded = loadPhoneDialSettings()
-    setSettings(loaded)
-  }, [])
 
   // 프로토콜 변경
   const handleProtocolChange = (protocol: PhoneDialProtocol) => {
@@ -98,13 +90,13 @@ export default function PhoneDialSettingsInline() {
     setTestResult(result)
   }
 
-  // 저장
-  const handleSave = () => {
-    savePhoneDialSettings(settings)
+  // 저장 (DB + localStorage 동시 저장)
+  const handleSave = async () => {
+    const result = await saveSettings(settings)
     setSaved(true)
     setTestResult({
-      success: true,
-      message: '설정이 저장되었습니다.'
+      success: result.success,
+      message: result.message
     })
     setTimeout(() => setSaved(false), 3000)
   }
@@ -116,11 +108,21 @@ export default function PhoneDialSettingsInline() {
         <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
           <Phone className="w-5 h-5 text-blue-600" />
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className="text-lg font-semibold text-slate-800">전화 다이얼 설정</h3>
           <p className="text-slate-500 text-sm">업체 연락처에서 전화 버튼 클릭 시 동작 방식을 설정합니다</p>
         </div>
+        {isFromDb && (
+          <div className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full">
+            <CheckCircle2 className="w-3 h-3" />
+            병원 공유 설정
+          </div>
+        )}
       </div>
+
+      {isLoading && (
+        <div className="text-center py-4 text-slate-500 text-sm">설정을 불러오는 중...</div>
+      )}
 
       {/* 프로토콜 선택 */}
       <div>
