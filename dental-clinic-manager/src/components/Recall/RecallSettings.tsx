@@ -23,7 +23,7 @@ import type {
   RecallSmsTemplateFormData
 } from '@/types/recall'
 import { recallService } from '@/lib/recallService'
-import { PHONE_PRESETS } from '@/types/phone'
+import PhoneDialSettingsInline from '@/components/Management/PhoneDialSettingsInline'
 
 // 서버 IP 확인 컴포넌트
 function ServerIpChecker() {
@@ -565,41 +565,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
 
       {/* 전화 설정 */}
       {activeTab === 'voip' && (
-        <div className="space-y-6">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">전화 걸기 설정</h4>
-            <p className="text-sm text-blue-700">
-              PC에서 전화를 거는 방법을 설정합니다. 모바일에서는 자동으로 전화 앱이 실행됩니다.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="font-medium text-gray-900">IP 전화기 프리셋</h4>
-            <p className="text-sm text-gray-500">
-              IP 전화기를 사용하는 경우 제조사를 선택하면 자동으로 설정됩니다.
-            </p>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {PHONE_PRESETS.map(preset => (
-                <button
-                  key={preset.id}
-                  className="p-3 text-left border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
-                >
-                  <p className="font-medium text-gray-900">{preset.name}</p>
-                  <p className="text-xs text-gray-500">{preset.description}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h4 className="font-medium text-yellow-900 mb-2">VoIP 서비스 연동</h4>
-            <p className="text-sm text-yellow-700">
-              KT 비즈메카, LG U+ 등 VoIP 서비스와 연동하려면 해당 서비스의 API 키가 필요합니다.
-              자세한 설정은 각 서비스 제공업체에 문의하세요.
-            </p>
-          </div>
-        </div>
+        <PhoneDialSettingsInline />
       )}
     </div>
   )
