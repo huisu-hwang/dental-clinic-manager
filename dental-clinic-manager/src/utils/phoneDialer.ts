@@ -91,6 +91,9 @@ export async function dialPhone(
     case 'http':
       return dialWithHttp(formattedNumber, dialSettings)
 
+    case 'centrex':
+      return dialWithCentrex(formattedNumber, dialSettings)
+
     default:
       return {
         success: false,
@@ -250,10 +253,61 @@ async function dialWithHttp(
 }
 
 /**
+ * LG U+ 고급형 센트릭스 REST API로 전화 걸기
+ */
+async function dialWithCentrex(
+  phoneNumber: string,
+  settings: PhoneDialSettings
+): Promise<DialResult> {
+  const centrexSettings = settings.centrexSettings
+
+  if (!centrexSettings?.phoneNumber || !centrexSettings?.password) {
+    return {
+      success: false,
+      message: '센트릭스 설정이 완료되지 않았습니다. 070번호와 비밀번호를 입력해주세요.',
+      error: 'Missing centrex configuration'
+    }
+  }
+
+  try {
+    const response = await fetch('/api/phone/centrex/clickdial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phoneNumber070: centrexSettings.phoneNumber,
+        password: centrexSettings.password,
+        destNumber: phoneNumber,
+      })
+    })
+
+    const result = await response.json()
+
+    return {
+      success: result.success,
+      message: result.success
+        ? (result.message || '전화 연결을 시작합니다. 전화기가 울리면 수화기를 들어주세요.')
+        : (result.error || '전화 연결에 실패했습니다.'),
+      error: result.error
+    }
+  } catch (error) {
+    console.error('[dialWithCentrex] Error:', error)
+    return {
+      success: false,
+      message: '센트릭스 서버 연결에 실패했습니다.',
+      error: String(error)
+    }
+  }
+}
+
+/**
  * 설정 테스트 (IP 전화기 연결 확인)
  * 서버사이드 프록시를 통해 테스트하여 CORS/Mixed Content 문제를 우회합니다.
  */
 export async function testPhoneConnection(settings: PhoneDialSettings): Promise<DialResult> {
+  if (settings.protocol === 'centrex') {
+    return testCentrexConnection(settings)
+  }
+
   if (settings.protocol !== 'http') {
     return {
       success: true,
@@ -296,6 +350,47 @@ export async function testPhoneConnection(settings: PhoneDialSettings): Promise<
     return {
       success: false,
       message: '연결 테스트 중 오류가 발생했습니다. 서버 상태를 확인해주세요.',
+      error: String(error)
+    }
+  }
+}
+
+/**
+ * LG U+ 센트릭스 연결 테스트 (userinfo API)
+ */
+async function testCentrexConnection(settings: PhoneDialSettings): Promise<DialResult> {
+  const centrexSettings = settings.centrexSettings
+
+  if (!centrexSettings?.phoneNumber || !centrexSettings?.password) {
+    return {
+      success: false,
+      message: '070번호와 비밀번호를 입력해주세요.'
+    }
+  }
+
+  try {
+    const response = await fetch('/api/phone/centrex/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phoneNumber070: centrexSettings.phoneNumber,
+        password: centrexSettings.password,
+      })
+    })
+
+    const result = await response.json()
+
+    return {
+      success: result.success,
+      message: result.success
+        ? (result.message || '센트릭스 연결 및 인증이 정상입니다.')
+        : (result.error || '센트릭스 연결에 실패했습니다. 070번호와 비밀번호를 확인하세요.'),
+      error: result.error
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: '센트릭스 연결 테스트 중 오류가 발생했습니다.',
       error: String(error)
     }
   }

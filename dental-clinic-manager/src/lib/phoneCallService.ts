@@ -169,6 +169,39 @@ export async function makeVoipCall(
   }
 }
 
+// LG U+ 센트릭스 REST API를 통한 전화 걸기
+export async function makeCentrexCall(
+  phoneNumber: string,
+  settings: NonNullable<PhoneDialSettings['centrexSettings']>
+): Promise<{ success: boolean; error?: string }> {
+  if (!settings.phoneNumber || !settings.password) {
+    return { success: false, error: '센트릭스 설정이 올바르지 않습니다.' }
+  }
+
+  const formattedNumber = formatPhoneNumber(phoneNumber)
+
+  try {
+    const response = await fetch('/api/phone/centrex/clickdial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phoneNumber070: settings.phoneNumber,
+        password: settings.password,
+        destNumber: formattedNumber,
+      })
+    })
+
+    const result = await response.json()
+    return {
+      success: result.success,
+      error: result.error,
+    }
+  } catch (error) {
+    console.error('[makeCentrexCall] Error:', error)
+    return { success: false, error: '센트릭스 서버 연결에 실패했습니다.' }
+  }
+}
+
 // 통합 전화 걸기 함수
 export async function makePhoneCall(
   phoneNumber: string,
@@ -213,6 +246,13 @@ export async function makePhoneCall(
           return { ...result, method: 'http' }
         }
         return { success: false, method: 'http', error: 'HTTP 설정이 없습니다.' }
+
+      case 'centrex':
+        if (settings.centrexSettings) {
+          const result = await makeCentrexCall(phoneNumber, settings.centrexSettings)
+          return { ...result, method: 'centrex' }
+        }
+        return { success: false, method: 'centrex', error: '센트릭스 설정이 없습니다.' }
     }
   }
 

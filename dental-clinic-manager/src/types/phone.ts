@@ -6,6 +6,7 @@ export type PhoneDialProtocol =
   | 'callto'    // Skype 등
   | 'sip'       // SIP 클라이언트
   | 'http'      // IP 전화기 HTTP API
+  | 'centrex'   // LG U+ 고급형 센트릭스 REST API
 
 // 전화 다이얼 설정
 export interface PhoneDialSettings {
@@ -28,6 +29,14 @@ export interface PhoneDialSettings {
       username: string
       password: string
     }
+  }
+
+  // LG U+ 고급형 센트릭스 설정 (protocol이 'centrex'일 때 사용)
+  centrexSettings?: {
+    // 070 번호 (센트릭스 로그인 ID)
+    phoneNumber: string
+    // 비밀번호 (평문 - 서버에서 SHA-512 해싱)
+    password: string
   }
 
   // 전화번호 포맷 설정
@@ -111,6 +120,15 @@ export const PHONE_PRESETS: PhonePreset[] = [
     settings: {
       port: 8080,
       pathTemplate: '/api/v1/manager/clicktocall/{number}',
+      method: 'POST'
+    }
+  },
+  {
+    id: 'centrex',
+    name: 'LG U+ 고급형 센트릭스',
+    description: 'LG U+ 센트릭스 REST API (Click-to-Call)',
+    settings: {
+      pathTemplate: '/RestApi/clickdial',
       method: 'POST'
     }
   },

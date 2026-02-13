@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 // 허용되는 프로토콜 목록
-const VALID_PROTOCOLS = ['tel', 'callto', 'sip', 'http'] as const
+const VALID_PROTOCOLS = ['tel', 'callto', 'sip', 'http', 'centrex'] as const
 const VALID_METHODS = ['GET', 'POST'] as const
 
 // settings 객체 유효성 검증
@@ -32,6 +32,17 @@ function validateSettings(settings: unknown): { valid: boolean; error?: string }
     }
     if (http.method && !VALID_METHODS.includes(http.method as typeof VALID_METHODS[number])) {
       return { valid: false, error: '유효하지 않은 HTTP 메서드입니다.' }
+    }
+  }
+
+  // centrexSettings 검증 (있는 경우)
+  if (s.centrexSettings && typeof s.centrexSettings === 'object') {
+    const centrex = s.centrexSettings as Record<string, unknown>
+    if (centrex.phoneNumber && typeof centrex.phoneNumber !== 'string') {
+      return { valid: false, error: '070번호는 문자열이어야 합니다.' }
+    }
+    if (centrex.password && typeof centrex.password !== 'string') {
+      return { valid: false, error: '비밀번호는 문자열이어야 합니다.' }
     }
   }
 
