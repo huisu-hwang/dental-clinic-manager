@@ -147,12 +147,13 @@ export default function PhoneDialSettingsModal({
             <label className="block text-sm font-medium text-slate-700 mb-3">
               전화 연결 방식
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
                 { value: 'tel', label: '기본 전화', desc: '모바일/소프트폰' },
                 { value: 'callto', label: 'Skype', desc: 'callto: 프로토콜' },
                 { value: 'sip', label: 'SIP', desc: 'SIP 클라이언트' },
-                { value: 'http', label: 'IP 전화기', desc: 'HTTP API' }
+                { value: 'http', label: 'IP 전화기', desc: 'HTTP API' },
+                { value: 'centrex', label: 'LG U+ 센트릭스', desc: '고급형 Click-to-Call' }
               ].map(option => (
                 <button
                   key={option.value}
@@ -353,6 +354,70 @@ export default function PhoneDialSettingsModal({
             </div>
           )}
 
+          {/* LG U+ 센트릭스 설정 */}
+          {localSettings.protocol === 'centrex' && (
+            <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <Settings className="w-4 h-4" />
+                LG U+ 센트릭스 설정
+              </div>
+
+              {/* 070 번호 */}
+              <div>
+                <label className="block text-sm text-slate-600 mb-2">
+                  070 전화번호 (로그인 ID) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={localSettings.centrexSettings?.phoneNumber || ''}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    centrexSettings: {
+                      ...prev.centrexSettings,
+                      phoneNumber: e.target.value,
+                      password: prev.centrexSettings?.password || ''
+                    }
+                  }))}
+                  placeholder="예: 07012345678"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="mt-1 text-xs text-slate-400">센트릭스에 등록된 070 번호를 입력하세요</p>
+              </div>
+
+              {/* 비밀번호 */}
+              <div>
+                <label className="block text-sm text-slate-600 mb-2">
+                  비밀번호 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={localSettings.centrexSettings?.password || ''}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    centrexSettings: {
+                      ...prev.centrexSettings,
+                      phoneNumber: prev.centrexSettings?.phoneNumber || '',
+                      password: e.target.value
+                    }
+                  }))}
+                  placeholder="센트릭스 비밀번호"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="mt-1 text-xs text-slate-400">비밀번호는 서버에서 안전하게 암호화(SHA-512)되어 전송됩니다</p>
+              </div>
+
+              {/* 연결 테스트 */}
+              <button
+                onClick={handleTest}
+                disabled={testing || !localSettings.centrexSettings?.phoneNumber || !localSettings.centrexSettings?.password}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white rounded-lg transition-colors"
+              >
+                <Wifi className="w-4 h-4" />
+                {testing ? '테스트 중...' : '연결 테스트'}
+              </button>
+            </div>
+          )}
+
           {/* 전화번호 포맷 설정 */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -403,7 +468,12 @@ export default function PhoneDialSettingsModal({
               <div className="text-sm text-amber-800">
                 <p className="font-semibold mb-2">추천 설정 안내</p>
                 <div className="space-y-2 text-amber-700">
-                  <p><strong>LG U+ 인터넷 전화 (DCS REST API)</strong></p>
+                  <p><strong>LG U+ 고급형 센트릭스 (권장)</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>&quot;LG U+ 센트릭스&quot; 선택 → 070번호와 비밀번호 입력</li>
+                    <li>버튼 클릭 시 내 전화기가 먼저 울리고, 수화기를 들면 상대방 연결</li>
+                  </ul>
+                  <p className="mt-2"><strong>LG U+ 인터넷 전화 (DCS REST API)</strong></p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
                     <li>&quot;IP 전화기&quot; 선택 → &quot;LG U+ DCS (iPECS)&quot; 프리셋 적용</li>
                     <li>DCS 서버 IP 주소와 포트(기본 8080) 입력</li>
@@ -433,6 +503,7 @@ export default function PhoneDialSettingsModal({
                   <li><strong>Skype:</strong> Skype 앱이 설치된 PC에서 사용</li>
                   <li><strong>SIP:</strong> SIP 클라이언트 앱(MicroSIP 등)으로 연결</li>
                   <li><strong>IP 전화기:</strong> 같은 네트워크의 IP 전화기에 HTTP로 다이얼 명령 전송</li>
+                  <li><strong>LG U+ 센트릭스:</strong> 센트릭스 REST API로 Click-to-Call (전화기 울림 → 수화기 → 상대방 연결)</li>
                 </ul>
               </div>
             </div>
