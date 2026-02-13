@@ -28,8 +28,8 @@ import {
 } from 'lucide-react'
 import type { VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData } from '@/types'
 import PhoneDialSettingsModal from './PhoneDialSettingsModal'
-import { dialPhone, loadPhoneDialSettings } from '@/utils/phoneDialer'
-import type { PhoneDialSettings } from '@/types/phone'
+import { dialPhone } from '@/utils/phoneDialer'
+import { usePhoneDialSettings } from '@/hooks/usePhoneDialSettings'
 
 // 섹션 헤더 컴포넌트 (일일보고서 스타일)
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
@@ -121,8 +121,8 @@ export default function VendorContactManagement() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
-  // 전화 다이얼 설정
-  const [phoneDialSettings, setPhoneDialSettings] = useState<PhoneDialSettings | null>(null)
+  // 전화 다이얼 설정 (DB에서 자동 로드)
+  const { settings: phoneDialSettings } = usePhoneDialSettings()
   const [dialingPhone, setDialingPhone] = useState<string | null>(null)
 
   // 선택 상태
@@ -214,11 +214,7 @@ export default function VendorContactManagement() {
     loadData()
   }, [loadData])
 
-  // 전화 다이얼 설정 로드
-  useEffect(() => {
-    const settings = loadPhoneDialSettings()
-    setPhoneDialSettings(settings)
-  }, [])
+  // 전화 다이얼 설정은 usePhoneDialSettings 훅에서 자동 로드
 
   // 검색 필터링된 연락처
   const filteredContacts = useMemo(() => {
@@ -816,7 +812,7 @@ export default function VendorContactManagement() {
   const makePhoneCall = async (phone: string) => {
     setDialingPhone(phone)
     try {
-      const result = await dialPhone(phone, phoneDialSettings || undefined)
+      const result = await dialPhone(phone, phoneDialSettings)
       if (result.success) {
         showToast(result.message, 'success')
       } else {
@@ -2159,7 +2155,6 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
       <PhoneDialSettingsModal
         isOpen={showPhoneSettings}
         onClose={() => setShowPhoneSettings(false)}
-        onSave={(settings) => setPhoneDialSettings(settings)}
       />
     </div>
   )

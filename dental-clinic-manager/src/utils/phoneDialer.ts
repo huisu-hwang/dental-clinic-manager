@@ -270,6 +270,7 @@ export async function testPhoneConnection(settings: PhoneDialSettings): Promise<
     }
   }
 
+  // 서버 프록시를 통한 연결 테스트 (CORS/Mixed Content 우회)
   try {
     const response = await fetch('/api/phone/test', {
       method: 'POST',

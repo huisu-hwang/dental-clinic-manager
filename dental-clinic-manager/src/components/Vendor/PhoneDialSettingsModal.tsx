@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   X,
   Phone,
@@ -18,11 +18,10 @@ import {
   PHONE_PRESETS
 } from '@/types/phone'
 import {
-  savePhoneDialSettings,
-  loadPhoneDialSettings,
   testPhoneConnection,
   dialPhone
 } from '@/utils/phoneDialer'
+import { usePhoneDialSettings } from '@/hooks/usePhoneDialSettings'
 
 interface PhoneDialSettingsModalProps {
   isOpen: boolean
@@ -35,27 +34,28 @@ export default function PhoneDialSettingsModal({
   onClose,
   onSave
 }: PhoneDialSettingsModalProps) {
-  const [settings, setSettings] = useState<PhoneDialSettings>(DEFAULT_PHONE_DIAL_SETTINGS)
+  const { settings: loadedSettings, saveSettings } = usePhoneDialSettings()
+  const [localSettings, setLocalSettings] = useState<PhoneDialSettings>(DEFAULT_PHONE_DIAL_SETTINGS)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [testing, setTesting] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<string>('')
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  // 설정 불러오기
+  // 모달이 열릴 때만 훅에서 로드된 설정을 로컬 상태에 복사
+  const prevIsOpen = useRef(false)
   useEffect(() => {
-    if (isOpen) {
-      const loaded = loadPhoneDialSettings()
-      setSettings(loaded)
+    if (isOpen && !prevIsOpen.current) {
+      setLocalSettings(loadedSettings)
       setTestResult(null)
     }
-  }, [isOpen])
+    prevIsOpen.current = isOpen
+  }, [isOpen, loadedSettings])
 
   // 프로토콜 변경
   const handleProtocolChange = (protocol: PhoneDialProtocol) => {
-    setSettings(prev => ({
+    setLocalSettings(prev => ({
       ...prev,
       protocol,
-      // HTTP 선택 시 기본 httpSettings 설정
       httpSettings: protocol === 'http' ? {
         host: prev.httpSettings?.host || '',
         port: prev.httpSettings?.port || 80,
@@ -71,7 +71,7 @@ export default function PhoneDialSettingsModal({
     const preset = PHONE_PRESETS.find(p => p.id === presetId)
     if (preset && preset.settings) {
       setSelectedPreset(presetId)
-      setSettings(prev => ({
+      setLocalSettings(prev => ({
         ...prev,
         httpSettings: {
           host: prev.httpSettings?.host || '',
@@ -90,7 +90,7 @@ export default function PhoneDialSettingsModal({
     setTestResult(null)
 
     try {
-      const result = await testPhoneConnection(settings)
+      const result = await testPhoneConnection(localSettings)
       setTestResult(result)
     } catch (error) {
       setTestResult({
@@ -105,14 +105,14 @@ export default function PhoneDialSettingsModal({
   // 테스트 전화
   const handleTestDial = async () => {
     const testNumber = '010-0000-0000'
-    const result = await dialPhone(testNumber, settings)
+    const result = await dialPhone(testNumber, localSettings)
     setTestResult(result)
   }
 
-  // 저장
-  const handleSave = () => {
-    savePhoneDialSettings(settings)
-    onSave?.(settings)
+  // 저장 (DB + localStorage 동시)
+  const handleSave = async () => {
+    await saveSettings(localSettings)
+    onSave?.(localSettings)
     onClose()
   }
 
@@ -158,7 +158,7 @@ export default function PhoneDialSettingsModal({
                   key={option.value}
                   onClick={() => handleProtocolChange(option.value as PhoneDialProtocol)}
                   className={`p-4 rounded-lg border-2 text-left transition-all ${
-                    settings.protocol === option.value
+                    localSettings.protocol === option.value
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-slate-200 hover:border-slate-300'
                   }`}
@@ -171,7 +171,7 @@ export default function PhoneDialSettingsModal({
           </div>
 
           {/* HTTP API 설정 (IP 전화기) */}
-          {settings.protocol === 'http' && (
+          {localSettings.protocol === 'http' && (
             <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <Settings className="w-4 h-4" />
@@ -204,8 +204,8 @@ export default function PhoneDialSettingsModal({
                 </label>
                 <input
                   type="text"
-                  value={settings.httpSettings?.host || ''}
-                  onChange={(e) => setSettings(prev => ({
+                  value={localSettings.httpSettings?.host || ''}
+                  onChange={(e) => setLocalSettings(prev => ({
                     ...prev,
                     httpSettings: {
                       ...prev.httpSettings!,
@@ -224,8 +224,8 @@ export default function PhoneDialSettingsModal({
                 </label>
                 <input
                   type="number"
-                  value={settings.httpSettings?.port || 80}
-                  onChange={(e) => setSettings(prev => ({
+                  value={localSettings.httpSettings?.port || 80}
+                  onChange={(e) => setLocalSettings(prev => ({
                     ...prev,
                     httpSettings: {
                       ...prev.httpSettings!,
@@ -257,8 +257,8 @@ export default function PhoneDialSettingsModal({
                     </label>
                     <input
                       type="text"
-                      value={settings.httpSettings?.pathTemplate || ''}
-                      onChange={(e) => setSettings(prev => ({
+                      value={localSettings.httpSettings?.pathTemplate || ''}
+                      onChange={(e) => setLocalSettings(prev => ({
                         ...prev,
                         httpSettings: {
                           ...prev.httpSettings!,
@@ -276,8 +276,8 @@ export default function PhoneDialSettingsModal({
                       HTTP 메서드
                     </label>
                     <select
-                      value={settings.httpSettings?.method || 'GET'}
-                      onChange={(e) => setSettings(prev => ({
+                      value={localSettings.httpSettings?.method || 'GET'}
+                      onChange={(e) => setLocalSettings(prev => ({
                         ...prev,
                         httpSettings: {
                           ...prev.httpSettings!,
@@ -299,8 +299,8 @@ export default function PhoneDialSettingsModal({
                       </label>
                       <input
                         type="text"
-                        value={settings.httpSettings?.auth?.username || ''}
-                        onChange={(e) => setSettings(prev => ({
+                        value={localSettings.httpSettings?.auth?.username || ''}
+                        onChange={(e) => setLocalSettings(prev => ({
                           ...prev,
                           httpSettings: {
                             ...prev.httpSettings!,
@@ -321,8 +321,8 @@ export default function PhoneDialSettingsModal({
                       </label>
                       <input
                         type="password"
-                        value={settings.httpSettings?.auth?.password || ''}
-                        onChange={(e) => setSettings(prev => ({
+                        value={localSettings.httpSettings?.auth?.password || ''}
+                        onChange={(e) => setLocalSettings(prev => ({
                           ...prev,
                           httpSettings: {
                             ...prev.httpSettings!,
@@ -344,7 +344,7 @@ export default function PhoneDialSettingsModal({
               {/* 연결 테스트 */}
               <button
                 onClick={handleTest}
-                disabled={testing || !settings.httpSettings?.host}
+                disabled={testing || !localSettings.httpSettings?.host}
                 className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white rounded-lg transition-colors"
               >
                 <Wifi className="w-4 h-4" />
@@ -363,8 +363,8 @@ export default function PhoneDialSettingsModal({
             <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg cursor-pointer">
               <input
                 type="checkbox"
-                checked={settings.numberFormat?.removeSpecialChars ?? true}
-                onChange={(e) => setSettings(prev => ({
+                checked={localSettings.numberFormat?.removeSpecialChars ?? true}
+                onChange={(e) => setLocalSettings(prev => ({
                   ...prev,
                   numberFormat: {
                     ...prev.numberFormat,
