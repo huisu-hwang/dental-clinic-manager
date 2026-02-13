@@ -1,8 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+// 허용되는 프로토콜 목록
+const VALID_PROTOCOLS = ['tel', 'callto', 'sip', 'http'] as const
+const VALID_METHODS = ['GET', 'POST'] as const
+
+// settings 객체 유효성 검증
+function validateSettings(settings: unknown): { valid: boolean; error?: string } {
+  if (!settings || typeof settings !== 'object') {
+    return { valid: false, error: '설정 데이터가 올바르지 않습니다.' }
+  }
+
+  const s = settings as Record<string, unknown>
+
+  // protocol 필수 검증
+  if (!s.protocol || !VALID_PROTOCOLS.includes(s.protocol as typeof VALID_PROTOCOLS[number])) {
+    return { valid: false, error: '유효하지 않은 프로토콜입니다.' }
+  }
+
+  // httpSettings 검증 (있는 경우)
+  if (s.httpSettings && typeof s.httpSettings === 'object') {
+    const http = s.httpSettings as Record<string, unknown>
+    if (http.host && typeof http.host !== 'string') {
+      return { valid: false, error: 'IP 주소는 문자열이어야 합니다.' }
+    }
+    if (http.port !== undefined && (typeof http.port !== 'number' || http.port < 1 || http.port > 65535)) {
+      return { valid: false, error: '포트 번호가 유효하지 않습니다.' }
+    }
+    if (http.pathTemplate && typeof http.pathTemplate !== 'string') {
+      return { valid: false, error: 'API 경로는 문자열이어야 합니다.' }
+    }
+    if (http.method && !VALID_METHODS.includes(http.method as typeof VALID_METHODS[number])) {
+      return { valid: false, error: '유효하지 않은 HTTP 메서드입니다.' }
+    }
+  }
+
+  return { valid: true }
+}
+
 // 병원 전화 다이얼 설정 조회
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -85,12 +122,29 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // 권한 체크: owner 또는 manager만 설정 변경 가능
+    if (!userData.role || !['owner', 'manager'].includes(userData.role)) {
+      return NextResponse.json(
+        { success: false, error: '설정 변경 권한이 없습니다. (관리자만 가능)' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const { settings } = body
 
     if (!settings) {
       return NextResponse.json(
         { success: false, error: '설정 데이터가 필요합니다.' },
+        { status: 400 }
+      )
+    }
+
+    // 설정 데이터 유효성 검증
+    const validation = validateSettings(settings)
+    if (!validation.valid) {
+      return NextResponse.json(
+        { success: false, error: validation.error },
         { status: 400 }
       )
     }

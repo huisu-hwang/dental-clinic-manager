@@ -26,13 +26,14 @@ export function usePhoneDialSettings() {
 
     try {
       const response = await fetch('/api/clinic/phone-settings')
+      if (!response.ok) return null
       const result = await response.json()
 
       if (result.success && result.data) {
         return result.data as PhoneDialSettings
       }
-    } catch (error) {
-      console.warn('[usePhoneDialSettings] DB 로드 실패, localStorage 사용:', error)
+    } catch {
+      // DB 로드 실패 시 localStorage 폴백
     }
     return null
   }, [user?.clinic_id])
@@ -84,17 +85,20 @@ export function usePhoneDialSettings() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ settings: newSettings })
         })
+
+        if (!response.ok) {
+          return { success: true, message: '설정이 이 브라우저에 저장되었습니다. (서버 저장 실패)' }
+        }
+
         const result = await response.json()
 
         if (result.success) {
           setIsFromDb(true)
           return { success: true, message: '설정이 저장되었습니다.' }
         } else {
-          console.warn('[usePhoneDialSettings] DB 저장 실패:', result.error)
           return { success: true, message: '설정이 이 브라우저에 저장되었습니다. (서버 저장 실패)' }
         }
-      } catch (error) {
-        console.warn('[usePhoneDialSettings] DB 저장 오류:', error)
+      } catch {
         return { success: true, message: '설정이 이 브라우저에 저장되었습니다. (네트워크 오류)' }
       }
     }

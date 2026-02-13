@@ -2155,7 +2155,6 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
       <PhoneDialSettingsModal
         isOpen={showPhoneSettings}
         onClose={() => setShowPhoneSettings(false)}
-        onSave={() => {}}
       />
     </div>
   )

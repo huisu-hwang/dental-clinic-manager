@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   X,
   Phone,
@@ -41,12 +41,14 @@ export default function PhoneDialSettingsModal({
   const [selectedPreset, setSelectedPreset] = useState<string>('')
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  // 모달이 열릴 때 훅에서 로드된 설정을 로컬 상태에 복사
+  // 모달이 열릴 때만 훅에서 로드된 설정을 로컬 상태에 복사
+  const prevIsOpen = useRef(false)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpen.current) {
       setLocalSettings(loadedSettings)
       setTestResult(null)
     }
+    prevIsOpen.current = isOpen
   }, [isOpen, loadedSettings])
 
   // 프로토콜 변경
