@@ -672,6 +672,11 @@ export async function validateQRCode(
       }
     }
 
+    // 위치 검증 모드가 'required'인데 위치 정보가 없는 경우 경고 로그
+    if (locationVerificationMode === 'required' && (!latitude || !longitude)) {
+      console.warn('[validateQRCode] Location verification is required but location not provided. Proceeding with QR-only validation.')
+    }
+
     // 위치 검증 (위치 정보가 있는 경우)
     // QR 코드의 좌표 대신 지점(clinic_branches)의 실제 좌표를 사용
     if (latitude && longitude) {
@@ -958,7 +963,12 @@ export async function checkIn(request: CheckInRequest): Promise<AttendanceCheckR
       .select('*')
       .eq('user_id', user_id)
       .eq('work_date', work_date)
-      .single()
+      .maybeSingle()
+
+    if (checkError) {
+      console.error('[checkIn] DB query error:', checkError)
+      return { success: false, message: `출근 기록 조회 실패: ${checkError.message}` }
+    }
 
     if (existingRecord && existingRecord.check_in_time) {
       return {
@@ -1085,7 +1095,12 @@ export async function checkOut(request: CheckOutRequest): Promise<AttendanceChec
       .select('*')
       .eq('user_id', user_id)
       .eq('work_date', work_date)
-      .single()
+      .maybeSingle()
+
+    if (checkError) {
+      console.error('[checkOut] DB query error:', checkError)
+      return { success: false, message: `출근 기록 조회 실패: ${checkError.message}` }
+    }
 
     if (!existingRecord) {
       return {

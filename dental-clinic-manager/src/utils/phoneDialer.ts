@@ -251,7 +251,7 @@ async function dialWithHttp(
 
 /**
  * 설정 테스트 (IP 전화기 연결 확인)
- * 서버 프록시를 경유하여 CORS/Mixed Content 문제를 우회합니다.
+ * 서버사이드 프록시를 통해 테스트하여 CORS/Mixed Content 문제를 우회합니다.
  */
 export async function testPhoneConnection(settings: PhoneDialSettings): Promise<DialResult> {
   if (settings.protocol !== 'http') {
@@ -272,46 +272,30 @@ export async function testPhoneConnection(settings: PhoneDialSettings): Promise<
 
   // 서버 프록시를 통한 연결 테스트 (CORS/Mixed Content 우회)
   try {
-    const response = await fetch('/api/phone/dial', {
+    const response = await fetch('/api/phone/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         host: httpSettings.host,
         port: httpSettings.port || 80,
-        pathTemplate: '/',
-        method: 'GET',
-        phoneNumber: 'test',
         auth: httpSettings.auth,
+        pathTemplate: httpSettings.pathTemplate,
       })
     })
 
     const result = await response.json()
 
-    if (result.success || response.ok) {
-      return {
-        success: true,
-        message: '전화기에 연결할 수 있습니다.'
-      }
-    }
-
-    // 연결은 됐지만 응답이 실패인 경우도 연결 자체는 성공
-    if (result.error?.includes('연결 시간이 초과') || result.error?.includes('ECONNREFUSED') || result.error?.includes('EHOSTUNREACH')) {
-      return {
-        success: false,
-        message: '전화기에 연결할 수 없습니다. IP 주소와 포트를 확인해주세요.',
-        error: result.error
-      }
-    }
-
-    // 전화기가 응답은 했지만 에러 코드를 반환한 경우 → 연결은 성공
     return {
-      success: true,
-      message: '전화기에 연결할 수 있습니다. (응답 코드: ' + (result.status || 'unknown') + ')'
+      success: result.success,
+      message: result.success
+        ? (result.message || '전화기에 연결할 수 있습니다.')
+        : (result.error || '전화기에 연결할 수 없습니다. IP 주소와 포트를 확인해주세요.'),
+      error: result.error
     }
   } catch (error) {
     return {
       success: false,
-      message: '연결 테스트 중 오류가 발생했습니다. 네트워크를 확인해주세요.',
+      message: '연결 테스트 중 오류가 발생했습니다. 서버 상태를 확인해주세요.',
       error: String(error)
     }
   }

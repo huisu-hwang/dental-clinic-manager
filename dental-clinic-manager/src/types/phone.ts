@@ -105,6 +105,16 @@ export const PHONE_PRESETS: PhonePreset[] = [
     }
   },
   {
+    id: 'dcs',
+    name: 'LG U+ DCS (iPECS)',
+    description: 'LG U+ 인터넷 전화 - DCS REST API',
+    settings: {
+      port: 8080,
+      pathTemplate: '/api/v1/manager/clicktocall/{number}',
+      method: 'POST'
+    }
+  },
+  {
     id: 'custom',
     name: '사용자 정의',
     description: '직접 API 경로 설정',

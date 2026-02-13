@@ -13,12 +13,14 @@ export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps
   const [error, setError] = useState<string | null>(null)
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const scannerIdRef = useRef('qr-reader-' + Math.random().toString(36).substring(7))
+  const hasScannedRef = useRef(false)
 
   const startScanner = async () => {
     if (scannerRef.current) return
 
     try {
       setError(null)
+      hasScannedRef.current = false
       const html5QrCode = new Html5Qrcode(scannerIdRef.current)
       scannerRef.current = html5QrCode
 
@@ -29,6 +31,10 @@ export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps
           qrbox: { width: 250, height: 250 },
         },
         (decodedText) => {
+          // 중복 스캔 방지
+          if (hasScannedRef.current) return
+          hasScannedRef.current = true
+
           // QR 코드 스캔 성공
           onScanSuccess(decodedText)
           stopScanner()
