@@ -4,19 +4,25 @@
  * QR 코드 스캔 전용 페이지
  * 핸드폰 카메라로 QR 코드를 직접 스캔하면 이 페이지로 이동됩니다.
  * 출근은 자동 처리, 퇴근은 확인 후 처리합니다.
+ *
+ * 비로그인 상태에서 QR 스캔 시 인라인 로그인 폼을 표시하여
+ * 로그인 후 자동으로 출퇴근 처리합니다.
  */
 
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { createClient } from '@/lib/supabase/client'
 import { attendanceService } from '@/lib/attendanceService'
+import { dataService } from '@/lib/dataService'
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
-type ProcessStatus = 'loading' | 'success' | 'error' | 'confirm-checkout'
+type ProcessStatus = 'loading' | 'success' | 'error' | 'confirm-checkout' | 'needs-login'
 
 export default function QRAttendancePage() {
   const params = useParams()
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, login } = useAuth()
   const [status, setStatus] = useState<ProcessStatus>('loading')
   const [message, setMessage] = useState('')
   const [actionType, setActionType] = useState<'check-in' | 'check-out' | 'error'>('check-in')
@@ -43,18 +49,34 @@ export default function QRAttendancePage() {
   const processAttendance = async () => {
     const code = params.code as string
 
-    // 1. 인증 확인
+    // 1. AuthContext 인증 확인
     if (!user) {
-      // 로그인 페이지로 직접 리디렉션 (로그인 후 다시 돌아오도록)
-      router.push(`/?show=login&redirect=/qr/${code}`)
+      console.log('[QRAttendancePage] No user in AuthContext, showing login form')
+      setStatus('needs-login')
       return
     }
 
-    // 2. 위치 정보 가져오기
+    // 2. 실제 Supabase 세션 유효성 확인
+    // (localStorage에서 복원된 만료 세션으로 인한 RLS 오류 방지)
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        console.warn('[QRAttendancePage] AuthContext has user but Supabase session is invalid')
+        setStatus('needs-login')
+        return
+      }
+    } catch (e) {
+      console.error('[QRAttendancePage] Failed to verify Supabase session:', e)
+      setStatus('needs-login')
+      return
+    }
+
+    // 3. 위치 정보 가져오기
     const loc = await getLocation()
     setLocation(loc)
 
-    // 3. 오늘의 출퇴근 상태 확인
+    // 4. 오늘의 출퇴근 상태 확인
     try {
       const todayResult = await attendanceService.getTodayAttendance(user.id)
 
@@ -103,6 +125,22 @@ export default function QRAttendancePage() {
       }
     } catch (error: any) {
       console.error('[QRAttendancePage] Error:', error)
+
+      // 인증 관련 오류 감지 → 로그인 화면 표시
+      const errorMsg = error.message || ''
+      if (
+        error.code === 'PGRST301' ||
+        errorMsg.includes('JWT') ||
+        errorMsg.includes('token') ||
+        errorMsg.includes('auth') ||
+        errorMsg.includes('permission') ||
+        errorMsg.includes('row-level security')
+      ) {
+        console.warn('[QRAttendancePage] Auth-related error detected, showing login form')
+        setStatus('needs-login')
+        return
+      }
+
       setStatus('error')
 
       // 오류 메시지를 더 명확하게 표시
@@ -179,6 +217,11 @@ export default function QRAttendancePage() {
     }, 100)
   }
 
+  // 로그인 성공 핸들러 - 페이지 리로드로 새 세션으로 출퇴근 처리
+  const handleLoginSuccess = () => {
+    window.location.reload()
+  }
+
   // 위치 정보 가져오기
   const getLocation = (): Promise<{ latitude: number; longitude: number } | null> => {
     return new Promise((resolve) => {
@@ -213,6 +256,9 @@ export default function QRAttendancePage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {status === 'loading' && <LoadingScreen isAuthLoading={authLoading} />}
+        {status === 'needs-login' && (
+          <InlineLoginScreen onLoginSuccess={handleLoginSuccess} />
+        )}
         {status === 'confirm-checkout' && (
           <ConfirmCheckoutScreen
             checkInTime={checkInTime}
@@ -223,6 +269,239 @@ export default function QRAttendancePage() {
         {status === 'success' && <SuccessScreen message={message} actionType={actionType} />}
         {status === 'error' && <ErrorScreen message={message} />}
       </div>
+    </div>
+  )
+}
+
+// 인라인 로그인 화면 (QR 출퇴근 전용)
+function InlineLoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
+  const { login } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const autoLoginAttempted = useRef(false)
+
+  // 저장된 로그인 정보 불러오기 + 자동 로그인
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('savedLoginEmail')
+    const savedPassword = localStorage.getItem('savedLoginPassword')
+    const savedAutoLogin = localStorage.getItem('autoLogin') === 'true'
+
+    if (savedEmail) setEmail(savedEmail)
+    if (savedPassword) setPassword(savedPassword)
+
+    // 자동 로그인이 활성화되어 있고 저장된 정보가 있으면 자동 로그인 시도
+    if (savedAutoLogin && savedEmail && savedPassword && !autoLoginAttempted.current) {
+      autoLoginAttempted.current = true
+      handleAutoLogin(savedEmail, savedPassword)
+    }
+  }, [])
+
+  const handleAutoLogin = async (savedEmail: string, savedPassword: string) => {
+    setLoading(true)
+    setError('')
+    try {
+      await performLogin(savedEmail, savedPassword)
+    } catch {
+      // 자동 로그인 실패 시 수동 입력으로 전환
+      setLoading(false)
+    }
+  }
+
+  const performLogin = async (loginEmail: string, loginPassword: string) => {
+    const supabase = createClient()
+
+    // 기존 세션 클리어
+    try {
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise(resolve => setTimeout(resolve, 3000))
+      ])
+    } catch { /* 무시 */ }
+
+    // 로그인 시도
+    const { data: authData, error: authError } = await Promise.race([
+      supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Login timeout')), 30000)
+      )
+    ]) as any
+
+    if (authError) {
+      if (authError.message?.includes('Invalid login credentials')) {
+        throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.')
+      } else if (authError.message?.includes('Email not confirmed')) {
+        throw new Error('이메일 인증이 완료되지 않았습니다.')
+      }
+      throw new Error('로그인 중 오류가 발생했습니다.')
+    }
+
+    if (!authData?.user) {
+      throw new Error('사용자 정보를 가져오지 못했습니다.')
+    }
+
+    // 프로필 조회
+    const result = await dataService.getUserProfileById(authData.user.id)
+    if (!result.success || !result.data) {
+      await supabase.auth.signOut()
+      throw new Error('프로필 정보를 불러오는 데 실패했습니다.')
+    }
+
+    // 병원 상태 검증
+    if (result.data.clinic?.status === 'suspended') {
+      await supabase.auth.signOut()
+      throw new Error('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
+    }
+
+    // 사용자 상태 검증
+    if (result.data.status === 'pending' || result.data.status === 'rejected') {
+      throw new Error('계정 승인 대기 중입니다. 관리자에게 문의해주세요.')
+    }
+
+    if (result.data.status === 'resigned') {
+      throw new Error('퇴사 처리된 계정입니다.')
+    }
+
+    // AuthContext 업데이트
+    login(loginEmail, result.data)
+
+    // 로그인 정보 저장
+    localStorage.setItem('savedLoginEmail', loginEmail)
+    localStorage.setItem('savedLoginPassword', loginPassword)
+
+    // 약간의 대기 후 페이지 리로드
+    await new Promise(resolve => setTimeout(resolve, 100))
+    onLoginSuccess()
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    if (!email.trim()) {
+      setError('이메일 주소를 입력해주세요.')
+      return
+    }
+
+    if (!password) {
+      setError('비밀번호를 입력해주세요.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await performLogin(email, password)
+    } catch (err: any) {
+      setError(err.message || '로그인 중 오류가 발생했습니다.')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-xl p-8">
+      {/* 아이콘 */}
+      <div className="flex justify-center mb-6">
+        <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center">
+          <svg
+            className="w-16 h-16 text-blue-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
+          </svg>
+        </div>
+      </div>
+
+      {/* 제목 */}
+      <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">로그인 필요</h2>
+      <p className="text-gray-600 mb-6 text-center">
+        출퇴근 체크를 위해 로그인해주세요.
+      </p>
+
+      {/* 자동 로그인 시도 중 */}
+      {loading && autoLoginAttempted.current && !error && (
+        <div className="text-center py-4">
+          <div className="relative inline-block">
+            <div className="w-12 h-12 border-4 border-blue-200 rounded-full"></div>
+            <div className="absolute top-0 left-0 w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-gray-600 mt-3">자동 로그인 중...</p>
+        </div>
+      )}
+
+      {/* 로그인 폼 */}
+      {(!loading || error) && (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="qr-email" className="block text-sm font-medium text-gray-700 mb-1">
+              이메일
+            </label>
+            <input
+              type="email"
+              id="qr-email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="email@example.com"
+              disabled={loading}
+              autoComplete="email"
+            />
+          </div>
+
+          <div className="relative">
+            <label htmlFor="qr-password" className="block text-sm font-medium text-gray-700 mb-1">
+              비밀번호
+            </label>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              id="qr-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-12"
+              placeholder="비밀번호 입력"
+              disabled={loading}
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              className="absolute right-3 top-9 p-1"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+              ) : (
+                <EyeIcon className="h-5 w-5 text-gray-400" />
+              )}
+            </button>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-semibold rounded-lg transition-colors text-lg"
+          >
+            {loading ? '로그인 중...' : '로그인하고 출퇴근 체크'}
+          </button>
+        </form>
+      )}
     </div>
   )
 }
@@ -390,7 +669,7 @@ function SuccessScreen({ message, actionType }: { message: string; actionType: s
       </h2>
       <p className="text-lg text-gray-600 mb-2">{message}</p>
       <p className="text-sm text-gray-500">
-        {isCheckIn ? '오늘도 좋은 하루 되세요 😊' : '수고하셨습니다 👋'}
+        {isCheckIn ? '오늘도 좋은 하루 되세요' : '수고하셨습니다'}
       </p>
 
       {/* 시간 표시 */}
@@ -471,22 +750,22 @@ function ErrorScreen({ message }: { message: string }) {
         <ul className="space-y-2 text-yellow-700">
           <li>
             <strong>QR 코드 오류:</strong><br />
-            • QR 코드가 최신 버전인지 확인해주세요<br />
-            • QR 코드가 만료되지 않았는지 확인해주세요
+            - QR 코드가 최신 버전인지 확인해주세요<br />
+            - QR 코드가 만료되지 않았는지 확인해주세요
           </li>
           <li>
             <strong>위치 오류:</strong><br />
-            • 브라우저에서 위치 권한을 허용했는지 확인해주세요<br />
-            • 병원 출입구 근처에 있는지 확인해주세요
+            - 브라우저에서 위치 권한을 허용했는지 확인해주세요<br />
+            - 병원 출입구 근처에 있는지 확인해주세요
           </li>
           <li>
             <strong>네트워크 오류:</strong><br />
-            • 인터넷 연결 상태를 확인해주세요<br />
-            • Wi-Fi 또는 모바일 데이터가 켜져 있는지 확인해주세요
+            - 인터넷 연결 상태를 확인해주세요<br />
+            - Wi-Fi 또는 모바일 데이터가 켜져 있는지 확인해주세요
           </li>
           <li>
             <strong>기타 문제:</strong><br />
-            • 관리자에게 문의해주세요
+            - 관리자에게 문의해주세요
           </li>
         </ul>
       </div>
