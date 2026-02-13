@@ -403,18 +403,20 @@ export default function PhoneDialSettingsModal({
               <div className="text-sm text-amber-800">
                 <p className="font-semibold mb-2">추천 설정 안내</p>
                 <div className="space-y-2 text-amber-700">
-                  <p><strong>IP 전화기 사용 시 (추천)</strong></p>
+                  <p><strong>LG U+ 인터넷 전화 (DCS REST API)</strong></p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>Yealink, Grandstream, Snom 등 → &quot;IP 전화기&quot; 선택</li>
+                    <li>&quot;IP 전화기&quot; 선택 → &quot;LG U+ DCS (iPECS)&quot; 프리셋 적용</li>
+                    <li>DCS 서버 IP 주소와 포트(기본 8080) 입력</li>
+                  </ul>
+                  <p className="mt-2"><strong>기타 IP 전화기</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>Yealink, Grandstream, Snom 등 → 제조사 프리셋 적용</li>
                     <li>Ericsson-LG iPECS → iPECS 프리셋 선택</li>
                   </ul>
                   <p className="mt-2"><strong>소프트폰 사용 시</strong></p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
                     <li>PC 소프트폰 앱 → &quot;기본 전화&quot; 또는 &quot;SIP&quot; 선택</li>
                   </ul>
-                  <p className="mt-2 text-xs text-amber-600">
-                    * KT/LG U+/SK 인터넷 전화는 전용 프로그램 필요 (웹 연동 미지원)
-                  </p>
                 </div>
               </div>
             </div>

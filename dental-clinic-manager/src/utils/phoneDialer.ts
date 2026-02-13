@@ -251,6 +251,7 @@ async function dialWithHttp(
 
 /**
  * 설정 테스트 (IP 전화기 연결 확인)
+ * 서버사이드 프록시를 통해 테스트하여 CORS/Mixed Content 문제를 우회합니다.
  */
 export async function testPhoneConnection(settings: PhoneDialSettings): Promise<DialResult> {
   if (settings.protocol !== 'http') {
@@ -270,21 +271,30 @@ export async function testPhoneConnection(settings: PhoneDialSettings): Promise<
   }
 
   try {
-    const port = httpSettings.port || 80
-    // 간단한 연결 테스트 (HEAD 요청)
-    await fetch(`http://${httpSettings.host}:${port}/`, {
-      method: 'HEAD',
-      mode: 'no-cors'
+    const response = await fetch('/api/phone/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        host: httpSettings.host,
+        port: httpSettings.port || 80,
+        auth: httpSettings.auth,
+        pathTemplate: httpSettings.pathTemplate,
+      })
     })
 
+    const result = await response.json()
+
     return {
-      success: true,
-      message: '전화기에 연결할 수 있습니다.'
+      success: result.success,
+      message: result.success
+        ? (result.message || '전화기에 연결할 수 있습니다.')
+        : (result.error || '전화기에 연결할 수 없습니다. IP 주소와 포트를 확인해주세요.'),
+      error: result.error
     }
   } catch (error) {
     return {
       success: false,
-      message: '전화기에 연결할 수 없습니다. IP 주소와 포트를 확인해주세요.',
+      message: '연결 테스트 중 오류가 발생했습니다. 서버 상태를 확인해주세요.',
       error: String(error)
     }
   }
