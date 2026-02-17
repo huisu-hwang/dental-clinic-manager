@@ -761,11 +761,26 @@ export function getScheduledWorkDaysFromSchedule(
   month: number,
   workSchedule?: WorkSchedule,
   holidayDates?: Set<string>,
-  endDate?: Date
+  endDate?: Date,
+  startDate?: Date
 ): number {
   const schedule = workSchedule || DEFAULT_WORK_SCHEDULE
   const daysInMonth = new Date(year, month, 0).getDate()
   let workDays = 0
+
+  // 시작일 결정: startDate가 있으면 해당 월 내에서 max(startDate, 1일)
+  let firstDay = 1
+  if (startDate) {
+    const startYear = startDate.getFullYear()
+    const startMonth = startDate.getMonth() + 1
+    if (startYear === year && startMonth === month) {
+      firstDay = Math.max(startDate.getDate(), 1)
+    } else if (startYear > year || (startYear === year && startMonth > month)) {
+      // 시작일이 해당 월보다 이후면 0일
+      return 0
+    }
+    // 시작일이 해당 월보다 이전이면 1일부터 계산
+  }
 
   // 종료일 결정: endDate가 있으면 해당 월 내에서 min(endDate, 월말)
   let lastDay = daysInMonth
@@ -781,7 +796,7 @@ export function getScheduledWorkDaysFromSchedule(
     // 종료일이 해당 월보다 이후면 전체 월 계산
   }
 
-  for (let day = 1; day <= lastDay; day++) {
+  for (let day = firstDay; day <= lastDay; day++) {
     const date = new Date(year, month - 1, day)
     const dateStr = formatDateString(date)
     const dayOfWeek = date.getDay()
@@ -799,6 +814,165 @@ export function getScheduledWorkDaysFromSchedule(
   }
 
   return workDays
+}
+
+// =====================================================================
+// 중간 입사자 일할 계산 함수
+// =====================================================================
+
+/**
+ * 중간 입사자 여부 확인
+ * 해당 연월에 입사했고, 1일이 아닌 경우 true
+ */
+export function isMidMonthHire(hireDate: string | undefined, year: number, month: number): boolean {
+  if (!hireDate) return false
+
+  const hire = new Date(hireDate)
+  const hireYear = hire.getFullYear()
+  const hireMonth = hire.getMonth() + 1
+  const hireDay = hire.getDate()
+
+  return hireYear === year && hireMonth === month && hireDay > 1
+}
+
+/**
+ * 입사월 여부 확인 (1일 입사 포함)
+ */
+export function isHireMonth(hireDate: string | undefined, year: number, month: number): boolean {
+  if (!hireDate) return false
+
+  const hire = new Date(hireDate)
+  return hire.getFullYear() === year && hire.getMonth() + 1 === month
+}
+
+/**
+ * 중간 입사자 급여 일할 계산
+ *
+ * 계산 방식: 월급여 × (입사일~말일 실제 근무일수 / 해당 월 총 소정근로일수)
+ *
+ * @param monthlySalary 월 급여 (세전 또는 세후 목표 금액)
+ * @param hireDate 입사일 (YYYY-MM-DD)
+ * @param year 급여 연도
+ * @param month 급여 월
+ * @param workSchedule 근무 스케줄
+ * @param holidayDates 공휴일 집합
+ * @returns 일할 계산 결과
+ */
+export function calculateProrataSalary(
+  monthlySalary: number,
+  hireDate: string,
+  year: number,
+  month: number,
+  workSchedule?: WorkSchedule,
+  holidayDates?: Set<string>
+): {
+  proratedSalary: number
+  ratio: number
+  hireWorkDays: number
+  totalWorkDays: number
+  isProrated: boolean
+} {
+  const hire = new Date(hireDate)
+  const hireYear = hire.getFullYear()
+  const hireMonth = hire.getMonth() + 1
+  const hireDay = hire.getDate()
+
+  // 해당 월의 총 소정근로일수
+  const totalWorkDays = getScheduledWorkDaysFromSchedule(year, month, workSchedule, holidayDates)
+
+  // 입사월이 아니거나 1일 입사면 전액
+  if (hireYear !== year || hireMonth !== month || hireDay === 1) {
+    return {
+      proratedSalary: monthlySalary,
+      ratio: 1,
+      hireWorkDays: totalWorkDays,
+      totalWorkDays,
+      isProrated: false
+    }
+  }
+
+  // 입사일부터 월말까지의 근무일수 계산
+  const hireWorkDays = getScheduledWorkDaysFromSchedule(
+    year, month, workSchedule, holidayDates,
+    undefined, // endDate: 월말까지
+    hire       // startDate: 입사일부터
+  )
+
+  // 일할 계산 비율
+  const ratio = totalWorkDays > 0 ? hireWorkDays / totalWorkDays : 0
+  const proratedSalary = Math.round(monthlySalary * ratio)
+
+  return {
+    proratedSalary,
+    ratio,
+    hireWorkDays,
+    totalWorkDays,
+    isProrated: true
+  }
+}
+
+/**
+ * 중간 입사자 국민연금/건강보험/장기요양보험 적용 여부 확인
+ *
+ * 현행 규정:
+ * - 월 1일 입사: 해당 월부터 보험료 부과
+ * - 월 2일~31일 입사: 해당 월 보험료 미부과 (다음 달부터 부과)
+ * - 국민연금, 건강보험, 장기요양보험 동일 규칙
+ *
+ * 주의: 고용보험은 이 함수를 사용하지 않음 (별도 처리 필요)
+ * 고용보험은 입사 해당 월부터 실제 지급 임금에 비례하여 부과됨
+ *
+ * @param hireDate 입사일
+ * @param year 급여 연도
+ * @param month 급여 월
+ * @returns true면 해당 월 보험료 부과, false면 미부과
+ */
+export function shouldApplyInsuranceForMonth(
+  hireDate: string | undefined,
+  year: number,
+  month: number
+): boolean {
+  if (!hireDate) return true // 입사일 정보 없으면 기본 부과
+
+  const hire = new Date(hireDate)
+  const hireYear = hire.getFullYear()
+  const hireMonth = hire.getMonth() + 1
+  const hireDay = hire.getDate()
+
+  // 입사월보다 이후 월이면 보험 적용
+  if (hireYear < year || (hireYear === year && hireMonth < month)) {
+    return true
+  }
+
+  // 아직 입사하지 않은 경우 (미래 입사)
+  if (hireYear > year || (hireYear === year && hireMonth > month)) {
+    return false
+  }
+
+  // 입사월인 경우: 1일 입사만 해당 월 부과
+  return hireDay === 1
+}
+
+/**
+ * 중간 입사자 고용보험 적용 금액 계산
+ *
+ * 고용보험은 국민연금/건강보험과 달리 입사 해당 월부터 부과됨
+ * (고용보험법 제69조의4, 고용보험 및 산재보험 보험료징수법 제16조의3)
+ * 실제 지급 임금에 비례하여 보험료 산정
+ *
+ * @param monthlyInsurance 월 고용보험료 (전월 기준)
+ * @param prorataRatio 일할 비율 (1이면 전액)
+ * @param isMidMonth 중간 입사자 여부
+ * @returns 적용할 고용보험료
+ */
+export function calculateEmploymentInsuranceForMonth(
+  monthlyInsurance: number,
+  prorataRatio: number,
+  isMidMonth: boolean
+): number {
+  if (!isMidMonth) return monthlyInsurance
+  // 중간 입사자: 일할 급여 비율로 보험료 산정
+  return Math.round(monthlyInsurance * prorataRatio)
 }
 
 /**

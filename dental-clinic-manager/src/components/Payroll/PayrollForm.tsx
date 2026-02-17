@@ -20,11 +20,16 @@ import {
   getAttendanceSummaryForPayroll,
   calculatePayrollBasis,
   calculateAttendanceDeduction,
-  checkPayrollAccess
+  checkPayrollAccess,
+  isMidMonthHire,
+  calculateProrataSalary,
+  shouldApplyInsuranceForMonth,
+  calculateEmploymentInsuranceForMonth
 } from '@/lib/payrollService'
 import { formatCurrency } from '@/utils/taxCalculationUtils'
+import { getPublicHolidaySet } from '@/lib/holidayService'
 import PayrollPreview from './PayrollPreview'
-import { AlertCircle, FileText, Settings, Clock, Calendar, AlertTriangle, Lock } from 'lucide-react'
+import { AlertCircle, FileText, Settings, Clock, Calendar, AlertTriangle, Lock, UserPlus } from 'lucide-react'
 import type { WorkSchedule } from '@/types/workSchedule'
 import { workScheduleService } from '@/lib/workScheduleService'
 
@@ -106,6 +111,17 @@ export default function PayrollForm() {
   const [employeeWorkSchedule, setEmployeeWorkSchedule] = useState<WorkSchedule | null>(null)
   const [attendanceLoadError, setAttendanceLoadError] = useState<string | null>(null)
 
+  // 중간 입사자 일할 계산 관련 상태
+  const [prorataInfo, setProrataInfo] = useState<{
+    isProrated: boolean
+    ratio: number
+    hireWorkDays: number
+    totalWorkDays: number
+    originalSalary: number
+    proratedSalary: number
+    insuranceExempt: boolean
+  } | null>(null)
+
   const yearMonthOptions = useMemo(() => generatePayrollYearMonthOptions(), [])
 
   // 권한 체크
@@ -183,6 +199,7 @@ export default function PayrollForm() {
         setAttendanceDeduction(null)
         setAccessResult(null)
         setAttendanceLoadError(null)
+        setProrataInfo(null)
         return
       }
 
@@ -304,6 +321,81 @@ export default function PayrollForm() {
           setAttendanceDeduction(null)
         }
 
+        // =====================================================================
+        // 중간 입사자 일할 계산 및 4대보험 면제 적용
+        // =====================================================================
+        const publicHolidays = getPublicHolidaySet(selectedYear, selectedMonth, true)
+        const midMonthHire = isMidMonthHire(employee.hire_date, selectedYear, selectedMonth)
+        const insuranceApplicable = shouldApplyInsuranceForMonth(employee.hire_date, selectedYear, selectedMonth)
+
+        // 기본 급여 금액 (세후: targetAmount, 세전: baseSalary)
+        let baseSalaryForCalc = settings.salaryType === 'net'
+          ? settings.targetAmount
+          : settings.baseSalary
+        let originalSalary = baseSalaryForCalc
+
+        // 중간 입사자 급여 일할 계산
+        let currentProrataInfo: typeof prorataInfo = null
+        if (midMonthHire && employee.hire_date) {
+          const prorataResult = calculateProrataSalary(
+            settings.targetAmount,
+            employee.hire_date,
+            selectedYear,
+            selectedMonth,
+            workSchedule,
+            publicHolidays
+          )
+
+          if (prorataResult.isProrated) {
+            baseSalaryForCalc = prorataResult.proratedSalary
+            currentProrataInfo = {
+              isProrated: true,
+              ratio: prorataResult.ratio,
+              hireWorkDays: prorataResult.hireWorkDays,
+              totalWorkDays: prorataResult.totalWorkDays,
+              originalSalary: settings.targetAmount,
+              proratedSalary: prorataResult.proratedSalary,
+              insuranceExempt: !insuranceApplicable
+            }
+
+            console.log('[PayrollForm] 중간 입사자 일할 계산 적용:', {
+              employeeName: employee.name,
+              hireDate: employee.hire_date,
+              originalSalary: settings.targetAmount,
+              proratedSalary: prorataResult.proratedSalary,
+              ratio: `${prorataResult.hireWorkDays}/${prorataResult.totalWorkDays} = ${(prorataResult.ratio * 100).toFixed(1)}%`,
+              insuranceExempt: !insuranceApplicable
+            })
+          }
+        }
+        setProrataInfo(currentProrataInfo)
+
+        // 일할 비율 (보험료 및 수당 계산에 공통 사용)
+        const prorataRatio = currentProrataInfo?.ratio ?? 1
+
+        // 4대보험: 중간 입사자(2일 이후 입사) 처리
+        // - 국민연금/건강보험/장기요양: 해당 월 면제 (다음 달부터 부과)
+        // - 고용보험: 입사 해당 월부터 일할 급여에 비례하여 부과 (면제 없음)
+        const appliedNationalPension = insuranceApplicable ? settings.nationalPension : 0
+        const appliedHealthInsurance = insuranceApplicable ? settings.healthInsurance : 0
+        const appliedLongTermCare = insuranceApplicable ? settings.longTermCare : 0
+        const appliedEmploymentInsurance = calculateEmploymentInsuranceForMonth(
+          settings.employmentInsurance,
+          prorataRatio,
+          midMonthHire
+        )
+
+        if (!insuranceApplicable) {
+          console.log('[PayrollForm] 중간 입사자 보험 적용:', {
+            employeeName: employee.name,
+            hireDate: employee.hire_date,
+            nationalPension: '면제 (월 2일 이후 입사)',
+            healthInsurance: '면제 (월 2일 이후 입사)',
+            longTermCare: '면제 (월 2일 이후 입사)',
+            employmentInsurance: `일할 적용 (${settings.employmentInsurance}원 × ${(prorataRatio * 100).toFixed(1)}% = ${appliedEmploymentInsurance}원)`
+          })
+        }
+
         // 급여 설정이 있으면 항상 설정 기반으로 계산 (4대보험 값 정확히 반영)
         // 근태 차감 적용 방식:
         // - 세전(gross) 계약: 기타 공제에 추가하여 실수령액 감소
@@ -312,13 +404,19 @@ export default function PayrollForm() {
 
         // 세후 계약의 경우 targetAmount에서 근태 차감액을 빼고,
         // 세전 계약의 경우 기타공제에 추가
+        // 일할 계산이 적용된 경우 baseSalaryForCalc 사용
         const adjustedTargetAmount = settings.salaryType === 'net'
-          ? Math.max(0, settings.targetAmount - attendanceDeductionAmount)
-          : settings.targetAmount
+          ? Math.max(0, baseSalaryForCalc - attendanceDeductionAmount)
+          : baseSalaryForCalc
 
         const adjustedOtherDeductions = settings.salaryType === 'gross'
           ? settings.otherDeductions + attendanceDeductionAmount
           : settings.otherDeductions
+
+        // 식대/자가운전 보조금도 일할 계산 적용
+        const adjustedMealAllowance = midMonthHire ? Math.round(settings.mealAllowance * prorataRatio) : settings.mealAllowance
+        const adjustedVehicleAllowance = midMonthHire ? Math.round(settings.vehicleAllowance * prorataRatio) : settings.vehicleAllowance
+        const adjustedBonus = midMonthHire ? Math.round(settings.bonus * prorataRatio) : settings.bonus
 
         const newFormState: PayrollFormState = {
           ...DEFAULT_PAYROLL_FORM_STATE,
@@ -327,14 +425,14 @@ export default function PayrollForm() {
           selectedMonth,
           salaryType: settings.salaryType,
           targetAmount: adjustedTargetAmount,
-          baseSalary: settings.baseSalary,
-          mealAllowance: settings.mealAllowance,
-          vehicleAllowance: settings.vehicleAllowance,
-          bonus: settings.bonus,
-          nationalPension: settings.nationalPension,
-          healthInsurance: settings.healthInsurance,
-          longTermCare: settings.longTermCare,
-          employmentInsurance: settings.employmentInsurance,
+          baseSalary: midMonthHire ? baseSalaryForCalc : settings.baseSalary,
+          mealAllowance: adjustedMealAllowance,
+          vehicleAllowance: adjustedVehicleAllowance,
+          bonus: adjustedBonus,
+          nationalPension: appliedNationalPension,
+          healthInsurance: appliedHealthInsurance,
+          longTermCare: appliedLongTermCare,
+          employmentInsurance: appliedEmploymentInsurance,
           familyCount: settings.familyCount,
           childCount: settings.childCount,
           otherDeductions: adjustedOtherDeductions
@@ -354,15 +452,16 @@ export default function PayrollForm() {
 
         if (savedPayroll) {
           // 저장된 데이터가 있지만, 설정이 변경되었는지 확인
+          // 일할 계산/보험 면제가 적용된 값과 비교 (원본 settings가 아닌 실제 적용값)
           const deductions = savedPayroll.deductions || {}
           const settingsChanged =
-            deductions.nationalPension !== settings.nationalPension ||
-            deductions.healthInsurance !== settings.healthInsurance ||
-            deductions.longTermCare !== settings.longTermCare ||
-            deductions.employmentInsurance !== settings.employmentInsurance ||
-            savedPayroll.payments?.mealAllowance !== settings.mealAllowance ||
-            savedPayroll.payments?.vehicleAllowance !== settings.vehicleAllowance ||
-            savedPayroll.payments?.bonus !== settings.bonus
+            deductions.nationalPension !== appliedNationalPension ||
+            deductions.healthInsurance !== appliedHealthInsurance ||
+            deductions.longTermCare !== appliedLongTermCare ||
+            deductions.employmentInsurance !== appliedEmploymentInsurance ||
+            savedPayroll.payments?.mealAllowance !== adjustedMealAllowance ||
+            savedPayroll.payments?.vehicleAllowance !== adjustedVehicleAllowance ||
+            savedPayroll.payments?.bonus !== adjustedBonus
 
           if (settingsChanged && isOwner) {
             // 설정이 변경되었으면 새로운 값으로 저장
@@ -590,6 +689,54 @@ export default function PayrollForm() {
         </div>
       )}
 
+      {/* 중간 입사자 일할 계산 안내 */}
+      {prorataInfo && prorataInfo.isProrated && accessResult?.canAccess && !noSettingsWarning && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+          <div className="flex items-start space-x-3">
+            <UserPlus className="w-6 h-6 text-indigo-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-medium text-indigo-800 mb-2">
+                중간 입사자 일할 계산 적용
+              </h4>
+              <p className="text-sm text-indigo-700 mb-3">
+                {selectedEmployee?.name}님은 {selectedYear}년 {selectedMonth}월 중 입사하여 근무일수에 비례한 급여가 적용됩니다.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div className="p-2 bg-white rounded border border-indigo-100">
+                  <p className="text-xs text-indigo-500">입사일</p>
+                  <p className="font-medium text-indigo-800">{selectedEmployee?.hire_date}</p>
+                </div>
+                <div className="p-2 bg-white rounded border border-indigo-100">
+                  <p className="text-xs text-indigo-500">근무일수 / 소정근로일수</p>
+                  <p className="font-medium text-indigo-800">{prorataInfo.hireWorkDays}일 / {prorataInfo.totalWorkDays}일</p>
+                </div>
+                <div className="p-2 bg-white rounded border border-indigo-100">
+                  <p className="text-xs text-indigo-500">일할 비율</p>
+                  <p className="font-medium text-indigo-800">{(prorataInfo.ratio * 100).toFixed(1)}%</p>
+                </div>
+                <div className="p-2 bg-white rounded border border-indigo-100">
+                  <p className="text-xs text-indigo-500">원래 급여 → 일할 급여</p>
+                  <p className="font-medium text-indigo-800">
+                    {formatCurrency(prorataInfo.originalSalary)}원 → {formatCurrency(prorataInfo.proratedSalary)}원
+                  </p>
+                </div>
+              </div>
+              {prorataInfo.insuranceExempt && (
+                <div className="mt-3 p-2 bg-amber-50 rounded border border-amber-200">
+                  <p className="text-sm text-amber-700">
+                    <AlertTriangle className="w-4 h-4 inline-block mr-1" />
+                    <strong>3대보험 면제:</strong> 월 2일 이후 입사자는 해당 월 국민연금·건강보험·장기요양보험료가 부과되지 않습니다. (다음 달부터 부과)
+                  </p>
+                  <p className="text-sm text-indigo-700 mt-1">
+                    <strong>고용보험:</strong> 입사 해당 월부터 일할 급여에 비례하여 부과됩니다. ({(prorataInfo.ratio * 100).toFixed(1)}% 적용)
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 근태 정보 요약 (owner 또는 차감이 있는 경우에만 표시) */}
       {attendanceSummary && accessResult?.canAccess && !noSettingsWarning && (
         (isOwner || (attendanceDeduction && attendanceDeduction.totalDeduction > 0)) && (
@@ -745,13 +892,27 @@ export default function PayrollForm() {
                     <td className="py-2 text-slate-600">기본급</td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.payments.baseSalary || 0)}원</td>
                   </tr>
+                  {/* 중간 입사자 일할 계산이 적용된 경우 표시 */}
+                  {prorataInfo?.isProrated && (
+                    <tr className="border-b bg-indigo-50">
+                      <td className="py-2 text-indigo-700 text-xs">
+                        ↳ 일할 계산 적용
+                        <span className="block text-indigo-500">
+                          (월 급여: {formatCurrency(prorataInfo.originalSalary)}원 × {(prorataInfo.ratio * 100).toFixed(1)}%)
+                        </span>
+                      </td>
+                      <td className="py-2 text-right text-indigo-700 text-xs">
+                        {formatCurrency(prorataInfo.proratedSalary)}원
+                      </td>
+                    </tr>
+                  )}
                   {/* 세후 계약에서 근태 차감이 적용된 경우 표시 */}
                   {formState.salaryType === 'net' && attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
                     <tr className="border-b bg-orange-50">
                       <td className="py-2 text-orange-700 text-xs">
                         ↳ 근태 차감 적용됨
                         <span className="block text-orange-500">
-                          (원 목표: {formatCurrency(salarySettings[selectedEmployeeId || '']?.targetAmount || 0)}원)
+                          (원 목표: {formatCurrency(prorataInfo?.isProrated ? prorataInfo.proratedSalary : (salarySettings[selectedEmployeeId || '']?.targetAmount || 0))}원)
                         </span>
                       </td>
                       <td className="py-2 text-right text-orange-700 text-xs">
@@ -800,19 +961,31 @@ export default function PayrollForm() {
               <table className="w-full">
                 <tbody>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">국민연금</td>
+                    <td className="py-2 text-slate-600">
+                      국민연금
+                      {prorataInfo?.insuranceExempt && <span className="text-xs text-amber-600 ml-1">(면제)</span>}
+                    </td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.nationalPension)}원</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">건강보험</td>
+                    <td className="py-2 text-slate-600">
+                      건강보험
+                      {prorataInfo?.insuranceExempt && <span className="text-xs text-amber-600 ml-1">(면제)</span>}
+                    </td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.healthInsurance)}원</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">장기요양보험료</td>
+                    <td className="py-2 text-slate-600">
+                      장기요양보험료
+                      {prorataInfo?.insuranceExempt && <span className="text-xs text-amber-600 ml-1">(면제)</span>}
+                    </td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.longTermCare)}원</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">고용보험</td>
+                    <td className="py-2 text-slate-600">
+                      고용보험
+                      {prorataInfo?.isProrated && <span className="text-xs text-indigo-600 ml-1">(일할 적용)</span>}
+                    </td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.employmentInsurance)}원</td>
                   </tr>
                   <tr className="border-b">
