@@ -29,7 +29,8 @@ import type {
   RecallPatient,
   PatientRecallStatus,
   RecallExcludeReason,
-  RecallPatientFilters
+  RecallPatientFilters,
+  LastVisitPeriod
 } from '@/types/recall'
 import {
   RECALL_STATUS_LABELS,
@@ -38,7 +39,9 @@ import {
   GENDER_LABELS,
   EXCLUDE_REASON_LABELS,
   EXCLUDE_REASON_COLORS,
-  calculateAge
+  calculateAge,
+  getElapsedMonths,
+  formatElapsedTime
 } from '@/types/recall'
 import { displayPhoneNumber } from '@/lib/phoneCallService'
 
@@ -91,7 +94,7 @@ export default function PatientList({
   totalPatients = 0,
   onPageChange
 }: PatientListProps) {
-  const [sortField, setSortField] = useState<'patient_name' | 'status' | 'last_contact_date'>('patient_name')
+  const [sortField, setSortField] = useState<'patient_name' | 'status' | 'last_contact_date' | 'last_visit_date'>('patient_name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [showFilters, setShowFilters] = useState(false)
 
@@ -112,20 +115,46 @@ export default function PatientList({
           const dateB = b.last_contact_date || ''
           comparison = dateA.localeCompare(dateB)
           break
+        case 'last_visit_date':
+          const visitA = a.last_visit_date || ''
+          const visitB = b.last_visit_date || ''
+          comparison = visitA.localeCompare(visitB)
+          break
       }
 
       return sortDirection === 'asc' ? comparison : -comparison
     })
   }, [patients, sortField, sortDirection])
 
-  // 정렬 토글
-  const handleSort = (field: 'patient_name' | 'status' | 'last_contact_date') => {
-    if (sortField === field) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDirection('asc')
-    }
+  // 정렬 토글 (서버사이드 정렬도 함께 적용)
+  const handleSort = (field: 'patient_name' | 'status' | 'last_contact_date' | 'last_visit_date') => {
+    const newDirection = sortField === field
+      ? (sortDirection === 'asc' ? 'desc' : 'asc')
+      : 'asc'
+
+    setSortField(field)
+    setSortDirection(newDirection)
+    onFiltersChange({ ...filters, sortBy: field, sortDirection: newDirection })
+  }
+
+  // 최종 내원일 기간 필터 옵션
+  const lastVisitOptions: { value: LastVisitPeriod; label: string }[] = [
+    { value: 'all', label: '전체' },
+    { value: '6months', label: '6개월↑' },
+    { value: '6to12months', label: '6개월~1년' },
+    { value: '1to2years', label: '1~2년' },
+    { value: '2years', label: '2년↑' },
+    { value: 'no_date', label: '없음' },
+    { value: 'custom', label: '직접설정' }
+  ]
+
+  // 경과 기간 색상 클래스
+  const getElapsedColorClass = (dateStr?: string): string => {
+    if (!dateStr) return 'text-gray-400'
+    const months = getElapsedMonths(dateStr)
+    if (months < 6) return 'text-green-600'
+    if (months < 12) return 'text-amber-600'
+    return 'text-red-600'
   }
 
   // 전체 선택 상태
@@ -220,6 +249,51 @@ export default function PatientList({
             필터
             {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
+        </div>
+
+        {/* 최종 내원일 기간 필터 칩 */}
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-gray-600 whitespace-nowrap">최종 내원일:</span>
+            {lastVisitOptions.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => onFiltersChange({
+                  ...filters,
+                  lastVisitPeriod: opt.value,
+                  ...(opt.value !== 'custom' ? { lastVisitFrom: undefined, lastVisitTo: undefined } : {})
+                })}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  (filters.lastVisitPeriod || 'all') === opt.value
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 사용자 정의 날짜 범위 */}
+          {filters.lastVisitPeriod === 'custom' && (
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <label className="text-xs text-gray-500">내원일 시작:</label>
+              <input
+                type="date"
+                value={filters.lastVisitFrom || ''}
+                onChange={(e) => onFiltersChange({ ...filters, lastVisitFrom: e.target.value })}
+                className="px-2 py-1 text-sm border border-gray-300 rounded-lg"
+              />
+              <span className="text-xs text-gray-400">~</span>
+              <label className="text-xs text-gray-500">종료:</label>
+              <input
+                type="date"
+                value={filters.lastVisitTo || ''}
+                onChange={(e) => onFiltersChange({ ...filters, lastVisitTo: e.target.value })}
+                className="px-2 py-1 text-sm border border-gray-300 rounded-lg"
+              />
+            </div>
+          )}
         </div>
 
         {/* 확장 필터 */}
@@ -320,6 +394,17 @@ export default function PatientList({
               </th>
               <th className="px-4 py-3 text-left">
                 <button
+                  onClick={() => handleSort('last_visit_date')}
+                  className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  최종 내원일
+                  {sortField === 'last_visit_date' && (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left">
+                <button
                   onClick={() => handleSort('status')}
                   className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900"
                 >
@@ -348,7 +433,7 @@ export default function PatientList({
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                   <div className="flex flex-col items-center gap-2">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                     <span>로딩 중...</span>
@@ -357,7 +442,7 @@ export default function PatientList({
               </tr>
             ) : sortedPatients.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                   <div className="flex flex-col items-center gap-2">
                     <User className="w-12 h-12 text-gray-300" />
                     <span>환자 목록이 없습니다.</span>
@@ -409,6 +494,22 @@ export default function PatientList({
                         )}
                       </div>
                     </div>
+                  </td>
+
+                  {/* 최종 내원일 */}
+                  <td className="px-4 py-3">
+                    {patient.last_visit_date ? (
+                      <div>
+                        <p className="text-sm text-gray-900">
+                          {patient.last_visit_date}
+                        </p>
+                        <p className={`text-xs font-medium ${getElapsedColorClass(patient.last_visit_date)}`}>
+                          {formatElapsedTime(patient.last_visit_date)}
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
                   </td>
 
                   {/* 상태 - 버튼으로 표시 */}
