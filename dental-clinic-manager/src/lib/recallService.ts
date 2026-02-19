@@ -108,6 +108,58 @@ async function getCurrentUser(): Promise<{ id: string; name: string } | null> {
   }
 }
 
+// 최종 내원일 필터 적용 헬퍼 함수
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyLastVisitFilter(
+  query: any,
+  filters?: RecallPatientFilters
+): any {
+  if (!filters?.lastVisitPeriod || filters.lastVisitPeriod === 'all') return query
+
+  const now = new Date()
+
+  if (filters.lastVisitPeriod === 'no_date') {
+    return query.is('last_visit_date', null)
+  }
+
+  if (filters.lastVisitPeriod === 'custom') {
+    if (filters.lastVisitFrom) {
+      query = query.gte('last_visit_date', filters.lastVisitFrom)
+    }
+    if (filters.lastVisitTo) {
+      query = query.lte('last_visit_date', filters.lastVisitTo)
+    }
+    return query
+  }
+
+  // 프리셋 기간 필터 - last_visit_date가 null이 아닌 것만
+  query = query.not('last_visit_date', 'is', null)
+
+  if (filters.lastVisitPeriod === '6months') {
+    // 6개월 이상 경과
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate())
+    query = query.lte('last_visit_date', sixMonthsAgo.toISOString().split('T')[0])
+  } else if (filters.lastVisitPeriod === '6to12months') {
+    // 6개월~1년
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate())
+    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+    query = query.lte('last_visit_date', sixMonthsAgo.toISOString().split('T')[0])
+    query = query.gte('last_visit_date', oneYearAgo.toISOString().split('T')[0])
+  } else if (filters.lastVisitPeriod === '1to2years') {
+    // 1년~2년
+    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+    const twoYearsAgo = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate())
+    query = query.lt('last_visit_date', oneYearAgo.toISOString().split('T')[0])
+    query = query.gte('last_visit_date', twoYearsAgo.toISOString().split('T')[0])
+  } else if (filters.lastVisitPeriod === '2years') {
+    // 2년 이상
+    const twoYearsAgo = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate())
+    query = query.lt('last_visit_date', twoYearsAgo.toISOString().split('T')[0])
+  }
+
+  return query
+}
+
 // ========================================
 // Recall Campaign Service
 // ========================================
@@ -316,18 +368,25 @@ export const recallPatientService = {
         countQuery = countQuery.is('exclude_reason', null)
       }
 
+      // 최종 내원일 필터 (count 쿼리)
+      countQuery = applyLastVisitFilter(countQuery, filters)
+
       const { count, error: countError } = await countQuery
       if (countError) throw countError
 
       const total = count || 0
       const totalPages = Math.ceil(total / pageSize)
 
+      // 정렬 설정
+      const sortBy = filters?.sortBy || 'created_at'
+      const sortAsc = filters?.sortDirection === 'asc'
+
       // 데이터 조회 (페이지네이션)
       let dataQuery = supabase
         .from('recall_patients')
         .select('*, campaign:recall_campaigns(*)')
         .eq('clinic_id', clinicId)
-        .order('created_at', { ascending: false })
+        .order(sortBy, { ascending: sortAsc, nullsFirst: false })
         .range(from, to)
 
       // 필터 적용 (data 쿼리)
@@ -355,6 +414,9 @@ export const recallPatientService = {
       } else {
         dataQuery = dataQuery.is('exclude_reason', null)
       }
+
+      // 최종 내원일 필터 (data 쿼리)
+      dataQuery = applyLastVisitFilter(dataQuery, filters)
 
       const { data, error } = await dataQuery
 

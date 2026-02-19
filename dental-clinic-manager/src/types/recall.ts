@@ -402,6 +402,40 @@ export function calculateAge(birthDate: string | undefined): number | null {
 }
 
 // ========================================
+// 최종 내원일 관련 타입 및 유틸리티
+// ========================================
+
+// 최종 내원일 기간 필터 프리셋
+export type LastVisitPeriod =
+  | 'all'           // 전체
+  | '6months'       // 6개월 이상
+  | '6to12months'   // 6개월~1년
+  | '1to2years'     // 1년~2년
+  | '2years'        // 2년 이상
+  | 'custom'        // 사용자 정의
+  | 'no_date'       // 내원일 없음
+
+// 경과 개월수 계산
+export function getElapsedMonths(dateStr: string): number {
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return 0
+  const now = new Date()
+  return (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth())
+}
+
+// 경과 기간 한국어 포맷 ("6개월 전", "1년 2개월 전" 등)
+export function formatElapsedTime(dateStr: string): string {
+  const months = getElapsedMonths(dateStr)
+  if (months < 0) return '미래'
+  if (months === 0) return '이번 달'
+  if (months < 12) return `${months}개월 전`
+  const years = Math.floor(months / 12)
+  const remainingMonths = months % 12
+  if (remainingMonths === 0) return `${years}년 전`
+  return `${years}년 ${remainingMonths}개월 전`
+}
+
+// ========================================
 // 필터 옵션
 // ========================================
 export interface RecallPatientFilters {
@@ -414,6 +448,11 @@ export interface RecallPatientFilters {
   pageSize?: number
   showExcluded?: boolean              // true: 제외 환자만, false: 일반 환자만 (기본)
   excludeReason?: RecallExcludeReason | 'all'  // 제외 사유 필터
+  lastVisitPeriod?: LastVisitPeriod   // 최종 내원일 프리셋 기간 필터
+  lastVisitFrom?: string              // 사용자 정의: 시작일
+  lastVisitTo?: string                // 사용자 정의: 종료일
+  sortBy?: 'patient_name' | 'status' | 'last_contact_date' | 'last_visit_date'
+  sortDirection?: 'asc' | 'desc'
 }
 
 // 페이지네이션 응답
