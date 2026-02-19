@@ -23,7 +23,10 @@ import {
   Heart,
   ShieldOff,
   Undo2,
-  EyeOff
+  EyeOff,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react'
 import type {
   RecallPatient,
@@ -258,11 +261,21 @@ export default function PatientList({
             {lastVisitOptions.map(opt => (
               <button
                 key={opt.value}
-                onClick={() => onFiltersChange({
-                  ...filters,
-                  lastVisitPeriod: opt.value,
-                  ...(opt.value !== 'custom' ? { lastVisitFrom: undefined, lastVisitTo: undefined } : {})
-                })}
+                onClick={() => {
+                  const isActive = opt.value !== 'all' && opt.value !== 'no_date'
+                  const newFilters = {
+                    ...filters,
+                    lastVisitPeriod: opt.value,
+                    ...(opt.value !== 'custom' ? { lastVisitFrom: undefined, lastVisitTo: undefined } : {}),
+                    // 기간 선택 시 자동으로 최종 내원일 오름차순(빠른 순) 정렬
+                    ...(isActive ? { sortBy: 'last_visit_date' as const, sortDirection: filters.sortDirection || 'asc' as const } : {}),
+                    // '전체' 선택 시 정렬 초기화
+                    ...(opt.value === 'all' ? { sortBy: undefined, sortDirection: undefined } : {})
+                  }
+                  setSortField(isActive ? 'last_visit_date' : 'patient_name')
+                  setSortDirection(isActive ? (filters.sortDirection || 'asc') : 'asc')
+                  onFiltersChange(newFilters)
+                }}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   (filters.lastVisitPeriod || 'all') === opt.value
                     ? 'bg-indigo-600 text-white shadow-sm'
@@ -272,6 +285,24 @@ export default function PatientList({
                 {opt.label}
               </button>
             ))}
+
+            {/* 기간 필터 활성 시 정렬 방향 토글 */}
+            {filters.lastVisitPeriod && filters.lastVisitPeriod !== 'all' && filters.lastVisitPeriod !== 'no_date' && (
+              <button
+                onClick={() => {
+                  const newDir = (filters.sortDirection || 'asc') === 'asc' ? 'desc' : 'asc'
+                  setSortDirection(newDir)
+                  onFiltersChange({ ...filters, sortBy: 'last_visit_date', sortDirection: newDir })
+                }}
+                className="ml-1 px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-all flex items-center gap-1"
+                title={(filters.sortDirection || 'asc') === 'asc' ? '오래된 순 (빠른 순)' : '최근 순'}
+              >
+                {(filters.sortDirection || 'asc') === 'asc'
+                  ? <><ArrowUp className="w-3 h-3" /> 오래된 순</>
+                  : <><ArrowDown className="w-3 h-3" /> 최근 순</>
+                }
+              </button>
+            )}
           </div>
 
           {/* 사용자 정의 날짜 범위 */}
