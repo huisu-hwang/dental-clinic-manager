@@ -75,6 +75,12 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres  # Transaction Mo
 - 모든 커밋 전에 자신이 작성한 코드를 리뷰
 - 체크리스트: 보안, 성능, 가독성, 테스트, 호환성
 
+### 4. Chrome DevTools MCP 필수 사용 (모든 오류 수정 시)
+- **모든 버그/오류 수정 시 Chrome DevTools MCP로 오류 재현 및 검증 필수**
+- 수정 전: 콘솔 로그(`list_console_messages`), 네트워크 요청(`list_network_requests`)으로 오류 재현
+- 수정 후: 동일 시나리오로 검증하여 오류 해결 확인
+- 추측으로 수정 금지 → 반드시 실제 오류 로그 기반으로 원인 파악
+
 ---
 
 ## 개발 프로세스
@@ -108,17 +114,21 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres  # Transaction Mo
 4. 정상 작동 확인 후 Git commit & push to GitHub
 
 ### 버그 수정
-1. 오류 재현 및 로그 확인
+1. **Chrome DevTools MCP로 오류 재현** (콘솔 에러, 네트워크 요청 확인)
 2. 5 Whys로 근본 원인 분석
 3. 코드 수정
-4. **구현-테스트-수정-푸시 사이클 실행 (정상 작동까지 반복)**
-5. 정상 작동 확인 후 Git commit & push to GitHub
+4. **Chrome DevTools MCP로 수정 검증** (동일 시나리오 재실행)
+5. **구현-테스트-수정-푸시 사이클 실행 (정상 작동까지 반복)**
+6. 정상 작동 확인 후 Git commit & push to GitHub
 
 ---
 
 ## SQL 마이그레이션 규칙
 
-SQL 마이그레이션 파일 생성 시 **반드시 전체 내용을 코드 블록으로 출력**하여 사용자가 Supabase SQL Editor에서 복사-붙여넣기 가능하도록 할 것.
+- **Supabase MCP를 통해 직접 실행**: `mcp__supabase__apply_migration` (DDL) 또는 `mcp__supabase__execute_sql` (DML)을 사용하여 마이그레이션을 직접 적용할 것
+- **프로젝트 ID**: `beahjntkmkfhpcbhfnrr` (Dental Clinic Manager)
+- SQL 마이그레이션 파일도 `supabase/migrations/` 디렉토리에 함께 생성하여 버전 관리
+- 전체 SQL 내용을 코드 블록으로 출력하여 사용자가 확인 가능하도록 할 것
 
 ---
 

@@ -124,21 +124,14 @@ mcp__context7__get-library-docs({
 
 ## 🗄️ SQL 마이그레이션 규칙
 
-**SQL 마이그레이션 파일 생성 시 반드시 내용 출력**
+**Supabase MCP를 통해 직접 실행 (필수)**
 
-- ✅ 새 SQL 파일 생성 후, 전체 내용을 코드 블록으로 보여줄 것
-- ✅ 사용자가 Supabase SQL Editor에서 복사-붙여넣기 가능하도록
-- ❌ "파일 경로만 알려주기" 금지 → ✅ 전체 SQL 코드 출력 필수
-
-```markdown
-## 예시 출력 형식
-
-새 마이그레이션 파일이 생성되었습니다. Supabase SQL Editor에서 실행하세요:
-
-\`\`\`sql
--- 전체 SQL 내용...
-\`\`\`
-```
+- ✅ `mcp__supabase__apply_migration` 사용 (DDL: CREATE, ALTER, DROP 등)
+- ✅ `mcp__supabase__execute_sql` 사용 (DML: INSERT, UPDATE, SELECT 등)
+- ✅ 프로젝트 ID: `beahjntkmkfhpcbhfnrr` (Dental Clinic Manager)
+- ✅ `supabase/migrations/` 디렉토리에 SQL 파일도 함께 생성하여 버전 관리
+- ✅ 전체 SQL 내용을 코드 블록으로 보여줄 것
+- ❌ SQL Editor에서 수동 실행 요청 금지 → ✅ MCP로 직접 적용
 
 ---
 

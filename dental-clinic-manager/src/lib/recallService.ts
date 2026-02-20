@@ -489,7 +489,7 @@ export const recallPatientService = {
     }
   },
 
-  // 환자 일괄 추가 (파일 업로드) — 중복 제거 로직
+  // 환자 일괄 추가 (파일 업로드) — 중복 제거 로직 (배치 처리)
   async addPatientsBulk(
     patients: RecallPatientUploadData[],
     campaignId: string,
@@ -501,30 +501,36 @@ export const recallPatientService = {
     const clinicId = await getCurrentClinicId()
     if (!clinicId) return { success: false, newCount: 0, updatedCount: 0, skippedCount: 0, error: 'Clinic ID not found' }
 
+    // 배치 크기 (Supabase PostgREST URL 길이 제한 방지)
+    const BATCH_SIZE = 100
+
     try {
       // 1. 업로드 데이터에서 유효한 phone_number 목록 추출
       const validPatients = patients.filter(p => p.phone_number && p.patient_name)
       const skippedCount = patients.length - validPatients.length
       const phoneNumbers = validPatients.map(p => p.phone_number)
 
-      // 2. DB에서 같은 clinic_id + phone_number를 가진 기존 환자 조회
-      const { data: existingPatients, error: fetchError } = await supabase
-        .from('recall_patients')
-        .select('id, phone_number, exclude_reason')
-        .eq('clinic_id', clinicId)
-        .in('phone_number', phoneNumbers)
+      // 2. DB에서 같은 clinic_id + phone_number를 가진 기존 환자 조회 (배치)
+      const existingPatients: { id: string; phone_number: string; exclude_reason: string | null }[] = []
+      for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
+        const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
+        const { data, error: fetchError } = await supabase
+          .from('recall_patients')
+          .select('id, phone_number, exclude_reason')
+          .eq('clinic_id', clinicId)
+          .in('phone_number', batch)
 
-      if (fetchError) throw fetchError
+        if (fetchError) throw fetchError
+        if (data) existingPatients.push(...data)
+      }
 
       // 3. phone_number → 기존 환자 Map 생성 (exclude_reason NULL인 레코드 우선)
       const existingMap = new Map<string, { id: string; exclude_reason: string | null }>()
-      if (existingPatients) {
-        for (const ep of existingPatients) {
-          const current = existingMap.get(ep.phone_number)
-          // exclude_reason이 NULL인 레코드를 우선 선택
-          if (!current || (current.exclude_reason !== null && ep.exclude_reason === null)) {
-            existingMap.set(ep.phone_number, { id: ep.id, exclude_reason: ep.exclude_reason })
-          }
+      for (const ep of existingPatients) {
+        const current = existingMap.get(ep.phone_number)
+        // exclude_reason이 NULL인 레코드를 우선 선택
+        if (!current || (current.exclude_reason !== null && ep.exclude_reason === null)) {
+          existingMap.set(ep.phone_number, { id: ep.id, exclude_reason: ep.exclude_reason })
         }
       }
 
@@ -541,7 +547,7 @@ export const recallPatientService = {
         }
       }
 
-      // 5. 신규 환자 일괄 삽입
+      // 5. 신규 환자 일괄 삽입 (배치)
       let newCount = 0
       if (newPatients.length > 0) {
         const newRecords = newPatients.map(p => ({
@@ -551,13 +557,16 @@ export const recallPatientService = {
           status: 'pending' as PatientRecallStatus
         }))
 
-        const { data: inserted, error: insertError } = await supabase
-          .from('recall_patients')
-          .insert(newRecords)
-          .select()
+        for (let i = 0; i < newRecords.length; i += BATCH_SIZE) {
+          const batch = newRecords.slice(i, i + BATCH_SIZE)
+          const { data: inserted, error: insertError } = await supabase
+            .from('recall_patients')
+            .insert(batch)
+            .select()
 
-        if (insertError) throw insertError
-        newCount = inserted?.length || 0
+          if (insertError) throw insertError
+          newCount += inserted?.length || 0
+        }
       }
 
       // 6. 기존 환자 정보 업데이트 (보존 필드 제외)
