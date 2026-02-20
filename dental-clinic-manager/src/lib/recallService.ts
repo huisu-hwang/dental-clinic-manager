@@ -17,7 +17,8 @@ import type {
   RecallPatientFilters,
   RecallStats,
   ContactType,
-  PaginatedResponse
+  PaginatedResponse,
+  BulkUploadResult
 } from '@/types/recall'
 
 // ========================================
@@ -488,47 +489,114 @@ export const recallPatientService = {
     }
   },
 
-  // 환자 일괄 추가 (파일 업로드)
+  // 환자 일괄 추가 (파일 업로드) — 중복 제거 로직
   async addPatientsBulk(
     patients: RecallPatientUploadData[],
     campaignId: string,
     filename?: string
-  ): Promise<{ success: boolean; insertedCount?: number; error?: string }> {
+  ): Promise<BulkUploadResult> {
     const supabase = await ensureConnection()
-    if (!supabase) return { success: false, error: 'Database connection not available' }
+    if (!supabase) return { success: false, newCount: 0, updatedCount: 0, skippedCount: 0, error: 'Database connection not available' }
 
     const clinicId = await getCurrentClinicId()
-    if (!clinicId) return { success: false, error: 'Clinic ID not found' }
+    if (!clinicId) return { success: false, newCount: 0, updatedCount: 0, skippedCount: 0, error: 'Clinic ID not found' }
 
     try {
-      // 환자 데이터 준비
-      const patientRecords = patients.map(p => ({
-        ...p,
-        clinic_id: clinicId,
-        campaign_id: campaignId,
-        status: 'pending' as PatientRecallStatus
-      }))
+      // 1. 업로드 데이터에서 유효한 phone_number 목록 추출
+      const validPatients = patients.filter(p => p.phone_number && p.patient_name)
+      const skippedCount = patients.length - validPatients.length
+      const phoneNumbers = validPatients.map(p => p.phone_number)
 
-      // 일괄 삽입
-      const { data, error } = await supabase
+      // 2. DB에서 같은 clinic_id + phone_number를 가진 기존 환자 조회
+      const { data: existingPatients, error: fetchError } = await supabase
         .from('recall_patients')
-        .insert(patientRecords)
-        .select()
+        .select('id, phone_number, exclude_reason')
+        .eq('clinic_id', clinicId)
+        .in('phone_number', phoneNumbers)
 
-      if (error) throw error
+      if (fetchError) throw fetchError
 
-      // 캠페인 업데이트
+      // 3. phone_number → 기존 환자 Map 생성 (exclude_reason NULL인 레코드 우선)
+      const existingMap = new Map<string, { id: string; exclude_reason: string | null }>()
+      if (existingPatients) {
+        for (const ep of existingPatients) {
+          const current = existingMap.get(ep.phone_number)
+          // exclude_reason이 NULL인 레코드를 우선 선택
+          if (!current || (current.exclude_reason !== null && ep.exclude_reason === null)) {
+            existingMap.set(ep.phone_number, { id: ep.id, exclude_reason: ep.exclude_reason })
+          }
+        }
+      }
+
+      // 4. 신규 vs 기존 분류
+      const newPatients: RecallPatientUploadData[] = []
+      const updateTargets: { id: string; data: RecallPatientUploadData }[] = []
+
+      for (const p of validPatients) {
+        const existing = existingMap.get(p.phone_number)
+        if (existing) {
+          updateTargets.push({ id: existing.id, data: p })
+        } else {
+          newPatients.push(p)
+        }
+      }
+
+      // 5. 신규 환자 일괄 삽입
+      let newCount = 0
+      if (newPatients.length > 0) {
+        const newRecords = newPatients.map(p => ({
+          ...p,
+          clinic_id: clinicId,
+          campaign_id: campaignId,
+          status: 'pending' as PatientRecallStatus
+        }))
+
+        const { data: inserted, error: insertError } = await supabase
+          .from('recall_patients')
+          .insert(newRecords)
+          .select()
+
+        if (insertError) throw insertError
+        newCount = inserted?.length || 0
+      }
+
+      // 6. 기존 환자 정보 업데이트 (보존 필드 제외)
+      let updatedCount = 0
+      for (const target of updateTargets) {
+        // undefined 값은 제거하여 기존 데이터를 null로 덮어쓰지 않도록 처리
+        const updateFields: Record<string, unknown> = {}
+        if (target.data.patient_name !== undefined) updateFields.patient_name = target.data.patient_name
+        if (target.data.chart_number !== undefined) updateFields.chart_number = target.data.chart_number
+        if (target.data.birth_date !== undefined) updateFields.birth_date = target.data.birth_date
+        if (target.data.gender !== undefined) updateFields.gender = target.data.gender
+        if (target.data.last_visit_date !== undefined) updateFields.last_visit_date = target.data.last_visit_date
+        if (target.data.treatment_type !== undefined) updateFields.treatment_type = target.data.treatment_type
+        if (target.data.notes !== undefined) updateFields.notes = target.data.notes
+        // campaign_id도 최신 캠페인으로 업데이트
+        updateFields.campaign_id = campaignId
+
+        if (Object.keys(updateFields).length > 0) {
+          const { error: updateError } = await supabase
+            .from('recall_patients')
+            .update(updateFields)
+            .eq('id', target.id)
+
+          if (!updateError) updatedCount++
+        }
+      }
+
+      // 7. 캠페인 업데이트
       await supabase
         .from('recall_campaigns')
         .update({
-          total_patients: patients.length,
+          total_patients: newCount + updatedCount,
           original_filename: filename
         })
         .eq('id', campaignId)
 
-      return { success: true, insertedCount: data?.length || 0 }
+      return { success: true, newCount, updatedCount, skippedCount }
     } catch (error) {
-      return { success: false, error: extractErrorMessage(error) }
+      return { success: false, newCount: 0, updatedCount: 0, skippedCount: 0, error: extractErrorMessage(error) }
     }
   },
 

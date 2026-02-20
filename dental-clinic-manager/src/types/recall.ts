@@ -436,6 +436,17 @@ export function formatElapsedTime(dateStr: string): string {
 }
 
 // ========================================
+// 일괄 업로드 결과
+// ========================================
+export interface BulkUploadResult {
+  success: boolean
+  newCount: number       // 신규 등록
+  updatedCount: number   // 기존 환자 업데이트
+  skippedCount: number   // 건너뜀 (유효하지 않은 데이터)
+  error?: string
+}
+
+// ========================================
 // 필터 옵션
 // ========================================
 export interface RecallPatientFilters {
