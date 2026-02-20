@@ -13,6 +13,7 @@
 ## 목차
 
 - [2026-02-20](#2026-02-20)
+  - [리콜 엑셀 업로드 TypeError: Failed to fetch 오류 수정](#2026-02-20-버그-수정-리콜-엑셀-업로드-typeerror-failed-to-fetch-오류-수정)
   - [리콜관리 최종 내원일 필터링/정렬 기능 추가](#2026-02-20-기능-개발-리콜관리-최종-내원일-필터링정렬-기능-추가)
   - [덴트웹 데이터 연동 계획 수립](#2026-02-20-계획-덴트웹-데이터-연동-계획-수립)
 - [2026-02-14](#2026-02-14)
@@ -25,6 +26,42 @@
   - [작업 문서화 가이드 추가](#2025-11-06-문서화-작업-문서화-가이드-추가)
   - [근본 원인 해결 원칙 추가](#2025-11-06-문서화-근본-원인-해결-원칙-추가)
   - [세션 만료 시 무한 로딩 문제 해결](#2025-11-06-버그-수정-세션-만료-시-무한-로딩-문제-해결)
+
+---
+
+## 2026-02-20 [버그 수정] 리콜 엑셀 업로드 TypeError: Failed to fetch 오류 수정
+
+**키워드:** #리콜 #엑셀업로드 #TypeError #FailedToFetch #배치처리 #Supabase
+
+### 문제
+- 리콜 환자 엑셀 파일 업로드 시 `TypeError: Failed to fetch` 오류 발생
+
+### 근본 원인 (5 Whys)
+1. Why: 업로드 시 fetch 요청이 실패함
+2. Why: Supabase PostgREST API 호출이 네트워크 레벨에서 실패
+3. Why: `.in('phone_number', phoneNumbers)` 쿼리가 GET URL에 수백~수천 개 전화번호를 포함
+4. Why: URL 길이가 브라우저/서버 한도(~8KB) 초과
+5. **근본 원인**: 대량 데이터를 배치 분할 없이 한 번에 쿼리/삽입하여 HTTP 요청 크기 제한 초과
+
+### 해결 방법
+- `addPatientsBulk()` 함수에 `BATCH_SIZE = 100` 상수 도입
+- `.in()` 쿼리를 100건 단위 배치로 분할 조회
+- `.insert()` 작업을 100건 단위 배치로 분할 삽입
+- CLAUDE.md에 Chrome DevTools MCP 필수 사용 원칙 추가
+
+### 변경 파일
+- `src/lib/recallService.ts` — addPatientsBulk 배치 처리
+- `CLAUDE.md` — Chrome DevTools MCP 원칙 추가, 버그 수정 프로세스 업데이트
+- `.claude/claude.md` — SQL 마이그레이션 규칙 Supabase MCP 직접 실행으로 업데이트
+
+### 결과
+- 빌드 성공 확인
+- develop 브랜치 푸시 완료
+
+### 배운 점
+- Supabase `.in()` 필터는 GET URL 파라미터로 변환되므로 대량 데이터 시 URL 길이 초과 발생
+- 대량 데이터 처리 시 항상 배치 분할 필수 (100건 단위 권장)
+- Chrome DevTools MCP로 네트워크 요청 실패를 정확히 진단 가능
 
 ---
 
