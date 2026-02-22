@@ -54,7 +54,8 @@ import {
   SlidersHorizontal,
   Banknote,
   PhoneCall,
-  Sparkles
+  Sparkles,
+  ClipboardCheck
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -92,6 +93,7 @@ const iconNameToComponent: Record<string, React.ElementType> = {
   'SlidersHorizontal': SlidersHorizontal,
   'PhoneCall': PhoneCall,
   'Sparkles': Sparkles,
+  'ClipboardCheck': ClipboardCheck,
   'Briefcase': Briefcase,
   'MessageSquare': MessageSquare,
   'FolderOpen': FolderOpen,
