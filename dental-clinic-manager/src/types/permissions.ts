@@ -120,8 +120,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'notification_view',
     // 업체 연락처 관리 (삭제, 일괄 등록 제외)
     'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit',
-    // 업무 체크리스트 (조회 및 전체 현황)
-    'task_checklist_view', 'task_checklist_view_all'
+    // 업무 체크리스트 (본인 체크만 - 직원과 동일)
+    'task_checklist_view'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
