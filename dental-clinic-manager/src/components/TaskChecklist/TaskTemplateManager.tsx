@@ -793,6 +793,7 @@ export default function TaskTemplateManager() {
                     value={item.title}
                     onChange={(e) => updateBulkItem(index, 'title', e.target.value)}
                     onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing) return
                       if (e.key === 'Tab' && !e.shiftKey) {
                         e.preventDefault()
                         // Tab: 첫 번째 시간대 선택 후 시간대 영역으로 포커스 이동
