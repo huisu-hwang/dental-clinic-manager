@@ -781,7 +781,13 @@ export default function TaskTemplateManager() {
                     value={item.title}
                     onChange={(e) => updateBulkItem(index, 'title', e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === 'Tab' && !e.shiftKey) {
+                        e.preventDefault()
+                        // Tab: 첫 번째 시간대 선택 후 시간대 영역으로 포커스 이동
+                        updateBulkItem(index, 'period', periodOptions[0].value)
+                        const periodEl = document.querySelector<HTMLElement>(`[data-bulk-period="${index}"]`)
+                        periodEl?.focus()
+                      } else if (e.key === 'Enter') {
                         e.preventDefault()
                         if (index === bulkItems.length - 1) {
                           addBulkItem()
@@ -806,7 +812,33 @@ export default function TaskTemplateManager() {
                     role="radiogroup"
                     onKeyDown={(e) => {
                       const currentIdx = periodOptions.findIndex(o => o.value === item.period)
-                      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                      if (e.key === 'Tab' && !e.shiftKey) {
+                        e.preventDefault()
+                        const nextIdx = currentIdx + 1
+                        if (nextIdx < periodOptions.length) {
+                          // 다음 시간대로 이동
+                          updateBulkItem(index, 'period', periodOptions[nextIdx].value)
+                        } else {
+                          // 마지막 시간대 → 다음 행의 업무명으로 이동
+                          if (index === bulkItems.length - 1) {
+                            addBulkItem()
+                          }
+                          setTimeout(() => {
+                            const inputs = document.querySelectorAll<HTMLInputElement>('[data-bulk-title]')
+                            inputs[index + 1]?.focus()
+                          }, 0)
+                        }
+                      } else if (e.key === 'Tab' && e.shiftKey) {
+                        e.preventDefault()
+                        const prevIdx = currentIdx - 1
+                        if (prevIdx >= 0) {
+                          updateBulkItem(index, 'period', periodOptions[prevIdx].value)
+                        } else {
+                          // 첫 번째 시간대에서 Shift+Tab → 업무명으로 이동
+                          const inputs = document.querySelectorAll<HTMLInputElement>('[data-bulk-title]')
+                          inputs[index]?.focus()
+                        }
+                      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                         e.preventDefault()
                         const next = (currentIdx + 1) % periodOptions.length
                         updateBulkItem(index, 'period', periodOptions[next].value)
