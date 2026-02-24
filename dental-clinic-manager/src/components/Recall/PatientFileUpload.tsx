@@ -23,7 +23,7 @@ const EXPECTED_COLUMNS: ParsedColumn[] = [
   { key: 'chart_number', label: '차트번호', required: false },
   { key: 'birth_date', label: '생년월일', required: false },
   { key: 'gender', label: '성별', required: false },
-  { key: 'last_visit_date', label: '마지막 내원일', required: false },
+  { key: 'last_visit_date', label: '최종 내원일', required: false },
   { key: 'treatment_type', label: '시술 종류', required: false },
   { key: 'notes', label: '비고', required: false }
 ]
@@ -67,7 +67,10 @@ const COLUMN_MAPPINGS: Record<string, keyof RecallPatientUploadData> = {
   'gender': 'gender',
   'sex': 'gender',
 
+  '최종내원일': 'last_visit_date',
+  '최종 내원일': 'last_visit_date',
   '마지막내원일': 'last_visit_date',
+  '마지막 내원일': 'last_visit_date',
   '최근내원일': 'last_visit_date',
   '내원일': 'last_visit_date',
   '방문일': 'last_visit_date',
@@ -110,40 +113,72 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
     return digits
   }
 
+  // 날짜 유효성 검증
+  const isValidDate = (year: number, month: number, day: number): boolean => {
+    if (month < 1 || month > 12 || day < 1 || day > 31) return false
+    if (year < 1900 || year > 2100) return false
+    const d = new Date(year, month - 1, day)
+    return d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day
+  }
+
   // 날짜 정규화
   const normalizeDate = (date: any): string | undefined => {
     if (!date) return undefined
 
     // Excel 날짜 시리얼 값 처리
     if (typeof date === 'number') {
+      if (date < 1 || date > 2958465) return undefined // 1900-01-01 ~ 9999-12-31
       const excelDate = new Date((date - 25569) * 86400 * 1000)
-      return excelDate.toISOString().split('T')[0]
+      const y = excelDate.getUTCFullYear()
+      const m = excelDate.getUTCMonth() + 1
+      const d = excelDate.getUTCDate()
+      if (!isValidDate(y, m, d)) return undefined
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     }
 
     // 문자열 날짜 처리
     const dateStr = date.toString().trim()
     if (!dateStr) return undefined
 
+    let year: number, month: number, day: number
+
     // YYYY-MM-DD 형식
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      return dateStr
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) {
+      const parts = dateStr.split('-')
+      year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
     }
     // YYYY/MM/DD 형식
-    if (/^\d{4}\/\d{2}\/\d{2}$/.test(dateStr)) {
-      return dateStr.replace(/\//g, '-')
+    else if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(dateStr)) {
+      const parts = dateStr.split('/')
+      year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
+    }
+    // YYYY.MM.DD 형식
+    else if (/^\d{4}\.\d{1,2}\.\d{1,2}\.?$/.test(dateStr)) {
+      const parts = dateStr.replace(/\.$/, '').split('.')
+      year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
     }
     // YYYYMMDD 형식
-    if (/^\d{8}$/.test(dateStr)) {
-      return `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`
+    else if (/^\d{8}$/.test(dateStr)) {
+      year = parseInt(dateStr.slice(0, 4)); month = parseInt(dateStr.slice(4, 6)); day = parseInt(dateStr.slice(6, 8))
     }
     // YYMMDD 형식 (주민번호 앞자리)
-    if (/^\d{6}$/.test(dateStr)) {
+    else if (/^\d{6}$/.test(dateStr)) {
       const yy = parseInt(dateStr.slice(0, 2))
-      const century = yy > 30 ? '19' : '20'  // 30보다 크면 1900년대, 아니면 2000년대
-      return `${century}${dateStr.slice(0, 2)}-${dateStr.slice(2, 4)}-${dateStr.slice(4, 6)}`
+      const century = yy > 30 ? 1900 : 2000
+      year = century + yy; month = parseInt(dateStr.slice(2, 4)); day = parseInt(dateStr.slice(4, 6))
+    }
+    // YYYY-MM-DD HH:mm:ss 또는 YYYY/MM/DD HH:mm:ss (날짜 부분만 추출)
+    else if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}\s+\d{1,2}:\d{2}/.test(dateStr)) {
+      const datePart = dateStr.split(/\s+/)[0]
+      const parts = datePart.split(/[-/]/)
+      year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
+    }
+    else {
+      return undefined
     }
 
-    return undefined
+    if (!isValidDate(year, month, day)) return undefined
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   }
 
   // 성별 정규화
