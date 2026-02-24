@@ -57,12 +57,11 @@ export default function TaskTemplateManager() {
 
   // 일괄 입력 모드
   const [showBulkForm, setShowBulkForm] = useState(false)
+  const [bulkAssignedUserId, setBulkAssignedUserId] = useState('')
   const [bulkItems, setBulkItems] = useState<Array<{
-    assigned_user_id: string
     title: string
-    description: string
     period: TaskPeriod
-  }>>([{ assigned_user_id: '', title: '', description: '', period: 'before_treatment' }])
+  }>>([{ title: '', period: 'before_treatment' }])
   const [bulkSaving, setBulkSaving] = useState(false)
 
   // 엑셀 업로드
@@ -203,8 +202,14 @@ export default function TaskTemplateManager() {
   }
 
   // === 일괄 입력 관련 ===
+  const resetBulkForm = () => {
+    setBulkAssignedUserId('')
+    setBulkItems([{ title: '', period: 'before_treatment' }])
+    setShowBulkForm(false)
+  }
+
   const addBulkItem = () => {
-    setBulkItems(prev => [...prev, { assigned_user_id: '', title: '', description: '', period: 'before_treatment' }])
+    setBulkItems(prev => [...prev, { title: '', period: 'before_treatment' }])
   }
 
   const removeBulkItem = (index: number) => {
@@ -216,8 +221,8 @@ export default function TaskTemplateManager() {
   }
 
   const handleBulkSave = async () => {
-    if (!user?.id) return
-    const validItems = bulkItems.filter(item => item.assigned_user_id && item.title.trim())
+    if (!user?.id || !bulkAssignedUserId) return
+    const validItems = bulkItems.filter(item => item.title.trim())
     if (validItems.length === 0) {
       alert('입력된 항목이 없습니다.')
       return
@@ -225,9 +230,8 @@ export default function TaskTemplateManager() {
     setBulkSaving(true)
     try {
       const formDataItems: TaskTemplateFormData[] = validItems.map((item, idx) => ({
-        assigned_user_id: item.assigned_user_id,
+        assigned_user_id: bulkAssignedUserId,
         title: item.title.trim(),
-        description: item.description.trim() || undefined,
         period: item.period,
         sort_order: idx,
       }))
@@ -236,8 +240,7 @@ export default function TaskTemplateManager() {
         alert(`일괄 추가 실패: ${error}`)
         return
       }
-      setBulkItems([{ assigned_user_id: '', title: '', description: '', period: 'before_treatment' }])
-      setShowBulkForm(false)
+      resetBulkForm()
       await fetchData()
     } finally {
       setBulkSaving(false)
@@ -442,7 +445,7 @@ export default function TaskTemplateManager() {
               업무 추가
             </button>
             <button
-              onClick={() => { setShowBulkForm(true); setShowForm(false); setShowExcelUpload(false) }}
+              onClick={() => { resetBulkForm(); setShowBulkForm(true); setShowForm(false); setShowExcelUpload(false) }}
               className="inline-flex items-center px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors"
             >
               <List className="w-4 h-4 mr-1.5" />
@@ -604,58 +607,53 @@ export default function TaskTemplateManager() {
         <div className="bg-white rounded-xl shadow-sm border border-indigo-200 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-800">업무 일괄 입력</h3>
-            <button onClick={() => { setShowBulkForm(false); setBulkItems([{ assigned_user_id: '', title: '', description: '', period: 'before_treatment' }]) }} className="p-1 hover:bg-slate-100 rounded-lg">
+            <button onClick={resetBulkForm} className="p-1 hover:bg-slate-100 rounded-lg">
               <X className="w-5 h-5 text-slate-400" />
             </button>
           </div>
-          <p className="text-xs text-slate-500 mb-4">여러 업무를 한 번에 추가할 수 있습니다. 행을 추가하여 입력하세요.</p>
 
-          <div className="space-y-3">
+          {/* 담당 직원 선택 (상단 고정) */}
+          <div className="mb-4 pb-4 border-b border-slate-100">
+            <label className="block text-sm font-medium text-slate-700 mb-1">담당 직원 *</label>
+            <select
+              value={bulkAssignedUserId}
+              onChange={(e) => setBulkAssignedUserId(e.target.value)}
+              className="w-full sm:w-64 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">직원 선택</option>
+              {staff.map(s => (
+                <option key={s.id} value={s.id}>{s.name} ({getRoleName(s.role)})</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 업무 목록 입력 */}
+          <p className="text-xs text-slate-500 mb-3">선택한 직원에게 할당할 업무를 입력하세요.</p>
+          <div className="space-y-2">
             {/* 헤더 */}
             <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-medium text-slate-500 px-1">
-              <div className="col-span-3">담당 직원 *</div>
-              <div className="col-span-3">업무명 *</div>
-              <div className="col-span-3">설명</div>
-              <div className="col-span-2">시간대</div>
+              <div className="col-span-1 text-center">#</div>
+              <div className="col-span-7">업무명 *</div>
+              <div className="col-span-3">시간대</div>
               <div className="col-span-1"></div>
             </div>
 
             {bulkItems.map((item, index) => (
-              <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start bg-slate-50 rounded-lg p-2 sm:p-0 sm:bg-transparent">
-                <div className="sm:col-span-3">
-                  <label className="sm:hidden text-xs text-slate-500 mb-1 block">담당 직원 *</label>
-                  <select
-                    value={item.assigned_user_id}
-                    onChange={(e) => updateBulkItem(index, 'assigned_user_id', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="">직원 선택</option>
-                    {staff.map(s => (
-                      <option key={s.id} value={s.id}>{s.name} ({getRoleName(s.role)})</option>
-                    ))}
-                  </select>
+              <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-slate-50 rounded-lg p-2 sm:p-1 sm:bg-transparent">
+                <div className="hidden sm:flex sm:col-span-1 justify-center">
+                  <span className="text-xs text-slate-400">{index + 1}</span>
                 </div>
-                <div className="sm:col-span-3">
+                <div className="sm:col-span-7">
                   <label className="sm:hidden text-xs text-slate-500 mb-1 block">업무명 *</label>
                   <input
                     type="text"
                     value={item.title}
                     onChange={(e) => updateBulkItem(index, 'title', e.target.value)}
-                    placeholder="업무명"
+                    placeholder="예: 진료실 소독 및 준비"
                     className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <label className="sm:hidden text-xs text-slate-500 mb-1 block">설명</label>
-                  <input
-                    type="text"
-                    value={item.description}
-                    onChange={(e) => updateBulkItem(index, 'description', e.target.value)}
-                    placeholder="설명 (선택)"
-                    className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-                <div className="sm:col-span-2">
                   <label className="sm:hidden text-xs text-slate-500 mb-1 block">시간대</label>
                   <select
                     value={item.period}
@@ -692,17 +690,17 @@ export default function TaskTemplateManager() {
             </button>
             <div className="flex items-center space-x-2">
               <span className="text-xs text-slate-500">
-                {bulkItems.filter(i => i.assigned_user_id && i.title.trim()).length}개 항목 입력됨
+                {bulkItems.filter(i => i.title.trim()).length}개 항목 입력됨
               </span>
               <button
-                onClick={() => { setShowBulkForm(false); setBulkItems([{ assigned_user_id: '', title: '', description: '', period: 'before_treatment' }]) }}
+                onClick={resetBulkForm}
                 className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={handleBulkSave}
-                disabled={bulkSaving || bulkItems.filter(i => i.assigned_user_id && i.title.trim()).length === 0}
+                disabled={bulkSaving || !bulkAssignedUserId || bulkItems.filter(i => i.title.trim()).length === 0}
                 className="inline-flex items-center px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors disabled:opacity-50"
               >
                 <Save className="w-4 h-4 mr-1.5" />
