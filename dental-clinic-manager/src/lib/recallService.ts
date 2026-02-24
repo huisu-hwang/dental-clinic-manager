@@ -554,18 +554,23 @@ export const recallPatientService = {
         }
       }
 
-      // 4. 신규 vs 기존 분류
-      const newPatients: RecallPatientUploadData[] = []
-      const updateTargets: { id: string; data: RecallPatientUploadData }[] = []
+      // 4. 신규 vs 기존 분류 (동일 phone_number 중복 시 마지막 행 우선)
+      const newPatientsMap = new Map<string, RecallPatientUploadData>()
+      const updateTargetsMap = new Map<string, { id: string; data: RecallPatientUploadData }>()
 
       for (const p of validPatients) {
         const existing = existingMap.get(p.phone_number)
         if (existing) {
-          updateTargets.push({ id: existing.id, data: p })
+          // 같은 id로 중복 upsert 시 "cannot affect row a second time" 방지
+          updateTargetsMap.set(existing.id, { id: existing.id, data: p })
         } else {
-          newPatients.push(p)
+          // 신규 환자도 phone_number 기준 중복 제거 (마지막 행 우선)
+          newPatientsMap.set(p.phone_number, p)
         }
       }
+
+      const newPatients = Array.from(newPatientsMap.values())
+      const updateTargets = Array.from(updateTargetsMap.values())
 
       // 5. 신규 환자 일괄 삽입 (병렬 배치, .select() 제거로 응답 크기 축소)
       let newCount = 0
