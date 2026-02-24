@@ -91,7 +91,6 @@ export default function TaskTemplateManager() {
   const periodOptions = periodConfig.keys.map(key => ({ value: key, label: periodConfig.labels[key] || key }))
 
   const fetchData = useCallback(async () => {
-    setLoading(true)
     try {
       const [templatesResult, staffResult] = await Promise.all([
         taskChecklistService.getAllTemplates(),

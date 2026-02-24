@@ -19,7 +19,6 @@ export default function AdminReportList() {
   const ITEMS_PER_PAGE = 20
 
   const fetchReports = useCallback(async () => {
-    setLoading(true)
     setError(null)
     const { data, total: totalCount, error: fetchError } = await communityAdminService.getReports({
       status: statusFilter || undefined,

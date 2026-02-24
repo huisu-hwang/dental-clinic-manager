@@ -41,7 +41,6 @@ export default function AttendanceHistory() {
   const loadRecords = async () => {
     if (!user?.id || !user?.clinic_id) return
 
-    setLoading(true)
     try {
       const result = await attendanceService.getAttendanceRecords({
         clinic_id: user.clinic_id,

@@ -24,7 +24,6 @@ export default function TaskApproval() {
   const [showRejectDialog, setShowRejectDialog] = useState(false)
 
   const fetchData = useCallback(async () => {
-    setLoading(true)
     try {
       const [templatesResult, staffResult] = await Promise.all([
         taskChecklistService.getPendingTemplates(),

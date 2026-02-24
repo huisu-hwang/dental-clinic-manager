@@ -37,7 +37,6 @@ export default function CommunityPostDetail({
   const [showMenu, setShowMenu] = useState(false)
 
   const fetchPost = async () => {
-    setLoading(true)
     const { data } = await communityPostService.getPost(postId)
     if (data) {
       setPost(data)

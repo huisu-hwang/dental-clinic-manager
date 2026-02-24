@@ -35,7 +35,6 @@ export default function DailyChecklist() {
 
   const fetchData = useCallback(async () => {
     if (!user?.id) return
-    setLoading(true)
     try {
       const [templatesResult, checksResult] = await Promise.all([
         taskChecklistService.getApprovedTemplatesForUser(user.id),

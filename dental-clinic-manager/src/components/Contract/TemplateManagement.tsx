@@ -36,7 +36,6 @@ export default function TemplateManagement({ currentUser, clinicId }: TemplateMa
   }, [clinicId])
 
   const loadTemplates = async () => {
-    setLoading(true)
     setError(null)
 
     try {

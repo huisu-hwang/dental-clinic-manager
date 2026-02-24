@@ -185,7 +185,6 @@ export default function VendorContactManagement() {
   const loadData = useCallback(async () => {
     if (!canView) return
 
-    setLoading(true)
     try {
       const [contactsResult, categoriesResult] = await Promise.all([
         dataService.getVendorContacts({

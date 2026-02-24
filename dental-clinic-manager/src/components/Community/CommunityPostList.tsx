@@ -31,7 +31,6 @@ export default function CommunityPostList({ profileId, isBanned, categories, lab
   const ITEMS_PER_PAGE = 20
 
   const fetchPosts = useCallback(async () => {
-    setLoading(true)
     setError(null)
 
     const { data, total: totalCount, error: fetchError } = await communityPostService.getPosts({
