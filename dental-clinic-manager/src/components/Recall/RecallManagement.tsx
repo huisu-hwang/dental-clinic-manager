@@ -11,9 +11,6 @@ import {
   Plus,
   RefreshCw,
   ChevronDown,
-  FolderOpen,
-  Trash2,
-  Edit,
   PhoneCall,
   UserX,
   Heart,
@@ -22,7 +19,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
-  RecallCampaign,
   RecallPatient,
   RecallPatientUploadData,
   RecallPatientFilters,
@@ -52,11 +48,8 @@ export default function RecallManagement() {
   const [showUpload, setShowUpload] = useState(false)
   const [showExcludeUpload, setShowExcludeUpload] = useState(false)
   const [excludeUploadReason, setExcludeUploadReason] = useState<RecallExcludeReason>('family')
-  const [showCampaignSelector, setShowCampaignSelector] = useState(false)
 
   // 데이터 상태
-  const [campaigns, setCampaigns] = useState<RecallCampaign[]>([])
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
   const [patients, setPatients] = useState<RecallPatient[]>([])
   const [stats, setStats] = useState<RecallStatsType | null>(null)
   const [filters, setFilters] = useState<RecallPatientFilters>({})
@@ -92,30 +85,15 @@ export default function RecallManagement() {
     setToast({ show: true, message, type })
   }
 
-  // 현재 선택된 캠페인
-  const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId)
-
   // 데이터 로드
-  const loadCampaigns = useCallback(async () => {
-    const result = await recallService.campaigns.getCampaigns()
-    if (result.success && result.data) {
-      setCampaigns(result.data)
-      // 첫 번째 캠페인 자동 선택
-      if (result.data.length > 0 && !selectedCampaignId) {
-        setSelectedCampaignId(result.data[0].id)
-      }
-    }
-  }, [selectedCampaignId])
-
   const loadPatients = useCallback(async (page: number = currentPage) => {
     setIsLoading(true)
-    const filterWithCampaign = {
+    const filterWithPagination = {
       ...filters,
-      campaign_id: selectedCampaignId || undefined,
       page,
       pageSize
     }
-    const result = await recallService.patients.getPatients(filterWithCampaign)
+    const result = await recallService.patients.getPatients(filterWithPagination)
     if (result.success && result.data) {
       setPatients(result.data.data)
       setTotalPages(result.data.totalPages)
@@ -123,27 +101,21 @@ export default function RecallManagement() {
       setCurrentPage(result.data.page)
     }
     setIsLoading(false)
-  }, [filters, selectedCampaignId, currentPage, pageSize])
+  }, [filters, currentPage, pageSize])
 
   const loadStats = useCallback(async () => {
-    const result = await recallService.patients.getStats(selectedCampaignId || undefined)
+    const result = await recallService.patients.getStats()
     if (result.success && result.data) {
       setStats(result.data)
     }
-  }, [selectedCampaignId])
+  }, [])
 
   // 초기 로드
   useEffect(() => {
-    loadCampaigns()
-  }, [])
-
-  useEffect(() => {
-    if (selectedCampaignId) {
-      setCurrentPage(1) // 필터 변경 시 첫 페이지로
-      loadPatients(1)
-      loadStats()
-    }
-  }, [selectedCampaignId, filters])
+    setCurrentPage(1)
+    loadPatients(1)
+    loadStats()
+  }, [filters])
 
   // 페이지 변경
   const handlePageChange = (page: number) => {
@@ -151,13 +123,10 @@ export default function RecallManagement() {
     loadPatients(page)
   }
 
-  // 캠페인 생성
+  // 캠페인 생성 (업로드 기록용)
   const handleCreateCampaign = async (name: string) => {
     const result = await recallService.campaigns.createCampaign({ name })
     if (result.success && result.data) {
-      await loadCampaigns()
-      setSelectedCampaignId(result.data.id)
-      showToast('새 캠페인이 생성되었습니다.', 'success')
       return result.data
     } else {
       showToast(result.error || '캠페인 생성에 실패했습니다.', 'error')
@@ -170,31 +139,30 @@ export default function RecallManagement() {
     setIsUploading(true)
 
     try {
-      // 캠페인이 없으면 새로 생성
-      let campaignId = selectedCampaignId
-      if (!campaignId) {
-        const campaignName = filename.replace(/\.[^/.]+$/, '') || `리콜 ${new Date().toLocaleDateString('ko-KR')}`
-        const newCampaign = await handleCreateCampaign(campaignName)
-        if (!newCampaign) {
-          setIsUploading(false)
-          return
-        }
-        campaignId = newCampaign.id
+      // 항상 새 캠페인을 업로드 기록용으로 생성
+      const campaignName = filename.replace(/\.[^/.]+$/, '') || `리콜 ${new Date().toLocaleDateString('ko-KR')}`
+      const newCampaign = await handleCreateCampaign(campaignName)
+      if (!newCampaign) {
+        setIsUploading(false)
+        return
       }
 
-      // 환자 일괄 등록
+      // 환자 일괄 등록 (중복 제거)
       const result = await recallService.patients.addPatientsBulk(
         uploadedPatients,
-        campaignId,
+        newCampaign.id,
         filename
       )
 
       if (result.success) {
-        showToast(`${result.insertedCount}명의 환자가 등록되었습니다.`, 'success')
+        const parts: string[] = []
+        if (result.newCount > 0) parts.push(`신규 ${result.newCount}명`)
+        if (result.updatedCount > 0) parts.push(`업데이트 ${result.updatedCount}명`)
+        if (result.skippedCount > 0) parts.push(`건너뜀 ${result.skippedCount}명`)
+        showToast(`업로드 완료: ${parts.join(', ')}`, 'success')
         setShowUpload(false)
         loadPatients()
         loadStats()
-        loadCampaigns()
       } else {
         showToast(result.error || '환자 등록에 실패했습니다.', 'error')
       }
@@ -351,31 +319,28 @@ export default function RecallManagement() {
     setIsUploading(true)
 
     try {
-      // 캠페인이 없으면 새로 생성
-      let campaignId = selectedCampaignId
-      if (!campaignId) {
-        const campaignName = filename.replace(/\.[^/.]+$/, '') || `리콜 ${new Date().toLocaleDateString('ko-KR')}`
-        const newCampaign = await handleCreateCampaign(campaignName)
-        if (!newCampaign) {
-          setIsUploading(false)
-          return
-        }
-        campaignId = newCampaign.id
+      // 항상 새 캠페인 생성
+      const campaignName = filename.replace(/\.[^/.]+$/, '') || `리콜 제외 ${new Date().toLocaleDateString('ko-KR')}`
+      const newCampaign = await handleCreateCampaign(campaignName)
+      if (!newCampaign) {
+        setIsUploading(false)
+        return
       }
+      const campaignId = newCampaign.id
 
-      // 환자 일괄 등록
+      // 환자 일괄 등록 (중복 제거)
       const result = await recallService.patients.addPatientsBulk(
         uploadedPatients,
         campaignId,
         filename
       )
 
-      if (result.success && result.insertedCount && result.insertedCount > 0) {
+      if (result.success && result.newCount > 0) {
         // 등록된 환자들을 조회하여 ID 가져오기 (최근 등록된 환자들)
         const patientsResult = await recallService.patients.getPatients({
           campaign_id: campaignId,
           page: 1,
-          pageSize: result.insertedCount,
+          pageSize: result.newCount,
           showExcluded: false
         })
 
@@ -383,7 +348,7 @@ export default function RecallManagement() {
           // 방금 등록한 환자들 (pending 상태, exclude_reason이 null인)
           const newPatientIds = patientsResult.data.data
             .filter(p => !p.exclude_reason)
-            .slice(0, result.insertedCount)
+            .slice(0, result.newCount)
             .map(p => p.id)
 
           if (newPatientIds.length > 0) {
@@ -392,11 +357,10 @@ export default function RecallManagement() {
         }
 
         const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'
-        showToast(`${result.insertedCount}명이 제외 환자(${label})로 등록되었습니다.`, 'success')
+        showToast(`${result.newCount}명이 제외 환자(${label})로 등록되었습니다.`, 'success')
         setShowExcludeUpload(false)
         loadPatients()
         loadStats()
-        loadCampaigns()
       } else {
         showToast(result.error || '환자 등록에 실패했습니다.', 'error')
       }
@@ -419,7 +383,6 @@ export default function RecallManagement() {
   const handlePatientAddComplete = () => {
     loadPatients()
     loadStats()
-    loadCampaigns()
     showToast('환자가 추가되었습니다.', 'success')
   }
 
@@ -439,70 +402,6 @@ export default function RecallManagement() {
               <h2 className="text-base sm:text-lg font-bold text-white">환자 리콜 관리</h2>
               <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Patient Recall Management</p>
             </div>
-          </div>
-
-          {/* 캠페인 선택 */}
-          <div className="relative">
-            <button
-              onClick={() => setShowCampaignSelector(!showCampaignSelector)}
-              className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-sm"
-            >
-              <FolderOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">{selectedCampaign?.name || '캠페인 선택'}</span>
-              <span className="sm:hidden">{selectedCampaign?.name ? selectedCampaign.name.substring(0, 8) : '캠페인'}</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
-
-            {showCampaignSelector && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowCampaignSelector(false)}
-                />
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
-                  <div className="px-3 py-2 border-b border-gray-100">
-                    <button
-                      onClick={async () => {
-                        const name = prompt('새 캠페인 이름을 입력하세요:')
-                        if (name) {
-                          await handleCreateCampaign(name)
-                        }
-                        setShowCampaignSelector(false)
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg"
-                    >
-                      <Plus className="w-4 h-4" />
-                      새 캠페인 만들기
-                    </button>
-                  </div>
-                  <div className="max-h-60 overflow-y-auto">
-                    {campaigns.length === 0 ? (
-                      <p className="px-4 py-3 text-sm text-gray-500 text-center">
-                        캠페인이 없습니다
-                      </p>
-                    ) : (
-                      campaigns.map(campaign => (
-                        <button
-                          key={campaign.id}
-                          onClick={() => {
-                            setSelectedCampaignId(campaign.id)
-                            setShowCampaignSelector(false)
-                          }}
-                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${
-                            selectedCampaignId === campaign.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                          }`}
-                        >
-                          <p className="font-medium">{campaign.name}</p>
-                          <p className="text-xs text-gray-400">
-                            {campaign.total_patients}명 | {new Date(campaign.created_at).toLocaleDateString('ko-KR')}
-                          </p>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         </div>
 
@@ -790,10 +689,7 @@ export default function RecallManagement() {
 
         {/* 통계 탭 */}
         {activeTab === 'stats' && (
-          <RecallStats
-            campaignId={selectedCampaignId || undefined}
-            campaignName={selectedCampaign?.name}
-          />
+          <RecallStats />
         )}
 
         {/* 설정 탭 */}
@@ -810,7 +706,6 @@ export default function RecallManagement() {
       <PatientAddModal
         isOpen={patientAddModalOpen}
         onClose={() => setPatientAddModalOpen(false)}
-        campaignId={selectedCampaignId || undefined}
         onAddComplete={handlePatientAddComplete}
       />
 

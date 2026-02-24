@@ -23,7 +23,7 @@ const EXPECTED_COLUMNS: ParsedColumn[] = [
   { key: 'chart_number', label: '차트번호', required: false },
   { key: 'birth_date', label: '생년월일', required: false },
   { key: 'gender', label: '성별', required: false },
-  { key: 'last_visit_date', label: '마지막 내원일', required: false },
+  { key: 'last_visit_date', label: '최종 내원일', required: false },
   { key: 'treatment_type', label: '시술 종류', required: false },
   { key: 'notes', label: '비고', required: false }
 ]
@@ -67,7 +67,10 @@ const COLUMN_MAPPINGS: Record<string, keyof RecallPatientUploadData> = {
   'gender': 'gender',
   'sex': 'gender',
 
+  '최종내원일': 'last_visit_date',
+  '최종 내원일': 'last_visit_date',
   '마지막내원일': 'last_visit_date',
+  '마지막 내원일': 'last_visit_date',
   '최근내원일': 'last_visit_date',
   '내원일': 'last_visit_date',
   '방문일': 'last_visit_date',
@@ -96,6 +99,7 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
   const [columnMapping, setColumnMapping] = useState<Record<string, keyof RecallPatientUploadData>>({})
   const [previewData, setPreviewData] = useState<any[]>([])
   const [headers, setHeaders] = useState<string[]>([])
+  const allParsedRowsRef = useRef<any[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 전화번호 정규화
@@ -110,40 +114,72 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
     return digits
   }
 
+  // 날짜 유효성 검증
+  const isValidDate = (year: number, month: number, day: number): boolean => {
+    if (month < 1 || month > 12 || day < 1 || day > 31) return false
+    if (year < 1900 || year > 2100) return false
+    const d = new Date(year, month - 1, day)
+    return d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day
+  }
+
   // 날짜 정규화
   const normalizeDate = (date: any): string | undefined => {
     if (!date) return undefined
 
     // Excel 날짜 시리얼 값 처리
     if (typeof date === 'number') {
+      if (date < 1 || date > 2958465) return undefined // 1900-01-01 ~ 9999-12-31
       const excelDate = new Date((date - 25569) * 86400 * 1000)
-      return excelDate.toISOString().split('T')[0]
+      const y = excelDate.getUTCFullYear()
+      const m = excelDate.getUTCMonth() + 1
+      const d = excelDate.getUTCDate()
+      if (!isValidDate(y, m, d)) return undefined
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     }
 
     // 문자열 날짜 처리
     const dateStr = date.toString().trim()
     if (!dateStr) return undefined
 
+    let year: number, month: number, day: number
+
     // YYYY-MM-DD 형식
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      return dateStr
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) {
+      const parts = dateStr.split('-')
+      year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
     }
     // YYYY/MM/DD 형식
-    if (/^\d{4}\/\d{2}\/\d{2}$/.test(dateStr)) {
-      return dateStr.replace(/\//g, '-')
+    else if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(dateStr)) {
+      const parts = dateStr.split('/')
+      year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
+    }
+    // YYYY.MM.DD 형식
+    else if (/^\d{4}\.\d{1,2}\.\d{1,2}\.?$/.test(dateStr)) {
+      const parts = dateStr.replace(/\.$/, '').split('.')
+      year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
     }
     // YYYYMMDD 형식
-    if (/^\d{8}$/.test(dateStr)) {
-      return `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`
+    else if (/^\d{8}$/.test(dateStr)) {
+      year = parseInt(dateStr.slice(0, 4)); month = parseInt(dateStr.slice(4, 6)); day = parseInt(dateStr.slice(6, 8))
     }
     // YYMMDD 형식 (주민번호 앞자리)
-    if (/^\d{6}$/.test(dateStr)) {
+    else if (/^\d{6}$/.test(dateStr)) {
       const yy = parseInt(dateStr.slice(0, 2))
-      const century = yy > 30 ? '19' : '20'  // 30보다 크면 1900년대, 아니면 2000년대
-      return `${century}${dateStr.slice(0, 2)}-${dateStr.slice(2, 4)}-${dateStr.slice(4, 6)}`
+      const century = yy > 30 ? 1900 : 2000
+      year = century + yy; month = parseInt(dateStr.slice(2, 4)); day = parseInt(dateStr.slice(4, 6))
+    }
+    // YYYY-MM-DD HH:mm:ss 또는 YYYY/MM/DD HH:mm:ss (날짜 부분만 추출)
+    else if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}\s+\d{1,2}:\d{2}/.test(dateStr)) {
+      const datePart = dateStr.split(/\s+/)[0]
+      const parts = datePart.split(/[-/]/)
+      year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
+    }
+    else {
+      return undefined
     }
 
-    return undefined
+    if (!isValidDate(year, month, day)) return undefined
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   }
 
   // 성별 정규화
@@ -171,6 +207,9 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
     try {
       const extension = file.name.split('.').pop()?.toLowerCase()
 
+      let headerRow: string[] = []
+      let allRows: Record<string, any>[] = []
+
       if (extension === 'csv') {
         // CSV 파싱
         const text = await file.text()
@@ -180,28 +219,13 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
           throw new Error('데이터가 없습니다.')
         }
 
-        const headerRow = rows[0]
+        headerRow = rows[0]
         const dataRows = rows.slice(1).filter(row => row.some(cell => cell.trim()))
-
-        setHeaders(headerRow)
-        setPreviewData(dataRows.slice(0, 5).map(row => {
+        allRows = dataRows.map(row => {
           const obj: Record<string, any> = {}
-          headerRow.forEach((h, i) => {
-            obj[h] = row[i] || ''
-          })
+          headerRow.forEach((h, i) => { obj[h] = row[i] || '' })
           return obj
-        }))
-
-        // 자동 컬럼 매핑
-        const autoMapping: Record<string, keyof RecallPatientUploadData> = {}
-        headerRow.forEach(header => {
-          const normalizedHeader = header.toLowerCase().replace(/\s/g, '')
-          const mapping = COLUMN_MAPPINGS[header] || COLUMN_MAPPINGS[normalizedHeader]
-          if (mapping) {
-            autoMapping[header] = mapping
-          }
         })
-        setColumnMapping(autoMapping)
 
       } else if (extension === 'xlsx' || extension === 'xls') {
         // Excel 파싱
@@ -215,32 +239,33 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
           throw new Error('데이터가 없습니다.')
         }
 
-        const headerRow = jsonData[0].map(h => String(h || '').trim())
+        headerRow = jsonData[0].map(h => String(h || '').trim())
         const dataRows = jsonData.slice(1).filter(row => row.some(cell => cell != null && cell !== ''))
-
-        setHeaders(headerRow)
-        setPreviewData(dataRows.slice(0, 5).map(row => {
+        allRows = dataRows.map(row => {
           const obj: Record<string, any> = {}
-          headerRow.forEach((h, i) => {
-            obj[h] = row[i] ?? ''
-          })
+          headerRow.forEach((h, i) => { obj[h] = row[i] ?? '' })
           return obj
-        }))
-
-        // 자동 컬럼 매핑
-        const autoMapping: Record<string, keyof RecallPatientUploadData> = {}
-        headerRow.forEach(header => {
-          const normalizedHeader = header.toLowerCase().replace(/\s/g, '')
-          const mapping = COLUMN_MAPPINGS[header] || COLUMN_MAPPINGS[normalizedHeader]
-          if (mapping) {
-            autoMapping[header] = mapping
-          }
         })
-        setColumnMapping(autoMapping)
 
       } else {
         throw new Error('지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 업로드해주세요.')
       }
+
+      // 전체 파싱 데이터 저장 (업로드 시 재파싱 방지)
+      allParsedRowsRef.current = allRows
+      setHeaders(headerRow)
+      setPreviewData(allRows.slice(0, 5))
+
+      // 자동 컬럼 매핑
+      const autoMapping: Record<string, keyof RecallPatientUploadData> = {}
+      headerRow.forEach(header => {
+        const normalizedHeader = header.toLowerCase().replace(/\s/g, '')
+        const mapping = COLUMN_MAPPINGS[header] || COLUMN_MAPPINGS[normalizedHeader]
+        if (mapping) {
+          autoMapping[header] = mapping
+        }
+      })
+      setColumnMapping(autoMapping)
 
       setFile(file)
 
@@ -250,12 +275,18 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
     }
   }, [])
 
-  // 최종 데이터 변환
+  // 최종 데이터 변환 (저장된 파싱 데이터 사용 — 재파싱 없음)
   const convertToPatientData = useCallback((): RecallPatientUploadData[] | null => {
     // 필수 컬럼 확인
     const mappedKeys = Object.values(columnMapping)
     if (!mappedKeys.includes('patient_name') || !mappedKeys.includes('phone_number')) {
       setParseError('환자명과 전화번호 컬럼을 매핑해주세요.')
+      return null
+    }
+
+    const allRows = allParsedRowsRef.current
+    if (allRows.length === 0) {
+      setParseError('파일 데이터가 없습니다.')
       return null
     }
 
@@ -265,110 +296,53 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
       headerToKey[header] = key
     })
 
-    // 파일 다시 파싱하여 전체 데이터 가져오기
-    return new Promise<RecallPatientUploadData[]>((resolve, reject) => {
-      if (!file) {
-        reject(new Error('파일이 없습니다.'))
-        return
-      }
+    const patients: RecallPatientUploadData[] = []
+    const invalidRows: number[] = []
 
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        try {
-          const extension = file.name.split('.').pop()?.toLowerCase()
-          let allRows: any[] = []
+    allRows.forEach((row, index) => {
+      const patient: Partial<RecallPatientUploadData> = {}
 
-          if (extension === 'csv') {
-            const text = e.target?.result as string
-            const rows = text.split('\n').map(row => row.split(',').map(cell => cell.trim().replace(/^"|"$/g, '')))
-            const dataRows = rows.slice(1).filter(row => row.some(cell => cell.trim()))
-            allRows = dataRows.map(row => {
-              const obj: Record<string, any> = {}
-              headers.forEach((h, i) => {
-                obj[h] = row[i] || ''
-              })
-              return obj
-            })
-          } else {
-            const buffer = e.target?.result as ArrayBuffer
-            const workbook = XLSX.read(buffer, { type: 'array' })
-            const sheetName = workbook.SheetNames[0]
-            const sheet = workbook.Sheets[sheetName]
-            const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][]
-            const dataRows = jsonData.slice(1).filter(row => row.some(cell => cell != null && cell !== ''))
-            allRows = dataRows.map(row => {
-              const obj: Record<string, any> = {}
-              headers.forEach((h, i) => {
-                obj[h] = row[i] ?? ''
-              })
-              return obj
-            })
-          }
+      Object.entries(headerToKey).forEach(([header, key]) => {
+        let value = row[header]
 
-          // 데이터 변환
-          const patients: RecallPatientUploadData[] = []
-          const invalidRows: number[] = []
-
-          allRows.forEach((row, index) => {
-            const patient: Partial<RecallPatientUploadData> = {}
-
-            Object.entries(headerToKey).forEach(([header, key]) => {
-              let value = row[header]
-
-              // 특수 처리
-              if (key === 'phone_number') {
-                value = normalizePhoneNumber(value)
-              } else if (key === 'last_visit_date' || key === 'birth_date') {
-                value = normalizeDate(value)
-              } else if (key === 'gender') {
-                value = normalizeGender(value)
-              } else if (typeof value === 'string') {
-                value = value.trim() || undefined
-              }
-
-              // undefined가 아닌 값만 추가
-              if (value !== undefined && value !== '') {
-                patient[key] = value
-              }
-            })
-
-            // 필수 필드 검증
-            if (patient.patient_name && patient.phone_number) {
-              patients.push(patient as RecallPatientUploadData)
-            } else {
-              invalidRows.push(index + 2) // 헤더 행 포함
-            }
-          })
-
-          if (invalidRows.length > 0 && patients.length === 0) {
-            reject(new Error('유효한 데이터가 없습니다. 환자명과 전화번호를 확인해주세요.'))
-            return
-          }
-
-          resolve(patients)
-
-        } catch (error) {
-          reject(error)
+        // 특수 처리
+        if (key === 'phone_number') {
+          value = normalizePhoneNumber(value)
+        } else if (key === 'last_visit_date' || key === 'birth_date') {
+          value = normalizeDate(value)
+        } else if (key === 'gender') {
+          value = normalizeGender(value)
+        } else if (typeof value === 'string') {
+          value = value.trim() || undefined
         }
-      }
 
-      if (file.name.endsWith('.csv')) {
-        reader.readAsText(file)
+        // undefined가 아닌 값만 추가
+        if (value !== undefined && value !== '') {
+          patient[key] = value
+        }
+      })
+
+      // 필수 필드 검증
+      if (patient.patient_name && patient.phone_number) {
+        patients.push(patient as RecallPatientUploadData)
       } else {
-        reader.readAsArrayBuffer(file)
+        invalidRows.push(index + 2)
       }
-    }) as any
-  }, [columnMapping, file, headers])
+    })
+
+    if (invalidRows.length > 0 && patients.length === 0) {
+      setParseError('유효한 데이터가 없습니다. 환자명과 전화번호를 확인해주세요.')
+      return null
+    }
+
+    return patients
+  }, [columnMapping])
 
   // 업로드 처리
-  const handleUpload = async () => {
-    try {
-      const patients = await convertToPatientData()
-      if (patients && patients.length > 0) {
-        onUpload(patients, file?.name || 'upload.xlsx')
-      }
-    } catch (error) {
-      setParseError(error instanceof Error ? error.message : '데이터 변환 중 오류가 발생했습니다.')
+  const handleUpload = () => {
+    const patients = convertToPatientData()
+    if (patients && patients.length > 0) {
+      onUpload(patients, file?.name || 'upload.xlsx')
     }
   }
 
@@ -491,6 +465,7 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
                 setHeaders([])
                 setColumnMapping({})
                 setParseError(null)
+                allParsedRowsRef.current = []
               }}
               className="text-gray-400 hover:text-gray-600"
             >

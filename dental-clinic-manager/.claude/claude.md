@@ -63,6 +63,14 @@ mcp__context7__get-library-docs({
 - ✅ 문제 발견 시: 즉시 수정 후 재리뷰
 - ❌ 리뷰 없이 커밋 금지
 
+### 7. 작업 중 실패/오류 시 자동 계속 (멈추지 않기)
+**작업 도중 실패나 오류 발생 시 멈추지 말고 자동으로 해결 후 이어서 작업**
+
+- ✅ 오류 발생 → 원인 파악 → 해결 → 이어서 작업
+- ✅ 빌드/테스트/푸시 실패 시 자동 재시도
+- ❌ 사용자에게 되묻지 않고 자동 처리
+- ❌ 실패한 채로 방치 금지
+
 ---
 
 ## 📋 개발 프로세스
@@ -124,21 +132,14 @@ mcp__context7__get-library-docs({
 
 ## 🗄️ SQL 마이그레이션 규칙
 
-**SQL 마이그레이션 파일 생성 시 반드시 내용 출력**
+**Supabase MCP를 통해 직접 실행 (필수)**
 
-- ✅ 새 SQL 파일 생성 후, 전체 내용을 코드 블록으로 보여줄 것
-- ✅ 사용자가 Supabase SQL Editor에서 복사-붙여넣기 가능하도록
-- ❌ "파일 경로만 알려주기" 금지 → ✅ 전체 SQL 코드 출력 필수
-
-```markdown
-## 예시 출력 형식
-
-새 마이그레이션 파일이 생성되었습니다. Supabase SQL Editor에서 실행하세요:
-
-\`\`\`sql
--- 전체 SQL 내용...
-\`\`\`
-```
+- ✅ `mcp__supabase__apply_migration` 사용 (DDL: CREATE, ALTER, DROP 등)
+- ✅ `mcp__supabase__execute_sql` 사용 (DML: INSERT, UPDATE, SELECT 등)
+- ✅ 프로젝트 ID: `beahjntkmkfhpcbhfnrr` (Dental Clinic Manager)
+- ✅ `supabase/migrations/` 디렉토리에 SQL 파일도 함께 생성하여 버전 관리
+- ✅ 전체 SQL 내용을 코드 블록으로 보여줄 것
+- ❌ SQL Editor에서 수동 실행 요청 금지 → ✅ MCP로 직접 적용
 
 ---
 

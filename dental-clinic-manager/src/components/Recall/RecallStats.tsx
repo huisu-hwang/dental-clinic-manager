@@ -27,12 +27,7 @@ interface TodayActivityData {
   recentPatients: RecallPatient[]
 }
 
-interface RecallStatsProps {
-  campaignId?: string
-  campaignName?: string
-}
-
-export default function RecallStats({ campaignId, campaignName }: RecallStatsProps) {
+export default function RecallStats() {
   const [stats, setStats] = useState<RecallStatsType | null>(null)
   const [todayActivity, setTodayActivity] = useState<TodayActivityData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -40,11 +35,11 @@ export default function RecallStats({ campaignId, campaignName }: RecallStatsPro
   useEffect(() => {
     loadStats()
     loadTodayActivity()
-  }, [campaignId])
+  }, [])
 
   const loadStats = async () => {
     setIsLoading(true)
-    const result = await recallService.patients.getStats(campaignId)
+    const result = await recallService.patients.getStats()
     if (result.success && result.data) {
       setStats(result.data)
     }
@@ -52,7 +47,7 @@ export default function RecallStats({ campaignId, campaignName }: RecallStatsPro
   }
 
   const loadTodayActivity = async () => {
-    const result = await recallService.patients.getTodayActivity(campaignId)
+    const result = await recallService.patients.getTodayActivity()
     if (result.success && result.data) {
       setTodayActivity(result.data)
     }
@@ -106,14 +101,6 @@ export default function RecallStats({ campaignId, campaignName }: RecallStatsPro
 
   return (
     <div className="space-y-6">
-      {/* 캠페인 정보 */}
-      {campaignName && (
-        <div className="bg-indigo-50 rounded-lg p-4">
-          <p className="text-sm text-indigo-600 font-medium">선택된 캠페인</p>
-          <p className="text-lg font-semibold text-indigo-900">{campaignName}</p>
-        </div>
-      )}
-
       {/* 주요 통계 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">

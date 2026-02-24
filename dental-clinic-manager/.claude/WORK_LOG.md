@@ -10,8 +10,58 @@
 
 ---
 
+## 2026-02-24
+
+### [버그 수정/성능 개선] 리콜 환자 엑셀 업로드 컬럼명 변경, 날짜 파싱 오류 수정, 성능 최적화
+
+**키워드:** #리콜관리 #엑셀업로드 #성능최적화 #upsert #RLS #날짜파싱
+
+#### 📋 작업 내용
+- 컬럼 매핑 레이블 "마지막 내원일" → "최종 내원일" 변경 및 자동 매핑 키 추가
+- 날짜 정규화 함수에 유효성 검증 추가 (isValidDate)
+- YYYY.MM.DD, datetime 형식 지원 추가
+- 업로드 성능 4가지 병목 최적화
+
+#### 🐛 문제
+1. "date time field value out of range" 400 오류 발생
+2. 업로드 시간 과다 (9000건 기준 ~27초)
+3. upsert 시 RLS violation 오류
+4. upsert 시 "null value in column phone_number" 오류
+
+#### 🔍 근본 원인
+1. normalizeDate()가 형식만 검사하고 실제 날짜 유효성(월 1-12, 일 1-31)을 미검증 → PostgreSQL에서 거부
+2. BATCH_SIZE=100 순차 실행 → 9000건 = 90회 순차 네트워크 요청
+3. Supabase upsert는 INSERT 먼저 시도 → RLS INSERT 정책이 clinic_id 요구 → 누락
+4. 동일 원인: upsert INSERT 시도 시 NOT NULL 컬럼(phone_number, patient_name) 누락
+
+#### ✅ 해결 방법
+1. isValidDate() 함수 추가, normalizeDate에서 모든 파싱 결과를 검증
+2. BATCH_SIZE 500 + 5병렬 실행 (runBatchesParallel), INSERT .select() 제거, getStats/getTodayActivity 쿼리 통합
+3. upsert 레코드에 clinic_id 추가
+4. upsert 레코드에 phone_number, patient_name 추가 + 업로드 파일 내 중복 phone_number Map으로 제거
+5. 파일 이중 파싱 → allParsedRowsRef에 저장하여 재사용
+
+#### 🧪 테스트 결과
+- 5회 빌드 모두 성공 (타입/컴파일 에러 없음)
+- 코드 리뷰 체크리스트 통과 (보안, 성능, 호환성, NOT NULL, RLS)
+
+#### 💡 배운 점
+- Supabase upsert는 내부적으로 INSERT ... ON CONFLICT DO UPDATE 실행 → INSERT 단계에서 RLS with_check, NOT NULL 제약조건 모두 검사됨
+- upsert 레코드에는 반드시 모든 NOT NULL 컬럼 + RLS 정책 관련 컬럼을 포함해야 함
+- 같은 배치 내 동일 PK upsert 시 "cannot affect row a second time" 오류 → 사전 중복 제거 필수
+
+---
+
 ## 목차
 
+- [2026-02-24](#2026-02-24)
+  - [리콜 환자 엑셀 업로드 컬럼명 변경, 날짜 파싱 오류 수정, 성능 최적화](#2026-02-24-버그-수정성능-개선-리콜-환자-엑셀-업로드-컬럼명-변경-날짜-파싱-오류-수정-성능-최적화)
+- [2026-02-21](#2026-02-21)
+  - [CLAUDE.md 작업 중 실패/오류 시 자동 계속 원칙 추가](#2026-02-21-문서화-claudemd-작업-중-실패오류-시-자동-계속-원칙-추가)
+- [2026-02-20](#2026-02-20)
+  - [리콜 엑셀 업로드 TypeError: Failed to fetch 오류 수정](#2026-02-20-버그-수정-리콜-엑셀-업로드-typeerror-failed-to-fetch-오류-수정)
+  - [리콜관리 최종 내원일 필터링/정렬 기능 추가](#2026-02-20-기능-개발-리콜관리-최종-내원일-필터링정렬-기능-추가)
+  - [덴트웹 데이터 연동 계획 수립](#2026-02-20-계획-덴트웹-데이터-연동-계획-수립)
 - [2026-02-14](#2026-02-14)
   - [인터넷 전화 클릭투콜 환경 설정 자동 공유 기능](#2026-02-14-기능-개발-인터넷-전화-클릭투콜-환경-설정-자동-공유-기능)
 - [2026-02-07](#2026-02-07)
@@ -22,6 +72,138 @@
   - [작업 문서화 가이드 추가](#2025-11-06-문서화-작업-문서화-가이드-추가)
   - [근본 원인 해결 원칙 추가](#2025-11-06-문서화-근본-원인-해결-원칙-추가)
   - [세션 만료 시 무한 로딩 문제 해결](#2025-11-06-버그-수정-세션-만료-시-무한-로딩-문제-해결)
+
+---
+
+## 2026-02-21 [문서화] CLAUDE.md 작업 중 실패/오류 시 자동 계속 원칙 추가
+
+**키워드:** #CLAUDE.md #개발원칙 #자동계속 #오류처리
+
+### 작업 내용
+- `CLAUDE.md`: 구현-테스트-수정-푸시 사이클에 "작업 중 실패/오류 시 자동 계속" 주의사항 추가
+- `.claude/claude.md`: 핵심 원칙 7번 "작업 중 실패/오류 시 자동 계속 (멈추지 않기)" 섹션 추가
+- 리콜 엑셀 업로드 배치 처리 수정에 대한 Chrome DevTools MCP 기능 테스트 검증 완료
+
+### 변경 파일
+- `CLAUDE.md` — 자동 계속 작업 원칙 추가
+- `.claude/claude.md` — 핵심 원칙 7번 추가
+
+### 결과
+- develop 브랜치 푸시 완료 (8aeb59c)
+
+---
+
+## 2026-02-20 [버그 수정] 리콜 엑셀 업로드 TypeError: Failed to fetch 오류 수정
+
+**키워드:** #리콜 #엑셀업로드 #TypeError #FailedToFetch #배치처리 #Supabase
+
+### 문제
+- 리콜 환자 엑셀 파일 업로드 시 `TypeError: Failed to fetch` 오류 발생
+
+### 근본 원인 (5 Whys)
+1. Why: 업로드 시 fetch 요청이 실패함
+2. Why: Supabase PostgREST API 호출이 네트워크 레벨에서 실패
+3. Why: `.in('phone_number', phoneNumbers)` 쿼리가 GET URL에 수백~수천 개 전화번호를 포함
+4. Why: URL 길이가 브라우저/서버 한도(~8KB) 초과
+5. **근본 원인**: 대량 데이터를 배치 분할 없이 한 번에 쿼리/삽입하여 HTTP 요청 크기 제한 초과
+
+### 해결 방법
+- `addPatientsBulk()` 함수에 `BATCH_SIZE = 100` 상수 도입
+- `.in()` 쿼리를 100건 단위 배치로 분할 조회
+- `.insert()` 작업을 100건 단위 배치로 분할 삽입
+- CLAUDE.md에 Chrome DevTools MCP 필수 사용 원칙 추가
+
+### 변경 파일
+- `src/lib/recallService.ts` — addPatientsBulk 배치 처리
+- `CLAUDE.md` — Chrome DevTools MCP 원칙 추가, 버그 수정 프로세스 업데이트
+- `.claude/claude.md` — SQL 마이그레이션 규칙 Supabase MCP 직접 실행으로 업데이트
+
+### 테스트 검증 (Chrome DevTools MCP)
+- 5명 테스트 엑셀 업로드 → "업로드 완료: 신규 5명" 성공 메시지 확인
+- 환자 수 3508 → 3513 정상 증가 확인
+- 콘솔 에러 없음 (warn만 CSS preload 관련, 무관)
+- 테스트 데이터 Supabase MCP로 정리 완료
+
+### 결과
+- 빌드 성공 확인
+- Chrome DevTools MCP로 기능 테스트 성공
+- develop 브랜치 푸시 완료
+
+### 배운 점
+- Supabase `.in()` 필터는 GET URL 파라미터로 변환되므로 대량 데이터 시 URL 길이 초과 발생
+- 대량 데이터 처리 시 항상 배치 분할 필수 (100건 단위 권장)
+- Chrome DevTools MCP로 네트워크 요청 실패를 정확히 진단 가능
+
+---
+
+## 2026-02-20 [기능 개발] 리콜관리 최종 내원일 필터링/정렬 기능 추가
+
+**키워드:** #리콜관리 #최종내원일 #필터링 #정렬 #기간필터
+
+### 작업 내용
+- `RecallPatientFilters`에 `lastVisitPeriod`, `lastVisitFrom/To`, `sortBy/sortDirection` 필드 추가
+- `LastVisitPeriod` 타입 및 `getElapsedMonths()`, `formatElapsedTime()` 유틸리티 함수 추가
+- `recallService.getPatients()`에 `applyLastVisitFilter()` 헬퍼로 서버사이드 필터/정렬 적용
+- PatientList에 기간 필터 칩 UI (전체/6개월↑/6개월~1년/1~2년/2년↑/없음/직접설정)
+- 최종 내원일 컬럼 추가 (날짜 + 경과 기간 색상 배지: 녹/황/적)
+- 기간 필터 선택 시 자동 정렬 + 오래된 순/최근 순 토글 버튼
+
+### 변경 파일
+- `src/types/recall.ts`
+- `src/lib/recallService.ts`
+- `src/components/Recall/PatientList.tsx`
+
+### 결과
+- PR #208 → main 머지 완료
+- `npm run build` 정상 통과
+
+---
+
+## 2026-02-20 [계획] 덴트웹 데이터 연동 계획 수립
+
+**키워드:** #덴트웹 #DentWeb #전자차트 #DB연동 #SQL_Server #브릿지에이전트
+
+### 조사 결과
+- 덴트웹 DB: MS SQL Server Express (공식 가이드에서 간접 확인)
+- 아키텍처: 원내 Windows PC를 서버로 사용하는 클라이언트-서버 구조
+- 공식 API 없음, externapp 메커니즘 존재 (WebCeph 플러그인 사례)
+- 개발사: 신흥 (신규개원 선택률 1위)
+
+### 연동 방식: 로컬 브릿지 에이전트
+```
+[덴트웹 서버 PC] → SQL Server(읽기전용) → [브릿지 에이전트] → HTTPS → [Supabase] → [웹 대시보드]
+```
+
+### 개발 계획
+
+**1단계: Mac에서 선행 개발 (미착수)**
+- Supabase 동기화 테이블 설계 (dentweb_patients, dentweb_revenue 등)
+- 데이터 수신 API (/api/dentweb/sync)
+- 웹 대시보드 UI (내원 현황, 매출)
+- 브릿지 에이전트 코드 (Node.js)
+- Mock 데이터 테스트
+
+**2단계: 원내 서버 PC 작업**
+- SSMS 설치 (https://aka.ms/ssmsfullsetup)
+- 덴트웹 DB 접속 → 테이블/컬럼 구조 파악
+- 읽기 전용 계정 생성
+- 실 데이터 테스트 및 배포
+
+### 동기화 대상
+| 데이터 | 용도 | 주기 |
+|--------|------|------|
+| 당일 내원 환자 | 내원 현황, 리콜 확인 | 5분 |
+| 일일/월별 매출 | 매출 대시보드 | 15분~1시간 |
+| 환자 기본정보 | 리콜 관리 연동 | 15분 |
+| 예약 현황 | 일정 관리 | 5분 |
+
+### 법적 고려사항
+- 개인정보보호법: 환자 동의 필수
+- 의료법: 진료 내용 전송 불가, 행정 데이터만 동기화
+- 기술적 보안: HTTPS, 읽기전용 계정, 접근 로그
+
+### 다음 작업
+→ **1단계부터 진행** ("덴트웹 연동 1단계 진행해줘")
 
 ---
 
