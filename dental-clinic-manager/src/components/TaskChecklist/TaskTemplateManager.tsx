@@ -571,18 +571,11 @@ export default function TaskTemplateManager() {
               return null
             })()}
             <button
-              onClick={() => { resetForm(); setShowForm(true) }}
+              onClick={() => { resetBulkForm(); setShowBulkForm(true); setShowForm(false); setShowExcelUpload(false) }}
               className="inline-flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors"
             >
               <Plus className="w-4 h-4 mr-1.5" />
               업무 추가
-            </button>
-            <button
-              onClick={() => { resetBulkForm(); setShowBulkForm(true); setShowForm(false); setShowExcelUpload(false) }}
-              className="inline-flex items-center px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors"
-            >
-              <List className="w-4 h-4 mr-1.5" />
-              일괄 입력
             </button>
             <div className="relative">
               <input
