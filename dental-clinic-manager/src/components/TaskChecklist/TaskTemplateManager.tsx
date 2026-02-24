@@ -701,6 +701,19 @@ export default function TaskTemplateManager() {
                     type="text"
                     value={item.title}
                     onChange={(e) => updateBulkItem(index, 'title', e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (index === bulkItems.length - 1) {
+                          addBulkItem()
+                        }
+                        setTimeout(() => {
+                          const inputs = document.querySelectorAll<HTMLInputElement>('[data-bulk-title]')
+                          inputs[index + 1]?.focus()
+                        }, 0)
+                      }
+                    }}
+                    data-bulk-title
                     placeholder="예: 진료실 소독 및 준비"
                     className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
