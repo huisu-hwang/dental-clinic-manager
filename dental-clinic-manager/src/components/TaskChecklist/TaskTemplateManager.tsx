@@ -66,21 +66,13 @@ export default function TaskTemplateManager() {
 
   // 엑셀 업로드
   const [showExcelUpload, setShowExcelUpload] = useState(false)
-  const [excelStep, setExcelStep] = useState<'mapping' | 'preview'>('mapping')
-  const [excelRawRows, setExcelRawRows] = useState<Record<string, string>[]>([])
-  const [excelColumns, setExcelColumns] = useState<string[]>([])
-  const [columnMapping, setColumnMapping] = useState<{
-    assigned_user: string
-    title: string
-    period: string
-  }>({ assigned_user: '', title: '', period: '' })
   const [excelPreview, setExcelPreview] = useState<Array<{
     assigned_user_name: string
     assigned_user_id: string
     title: string
     period: TaskPeriod
     valid: boolean
-    error?: string
+    error: string
   }>>([])
   const [excelUploading, setExcelUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -269,33 +261,41 @@ export default function TaskTemplateManager() {
     'before_leaving': 'before_leaving',
   }
 
-  const findStaffByName = (name: string): { id: string; name: string } | undefined => {
-    const trimmed = name.trim()
-    return staff.find(s => s.name === trimmed)
-  }
-
   const resetExcelUpload = () => {
     setShowExcelUpload(false)
-    setExcelStep('mapping')
-    setExcelRawRows([])
-    setExcelColumns([])
-    setColumnMapping({ assigned_user: '', title: '', period: '' })
     setExcelPreview([])
   }
 
-  // 자동 매칭 시도
-  const autoDetectMapping = (columns: string[]): { assigned_user: string; title: string; period: string } => {
-    const mapping = { assigned_user: '', title: '', period: '' }
-    const userKeywords = ['담당자', '직원', '이름', '담당', '성명']
-    const titleKeywords = ['업무명', '업무', '제목', '항목', '체크리스트']
-    const periodKeywords = ['시간대', '구분', '시간', '타임']
+  const updateExcelRow = (index: number, field: string, value: string) => {
+    setExcelPreview(prev => prev.map((item, i) => {
+      if (i !== index) return item
+      if (field === 'assigned_user_id') {
+        const s = staff.find(st => st.id === value)
+        return {
+          ...item,
+          assigned_user_id: value,
+          assigned_user_name: s?.name || '',
+          valid: !!value && !!item.title,
+          error: !value ? '담당자를 선택하세요' : !item.title ? '업무명 없음' : '',
+        }
+      }
+      if (field === 'period') {
+        return { ...item, period: value as TaskPeriod }
+      }
+      if (field === 'title') {
+        return {
+          ...item,
+          title: value,
+          valid: !!item.assigned_user_id && !!value.trim(),
+          error: !item.assigned_user_id ? '담당자를 선택하세요' : !value.trim() ? '업무명 없음' : '',
+        }
+      }
+      return item
+    }))
+  }
 
-    for (const col of columns) {
-      if (!mapping.assigned_user && userKeywords.some(k => col.includes(k))) mapping.assigned_user = col
-      if (!mapping.title && titleKeywords.some(k => col.includes(k))) mapping.title = col
-      if (!mapping.period && periodKeywords.some(k => col.includes(k))) mapping.period = col
-    }
-    return mapping
+  const removeExcelRow = (index: number) => {
+    setExcelPreview(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleExcelFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -317,12 +317,62 @@ export default function TaskTemplateManager() {
         return
       }
 
-      const columns = Object.keys(rows[0])
-      setExcelRawRows(rows)
-      setExcelColumns(columns)
-      setColumnMapping(autoDetectMapping(columns))
-      setExcelStep('mapping')
-      setExcelPreview([])
+      // 자동 분석: 각 행의 모든 셀을 스캔하여 이름/시간대/업무명 추출
+      const staffNames = staff.map(s => s.name)
+
+      const parsed = rows.map(row => {
+        const values = Object.values(row).map(v => (v ?? '').toString().trim()).filter(Boolean)
+
+        let matchedStaff: Staff | undefined
+        let matchedPeriod: TaskPeriod | undefined
+        const remainingValues: string[] = []
+
+        for (const val of values) {
+          // 직원 이름 매칭
+          if (!matchedStaff) {
+            const found = staff.find(s => s.name === val)
+            if (found) {
+              matchedStaff = found
+              continue
+            }
+          }
+          // 시간대 매칭
+          if (!matchedPeriod && periodMap[val]) {
+            matchedPeriod = periodMap[val]
+            continue
+          }
+          // 숫자만 있는 값(번호 등)은 건너뜀
+          if (/^\d+$/.test(val)) continue
+          remainingValues.push(val)
+        }
+
+        // 나머지 값 중 가장 긴 것을 업무명으로 사용
+        const title = remainingValues.sort((a, b) => b.length - a.length)[0] || ''
+        const period = matchedPeriod || 'before_treatment'
+
+        let error = ''
+        if (!matchedStaff) error = '담당자를 선택하세요'
+        else if (!title) error = '업무명 없음'
+
+        return {
+          assigned_user_name: matchedStaff?.name || '',
+          assigned_user_id: matchedStaff?.id || '',
+          title,
+          period,
+          valid: !!matchedStaff && !!title,
+          error,
+        }
+      })
+
+      // 업무명이 비어있는 행 제거
+      const filtered = parsed.filter(item => item.title)
+
+      if (filtered.length === 0) {
+        alert('엑셀 파일에서 업무 항목을 찾을 수 없습니다.')
+        return
+      }
+
+      setExcelPreview(filtered)
       setShowExcelUpload(true)
     }
     reader.readAsBinaryString(file)
@@ -330,56 +380,6 @@ export default function TaskTemplateManager() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-  }
-
-  const applyColumnMapping = () => {
-    if (!columnMapping.title) {
-      alert('업무명 컬럼은 필수로 매칭해야 합니다.')
-      return
-    }
-
-    const parsed = excelRawRows.map(row => {
-      const staffName = columnMapping.assigned_user
-        ? (row[columnMapping.assigned_user] || '').toString().trim()
-        : ''
-      const title = (row[columnMapping.title] || '').toString().trim()
-      const periodStr = columnMapping.period
-        ? (row[columnMapping.period] || '').toString().trim()
-        : ''
-
-      const foundStaff = findStaffByName(staffName)
-      const period = periodMap[periodStr] || 'before_treatment'
-
-      let valid = true
-      let error = ''
-      if (!columnMapping.assigned_user) {
-        // 담당자 컬럼 미매칭 시 나중에 선택하도록 허용하지 않고 오류 처리
-        valid = false
-        error = '담당자 컬럼 미매칭'
-      } else if (!staffName) {
-        valid = false
-        error = '담당자 없음'
-      } else if (!foundStaff) {
-        valid = false
-        error = `"${staffName}" 직원을 찾을 수 없음`
-      }
-      if (!title) {
-        valid = false
-        error = error ? `${error}, 업무명 없음` : '업무명 없음'
-      }
-
-      return {
-        assigned_user_name: staffName,
-        assigned_user_id: foundStaff?.id || '',
-        title,
-        period,
-        valid,
-        error,
-      }
-    })
-
-    setExcelPreview(parsed)
-    setExcelStep('preview')
   }
 
   const handleExcelUpload = async () => {
@@ -763,13 +763,15 @@ export default function TaskTemplateManager() {
         </div>
       )}
 
-      {/* 엑셀 업로드 - 컬럼 매칭 단계 */}
-      {showExcelUpload && excelStep === 'mapping' && (
+      {/* 엑셀 업로드 - 자동 분석 결과 */}
+      {showExcelUpload && (
         <div className="bg-white rounded-xl shadow-sm border border-green-200 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-semibold text-slate-800">엑셀 컬럼 매칭</h3>
-              <p className="text-xs text-slate-500 mt-1">엑셀 파일의 컬럼을 업무 항목 필드에 매칭하세요. ({excelRawRows.length}행 감지됨)</p>
+              <h3 className="font-semibold text-slate-800">엑셀 자동 분석 결과</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                엑셀에서 직원 이름과 업무를 자동으로 인식했습니다. 필요시 수정 후 업로드하세요.
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <button
@@ -785,160 +787,93 @@ export default function TaskTemplateManager() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            {/* 매칭 필드들 */}
-            {[
-              { key: 'assigned_user' as const, label: '담당자', required: true, desc: '직원 이름이 있는 컬럼' },
-              { key: 'title' as const, label: '업무명', required: true, desc: '업무 제목이 있는 컬럼' },
-              { key: 'period' as const, label: '시간대', required: false, desc: '진료시작 전 / 진료 중 / 퇴근 전' },
-            ].map(field => (
-              <div key={field.key} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-slate-50 rounded-lg p-3">
-                <div className="sm:w-32 flex-shrink-0">
-                  <span className="text-sm font-medium text-slate-700">
-                    {field.label}
-                    {field.required && <span className="text-red-500 ml-0.5">*</span>}
-                  </span>
-                  <p className="text-xs text-slate-400">{field.desc}</p>
+          <div className="flex items-center space-x-3 text-xs mb-3">
+            <span className="text-slate-600">
+              전체 {excelPreview.length}건
+            </span>
+            <span className="text-green-600">
+              <CheckCircle2 className="w-3.5 h-3.5 inline mr-0.5" />
+              유효 {excelPreview.filter(i => i.valid).length}건
+            </span>
+            {excelPreview.filter(i => !i.valid).length > 0 && (
+              <span className="text-red-600">
+                <AlertCircle className="w-3.5 h-3.5 inline mr-0.5" />
+                수정 필요 {excelPreview.filter(i => !i.valid).length}건
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {/* 헤더 */}
+            <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-medium text-slate-500 px-1">
+              <div className="col-span-1 text-center">#</div>
+              <div className="col-span-3">담당자</div>
+              <div className="col-span-5">업무명</div>
+              <div className="col-span-2">시간대</div>
+              <div className="col-span-1"></div>
+            </div>
+
+            {excelPreview.map((item, idx) => (
+              <div
+                key={idx}
+                className={`grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-lg p-2 ${
+                  item.valid ? 'bg-slate-50' : 'bg-red-50 border border-red-200'
+                }`}
+              >
+                <div className="hidden sm:flex sm:col-span-1 justify-center">
+                  {item.valid ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                  )}
                 </div>
-                <div className="flex items-center flex-1 gap-2">
-                  <span className="text-slate-400 text-sm hidden sm:block">&larr;</span>
+                <div className="sm:col-span-3">
+                  <label className="sm:hidden text-xs text-slate-500 mb-1 block">담당자</label>
                   <select
-                    value={columnMapping[field.key]}
-                    onChange={(e) => setColumnMapping(prev => ({ ...prev, [field.key]: e.target.value }))}
-                    className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                      columnMapping[field.key]
-                        ? 'border-green-300 bg-green-50'
-                        : field.required ? 'border-orange-300 bg-orange-50' : 'border-slate-300'
+                    value={item.assigned_user_id}
+                    onChange={(e) => updateExcelRow(idx, 'assigned_user_id', e.target.value)}
+                    className={`w-full border rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                      item.assigned_user_id ? 'border-green-300' : 'border-red-300'
                     }`}
                   >
-                    <option value="">{field.required ? '(필수) 컬럼 선택' : '(선택) 매칭 안 함'}</option>
-                    {excelColumns.map(col => (
-                      <option key={col} value={col}>{col}</option>
+                    <option value="">직원 선택</option>
+                    {staff.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                   </select>
-                  {columnMapping[field.key] && (
-                    <span className="text-xs text-slate-500 hidden sm:block whitespace-nowrap">
-                      예: {excelRawRows[0]?.[columnMapping[field.key]] || '-'}
-                    </span>
-                  )}
+                </div>
+                <div className="sm:col-span-5">
+                  <label className="sm:hidden text-xs text-slate-500 mb-1 block">업무명</label>
+                  <input
+                    type="text"
+                    value={item.title}
+                    onChange={(e) => updateExcelRow(idx, 'title', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="sm:hidden text-xs text-slate-500 mb-1 block">시간대</label>
+                  <select
+                    value={item.period}
+                    onChange={(e) => updateExcelRow(idx, 'period', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    {PERIOD_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-1 flex justify-end sm:justify-center">
+                  <button
+                    onClick={() => removeExcelRow(idx)}
+                    className="p-1.5 rounded-lg hover:bg-red-100 transition-colors"
+                    title="행 삭제"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                  </button>
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* 엑셀 원본 데이터 미리보기 (처음 3행) */}
-          {excelRawRows.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <p className="text-xs font-medium text-slate-500 mb-2">엑셀 데이터 미리보기 (처음 3행)</p>
-              <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                <table className="w-full text-xs">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      {excelColumns.map(col => (
-                        <th key={col} className="px-3 py-1.5 text-left font-medium text-slate-500 whitespace-nowrap">{col}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {excelRawRows.slice(0, 3).map((row, idx) => (
-                      <tr key={idx}>
-                        {excelColumns.map(col => (
-                          <td key={col} className="px-3 py-1.5 text-slate-600 whitespace-nowrap">{(row[col] || '').toString()}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-slate-100">
-            <button
-              onClick={resetExcelUpload}
-              className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-            >
-              취소
-            </button>
-            <button
-              onClick={applyColumnMapping}
-              disabled={!columnMapping.title}
-              className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
-            >
-              매칭 적용 및 미리보기
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 엑셀 업로드 - 미리보기 단계 */}
-      {showExcelUpload && excelStep === 'preview' && (
-        <div className="bg-white rounded-xl shadow-sm border border-green-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-800">엑셀 업로드 미리보기</h3>
-            <button onClick={resetExcelUpload} className="p-1 hover:bg-slate-100 rounded-lg">
-              <X className="w-5 h-5 text-slate-400" />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-3 text-xs">
-              <span className="text-slate-600">
-                전체 {excelPreview.length}건
-              </span>
-              <span className="text-green-600">
-                <CheckCircle2 className="w-3.5 h-3.5 inline mr-0.5" />
-                유효 {excelPreview.filter(i => i.valid).length}건
-              </span>
-              {excelPreview.filter(i => !i.valid).length > 0 && (
-                <span className="text-red-600">
-                  <AlertCircle className="w-3.5 h-3.5 inline mr-0.5" />
-                  오류 {excelPreview.filter(i => !i.valid).length}건
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => setExcelStep('mapping')}
-              className="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-800"
-            >
-              컬럼 매칭 수정
-            </button>
-          </div>
-
-          <div className="overflow-x-auto border border-slate-200 rounded-lg">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 w-8">상태</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">담당자</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">업무명</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">시간대</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {excelPreview.map((item, idx) => (
-                  <tr key={idx} className={item.valid ? '' : 'bg-red-50'}>
-                    <td className="px-3 py-2">
-                      {item.valid ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <div title={item.error}>
-                          <AlertCircle className="w-4 h-4 text-red-500" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-slate-800">
-                      {item.assigned_user_name || '-'}
-                      {!item.valid && item.error && (
-                        <span className="block text-xs text-red-500">{item.error}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-slate-800">{item.title}</td>
-                    <td className="px-3 py-2 text-slate-600">{TASK_PERIOD_LABELS[item.period]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
 
           <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-slate-100">
