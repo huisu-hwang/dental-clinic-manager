@@ -596,7 +596,14 @@ export const recallPatientService = {
 
         const upsertResults = await runBatchesParallel(updateTargets, WRITE_BATCH_SIZE, async (batch) => {
           const upsertRecords = batch.map(t => {
-            const record: Record<string, unknown> = { id: t.id, clinic_id: clinicId, campaign_id: campaignId }
+            // NOT NULL 컬럼(phone_number, patient_name)을 반드시 포함 (upsert INSERT 시도 시 필요)
+            const record: Record<string, unknown> = {
+              id: t.id,
+              clinic_id: clinicId,
+              campaign_id: campaignId,
+              phone_number: t.data.phone_number,
+              patient_name: t.data.patient_name
+            }
             for (const key of activeFields) {
               if (t.data[key] !== undefined) record[key] = t.data[key]
             }
