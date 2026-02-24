@@ -788,6 +788,19 @@ export default function TaskTemplateManager() {
                       return (
                         <label
                           key={opt.value}
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              if (index === bulkItems.length - 1) {
+                                addBulkItem()
+                              }
+                              setTimeout(() => {
+                                const inputs = document.querySelectorAll<HTMLInputElement>('[data-bulk-title]')
+                                inputs[index + 1]?.focus()
+                              }, 0)
+                            }
+                          }}
                           className={`flex-1 flex items-center justify-center cursor-pointer rounded-lg border px-1.5 py-1.5 text-xs transition-colors ${
                             selected
                               ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
