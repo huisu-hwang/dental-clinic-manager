@@ -110,11 +110,14 @@ export async function getPendingTemplates(): Promise<{ data: TaskTemplate[]; err
 }
 
 /**
- * 업무 템플릿 생성 (실장이 생성 -> draft 상태)
+ * 업무 템플릿 생성
+ * - 원장(owner)이 생성하면 즉시 approved 상태
+ * - 그 외(실장 등)가 생성하면 draft 상태
  */
 export async function createTaskTemplate(
   formData: TaskTemplateFormData,
-  createdBy: string
+  createdBy: string,
+  creatorRole?: string
 ): Promise<{ data: TaskTemplate | null; error?: string }> {
   try {
     const supabase = createClient()
@@ -122,6 +125,8 @@ export async function createTaskTemplate(
 
     const clinicId = getCurrentClinicId()
     if (!clinicId) return { data: null, error: 'Clinic ID not found' }
+
+    const isOwner = creatorRole === 'owner'
 
     const { data, error } = await (supabase
       .from('task_templates') as any)
@@ -132,8 +137,10 @@ export async function createTaskTemplate(
         description: formData.description || null,
         period: formData.period,
         sort_order: formData.sort_order || 0,
-        status: 'draft',
+        status: isOwner ? 'approved' : 'draft',
         created_by: createdBy,
+        approved_by: isOwner ? createdBy : null,
+        approved_at: isOwner ? new Date().toISOString() : null,
         is_active: true,
       })
       .select()
@@ -148,10 +155,13 @@ export async function createTaskTemplate(
 
 /**
  * 업무 템플릿 일괄 생성 (여러 항목을 한 번에 추가)
+ * - 원장(owner)이 생성하면 즉시 approved 상태
+ * - 그 외(실장 등)가 생성하면 draft 상태
  */
 export async function createTaskTemplatesBulk(
   items: TaskTemplateFormData[],
-  createdBy: string
+  createdBy: string,
+  creatorRole?: string
 ): Promise<{ data: TaskTemplate[]; error?: string }> {
   try {
     const supabase = createClient()
@@ -160,6 +170,8 @@ export async function createTaskTemplatesBulk(
     const clinicId = getCurrentClinicId()
     if (!clinicId) return { data: [], error: 'Clinic ID not found' }
 
+    const isOwner = creatorRole === 'owner'
+
     const rows = items.map(item => ({
       clinic_id: clinicId,
       assigned_user_id: item.assigned_user_id,
@@ -167,8 +179,10 @@ export async function createTaskTemplatesBulk(
       description: item.description || null,
       period: item.period,
       sort_order: item.sort_order || 0,
-      status: 'draft' as const,
+      status: isOwner ? ('approved' as const) : ('draft' as const),
       created_by: createdBy,
+      approved_by: isOwner ? createdBy : null,
+      approved_at: isOwner ? new Date().toISOString() : null,
       is_active: true,
     }))
 
@@ -186,10 +200,14 @@ export async function createTaskTemplatesBulk(
 
 /**
  * 업무 템플릿 수정
+ * - 원장(owner)이 수정하면 즉시 approved 유지
+ * - 그 외(실장 등)가 수정하면 draft로 되돌림 (재승인 필요)
  */
 export async function updateTaskTemplate(
   templateId: string,
-  updates: Partial<TaskTemplateFormData>
+  updates: Partial<TaskTemplateFormData>,
+  editorId?: string,
+  editorRole?: string
 ): Promise<{ data: TaskTemplate | null; error?: string }> {
   try {
     const supabase = createClient()
@@ -202,11 +220,20 @@ export async function updateTaskTemplate(
     if (updates.period !== undefined) updateData.period = updates.period
     if (updates.sort_order !== undefined) updateData.sort_order = updates.sort_order
 
-    // 수정 시 상태를 draft로 되돌림 (재승인 필요)
-    updateData.status = 'draft'
-    updateData.approved_by = null
-    updateData.approved_at = null
-    updateData.rejection_reason = null
+    const isOwner = editorRole === 'owner'
+    if (isOwner) {
+      // 원장이 수정 시 즉시 승인 유지
+      updateData.status = 'approved'
+      updateData.approved_by = editorId || null
+      updateData.approved_at = new Date().toISOString()
+      updateData.rejection_reason = null
+    } else {
+      // 실장 등이 수정 시 재승인 필요
+      updateData.status = 'draft'
+      updateData.approved_by = null
+      updateData.approved_at = null
+      updateData.rejection_reason = null
+    }
 
     const { data, error } = await (supabase
       .from('task_templates') as any)

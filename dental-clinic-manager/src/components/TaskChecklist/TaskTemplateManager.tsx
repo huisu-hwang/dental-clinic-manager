@@ -8,10 +8,19 @@ import { TEMPLATE_STATUS_LABELS, DEFAULT_PERIOD_KEYS, DEFAULT_PERIOD_LABELS, loa
 import * as XLSX from 'xlsx'
 import {
   Plus, Edit3, Trash2, Send, X, Save,
-  Users, Filter, Settings,
+  Users, Filter, Settings, Clock,
   AlertCircle, CheckCircle2, XCircle, FileEdit,
   Upload, Download, List
 } from 'lucide-react'
+
+const PERIOD_COLORS = [
+  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', dot: 'bg-amber-400' },
+  { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', dot: 'bg-blue-400' },
+  { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', dot: 'bg-indigo-400' },
+  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+  { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', dot: 'bg-rose-400' },
+  { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700', dot: 'bg-violet-400' },
+]
 
 const STATUS_BADGE: Record<TaskTemplateStatus, { bg: string; text: string }> = {
   draft: { bg: 'bg-slate-100', text: 'text-slate-600' },
@@ -125,18 +134,20 @@ export default function TaskTemplateManager() {
     setShowForm(true)
   }
 
+  const isOwner = user?.role === 'owner'
+
   const handleSave = async () => {
     if (!user?.id || !formData.assigned_user_id || !formData.title.trim()) return
     setSaving(true)
     try {
       if (editingTemplate) {
-        const { error } = await taskChecklistService.updateTaskTemplate(editingTemplate.id, formData)
+        const { error } = await taskChecklistService.updateTaskTemplate(editingTemplate.id, formData, user.id, user.role)
         if (error) {
           alert(`수정 실패: ${error}`)
           return
         }
       } else {
-        const { error } = await taskChecklistService.createTaskTemplate(formData, user.id)
+        const { error } = await taskChecklistService.createTaskTemplate(formData, user.id, user.role)
         if (error) {
           alert(`생성 실패: ${error}`)
           return
@@ -254,7 +265,7 @@ export default function TaskTemplateManager() {
         period: item.period,
         sort_order: idx,
       }))
-      const { error } = await taskChecklistService.createTaskTemplatesBulk(formDataItems, user.id)
+      const { error } = await taskChecklistService.createTaskTemplatesBulk(formDataItems, user.id, user.role)
       if (error) {
         alert(`일괄 추가 실패: ${error}`)
         return
@@ -426,7 +437,7 @@ export default function TaskTemplateManager() {
         period: item.period,
         sort_order: idx,
       }))
-      const { error } = await taskChecklistService.createTaskTemplatesBulk(formDataItems, user.id)
+      const { error } = await taskChecklistService.createTaskTemplatesBulk(formDataItems, user.id, user.role)
       if (error) {
         alert(`엑셀 업로드 실패: ${error}`)
         return
@@ -505,7 +516,11 @@ export default function TaskTemplateManager() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-800">업무 체크리스트 관리</h2>
-            <p className="text-sm text-slate-500 mt-1">직원별 업무를 생성하고 원장에게 결재를 요청하세요.</p>
+            <p className="text-sm text-slate-500 mt-1">
+              {isOwner
+                ? '직원별 업무를 생성하면 즉시 반영됩니다.'
+                : '직원별 업무를 생성하고 원장에게 결재를 요청하세요.'}
+            </p>
           </div>
           <div className="flex items-center space-x-2 flex-wrap gap-y-2">
             {selectedIds.size > 0 && (
@@ -517,14 +532,16 @@ export default function TaskTemplateManager() {
                   <Trash2 className="w-4 h-4 mr-1.5" />
                   삭제 ({selectedIds.size})
                 </button>
-                <button
-                  onClick={handleSubmitForApproval}
-                  disabled={submitting}
-                  className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
-                >
-                  <Send className="w-4 h-4 mr-1.5" />
-                  {submitting ? '요청 중...' : `결재 요청 (${selectedIds.size})`}
-                </button>
+                {!isOwner && (
+                  <button
+                    onClick={handleSubmitForApproval}
+                    disabled={submitting}
+                    className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                  >
+                    <Send className="w-4 h-4 mr-1.5" />
+                    {submitting ? '요청 중...' : `결재 요청 (${selectedIds.size})`}
+                  </button>
+                )}
               </>
             )}
             <button
@@ -1041,6 +1058,17 @@ export default function TaskTemplateManager() {
             return a.sort_order - b.sort_order
           })
 
+          // 시간대별 그룹화
+          const usedPeriods = [...new Set(sorted.map(t => t.period))]
+          const orderedPeriods = periodConfig.keys.filter(k => usedPeriods.includes(k))
+          for (const p of usedPeriods) {
+            if (!orderedPeriods.includes(p)) orderedPeriods.push(p)
+          }
+          const groupedByPeriod = orderedPeriods.reduce((acc, period) => {
+            acc[period] = sorted.filter(t => t.period === period)
+            return acc
+          }, {} as Record<string, TaskTemplate[]>)
+
           return (
             <div key={userId} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="px-4 sm:px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -1060,66 +1088,84 @@ export default function TaskTemplateManager() {
                 <span className="text-sm text-slate-500">{sorted.length}개 업무</span>
               </div>
 
-              <div className="divide-y divide-slate-100">
-                {sorted.map(template => {
-                  const statusBadge = STATUS_BADGE[template.status]
+              {orderedPeriods.map((period, periodIdx) => {
+                const periodTemplates = groupedByPeriod[period]
+                if (!periodTemplates || periodTemplates.length === 0) return null
+                const color = PERIOD_COLORS[periodConfig.keys.indexOf(period) % PERIOD_COLORS.length] || PERIOD_COLORS[periodIdx % PERIOD_COLORS.length]
+                const periodLabel = periodConfig.labels[period] || period
 
-                  return (
-                    <div
-                      key={template.id}
-                      className="px-4 sm:px-6 py-3 flex items-center space-x-3"
-                    >
-                      {/* 체크박스 (결재 요청용 선택) */}
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(template.id)}
-                        onChange={() => toggleSelect(template.id)}
-                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-
-                      {/* 업무 내용 */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-slate-800">{template.title}</span>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>
-                            {TEMPLATE_STATUS_LABELS[template.status]}
-                          </span>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
-                            {periodConfig.labels[template.period] || template.period}
-                          </span>
-                        </div>
-                        {template.description && (
-                          <p className="text-xs text-slate-500 mt-0.5">{template.description}</p>
-                        )}
-                        {template.status === 'rejected' && template.rejection_reason && (
-                          <p className="text-xs text-red-500 mt-0.5 flex items-center">
-                            <AlertCircle className="w-3 h-3 mr-1" />
-                            반려 사유: {template.rejection_reason}
-                          </p>
-                        )}
+                return (
+                  <div key={period}>
+                    {/* 시간대 헤더 */}
+                    <div className={`px-4 sm:px-6 py-2 ${color.bg} ${color.border} border-b flex items-center justify-between`}>
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${color.dot}`} />
+                        <span className={`text-xs font-semibold ${color.text}`}>{periodLabel}</span>
                       </div>
-
-                      {/* 액션 */}
-                      <div className="flex items-center space-x-1">
-                        <button
-                          onClick={() => handleEdit(template)}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-                          title="수정"
-                        >
-                          <Edit3 className="w-4 h-4 text-slate-400" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(template.id)}
-                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                          title="삭제"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-400" />
-                        </button>
-                      </div>
+                      <span className={`text-xs ${color.text}`}>{periodTemplates.length}건</span>
                     </div>
-                  )
-                })}
-              </div>
+
+                    {/* 해당 시간대 업무 목록 */}
+                    <div className="divide-y divide-slate-100">
+                      {periodTemplates.map(template => {
+                        const statusBadge = STATUS_BADGE[template.status]
+
+                        return (
+                          <div
+                            key={template.id}
+                            className="px-4 sm:px-6 py-3 flex items-center space-x-3"
+                          >
+                            {/* 체크박스 */}
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(template.id)}
+                              onChange={() => toggleSelect(template.id)}
+                              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+
+                            {/* 업무 내용 */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm font-medium text-slate-800">{template.title}</span>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>
+                                  {TEMPLATE_STATUS_LABELS[template.status]}
+                                </span>
+                              </div>
+                              {template.description && (
+                                <p className="text-xs text-slate-500 mt-0.5">{template.description}</p>
+                              )}
+                              {template.status === 'rejected' && template.rejection_reason && (
+                                <p className="text-xs text-red-500 mt-0.5 flex items-center">
+                                  <AlertCircle className="w-3 h-3 mr-1" />
+                                  반려 사유: {template.rejection_reason}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* 액션 */}
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => handleEdit(template)}
+                                className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                title="수정"
+                              >
+                                <Edit3 className="w-4 h-4 text-slate-400" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(template.id)}
+                                className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                title="삭제"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-400" />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )
         })
