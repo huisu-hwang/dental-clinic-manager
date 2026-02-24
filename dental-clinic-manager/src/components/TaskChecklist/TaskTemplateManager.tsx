@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { taskChecklistService } from '@/lib/taskChecklistService'
-import type { TaskTemplate, TaskPeriod, TaskTemplateFormData, TaskTemplateStatus } from '@/types/taskChecklist'
-import { TEMPLATE_STATUS_LABELS } from '@/types/taskChecklist'
+import type { TaskTemplate, TaskPeriod, TaskTemplateFormData, TaskTemplateStatus, PeriodConfig } from '@/types/taskChecklist'
+import { TEMPLATE_STATUS_LABELS, DEFAULT_PERIOD_KEYS, DEFAULT_PERIOD_LABELS, loadPeriodConfig, savePeriodConfig } from '@/types/taskChecklist'
 import * as XLSX from 'xlsx'
 import {
   Plus, Edit3, Trash2, Send, X, Save,
@@ -18,32 +18,6 @@ const STATUS_BADGE: Record<TaskTemplateStatus, { bg: string; text: string }> = {
   pending_approval: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
   approved: { bg: 'bg-green-100', text: 'text-green-700' },
   rejected: { bg: 'bg-red-100', text: 'text-red-700' },
-}
-
-const DEFAULT_PERIOD_LABELS: Record<TaskPeriod, string> = {
-  before_treatment: '진료시작 전',
-  during_treatment: '진료 중',
-  before_leaving: '퇴근 전',
-}
-
-const PERIOD_KEYS: TaskPeriod[] = ['before_treatment', 'during_treatment', 'before_leaving']
-
-const PERIOD_LABELS_STORAGE_KEY = 'dental_task_period_labels'
-
-function loadPeriodLabels(): Record<TaskPeriod, string> {
-  if (typeof window === 'undefined') return { ...DEFAULT_PERIOD_LABELS }
-  try {
-    const saved = localStorage.getItem(PERIOD_LABELS_STORAGE_KEY)
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      return { ...DEFAULT_PERIOD_LABELS, ...parsed }
-    }
-  } catch { /* ignore */ }
-  return { ...DEFAULT_PERIOD_LABELS }
-}
-
-function savePeriodLabels(labels: Record<TaskPeriod, string>) {
-  localStorage.setItem(PERIOD_LABELS_STORAGE_KEY, JSON.stringify(labels))
 }
 
 interface Staff {
@@ -100,12 +74,12 @@ export default function TaskTemplateManager() {
   // 선택된 템플릿 (일괄 결재 요청용)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-  // 시간대 라벨 설정
-  const [periodLabels, setPeriodLabels] = useState<Record<TaskPeriod, string>>(loadPeriodLabels)
+  // 시간대 설정
+  const [periodConfig, setPeriodConfig] = useState<PeriodConfig>(loadPeriodConfig)
   const [showPeriodSettings, setShowPeriodSettings] = useState(false)
-  const [editingPeriodLabels, setEditingPeriodLabels] = useState<Record<TaskPeriod, string>>({ ...DEFAULT_PERIOD_LABELS })
+  const [editingConfig, setEditingConfig] = useState<PeriodConfig>({ keys: [], labels: {} })
 
-  const periodOptions = PERIOD_KEYS.map(key => ({ value: key, label: periodLabels[key] }))
+  const periodOptions = periodConfig.keys.map(key => ({ value: key, label: periodConfig.labels[key] || key }))
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -125,12 +99,14 @@ export default function TaskTemplateManager() {
     fetchData()
   }, [fetchData])
 
+  const defaultPeriod = periodConfig.keys[0] || 'before_treatment'
+
   const resetForm = () => {
     setFormData({
       assigned_user_id: '',
       title: '',
       description: '',
-      period: 'before_treatment',
+      period: defaultPeriod,
       sort_order: 0,
     })
     setEditingTemplate(null)
@@ -230,12 +206,12 @@ export default function TaskTemplateManager() {
   // === 일괄 입력 관련 ===
   const resetBulkForm = () => {
     setBulkAssignedUserId('')
-    setBulkItems([{ title: '', period: 'before_treatment' }])
+    setBulkItems([{ title: '', period: defaultPeriod }])
     setShowBulkForm(false)
   }
 
   const addBulkItem = () => {
-    setBulkItems(prev => [...prev, { title: '', period: 'before_treatment' }])
+    setBulkItems(prev => [...prev, { title: '', period: defaultPeriod }])
   }
 
   const removeBulkItem = (index: number) => {
@@ -274,21 +250,19 @@ export default function TaskTemplateManager() {
   }
 
   // === 엑셀 업로드 관련 ===
-  // 사용자 커스텀 라벨 + 기본 라벨 + 영문키 모두 매핑
+  // 커스텀 라벨 + 기본 라벨 + 영문키 모두 매핑
   const periodMap: Record<string, TaskPeriod> = {
-    ...Object.fromEntries(PERIOD_KEYS.map(k => [periodLabels[k], k])),
-    ...Object.fromEntries(PERIOD_KEYS.map(k => [periodLabels[k].replace(/\s/g, ''), k])),
+    ...Object.fromEntries(periodConfig.keys.map(k => [periodConfig.labels[k] || k, k])),
+    ...Object.fromEntries(periodConfig.keys.map(k => [(periodConfig.labels[k] || k).replace(/\s/g, ''), k])),
+    ...Object.fromEntries(periodConfig.keys.map(k => [k, k])),
     '진료시작 전': 'before_treatment',
     '진료시작전': 'before_treatment',
     '진료 전': 'before_treatment',
     '진료전': 'before_treatment',
-    'before_treatment': 'before_treatment',
     '진료 중': 'during_treatment',
     '진료중': 'during_treatment',
-    'during_treatment': 'during_treatment',
     '퇴근 전': 'before_leaving',
     '퇴근전': 'before_leaving',
-    'before_leaving': 'before_leaving',
   }
 
   const resetExcelUpload = () => {
@@ -386,7 +360,7 @@ export default function TaskTemplateManager() {
 
         // 나머지 값 중 가장 긴 것을 업무명으로 사용
         const title = remainingValues.sort((a, b) => b.length - a.length)[0] || ''
-        const period = matchedPeriod || 'before_treatment'
+        const period = matchedPeriod || defaultPeriod
 
         let error = ''
         if (!matchedStaff) error = '담당자를 선택하세요'
@@ -558,7 +532,7 @@ export default function TaskTemplateManager() {
               </button>
             </div>
             <button
-              onClick={() => { setEditingPeriodLabels({ ...periodLabels }); setShowPeriodSettings(true) }}
+              onClick={() => { setEditingConfig({ keys: [...periodConfig.keys], labels: { ...periodConfig.labels } }); setShowPeriodSettings(true) }}
               className="inline-flex items-center px-3 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
               title="시간대 설정"
             >
@@ -1029,8 +1003,8 @@ export default function TaskTemplateManager() {
           const staffMember = staff.find(s => s.id === userId)
           // 시간대별로 정렬
           const sorted = [...userTemplates].sort((a, b) => {
-            const periodOrder: Record<string, number> = { before_treatment: 0, during_treatment: 1, before_leaving: 2 }
-            const pDiff = (periodOrder[a.period] || 0) - (periodOrder[b.period] || 0)
+            const periodOrder = Object.fromEntries(periodConfig.keys.map((k, i) => [k, i]))
+            const pDiff = (periodOrder[a.period] ?? 999) - (periodOrder[b.period] ?? 999)
             if (pDiff !== 0) return pDiff
             return a.sort_order - b.sort_order
           })
@@ -1079,7 +1053,7 @@ export default function TaskTemplateManager() {
                             {TEMPLATE_STATUS_LABELS[template.status]}
                           </span>
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
-                            {periodLabels[template.period]}
+                            {periodConfig.labels[template.period] || template.period}
                           </span>
                         </div>
                         {template.description && (
@@ -1129,27 +1103,55 @@ export default function TaskTemplateManager() {
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-slate-500">각 시간대의 표시 이름을 수정할 수 있습니다.</p>
-              {PERIOD_KEYS.map(key => (
-                <div key={key}>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    {DEFAULT_PERIOD_LABELS[key]} <span className="text-xs text-slate-400">({key})</span>
-                  </label>
+            <div className="p-6 space-y-3">
+              <p className="text-sm text-slate-500">시간대를 추가, 삭제, 수정할 수 있습니다.</p>
+              {editingConfig.keys.map((key, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 w-5 text-center">{idx + 1}</span>
                   <input
                     type="text"
-                    value={editingPeriodLabels[key]}
-                    onChange={(e) => setEditingPeriodLabels(prev => ({ ...prev, [key]: e.target.value }))}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={DEFAULT_PERIOD_LABELS[key]}
+                    value={editingConfig.labels[key] || ''}
+                    onChange={(e) => {
+                      const newLabels = { ...editingConfig.labels, [key]: e.target.value }
+                      setEditingConfig(prev => ({ ...prev, labels: newLabels }))
+                    }}
+                    className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="시간대 이름"
                   />
+                  {editingConfig.keys.length > 1 && (
+                    <button
+                      onClick={() => {
+                        const newKeys = editingConfig.keys.filter((_, i) => i !== idx)
+                        const newLabels = { ...editingConfig.labels }
+                        delete newLabels[key]
+                        setEditingConfig({ keys: newKeys, labels: newLabels })
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                      title="삭제"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-400" />
+                    </button>
+                  )}
                 </div>
               ))}
+              <button
+                onClick={() => {
+                  const newKey = `custom_${Date.now()}`
+                  setEditingConfig(prev => ({
+                    keys: [...prev.keys, newKey],
+                    labels: { ...prev.labels, [newKey]: '' },
+                  }))
+                }}
+                className="w-full flex items-center justify-center gap-1.5 border border-dashed border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 hover:border-slate-400 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                시간대 추가
+              </button>
             </div>
             <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl">
               <button
                 onClick={() => {
-                  setEditingPeriodLabels({ ...DEFAULT_PERIOD_LABELS })
+                  setEditingConfig({ keys: [...DEFAULT_PERIOD_KEYS], labels: { ...DEFAULT_PERIOD_LABELS } })
                 }}
                 className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
               >
@@ -1164,12 +1166,18 @@ export default function TaskTemplateManager() {
                 </button>
                 <button
                   onClick={() => {
-                    const trimmed = { ...editingPeriodLabels }
-                    for (const k of PERIOD_KEYS) {
-                      trimmed[k] = trimmed[k].trim() || DEFAULT_PERIOD_LABELS[k]
+                    const finalKeys = editingConfig.keys.filter(k => (editingConfig.labels[k] || '').trim())
+                    if (finalKeys.length === 0) {
+                      alert('최소 1개 이상의 시간대가 필요합니다.')
+                      return
                     }
-                    setPeriodLabels(trimmed)
-                    savePeriodLabels(trimmed)
+                    const finalLabels: Record<string, string> = {}
+                    for (const k of finalKeys) {
+                      finalLabels[k] = (editingConfig.labels[k] || '').trim()
+                    }
+                    const config: PeriodConfig = { keys: finalKeys, labels: finalLabels }
+                    setPeriodConfig(config)
+                    savePeriodConfig(config)
                     setShowPeriodSettings(false)
                   }}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"

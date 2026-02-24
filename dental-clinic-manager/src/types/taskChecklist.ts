@@ -1,20 +1,57 @@
 // 업무 체크리스트 관련 타입 정의
 
-// 업무 시간대 구분
-export type TaskPeriod = 'before_treatment' | 'during_treatment' | 'before_leaving'
+// 업무 시간대 구분 (기본 3개 + 사용자 커스텀)
+export type TaskPeriod = string
+
+// 기본 시간대 키 목록
+export const DEFAULT_PERIOD_KEYS: string[] = ['before_treatment', 'during_treatment', 'before_leaving']
+
+// 기본 시간대 라벨 매핑
+export const DEFAULT_PERIOD_LABELS: Record<string, string> = {
+  before_treatment: '진료시작 전',
+  during_treatment: '진료 중',
+  before_leaving: '퇴근 전',
+}
+
+// 시간대 설정 localStorage 키
+const PERIOD_CONFIG_STORAGE_KEY = 'dental_task_period_config'
+
+export interface PeriodConfig {
+  keys: string[]
+  labels: Record<string, string>
+}
+
+// 시간대 설정 로드
+export function loadPeriodConfig(): PeriodConfig {
+  if (typeof window === 'undefined') return { keys: [...DEFAULT_PERIOD_KEYS], labels: { ...DEFAULT_PERIOD_LABELS } }
+  try {
+    const saved = localStorage.getItem(PERIOD_CONFIG_STORAGE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved) as PeriodConfig
+      if (parsed.keys?.length > 0 && parsed.labels) return parsed
+    }
+  } catch { /* ignore */ }
+  return { keys: [...DEFAULT_PERIOD_KEYS], labels: { ...DEFAULT_PERIOD_LABELS } }
+}
+
+// 시간대 설정 저장
+export function savePeriodConfig(config: PeriodConfig) {
+  localStorage.setItem(PERIOD_CONFIG_STORAGE_KEY, JSON.stringify(config))
+}
+
+// 현재 시간대 라벨 반환 (하위호환용)
+export const TASK_PERIOD_LABELS: Record<string, string> = new Proxy({} as Record<string, string>, {
+  get(_target, prop: string) {
+    const config = loadPeriodConfig()
+    return config.labels[prop] || prop
+  },
+})
 
 // 업무 템플릿 승인 상태
 export type TaskTemplateStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected'
 
 // 체크리스트 완료 상태
 export type CheckStatus = 'pending' | 'completed'
-
-// 시간대 라벨 매핑
-export const TASK_PERIOD_LABELS: Record<TaskPeriod, string> = {
-  before_treatment: '진료시작 전',
-  during_treatment: '진료 중',
-  before_leaving: '퇴근 전',
-}
 
 // 템플릿 상태 라벨 매핑
 export const TEMPLATE_STATUS_LABELS: Record<TaskTemplateStatus, string> = {
@@ -93,9 +130,5 @@ export interface UserDailyTaskSummary {
   total_tasks: number
   completed_tasks: number
   completion_rate: number
-  tasks_by_period: {
-    before_treatment: { total: number; completed: number }
-    during_treatment: { total: number; completed: number }
-    before_leaving: { total: number; completed: number }
-  }
+  tasks_by_period: Record<string, { total: number; completed: number }>
 }

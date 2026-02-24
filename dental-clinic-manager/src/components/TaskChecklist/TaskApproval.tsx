@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { taskChecklistService } from '@/lib/taskChecklistService'
 import type { TaskTemplate, TaskPeriod } from '@/types/taskChecklist'
-import { TASK_PERIOD_LABELS } from '@/types/taskChecklist'
-import { CheckCircle2, XCircle, Clock, Sun, Moon, AlertCircle, FileCheck } from 'lucide-react'
+import { loadPeriodConfig } from '@/types/taskChecklist'
+import { CheckCircle2, XCircle, Clock, AlertCircle, FileCheck } from 'lucide-react'
 
 interface Staff {
   id: string
@@ -266,7 +266,7 @@ export default function TaskApproval() {
                         <div className="flex items-center space-x-2">
                           <span className="text-sm font-medium text-slate-800">{template.title}</span>
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
-                            {TASK_PERIOD_LABELS[template.period]}
+                            {loadPeriodConfig().labels[template.period] || template.period}
                           </span>
                         </div>
                         {template.description && (

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { taskChecklistService } from '@/lib/taskChecklistService'
 import type { TaskTemplate, DailyTaskCheck, TaskPeriod } from '@/types/taskChecklist'
-import { TASK_PERIOD_LABELS } from '@/types/taskChecklist'
+import { loadPeriodConfig } from '@/types/taskChecklist'
 import { ChevronLeft, ChevronRight, Users, CheckCircle2, Circle, BarChart3 } from 'lucide-react'
 
 interface Staff {
@@ -68,8 +68,8 @@ export default function StaffChecklistOverview() {
     const completed = userChecks.length
     const rate = total > 0 ? Math.round((completed / total) * 100) : 0
 
-    const periods: TaskPeriod[] = ['before_treatment', 'during_treatment', 'before_leaving']
-    const byPeriod = periods.map(period => {
+    const periodCfg = loadPeriodConfig()
+    const byPeriod = periodCfg.keys.map(period => {
       const periodTemplates = userTemplates.filter(t => t.period === period)
       const periodCompleted = periodTemplates.filter(t =>
         userChecks.some(c => c.template_id === t.id)
@@ -192,7 +192,7 @@ export default function StaffChecklistOverview() {
               <div className="px-4 py-2 pb-3 flex space-x-3">
                 {s.byPeriod.filter(p => p.total > 0).map(p => (
                   <div key={p.period} className="flex-1 text-center">
-                    <p className="text-xs text-slate-400 mb-1">{TASK_PERIOD_LABELS[p.period]}</p>
+                    <p className="text-xs text-slate-400 mb-1">{loadPeriodConfig().labels[p.period] || p.period}</p>
                     <div className="flex items-center justify-center space-x-1">
                       {p.completed === p.total ? (
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />

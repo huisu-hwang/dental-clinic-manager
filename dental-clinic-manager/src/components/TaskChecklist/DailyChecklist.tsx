@@ -4,19 +4,20 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { taskChecklistService } from '@/lib/taskChecklistService'
 import type { TaskTemplate, DailyTaskCheck, TaskPeriod } from '@/types/taskChecklist'
-import { TASK_PERIOD_LABELS } from '@/types/taskChecklist'
-import { CheckCircle2, Circle, Clock, Sun, Moon, ChevronLeft, ChevronRight, StickyNote } from 'lucide-react'
+import { loadPeriodConfig } from '@/types/taskChecklist'
+import { CheckCircle2, Circle, ChevronLeft, ChevronRight, StickyNote } from 'lucide-react'
 
-const PERIOD_ICONS: Record<TaskPeriod, React.ElementType> = {
-  before_treatment: Sun,
-  during_treatment: Clock,
-  before_leaving: Moon,
-}
+const FALLBACK_COLORS = [
+  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
+  { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+  { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700' },
+  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
+  { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
+  { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700' },
+]
 
-const PERIOD_COLORS: Record<TaskPeriod, { bg: string; border: string; text: string; icon: string }> = {
-  before_treatment: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', icon: 'text-amber-500' },
-  during_treatment: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: 'text-blue-500' },
-  before_leaving: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', icon: 'text-indigo-500' },
+function getPeriodColor(index: number) {
+  return FALLBACK_COLORS[index % FALLBACK_COLORS.length]
 }
 
 export default function DailyChecklist() {
@@ -84,7 +85,13 @@ export default function DailyChecklist() {
   const isToday = selectedDate === new Date().toISOString().split('T')[0]
 
   // 시간대별로 템플릿 그룹화
-  const periods: TaskPeriod[] = ['before_treatment', 'during_treatment', 'before_leaving']
+  const periodCfg = loadPeriodConfig()
+  const usedPeriods = [...new Set(templates.map(t => t.period))]
+  const periods = periodCfg.keys.filter(k => usedPeriods.includes(k))
+  // 설정에 없는 period도 포함
+  for (const p of usedPeriods) {
+    if (!periods.includes(p)) periods.push(p)
+  }
   const groupedTemplates = periods.reduce((acc, period) => {
     acc[period] = templates.filter(t => t.period === period)
     return acc
@@ -170,22 +177,19 @@ export default function DailyChecklist() {
       )}
 
       {/* 시간대별 업무 목록 */}
-      {periods.map(period => {
+      {periods.map((period, periodIdx) => {
         const periodTemplates = groupedTemplates[period]
         if (periodTemplates.length === 0) return null
 
-        const periodColor = PERIOD_COLORS[period]
-        const PeriodIcon = PERIOD_ICONS[period]
+        const periodColor = getPeriodColor(periodIdx)
+        const periodLabel = periodCfg.labels[period] || period
         const periodCompleted = periodTemplates.filter(t => isChecked(t.id)).length
 
         return (
           <div key={period} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             {/* 시간대 헤더 */}
             <div className={`px-4 sm:px-6 py-3 ${periodColor.bg} ${periodColor.border} border-b flex items-center justify-between`}>
-              <div className="flex items-center space-x-2">
-                <PeriodIcon className={`w-5 h-5 ${periodColor.icon}`} />
-                <h3 className={`font-semibold ${periodColor.text}`}>{TASK_PERIOD_LABELS[period]}</h3>
-              </div>
+              <h3 className={`font-semibold ${periodColor.text}`}>{periodLabel}</h3>
               <span className={`text-sm ${periodColor.text}`}>
                 {periodCompleted}/{periodTemplates.length}
               </span>
