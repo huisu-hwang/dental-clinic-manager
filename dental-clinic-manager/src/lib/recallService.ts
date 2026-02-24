@@ -832,15 +832,33 @@ export const recallPatientService = {
         ? { clinic_id: clinicId, campaign_id: campaignId }
         : { clinic_id: clinicId }
 
-      // 2개 쿼리를 병렬 실행: 상태 집계용 + 최근 환자 목록용
-      const [statusResult, recentResult] = await Promise.all([
-        // 오늘 변경된 환자의 상태값만 조회 (6개 순차 쿼리 → 1개)
-        supabase
+      // COUNT 쿼리 + 최근 환자 목록을 병렬 실행
+      const buildTodayQuery = (status?: string) => {
+        let q = supabase
           .from('recall_patients')
-          .select('status')
+          .select('*', { count: 'exact', head: true })
           .match(baseFilter)
           .gte('recall_datetime', `${today}T00:00:00`)
-          .lte('recall_datetime', `${today}T23:59:59`),
+          .lte('recall_datetime', `${today}T23:59:59`)
+        if (status) q = q.eq('status', status)
+        return q
+      }
+
+      const [
+        totalResult,
+        appointmentResult,
+        noAnswerResult,
+        callRejectedResult,
+        visitRefusedResult,
+        invalidResult,
+        recentResult
+      ] = await Promise.all([
+        buildTodayQuery(),
+        buildTodayQuery('appointment_made'),
+        buildTodayQuery('no_answer'),
+        buildTodayQuery('call_rejected'),
+        buildTodayQuery('visit_refused'),
+        buildTodayQuery('invalid_number'),
         // 최근 상태 변경된 환자 목록 (최대 10명)
         supabase
           .from('recall_patients')
@@ -852,24 +870,15 @@ export const recallPatientService = {
           .limit(10)
       ])
 
-      if (statusResult.error) throw statusResult.error
-
-      // JS에서 상태별 카운트 집계
-      const counts: Record<string, number> = {}
-      let totalChanges = 0
-      for (const row of statusResult.data || []) {
-        counts[row.status] = (counts[row.status] || 0) + 1
-        totalChanges++
-      }
-
-      const appointmentsMade = counts['appointment_made'] || 0
+      const totalChanges = totalResult.count || 0
+      const appointmentsMade = appointmentResult.count || 0
 
       const statusChanges = [
         { status: 'appointment_made' as PatientRecallStatus, count: appointmentsMade },
-        { status: 'no_answer' as PatientRecallStatus, count: counts['no_answer'] || 0 },
-        { status: 'call_rejected' as PatientRecallStatus, count: counts['call_rejected'] || 0 },
-        { status: 'visit_refused' as PatientRecallStatus, count: counts['visit_refused'] || 0 },
-        { status: 'invalid_number' as PatientRecallStatus, count: counts['invalid_number'] || 0 }
+        { status: 'no_answer' as PatientRecallStatus, count: noAnswerResult.count || 0 },
+        { status: 'call_rejected' as PatientRecallStatus, count: callRejectedResult.count || 0 },
+        { status: 'visit_refused' as PatientRecallStatus, count: visitRefusedResult.count || 0 },
+        { status: 'invalid_number' as PatientRecallStatus, count: invalidResult.count || 0 }
       ].filter(s => s.count > 0)
 
       return {
@@ -899,33 +908,43 @@ export const recallPatientService = {
         ? { clinic_id: clinicId, campaign_id: campaignId }
         : { clinic_id: clinicId }
 
-      // 단일 쿼리로 상태값만 조회 후 JS에서 그룹핑 (8개 순차 쿼리 → 1개)
-      const { data: statusRows, error: fetchError } = await supabase
-        .from('recall_patients')
-        .select('status')
-        .match(baseFilter)
-        .is('exclude_reason', null)
-
-      if (fetchError) throw fetchError
-
-      // JS에서 상태별 카운트 집계
-      const counts: Record<string, number> = {}
-      let total = 0
-      for (const row of statusRows || []) {
-        counts[row.status] = (counts[row.status] || 0) + 1
-        total++
+      // 8개 COUNT 쿼리를 병렬 실행 (순차 → Promise.all)
+      // 주의: select('status')로 실제 행을 가져오면 Supabase 기본 1000행 제한에 걸림
+      const buildQuery = (status?: string) => {
+        let q = supabase
+          .from('recall_patients')
+          .select('*', { count: 'exact', head: true })
+          .match(baseFilter)
+          .is('exclude_reason', null)
+        if (status) q = q.eq('status', status)
+        return q
       }
 
-      const pending = counts['pending'] || 0
-      const smsSent = counts['sms_sent'] || 0
-      const appointment = counts['appointment_made'] || 0
-      const noAnswer = counts['no_answer'] || 0
-      const callRejected = counts['call_rejected'] || 0
-      const visitRefused = counts['visit_refused'] || 0
-      const invalidCount = counts['invalid_number'] || 0
+      const [
+        totalResult,
+        pendingResult,
+        smsSentResult,
+        appointmentResult,
+        noAnswerResult,
+        callRejectedResult,
+        visitRefusedResult,
+        invalidResult
+      ] = await Promise.all([
+        buildQuery(),
+        buildQuery('pending'),
+        buildQuery('sms_sent'),
+        buildQuery('appointment_made'),
+        buildQuery('no_answer'),
+        buildQuery('call_rejected'),
+        buildQuery('visit_refused'),
+        buildQuery('invalid_number')
+      ])
 
-      const contacted = smsSent + appointment + noAnswer
-      const rejected = callRejected + visitRefused
+      const total = totalResult.count || 0
+      const pending = pendingResult.count || 0
+      const appointment = appointmentResult.count || 0
+      const contacted = (smsSentResult.count || 0) + appointment + (noAnswerResult.count || 0)
+      const rejected = (callRejectedResult.count || 0) + (visitRefusedResult.count || 0)
       const processed = total - pending
 
       const stats: RecallStats = {
@@ -934,7 +953,7 @@ export const recallPatientService = {
         contacted_count: contacted,
         appointment_count: appointment,
         rejected_count: rejected,
-        invalid_count: invalidCount,
+        invalid_count: invalidResult.count || 0,
         success_rate: processed > 0 ? Math.round((appointment / processed) * 100) : 0
       }
 
