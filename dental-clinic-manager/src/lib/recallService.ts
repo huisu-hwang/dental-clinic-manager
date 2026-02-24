@@ -596,7 +596,7 @@ export const recallPatientService = {
 
         const upsertResults = await runBatchesParallel(updateTargets, WRITE_BATCH_SIZE, async (batch) => {
           const upsertRecords = batch.map(t => {
-            const record: Record<string, unknown> = { id: t.id, campaign_id: campaignId }
+            const record: Record<string, unknown> = { id: t.id, clinic_id: clinicId, campaign_id: campaignId }
             for (const key of activeFields) {
               if (t.data[key] !== undefined) record[key] = t.data[key]
             }
