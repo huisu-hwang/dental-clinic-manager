@@ -66,11 +66,18 @@ export default function TaskTemplateManager() {
 
   // 엑셀 업로드
   const [showExcelUpload, setShowExcelUpload] = useState(false)
+  const [excelStep, setExcelStep] = useState<'mapping' | 'preview'>('mapping')
+  const [excelRawRows, setExcelRawRows] = useState<Record<string, string>[]>([])
+  const [excelColumns, setExcelColumns] = useState<string[]>([])
+  const [columnMapping, setColumnMapping] = useState<{
+    assigned_user: string
+    title: string
+    period: string
+  }>({ assigned_user: '', title: '', period: '' })
   const [excelPreview, setExcelPreview] = useState<Array<{
     assigned_user_name: string
     assigned_user_id: string
     title: string
-    description: string
     period: TaskPeriod
     valid: boolean
     error?: string
@@ -267,6 +274,30 @@ export default function TaskTemplateManager() {
     return staff.find(s => s.name === trimmed)
   }
 
+  const resetExcelUpload = () => {
+    setShowExcelUpload(false)
+    setExcelStep('mapping')
+    setExcelRawRows([])
+    setExcelColumns([])
+    setColumnMapping({ assigned_user: '', title: '', period: '' })
+    setExcelPreview([])
+  }
+
+  // 자동 매칭 시도
+  const autoDetectMapping = (columns: string[]): { assigned_user: string; title: string; period: string } => {
+    const mapping = { assigned_user: '', title: '', period: '' }
+    const userKeywords = ['담당자', '직원', '이름', '담당', '성명']
+    const titleKeywords = ['업무명', '업무', '제목', '항목', '체크리스트']
+    const periodKeywords = ['시간대', '구분', '시간', '타임']
+
+    for (const col of columns) {
+      if (!mapping.assigned_user && userKeywords.some(k => col.includes(k))) mapping.assigned_user = col
+      if (!mapping.title && titleKeywords.some(k => col.includes(k))) mapping.title = col
+      if (!mapping.period && periodKeywords.some(k => col.includes(k))) mapping.period = col
+    }
+    return mapping
+  }
+
   const handleExcelFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -281,49 +312,74 @@ export default function TaskTemplateManager() {
       const sheet = workbook.Sheets[sheetName]
       const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet)
 
-      const parsed = rows.map(row => {
-        const staffName = (row['담당자'] || row['직원'] || row['이름'] || '').toString().trim()
-        const title = (row['업무명'] || row['업무'] || row['제목'] || '').toString().trim()
-        const description = (row['설명'] || row['비고'] || row['상세설명'] || '').toString().trim()
-        const periodStr = (row['시간대'] || row['구분'] || '').toString().trim()
+      if (rows.length === 0) {
+        alert('엑셀 파일에 데이터가 없습니다.')
+        return
+      }
 
-        const foundStaff = findStaffByName(staffName)
-        const period = periodMap[periodStr] || 'before_treatment'
-
-        let valid = true
-        let error = ''
-        if (!staffName) {
-          valid = false
-          error = '담당자 없음'
-        } else if (!foundStaff) {
-          valid = false
-          error = `"${staffName}" 직원을 찾을 수 없음`
-        }
-        if (!title) {
-          valid = false
-          error = error ? `${error}, 업무명 없음` : '업무명 없음'
-        }
-
-        return {
-          assigned_user_name: staffName,
-          assigned_user_id: foundStaff?.id || '',
-          title,
-          description,
-          period,
-          valid,
-          error,
-        }
-      })
-
-      setExcelPreview(parsed)
+      const columns = Object.keys(rows[0])
+      setExcelRawRows(rows)
+      setExcelColumns(columns)
+      setColumnMapping(autoDetectMapping(columns))
+      setExcelStep('mapping')
+      setExcelPreview([])
       setShowExcelUpload(true)
     }
     reader.readAsBinaryString(file)
 
-    // input 초기화
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  const applyColumnMapping = () => {
+    if (!columnMapping.title) {
+      alert('업무명 컬럼은 필수로 매칭해야 합니다.')
+      return
+    }
+
+    const parsed = excelRawRows.map(row => {
+      const staffName = columnMapping.assigned_user
+        ? (row[columnMapping.assigned_user] || '').toString().trim()
+        : ''
+      const title = (row[columnMapping.title] || '').toString().trim()
+      const periodStr = columnMapping.period
+        ? (row[columnMapping.period] || '').toString().trim()
+        : ''
+
+      const foundStaff = findStaffByName(staffName)
+      const period = periodMap[periodStr] || 'before_treatment'
+
+      let valid = true
+      let error = ''
+      if (!columnMapping.assigned_user) {
+        // 담당자 컬럼 미매칭 시 나중에 선택하도록 허용하지 않고 오류 처리
+        valid = false
+        error = '담당자 컬럼 미매칭'
+      } else if (!staffName) {
+        valid = false
+        error = '담당자 없음'
+      } else if (!foundStaff) {
+        valid = false
+        error = `"${staffName}" 직원을 찾을 수 없음`
+      }
+      if (!title) {
+        valid = false
+        error = error ? `${error}, 업무명 없음` : '업무명 없음'
+      }
+
+      return {
+        assigned_user_name: staffName,
+        assigned_user_id: foundStaff?.id || '',
+        title,
+        period,
+        valid,
+        error,
+      }
+    })
+
+    setExcelPreview(parsed)
+    setExcelStep('preview')
   }
 
   const handleExcelUpload = async () => {
@@ -338,7 +394,6 @@ export default function TaskTemplateManager() {
       const formDataItems: TaskTemplateFormData[] = validItems.map((item, idx) => ({
         assigned_user_id: item.assigned_user_id,
         title: item.title,
-        description: item.description || undefined,
         period: item.period,
         sort_order: idx,
       }))
@@ -347,8 +402,7 @@ export default function TaskTemplateManager() {
         alert(`엑셀 업로드 실패: ${error}`)
         return
       }
-      setExcelPreview([])
-      setShowExcelUpload(false)
+      resetExcelUpload()
       await fetchData()
     } finally {
       setExcelUploading(false)
@@ -357,18 +411,16 @@ export default function TaskTemplateManager() {
 
   const downloadExcelTemplate = () => {
     const templateData = [
-      { '담당자': '홍길동', '업무명': '진료실 소독 및 준비', '설명': '매일 아침 진료실 전체 소독', '시간대': '진료시작 전' },
-      { '담당자': '홍길동', '업무명': '기구 세척 및 멸균', '설명': '', '시간대': '퇴근 전' },
+      { '담당자': '홍길동', '업무명': '진료실 소독 및 준비', '시간대': '진료시작 전' },
+      { '담당자': '홍길동', '업무명': '기구 세척 및 멸균', '시간대': '퇴근 전' },
     ]
     const ws = XLSX.utils.json_to_sheet(templateData)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '업무체크리스트')
 
-    // 열 너비 설정
     ws['!cols'] = [
       { wch: 12 },
       { wch: 25 },
-      { wch: 30 },
       { wch: 15 },
     ]
 
@@ -711,12 +763,120 @@ export default function TaskTemplateManager() {
         </div>
       )}
 
-      {/* 엑셀 업로드 미리보기 */}
-      {showExcelUpload && (
+      {/* 엑셀 업로드 - 컬럼 매칭 단계 */}
+      {showExcelUpload && excelStep === 'mapping' && (
+        <div className="bg-white rounded-xl shadow-sm border border-green-200 p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-slate-800">엑셀 컬럼 매칭</h3>
+              <p className="text-xs text-slate-500 mt-1">엑셀 파일의 컬럼을 업무 항목 필드에 매칭하세요. ({excelRawRows.length}행 감지됨)</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={downloadExcelTemplate}
+                className="inline-flex items-center text-xs text-green-600 hover:text-green-800"
+              >
+                <Download className="w-3.5 h-3.5 mr-1" />
+                양식 다운로드
+              </button>
+              <button onClick={resetExcelUpload} className="p-1 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {/* 매칭 필드들 */}
+            {[
+              { key: 'assigned_user' as const, label: '담당자', required: true, desc: '직원 이름이 있는 컬럼' },
+              { key: 'title' as const, label: '업무명', required: true, desc: '업무 제목이 있는 컬럼' },
+              { key: 'period' as const, label: '시간대', required: false, desc: '진료시작 전 / 진료 중 / 퇴근 전' },
+            ].map(field => (
+              <div key={field.key} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-slate-50 rounded-lg p-3">
+                <div className="sm:w-32 flex-shrink-0">
+                  <span className="text-sm font-medium text-slate-700">
+                    {field.label}
+                    {field.required && <span className="text-red-500 ml-0.5">*</span>}
+                  </span>
+                  <p className="text-xs text-slate-400">{field.desc}</p>
+                </div>
+                <div className="flex items-center flex-1 gap-2">
+                  <span className="text-slate-400 text-sm hidden sm:block">&larr;</span>
+                  <select
+                    value={columnMapping[field.key]}
+                    onChange={(e) => setColumnMapping(prev => ({ ...prev, [field.key]: e.target.value }))}
+                    className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                      columnMapping[field.key]
+                        ? 'border-green-300 bg-green-50'
+                        : field.required ? 'border-orange-300 bg-orange-50' : 'border-slate-300'
+                    }`}
+                  >
+                    <option value="">{field.required ? '(필수) 컬럼 선택' : '(선택) 매칭 안 함'}</option>
+                    {excelColumns.map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                  {columnMapping[field.key] && (
+                    <span className="text-xs text-slate-500 hidden sm:block whitespace-nowrap">
+                      예: {excelRawRows[0]?.[columnMapping[field.key]] || '-'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 엑셀 원본 데이터 미리보기 (처음 3행) */}
+          {excelRawRows.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <p className="text-xs font-medium text-slate-500 mb-2">엑셀 데이터 미리보기 (처음 3행)</p>
+              <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      {excelColumns.map(col => (
+                        <th key={col} className="px-3 py-1.5 text-left font-medium text-slate-500 whitespace-nowrap">{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {excelRawRows.slice(0, 3).map((row, idx) => (
+                      <tr key={idx}>
+                        {excelColumns.map(col => (
+                          <td key={col} className="px-3 py-1.5 text-slate-600 whitespace-nowrap">{(row[col] || '').toString()}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-slate-100">
+            <button
+              onClick={resetExcelUpload}
+              className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={applyColumnMapping}
+              disabled={!columnMapping.title}
+              className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+            >
+              매칭 적용 및 미리보기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 엑셀 업로드 - 미리보기 단계 */}
+      {showExcelUpload && excelStep === 'preview' && (
         <div className="bg-white rounded-xl shadow-sm border border-green-200 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-800">엑셀 업로드 미리보기</h3>
-            <button onClick={() => { setShowExcelUpload(false); setExcelPreview([]) }} className="p-1 hover:bg-slate-100 rounded-lg">
+            <button onClick={resetExcelUpload} className="p-1 hover:bg-slate-100 rounded-lg">
               <X className="w-5 h-5 text-slate-400" />
             </button>
           </div>
@@ -738,11 +898,10 @@ export default function TaskTemplateManager() {
               )}
             </div>
             <button
-              onClick={downloadExcelTemplate}
-              className="inline-flex items-center text-xs text-green-600 hover:text-green-800"
+              onClick={() => setExcelStep('mapping')}
+              className="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-800"
             >
-              <Download className="w-3.5 h-3.5 mr-1" />
-              양식 다운로드
+              컬럼 매칭 수정
             </button>
           </div>
 
@@ -753,7 +912,6 @@ export default function TaskTemplateManager() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 w-8">상태</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">담당자</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">업무명</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">설명</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">시간대</th>
                 </tr>
               </thead>
@@ -770,13 +928,12 @@ export default function TaskTemplateManager() {
                       )}
                     </td>
                     <td className="px-3 py-2 text-slate-800">
-                      {item.assigned_user_name}
+                      {item.assigned_user_name || '-'}
                       {!item.valid && item.error && (
                         <span className="block text-xs text-red-500">{item.error}</span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-slate-800">{item.title}</td>
-                    <td className="px-3 py-2 text-slate-500">{item.description || '-'}</td>
                     <td className="px-3 py-2 text-slate-600">{TASK_PERIOD_LABELS[item.period]}</td>
                   </tr>
                 ))}
@@ -786,7 +943,7 @@ export default function TaskTemplateManager() {
 
           <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-slate-100">
             <button
-              onClick={() => { setShowExcelUpload(false); setExcelPreview([]) }}
+              onClick={resetExcelUpload}
               className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
             >
               취소
