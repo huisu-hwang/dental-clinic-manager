@@ -569,28 +569,32 @@ export const recallPatientService = {
         }
       }
 
-      // 6. 기존 환자 정보 업데이트 (보존 필드 제외)
+      // 6. 기존 환자 정보 배치 업데이트 (동일 필드셋으로 그룹화)
       let updatedCount = 0
-      for (const target of updateTargets) {
-        // undefined 값은 제거하여 기존 데이터를 null로 덮어쓰지 않도록 처리
-        const updateFields: Record<string, unknown> = {}
-        if (target.data.patient_name !== undefined) updateFields.patient_name = target.data.patient_name
-        if (target.data.chart_number !== undefined) updateFields.chart_number = target.data.chart_number
-        if (target.data.birth_date !== undefined) updateFields.birth_date = target.data.birth_date
-        if (target.data.gender !== undefined) updateFields.gender = target.data.gender
-        if (target.data.last_visit_date !== undefined) updateFields.last_visit_date = target.data.last_visit_date
-        if (target.data.treatment_type !== undefined) updateFields.treatment_type = target.data.treatment_type
-        if (target.data.notes !== undefined) updateFields.notes = target.data.notes
-        // campaign_id도 최신 캠페인으로 업데이트
-        updateFields.campaign_id = campaignId
+      if (updateTargets.length > 0) {
+        // 업로드 파일의 모든 행은 동일한 컬럼 구조를 가지므로, 첫 번째 행에서 업데이트할 필드 키 결정
+        const fieldKeys = ['patient_name', 'chart_number', 'birth_date', 'gender', 'last_visit_date', 'treatment_type', 'notes'] as const
+        const activeFields = fieldKeys.filter(key => updateTargets.some(t => t.data[key] !== undefined))
 
-        if (Object.keys(updateFields).length > 0) {
+        // 배치 단위로 업데이트 (같은 필드셋이므로 ID 목록으로 일괄 처리)
+        for (let i = 0; i < updateTargets.length; i += BATCH_SIZE) {
+          const batch = updateTargets.slice(i, i + BATCH_SIZE)
+          const ids = batch.map(t => t.id)
+
+          // 공통 필드만 업데이트하는 경우 (모든 행의 값이 동일하지 않으므로 upsert 사용)
+          const upsertRecords = batch.map(t => {
+            const record: Record<string, unknown> = { id: t.id, campaign_id: campaignId }
+            for (const key of activeFields) {
+              if (t.data[key] !== undefined) record[key] = t.data[key]
+            }
+            return record
+          })
+
           const { error: updateError } = await supabase
             .from('recall_patients')
-            .update(updateFields)
-            .eq('id', target.id)
+            .upsert(upsertRecords, { onConflict: 'id', ignoreDuplicates: false })
 
-          if (!updateError) updatedCount++
+          if (!updateError) updatedCount += batch.length
         }
       }
 
@@ -801,86 +805,53 @@ export const recallPatientService = {
         ? { clinic_id: clinicId, campaign_id: campaignId }
         : { clinic_id: clinicId }
 
-      // 오늘 상태 변경된 총 환자 수
-      const { count: totalChanges } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .gte('recall_datetime', `${today}T00:00:00`)
-        .lte('recall_datetime', `${today}T23:59:59`)
+      // 2개 쿼리를 병렬 실행: 상태 집계용 + 최근 환자 목록용
+      const [statusResult, recentResult] = await Promise.all([
+        // 오늘 변경된 환자의 상태값만 조회 (6개 순차 쿼리 → 1개)
+        supabase
+          .from('recall_patients')
+          .select('status')
+          .match(baseFilter)
+          .gte('recall_datetime', `${today}T00:00:00`)
+          .lte('recall_datetime', `${today}T23:59:59`),
+        // 최근 상태 변경된 환자 목록 (최대 10명)
+        supabase
+          .from('recall_patients')
+          .select('*')
+          .match(baseFilter)
+          .gte('recall_datetime', `${today}T00:00:00`)
+          .lte('recall_datetime', `${today}T23:59:59`)
+          .order('recall_datetime', { ascending: false })
+          .limit(10)
+      ])
 
-      // 오늘 예약 완료된 환자 수
-      const { count: appointmentsMade } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .eq('status', 'appointment_made')
-        .gte('recall_datetime', `${today}T00:00:00`)
-        .lte('recall_datetime', `${today}T23:59:59`)
+      if (statusResult.error) throw statusResult.error
 
-      // 오늘 부재중 수
-      const { count: noAnswerCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .eq('status', 'no_answer')
-        .gte('recall_datetime', `${today}T00:00:00`)
-        .lte('recall_datetime', `${today}T23:59:59`)
+      // JS에서 상태별 카운트 집계
+      const counts: Record<string, number> = {}
+      let totalChanges = 0
+      for (const row of statusResult.data || []) {
+        counts[row.status] = (counts[row.status] || 0) + 1
+        totalChanges++
+      }
 
-      // 오늘 통화거부 수
-      const { count: callRejectedCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .eq('status', 'call_rejected')
-        .gte('recall_datetime', `${today}T00:00:00`)
-        .lte('recall_datetime', `${today}T23:59:59`)
-
-      // 오늘 내원거부 수
-      const { count: visitRefusedCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .eq('status', 'visit_refused')
-        .gte('recall_datetime', `${today}T00:00:00`)
-        .lte('recall_datetime', `${today}T23:59:59`)
-
-      // 오늘 없는번호 수
-      const { count: invalidNumberCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .eq('status', 'invalid_number')
-        .gte('recall_datetime', `${today}T00:00:00`)
-        .lte('recall_datetime', `${today}T23:59:59`)
-
-      // 최근 상태 변경된 환자 목록 (최대 10명)
-      let recentQuery = supabase
-        .from('recall_patients')
-        .select('*')
-        .match(baseFilter)
-        .gte('recall_datetime', `${today}T00:00:00`)
-        .lte('recall_datetime', `${today}T23:59:59`)
-        .order('recall_datetime', { ascending: false })
-        .limit(10)
-
-      const { data: recentPatients } = await recentQuery
+      const appointmentsMade = counts['appointment_made'] || 0
 
       const statusChanges = [
-        { status: 'appointment_made' as PatientRecallStatus, count: appointmentsMade || 0 },
-        { status: 'no_answer' as PatientRecallStatus, count: noAnswerCount || 0 },
-        { status: 'call_rejected' as PatientRecallStatus, count: callRejectedCount || 0 },
-        { status: 'visit_refused' as PatientRecallStatus, count: visitRefusedCount || 0 },
-        { status: 'invalid_number' as PatientRecallStatus, count: invalidNumberCount || 0 }
+        { status: 'appointment_made' as PatientRecallStatus, count: appointmentsMade },
+        { status: 'no_answer' as PatientRecallStatus, count: counts['no_answer'] || 0 },
+        { status: 'call_rejected' as PatientRecallStatus, count: counts['call_rejected'] || 0 },
+        { status: 'visit_refused' as PatientRecallStatus, count: counts['visit_refused'] || 0 },
+        { status: 'invalid_number' as PatientRecallStatus, count: counts['invalid_number'] || 0 }
       ].filter(s => s.count > 0)
 
       return {
         success: true,
         data: {
-          totalChanges: totalChanges || 0,
-          appointmentsMade: appointmentsMade || 0,
+          totalChanges,
+          appointmentsMade,
           statusChanges,
-          recentPatients: (recentPatients as RecallPatient[]) || []
+          recentPatients: (recentResult.data as RecallPatient[]) || []
         }
       }
     } catch (error) {
@@ -897,81 +868,37 @@ export const recallPatientService = {
     if (!clinicId) return { success: false, error: 'Clinic ID not found' }
 
     try {
-      // 각 상태별로 count 쿼리 실행
       const baseFilter = campaignId
         ? { clinic_id: clinicId, campaign_id: campaignId }
         : { clinic_id: clinicId }
 
-      // 전체 환자 수 (제외 환자 미포함)
-      const { count: totalCount } = await supabase
+      // 단일 쿼리로 상태값만 조회 후 JS에서 그룹핑 (8개 순차 쿼리 → 1개)
+      const { data: statusRows, error: fetchError } = await supabase
         .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
+        .select('status')
         .match(baseFilter)
         .is('exclude_reason', null)
 
-      // 대기중
-      const { count: pendingCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .is('exclude_reason', null)
-        .eq('status', 'pending')
+      if (fetchError) throw fetchError
 
-      // 문자발송
-      const { count: smsSentCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .is('exclude_reason', null)
-        .eq('status', 'sms_sent')
+      // JS에서 상태별 카운트 집계
+      const counts: Record<string, number> = {}
+      let total = 0
+      for (const row of statusRows || []) {
+        counts[row.status] = (counts[row.status] || 0) + 1
+        total++
+      }
 
-      // 예약완료
-      const { count: appointmentCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .is('exclude_reason', null)
-        .eq('status', 'appointment_made')
+      const pending = counts['pending'] || 0
+      const smsSent = counts['sms_sent'] || 0
+      const appointment = counts['appointment_made'] || 0
+      const noAnswer = counts['no_answer'] || 0
+      const callRejected = counts['call_rejected'] || 0
+      const visitRefused = counts['visit_refused'] || 0
+      const invalidCount = counts['invalid_number'] || 0
 
-      // 부재중
-      const { count: noAnswerCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .is('exclude_reason', null)
-        .eq('status', 'no_answer')
-
-      // 통화거부
-      const { count: callRejectedCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .is('exclude_reason', null)
-        .eq('status', 'call_rejected')
-
-      // 내원거부
-      const { count: visitRefusedCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .is('exclude_reason', null)
-        .eq('status', 'visit_refused')
-
-      // 없는번호
-      const { count: invalidCount } = await supabase
-        .from('recall_patients')
-        .select('*', { count: 'exact', head: true })
-        .match(baseFilter)
-        .is('exclude_reason', null)
-        .eq('status', 'invalid_number')
-
-      const total = totalCount || 0
-      const pending = pendingCount || 0
-      const appointment = appointmentCount || 0
-      const contacted = (smsSentCount || 0) + appointment + (noAnswerCount || 0)
-      const rejected = (callRejectedCount || 0) + (visitRefusedCount || 0)
-
-      // 총처리 = 전체 - 대기중 (상태 변경된 환자만)
+      const contacted = smsSent + appointment + noAnswer
+      const rejected = callRejected + visitRefused
       const processed = total - pending
 
       const stats: RecallStats = {
@@ -980,8 +907,7 @@ export const recallPatientService = {
         contacted_count: contacted,
         appointment_count: appointment,
         rejected_count: rejected,
-        invalid_count: invalidCount || 0,
-        // 성공률 = 예약성공 / 총처리
+        invalid_count: invalidCount,
         success_rate: processed > 0 ? Math.round((appointment / processed) * 100) : 0
       }
 
