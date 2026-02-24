@@ -156,6 +156,23 @@ export default function TaskTemplateManager() {
       alert(`삭제 실패: ${error}`)
       return
     }
+    setSelectedIds(prev => { const next = new Set(prev); next.delete(templateId); return next })
+    await fetchData()
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`선택한 ${selectedIds.size}개 업무를 삭제하시겠습니까?`)) return
+    const ids = Array.from(selectedIds)
+    const errors: string[] = []
+    for (const id of ids) {
+      const { error } = await taskChecklistService.deleteTaskTemplate(id)
+      if (error) errors.push(error)
+    }
+    if (errors.length > 0) {
+      alert(`${ids.length - errors.length}건 삭제 완료, ${errors.length}건 실패`)
+    }
+    setSelectedIds(new Set())
     await fetchData()
   }
 
@@ -492,14 +509,23 @@ export default function TaskTemplateManager() {
           </div>
           <div className="flex items-center space-x-2 flex-wrap gap-y-2">
             {selectedIds.size > 0 && (
-              <button
-                onClick={handleSubmitForApproval}
-                disabled={submitting}
-                className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
-              >
-                <Send className="w-4 h-4 mr-1.5" />
-                {submitting ? '요청 중...' : `결재 요청 (${selectedIds.size})`}
-              </button>
+              <>
+                <button
+                  onClick={handleBulkDelete}
+                  className="inline-flex items-center px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4 mr-1.5" />
+                  삭제 ({selectedIds.size})
+                </button>
+                <button
+                  onClick={handleSubmitForApproval}
+                  disabled={submitting}
+                  className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                >
+                  <Send className="w-4 h-4 mr-1.5" />
+                  {submitting ? '요청 중...' : `결재 요청 (${selectedIds.size})`}
+                </button>
+              </>
             )}
             <button
               onClick={() => { resetForm(); setShowForm(true) }}
