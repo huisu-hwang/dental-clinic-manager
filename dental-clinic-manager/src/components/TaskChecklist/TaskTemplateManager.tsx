@@ -756,39 +756,45 @@ export default function TaskTemplateManager() {
                 </div>
                 <div className="sm:col-span-5">
                   <label className="sm:hidden text-xs text-slate-500 mb-1 block">시간대</label>
-                  <div className="flex gap-1">
+                  <div
+                    className="flex gap-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1"
+                    tabIndex={0}
+                    data-bulk-period={index}
+                    role="radiogroup"
+                    onKeyDown={(e) => {
+                      const currentIdx = periodOptions.findIndex(o => o.value === item.period)
+                      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        const next = (currentIdx + 1) % periodOptions.length
+                        updateBulkItem(index, 'period', periodOptions[next].value)
+                      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        const prev = (currentIdx - 1 + periodOptions.length) % periodOptions.length
+                        updateBulkItem(index, 'period', periodOptions[prev].value)
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (index === bulkItems.length - 1) {
+                          addBulkItem()
+                        }
+                        setTimeout(() => {
+                          const inputs = document.querySelectorAll<HTMLInputElement>('[data-bulk-title]')
+                          inputs[index + 1]?.focus()
+                        }, 0)
+                      }
+                    }}
+                  >
                     {periodOptions.map(opt => {
                       const selected = item.period === opt.value
                       return (
                         <label
                           key={opt.value}
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault()
-                              if (index === bulkItems.length - 1) {
-                                addBulkItem()
-                              }
-                              setTimeout(() => {
-                                const inputs = document.querySelectorAll<HTMLInputElement>('[data-bulk-title]')
-                                inputs[index + 1]?.focus()
-                              }, 0)
-                            }
-                          }}
+                          onClick={() => updateBulkItem(index, 'period', opt.value)}
                           className={`flex-1 flex items-center justify-center cursor-pointer rounded-lg border px-1.5 py-1.5 text-xs transition-colors ${
                             selected
                               ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
                               : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
                           }`}
                         >
-                          <input
-                            type="radio"
-                            name={`period-bulk-${index}`}
-                            value={opt.value}
-                            checked={selected}
-                            onChange={(e) => updateBulkItem(index, 'period', e.target.value)}
-                            className="sr-only"
-                          />
                           {opt.label}
                         </label>
                       )
