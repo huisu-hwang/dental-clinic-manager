@@ -187,8 +187,9 @@ export default function TaskTemplateManager() {
     await fetchData()
   }
 
-  const handleSubmitForApproval = async () => {
-    const draftIds = Array.from(selectedIds).filter(id => {
+  const handleSubmitForApproval = async (targetIds?: string[]) => {
+    const idsToCheck = targetIds || Array.from(selectedIds)
+    const draftIds = idsToCheck.filter(id => {
       const t = templates.find(t => t.id === id)
       return t && (t.status === 'draft' || t.status === 'rejected')
     })
@@ -524,26 +525,51 @@ export default function TaskTemplateManager() {
           </div>
           <div className="flex items-center space-x-2 flex-wrap gap-y-2">
             {selectedIds.size > 0 && (
-              <>
-                <button
-                  onClick={handleBulkDelete}
-                  className="inline-flex items-center px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4 mr-1.5" />
-                  삭제 ({selectedIds.size})
-                </button>
-                {!isOwner && (
+              <button
+                onClick={handleBulkDelete}
+                className="inline-flex items-center px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
+              >
+                <Trash2 className="w-4 h-4 mr-1.5" />
+                삭제 ({selectedIds.size})
+              </button>
+            )}
+            {!isOwner && (() => {
+              // 선택된 항목 중 결재 요청 가능 건수
+              const selectedDraftCount = selectedIds.size > 0
+                ? Array.from(selectedIds).filter(id => {
+                    const t = templates.find(t => t.id === id)
+                    return t && (t.status === 'draft' || t.status === 'rejected')
+                  }).length
+                : 0
+              // 전체 결재 요청 가능 건수
+              const allDraftCount = filteredTemplates.filter(t => t.status === 'draft' || t.status === 'rejected').length
+
+              if (selectedDraftCount > 0) {
+                return (
                   <button
-                    onClick={handleSubmitForApproval}
+                    onClick={() => handleSubmitForApproval()}
                     disabled={submitting}
                     className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
                   >
                     <Send className="w-4 h-4 mr-1.5" />
-                    {submitting ? '요청 중...' : `결재 요청 (${selectedIds.size})`}
+                    {submitting ? '요청 중...' : `선택 결재 요청 (${selectedDraftCount})`}
                   </button>
-                )}
-              </>
-            )}
+                )
+              }
+              if (allDraftCount > 0) {
+                return (
+                  <button
+                    onClick={() => handleSubmitForApproval(filteredTemplates.filter(t => t.status === 'draft' || t.status === 'rejected').map(t => t.id))}
+                    disabled={submitting}
+                    className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                  >
+                    <Send className="w-4 h-4 mr-1.5" />
+                    {submitting ? '요청 중...' : `전체 결재 요청 (${allDraftCount})`}
+                  </button>
+                )
+              }
+              return null
+            })()}
             <button
               onClick={() => { resetForm(); setShowForm(true) }}
               className="inline-flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors"
@@ -1119,6 +1145,28 @@ export default function TaskTemplateManager() {
                 </div>
                 <span className="text-sm text-slate-500">{sorted.length}개 업무</span>
               </div>
+
+              {/* 직원별 결재 요청 바 */}
+              {!isOwner && (() => {
+                const userDrafts = sorted.filter(t => t.status === 'draft' || t.status === 'rejected')
+                if (userDrafts.length === 0) return null
+                return (
+                  <div className="px-4 sm:px-6 py-2 bg-yellow-50 border-b border-yellow-200 flex items-center justify-between">
+                    <span className="text-xs text-yellow-700">
+                      결재 대기: 초안 {userDrafts.filter(t => t.status === 'draft').length}건
+                      {userDrafts.some(t => t.status === 'rejected') && `, 반려 ${userDrafts.filter(t => t.status === 'rejected').length}건`}
+                    </span>
+                    <button
+                      onClick={() => handleSubmitForApproval(userDrafts.map(t => t.id))}
+                      disabled={submitting}
+                      className="inline-flex items-center px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-md hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                    >
+                      <Send className="w-3 h-3 mr-1" />
+                      {submitting ? '요청 중...' : `결재 요청 (${userDrafts.length})`}
+                    </button>
+                  </div>
+                )
+              })()}
 
               {orderedPeriods.map((period, periodIdx) => {
                 const periodTemplates = groupedByPeriod[period]
