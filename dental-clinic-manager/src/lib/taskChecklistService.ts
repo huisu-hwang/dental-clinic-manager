@@ -147,6 +147,44 @@ export async function createTaskTemplate(
 }
 
 /**
+ * 업무 템플릿 일괄 생성 (여러 항목을 한 번에 추가)
+ */
+export async function createTaskTemplatesBulk(
+  items: TaskTemplateFormData[],
+  createdBy: string
+): Promise<{ data: TaskTemplate[]; error?: string }> {
+  try {
+    const supabase = createClient()
+    if (!supabase) return { data: [], error: 'Supabase client not available' }
+
+    const clinicId = getCurrentClinicId()
+    if (!clinicId) return { data: [], error: 'Clinic ID not found' }
+
+    const rows = items.map(item => ({
+      clinic_id: clinicId,
+      assigned_user_id: item.assigned_user_id,
+      title: item.title,
+      description: item.description || null,
+      period: item.period,
+      sort_order: item.sort_order || 0,
+      status: 'draft' as const,
+      created_by: createdBy,
+      is_active: true,
+    }))
+
+    const { data, error } = await (supabase
+      .from('task_templates') as any)
+      .insert(rows)
+      .select()
+
+    if (error) return { data: [], error: extractErrorMessage(error) }
+    return { data: data || [] }
+  } catch (error) {
+    return { data: [], error: extractErrorMessage(error) }
+  }
+}
+
+/**
  * 업무 템플릿 수정
  */
 export async function updateTaskTemplate(
@@ -429,6 +467,7 @@ export const taskChecklistService = {
   getAllTemplates,
   getPendingTemplates,
   createTaskTemplate,
+  createTaskTemplatesBulk,
   updateTaskTemplate,
   deleteTaskTemplate,
   submitForApproval,
