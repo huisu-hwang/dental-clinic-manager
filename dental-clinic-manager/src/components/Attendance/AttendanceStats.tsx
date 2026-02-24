@@ -66,7 +66,6 @@ export default function AttendanceStats() {
   const refreshStatisticsOnLoad = async () => {
     if (!user?.id) return
 
-    setLoading(true)
     try {
       if (periodMode === 'monthly') {
         // 월별 통계 조회

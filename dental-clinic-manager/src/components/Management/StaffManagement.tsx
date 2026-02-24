@@ -158,7 +158,6 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   }
 
   const fetchJoinRequests = async () => {
-    setLoading(true)
     const supabase = getSupabase()
     if (!supabase || !currentUser.clinic_id) {
       setLoading(false)

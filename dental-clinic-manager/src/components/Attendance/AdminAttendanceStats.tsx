@@ -91,7 +91,6 @@ export default function AdminAttendanceStats() {
   const refreshStatisticsOnLoad = async () => {
     if (!user?.clinic_id) return
 
-    setLoading(true)
     try {
       if (periodMode === 'monthly') {
         // 월별 통계 조회

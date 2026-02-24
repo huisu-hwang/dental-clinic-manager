@@ -41,7 +41,6 @@ export default function ProtocolCategoryManager({ onCategoryChange }: ProtocolCa
   }, [])
 
   const fetchCategories = async () => {
-    setLoading(true)
     const result = await dataService.getProtocolCategories()
     if (result.error) {
       setError(result.error)

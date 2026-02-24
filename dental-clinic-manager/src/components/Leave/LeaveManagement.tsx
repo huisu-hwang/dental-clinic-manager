@@ -501,7 +501,6 @@ function AllEmployeeBalances() {
   }, [])
 
   const loadBalances = async () => {
-    setLoading(true)
     // 연도 필터 없이 전체 조회
     const result = await leaveService.getAllEmployeeBalances()
     setBalances(result.data || [])

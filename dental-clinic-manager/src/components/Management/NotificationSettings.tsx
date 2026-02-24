@@ -102,7 +102,6 @@ export default function NotificationSettings({ currentUser, clinicId }: Notifica
   }, [clinicId])
 
   const fetchNotifications = async () => {
-    setLoading(true)
     try {
       const response = await fetch(`/api/notifications?clinicId=${encodeURIComponent(clinicId)}`)
       const result = await response.json()

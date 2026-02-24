@@ -63,7 +63,6 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
   }, [])
 
   const loadHolidays = async () => {
-    setLoading(true)
     try {
       // 연도에 상관없이 모든 휴무일 조회
       const result = await leaveService.getClinicHolidays()
@@ -112,7 +111,6 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
       return
     }
 
-    setLoading(true)
     try {
       const result = await leaveService.createClinicHoliday({
         holiday_name: formData.holiday_name,

@@ -82,7 +82,6 @@ export default function QRCodeDisplay() {
   const loadQRCode = async () => {
     if (!user?.clinic_id) return
 
-    setLoading(true)
     setMessage(null)
 
     try {

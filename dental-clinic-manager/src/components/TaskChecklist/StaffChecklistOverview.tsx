@@ -22,7 +22,6 @@ export default function StaffChecklistOverview() {
   const [loading, setLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
-    setLoading(true)
     try {
       const [templatesResult, checksResult, staffResult] = await Promise.all([
         taskChecklistService.getAllTemplates('approved'),

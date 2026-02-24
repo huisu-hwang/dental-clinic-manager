@@ -9,7 +9,7 @@ import * as XLSX from 'xlsx'
 import {
   Plus, Edit3, Trash2, Send, X, Save,
   Users, Filter, Settings, Clock,
-  AlertCircle, CheckCircle2, XCircle, FileEdit,
+  AlertCircle, AlertTriangle, CheckCircle2, XCircle, FileEdit,
   Upload, Download, List
 } from 'lucide-react'
 
@@ -83,6 +83,15 @@ export default function TaskTemplateManager() {
   // 선택된 템플릿 (일괄 결재 요청용)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
+  // 삭제 확인 다이얼로그
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    show: boolean
+    type: 'single' | 'bulk'
+    templateId?: string
+    templateTitle?: string
+    count?: number
+  }>({ show: false, type: 'single' })
+
   // 시간대 설정
   const [periodConfig, setPeriodConfig] = useState<PeriodConfig>(loadPeriodConfig)
   const [showPeriodSettings, setShowPeriodSettings] = useState(false)
@@ -91,7 +100,6 @@ export default function TaskTemplateManager() {
   const periodOptions = periodConfig.keys.map(key => ({ value: key, label: periodConfig.labels[key] || key }))
 
   const fetchData = useCallback(async () => {
-    setLoading(true)
     try {
       const [templatesResult, staffResult] = await Promise.all([
         taskChecklistService.getAllTemplates(),
@@ -160,30 +168,47 @@ export default function TaskTemplateManager() {
     }
   }
 
-  const handleDelete = async (templateId: string) => {
-    if (!confirm('이 업무를 삭제하시겠습니까?')) return
-    const { error } = await taskChecklistService.deleteTaskTemplate(templateId)
-    if (error) {
-      alert(`삭제 실패: ${error}`)
-      return
-    }
-    setSelectedIds(prev => { const next = new Set(prev); next.delete(templateId); return next })
-    await fetchData()
+  const handleDelete = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId)
+    setDeleteConfirm({
+      show: true,
+      type: 'single',
+      templateId,
+      templateTitle: template?.title || '업무',
+    })
   }
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.size === 0) return
-    if (!confirm(`선택한 ${selectedIds.size}개 업무를 삭제하시겠습니까?`)) return
-    const ids = Array.from(selectedIds)
-    const errors: string[] = []
-    for (const id of ids) {
-      const { error } = await taskChecklistService.deleteTaskTemplate(id)
-      if (error) errors.push(error)
+    setDeleteConfirm({
+      show: true,
+      type: 'bulk',
+      count: selectedIds.size,
+    })
+  }
+
+  const confirmDeleteAction = async () => {
+    if (deleteConfirm.type === 'single' && deleteConfirm.templateId) {
+      const { error } = await taskChecklistService.deleteTaskTemplate(deleteConfirm.templateId)
+      if (error) {
+        alert(`삭제 실패: ${error}`)
+        setDeleteConfirm({ show: false, type: 'single' })
+        return
+      }
+      setSelectedIds(prev => { const next = new Set(prev); next.delete(deleteConfirm.templateId!); return next })
+    } else if (deleteConfirm.type === 'bulk') {
+      const ids = Array.from(selectedIds)
+      const errors: string[] = []
+      for (const id of ids) {
+        const { error } = await taskChecklistService.deleteTaskTemplate(id)
+        if (error) errors.push(error)
+      }
+      if (errors.length > 0) {
+        alert(`${ids.length - errors.length}건 삭제 완료, ${errors.length}건 실패`)
+      }
+      setSelectedIds(new Set())
     }
-    if (errors.length > 0) {
-      alert(`${ids.length - errors.length}건 삭제 완료, ${errors.length}건 실패`)
-    }
-    setSelectedIds(new Set())
+    setDeleteConfirm({ show: false, type: 'single' })
     await fetchData()
   }
 
@@ -768,6 +793,7 @@ export default function TaskTemplateManager() {
                     value={item.title}
                     onChange={(e) => updateBulkItem(index, 'title', e.target.value)}
                     onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing) return
                       if (e.key === 'Tab' && !e.shiftKey) {
                         e.preventDefault()
                         // Tab: 첫 번째 시간대 선택 후 시간대 영역으로 포커스 이동
@@ -1340,6 +1366,51 @@ export default function TaskTemplateManager() {
                   저장
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 삭제 확인 다이얼로그 */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300">
+            <div className="px-6 pt-6 pb-4 text-center">
+              <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-7 h-7 text-red-500" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">
+                {deleteConfirm.type === 'single' ? '업무 삭제' : '선택 업무 삭제'}
+              </h3>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                {deleteConfirm.type === 'single' ? (
+                  <>
+                    <span className="font-medium text-slate-700">&quot;{deleteConfirm.templateTitle}&quot;</span>
+                    <br />업무를 삭제하시겠습니까?
+                  </>
+                ) : (
+                  <>
+                    선택한 <span className="font-semibold text-red-600">{deleteConfirm.count}개</span> 업무를
+                    <br />삭제하시겠습니까?
+                  </>
+                )}
+              </p>
+              <p className="text-xs text-slate-400 mt-2">삭제된 업무는 복구할 수 없습니다.</p>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm({ show: false, type: 'single' })}
+                className="flex-1 px-4 py-3 text-sm font-medium text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={confirmDeleteAction}
+                className="flex-1 px-4 py-3 text-sm font-medium text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors inline-flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                삭제하기
+              </button>
             </div>
           </div>
         </div>

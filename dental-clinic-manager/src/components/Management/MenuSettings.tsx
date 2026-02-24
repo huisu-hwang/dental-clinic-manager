@@ -901,7 +901,6 @@ export default function MenuSettings() {
   const loadMenuSettings = useCallback(async () => {
     if (!user?.id) return
 
-    setLoading(true)
     setError('')
 
     const result = await getUserMenuSettings(user.id, true)

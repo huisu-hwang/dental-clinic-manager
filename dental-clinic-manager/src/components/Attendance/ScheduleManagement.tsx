@@ -82,7 +82,6 @@ export default function ScheduleManagement() {
   const loadUserSchedule = async () => {
     if (!selectedUser) return
 
-    setLoading(true)
     try {
       const result = await workScheduleService.getUserWorkSchedule(selectedUser)
       if (result.data) {
@@ -103,7 +102,6 @@ export default function ScheduleManagement() {
   ) => {
     if (!selectedUser || !workSchedule) return
 
-    setLoading(true)
     setMessage(null)
 
     try {
@@ -134,7 +132,6 @@ export default function ScheduleManagement() {
       return
     }
 
-    setLoading(true)
     setMessage(null)
 
     try {

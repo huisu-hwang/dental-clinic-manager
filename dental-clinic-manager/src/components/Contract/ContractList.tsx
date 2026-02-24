@@ -95,7 +95,6 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
     const loadContracts = async () => {
       if (!isMounted) return
 
-      setLoading(true)
       setError(null)
 
       try {
@@ -162,7 +161,6 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
   }, [clinicId, filters.status, filters.employee_user_id, filters.search, isVerified])
 
   const loadContracts = async () => {
-    setLoading(true)
     setError(null)
 
     try {
@@ -190,8 +188,6 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
     } catch (err) {
       console.error('[ContractList] Failed to load contracts:', err)
       setError('근로계약서 목록을 불러오는 중 오류가 발생했습니다.')
-    } finally {
-      setLoading(false)
     }
   }
 

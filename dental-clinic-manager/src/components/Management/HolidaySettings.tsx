@@ -56,7 +56,6 @@ export default function HolidaySettings({ clinicId }: HolidaySettingsProps) {
   }, [clinicId])
 
   const fetchSettings = async () => {
-    setLoading(true)
     setError('')
 
     try {
