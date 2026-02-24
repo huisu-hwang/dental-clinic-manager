@@ -489,7 +489,7 @@ export const recallPatientService = {
     }
   },
 
-  // 환자 일괄 추가 (파일 업로드) — 중복 제거 로직 (배치 처리)
+  // 환자 일괄 추가 (파일 업로드) — 중복 제거 로직 (배치 병렬 처리)
   async addPatientsBulk(
     patients: RecallPatientUploadData[],
     campaignId: string,
@@ -501,8 +501,29 @@ export const recallPatientService = {
     const clinicId = await getCurrentClinicId()
     if (!clinicId) return { success: false, newCount: 0, updatedCount: 0, skippedCount: 0, error: 'Clinic ID not found' }
 
-    // 배치 크기 (Supabase PostgREST URL 길이 제한 방지)
-    const BATCH_SIZE = 100
+    // 배치 크기 (GET: URL 길이 제한 고려, POST/UPSERT: body 기반이라 더 크게)
+    const FETCH_BATCH_SIZE = 500
+    const WRITE_BATCH_SIZE = 500
+    const MAX_CONCURRENT = 5
+
+    // 병렬 배치 실행 헬퍼
+    const runBatchesParallel = async <T, R>(
+      items: T[],
+      batchSize: number,
+      fn: (batch: T[]) => Promise<R>
+    ): Promise<R[]> => {
+      const batches: T[][] = []
+      for (let i = 0; i < items.length; i += batchSize) {
+        batches.push(items.slice(i, i + batchSize))
+      }
+      const results: R[] = []
+      for (let i = 0; i < batches.length; i += MAX_CONCURRENT) {
+        const concurrent = batches.slice(i, i + MAX_CONCURRENT)
+        const batchResults = await Promise.all(concurrent.map(fn))
+        results.push(...batchResults)
+      }
+      return results
+    }
 
     try {
       // 1. 업로드 데이터에서 유효한 phone_number 목록 추출
@@ -510,10 +531,9 @@ export const recallPatientService = {
       const skippedCount = patients.length - validPatients.length
       const phoneNumbers = validPatients.map(p => p.phone_number)
 
-      // 2. DB에서 같은 clinic_id + phone_number를 가진 기존 환자 조회 (배치)
+      // 2. DB에서 같은 clinic_id + phone_number를 가진 기존 환자 조회 (병렬 배치)
       const existingPatients: { id: string; phone_number: string; exclude_reason: string | null }[] = []
-      for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
-        const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
+      await runBatchesParallel(phoneNumbers, FETCH_BATCH_SIZE, async (batch) => {
         const { data, error: fetchError } = await supabase
           .from('recall_patients')
           .select('id, phone_number, exclude_reason')
@@ -522,13 +542,13 @@ export const recallPatientService = {
 
         if (fetchError) throw fetchError
         if (data) existingPatients.push(...data)
-      }
+        return data
+      })
 
       // 3. phone_number → 기존 환자 Map 생성 (exclude_reason NULL인 레코드 우선)
       const existingMap = new Map<string, { id: string; exclude_reason: string | null }>()
       for (const ep of existingPatients) {
         const current = existingMap.get(ep.phone_number)
-        // exclude_reason이 NULL인 레코드를 우선 선택
         if (!current || (current.exclude_reason !== null && ep.exclude_reason === null)) {
           existingMap.set(ep.phone_number, { id: ep.id, exclude_reason: ep.exclude_reason })
         }
@@ -547,7 +567,7 @@ export const recallPatientService = {
         }
       }
 
-      // 5. 신규 환자 일괄 삽입 (배치)
+      // 5. 신규 환자 일괄 삽입 (병렬 배치, .select() 제거로 응답 크기 축소)
       let newCount = 0
       if (newPatients.length > 0) {
         const newRecords = newPatients.map(p => ({
@@ -557,31 +577,24 @@ export const recallPatientService = {
           status: 'pending' as PatientRecallStatus
         }))
 
-        for (let i = 0; i < newRecords.length; i += BATCH_SIZE) {
-          const batch = newRecords.slice(i, i + BATCH_SIZE)
-          const { data: inserted, error: insertError } = await supabase
+        const insertResults = await runBatchesParallel(newRecords, WRITE_BATCH_SIZE, async (batch) => {
+          const { error: insertError } = await supabase
             .from('recall_patients')
             .insert(batch)
-            .select()
 
           if (insertError) throw insertError
-          newCount += inserted?.length || 0
-        }
+          return batch.length
+        })
+        newCount = insertResults.reduce((sum, n) => sum + n, 0)
       }
 
-      // 6. 기존 환자 정보 배치 업데이트 (동일 필드셋으로 그룹화)
+      // 6. 기존 환자 정보 배치 업데이트 (병렬)
       let updatedCount = 0
       if (updateTargets.length > 0) {
-        // 업로드 파일의 모든 행은 동일한 컬럼 구조를 가지므로, 첫 번째 행에서 업데이트할 필드 키 결정
         const fieldKeys = ['patient_name', 'chart_number', 'birth_date', 'gender', 'last_visit_date', 'treatment_type', 'notes'] as const
         const activeFields = fieldKeys.filter(key => updateTargets.some(t => t.data[key] !== undefined))
 
-        // 배치 단위로 업데이트 (같은 필드셋이므로 ID 목록으로 일괄 처리)
-        for (let i = 0; i < updateTargets.length; i += BATCH_SIZE) {
-          const batch = updateTargets.slice(i, i + BATCH_SIZE)
-          const ids = batch.map(t => t.id)
-
-          // 공통 필드만 업데이트하는 경우 (모든 행의 값이 동일하지 않으므로 upsert 사용)
+        const upsertResults = await runBatchesParallel(updateTargets, WRITE_BATCH_SIZE, async (batch) => {
           const upsertRecords = batch.map(t => {
             const record: Record<string, unknown> = { id: t.id, campaign_id: campaignId }
             for (const key of activeFields) {
@@ -594,8 +607,10 @@ export const recallPatientService = {
             .from('recall_patients')
             .upsert(upsertRecords, { onConflict: 'id', ignoreDuplicates: false })
 
-          if (!updateError) updatedCount += batch.length
-        }
+          if (updateError) throw updateError
+          return batch.length
+        })
+        updatedCount = upsertResults.reduce((sum, n) => sum + n, 0)
       }
 
       // 7. 캠페인 업데이트
