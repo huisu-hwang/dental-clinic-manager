@@ -524,51 +524,19 @@ export default function TaskTemplateManager() {
             </p>
           </div>
           <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-            {selectedIds.size > 0 && (
-              <button
-                onClick={handleBulkDelete}
-                className="inline-flex items-center px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
-              >
-                <Trash2 className="w-4 h-4 mr-1.5" />
-                삭제 ({selectedIds.size})
-              </button>
-            )}
             {!isOwner && (() => {
-              // 선택된 항목 중 결재 요청 가능 건수
-              const selectedDraftCount = selectedIds.size > 0
-                ? Array.from(selectedIds).filter(id => {
-                    const t = templates.find(t => t.id === id)
-                    return t && (t.status === 'draft' || t.status === 'rejected')
-                  }).length
-                : 0
-              // 전체 결재 요청 가능 건수
               const allDraftCount = filteredTemplates.filter(t => t.status === 'draft' || t.status === 'rejected').length
-
-              if (selectedDraftCount > 0) {
-                return (
-                  <button
-                    onClick={() => handleSubmitForApproval()}
-                    disabled={submitting}
-                    className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
-                  >
-                    <Send className="w-4 h-4 mr-1.5" />
-                    {submitting ? '요청 중...' : `선택 결재 요청 (${selectedDraftCount})`}
-                  </button>
-                )
-              }
-              if (allDraftCount > 0) {
-                return (
-                  <button
-                    onClick={() => handleSubmitForApproval(filteredTemplates.filter(t => t.status === 'draft' || t.status === 'rejected').map(t => t.id))}
-                    disabled={submitting}
-                    className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
-                  >
-                    <Send className="w-4 h-4 mr-1.5" />
-                    {submitting ? '요청 중...' : `전체 결재 요청 (${allDraftCount})`}
-                  </button>
-                )
-              }
-              return null
+              if (allDraftCount === 0) return null
+              return (
+                <button
+                  onClick={() => handleSubmitForApproval(filteredTemplates.filter(t => t.status === 'draft' || t.status === 'rejected').map(t => t.id))}
+                  disabled={submitting}
+                  className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                >
+                  <Send className="w-4 h-4 mr-1.5" />
+                  {submitting ? '요청 중...' : `전체 결재 요청 (${allDraftCount})`}
+                </button>
+              )
             })()}
             <button
               onClick={() => { resetBulkForm(); setShowBulkForm(true); setShowForm(false); setShowExcelUpload(false) }}
@@ -1124,6 +1092,24 @@ export default function TaskTemplateManager() {
             <div key={userId} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="px-4 sm:px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={sorted.length > 0 && sorted.every(t => selectedIds.has(t.id))}
+                    onChange={() => {
+                      setSelectedIds(prev => {
+                        const next = new Set(prev)
+                        const allSelected = sorted.every(t => next.has(t.id))
+                        if (allSelected) {
+                          sorted.forEach(t => next.delete(t.id))
+                        } else {
+                          sorted.forEach(t => next.add(t.id))
+                        }
+                        return next
+                      })
+                    }}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    title={`${staffMember?.name || ''} 전체 선택`}
+                  />
                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                     <span className="text-sm font-semibold text-blue-600">
                       {staffMember?.name?.charAt(0) || '?'}
@@ -1172,6 +1158,24 @@ export default function TaskTemplateManager() {
                     {/* 시간대 헤더 */}
                     <div className={`px-4 sm:px-6 py-2 ${color.bg} ${color.border} border-b flex items-center justify-between`}>
                       <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={periodTemplates.length > 0 && periodTemplates.every(t => selectedIds.has(t.id))}
+                          onChange={() => {
+                            setSelectedIds(prev => {
+                              const next = new Set(prev)
+                              const allSelected = periodTemplates.every(t => next.has(t.id))
+                              if (allSelected) {
+                                periodTemplates.forEach(t => next.delete(t.id))
+                              } else {
+                                periodTemplates.forEach(t => next.add(t.id))
+                              }
+                              return next
+                            })
+                          }}
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          title={`${periodLabel} 전체 선택`}
+                        />
                         <div className={`w-2 h-2 rounded-full ${color.dot}`} />
                         <span className={`text-xs font-semibold ${color.text}`}>{periodLabel}</span>
                       </div>
@@ -1338,6 +1342,45 @@ export default function TaskTemplateManager() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 선택 시 하단 플로팅 액션 바 */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-800 text-white rounded-xl shadow-2xl px-5 py-3 flex items-center space-x-4 animate-in fade-in slide-in-from-bottom-4">
+          <span className="text-sm font-medium">{selectedIds.size}개 선택</span>
+          <div className="w-px h-5 bg-slate-600" />
+          <button
+            onClick={handleBulkDelete}
+            className="inline-flex items-center px-3 py-1.5 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            삭제
+          </button>
+          {!isOwner && (() => {
+            const selectedDraftCount = Array.from(selectedIds).filter(id => {
+              const t = templates.find(t => t.id === id)
+              return t && (t.status === 'draft' || t.status === 'rejected')
+            }).length
+            if (selectedDraftCount === 0) return null
+            return (
+              <button
+                onClick={() => handleSubmitForApproval()}
+                disabled={submitting}
+                className="inline-flex items-center px-3 py-1.5 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
+              >
+                <Send className="w-4 h-4 mr-1" />
+                {submitting ? '요청 중...' : `결재 요청 (${selectedDraftCount})`}
+              </button>
+            )
+          })()}
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="p-1.5 rounded-lg hover:bg-slate-700 transition-colors"
+            title="선택 해제"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>
