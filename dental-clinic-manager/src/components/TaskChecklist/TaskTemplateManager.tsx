@@ -318,7 +318,8 @@ export default function TaskTemplateManager() {
       }
 
       // 자동 분석: 각 행의 모든 셀을 스캔하여 이름/시간대/업무명 추출
-      const staffNames = staff.map(s => s.name)
+      // 이름이 없는 행은 직전에 매칭된 직원을 자동으로 이어받음
+      let lastMatchedStaff: Staff | undefined
 
       const parsed = rows.map(row => {
         const values = Object.values(row).map(v => (v ?? '').toString().trim()).filter(Boolean)
@@ -344,6 +345,13 @@ export default function TaskTemplateManager() {
           // 숫자만 있는 값(번호 등)은 건너뜀
           if (/^\d+$/.test(val)) continue
           remainingValues.push(val)
+        }
+
+        // 이름이 매칭되면 기억, 안 되면 직전 이름 사용
+        if (matchedStaff) {
+          lastMatchedStaff = matchedStaff
+        } else {
+          matchedStaff = lastMatchedStaff
         }
 
         // 나머지 값 중 가장 긴 것을 업무명으로 사용
