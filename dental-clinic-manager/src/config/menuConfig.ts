@@ -107,6 +107,17 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     ownerOnly: true,  // 대표 원장 전용
   },
 
+  {
+    id: 'task-checklist',
+    label: '업무 체크리스트',
+    icon: 'ClipboardCheck',
+    route: '/dashboard?tab=task-checklist',
+    permissions: ['task_checklist_view'],
+    categoryId: 'work',
+    order: 6.5,
+    visible: true,
+  },
+
   // === 중간 고정 메뉴 ===
   {
     id: 'bulletin',

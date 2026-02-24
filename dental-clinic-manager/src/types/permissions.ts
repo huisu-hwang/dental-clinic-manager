@@ -62,6 +62,11 @@ export type Permission =
   | 'vendor_contacts_edit'   // 업체 연락처 수정
   | 'vendor_contacts_delete' // 업체 연락처 삭제
   | 'vendor_contacts_import' // 업체 연락처 일괄 등록
+  // 업무 체크리스트 권한
+  | 'task_checklist_view'     // 본인 업무 체크리스트 조회/체크
+  | 'task_checklist_manage'   // 업무 체크리스트 템플릿 생성/수정 (실장)
+  | 'task_checklist_approve'  // 업무 체크리스트 결재 (원장)
+  | 'task_checklist_view_all' // 전체 직원 체크리스트 현황 조회
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -88,7 +93,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 알림 관리 (모든 권한)
     'notification_view', 'notification_manage',
     // 업체 연락처 관리 (모든 권한)
-    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit', 'vendor_contacts_delete', 'vendor_contacts_import'
+    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit', 'vendor_contacts_delete', 'vendor_contacts_import',
+    // 업무 체크리스트 (모든 권한)
+    'task_checklist_view', 'task_checklist_manage', 'task_checklist_approve', 'task_checklist_view_all'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -112,7 +119,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 알림 조회
     'notification_view',
     // 업체 연락처 관리 (삭제, 일괄 등록 제외)
-    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit'
+    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit',
+    // 업무 체크리스트 (본인 체크만 - 직원과 동일)
+    'task_checklist_view'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
@@ -133,7 +142,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_policy_view',
     'leave_balance_view_own', 'leave_balance_view_all',
     // 업체 연락처 관리 (조회, 생성, 수정)
-    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit'
+    'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit',
+    // 업무 체크리스트 (관리 및 전체 현황 - 실장은 템플릿 생성/수정 가능)
+    'task_checklist_view', 'task_checklist_manage', 'task_checklist_view_all'
   ],
   team_leader: [
     // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
@@ -152,7 +163,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_policy_view',
     'leave_balance_view_own', 'leave_balance_view_all',
     // 업체 연락처 관리 (조회, 생성)
-    'vendor_contacts_view', 'vendor_contacts_create'
+    'vendor_contacts_view', 'vendor_contacts_create',
+    // 업무 체크리스트 (본인 체크만)
+    'task_checklist_view'
   ],
   staff: [
     // 일반 직원은 프로토콜 조회, 본인 출퇴근, 본인 연차만 가능
@@ -171,7 +184,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_policy_view',
     'leave_balance_view_own',
     // 업체 연락처 관리 (조회만)
-    'vendor_contacts_view'
+    'vendor_contacts_view',
+    // 업무 체크리스트 (본인 체크만)
+    'task_checklist_view'
   ]
 }
 
@@ -255,6 +270,12 @@ export const PERMISSION_GROUPS = {
     { key: 'vendor_contacts_delete', label: '연락처 삭제' },
     { key: 'vendor_contacts_import', label: '일괄 등록' }
   ],
+  '업무 체크리스트': [
+    { key: 'task_checklist_view', label: '본인 체크리스트 조회' },
+    { key: 'task_checklist_manage', label: '체크리스트 관리' },
+    { key: 'task_checklist_approve', label: '체크리스트 결재' },
+    { key: 'task_checklist_view_all', label: '전체 현황 조회' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -323,5 +344,10 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'vendor_contacts_create': '새로운 업체 연락처를 등록할 수 있습니다.',
   'vendor_contacts_edit': '업체 연락처 정보를 수정할 수 있습니다.',
   'vendor_contacts_delete': '업체 연락처를 삭제할 수 있습니다.',
-  'vendor_contacts_import': '엑셀/CSV 파일로 업체 연락처를 일괄 등록할 수 있습니다.'
+  'vendor_contacts_import': '엑셀/CSV 파일로 업체 연락처를 일괄 등록할 수 있습니다.',
+  // 업무 체크리스트 권한 설명
+  'task_checklist_view': '본인의 업무 체크리스트를 조회하고 체크할 수 있습니다.',
+  'task_checklist_manage': '업무 체크리스트 템플릿을 생성하고 수정할 수 있습니다.',
+  'task_checklist_approve': '업무 체크리스트 변경사항을 결재할 수 있습니다.',
+  'task_checklist_view_all': '전체 직원의 업무 체크리스트 현황을 조회할 수 있습니다.'
 }
