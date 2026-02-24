@@ -599,15 +599,33 @@ export default function TaskTemplateManager() {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">시간대 *</label>
-              <select
-                value={formData.period}
-                onChange={(e) => setFormData(prev => ({ ...prev, period: e.target.value as TaskPeriod }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {PERIOD_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                {PERIOD_OPTIONS.map(opt => {
+                  const Icon = opt.icon
+                  const selected = formData.period === opt.value
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        selected
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                          : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="period-single"
+                        value={opt.value}
+                        checked={selected}
+                        onChange={(e) => setFormData(prev => ({ ...prev, period: e.target.value as TaskPeriod }))}
+                        className="sr-only"
+                      />
+                      <Icon className="w-4 h-4" />
+                      <span>{opt.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="sm:col-span-2">
@@ -693,8 +711,8 @@ export default function TaskTemplateManager() {
             {/* 헤더 */}
             <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-medium text-slate-500 px-1">
               <div className="col-span-1 text-center">#</div>
-              <div className="col-span-7">업무명 *</div>
-              <div className="col-span-3">시간대</div>
+              <div className="col-span-5">업무명 *</div>
+              <div className="col-span-5">시간대</div>
               <div className="col-span-1"></div>
             </div>
 
@@ -703,7 +721,7 @@ export default function TaskTemplateManager() {
                 <div className="hidden sm:flex sm:col-span-1 justify-center">
                   <span className="text-xs text-slate-400">{index + 1}</span>
                 </div>
-                <div className="sm:col-span-7">
+                <div className="sm:col-span-5">
                   <label className="sm:hidden text-xs text-slate-500 mb-1 block">업무명 *</label>
                   <input
                     type="text"
@@ -726,17 +744,35 @@ export default function TaskTemplateManager() {
                     className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
-                <div className="sm:col-span-3">
+                <div className="sm:col-span-5">
                   <label className="sm:hidden text-xs text-slate-500 mb-1 block">시간대</label>
-                  <select
-                    value={item.period}
-                    onChange={(e) => updateBulkItem(index, 'period', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    {PERIOD_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-1">
+                    {PERIOD_OPTIONS.map(opt => {
+                      const Icon = opt.icon
+                      const selected = item.period === opt.value
+                      return (
+                        <label
+                          key={opt.value}
+                          className={`flex-1 flex items-center justify-center gap-1 cursor-pointer rounded-lg border px-1.5 py-1.5 text-xs transition-colors ${
+                            selected
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
+                              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name={`period-bulk-${index}`}
+                            value={opt.value}
+                            checked={selected}
+                            onChange={(e) => updateBulkItem(index, 'period', e.target.value)}
+                            className="sr-only"
+                          />
+                          <Icon className="w-3.5 h-3.5" />
+                          <span className="hidden lg:inline">{opt.label}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
                 <div className="sm:col-span-1 flex justify-end sm:justify-center">
                   {bulkItems.length > 1 && (
@@ -828,9 +864,9 @@ export default function TaskTemplateManager() {
             {/* 헤더 */}
             <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-medium text-slate-500 px-1">
               <div className="col-span-1 text-center">#</div>
-              <div className="col-span-3">담당자</div>
-              <div className="col-span-5">업무명</div>
-              <div className="col-span-2">시간대</div>
+              <div className="col-span-2">담당자</div>
+              <div className="col-span-4">업무명</div>
+              <div className="col-span-4">시간대</div>
               <div className="col-span-1"></div>
             </div>
 
@@ -848,7 +884,7 @@ export default function TaskTemplateManager() {
                     <AlertCircle className="w-4 h-4 text-red-500" />
                   )}
                 </div>
-                <div className="sm:col-span-3">
+                <div className="sm:col-span-2">
                   <label className="sm:hidden text-xs text-slate-500 mb-1 block">담당자</label>
                   <select
                     value={item.assigned_user_id}
@@ -863,7 +899,7 @@ export default function TaskTemplateManager() {
                     ))}
                   </select>
                 </div>
-                <div className="sm:col-span-5">
+                <div className="sm:col-span-4">
                   <label className="sm:hidden text-xs text-slate-500 mb-1 block">업무명</label>
                   <input
                     type="text"
@@ -872,17 +908,35 @@ export default function TaskTemplateManager() {
                     className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   />
                 </div>
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-4">
                   <label className="sm:hidden text-xs text-slate-500 mb-1 block">시간대</label>
-                  <select
-                    value={item.period}
-                    onChange={(e) => updateExcelRow(idx, 'period', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    {PERIOD_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-1">
+                    {PERIOD_OPTIONS.map(opt => {
+                      const Icon = opt.icon
+                      const selected = item.period === opt.value
+                      return (
+                        <label
+                          key={opt.value}
+                          className={`flex-1 flex items-center justify-center gap-1 cursor-pointer rounded-lg border px-1.5 py-1.5 text-xs transition-colors ${
+                            selected
+                              ? 'border-green-500 bg-green-50 text-green-700 font-medium'
+                              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name={`period-excel-${idx}`}
+                            value={opt.value}
+                            checked={selected}
+                            onChange={(e) => updateExcelRow(idx, 'period', e.target.value)}
+                            className="sr-only"
+                          />
+                          <Icon className="w-3.5 h-3.5" />
+                          <span className="hidden lg:inline">{opt.label}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
                 <div className="sm:col-span-1 flex justify-end sm:justify-center">
                   <button
