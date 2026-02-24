@@ -10,8 +10,52 @@
 
 ---
 
+## 2026-02-24
+
+### [버그 수정/성능 개선] 리콜 환자 엑셀 업로드 컬럼명 변경, 날짜 파싱 오류 수정, 성능 최적화
+
+**키워드:** #리콜관리 #엑셀업로드 #성능최적화 #upsert #RLS #날짜파싱
+
+#### 📋 작업 내용
+- 컬럼 매핑 레이블 "마지막 내원일" → "최종 내원일" 변경 및 자동 매핑 키 추가
+- 날짜 정규화 함수에 유효성 검증 추가 (isValidDate)
+- YYYY.MM.DD, datetime 형식 지원 추가
+- 업로드 성능 4가지 병목 최적화
+
+#### 🐛 문제
+1. "date time field value out of range" 400 오류 발생
+2. 업로드 시간 과다 (9000건 기준 ~27초)
+3. upsert 시 RLS violation 오류
+4. upsert 시 "null value in column phone_number" 오류
+
+#### 🔍 근본 원인
+1. normalizeDate()가 형식만 검사하고 실제 날짜 유효성(월 1-12, 일 1-31)을 미검증 → PostgreSQL에서 거부
+2. BATCH_SIZE=100 순차 실행 → 9000건 = 90회 순차 네트워크 요청
+3. Supabase upsert는 INSERT 먼저 시도 → RLS INSERT 정책이 clinic_id 요구 → 누락
+4. 동일 원인: upsert INSERT 시도 시 NOT NULL 컬럼(phone_number, patient_name) 누락
+
+#### ✅ 해결 방법
+1. isValidDate() 함수 추가, normalizeDate에서 모든 파싱 결과를 검증
+2. BATCH_SIZE 500 + 5병렬 실행 (runBatchesParallel), INSERT .select() 제거, getStats/getTodayActivity 쿼리 통합
+3. upsert 레코드에 clinic_id 추가
+4. upsert 레코드에 phone_number, patient_name 추가 + 업로드 파일 내 중복 phone_number Map으로 제거
+5. 파일 이중 파싱 → allParsedRowsRef에 저장하여 재사용
+
+#### 🧪 테스트 결과
+- 5회 빌드 모두 성공 (타입/컴파일 에러 없음)
+- 코드 리뷰 체크리스트 통과 (보안, 성능, 호환성, NOT NULL, RLS)
+
+#### 💡 배운 점
+- Supabase upsert는 내부적으로 INSERT ... ON CONFLICT DO UPDATE 실행 → INSERT 단계에서 RLS with_check, NOT NULL 제약조건 모두 검사됨
+- upsert 레코드에는 반드시 모든 NOT NULL 컬럼 + RLS 정책 관련 컬럼을 포함해야 함
+- 같은 배치 내 동일 PK upsert 시 "cannot affect row a second time" 오류 → 사전 중복 제거 필수
+
+---
+
 ## 목차
 
+- [2026-02-24](#2026-02-24)
+  - [리콜 환자 엑셀 업로드 컬럼명 변경, 날짜 파싱 오류 수정, 성능 최적화](#2026-02-24-버그-수정성능-개선-리콜-환자-엑셀-업로드-컬럼명-변경-날짜-파싱-오류-수정-성능-최적화)
 - [2026-02-21](#2026-02-21)
   - [CLAUDE.md 작업 중 실패/오류 시 자동 계속 원칙 추가](#2026-02-21-문서화-claudemd-작업-중-실패오류-시-자동-계속-원칙-추가)
 - [2026-02-20](#2026-02-20)
