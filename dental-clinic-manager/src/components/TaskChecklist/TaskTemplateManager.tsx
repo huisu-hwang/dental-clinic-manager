@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { taskChecklistService } from '@/lib/taskChecklistService'
 import type { TaskTemplate, TaskPeriod, TaskTemplateFormData, TaskTemplateStatus } from '@/types/taskChecklist'
-import { TASK_PERIOD_LABELS, TEMPLATE_STATUS_LABELS } from '@/types/taskChecklist'
+import { TEMPLATE_STATUS_LABELS } from '@/types/taskChecklist'
 import * as XLSX from 'xlsx'
 import {
   Plus, Edit3, Trash2, Send, X, Save,
-  Clock, Sun, Moon, Users, Filter,
+  Users, Filter, Settings,
   AlertCircle, CheckCircle2, XCircle, FileEdit,
   Upload, Download, List
 } from 'lucide-react'
@@ -20,11 +20,31 @@ const STATUS_BADGE: Record<TaskTemplateStatus, { bg: string; text: string }> = {
   rejected: { bg: 'bg-red-100', text: 'text-red-700' },
 }
 
-const PERIOD_OPTIONS: { value: TaskPeriod; label: string; icon: React.ElementType }[] = [
-  { value: 'before_treatment', label: '진료시작 전', icon: Sun },
-  { value: 'during_treatment', label: '진료 중', icon: Clock },
-  { value: 'before_leaving', label: '퇴근 전', icon: Moon },
-]
+const DEFAULT_PERIOD_LABELS: Record<TaskPeriod, string> = {
+  before_treatment: '진료시작 전',
+  during_treatment: '진료 중',
+  before_leaving: '퇴근 전',
+}
+
+const PERIOD_KEYS: TaskPeriod[] = ['before_treatment', 'during_treatment', 'before_leaving']
+
+const PERIOD_LABELS_STORAGE_KEY = 'dental_task_period_labels'
+
+function loadPeriodLabels(): Record<TaskPeriod, string> {
+  if (typeof window === 'undefined') return { ...DEFAULT_PERIOD_LABELS }
+  try {
+    const saved = localStorage.getItem(PERIOD_LABELS_STORAGE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      return { ...DEFAULT_PERIOD_LABELS, ...parsed }
+    }
+  } catch { /* ignore */ }
+  return { ...DEFAULT_PERIOD_LABELS }
+}
+
+function savePeriodLabels(labels: Record<TaskPeriod, string>) {
+  localStorage.setItem(PERIOD_LABELS_STORAGE_KEY, JSON.stringify(labels))
+}
 
 interface Staff {
   id: string
@@ -79,6 +99,13 @@ export default function TaskTemplateManager() {
 
   // 선택된 템플릿 (일괄 결재 요청용)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // 시간대 라벨 설정
+  const [periodLabels, setPeriodLabels] = useState<Record<TaskPeriod, string>>(loadPeriodLabels)
+  const [showPeriodSettings, setShowPeriodSettings] = useState(false)
+  const [editingPeriodLabels, setEditingPeriodLabels] = useState<Record<TaskPeriod, string>>({ ...DEFAULT_PERIOD_LABELS })
+
+  const periodOptions = PERIOD_KEYS.map(key => ({ value: key, label: periodLabels[key] }))
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -247,7 +274,10 @@ export default function TaskTemplateManager() {
   }
 
   // === 엑셀 업로드 관련 ===
+  // 사용자 커스텀 라벨 + 기본 라벨 + 영문키 모두 매핑
   const periodMap: Record<string, TaskPeriod> = {
+    ...Object.fromEntries(PERIOD_KEYS.map(k => [periodLabels[k], k])),
+    ...Object.fromEntries(PERIOD_KEYS.map(k => [periodLabels[k].replace(/\s/g, ''), k])),
     '진료시작 전': 'before_treatment',
     '진료시작전': 'before_treatment',
     '진료 전': 'before_treatment',
@@ -527,6 +557,14 @@ export default function TaskTemplateManager() {
                 엑셀 업로드
               </button>
             </div>
+            <button
+              onClick={() => { setEditingPeriodLabels({ ...periodLabels }); setShowPeriodSettings(true) }}
+              className="inline-flex items-center px-3 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+              title="시간대 설정"
+            >
+              <Settings className="w-4 h-4 mr-1.5" />
+              시간대 설정
+            </button>
           </div>
         </div>
 
@@ -600,13 +638,12 @@ export default function TaskTemplateManager() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">시간대 *</label>
               <div className="flex gap-2">
-                {PERIOD_OPTIONS.map(opt => {
-                  const Icon = opt.icon
+                {periodOptions.map(opt => {
                   const selected = formData.period === opt.value
                   return (
                     <label
                       key={opt.value}
-                      className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer rounded-lg border px-3 py-2 text-sm transition-colors ${
+                      className={`flex-1 flex items-center justify-center cursor-pointer rounded-lg border px-3 py-2 text-sm transition-colors ${
                         selected
                           ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
                           : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
@@ -620,8 +657,7 @@ export default function TaskTemplateManager() {
                         onChange={(e) => setFormData(prev => ({ ...prev, period: e.target.value as TaskPeriod }))}
                         className="sr-only"
                       />
-                      <Icon className="w-4 h-4" />
-                      <span>{opt.label}</span>
+                      {opt.label}
                     </label>
                   )
                 })}
@@ -747,13 +783,12 @@ export default function TaskTemplateManager() {
                 <div className="sm:col-span-5">
                   <label className="sm:hidden text-xs text-slate-500 mb-1 block">시간대</label>
                   <div className="flex gap-1">
-                    {PERIOD_OPTIONS.map(opt => {
-                      const Icon = opt.icon
+                    {periodOptions.map(opt => {
                       const selected = item.period === opt.value
                       return (
                         <label
                           key={opt.value}
-                          className={`flex-1 flex items-center justify-center gap-1 cursor-pointer rounded-lg border px-1.5 py-1.5 text-xs transition-colors ${
+                          className={`flex-1 flex items-center justify-center cursor-pointer rounded-lg border px-1.5 py-1.5 text-xs transition-colors ${
                             selected
                               ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
                               : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
@@ -767,8 +802,7 @@ export default function TaskTemplateManager() {
                             onChange={(e) => updateBulkItem(index, 'period', e.target.value)}
                             className="sr-only"
                           />
-                          <Icon className="w-3.5 h-3.5" />
-                          <span className="hidden lg:inline">{opt.label}</span>
+                          {opt.label}
                         </label>
                       )
                     })}
@@ -911,13 +945,12 @@ export default function TaskTemplateManager() {
                 <div className="sm:col-span-4">
                   <label className="sm:hidden text-xs text-slate-500 mb-1 block">시간대</label>
                   <div className="flex gap-1">
-                    {PERIOD_OPTIONS.map(opt => {
-                      const Icon = opt.icon
+                    {periodOptions.map(opt => {
                       const selected = item.period === opt.value
                       return (
                         <label
                           key={opt.value}
-                          className={`flex-1 flex items-center justify-center gap-1 cursor-pointer rounded-lg border px-1.5 py-1.5 text-xs transition-colors ${
+                          className={`flex-1 flex items-center justify-center cursor-pointer rounded-lg border px-1.5 py-1.5 text-xs transition-colors ${
                             selected
                               ? 'border-green-500 bg-green-50 text-green-700 font-medium'
                               : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
@@ -931,8 +964,7 @@ export default function TaskTemplateManager() {
                             onChange={(e) => updateExcelRow(idx, 'period', e.target.value)}
                             className="sr-only"
                           />
-                          <Icon className="w-3.5 h-3.5" />
-                          <span className="hidden lg:inline">{opt.label}</span>
+                          {opt.label}
                         </label>
                       )
                     })}
@@ -1034,7 +1066,7 @@ export default function TaskTemplateManager() {
                             {TEMPLATE_STATUS_LABELS[template.status]}
                           </span>
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
-                            {TASK_PERIOD_LABELS[template.period]}
+                            {periodLabels[template.period]}
                           </span>
                         </div>
                         {template.description && (
@@ -1072,6 +1104,69 @@ export default function TaskTemplateManager() {
             </div>
           )
         })
+      )}
+
+      {/* 시간대 설정 모달 */}
+      {showPeriodSettings && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-bold text-slate-800">시간대 설정</h3>
+              <button onClick={() => setShowPeriodSettings(false)} className="p-1 rounded-lg hover:bg-slate-100">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-500">각 시간대의 표시 이름을 수정할 수 있습니다.</p>
+              {PERIOD_KEYS.map(key => (
+                <div key={key}>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    {DEFAULT_PERIOD_LABELS[key]} <span className="text-xs text-slate-400">({key})</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPeriodLabels[key]}
+                    onChange={(e) => setEditingPeriodLabels(prev => ({ ...prev, [key]: e.target.value }))}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={DEFAULT_PERIOD_LABELS[key]}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+              <button
+                onClick={() => {
+                  setEditingPeriodLabels({ ...DEFAULT_PERIOD_LABELS })
+                }}
+                className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                기본값으로 초기화
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowPeriodSettings(false)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={() => {
+                    const trimmed = { ...editingPeriodLabels }
+                    for (const k of PERIOD_KEYS) {
+                      trimmed[k] = trimmed[k].trim() || DEFAULT_PERIOD_LABELS[k]
+                    }
+                    setPeriodLabels(trimmed)
+                    savePeriodLabels(trimmed)
+                    setShowPeriodSettings(false)
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  저장
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
