@@ -459,33 +459,94 @@ export async function getCashReceiptSalesDetails(
 }
 
 // ============================================
-// 신용카드 매출자료 조회
+// 인증서 기반 API 전용 인스턴스 (DEMO 모드 지원)
+// 공동인증서 전용 API는 DEMO 환경에서도 실제 데이터 조회 가능
+// ============================================
+
+function getActualServiceType(): number {
+  const env = (process.env.CODEF_SERVICE_TYPE || 'SANDBOX').trim().toUpperCase();
+  switch (env) {
+    case 'PRODUCT': case '0': return 0;
+    case 'DEMO': case '1': return 1;
+    default: return 2;
+  }
+}
+
+async function createCodefInstanceForCertApi() {
+  const { EasyCodef } = await loadEasyCodef();
+  const config = getCodefConfig();
+  const actualServiceType = getActualServiceType();
+
+  if (!config.clientId || !config.clientSecret || !config.publicKey) {
+    throw new Error('CODEF API 설정이 완료되지 않았습니다.');
+  }
+
+  const codef = new EasyCodef();
+  codef.setPublicKey(config.publicKey);
+
+  if (actualServiceType === 0) {
+    codef.setClientInfo(config.clientId, config.clientSecret);
+  } else {
+    codef.setClientInfoForDemo(config.clientId, config.clientSecret);
+  }
+
+  return { codef, serviceType: actualServiceType };
+}
+
+async function requestProductForCertApi<T>(productUrl: string, params: object): Promise<CodefApiResponse<T>> {
+  try {
+    const { codef, serviceType } = await createCodefInstanceForCertApi();
+    const serviceTypeConstant = await getServiceTypeConstant(serviceType);
+    console.log(`CODEF requestProduct (cert API, serviceType=${serviceType}): ${productUrl}`);
+    console.log(`CODEF params:`, JSON.stringify(params).substring(0, 300));
+    const response = await codef.requestProduct(productUrl, serviceTypeConstant, params);
+    const result = typeof response === 'string' ? JSON.parse(response) : response;
+    console.log(`CODEF response code: ${result?.result?.code}, message: ${result?.result?.message}`);
+    return result;
+  } catch (error) {
+    console.error('CODEF requestProduct (cert) error:', error);
+    return {
+      result: { code: 'CF-99999', extraMessage: '', message: error instanceof Error ? error.message : '상품 조회 실패', transactionId: '' },
+      data: null as any,
+    };
+  }
+}
+
+// ============================================
+// 신용카드 매출자료 조회 (공동인증서 전용)
 // Endpoint: /v1/kr/public/nt/tax-payment/credit-card-sales-data-list
 // Organization: 0006
-// 직접 인증 방식 (loginType=1, userId, userPassword)
+// 인증 방식: 공동인증서 (certFile + certPassword + keyFile)
 // ============================================
 
 export async function getCreditCardSalesData(
-  hometaxId: string,
-  hometaxPassword: string,
-  startYearMonth: string,  // YYYYMM 형식
-  endYearMonth: string     // YYYYMM 형식
+  certFile: string,        // BASE64 인코딩된 인증서 der 파일 (또는 pfx)
+  certPassword: string,    // 인증서 비밀번호 (평문 - 내부에서 RSA 암호화)
+  keyFile: string,         // BASE64 인코딩된 인증서 key 파일 (der/key 타입 시)
+  certType: string,        // "1": der/key 타입, "pfx": pfx 타입
+  year: string,            // YYYY 형식
+  startQuarter: string,    // 조회시작 분기 "1", "2", "3", "4"
+  endQuarter: string       // 조회종료 분기 "1", "2", "3", "4"
 ): Promise<CreditCardSalesData | null> {
   const config = getCodefConfig();
-  const encryptedPassword = encryptRSAWithForge(config.publicKey, hometaxPassword);
+  const encryptedCertPassword = encryptRSAWithForge(config.publicKey, certPassword);
 
-  const params = {
+  const params: Record<string, string> = {
     organization: CODEF_ORGANIZATION.CREDIT_CARD_SALES,  // 0006
-    loginType: '1',          // ID/PW 로그인
-    userId: hometaxId,
-    userPassword: encryptedPassword,
-    startDate: startYearMonth,    // YYYYMM
-    endDate: endYearMonth,        // YYYYMM
-    identity: '',
-    telecom: '',
+    certFile,
+    certPassword: encryptedCertPassword,
+    certType,
+    year,
+    startDate: startQuarter,    // 분기 번호 ("1"~"4")
+    endDate: endQuarter,        // 분기 번호 ("1"~"4")
   };
 
-  const response = await requestProduct<CreditCardSalesData>(
+  // der/key 타입일 때만 keyFile 추가
+  if (certType === '1' && keyFile) {
+    params.keyFile = keyFile;
+  }
+
+  const response = await requestProductForCertApi<CreditCardSalesData>(
     CODEF_ENDPOINTS.CREDIT_CARD_SALES,
     params
   );
@@ -496,6 +557,15 @@ export async function getCreditCardSalesData(
   }
 
   return response.data;
+}
+
+export function getActualCodefServiceType(): string {
+  const actualType = getActualServiceType();
+  switch (actualType) {
+    case 0: return '정식';
+    case 1: return '데모';
+    default: return '샌드박스';
+  }
 }
 
 // ============================================
