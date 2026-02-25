@@ -257,7 +257,7 @@ export default function CodefSyncPanel({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border p-6">
+      <div className="w-full">
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         </div>
@@ -266,11 +266,11 @@ export default function CodefSyncPanel({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-6">
+    <div className="w-full">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Settings className="w-5 h-5 text-blue-600" />
-          홈택스 자동 연동 (CODEF)
+        <h3 className="text-sm font-bold flex items-center gap-2 text-slate-700">
+          <Settings className="w-4 h-4 text-indigo-500" />
+          연동 설정
         </h3>
 
         {connection.isConnected && (
@@ -285,11 +285,10 @@ export default function CodefSyncPanel({
       </div>
 
       {/* 연결 상태 표시 */}
-      <div className={`p-4 rounded-lg mb-4 ${
-        connection.isConnected
+      <div className={`p-4 rounded-lg mb-4 ${connection.isConnected
           ? 'bg-green-50 border border-green-200'
           : 'bg-gray-50 border border-gray-200'
-      }`}>
+        }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {connection.isConnected ? (

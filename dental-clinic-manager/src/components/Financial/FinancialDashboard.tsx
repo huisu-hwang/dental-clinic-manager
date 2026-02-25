@@ -28,6 +28,9 @@ import {
   Calculator,
   Building2,
   BarChart3,
+  CreditCard,
+  Building,
+  ArrowRight
 } from 'lucide-react'
 
 export default function FinancialDashboard() {
@@ -121,7 +124,6 @@ export default function FinancialDashboard() {
     }
   }
 
-  // 수익률 계산
   const profitMargin = summary?.total_revenue
     ? ((summary.pre_tax_profit / summary.total_revenue) * 100).toFixed(1)
     : '0'
@@ -135,28 +137,28 @@ export default function FinancialDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 md:p-8 space-y-8 bg-slate-50 min-h-screen">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">경영 현황</h1>
-          <p className="text-sm text-gray-500 mt-1">월별 수입, 지출, 손익을 관리합니다.</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">경영 현황</h1>
+          <p className="text-sm text-slate-500 mt-1">월별 수입, 지출, 손익을 한눈에 파악하고 관리하세요.</p>
         </div>
 
-        {/* 월 선택 */}
-        <div className="flex items-center gap-2">
+        {/* Date Selector with sleek UI */}
+        <div className="flex items-center gap-1 bg-white p-1 rounded-2xl shadow-sm border border-slate-200">
           <button
             onClick={goToPreviousMonth}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2.5 hover:bg-slate-100 rounded-xl transition-all duration-200 text-slate-600"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div className="px-4 py-2 bg-white border rounded-lg font-semibold min-w-[140px] text-center">
+          <div className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold tracking-wide min-w-[150px] text-center shadow-md">
             {selectedYear}년 {selectedMonth}월
           </div>
           <button
             onClick={goToNextMonth}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2.5 hover:bg-slate-100 rounded-xl transition-all duration-200 text-slate-600"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -164,302 +166,381 @@ export default function FinancialDashboard() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <div className="flex flex-col items-center justify-center py-32 space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+          <p className="text-slate-500 font-medium animate-pulse">경영 데이터를 불러오는 중...</p>
         </div>
       ) : (
-        <>
-          {/* 요약 카드 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* 총 수입 */}
-            <div className="bg-white rounded-xl shadow-sm border p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">총 수입</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">
-                    {formatCurrency(summary?.total_revenue || 0)}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2 text-xs">
-                    <span className="text-blue-600">
-                      보험 {formatCurrency(summary?.insurance_revenue || 0)}
-                    </span>
-                    <span className="text-gray-300">|</span>
-                    <span className="text-purple-600">
-                      비보험 {formatCurrency(summary?.non_insurance_revenue || 0)}
-                    </span>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+          {/* Executive Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 overflow-hidden relative group hover:shadow-md transition-shadow">
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                <TrendingUp className="w-24 h-24 text-emerald-600 transform translate-x-4 -translate-y-4" />
+              </div>
+              <p className="text-sm font-semibold tracking-wider text-slate-500 uppercase">총 수입</p>
+              <h3 className="text-3xl font-black text-slate-900 mt-2 mb-4">
+                {formatCurrency(summary?.total_revenue || 0)}
+              </h3>
+              <div className="flex items-center justify-between text-xs font-medium bg-slate-50 rounded-xl p-3">
+                <div className="flex flex-col">
+                  <span className="text-slate-400">보험수입</span>
+                  <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.insurance_revenue || 0)}</span>
+                </div>
+                <div className="h-8 w-px bg-slate-200"></div>
+                <div className="flex flex-col items-end">
+                  <span className="text-slate-400">비보험수입</span>
+                  <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.non_insurance_revenue || 0)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 overflow-hidden relative group hover:shadow-md transition-shadow">
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                <TrendingDown className="w-24 h-24 text-rose-600 transform translate-x-4 -translate-y-4" />
+              </div>
+              <p className="text-sm font-semibold tracking-wider text-slate-500 uppercase">총 지출</p>
+              <h3 className="text-3xl font-black text-slate-900 mt-2 mb-4">
+                {formatCurrency(summary?.total_expense || 0)}
+              </h3>
+              <div className="flex items-center justify-between text-xs font-medium bg-slate-50 rounded-xl p-3">
+                <div className="flex flex-col">
+                  <span className="text-slate-400">인건비 비중</span>
+                  <span className="text-rose-700 text-sm mt-0.5">{formatCurrency(summary?.personnel_expense || 0)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl shadow-md p-6 overflow-hidden relative group hover:shadow-lg transition-shadow text-white">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <DollarSign className="w-24 h-24 text-white transform translate-x-4 -translate-y-4" />
+              </div>
+              <p className="text-sm font-semibold tracking-wider text-indigo-100 uppercase">세전 순이익</p>
+              <h3 className="text-3xl font-black mt-2 mb-4">
+                {formatCurrency(summary?.pre_tax_profit || 0)}
+              </h3>
+              <div className="flex items-center justify-between text-xs font-medium bg-white/10 rounded-xl p-3 backdrop-blur-sm">
+                <span>영업 이익률</span>
+                <span className="text-base">{profitMargin}%</span>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl shadow-md p-6 overflow-hidden relative group hover:shadow-lg transition-shadow text-white">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <PiggyBank className="w-24 h-24 text-white transform translate-x-4 -translate-y-4" />
+              </div>
+              <p className="text-sm font-semibold tracking-wider text-purple-200 uppercase">세후 순이익</p>
+              <h3 className="text-3xl font-black mt-2 mb-4">
+                {formatCurrency(summary?.post_tax_profit || 0)}
+              </h3>
+              <div className="flex items-center justify-between text-xs font-medium bg-white/10 rounded-xl p-3 backdrop-blur-sm">
+                <span>예상 납부세액</span>
+                <span className="text-base">{formatCurrency(summary?.actual_tax_paid || 0)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Hometax Integration Tri-Pillar Dashboard */}
+          <div className="pt-6">
+            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+              <Building className="w-6 h-6 text-indigo-500" />
+              홈택스 매입·매출 통합 현황
+              <span className="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-1 rounded-full ml-2">자동 연동</span>
+            </h2>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Pillar 1: Tax Invoices */}
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:border-indigo-300 transition-colors">
+                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-bold text-slate-800">세금계산서</h3>
                   </div>
                 </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
+                <div className="p-6 flex-1 flex flex-col justify-center space-y-6">
+                  {summary?.codef_sync ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-500">매출 (발행건)</p>
+                          <p className="text-2xl font-bold text-blue-600 mt-1">{summary.codef_sync.tax_invoice_sales_count}건</p>
+                        </div>
+                        <TrendingUp className="w-8 h-8 text-blue-100" />
+                      </div>
+                      <div className="h-px bg-slate-100 w-full"></div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-500">매입 (수취건)</p>
+                          <p className="text-2xl font-bold text-rose-500 mt-1">{summary.codef_sync.tax_invoice_purchase_count}건</p>
+                        </div>
+                        <TrendingDown className="w-8 h-8 text-rose-100" />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center text-slate-400 py-4">
+                      연동된 데이터가 없습니다
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* 총 지출 */}
-            <div className="bg-white rounded-xl shadow-sm border p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">총 지출</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">
-                    {formatCurrency(summary?.total_expense || 0)}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    인건비 {formatCurrency(summary?.personnel_expense || 0)}
-                  </p>
+              {/* Pillar 2: Cash Receipts */}
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:border-emerald-300 transition-colors">
+                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                      <Receipt className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-bold text-slate-800">현금영수증</h3>
+                  </div>
                 </div>
-                <div className="p-3 bg-red-100 rounded-full">
-                  <TrendingDown className="w-6 h-6 text-red-600" />
-                </div>
-              </div>
-            </div>
-
-            {/* 세전 순이익 */}
-            <div className="bg-white rounded-xl shadow-sm border p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">세전 순이익</p>
-                  <p
-                    className={`text-2xl font-bold mt-1 ${
-                      (summary?.pre_tax_profit || 0) >= 0 ? 'text-blue-600' : 'text-red-600'
-                    }`}
-                  >
-                    {formatCurrency(summary?.pre_tax_profit || 0)}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-2">수익률 {profitMargin}%</p>
-                </div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <DollarSign className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
-
-            {/* 세후 순이익 */}
-            <div className="bg-white rounded-xl shadow-sm border p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">세후 순이익</p>
-                  <p
-                    className={`text-2xl font-bold mt-1 ${
-                      (summary?.post_tax_profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
-                    {formatCurrency(summary?.post_tax_profit || 0)}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    세금 {formatCurrency(summary?.actual_tax_paid || 0)}
-                  </p>
-                </div>
-                <div className="p-3 bg-purple-100 rounded-full">
-                  <PiggyBank className="w-6 h-6 text-purple-600" />
+                <div className="p-6 flex-1 flex flex-col justify-center space-y-6">
+                  {summary?.codef_sync ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-500">매출 (발행건)</p>
+                          <p className="text-2xl font-bold text-emerald-600 mt-1">{summary.codef_sync.cash_receipt_sales_count}건</p>
+                        </div>
+                        <TrendingUp className="w-8 h-8 text-emerald-100" />
+                      </div>
+                      <div className="h-px bg-slate-100 w-full"></div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-500">매입 (수취건)</p>
+                          <p className="text-2xl font-bold text-rose-500 mt-1">{summary.codef_sync.cash_receipt_purchase_count}건</p>
+                        </div>
+                        <TrendingDown className="w-8 h-8 text-rose-100" />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center text-slate-400 py-4">
+                      연동된 데이터가 없습니다
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* 액션 버튼 */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowRevenueForm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <TrendingUp className="w-4 h-4" />
-              수입 입력
-            </button>
-            <button
-              onClick={() => setShowExpenseForm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              지출 추가
-            </button>
-          </div>
-
-          {/* CODEF 홈택스 연동 패널 */}
-          <CodefSyncPanel
-            clinicId={clinicId}
-            year={selectedYear}
-            month={selectedMonth}
-            onSyncComplete={loadData}
-          />
-
-          {/* 신용카드 매출 조회 패널 */}
-          <CreditCardSalesPanel
-            clinicId={clinicId}
-            year={selectedYear}
-            month={selectedMonth}
-          />
-
-          {/* 지출 내역 테이블 */}
-          <div className="bg-white rounded-xl shadow-sm border">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-gray-400" />
-                지출 내역
-              </h2>
-              <span className="text-sm text-gray-500">{expenses.length}건</span>
-            </div>
-
-            {expenses.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>이번 달 지출 내역이 없습니다.</p>
-                <button
-                  onClick={() => setShowExpenseForm(true)}
-                  className="mt-3 text-blue-600 hover:underline text-sm"
-                >
-                  지출 추가하기
-                </button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        카테고리
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        내역
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        거래처
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                        금액
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                        증빙
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                        작업
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {expenses.map(expense => (
-                      <tr key={expense.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            {expense.category?.name ||
-                              EXPENSE_CATEGORY_LABELS[
-                                expense.category?.type as ExpenseCategoryType
-                              ] ||
-                              '기타'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {expense.description || '-'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {expense.vendor_name || '-'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                          {formatCurrency(expense.amount)}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {expense.has_tax_invoice && (
-                            <span
-                              className="inline-flex items-center text-green-600"
-                              title="세금계산서"
-                            >
-                              <Receipt className="w-4 h-4" />
-                            </span>
-                          )}
-                          {expense.is_business_card && (
-                            <span
-                              className="inline-flex items-center text-blue-600 ml-1"
-                              title="사업용카드"
-                            >
-                              <Building2 className="w-4 h-4" />
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => handleDeleteExpense(expense.id)}
-                            className="text-gray-400 hover:text-red-600 transition-colors"
-                            title="삭제"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* 지출 카테고리별 요약 */}
-          {summary && (
-            <div className="bg-white rounded-xl shadow-sm border p-5">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-gray-400" />
-                지출 카테고리별 현황
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {[
-                  { label: '인건비', value: summary.personnel_expense, color: 'blue' },
-                  { label: '임대료', value: summary.rent_expense, color: 'purple' },
-                  { label: '관리비', value: summary.utilities_expense, color: 'yellow' },
-                  { label: '재료비', value: summary.material_expense, color: 'green' },
-                  { label: '기공비', value: summary.lab_expense, color: 'pink' },
-                  { label: '기타', value: summary.other_expense, color: 'gray' },
-                ].map(item => (
-                  <div key={item.label} className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500">{item.label}</p>
-                    <p className="text-sm font-semibold mt-1">
-                      {formatCurrency(item.value || 0)}
+              {/* Pillar 3: Codef Connection Manager / Quick Actions */}
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600">
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-bold text-slate-800">연동 관리</h3>
+                  </div>
+                </div>
+                <div className="p-5 flex-1 flex flex-col justify-between">
+                  <CodefSyncPanel
+                    clinicId={clinicId}
+                    year={selectedYear}
+                    month={selectedMonth}
+                    onSyncComplete={loadData}
+                  />
+                  {summary?.codef_sync?.synced_at && (
+                    <p className="text-xs text-center text-slate-400 mt-4">
+                      마지막 동기화: {new Date(summary.codef_sync.synced_at).toLocaleString('ko-KR')}
                     </p>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             </div>
-          )}
 
-          {/* 세금 정보 */}
-          {summary && (summary.income_tax > 0 || summary.total_tax > 0) && (
-            <div className="bg-white rounded-xl shadow-sm border p-5">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-gray-400" />
-                세금 정보
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">종합소득세</p>
-                  <p className="text-lg font-semibold mt-1">
-                    {formatCurrency(summary.income_tax)}
-                  </p>
+            {/* 신용카드 매출 조회 패널 - Beautiful integration */}
+            <div className="mt-6">
+              <CreditCardSalesPanel
+                clinicId={clinicId}
+                year={selectedYear}
+                month={selectedMonth}
+              />
+            </div>
+          </div>
+
+          <div className="pt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Detailed Expense Table Section */}
+              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <Receipt className="w-5 h-5 text-indigo-500" />
+                    상세 지출 내역
+                    <span className="bg-slate-200 text-slate-600 text-xs px-2 py-0.5 rounded-full ml-2">
+                      {expenses.length}건
+                    </span>
+                  </h2>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowExpenseForm(true)}
+                      className="flex items-center justify-center w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors"
+                      title="지출 추가"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setShowRevenueForm(true)}
+                      className="flex items-center justify-center w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors"
+                      title="수입 추가"
+                    >
+                      <TrendingUp className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">지방소득세</p>
-                  <p className="text-lg font-semibold mt-1">
-                    {formatCurrency(summary.local_income_tax)}
-                  </p>
-                </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">정부 지원</p>
-                  <p className="text-lg font-semibold mt-1 text-green-600">
-                    +{formatCurrency(summary.government_support)}
-                  </p>
-                </div>
-                <div className="p-3 bg-red-50 rounded-lg">
-                  <p className="text-xs text-gray-500">실납부 세금</p>
-                  <p className="text-lg font-semibold mt-1 text-red-600">
-                    {formatCurrency(summary.actual_tax_paid)}
-                  </p>
-                </div>
+
+                {expenses.length === 0 ? (
+                  <div className="p-16 text-center text-slate-400 flex flex-col items-center">
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                      <FileText className="w-10 h-10 text-slate-300" />
+                    </div>
+                    <p className="font-medium text-slate-600 text-lg">이번 달 지출 내역이 없습니다</p>
+                    <p className="text-sm mt-1 mb-6">수동으로 내역을 추가하거나 홈택스 연동을 진행하세요.</p>
+                    <button
+                      onClick={() => setShowExpenseForm(true)}
+                      className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl shadow-sm hover:bg-indigo-700 transition"
+                    >
+                      <Plus className="w-5 h-5" />
+                      지출 추가하기
+                    </button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/80 text-xs uppercase font-semibold text-slate-500 tracking-wider">
+                          <th className="px-6 py-4 border-b border-slate-100">분류</th>
+                          <th className="px-6 py-4 border-b border-slate-100">내역</th>
+                          <th className="px-6 py-4 border-b border-slate-100 text-right">금액</th>
+                          <th className="px-6 py-4 border-b border-slate-100 text-center">증빙</th>
+                          <th className="px-6 py-4 border-b border-slate-100 text-center">작업</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {expenses.map(expense => (
+                          <tr key={expense.id} className="hover:bg-slate-50/80 transition-colors group">
+                            <td className="px-6 py-4">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                                {expense.category?.name ||
+                                  EXPENSE_CATEGORY_LABELS[expense.category?.type as ExpenseCategoryType] ||
+                                  '기타'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="font-medium text-slate-800">{expense.description || '-'}</p>
+                              <p className="text-xs text-slate-400 mt-0.5">{expense.vendor_name}</p>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <p className="font-bold text-slate-900">{formatCurrency(expense.amount)}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex justify-center gap-1.5">
+                                {expense.has_tax_invoice && (
+                                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600" title="세금계산서">
+                                    <Receipt className="w-4 h-4" />
+                                  </div>
+                                )}
+                                {expense.is_business_card && (
+                                  <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-600" title="사업용카드">
+                                    <Building2 className="w-4 h-4" />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <button
+                                onClick={() => handleDeleteExpense(expense.id)}
+                                className="w-8 h-8 inline-flex items-center justify-center text-slate-300 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </>
+
+            <div className="space-y-6">
+              {/* Category Breakdown */}
+              {summary && (
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                  <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-indigo-500" />
+                    지출 카테고리
+                  </h2>
+                  <div className="space-y-4">
+                    {[
+                      { label: '인건비', value: summary.personnel_expense, color: 'bg-rose-500' },
+                      { label: '임대료', value: summary.rent_expense, color: 'bg-purple-500' },
+                      { label: '재료비', value: summary.material_expense, color: 'bg-emerald-500' },
+                      { label: '유지비', value: summary.utilities_expense, color: 'bg-amber-500' },
+                    ].map(item => {
+                      const total = summary.total_expense || 1;
+                      const percent = Math.round((item.value / total) * 100);
+                      return (
+                        <div key={item.label} className="group">
+                          <div className="flex justify-between items-end mb-1">
+                            <span className="text-sm font-semibold text-slate-700">{item.label}</span>
+                            <span className="text-sm font-bold text-slate-900">{formatCurrency(item.value)}</span>
+                          </div>
+                          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${item.color} rounded-full transition-all duration-1000 ease-out`}
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Tax Information */}
+              {summary && (summary.income_tax > 0 || summary.total_tax > 0) && (
+                <div className="bg-slate-800 rounded-3xl shadow-sm border border-slate-700 p-6 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-5">
+                    <Calculator className="w-32 h-32" />
+                  </div>
+                  <h2 className="text-lg font-bold mb-6 flex items-center gap-2 relative z-10">
+                    <Calculator className="w-5 h-5 text-blue-400" />
+                    예상 세금 정보
+                  </h2>
+                  <div className="space-y-4 relative z-10">
+                    <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
+                      <span className="text-sm text-slate-300">종합소득세</span>
+                      <span className="font-medium text-slate-100">{formatCurrency(summary.income_tax)}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
+                      <span className="text-sm text-slate-300">지방소득세</span>
+                      <span className="font-medium text-slate-100">{formatCurrency(summary.local_income_tax)}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl">
+                      <span className="text-sm text-emerald-300 font-medium">정부 지원</span>
+                      <span className="font-bold text-emerald-400">-{formatCurrency(summary.government_support)}</span>
+                    </div>
+                    <div className="w-full h-px bg-slate-700 my-2"></div>
+                    <div className="flex justify-between items-center px-1">
+                      <span className="text-sm text-rose-300 font-medium">실납부 세금</span>
+                      <span className="text-xl font-black text-white">{formatCurrency(summary.actual_tax_paid)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 수입 입력 모달 */}
       {showRevenueForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
             <RevenueForm
               clinicId={clinicId}
               year={selectedYear}
@@ -467,10 +548,10 @@ export default function FinancialDashboard() {
               initialData={
                 summary
                   ? {
-                      insurance_revenue: summary.insurance_revenue,
-                      non_insurance_revenue: summary.non_insurance_revenue,
-                      other_revenue: summary.other_revenue,
-                    }
+                    insurance_revenue: summary.insurance_revenue,
+                    non_insurance_revenue: summary.non_insurance_revenue,
+                    other_revenue: summary.other_revenue,
+                  }
                   : undefined
               }
               onSave={() => {
@@ -485,8 +566,8 @@ export default function FinancialDashboard() {
 
       {/* 지출 입력 모달 */}
       {showExpenseForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
             <ExpenseForm
               clinicId={clinicId}
               year={selectedYear}

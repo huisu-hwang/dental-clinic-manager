@@ -17,6 +17,10 @@ import {
   FileKey,
   X,
   Info,
+  Smartphone,
+  Lock,
+  Check,
+  Disc
 } from 'lucide-react'
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 
@@ -275,225 +279,158 @@ export default function CreditCardSalesPanel({
         </div>
       </div>
 
-      {/* 인증서 등록 폼 */}
+      {/* 인증서 등록 폼 (한국형 공동인증서 UI 스타일) */}
       {showCertForm && (
-        <div className="p-5 border-b bg-slate-50">
-          {/* 안내 메시지 */}
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
-            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-            <div className="text-sm text-blue-700">
-              <p className="font-medium">공동인증서 필요</p>
-              <p className="mt-0.5 text-blue-600">
-                신용카드 매출자료 조회는 공동인증서(구 공인인증서)로만 인증이 가능합니다.
-                인증서 파일과 비밀번호를 입력해주세요.
-              </p>
-            </div>
-          </div>
+        <div className="p-5 border-b bg-gray-50/50">
 
-          {/* 인증서 타입 선택 */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              인증서 타입
-            </label>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleCertTypeChange('1')}
-                className={`flex-1 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-                  certType === '1'
-                    ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <FileKey className="w-4 h-4 inline mr-1.5" />
-                DER/KEY 파일
-              </button>
-              <button
-                onClick={() => handleCertTypeChange('pfx')}
-                className={`flex-1 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-                  certType === 'pfx'
-                    ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4 inline mr-1.5" />
-                PFX 파일
+          <div className="border border-[#1e3a8a] rounded-lg bg-white overflow-hidden shadow-sm max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="bg-[#1e3a8a] text-white px-5 py-3 flex items-center justify-between">
+              <h4 className="font-bold flex items-center gap-2 text-base">
+                <ShieldCheck className="w-5 h-5 text-indigo-200" />
+                인증서 선택
+              </h4>
+              <button onClick={() => setShowCertForm(false)} className="text-white hover:text-indigo-200 transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
-          </div>
 
-          {/* 인증서 파일 업로드 */}
-          <div className="space-y-3 mb-4">
-            {/* Cert 파일 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {certType === '1' ? '인증서 파일 (signCert.der)' : '인증서 파일 (.pfx / .p12)'}
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  ref={certFileRef}
-                  type="file"
-                  accept={certType === '1' ? '.der' : '.pfx,.p12'}
-                  onChange={handleCertFileChange}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => certFileRef.current?.click()}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  파일 선택
-                </button>
-                {certFileName ? (
-                  <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">
-                    <ShieldCheck className="w-4 h-4" />
-                    {certFileName}
-                    <button
-                      onClick={() => {
-                        setCertFile('')
-                        setCertFileName('')
-                        setCertReady(false)
-                        if (certFileRef.current) certFileRef.current.value = ''
-                      }}
-                      className="text-gray-400 hover:text-red-500"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <span className="text-sm text-gray-400">선택된 파일 없음</span>
-                )}
-              </div>
-            </div>
-
-            {/* Key 파일 (der/key 타입만) */}
-            {certType === '1' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  키 파일 (signPri.key)
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={keyFileRef}
-                    type="file"
-                    accept=".key"
-                    onChange={handleKeyFileChange}
-                    className="hidden"
-                  />
-                  <button
-                    onClick={() => keyFileRef.current?.click()}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
+            <div className="p-5 flex flex-col md:flex-row gap-6">
+              {/* Left: Storage Media */}
+              <div className="w-full md:w-1/4">
+                <p className="text-sm font-bold text-gray-800 mb-3 ml-1">저장매체 선택</p>
+                <div className="grid grid-cols-2 lg:grid-cols-2 gap-2">
+                  <div
+                    className={`p-3 border rounded-lg text-center cursor-pointer transition-all ${certType === '1' ? 'bg-[#f0f4ff] border-[#1e3a8a] text-[#1e3a8a] font-bold shadow-sm' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'}`}
+                    onClick={() => handleCertTypeChange('1')}
                   >
-                    <Upload className="w-4 h-4" />
-                    파일 선택
-                  </button>
-                  {keyFileName ? (
-                    <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">
-                      <FileKey className="w-4 h-4" />
-                      {keyFileName}
-                      <button
-                        onClick={() => {
-                          setKeyFile('')
-                          setKeyFileName('')
-                          setCertReady(false)
-                          if (keyFileRef.current) keyFileRef.current.value = ''
-                        }}
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-400">선택된 파일 없음</span>
-                  )}
+                    <Disc className="w-8 h-8 mx-auto mb-2 opacity-80" />
+                    <p className="text-[11px] leading-tight break-keep-all">하드디스크<br />(DER/KEY)</p>
+                  </div>
+                  <div
+                    className={`p-3 border rounded-lg text-center cursor-pointer transition-all ${certType === 'pfx' ? 'bg-[#f0f4ff] border-[#1e3a8a] text-[#1e3a8a] font-bold shadow-sm' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'}`}
+                    onClick={() => handleCertTypeChange('pfx')}
+                  >
+                    <FileKey className="w-8 h-8 mx-auto mb-2 opacity-80" />
+                    <p className="text-[11px] leading-tight break-keep-all">이동식디스크<br />(PFX)</p>
+                  </div>
+                  <div className="p-3 border border-gray-100 bg-gray-50/50 text-gray-400 rounded-lg text-center">
+                    <Smartphone className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                    <p className="text-[11px] leading-tight break-keep-all">휴대전화</p>
+                  </div>
+                  <div className="p-3 border border-gray-100 bg-gray-50/50 text-gray-400 rounded-lg text-center">
+                    <Lock className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                    <p className="text-[11px] leading-tight break-keep-all">보안토큰</p>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* 인증서 비밀번호 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                인증서 비밀번호
-              </label>
-              <input
-                type="password"
-                value={certPassword}
-                onChange={(e) => handlePasswordChange(e.target.value)}
-                className="w-full max-w-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="공동인증서 비밀번호"
-              />
+              {/* Right: File Upload and Password */}
+              <div className="w-full md:w-3/4 flex flex-col">
+                <p className="text-sm font-bold text-gray-800 mb-3 ml-1">인증서 파일 선택</p>
+
+                {/* File Selection Area */}
+                <div className="border border-gray-300 rounded-lg bg-white overflow-hidden mb-5">
+                  <div className="bg-gray-100 border-b border-gray-300 px-4 py-2.5 text-xs font-bold text-gray-600 flex justify-between">
+                    <span>구분 / 파일명</span>
+                    <span>액션</span>
+                  </div>
+
+                  <div className="p-4 flex flex-col gap-3 bg-white min-h-[140px]">
+                    <div className="hidden">
+                      <input ref={certFileRef} type="file" accept={certType === '1' ? '.der' : '.pfx,.p12'} onChange={handleCertFileChange} />
+                      <input ref={keyFileRef} type="file" accept=".key" onChange={handleKeyFileChange} />
+                    </div>
+
+                    {/* Primary File */}
+                    <div className={`flex items-center justify-between p-3 border rounded-lg transition-all ${certFile ? 'bg-[#f0f9ff] border-blue-200' : 'bg-gray-50 border-dashed border-gray-300'}`}>
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className={`w-10 h-10 rounded-full flex shrink-0 items-center justify-center ${certFile ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'}`}>
+                          <ShieldCheck className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-gray-800">{certType === '1' ? '인증서 (.der)' : '공동인증서 (.pfx, .p12)'}</p>
+                          <p className="text-xs text-gray-500 truncate max-w-[200px] sm:max-w-xs">{certFileName || '파일을 찾아주세요'}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => certFileRef.current?.click()} className="shrink-0 ml-2 px-3 py-1.5 border border-gray-300 bg-white text-xs font-medium text-gray-700 rounded shadow-sm hover:bg-gray-50 transition-colors">
+                        찾기
+                      </button>
+                    </div>
+
+                    {/* Secondary File (KEY) */}
+                    {certType === '1' && (
+                      <div className={`flex items-center justify-between p-3 border rounded-lg transition-all ${keyFile ? 'bg-[#f0f9ff] border-blue-200' : 'bg-gray-50 border-dashed border-gray-300'}`}>
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className={`w-10 h-10 rounded-full flex shrink-0 items-center justify-center ${keyFile ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-200 text-gray-400'}`}>
+                            <FileKey className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-gray-800">개인키 (.key)</p>
+                            <p className="text-xs text-gray-500 truncate max-w-[200px] sm:max-w-xs">{keyFileName || '파일을 찾아주세요'}</p>
+                          </div>
+                        </div>
+                        <button onClick={() => keyFileRef.current?.click()} className="shrink-0 ml-2 px-3 py-1.5 border border-gray-300 bg-white text-xs font-medium text-gray-700 rounded shadow-sm hover:bg-gray-50 transition-colors">
+                          찾기
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Password Input Area */}
+                <div className="bg-[#f8fafc] p-4 border border-gray-200 rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <label className="text-sm font-bold text-gray-800 shrink-0 w-24">인증서 암호</label>
+                    <div className="relative flex-1">
+                      <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="password"
+                        value={certPassword}
+                        onChange={(e) => handlePasswordChange(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#1e3a8a] focus:border-[#1e3a8a] text-sm"
+                        placeholder="인증서 암호를 입력하세요"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-2 sm:ml-[108px]">
+                    * 인증서 암호는 대소문자를 구분합니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Form Controls */}
+            <div className="bg-gray-100 px-5 py-4 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-sm w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                <span className="text-gray-600 font-medium whitespace-nowrap hidden sm:inline">조회기간:</span>
+                <select value={queryYear} onChange={(e) => setQueryYear(parseInt(e.target.value, 10))} className="px-2 py-1.5 border border-gray-300 bg-white rounded text-sm focus:ring-[#1e3a8a] focus:border-[#1e3a8a]">
+                  {yearOptions.map((y) => <option key={y} value={y}>{y}년</option>)}
+                </select>
+                <select value={startQuarter} onChange={(e) => setStartQuarter(e.target.value)} className="px-2 py-1.5 border border-gray-300 bg-white rounded text-sm focus:ring-[#1e3a8a] focus:border-[#1e3a8a]">
+                  <option value="1">1분기</option><option value="2">2분기</option><option value="3">3분기</option><option value="4">4분기</option>
+                </select>
+                <span className="text-gray-400">~</span>
+                <select value={endQuarter} onChange={(e) => setEndQuarter(e.target.value)} className="px-2 py-1.5 border border-gray-300 bg-white rounded text-sm focus:ring-[#1e3a8a] focus:border-[#1e3a8a]">
+                  <option value="1">1분기</option><option value="2">2분기</option><option value="3">3분기</option><option value="4">4분기</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                <button onClick={() => setShowCertForm(false)} className="px-6 py-2 border border-gray-300 bg-white text-gray-700 font-medium rounded hover:bg-gray-50 transition-colors text-sm">
+                  취소
+                </button>
+                <button
+                  onClick={fetchSalesData}
+                  disabled={loading || !certReady}
+                  className="px-8 py-2 bg-[#1e3a8a] hover:bg-blue-900 disabled:bg-indigo-300 disabled:cursor-not-allowed text-white font-bold rounded shadow-sm transition-colors flex items-center gap-2 text-sm"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  확인
+                </button>
+              </div>
             </div>
           </div>
-
-          {/* 조회 조건 */}
-          <div className="flex flex-wrap items-end gap-3 mb-4">
-            {/* 연도 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">연도</label>
-              <select
-                value={queryYear}
-                onChange={(e) => setQueryYear(parseInt(e.target.value, 10))}
-                className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-              >
-                {yearOptions.map((y) => (
-                  <option key={y} value={y}>{y}년</option>
-                ))}
-              </select>
-            </div>
-
-            {/* 시작 분기 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">시작 분기</label>
-              <select
-                value={startQuarter}
-                onChange={(e) => setStartQuarter(e.target.value)}
-                className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="1">1분기 (1~3월)</option>
-                <option value="2">2분기 (4~6월)</option>
-                <option value="3">3분기 (7~9월)</option>
-                <option value="4">4분기 (10~12월)</option>
-              </select>
-            </div>
-
-            {/* 종료 분기 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">종료 분기</label>
-              <select
-                value={endQuarter}
-                onChange={(e) => setEndQuarter(e.target.value)}
-                className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="1">1분기 (1~3월)</option>
-                <option value="2">2분기 (4~6월)</option>
-                <option value="3">3분기 (7~9월)</option>
-                <option value="4">4분기 (10~12월)</option>
-              </select>
-            </div>
-
-            {/* 조회 버튼 */}
-            <button
-              onClick={fetchSalesData}
-              disabled={loading || !certReady}
-              className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  조회 중...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4" />
-                  매출 조회
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* 인증서 경로 안내 */}
-          <p className="text-xs text-gray-400">
-            * 공동인증서 위치: USB 드라이브 또는 PC의 NPKI 폴더 (C:\Users\[사용자]\AppData\LocalLow\NPKI 등)
-          </p>
         </div>
       )}
 

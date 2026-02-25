@@ -212,6 +212,15 @@ export interface FinancialSummary {
   pre_tax_profit: number;
   post_tax_profit: number;
   profit_margin_percent: number;
+
+  // CODEF 연동 데이터
+  codef_sync?: {
+    tax_invoice_sales_count: number;
+    tax_invoice_purchase_count: number;
+    cash_receipt_sales_count: number;
+    cash_receipt_purchase_count: number;
+    synced_at: string;
+  };
 }
 
 // 연간 재무 요약
