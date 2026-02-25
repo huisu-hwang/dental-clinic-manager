@@ -26,12 +26,17 @@ function getServiceClient() {
 // POST: 홈택스 계정 연결
 export async function POST(request: NextRequest) {
   try {
-    // CODEF 설정 확인
-    if (!isCodefConfigured()) {
-      return NextResponse.json(
-        { success: false, error: 'CODEF API가 설정되지 않았습니다. 환경변수를 확인하세요.' },
-        { status: 500 }
-      );
+    // DEMO VERSION: Always allow connection for demonstration purposes
+    const isDemoMode = false; // Set to false to use actual CODEF API
+
+    if (!isDemoMode) {
+      // CODEF 설정 확인
+      if (!isCodefConfigured()) {
+        return NextResponse.json(
+          { success: false, error: 'CODEF API가 설정되지 않았습니다. 환경변수를 확인하세요.' },
+          { status: 500 }
+        );
+      }
     }
 
     const body = await request.json();
@@ -64,28 +69,80 @@ export async function POST(request: NextRequest) {
 
     let connectedId: string | null = null;
 
-    // 기존 connectedId가 있으면 (활성이든 비활성이든) updateAccount로 갱신 시도
-    const existingConnectedId = activeConnection?.connected_id || anyConnection?.connected_id;
+    // 데모 모드일 때는 CODEF 연동 로직 생략하고 바로 성공 처리
+    if (isDemoMode) {
+      connectedId = 'demo-hometax-id-1234';
+      console.log('CODEF DEMO MODE: Successfully mocked connection');
+    } else {
+      // 기존 connectedId가 있으면 (활성이든 비활성이든) updateAccount로 갱신 시도
+      const existingConnectedId = activeConnection?.connected_id || anyConnection?.connected_id;
 
-    if (existingConnectedId) {
-      console.log('CODEF: 기존 connectedId 발견, updateAccount 시도:', existingConnectedId);
-      const updateResult = await updateCodefAccount(existingConnectedId, userId, password, identity);
-      console.log('CODEF updateAccount result:', JSON.stringify(updateResult.result));
+      if (existingConnectedId) {
+        console.log('CODEF: 기존 connectedId 발견, updateAccount 시도:', existingConnectedId);
+        const updateResult = await updateCodefAccount(existingConnectedId, userId, password, identity);
+        console.log('CODEF updateAccount result:', JSON.stringify(updateResult.result));
 
-      if (updateResult.result.code === 'CF-00000') {
-        connectedId = existingConnectedId;
+        if (updateResult.result.code === 'CF-00000') {
+          connectedId = existingConnectedId;
+        } else {
+          // updateAccount 실패 → createAccount 시도
+          console.log('CODEF: updateAccount 실패, createAccount 시도');
+          const createResult = await createCodefAccount(userId, password, identity);
+          console.log('CODEF createAccount result:', JSON.stringify(createResult.result));
+
+          if (createResult.result.code === 'CF-00000') {
+            connectedId = createResult.data?.connectedId;
+          } else if (createResult.result.code === 'CF-04000') {
+            // 이미 등록된 계정 → 기존 connectedId 그대로 재사용
+            console.log('CODEF: CF-04000, 기존 connectedId 재사용:', existingConnectedId);
+            connectedId = existingConnectedId;
+          } else {
+            const errorMsg = createResult.result.extraMessage
+              ? `${createResult.result.message} (${createResult.result.extraMessage})`
+              : createResult.result.message || 'CODEF 계정 연결에 실패했습니다.';
+            return NextResponse.json(
+              { success: false, error: errorMsg, code: createResult.result.code },
+              { status: 400 }
+            );
+          }
+        }
       } else {
-        // updateAccount 실패 → createAccount 시도
-        console.log('CODEF: updateAccount 실패, createAccount 시도');
+        // DB에 연결 이력이 전혀 없으면 새로 생성
         const createResult = await createCodefAccount(userId, password, identity);
         console.log('CODEF createAccount result:', JSON.stringify(createResult.result));
 
         if (createResult.result.code === 'CF-00000') {
           connectedId = createResult.data?.connectedId;
         } else if (createResult.result.code === 'CF-04000') {
-          // 이미 등록된 계정 → 기존 connectedId 그대로 재사용
-          console.log('CODEF: CF-04000, 기존 connectedId 재사용:', existingConnectedId);
-          connectedId = existingConnectedId;
+          // DB에 없지만 CODEF에 이미 등록됨 → connectedId 목록에서 조회
+          console.log('CODEF: CF-04000, connectedIdList 조회');
+          const idListResult = await getConnectedIdList();
+          const connectedIds = idListResult.data?.connectedIdList || [];
+          console.log('CODEF connectedIdList:', connectedIds);
+
+          if (connectedIds.length > 0) {
+            for (const existingId of connectedIds) {
+              const updateResult = await updateCodefAccount(existingId, userId, password, identity);
+              if (updateResult.result.code === 'CF-00000') {
+                connectedId = existingId;
+                break;
+              }
+            }
+            if (!connectedId) {
+              connectedId = connectedIds[0];
+            }
+          }
+
+          if (!connectedId) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'CODEF에 이미 등록된 계정이 있으나, 연결 ID를 찾을 수 없습니다. 관리자에게 문의하세요.',
+                code: createResult.result.code,
+              },
+              { status: 400 }
+            );
+          }
         } else {
           const errorMsg = createResult.result.extraMessage
             ? `${createResult.result.message} (${createResult.result.extraMessage})`
@@ -95,52 +152,6 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-      }
-    } else {
-      // DB에 연결 이력이 전혀 없으면 새로 생성
-      const createResult = await createCodefAccount(userId, password, identity);
-      console.log('CODEF createAccount result:', JSON.stringify(createResult.result));
-
-      if (createResult.result.code === 'CF-00000') {
-        connectedId = createResult.data?.connectedId;
-      } else if (createResult.result.code === 'CF-04000') {
-        // DB에 없지만 CODEF에 이미 등록됨 → connectedId 목록에서 조회
-        console.log('CODEF: CF-04000, connectedIdList 조회');
-        const idListResult = await getConnectedIdList();
-        const connectedIds = idListResult.data?.connectedIdList || [];
-        console.log('CODEF connectedIdList:', connectedIds);
-
-        if (connectedIds.length > 0) {
-          for (const existingId of connectedIds) {
-            const updateResult = await updateCodefAccount(existingId, userId, password, identity);
-            if (updateResult.result.code === 'CF-00000') {
-              connectedId = existingId;
-              break;
-            }
-          }
-          if (!connectedId) {
-            connectedId = connectedIds[0];
-          }
-        }
-
-        if (!connectedId) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: 'CODEF에 이미 등록된 계정이 있으나, 연결 ID를 찾을 수 없습니다. 관리자에게 문의하세요.',
-              code: createResult.result.code,
-            },
-            { status: 400 }
-          );
-        }
-      } else {
-        const errorMsg = createResult.result.extraMessage
-          ? `${createResult.result.message} (${createResult.result.extraMessage})`
-          : createResult.result.message || 'CODEF 계정 연결에 실패했습니다.';
-        return NextResponse.json(
-          { success: false, error: errorMsg, code: createResult.result.code },
-          { status: 400 }
-        );
       }
     }
 
@@ -178,14 +189,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const serviceType = getCodefServiceType();
+    let serviceType = getCodefServiceType();
+
+    // 데모 모드일때는 성공 메시지와 정식 서비스 타입 반환
+    if (isDemoMode) {
+      serviceType = '정식 (데모데이터)';
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         connectedId,
         serviceType,
-        message: '홈택스 계정이 성공적으로 연결되었습니다.',
+        message: isDemoMode ? '홈택스 계정이 데모 모드로 연결되었습니다.' : '홈택스 계정이 성공적으로 연결되었습니다.',
       },
     });
   } catch (error) {
@@ -281,8 +297,9 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .single();
 
-    const configured = isCodefConfigured();
-    const serviceType = getCodefServiceType();
+    const isDemoMode = false; // 데모 목적 해제
+    const configured = isDemoMode ? true : isCodefConfigured();
+    const serviceType = isDemoMode ? '정식 (데모데이터)' : getCodefServiceType();
 
     if (error || !connection) {
       return NextResponse.json({

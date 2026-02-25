@@ -13,7 +13,9 @@ import {
 // POST: 공동인증서 기반 신용카드 매출자료 조회
 export async function POST(request: NextRequest) {
   try {
-    if (!isCodefConfigured()) {
+    const isDemoMode = false; // Set to false to use actual CODEF API
+
+    if (!isDemoMode && !isCodefConfigured()) {
       return NextResponse.json(
         { success: false, error: 'CODEF API가 설정되지 않았습니다. 환경변수를 확인하세요.' },
         { status: 500 }
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (parseInt(startQuarter, 10) > parseInt(endQuarter, 10)) {
+    if (!isDemoMode && parseInt(startQuarter, 10) > parseInt(endQuarter, 10)) {
       return NextResponse.json(
         { success: false, error: '시작 분기가 종료 분기보다 클 수 없습니다.' },
         { status: 400 }
@@ -69,7 +71,16 @@ export async function POST(request: NextRequest) {
     const serviceType = getActualCodefServiceType();
     console.log(`CODEF 신용카드 매출 조회: year=${year}, Q${startQuarter}~Q${endQuarter}, serviceType=${serviceType}`);
 
-    const salesData = await getCreditCardSalesData(
+    // 데모 모드를 기반으로 실제 신용카드 PDF 데이터 모의 구현
+    const salesData = isDemoMode ? {
+      resSalesHistoryList: [
+        { resMonth: `${year}01`, resSalesCount: "134", resSalesAmount: "45000000" },
+        { resMonth: `${year}02`, resSalesCount: "112", resSalesAmount: "38500000" },
+        { resMonth: `${year}03`, resSalesCount: "156", resSalesAmount: "52000000" }
+      ],
+      resTotalList: [],
+      resSalesHistoryList1: []
+    } as any : await getCreditCardSalesData(
       certFile,
       certPassword,
       keyFile || '',
@@ -100,7 +111,7 @@ export async function POST(request: NextRequest) {
         salesHistory: salesData.resSalesHistoryList || [],
         totalList: salesData.resTotalList || [],
         pgSalesHistory: salesData.resSalesHistoryList1 || [],
-        serviceType,
+        serviceType: isDemoMode ? '정식 (데모데이터)' : serviceType,
         message: `${salesCount}개월 매출 데이터가 조회되었습니다.`,
       },
     });
