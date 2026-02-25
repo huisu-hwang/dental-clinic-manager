@@ -12,6 +12,7 @@ import { formatCurrency } from '@/utils/taxCalculationUtils'
 import RevenueForm from './RevenueForm'
 import ExpenseForm from './ExpenseForm'
 import CodefSyncPanel from './CodefSyncPanel'
+import CreditCardSalesPanel from './CreditCardSalesPanel'
 import {
   TrendingUp,
   TrendingDown,
@@ -279,6 +280,13 @@ export default function FinancialDashboard() {
             year={selectedYear}
             month={selectedMonth}
             onSyncComplete={loadData}
+          />
+
+          {/* 신용카드 매출 조회 패널 */}
+          <CreditCardSalesPanel
+            clinicId={clinicId}
+            year={selectedYear}
+            month={selectedMonth}
           />
 
           {/* 지출 내역 테이블 */}

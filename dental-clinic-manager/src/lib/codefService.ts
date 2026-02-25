@@ -11,6 +11,7 @@ import {
   TaxInvoiceStatisticsItem,
   CashReceiptPurchaseItem,
   CashReceiptSalesItem,
+  CreditCardSalesData,
   SyncResult,
   CODEF_ORGANIZATION,
   CODEF_ENDPOINTS,
@@ -455,6 +456,46 @@ export async function getCashReceiptSalesDetails(
   if (Array.isArray(data)) return data;
   if (data && typeof data === 'object' && 'resUsedDate' in (data as any)) return [data as CashReceiptSalesItem];
   return [];
+}
+
+// ============================================
+// 신용카드 매출자료 조회
+// Endpoint: /v1/kr/public/nt/tax-payment/credit-card-sales-data-list
+// Organization: 0006
+// 직접 인증 방식 (loginType=1, userId, userPassword)
+// ============================================
+
+export async function getCreditCardSalesData(
+  hometaxId: string,
+  hometaxPassword: string,
+  startYearMonth: string,  // YYYYMM 형식
+  endYearMonth: string     // YYYYMM 형식
+): Promise<CreditCardSalesData | null> {
+  const config = getCodefConfig();
+  const encryptedPassword = encryptRSAWithForge(config.publicKey, hometaxPassword);
+
+  const params = {
+    organization: CODEF_ORGANIZATION.CREDIT_CARD_SALES,  // 0006
+    loginType: '1',          // ID/PW 로그인
+    userId: hometaxId,
+    userPassword: encryptedPassword,
+    startDate: startYearMonth,    // YYYYMM
+    endDate: endYearMonth,        // YYYYMM
+    identity: '',
+    telecom: '',
+  };
+
+  const response = await requestProduct<CreditCardSalesData>(
+    CODEF_ENDPOINTS.CREDIT_CARD_SALES,
+    params
+  );
+
+  if (response.result.code !== 'CF-00000') {
+    console.error('Credit card sales data error:', response.result);
+    return null;
+  }
+
+  return response.data;
 }
 
 // ============================================
