@@ -62,6 +62,9 @@ export type Permission =
   | 'vendor_contacts_edit'   // 업체 연락처 수정
   | 'vendor_contacts_delete' // 업체 연락처 삭제
   | 'vendor_contacts_import' // 업체 연락처 일괄 등록
+  // 급여 명세서 권한
+  | 'payroll_view'            // 본인 급여 명세서 조회
+  | 'payroll_manage'          // 급여 설정 및 전체 직원 급여 관리 (원장)
   // 업무 체크리스트 권한
   | 'task_checklist_view'     // 본인 업무 체크리스트 조회/체크
   | 'task_checklist_manage'   // 업무 체크리스트 템플릿 생성/수정 (실장)
@@ -94,6 +97,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'notification_view', 'notification_manage',
     // 업체 연락처 관리 (모든 권한)
     'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit', 'vendor_contacts_delete', 'vendor_contacts_import',
+    // 급여 명세서 (모든 권한)
+    'payroll_view', 'payroll_manage',
     // 업무 체크리스트 (모든 권한)
     'task_checklist_view', 'task_checklist_manage', 'task_checklist_approve', 'task_checklist_view_all'
   ],
@@ -120,6 +125,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'notification_view',
     // 업체 연락처 관리 (삭제, 일괄 등록 제외)
     'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit',
+    // 급여 명세서 (본인 조회)
+    'payroll_view',
     // 업무 체크리스트 (본인 체크만 - 직원과 동일)
     'task_checklist_view'
   ],
@@ -143,6 +150,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_balance_view_own', 'leave_balance_view_all',
     // 업체 연락처 관리 (조회, 생성, 수정)
     'vendor_contacts_view', 'vendor_contacts_create', 'vendor_contacts_edit',
+    // 급여 명세서 (본인 조회)
+    'payroll_view',
     // 업무 체크리스트 (관리 및 전체 현황 - 실장은 템플릿 생성/수정 가능)
     'task_checklist_view', 'task_checklist_manage', 'task_checklist_view_all'
   ],
@@ -164,6 +173,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_balance_view_own', 'leave_balance_view_all',
     // 업체 연락처 관리 (조회, 생성)
     'vendor_contacts_view', 'vendor_contacts_create',
+    // 급여 명세서 (본인 조회)
+    'payroll_view',
     // 업무 체크리스트 (본인 체크만)
     'task_checklist_view'
   ],
@@ -185,6 +196,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'leave_balance_view_own',
     // 업체 연락처 관리 (조회만)
     'vendor_contacts_view',
+    // 급여 명세서 (본인 조회)
+    'payroll_view',
     // 업무 체크리스트 (본인 체크만)
     'task_checklist_view'
   ]
@@ -270,6 +283,10 @@ export const PERMISSION_GROUPS = {
     { key: 'vendor_contacts_delete', label: '연락처 삭제' },
     { key: 'vendor_contacts_import', label: '일괄 등록' }
   ],
+  '급여 명세서': [
+    { key: 'payroll_view', label: '본인 급여 명세서 조회' },
+    { key: 'payroll_manage', label: '급여 설정 및 관리' }
+  ],
   '업무 체크리스트': [
     { key: 'task_checklist_view', label: '본인 체크리스트 조회' },
     { key: 'task_checklist_manage', label: '체크리스트 관리' },
@@ -345,6 +362,9 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'vendor_contacts_edit': '업체 연락처 정보를 수정할 수 있습니다.',
   'vendor_contacts_delete': '업체 연락처를 삭제할 수 있습니다.',
   'vendor_contacts_import': '엑셀/CSV 파일로 업체 연락처를 일괄 등록할 수 있습니다.',
+  // 급여 명세서 권한 설명
+  'payroll_view': '본인의 급여 명세서를 조회할 수 있습니다.',
+  'payroll_manage': '급여 설정 및 전체 직원의 급여 명세서를 관리할 수 있습니다.',
   // 업무 체크리스트 권한 설명
   'task_checklist_view': '본인의 업무 체크리스트를 조회하고 체크할 수 있습니다.',
   'task_checklist_manage': '업무 체크리스트 템플릿을 생성하고 수정할 수 있습니다.',
