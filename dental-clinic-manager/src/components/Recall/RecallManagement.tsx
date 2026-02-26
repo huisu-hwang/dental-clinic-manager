@@ -85,16 +85,6 @@ export default function RecallManagement() {
     setToast({ show: true, message, type })
   }
 
-  // 전화번호 정규화 (중복 제거용)
-  const normalizePhone = (phone: string): string => {
-    if (!phone) return ''
-    const digits = phone.replace(/[^0-9]/g, '')
-    if (digits.length === 10 && !digits.startsWith('0')) {
-      return '0' + digits
-    }
-    return digits
-  }
-
   // 데이터 로드
   const loadPatients = useCallback(async (page: number = currentPage) => {
     setIsLoading(true)
@@ -105,17 +95,8 @@ export default function RecallManagement() {
     }
     const result = await recallService.patients.getPatients(filterWithPagination)
     if (result.success && result.data) {
-      // 전화번호 기준 중복 제거 (같은 전화번호의 환자가 여러 건 있으면 최신 1건만 표시)
-      const seen = new Map<string, RecallPatient>()
-      for (const patient of result.data.data) {
-        const key = normalizePhone(patient.phone_number)
-        const existing = seen.get(key)
-        if (!existing || new Date(patient.updated_at) > new Date(existing.updated_at)) {
-          seen.set(key, patient)
-        }
-      }
-      const deduplicated = Array.from(seen.values())
-      setPatients(deduplicated)
+      // 중복 제거는 getPatients 서비스에서 처리됨
+      setPatients(result.data.data)
       setTotalPages(result.data.totalPages)
       setTotalPatients(result.data.total)
       setCurrentPage(result.data.page)
