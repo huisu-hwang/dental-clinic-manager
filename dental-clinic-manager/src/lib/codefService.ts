@@ -609,10 +609,12 @@ export async function getCreditCardSalesData(
     organization: CODEF_ORGANIZATION.CREDIT_CARD_SALES,  // 0006
     loginType: '1',          // ID/PW 로그인
     id: hometaxId,
-    password: encryptedPassword,
+    userPassword: encryptedPassword,
     year,
     startDate: startQuarter,    // 분기 번호 ("1"~"4")
     endDate: endQuarter,        // 분기 번호 ("1"~"4")
+    identity: '',
+    telecom: '',
   };
 
   const response = await requestProduct<CreditCardSalesData>(
@@ -622,7 +624,7 @@ export async function getCreditCardSalesData(
 
   if (response.result.code !== 'CF-00000') {
     console.error('Credit card sales data error:', response.result);
-    return null;
+    throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
   }
 
   return response.data;
