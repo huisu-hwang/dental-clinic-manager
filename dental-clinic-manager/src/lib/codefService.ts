@@ -243,6 +243,82 @@ export async function updateCodefAccount(
   }
 }
 
+// ============================================
+// 공동인증서 기반 계정 관리 API
+// loginType: '0' (인증서 로그인)
+// ============================================
+
+export async function createCodefAccountWithCert(
+  certDerBase64: string, keyDerBase64: string, certPassword: string, identity: string
+): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
+  try {
+    const { codef, serviceType } = await createCodefInstance();
+    const config = getCodefConfig();
+    const serviceTypeConstant = await getServiceTypeConstant(serviceType);
+    const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
+
+    const param = {
+      accountList: [{
+        countryCode: 'KR',
+        businessType: 'NT',
+        clientType: 'P',
+        organization: CODEF_ORGANIZATION.HOMETAX,
+        loginType: '0',
+        certFile: certDerBase64,
+        keyFile: keyDerBase64,
+        password: encryptedPassword,
+        identity: identity,
+      }],
+    };
+
+    const response = await codef.createAccount(serviceTypeConstant, param);
+    return typeof response === 'string' ? JSON.parse(response) : response;
+  } catch (error: any) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('CODEF createAccountWithCert error:', errMsg);
+    return {
+      result: { code: 'CF-99999', extraMessage: String(error?.stack || ''), message: errMsg, transactionId: '' },
+      data: null as any,
+    };
+  }
+}
+
+export async function updateCodefAccountWithCert(
+  connectedId: string, certDerBase64: string, keyDerBase64: string, certPassword: string, identity: string
+): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
+  try {
+    const { codef, serviceType } = await createCodefInstance();
+    const config = getCodefConfig();
+    const serviceTypeConstant = await getServiceTypeConstant(serviceType);
+    const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
+
+    const param = {
+      connectedId,
+      accountList: [{
+        countryCode: 'KR',
+        businessType: 'NT',
+        clientType: 'P',
+        organization: CODEF_ORGANIZATION.HOMETAX,
+        loginType: '0',
+        certFile: certDerBase64,
+        keyFile: keyDerBase64,
+        password: encryptedPassword,
+        identity: identity,
+      }],
+    };
+
+    const response = await codef.updateAccount(serviceTypeConstant, param);
+    return typeof response === 'string' ? JSON.parse(response) : response;
+  } catch (error: any) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('CODEF updateAccountWithCert error:', errMsg);
+    return {
+      result: { code: 'CF-99999', extraMessage: String(error?.stack || ''), message: errMsg, transactionId: '' },
+      data: null as any,
+    };
+  }
+}
+
 export async function addCodefAccount(
   connectedId: string, userId: string, password: string, identity: string
 ): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {

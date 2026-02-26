@@ -9,6 +9,8 @@ import { createClient } from '@supabase/supabase-js';
 import {
   createCodefAccount,
   updateCodefAccount,
+  createCodefAccountWithCert,
+  updateCodefAccountWithCert,
   getConnectedIdList,
   deleteCodefAccount,
   isCodefConfigured,
@@ -40,13 +42,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { clinicId, userId, password, identity } = body;
+    const { clinicId, userId, password, identity, loginType, certFile, keyFile, certPassword } = body;
 
-    if (!clinicId || !userId || !password || !identity) {
-      return NextResponse.json(
-        { success: false, error: '필수 파라미터가 누락되었습니다. (clinicId, userId, password, identity)' },
-        { status: 400 }
-      );
+    // loginType: '1' = ID/PW (기본), '0' = 공동인증서
+    const isCertAuth = loginType === '0';
+
+    if (isCertAuth) {
+      if (!clinicId || !certFile || !keyFile || !certPassword || !identity) {
+        return NextResponse.json(
+          { success: false, error: '필수 파라미터가 누락되었습니다. (clinicId, certFile, keyFile, certPassword, identity)' },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (!clinicId || !userId || !password || !identity) {
+        return NextResponse.json(
+          { success: false, error: '필수 파라미터가 누락되었습니다. (clinicId, userId, password, identity)' },
+          { status: 400 }
+        );
+      }
     }
 
     // DB에서 기존 연결 정보 확인 (활성/비활성 모두 조회)
@@ -77,9 +91,17 @@ export async function POST(request: NextRequest) {
       // 기존 connectedId가 있으면 (활성이든 비활성이든) updateAccount로 갱신 시도
       const existingConnectedId = activeConnection?.connected_id || anyConnection?.connected_id;
 
+      // 인증 방식에 따른 CODEF 함수 래퍼
+      const doCreateAccount = isCertAuth
+        ? () => createCodefAccountWithCert(certFile, keyFile, certPassword, identity)
+        : () => createCodefAccount(userId, password, identity);
+      const doUpdateAccount = (connId: string) => isCertAuth
+        ? updateCodefAccountWithCert(connId, certFile, keyFile, certPassword, identity)
+        : updateCodefAccount(connId, userId, password, identity);
+
       if (existingConnectedId) {
         console.log('CODEF: 기존 connectedId 발견, updateAccount 시도:', existingConnectedId);
-        const updateResult = await updateCodefAccount(existingConnectedId, userId, password, identity);
+        const updateResult = await doUpdateAccount(existingConnectedId);
         console.log('CODEF updateAccount result:', JSON.stringify(updateResult.result));
 
         if (updateResult.result.code === 'CF-00000') {
@@ -87,7 +109,7 @@ export async function POST(request: NextRequest) {
         } else {
           // updateAccount 실패 → createAccount 시도
           console.log('CODEF: updateAccount 실패, createAccount 시도');
-          const createResult = await createCodefAccount(userId, password, identity);
+          const createResult = await doCreateAccount();
           console.log('CODEF createAccount result:', JSON.stringify(createResult.result));
 
           if (createResult.result.code === 'CF-00000') {
@@ -108,7 +130,7 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // DB에 연결 이력이 전혀 없으면 새로 생성
-        const createResult = await createCodefAccount(userId, password, identity);
+        const createResult = await doCreateAccount();
         console.log('CODEF createAccount result:', JSON.stringify(createResult.result));
 
         if (createResult.result.code === 'CF-00000') {
@@ -122,7 +144,7 @@ export async function POST(request: NextRequest) {
 
           if (connectedIds.length > 0) {
             for (const existingId of connectedIds) {
-              const updateResult = await updateCodefAccount(existingId, userId, password, identity);
+              const updateResult = await doUpdateAccount(existingId);
               if (updateResult.result.code === 'CF-00000') {
                 connectedId = existingId;
                 break;
@@ -162,24 +184,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 비밀번호 AES 암호화 후 DB 저장 (sync 시 복호화하여 CODEF API 호출)
-    const encryptedPw = encryptPasswordForStorage(password);
+    // DB 저장용 데이터 구성
+    const dbData: Record<string, any> = {
+      clinic_id: clinicId,
+      connected_id: connectedId,
+      is_active: true,
+      connected_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      login_type: isCertAuth ? '0' : '1',
+    };
+
+    if (isCertAuth) {
+      // 인증서 인증: 인증서/키/비밀번호 암호화 저장
+      dbData.encrypted_password = encryptPasswordForStorage(certPassword);
+      dbData.encrypted_cert_der = encryptPasswordForStorage(certFile);
+      dbData.encrypted_key_der = encryptPasswordForStorage(keyFile);
+      dbData.hometax_user_id = null;
+    } else {
+      // ID/PW 인증: 비밀번호 암호화 저장
+      dbData.encrypted_password = encryptPasswordForStorage(password);
+      dbData.hometax_user_id = userId;
+      dbData.encrypted_cert_der = null;
+      dbData.encrypted_key_der = null;
+    }
 
     // DB에 연결 정보 저장 (service_role로 RLS 우회)
     const { error: dbError } = await supabase
       .from('codef_connections')
-      .upsert(
-        {
-          clinic_id: clinicId,
-          connected_id: connectedId,
-          hometax_user_id: userId,
-          encrypted_password: encryptedPw,
-          is_active: true,
-          connected_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'clinic_id' }
-      );
+      .upsert(dbData, { onConflict: 'clinic_id' });
 
     if (dbError) {
       console.error('DB save error:', dbError);
@@ -320,6 +352,7 @@ export async function GET(request: NextRequest) {
         isConnected: true,
         connectedId: connection.connected_id,
         hometaxUserId: connection.hometax_user_id,
+        loginType: connection.login_type || '1',
         connectedAt: connection.connected_at,
         lastSyncDate: connection.last_sync_date,
         isConfigured: configured,
