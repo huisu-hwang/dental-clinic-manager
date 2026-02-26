@@ -12,17 +12,35 @@ import {
   Store,
   Receipt,
   Wallet,
-  Upload,
   ShieldCheck,
   FileKey,
   X,
-  Info,
   Smartphone,
   Lock,
   Check,
-  Disc
+  Disc,
+  Search,
+  CheckCircle2,
+  ChevronRight,
+  FolderOpen,
 } from 'lucide-react'
 import { formatCurrency } from '@/utils/taxCalculationUtils'
+import {
+  findCertificatePairs,
+  findPfxFiles,
+  parseCertificate,
+  createPfxCertInfo,
+  formatCertDate,
+  getRemainingDays,
+  getCANameFromPath,
+  type ParsedCertificate,
+  type PfxParsedCertificate,
+} from '@/lib/certificateParser'
+
+// DER/KEY 또는 PFX 인증서 통합 타입
+type FoundCertificate =
+  | (ParsedCertificate & { isPfx?: false })
+  | PfxParsedCertificate
 
 interface CreditCardSalesHistoryItem {
   resYearMonth: string
@@ -65,12 +83,12 @@ export default function CreditCardSalesPanel({
 }: CreditCardSalesPanelProps) {
   // 인증서 상태
   const [certType, setCertType] = useState<'1' | 'pfx'>('1')
-  const [certFile, setCertFile] = useState<string>('')
-  const [certFileName, setCertFileName] = useState<string>('')
-  const [keyFile, setKeyFile] = useState<string>('')
-  const [keyFileName, setKeyFileName] = useState<string>('')
+  const [foundCerts, setFoundCerts] = useState<FoundCertificate[]>([])
+  const [selectedCert, setSelectedCert] = useState<FoundCertificate | null>(null)
   const [certPassword, setCertPassword] = useState<string>('')
-  const [certReady, setCertReady] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [scanned, setScanned] = useState(false)
+  const [scanError, setScanError] = useState('')
 
   // 조회 조건
   const [queryYear, setQueryYear] = useState(year)
@@ -94,86 +112,110 @@ export default function CreditCardSalesPanel({
   const [showTotals, setShowTotals] = useState(false)
 
   // 파일 ref
-  const certFileRef = useRef<HTMLInputElement>(null)
-  const keyFileRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
 
-  // 파일을 base64로 변환
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const result = reader.result as string
-        // data:application/...;base64, 접두사 제거
-        const base64 = result.split(',')[1] || result
-        resolve(base64)
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  }
+  // 인증서 준비 상태 계산
+  const certReady = !!(selectedCert && certPassword)
 
-  // 인증서 파일 업로드 핸들러
-  const handleCertFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    try {
-      const base64 = await fileToBase64(file)
-      setCertFile(base64)
-      setCertFileName(file.name)
-      checkCertReady(base64, keyFile, certPassword, certType)
-    } catch {
-      setError('인증서 파일을 읽을 수 없습니다.')
-    }
-  }
-
-  // Key 파일 업로드 핸들러
-  const handleKeyFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    try {
-      const base64 = await fileToBase64(file)
-      setKeyFile(base64)
-      setKeyFileName(file.name)
-      checkCertReady(certFile, base64, certPassword, certType)
-    } catch {
-      setError('키 파일을 읽을 수 없습니다.')
-    }
-  }
-
-  // 인증서 준비 상태 확인
-  const checkCertReady = (cf: string, kf: string, pw: string, ct: string) => {
-    if (ct === '1') {
-      setCertReady(!!(cf && kf && pw))
-    } else {
-      setCertReady(!!(cf && pw))
-    }
-  }
-
-  // 인증서 타입 변경
+  // 저장매체 선택 시 폴더 검색 트리거
   const handleCertTypeChange = (type: '1' | 'pfx') => {
     setCertType(type)
-    // 파일 초기화
-    setCertFile('')
-    setCertFileName('')
-    setKeyFile('')
-    setKeyFileName('')
-    setCertReady(false)
-    if (certFileRef.current) certFileRef.current.value = ''
-    if (keyFileRef.current) keyFileRef.current.value = ''
+    setFoundCerts([])
+    setSelectedCert(null)
+    setCertPassword('')
+    setScanned(false)
+    setScanError('')
+    // 폴더 선택 다이얼로그 열기
+    setTimeout(() => {
+      if (folderInputRef.current) {
+        // 타입에 맞게 input 속성 조정
+        folderInputRef.current.value = ''
+        folderInputRef.current.click()
+      }
+    }, 100)
   }
 
-  // 비밀번호 변경
-  const handlePasswordChange = (pw: string) => {
-    setCertPassword(pw)
-    checkCertReady(certFile, keyFile, pw, certType)
-  }
+  // 폴더 검색 핸들러
+  const handleFolderScan = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setScanning(true)
+    setScanError('')
+    setFoundCerts([])
+    setSelectedCert(null)
+    setScanned(false)
+
+    try {
+      const parsed: FoundCertificate[] = []
+
+      if (certType === '1') {
+        // DER/KEY 쌍 검색
+        const pairs = findCertificatePairs(files)
+        for (const pair of pairs) {
+          try {
+            const cert = await parseCertificate(pair)
+            parsed.push(cert)
+          } catch (err) {
+            console.warn('인증서 파싱 실패:', pair.dirPath, err)
+          }
+        }
+      } else {
+        // PFX/P12 파일 검색
+        const pfxFiles = findPfxFiles(files)
+        for (const pfx of pfxFiles) {
+          try {
+            const pfxInfo = await createPfxCertInfo(pfx)
+            parsed.push(pfxInfo)
+          } catch (err) {
+            console.warn('PFX 파일 읽기 실패:', pfx.dirPath, err)
+          }
+        }
+      }
+
+      if (parsed.length === 0) {
+        setScanError(
+          certType === '1'
+            ? '선택한 폴더에서 DER/KEY 인증서를 찾을 수 없습니다.\nNPKI 폴더 또는 인증서가 있는 폴더를 선택해주세요.'
+            : '선택한 폴더에서 PFX/P12 파일을 찾을 수 없습니다.\n인증서가 있는 폴더를 선택해주세요.'
+        )
+        setScanned(true)
+        return
+      }
+
+      // DER 인증서: 만료되지 않은 것 우선 정렬
+      parsed.sort((a, b) => {
+        const aIsPfx = 'isPfx' in a && a.isPfx
+        const bIsPfx = 'isPfx' in b && b.isPfx
+        if (!aIsPfx && !bIsPfx) {
+          const aDer = a as ParsedCertificate
+          const bDer = b as ParsedCertificate
+          if (aDer.isExpired !== bDer.isExpired) return aDer.isExpired ? 1 : -1
+          return bDer.notAfter.getTime() - aDer.notAfter.getTime()
+        }
+        return 0
+      })
+
+      setFoundCerts(parsed)
+      // 유효한 인증서가 하나뿐이면 자동 선택
+      if (parsed.length === 1) {
+        const first = parsed[0]
+        const isExpired = !('isPfx' in first && first.isPfx) && (first as ParsedCertificate).isExpired
+        if (!isExpired) setSelectedCert(first)
+      }
+    } catch (err) {
+      console.error('인증서 검색 오류:', err)
+      setScanError('인증서 검색 중 오류가 발생했습니다.')
+    } finally {
+      setScanning(false)
+      setScanned(true)
+    }
+  }, [certType])
 
   // 데이터 조회
   const fetchSalesData = useCallback(async () => {
-    if (!certReady) {
-      setError('공동인증서를 먼저 등록해주세요.')
+    if (!selectedCert || !certPassword) {
+      setError('공동인증서를 선택하고 비밀번호를 입력해주세요.')
       return
     }
 
@@ -181,18 +223,31 @@ export default function CreditCardSalesPanel({
     setError(null)
 
     try {
+      const isPfx = 'isPfx' in selectedCert && selectedCert.isPfx
+      const body = isPfx
+        ? {
+            certFile: (selectedCert as PfxParsedCertificate).pfxBase64,
+            certPassword,
+            keyFile: '',
+            certType: 'pfx',
+            year: String(queryYear),
+            startQuarter,
+            endQuarter,
+          }
+        : {
+            certFile: (selectedCert as ParsedCertificate).certDerBase64,
+            certPassword,
+            keyFile: (selectedCert as ParsedCertificate).keyDerBase64,
+            certType: '1',
+            year: String(queryYear),
+            startQuarter,
+            endQuarter,
+          }
+
       const response = await fetch('/api/codef/credit-card-sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          certFile,
-          certPassword,
-          keyFile: certType === '1' ? keyFile : '',
-          certType,
-          year: String(queryYear),
-          startQuarter,
-          endQuarter,
-        }),
+        body: JSON.stringify(body),
       })
       const result = await response.json()
 
@@ -212,7 +267,7 @@ export default function CreditCardSalesPanel({
     } finally {
       setLoading(false)
     }
-  }, [certFile, certPassword, keyFile, certType, queryYear, startQuarter, endQuarter, certReady])
+  }, [selectedCert, certPassword, queryYear, startQuarter, endQuarter])
 
   // 합계 계산
   const totalAmount = salesHistory.reduce(
@@ -325,78 +380,178 @@ export default function CreditCardSalesPanel({
                 </div>
               </div>
 
-              {/* Right: File Upload and Password */}
+              {/* Right: Certificate List and Password */}
               <div className="w-full md:w-3/4 flex flex-col">
-                <p className="text-sm font-bold text-gray-800 mb-3 ml-1">인증서 파일 선택</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-bold text-gray-800 ml-1">
+                    {foundCerts.length > 0
+                      ? `인증서 선택 (${foundCerts.filter(c => !('isExpired' in c && (c as ParsedCertificate).isExpired)).length}개 유효 / 총 ${foundCerts.length}개)`
+                      : '인증서 목록'}
+                  </p>
+                  {scanned && (
+                    <button
+                      onClick={() => folderInputRef.current?.click()}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      다른 폴더 검색
+                    </button>
+                  )}
+                </div>
 
-                {/* File Selection Area */}
+                {/* Certificate List Area */}
                 <div className="border border-gray-300 rounded-lg bg-white overflow-hidden mb-5">
                   <div className="bg-gray-100 border-b border-gray-300 px-4 py-2.5 text-xs font-bold text-gray-600 flex justify-between">
-                    <span>구분 / 파일명</span>
-                    <span>액션</span>
+                    <span>소유자 / 발급기관</span>
+                    <span>유효기간</span>
                   </div>
 
-                  <div className="p-4 flex flex-col gap-3 bg-white min-h-[140px]">
-                    <div className="hidden">
-                      <input ref={certFileRef} type="file" accept={certType === '1' ? '.der' : '.pfx,.p12'} onChange={handleCertFileChange} />
-                      <input ref={keyFileRef} type="file" accept=".key" onChange={handleKeyFileChange} />
-                    </div>
-
-                    {/* Primary File */}
-                    <div className={`flex items-center justify-between p-3 border rounded-lg transition-all ${certFile ? 'bg-[#f0f9ff] border-blue-200' : 'bg-gray-50 border-dashed border-gray-300'}`}>
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className={`w-10 h-10 rounded-full flex shrink-0 items-center justify-center ${certFile ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'}`}>
-                          <ShieldCheck className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-gray-800">{certType === '1' ? '인증서 (.der)' : '공동인증서 (.pfx, .p12)'}</p>
-                          <p className="text-xs text-gray-500 truncate max-w-[200px] sm:max-w-xs">{certFileName || '파일을 찾아주세요'}</p>
-                        </div>
+                  <div className="bg-white min-h-[140px] max-h-[220px] overflow-y-auto">
+                    {/* 스캔 중 */}
+                    {scanning && (
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mb-2" />
+                        <p className="text-sm text-gray-500">인증서 검색 중...</p>
                       </div>
-                      <button onClick={() => certFileRef.current?.click()} className="shrink-0 ml-2 px-3 py-1.5 border border-gray-300 bg-white text-xs font-medium text-gray-700 rounded shadow-sm hover:bg-gray-50 transition-colors">
-                        찾기
-                      </button>
-                    </div>
+                    )}
 
-                    {/* Secondary File (KEY) */}
-                    {certType === '1' && (
-                      <div className={`flex items-center justify-between p-3 border rounded-lg transition-all ${keyFile ? 'bg-[#f0f9ff] border-blue-200' : 'bg-gray-50 border-dashed border-gray-300'}`}>
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className={`w-10 h-10 rounded-full flex shrink-0 items-center justify-center ${keyFile ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-200 text-gray-400'}`}>
-                            <FileKey className="w-5 h-5" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-gray-800">개인키 (.key)</p>
-                            <p className="text-xs text-gray-500 truncate max-w-[200px] sm:max-w-xs">{keyFileName || '파일을 찾아주세요'}</p>
-                          </div>
-                        </div>
-                        <button onClick={() => keyFileRef.current?.click()} className="shrink-0 ml-2 px-3 py-1.5 border border-gray-300 bg-white text-xs font-medium text-gray-700 rounded shadow-sm hover:bg-gray-50 transition-colors">
-                          찾기
+                    {/* 초기 상태: 폴더 선택 안내 */}
+                    {!scanning && !scanned && foundCerts.length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <Search className="w-8 h-8 text-gray-300 mb-2" />
+                        <p className="text-sm text-gray-500 mb-3">좌측에서 저장매체를 선택하면<br/>자동으로 인증서를 검색합니다.</p>
+                        <button
+                          onClick={() => folderInputRef.current?.click()}
+                          className="px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1.5"
+                        >
+                          <FolderOpen className="w-4 h-4" />
+                          폴더에서 인증서 찾기
                         </button>
                       </div>
                     )}
+
+                    {/* 검색 결과 없음 */}
+                    {!scanning && scanned && foundCerts.length === 0 && scanError && (
+                      <div className="flex flex-col items-center justify-center py-8 px-4">
+                        <AlertCircle className="w-6 h-6 text-amber-400 mb-2" />
+                        <p className="text-xs text-gray-500 text-center whitespace-pre-line">{scanError}</p>
+                        <button
+                          onClick={() => folderInputRef.current?.click()}
+                          className="mt-3 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition-colors"
+                        >
+                          다시 검색
+                        </button>
+                      </div>
+                    )}
+
+                    {/* 인증서 목록 */}
+                    {foundCerts.map((cert, index) => {
+                      const isPfx = 'isPfx' in cert && cert.isPfx
+                      const certId = isPfx ? (cert as PfxParsedCertificate).fileName : (cert as ParsedCertificate).serialNumber
+                      const isSelected = selectedCert && (
+                        isPfx
+                          ? ('isPfx' in selectedCert && (selectedCert as PfxParsedCertificate).fileName === (cert as PfxParsedCertificate).fileName)
+                          : (!('isPfx' in selectedCert && selectedCert.isPfx) && (selectedCert as ParsedCertificate).serialNumber === (cert as ParsedCertificate).serialNumber)
+                      )
+                      const isExpired = !isPfx && (cert as ParsedCertificate).isExpired
+                      const isDisabled = isExpired || loading
+
+                      return (
+                        <button
+                          key={certId || index}
+                          onClick={() => {
+                            if (!isDisabled) {
+                              setSelectedCert(cert)
+                              setError(null)
+                            }
+                          }}
+                          disabled={isDisabled}
+                          className={`w-full text-left px-4 py-3 border-b last:border-b-0 transition-all flex items-center gap-3 ${
+                            isSelected
+                              ? 'bg-[#f0f4ff] border-b-blue-100'
+                              : isExpired
+                                ? 'bg-gray-50 opacity-50 cursor-not-allowed'
+                                : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          {/* 선택 표시 */}
+                          <div className="shrink-0">
+                            {isSelected ? (
+                              <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                            )}
+                          </div>
+
+                          {/* 인증서 정보 */}
+                          <div className="flex-1 min-w-0">
+                            {isPfx ? (
+                              <>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-sm font-medium ${isSelected ? 'text-blue-800' : 'text-gray-900'}`}>
+                                    {(cert as PfxParsedCertificate).fileName}
+                                  </span>
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">PFX</span>
+                                </div>
+                                <p className="text-xs text-gray-400 truncate">{(cert as PfxParsedCertificate).certPath || '직접 선택'}</p>
+                              </>
+                            ) : (
+                              <>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-sm font-medium ${isSelected ? 'text-blue-800' : 'text-gray-900'}`}>
+                                    {(cert as ParsedCertificate).subjectCN}
+                                  </span>
+                                  {isExpired ? (
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded font-medium">만료</span>
+                                  ) : getRemainingDays((cert as ParsedCertificate).notAfter) <= 30 ? (
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-medium">
+                                      {getRemainingDays((cert as ParsedCertificate).notAfter)}일
+                                    </span>
+                                  ) : null}
+                                  {(cert as ParsedCertificate).usage !== '일반' && (
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                      {(cert as ParsedCertificate).usage}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-400">
+                                  {(cert as ParsedCertificate).issuerCN || getCANameFromPath((cert as ParsedCertificate).certPath)}
+                                  {' · '}
+                                  {formatCertDate((cert as ParsedCertificate).notBefore)} ~ {formatCertDate((cert as ParsedCertificate).notAfter)}
+                                </p>
+                              </>
+                            )}
+                          </div>
+
+                          <ChevronRight className={`w-4 h-4 shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-300'}`} />
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
-                {/* Password Input Area */}
-                <div className="bg-[#f8fafc] p-4 border border-gray-200 rounded-lg">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <label className="text-sm font-bold text-gray-800 shrink-0 w-24">인증서 암호</label>
-                    <div className="relative flex-1">
-                      <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="password"
-                        value={certPassword}
-                        onChange={(e) => handlePasswordChange(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#1e3a8a] focus:border-[#1e3a8a] text-sm"
-                        placeholder="인증서 암호를 입력하세요"
-                      />
+                {/* Password Input Area - 인증서 선택 후 표시 */}
+                {selectedCert && (
+                  <div className="bg-[#f8fafc] p-4 border border-gray-200 rounded-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <label className="text-sm font-bold text-gray-800 shrink-0 w-24">인증서 암호</label>
+                      <div className="relative flex-1">
+                        <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="password"
+                          value={certPassword}
+                          onChange={(e) => setCertPassword(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#1e3a8a] focus:border-[#1e3a8a] text-sm"
+                          placeholder="인증서 암호를 입력하세요"
+                          autoFocus
+                        />
+                      </div>
                     </div>
+                    <p className="text-[11px] text-gray-500 mt-2 sm:ml-[108px]">
+                      * 인증서 암호는 대소문자를 구분합니다.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-2 sm:ml-[108px]">
-                    * 인증서 암호는 대소문자를 구분합니다.
-                  </p>
-                </div>
+                )}
               </div>
             </div>
 
@@ -704,6 +859,16 @@ export default function CreditCardSalesPanel({
           </button>
         </div>
       )}
+
+      {/* 숨겨진 폴더 선택 input */}
+      <input
+        ref={folderInputRef}
+        type="file"
+        className="hidden"
+        onChange={handleFolderScan}
+        {...({ webkitdirectory: '', directory: '', mozdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
+        multiple
+      />
     </div>
   )
 }
