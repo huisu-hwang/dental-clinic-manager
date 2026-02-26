@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import {
   CreditCard,
   Loader2,
@@ -22,25 +22,27 @@ import {
   Search,
   CheckCircle2,
   ChevronRight,
-  FolderOpen,
 } from 'lucide-react'
 import { formatCurrency } from '@/utils/taxCalculationUtils'
-import {
-  findCertificatePairs,
-  findPfxFiles,
-  parseCertificate,
-  createPfxCertInfo,
-  formatCertDate,
-  getRemainingDays,
-  getCANameFromPath,
-  type ParsedCertificate,
-  type PfxParsedCertificate,
-} from '@/lib/certificateParser'
 
-// DER/KEY 또는 PFX 인증서 통합 타입
-type FoundCertificate =
-  | (ParsedCertificate & { isPfx?: false })
-  | PfxParsedCertificate
+// 서버에서 반환하는 인증서 정보 타입
+interface ScannedCert {
+  type: 'der' | 'pfx'
+  subjectCN: string
+  issuerCN: string
+  issuerOU: string
+  serialNumber: string
+  notBefore: string
+  notAfter: string
+  isExpired: boolean
+  certDerBase64: string
+  keyDerBase64: string
+  pfxBase64: string
+  certPath: string
+  policyOid: string
+  usage: string
+  fileName: string
+}
 
 interface CreditCardSalesHistoryItem {
   resYearMonth: string
@@ -83,8 +85,8 @@ export default function CreditCardSalesPanel({
 }: CreditCardSalesPanelProps) {
   // 인증서 상태
   const [certType, setCertType] = useState<'1' | 'pfx'>('1')
-  const [foundCerts, setFoundCerts] = useState<FoundCertificate[]>([])
-  const [selectedCert, setSelectedCert] = useState<FoundCertificate | null>(null)
+  const [foundCerts, setFoundCerts] = useState<ScannedCert[]>([])
+  const [selectedCert, setSelectedCert] = useState<ScannedCert | null>(null)
   const [certPassword, setCertPassword] = useState<string>('')
   const [scanning, setScanning] = useState(false)
   const [scanned, setScanned] = useState(false)
@@ -111,35 +113,11 @@ export default function CreditCardSalesPanel({
   const [showPG, setShowPG] = useState(false)
   const [showTotals, setShowTotals] = useState(false)
 
-  // 파일 ref
-  const folderInputRef = useRef<HTMLInputElement>(null)
-
   // 인증서 준비 상태 계산
   const certReady = !!(selectedCert && certPassword)
 
-  // 저장매체 선택 시 폴더 검색 트리거
-  const handleCertTypeChange = (type: '1' | 'pfx') => {
-    setCertType(type)
-    setFoundCerts([])
-    setSelectedCert(null)
-    setCertPassword('')
-    setScanned(false)
-    setScanError('')
-    // 폴더 선택 다이얼로그 열기
-    setTimeout(() => {
-      if (folderInputRef.current) {
-        // 타입에 맞게 input 속성 조정
-        folderInputRef.current.value = ''
-        folderInputRef.current.click()
-      }
-    }, 100)
-  }
-
-  // 폴더 검색 핸들러
-  const handleFolderScan = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-
+  // 서버 API로 인증서 자동 검색
+  const scanCerts = useCallback(async (mediaType: 'hard' | 'removable', ct: '1' | 'pfx') => {
     setScanning(true)
     setScanError('')
     setFoundCerts([])
@@ -147,61 +125,33 @@ export default function CreditCardSalesPanel({
     setScanned(false)
 
     try {
-      const parsed: FoundCertificate[] = []
+      const certTypeParam = ct === '1' ? 'der' : 'pfx'
+      const res = await fetch(`/api/codef/scan-certs?mediaType=${mediaType}&certType=${certTypeParam}`)
+      const data = await res.json()
 
-      if (certType === '1') {
-        // DER/KEY 쌍 검색
-        const pairs = findCertificatePairs(files)
-        for (const pair of pairs) {
-          try {
-            const cert = await parseCertificate(pair)
-            parsed.push(cert)
-          } catch (err) {
-            console.warn('인증서 파싱 실패:', pair.dirPath, err)
-          }
-        }
-      } else {
-        // PFX/P12 파일 검색
-        const pfxFiles = findPfxFiles(files)
-        for (const pfx of pfxFiles) {
-          try {
-            const pfxInfo = await createPfxCertInfo(pfx)
-            parsed.push(pfxInfo)
-          } catch (err) {
-            console.warn('PFX 파일 읽기 실패:', pfx.dirPath, err)
-          }
-        }
+      if (!data.success) {
+        setScanError(data.error || '인증서 검색에 실패했습니다.')
+        setScanned(true)
+        return
       }
 
-      if (parsed.length === 0) {
+      const certs: ScannedCert[] = data.certs || []
+
+      if (certs.length === 0) {
         setScanError(
-          certType === '1'
-            ? '선택한 폴더에서 DER/KEY 인증서를 찾을 수 없습니다.\nNPKI 폴더 또는 인증서가 있는 폴더를 선택해주세요.'
-            : '선택한 폴더에서 PFX/P12 파일을 찾을 수 없습니다.\n인증서가 있는 폴더를 선택해주세요.'
+          ct === '1'
+            ? 'NPKI 기본 경로에서 DER/KEY 인증서를 찾을 수 없습니다.\n인증서가 설치되어 있는지 확인해주세요.'
+            : 'NPKI 기본 경로에서 PFX/P12 파일을 찾을 수 없습니다.\n인증서가 설치되어 있는지 확인해주세요.'
         )
         setScanned(true)
         return
       }
 
-      // DER 인증서: 만료되지 않은 것 우선 정렬
-      parsed.sort((a, b) => {
-        const aIsPfx = 'isPfx' in a && a.isPfx
-        const bIsPfx = 'isPfx' in b && b.isPfx
-        if (!aIsPfx && !bIsPfx) {
-          const aDer = a as ParsedCertificate
-          const bDer = b as ParsedCertificate
-          if (aDer.isExpired !== bDer.isExpired) return aDer.isExpired ? 1 : -1
-          return bDer.notAfter.getTime() - aDer.notAfter.getTime()
-        }
-        return 0
-      })
-
-      setFoundCerts(parsed)
+      setFoundCerts(certs)
       // 유효한 인증서가 하나뿐이면 자동 선택
-      if (parsed.length === 1) {
-        const first = parsed[0]
-        const isExpired = !('isPfx' in first && first.isPfx) && (first as ParsedCertificate).isExpired
-        if (!isExpired) setSelectedCert(first)
+      const validCerts = certs.filter(c => !c.isExpired)
+      if (validCerts.length === 1) {
+        setSelectedCert(validCerts[0])
       }
     } catch (err) {
       console.error('인증서 검색 오류:', err)
@@ -210,7 +160,15 @@ export default function CreditCardSalesPanel({
       setScanning(false)
       setScanned(true)
     }
-  }, [certType])
+  }, [])
+
+  // 저장매체 선택 시 자동 검색 트리거
+  const handleCertTypeChange = (type: '1' | 'pfx') => {
+    setCertType(type)
+    setCertPassword('')
+    const mediaType = type === '1' ? 'hard' : 'removable'
+    scanCerts(mediaType, type)
+  }
 
   // 데이터 조회
   const fetchSalesData = useCallback(async () => {
@@ -223,10 +181,9 @@ export default function CreditCardSalesPanel({
     setError(null)
 
     try {
-      const isPfx = 'isPfx' in selectedCert && selectedCert.isPfx
-      const body = isPfx
+      const body = selectedCert.type === 'pfx'
         ? {
-            certFile: (selectedCert as PfxParsedCertificate).pfxBase64,
+            certFile: selectedCert.pfxBase64,
             certPassword,
             keyFile: '',
             certType: 'pfx',
@@ -235,9 +192,9 @@ export default function CreditCardSalesPanel({
             endQuarter,
           }
         : {
-            certFile: (selectedCert as ParsedCertificate).certDerBase64,
+            certFile: selectedCert.certDerBase64,
             certPassword,
-            keyFile: (selectedCert as ParsedCertificate).keyDerBase64,
+            keyFile: selectedCert.keyDerBase64,
             certType: '1',
             year: String(queryYear),
             startQuarter,
@@ -385,16 +342,16 @@ export default function CreditCardSalesPanel({
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-bold text-gray-800 ml-1">
                     {foundCerts.length > 0
-                      ? `인증서 선택 (${foundCerts.filter(c => !('isExpired' in c && (c as ParsedCertificate).isExpired)).length}개 유효 / 총 ${foundCerts.length}개)`
+                      ? `인증서 선택 (${foundCerts.filter(c => !c.isExpired).length}개 유효 / 총 ${foundCerts.length}개)`
                       : '인증서 목록'}
                   </p>
                   {scanned && (
                     <button
-                      onClick={() => folderInputRef.current?.click()}
+                      onClick={() => scanCerts(certType === '1' ? 'hard' : 'removable', certType)}
                       className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
                     >
-                      <FolderOpen className="w-3.5 h-3.5" />
-                      다른 폴더 검색
+                      <Search className="w-3.5 h-3.5" />
+                      다시 검색
                     </button>
                   )}
                 </div>
@@ -415,18 +372,11 @@ export default function CreditCardSalesPanel({
                       </div>
                     )}
 
-                    {/* 초기 상태: 폴더 선택 안내 */}
+                    {/* 초기 상태: 저장매체 선택 안내 */}
                     {!scanning && !scanned && foundCerts.length === 0 && (
                       <div className="flex flex-col items-center justify-center py-8">
                         <Search className="w-8 h-8 text-gray-300 mb-2" />
-                        <p className="text-sm text-gray-500 mb-3">좌측에서 저장매체를 선택하면<br/>자동으로 인증서를 검색합니다.</p>
-                        <button
-                          onClick={() => folderInputRef.current?.click()}
-                          className="px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1.5"
-                        >
-                          <FolderOpen className="w-4 h-4" />
-                          폴더에서 인증서 찾기
-                        </button>
+                        <p className="text-sm text-gray-500">좌측에서 저장매체를 선택하면<br/>자동으로 인증서를 검색합니다.</p>
                       </div>
                     )}
 
@@ -436,7 +386,7 @@ export default function CreditCardSalesPanel({
                         <AlertCircle className="w-6 h-6 text-amber-400 mb-2" />
                         <p className="text-xs text-gray-500 text-center whitespace-pre-line">{scanError}</p>
                         <button
-                          onClick={() => folderInputRef.current?.click()}
+                          onClick={() => scanCerts(certType === '1' ? 'hard' : 'removable', certType)}
                           className="mt-3 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition-colors"
                         >
                           다시 검색
@@ -446,15 +396,21 @@ export default function CreditCardSalesPanel({
 
                     {/* 인증서 목록 */}
                     {foundCerts.map((cert, index) => {
-                      const isPfx = 'isPfx' in cert && cert.isPfx
-                      const certId = isPfx ? (cert as PfxParsedCertificate).fileName : (cert as ParsedCertificate).serialNumber
+                      const isPfx = cert.type === 'pfx'
+                      const certId = isPfx ? cert.fileName : cert.serialNumber
                       const isSelected = selectedCert && (
                         isPfx
-                          ? ('isPfx' in selectedCert && (selectedCert as PfxParsedCertificate).fileName === (cert as PfxParsedCertificate).fileName)
-                          : (!('isPfx' in selectedCert && selectedCert.isPfx) && (selectedCert as ParsedCertificate).serialNumber === (cert as ParsedCertificate).serialNumber)
+                          ? (selectedCert.type === 'pfx' && selectedCert.fileName === cert.fileName)
+                          : (selectedCert.type === 'der' && selectedCert.serialNumber === cert.serialNumber)
                       )
-                      const isExpired = !isPfx && (cert as ParsedCertificate).isExpired
-                      const isDisabled = isExpired || loading
+                      const isDisabled = cert.isExpired || loading
+
+                      const remainingDays = cert.notAfter
+                        ? Math.ceil((new Date(cert.notAfter).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                        : null
+
+                      const formatDate = (iso: string) =>
+                        iso ? new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : ''
 
                       return (
                         <button
@@ -469,7 +425,7 @@ export default function CreditCardSalesPanel({
                           className={`w-full text-left px-4 py-3 border-b last:border-b-0 transition-all flex items-center gap-3 ${
                             isSelected
                               ? 'bg-[#f0f4ff] border-b-blue-100'
-                              : isExpired
+                              : cert.isExpired
                                 ? 'bg-gray-50 opacity-50 cursor-not-allowed'
                                 : 'hover:bg-gray-50'
                           }`}
@@ -489,35 +445,35 @@ export default function CreditCardSalesPanel({
                               <>
                                 <div className="flex items-center gap-2">
                                   <span className={`text-sm font-medium ${isSelected ? 'text-blue-800' : 'text-gray-900'}`}>
-                                    {(cert as PfxParsedCertificate).fileName}
+                                    {cert.fileName}
                                   </span>
                                   <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">PFX</span>
                                 </div>
-                                <p className="text-xs text-gray-400 truncate">{(cert as PfxParsedCertificate).certPath || '직접 선택'}</p>
+                                <p className="text-xs text-gray-400 truncate">{cert.certPath}</p>
                               </>
                             ) : (
                               <>
                                 <div className="flex items-center gap-2">
                                   <span className={`text-sm font-medium ${isSelected ? 'text-blue-800' : 'text-gray-900'}`}>
-                                    {(cert as ParsedCertificate).subjectCN}
+                                    {cert.subjectCN}
                                   </span>
-                                  {isExpired ? (
+                                  {cert.isExpired ? (
                                     <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded font-medium">만료</span>
-                                  ) : getRemainingDays((cert as ParsedCertificate).notAfter) <= 30 ? (
+                                  ) : remainingDays !== null && remainingDays <= 30 ? (
                                     <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-medium">
-                                      {getRemainingDays((cert as ParsedCertificate).notAfter)}일
+                                      {remainingDays}일
                                     </span>
                                   ) : null}
-                                  {(cert as ParsedCertificate).usage !== '일반' && (
+                                  {cert.usage && cert.usage !== '일반' && (
                                     <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
-                                      {(cert as ParsedCertificate).usage}
+                                      {cert.usage}
                                     </span>
                                   )}
                                 </div>
                                 <p className="text-xs text-gray-400">
-                                  {(cert as ParsedCertificate).issuerCN || getCANameFromPath((cert as ParsedCertificate).certPath)}
+                                  {cert.issuerCN || '인증기관'}
                                   {' · '}
-                                  {formatCertDate((cert as ParsedCertificate).notBefore)} ~ {formatCertDate((cert as ParsedCertificate).notAfter)}
+                                  {formatDate(cert.notBefore)} ~ {formatDate(cert.notAfter)}
                                 </p>
                               </>
                             )}
@@ -860,15 +816,6 @@ export default function CreditCardSalesPanel({
         </div>
       )}
 
-      {/* 숨겨진 폴더 선택 input */}
-      <input
-        ref={folderInputRef}
-        type="file"
-        className="hidden"
-        onChange={handleFolderScan}
-        {...({ webkitdirectory: '', directory: '', mozdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
-        multiple
-      />
     </div>
   )
 }
