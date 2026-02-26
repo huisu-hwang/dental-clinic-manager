@@ -42,15 +42,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { clinicId, userId, password, identity, loginType, certFile, keyFile, certPassword } = body;
+    const { clinicId, userId, password, identity, loginType, certFile, keyFile, certPassword, certType } = body;
 
     // loginType: '1' = ID/PW (기본), '0' = 공동인증서
     const isCertAuth = loginType === '0';
+    const isPfx = certType === 'pfx';
 
     if (isCertAuth) {
-      if (!clinicId || !certFile || !keyFile || !certPassword || !identity) {
+      // PFX: certFile + certPassword 필수, keyFile 불필요
+      // DER/KEY: certFile + keyFile + certPassword 필수
+      if (!clinicId || !certFile || !certPassword || !identity) {
         return NextResponse.json(
-          { success: false, error: '필수 파라미터가 누락되었습니다. (clinicId, certFile, keyFile, certPassword, identity)' },
+          { success: false, error: '필수 파라미터가 누락되었습니다. (clinicId, certFile, certPassword, identity)' },
+          { status: 400 }
+        );
+      }
+      if (!isPfx && !keyFile) {
+        return NextResponse.json(
+          { success: false, error: 'DER/KEY 타입은 keyFile이 필요합니다.' },
           { status: 400 }
         );
       }
@@ -93,10 +102,10 @@ export async function POST(request: NextRequest) {
 
       // 인증 방식에 따른 CODEF 함수 래퍼
       const doCreateAccount = isCertAuth
-        ? () => createCodefAccountWithCert(certFile, keyFile, certPassword, identity)
+        ? () => createCodefAccountWithCert(certFile, keyFile || '', certPassword, identity)
         : () => createCodefAccount(userId, password, identity);
       const doUpdateAccount = (connId: string) => isCertAuth
-        ? updateCodefAccountWithCert(connId, certFile, keyFile, certPassword, identity)
+        ? updateCodefAccountWithCert(connId, certFile, keyFile || '', certPassword, identity)
         : updateCodefAccount(connId, userId, password, identity);
 
       if (existingConnectedId) {
@@ -198,8 +207,11 @@ export async function POST(request: NextRequest) {
       // 인증서 인증: 인증서/키/비밀번호 암호화 저장
       dbData.encrypted_password = encryptPasswordForStorage(certPassword);
       dbData.encrypted_cert_der = encryptPasswordForStorage(certFile);
-      dbData.encrypted_key_der = encryptPasswordForStorage(keyFile);
+      dbData.encrypted_key_der = isPfx ? null : encryptPasswordForStorage(keyFile);
       dbData.hometax_user_id = null;
+      if (isPfx) {
+        dbData.login_type = '0'; // 인증서 인증이지만 PFX 타입 구분은 cert_type으로
+      }
     } else {
       // ID/PW 인증: 비밀번호 암호화 저장
       dbData.encrypted_password = encryptPasswordForStorage(password);

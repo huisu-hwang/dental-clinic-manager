@@ -27,6 +27,20 @@ export interface CertificateFile {
   dirPath: string          // 디렉토리 경로
 }
 
+export interface PfxCertificateFile {
+  pfxFile: File            // .pfx 또는 .p12 파일
+  dirPath: string          // 디렉토리 경로
+}
+
+export interface PfxParsedCertificate {
+  subjectCN: string        // 파일명 (PFX는 비밀번호 없이 파싱 불가)
+  issuerCN: string
+  pfxBase64: string        // PFX 파일 base64
+  certPath: string         // 파일 경로
+  isPfx: true              // PFX 타입 구분
+  fileName: string         // 원본 파일명
+}
+
 // 한국 공인인증기관(CA) 매핑
 const CA_NAMES: Record<string, string> = {
   yessign: '금융결제원(yessign)',
@@ -50,7 +64,7 @@ const CERT_POLICY_USAGE: Record<string, string> = {
 }
 
 /**
- * FileList에서 NPKI 인증서 쌍(signCert.der + signPri.key)을 찾아 반환
+ * FileList에서 NPKI 인증서 쌍(signCert.der + signPri.key) 및 PFX/P12 파일을 찾아 반환
  */
 export function findCertificatePairs(files: FileList): CertificateFile[] {
   type CertEntry = { cert?: File; key?: File; path: string }
@@ -61,11 +75,14 @@ export function findCertificatePairs(files: FileList): CertificateFile[] {
     const relativePath = (file as any).webkitRelativePath || file.name
     const dirPath = relativePath.substring(0, relativePath.lastIndexOf('/'))
 
-    if (file.name === 'signCert.der') {
+    // DER 인증서 파일 (signCert.der, *.der)
+    if (file.name === 'signCert.der' || file.name.toLowerCase().endsWith('.der')) {
       const entry: CertEntry = fileMap.get(dirPath) || { path: dirPath }
       entry.cert = file
       fileMap.set(dirPath, entry)
-    } else if (file.name === 'signPri.key') {
+    }
+    // KEY 개인키 파일 (signPri.key, *.key)
+    else if (file.name === 'signPri.key' || file.name.toLowerCase().endsWith('.key')) {
       const entry: CertEntry = fileMap.get(dirPath) || { path: dirPath }
       entry.key = file
       fileMap.set(dirPath, entry)
@@ -84,6 +101,43 @@ export function findCertificatePairs(files: FileList): CertificateFile[] {
   })
 
   return pairs
+}
+
+/**
+ * FileList에서 PFX/P12 인증서 파일을 찾아 반환
+ */
+export function findPfxFiles(files: FileList): PfxCertificateFile[] {
+  const pfxFiles: PfxCertificateFile[] = []
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    const name = file.name.toLowerCase()
+    if (name.endsWith('.pfx') || name.endsWith('.p12')) {
+      const relativePath = (file as any).webkitRelativePath || file.name
+      const dirPath = relativePath.substring(0, relativePath.lastIndexOf('/'))
+      pfxFiles.push({ pfxFile: file, dirPath })
+    }
+  }
+
+  return pfxFiles
+}
+
+/**
+ * PFX 파일을 파싱하지 않고 기본 정보만 반환 (비밀번호 없이는 파싱 불가)
+ */
+export async function createPfxCertInfo(pfxFile: PfxCertificateFile): Promise<PfxParsedCertificate> {
+  const arrayBuffer = await pfxFile.pfxFile.arrayBuffer()
+  const bytes = new Uint8Array(arrayBuffer)
+  const pfxBase64 = uint8ArrayToBase64(bytes)
+
+  return {
+    subjectCN: pfxFile.pfxFile.name.replace(/\.(pfx|p12)$/i, ''),
+    issuerCN: 'PFX 인증서 (비밀번호 입력 후 확인)',
+    pfxBase64,
+    certPath: pfxFile.dirPath,
+    isPfx: true,
+    fileName: pfxFile.pfxFile.name,
+  }
 }
 
 /**

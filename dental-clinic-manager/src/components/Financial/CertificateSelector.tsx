@@ -19,17 +19,25 @@ import {
 } from 'lucide-react'
 import {
   findCertificatePairs,
+  findPfxFiles,
   parseCertificate,
+  createPfxCertInfo,
   getCANameFromPath,
   formatCertDate,
   getRemainingDays,
   type ParsedCertificate,
+  type PfxParsedCertificate,
 } from '@/lib/certificateParser'
 
 export type StorageMedium = 'hard_disk' | 'removable' | 'security_token' | 'mobile'
 
+// DER/KEY 또는 PFX 인증서 통합 타입
+export type SelectedCertificate =
+  | (ParsedCertificate & { isPfx?: false })
+  | PfxParsedCertificate
+
 interface CertificateSelectorProps {
-  onSelect: (cert: ParsedCertificate, password: string) => void
+  onSelect: (cert: ParsedCertificate | PfxParsedCertificate, password: string) => void
   onCancel: () => void
   loading?: boolean
 }
@@ -75,8 +83,8 @@ export default function CertificateSelector({
   loading = false,
 }: CertificateSelectorProps) {
   const [selectedMedium, setSelectedMedium] = useState<StorageMedium | null>(null)
-  const [certificates, setCertificates] = useState<ParsedCertificate[]>([])
-  const [selectedCert, setSelectedCert] = useState<ParsedCertificate | null>(null)
+  const [certificates, setCertificates] = useState<SelectedCertificate[]>([])
+  const [selectedCert, setSelectedCert] = useState<SelectedCertificate | null>(null)
   const [certPassword, setCertPassword] = useState('')
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState('')
@@ -135,19 +143,22 @@ export default function CertificateSelector({
     setScanned(false)
 
     try {
+      // DER/KEY 쌍 검색
       const pairs = findCertificatePairs(files)
+      // PFX/P12 파일 검색
+      const pfxFiles = findPfxFiles(files)
 
-      if (pairs.length === 0) {
+      if (pairs.length === 0 && pfxFiles.length === 0) {
         setScanError(
           '선택한 폴더에서 인증서를 찾을 수 없습니다.\n' +
-          'NPKI 폴더 또는 그 상위 폴더를 선택해주세요.'
+          'NPKI 폴더를 선택하거나, 인증서 파일(.der+.key 또는 .pfx/.p12)이 있는 폴더를 선택해주세요.'
         )
         setScanned(true)
         return
       }
 
-      // 모든 인증서 파싱
-      const parsed: ParsedCertificate[] = []
+      // DER/KEY 인증서 파싱
+      const parsed: SelectedCertificate[] = []
       for (const pair of pairs) {
         try {
           const cert = await parseCertificate(pair)
@@ -157,24 +168,44 @@ export default function CertificateSelector({
         }
       }
 
+      // PFX/P12 인증서 추가 (비밀번호 없이는 상세 파싱 불가)
+      for (const pfx of pfxFiles) {
+        try {
+          const pfxInfo = await createPfxCertInfo(pfx)
+          parsed.push(pfxInfo)
+        } catch (err) {
+          console.warn('PFX 파일 읽기 실패:', pfx.dirPath, err)
+        }
+      }
+
       if (parsed.length === 0) {
         setScanError('인증서 파일을 읽을 수 없습니다. 올바른 인증서 폴더인지 확인해주세요.')
         setScanned(true)
         return
       }
 
-      // 만료되지 않은 인증서 우선, 유효기간 내림차순 정렬
+      // DER 인증서: 만료되지 않은 것 우선, PFX는 마지막에
       parsed.sort((a, b) => {
-        if (a.isExpired !== b.isExpired) return a.isExpired ? 1 : -1
-        return b.notAfter.getTime() - a.notAfter.getTime()
+        const aIsPfx = 'isPfx' in a && a.isPfx
+        const bIsPfx = 'isPfx' in b && b.isPfx
+        if (aIsPfx !== bIsPfx) return aIsPfx ? 1 : -1
+        if (!aIsPfx && !bIsPfx) {
+          const aDer = a as ParsedCertificate
+          const bDer = b as ParsedCertificate
+          if (aDer.isExpired !== bDer.isExpired) return aDer.isExpired ? 1 : -1
+          return bDer.notAfter.getTime() - aDer.notAfter.getTime()
+        }
+        return 0
       })
 
       setCertificates(parsed)
 
-      // 유효한 인증서가 하나뿐이면 자동 선택
-      const validCerts = parsed.filter(c => !c.isExpired)
-      if (validCerts.length === 1) {
-        setSelectedCert(validCerts[0])
+      // 유효한 DER 인증서가 하나뿐이면 자동 선택
+      const validDerCerts = parsed.filter(c => !('isPfx' in c && c.isPfx) && !(c as ParsedCertificate).isExpired)
+      if (validDerCerts.length === 1 && pfxFiles.length === 0) {
+        setSelectedCert(validDerCerts[0])
+      } else if (parsed.length === 1) {
+        setSelectedCert(parsed[0])
       }
     } catch (err) {
       console.error('인증서 검색 오류:', err)
@@ -187,7 +218,7 @@ export default function CertificateSelector({
     }
   }, [])
 
-  // 개별 파일(signCert.der, signPri.key) 직접 선택 처리
+  // 개별 파일(signCert.der, signPri.key, .pfx, .p12) 직접 선택 처리
   const handleFilesChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
@@ -198,14 +229,29 @@ export default function CertificateSelector({
     try {
       let certFile: File | null = null
       let keyFile: File | null = null
+      let pfxFile: File | null = null
 
       for (let i = 0; i < files.length; i++) {
-        if (files[i].name === 'signCert.der' || files[i].name.endsWith('.der')) certFile = files[i]
-        if (files[i].name === 'signPri.key' || files[i].name.endsWith('.key')) keyFile = files[i]
+        const name = files[i].name.toLowerCase()
+        if (name === 'signcert.der' || name.endsWith('.der')) certFile = files[i]
+        else if (name === 'signpri.key' || name.endsWith('.key')) keyFile = files[i]
+        else if (name.endsWith('.pfx') || name.endsWith('.p12')) pfxFile = files[i]
+      }
+
+      // PFX/P12 파일이 있으면 PFX 모드
+      if (pfxFile) {
+        const pfxInfo = await createPfxCertInfo({
+          pfxFile,
+          dirPath: '직접 선택',
+        })
+        setCertificates([pfxInfo])
+        setSelectedCert(pfxInfo)
+        setScanned(true)
+        return
       }
 
       if (!certFile || !keyFile) {
-        setScanError('signCert.der 와 signPri.key 파일을 모두 선택해주세요.')
+        setScanError('signCert.der + signPri.key 파일을 함께 선택하거나, .pfx/.p12 파일을 선택해주세요.')
         return
       }
 
@@ -354,7 +400,7 @@ export default function CertificateSelector({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">
-                2. 인증서 선택 ({certificates.filter(c => !c.isExpired).length}개 유효 / 총 {certificates.length}개)
+                2. 인증서 선택 ({certificates.filter(c => !('isExpired' in c && c.isExpired)).length}개 유효 / 총 {certificates.length}개)
               </label>
               <div className="flex items-center gap-2">
                 <button
@@ -376,24 +422,30 @@ export default function CertificateSelector({
 
             <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
               {certificates.map((cert, index) => {
-                const isSelected = selectedCert?.serialNumber === cert.serialNumber
-                const remaining = getRemainingDays(cert.notAfter)
-                const caName = cert.issuerCN || getCANameFromPath(cert.certPath)
+                const isPfx = 'isPfx' in cert && cert.isPfx
+                const certId = isPfx ? (cert as PfxParsedCertificate).fileName : (cert as ParsedCertificate).serialNumber
+                const isSelected = selectedCert && (
+                  isPfx
+                    ? ('isPfx' in selectedCert && (selectedCert as PfxParsedCertificate).fileName === (cert as PfxParsedCertificate).fileName)
+                    : (!('isPfx' in selectedCert && selectedCert.isPfx) && (selectedCert as ParsedCertificate).serialNumber === (cert as ParsedCertificate).serialNumber)
+                )
+                const isExpired = !isPfx && (cert as ParsedCertificate).isExpired
+                const isDisabled = isExpired || loading
 
                 return (
                   <button
-                    key={cert.serialNumber || index}
+                    key={certId || index}
                     onClick={() => {
-                      if (!cert.isExpired) {
+                      if (!isDisabled) {
                         setSelectedCert(cert)
                         setPasswordError('')
                       }
                     }}
-                    disabled={cert.isExpired || loading}
+                    disabled={isDisabled}
                     className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
                       isSelected
                         ? 'border-blue-500 bg-blue-50 shadow-sm'
-                        : cert.isExpired
+                        : isExpired
                           ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
                           : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                     }`}
@@ -404,43 +456,62 @@ export default function CertificateSelector({
                         {isSelected ? (
                           <CheckCircle2 className="w-5 h-5 text-blue-600" />
                         ) : (
-                          <div className={`w-5 h-5 rounded-full border-2 ${
-                            cert.isExpired ? 'border-gray-300' : 'border-gray-300'
-                          }`} />
+                          <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
                         )}
                       </div>
 
                       {/* 인증서 정보 */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`font-medium text-sm ${
-                            isSelected ? 'text-blue-800' : 'text-gray-900'
-                          }`}>
-                            {cert.subjectCN}
-                          </span>
-                          {cert.isExpired ? (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded font-medium">
-                              만료됨
-                            </span>
-                          ) : remaining <= 30 ? (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-medium">
-                              {remaining}일 남음
-                            </span>
-                          ) : null}
-                          {cert.usage !== '일반' && (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
-                              {cert.usage}
-                            </span>
-                          )}
-                        </div>
-                        <div className="space-y-0.5">
-                          <p className="text-xs text-gray-500">
-                            발급기관: {caName}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            유효기간: {formatCertDate(cert.notBefore)} ~ {formatCertDate(cert.notAfter)}
-                          </p>
-                        </div>
+                        {isPfx ? (
+                          // PFX 인증서 표시
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`font-medium text-sm ${isSelected ? 'text-blue-800' : 'text-gray-900'}`}>
+                                {(cert as PfxParsedCertificate).fileName}
+                              </span>
+                              <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">
+                                PFX
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              경로: {(cert as PfxParsedCertificate).certPath || '직접 선택'}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              비밀번호 입력 후 인증서 정보가 확인됩니다
+                            </p>
+                          </>
+                        ) : (
+                          // DER/KEY 인증서 표시
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`font-medium text-sm ${isSelected ? 'text-blue-800' : 'text-gray-900'}`}>
+                                {(cert as ParsedCertificate).subjectCN}
+                              </span>
+                              {(cert as ParsedCertificate).isExpired ? (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded font-medium">
+                                  만료됨
+                                </span>
+                              ) : getRemainingDays((cert as ParsedCertificate).notAfter) <= 30 ? (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-medium">
+                                  {getRemainingDays((cert as ParsedCertificate).notAfter)}일 남음
+                                </span>
+                              ) : null}
+                              {(cert as ParsedCertificate).usage !== '일반' && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                  {(cert as ParsedCertificate).usage}
+                                </span>
+                              )}
+                            </div>
+                            <div className="space-y-0.5">
+                              <p className="text-xs text-gray-500">
+                                발급기관: {(cert as ParsedCertificate).issuerCN || getCANameFromPath((cert as ParsedCertificate).certPath)}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                유효기간: {formatCertDate((cert as ParsedCertificate).notBefore)} ~ {formatCertDate((cert as ParsedCertificate).notAfter)}
+                              </p>
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       <ChevronRight className={`w-4 h-4 mt-1 flex-shrink-0 ${
@@ -533,7 +604,7 @@ export default function CertificateSelector({
         type="file"
         className="hidden"
         multiple
-        accept=".der,.key"
+        accept=".der,.key,.pfx,.p12"
         onChange={handleFilesChange}
       />
     </div>

@@ -20,7 +20,7 @@ import {
   FileKey,
 } from 'lucide-react'
 import CertificateSelector from './CertificateSelector'
-import type { ParsedCertificate } from '@/lib/certificateParser'
+import type { ParsedCertificate, PfxParsedCertificate } from '@/lib/certificateParser'
 
 interface CodefConnection {
   isConnected: boolean
@@ -182,8 +182,8 @@ export default function CodefSyncPanel({
     }
   }
 
-  // 공동인증서 연결
-  const handleCertConnect = async (cert: ParsedCertificate, certPassword: string) => {
+  // 공동인증서 연결 (DER/KEY 또는 PFX)
+  const handleCertConnect = async (cert: ParsedCertificate | PfxParsedCertificate, certPassword: string) => {
     if (!certIdentity) {
       setFormError('대표자 주민등록번호 앞 7자리를 입력해주세요.')
       return
@@ -199,17 +199,29 @@ export default function CodefSyncPanel({
     setFormError('')
 
     try {
+      const isPfx = 'isPfx' in cert && cert.isPfx
+      const body = isPfx
+        ? {
+            clinicId,
+            loginType: '0',
+            certFile: (cert as PfxParsedCertificate).pfxBase64,
+            certPassword,
+            identity: identityDigits,
+            certType: 'pfx',
+          }
+        : {
+            clinicId,
+            loginType: '0',
+            certFile: (cert as ParsedCertificate).certDerBase64,
+            keyFile: (cert as ParsedCertificate).keyDerBase64,
+            certPassword,
+            identity: identityDigits,
+          }
+
       const response = await fetch('/api/codef/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clinicId,
-          loginType: '0',
-          certFile: cert.certDerBase64,
-          keyFile: cert.keyDerBase64,
-          certPassword,
-          identity: identityDigits,
-        }),
+        body: JSON.stringify(body),
       })
 
       const result = await response.json()
