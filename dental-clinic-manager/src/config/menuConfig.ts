@@ -165,7 +165,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: '급여 명세서',
     icon: 'Banknote',
     route: '/dashboard?tab=payroll',
-    permissions: ['contract_view'],
+    permissions: ['payroll_view'],
     categoryId: 'documents',
     order: 10,
     visible: true,
