@@ -12,6 +12,32 @@
 
 ## 2026-02-26
 
+### [기능 개발] 저장매체 선택 시 서버사이드 NPKI 인증서 자동 검색
+
+**키워드:** #CODEF #홈택스 #공동인증서 #NPKI #서버사이드스캔 #자동검색
+
+#### 📋 작업 내용
+- `/api/codef/scan-certs` API 라우트 신규 생성 (서버사이드 파일시스템 스캔)
+  - Mac: `~/Library/Preferences/NPKI/` (하드디스크), `/Volumes/*/NPKI/` (이동식)
+  - Windows: `AppData/LocalLow/NPKI/` (하드디스크), `D~Z:\NPKI` (이동식)
+  - Linux: `~/NPKI/` (하드디스크), `/media/*/NPKI/` (이동식)
+- `CreditCardSalesPanel.tsx`: 클라이언트 폴더 선택 다이얼로그 제거 → 서버 API 호출로 대체
+- 저장매체 클릭만으로 인증서 자동 검색/파싱/표시 (추가 사용자 조작 불필요)
+- 클라이언트 `certificateParser` 의존성 제거, `ScannedCert` 서버 타입으로 통합
+
+#### ✅ 해결 방법
+- 웹 브라우저는 파일시스템 자동 접근 불가 → Next.js API Route에서 Node.js `fs` 모듈로 서버사이드 스캔
+- NPKI 인증서 기본 저장 경로는 OS별로 표준화되어 있으므로 해당 경로를 자동 스캔
+- node-forge로 DER 인증서 서버사이드 파싱 (소유자, 발급기관, 유효기간 등)
+
+#### 🧪 테스트 결과
+- `npm run build` 성공
+- API 테스트: `GET /api/codef/scan-certs?mediaType=hard&certType=der` → 정상 응답 (Mac에 NPKI 없어 빈 배열)
+- Chrome DevTools: 하드디스크 클릭 → 자동 검색 → 결과 표시, 콘솔 에러 없음
+- 커밋: `e95e157` → develop 브랜치 푸시 완료
+
+---
+
 ### [기능 개발] 신용카드 매출 조회 - 인증서 자동 폴더 스캔 및 목록 선택 UX
 
 **키워드:** #CODEF #홈택스 #공동인증서 #폴더스캔 #인증서선택 #CreditCardSalesPanel
