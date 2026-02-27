@@ -95,6 +95,7 @@ export default function RecallManagement() {
     }
     const result = await recallService.patients.getPatients(filterWithPagination)
     if (result.success && result.data) {
+      // 중복 제거는 getPatients 서비스에서 처리됨
       setPatients(result.data.data)
       setTotalPages(result.data.totalPages)
       setTotalPatients(result.data.total)
