@@ -1824,7 +1824,7 @@ function ResignationPreview({
   formatDate: (date: string) => string
 }) {
   return (
-    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-sm">
+    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-sm overflow-hidden">
       {/* 제목 */}
       <h1 className="text-2xl font-bold text-center mb-6">사 직 서</h1>
 
@@ -1832,23 +1832,23 @@ function ResignationPreview({
       <div className="flex-1 flex flex-col justify-between">
         {/* 인적사항 */}
         <section>
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full table-fixed border-collapse text-sm">
             <tbody>
               <tr className="border-t border-b border-slate-300">
-                <td className="py-2 px-3 bg-slate-50 font-medium w-24 whitespace-nowrap">성 명</td>
-                <td className="py-2 px-3 whitespace-nowrap">{data.employeeName || '　'}</td>
-                <td className="py-2 px-3 bg-slate-50 font-medium w-24 whitespace-nowrap">직 급</td>
-                <td className="py-2 px-3 whitespace-nowrap">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
+                <td className="py-2 px-2 bg-slate-50 font-medium w-[18%]">성 명</td>
+                <td className="py-2 px-2 w-[32%]">{data.employeeName || '　'}</td>
+                <td className="py-2 px-2 bg-slate-50 font-medium w-[18%]">직 급</td>
+                <td className="py-2 px-2 w-[32%]">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
               </tr>
               <tr className="border-b border-slate-300">
-                <td className="py-2 px-3 bg-slate-50 font-medium whitespace-nowrap">부 서</td>
-                <td className="py-2 px-3" colSpan={3}>{data.department || '　'}</td>
+                <td className="py-2 px-2 bg-slate-50 font-medium">부 서</td>
+                <td className="py-2 px-2" colSpan={3}>{data.department || '　'}</td>
               </tr>
               <tr className="border-b border-slate-300">
-                <td className="py-2 px-3 bg-slate-50 font-medium whitespace-nowrap">입사일</td>
-                <td className="py-2 px-3 whitespace-nowrap">{formatDate(data.hireDate) || '　'}</td>
-                <td className="py-2 px-3 bg-slate-50 font-medium whitespace-nowrap">퇴사 희망일</td>
-                <td className="py-2 px-3 whitespace-nowrap">{formatDate(data.resignationDate) || '　'}</td>
+                <td className="py-2 px-2 bg-slate-50 font-medium">입사일</td>
+                <td className="py-2 px-2">{formatDate(data.hireDate) || '　'}</td>
+                <td className="py-2 px-2 bg-slate-50 font-medium">퇴사 희망일</td>
+                <td className="py-2 px-2">{formatDate(data.resignationDate) || '　'}</td>
               </tr>
             </tbody>
           </table>
@@ -1931,7 +1931,7 @@ function EmploymentCertificatePreview({
   formatDate: (date: string) => string
 }) {
   return (
-    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-xs">
+    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-xs overflow-hidden">
       {/* 문서 번호 */}
       {data.certificateNumber && (
         <p className="text-right text-[10px] text-slate-500 mb-1">{data.certificateNumber}</p>
@@ -1945,17 +1945,17 @@ function EmploymentCertificatePreview({
         {/* 직원 정보 */}
         <section className="mb-2">
           <h3 className="text-xs font-semibold mb-1 text-slate-600">인 적 사 항</h3>
-          <table className="w-full border-collapse border border-slate-300 text-xs">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-xs">
             <tbody>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">성 명</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.employeeName || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">생년월일</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{formatDate(data.employeeBirthDate || '') || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">성 명</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{data.employeeName || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">생년월일</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{formatDate(data.employeeBirthDate || '') || '　'}</td>
               </tr>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">주 소</td>
-                <td className="py-1 px-2 border border-slate-300" colSpan={3}>{data.employeeAddress || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300">주 소</td>
+                <td className="py-1 px-1.5 border border-slate-300 break-words" colSpan={3}>{data.employeeAddress || '　'}</td>
               </tr>
             </tbody>
           </table>
@@ -1964,17 +1964,17 @@ function EmploymentCertificatePreview({
         {/* 재직 정보 */}
         <section className="mb-2">
           <h3 className="text-xs font-semibold mb-1 text-slate-600">재 직 사 항</h3>
-          <table className="w-full border-collapse border border-slate-300 text-xs">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-xs">
             <tbody>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">소 속</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.department || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">직 급</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{translateRole(data.position) || data.position || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">소 속</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{data.department || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">직 급</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{translateRole(data.position) || data.position || '　'}</td>
               </tr>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">재직기간</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap" colSpan={3}>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300">재직기간</td>
+                <td className="py-1 px-1.5 border border-slate-300" colSpan={3}>
                   {formatDate(data.hireDate) || '____년 __월 __일'} ~{' '}
                   {data.currentlyEmployed
                     ? '현재'
@@ -1988,23 +1988,23 @@ function EmploymentCertificatePreview({
         {/* 회사 정보 */}
         <section className="mb-2">
           <h3 className="text-xs font-semibold mb-1 text-slate-600">회 사 정 보</h3>
-          <table className="w-full border-collapse border border-slate-300 text-xs">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-xs">
             <tbody>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">회사명</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.clinicName || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">대표자</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.representativeName || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">회사명</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{data.clinicName || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">대표자</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{data.representativeName || '　'}</td>
               </tr>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">사업자번호</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.businessNumber || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">전화번호</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.clinicPhone || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300">사업자번호</td>
+                <td className="py-1 px-1.5 border border-slate-300">{data.businessNumber || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300">전화번호</td>
+                <td className="py-1 px-1.5 border border-slate-300">{data.clinicPhone || '　'}</td>
               </tr>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">소재지</td>
-                <td className="py-1 px-2 border border-slate-300" colSpan={3}>{data.clinicAddress || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300">소재지</td>
+                <td className="py-1 px-1.5 border border-slate-300 break-words" colSpan={3}>{data.clinicAddress || '　'}</td>
               </tr>
             </tbody>
           </table>
@@ -2012,11 +2012,11 @@ function EmploymentCertificatePreview({
 
         {/* 발급 목적 */}
         <section className="mb-2">
-          <table className="w-full border-collapse border border-slate-300 text-xs">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-xs">
             <tbody>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">용 도</td>
-                <td className="py-1 px-2 border border-slate-300">{data.purpose || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">용 도</td>
+                <td className="py-1 px-1.5 border border-slate-300">{data.purpose || '　'}</td>
               </tr>
             </tbody>
           </table>
@@ -2673,7 +2673,7 @@ function TerminationNoticePreview({
   formatDate: (date: string) => string
 }) {
   return (
-    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-[11px]">
+    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-[11px] overflow-hidden">
       {/* 제목 */}
       <h1 className="text-lg font-bold text-center mb-0.5">해 고 통 보 서</h1>
 
@@ -2687,19 +2687,19 @@ function TerminationNoticePreview({
         {/* 대상자 정보 */}
         <section className="mb-1">
           <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">해고 대상자</h3>
-          <table className="w-full border-collapse border border-slate-300 text-[11px]">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
             <tbody>
               <tr>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-14 whitespace-nowrap">성 명</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">{data.employeeName || '　'}</td>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-14 whitespace-nowrap">직 급</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">성 명</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%]">{data.employeeName || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">직 급</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%]">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
               </tr>
               <tr>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">부 서</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">{data.department || '　'}</td>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">입사일</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">{formatDate(data.hireDate) || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">부 서</td>
+                <td className="py-0.5 px-1.5 border border-slate-300">{data.department || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">입사일</td>
+                <td className="py-0.5 px-1.5 border border-slate-300">{formatDate(data.hireDate) || '　'}</td>
               </tr>
             </tbody>
           </table>
@@ -2708,16 +2708,16 @@ function TerminationNoticePreview({
         {/* 해고 내용 */}
         <section className="mb-1">
           <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">해고 내용</h3>
-          <table className="w-full border-collapse border border-slate-300 text-[11px]">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
             <tbody>
               <tr>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-14 whitespace-nowrap">통보일</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">{formatDate(data.noticeDate) || '　'}</td>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-14 whitespace-nowrap">해고일</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 font-semibold text-red-600 whitespace-nowrap">{formatDate(data.terminationDate) || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">통보일</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%]">{formatDate(data.noticeDate) || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">해고일</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%] font-semibold text-red-600">{formatDate(data.terminationDate) || '　'}</td>
               </tr>
               <tr>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">해고 사유</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">해고 사유</td>
                 <td className="py-0.5 px-1.5 border border-slate-300" colSpan={3}>{data.reason || '　'}</td>
               </tr>
             </tbody>
@@ -2728,23 +2728,23 @@ function TerminationNoticePreview({
         <section className="mb-1">
           <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">상세 해고 사유</h3>
           <div className="p-1 border border-slate-300 rounded bg-white min-h-[24px]">
-            <p className="text-[11px] leading-4 whitespace-pre-wrap">{data.detailedReason || '　'}</p>
+            <p className="text-[11px] leading-4 whitespace-pre-wrap break-words">{data.detailedReason || '　'}</p>
           </div>
         </section>
 
         {/* 해고예고 관련 */}
         <section className="mb-1">
           <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">해고예고 관련</h3>
-          <table className="w-full border-collapse border border-slate-300 text-[11px]">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
             <tbody>
               <tr>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">해고예고 여부</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[20%]">해고예고 여부</td>
+                <td className="py-0.5 px-1.5 border border-slate-300">
                   {data.advanceNotice ? '30일 전 예고 완료' : '30일 전 예고 미완료'}
                 </td>
                 {!data.advanceNotice && data.severancePayInLieu && (
                   <>
-                    <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">해고예고수당</td>
+                    <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[20%]">해고예고수당</td>
                     <td className="py-0.5 px-1.5 border border-slate-300">{data.severancePayInLieu}</td>
                   </>
                 )}
@@ -3022,29 +3022,29 @@ function WelfarePaymentPreview({
   const requestDateParts = parseDateParts(data.requestDate)
 
   return (
-    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-[11px]">
+    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-[11px] overflow-hidden">
       {/* 제목 */}
       <h1 className="text-lg font-bold text-center mb-2 tracking-[0.2em]">복 지 비 지 급 확 인 서</h1>
 
       <div className="flex-1 flex flex-col justify-between">
         {/* 신청자 정보 테이블 */}
-        <table className="w-full border-collapse border border-slate-400 mb-2 text-[10px]">
+        <table className="w-full table-fixed border-collapse border border-slate-400 mb-2 text-[10px]">
           <tbody>
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 w-16 text-center whitespace-nowrap">성명</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">{data.employeeName || '　'}</td>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 w-16 text-center whitespace-nowrap">생년월일</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">{formatDate(data.birthDate) || '　'}</td>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 w-[16%] text-center">성명</td>
+              <td className="py-1 px-1.5 border border-slate-400 w-[34%]">{data.employeeName || '　'}</td>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 w-[16%] text-center">생년월일</td>
+              <td className="py-1 px-1.5 border border-slate-400 w-[34%]">{formatDate(data.birthDate) || '　'}</td>
             </tr>
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">연락처</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">{data.phone || '　'}</td>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">상호명</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">{data.clinicName || '　'}</td>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">연락처</td>
+              <td className="py-1 px-1.5 border border-slate-400">{data.phone || '　'}</td>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">상호명</td>
+              <td className="py-1 px-1.5 border border-slate-400">{data.clinicName || '　'}</td>
             </tr>
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">지급방법</td>
-              <td className="py-1 px-2 border border-slate-400" colSpan={3}>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">지급방법</td>
+              <td className="py-1 px-1.5 border border-slate-400" colSpan={3}>
                 <span className="mr-2">{data.paymentMethod === 'cash' ? '◉' : '○'} 현금</span>
                 <span className="mr-2">{data.paymentMethod === 'transfer' ? '◉' : '○'} 계좌이체</span>
                 <span>{data.paymentMethod === 'hospital_card' ? '◉' : '○'} 병원카드</span>
@@ -3052,35 +3052,35 @@ function WelfarePaymentPreview({
             </tr>
             {data.paymentMethod === 'transfer' && (
               <tr>
-                <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">예금주/은행</td>
-                <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">
+                <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">예금주/은행</td>
+                <td className="py-1 px-1.5 border border-slate-400">
                   {data.accountHolder || '　'} / {data.bankName || '　'}
                 </td>
-                <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">계좌번호</td>
-                <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">{data.accountNumber || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">계좌번호</td>
+                <td className="py-1 px-1.5 border border-slate-400">{data.accountNumber || '　'}</td>
               </tr>
             )}
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">지급요청일</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">지급요청일</td>
+              <td className="py-1 px-1.5 border border-slate-400">
                 {requestDateParts.year || '____'}년 {requestDateParts.month || '__'}월 {requestDateParts.day || '__'}일
               </td>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">지급일자</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">지급일자</td>
+              <td className="py-1 px-1.5 border border-slate-400">
                 20{paymentDateParts.year ? paymentDateParts.year.slice(-2) : '__'}년 {paymentDateParts.month || '__'}월 {paymentDateParts.day || '__'}일
               </td>
             </tr>
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">지급금액</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap" colSpan={3}>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">지급금액</td>
+              <td className="py-1 px-1.5 border border-slate-400" colSpan={3}>
                 일금 {data.paymentAmount || '           '} 원정
               </td>
             </tr>
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">
                 지급사유
               </td>
-              <td className="py-1 px-2 border border-slate-400" colSpan={3}>
+              <td className="py-1 px-1.5 border border-slate-400 break-words" colSpan={3}>
                 {data.paymentReason || '　'}
               </td>
             </tr>
