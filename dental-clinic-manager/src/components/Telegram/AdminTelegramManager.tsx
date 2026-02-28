@@ -1,26 +1,63 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Send, ChevronDown, ChevronUp, Power, PowerOff, Loader2, AlertCircle, Users } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Send, ChevronDown, ChevronUp, Power, PowerOff, Loader2, AlertCircle, Webhook, CheckCircle2, XCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { useAuth } from '@/contexts/AuthContext'
 import { telegramGroupService } from '@/lib/telegramService'
 import AdminTelegramGroupForm from './AdminTelegramGroupForm'
 import AdminTelegramMembers from './AdminTelegramMembers'
 import AdminTelegramSyncStatus from './AdminTelegramSyncStatus'
 import type { TelegramGroup, CreateTelegramGroupDto } from '@/types/telegram'
 
+interface WebhookInfo {
+  url: string | null
+  pending_update_count: number
+  last_error_date: number | null
+  last_error_message: string | null
+}
+
 export default function AdminTelegramManager() {
+  const { user } = useAuth()
   const [groups, setGroups] = useState<TelegramGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [addingGroup, setAddingGroup] = useState(false)
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null)
   const [triggeringSummary, setTriggeringSummary] = useState<string | null>(null)
 
+  // 웹훅 관련 상태
+  const [webhookInfo, setWebhookInfo] = useState<WebhookInfo | null>(null)
+  const [webhookLoading, setWebhookLoading] = useState(false)
+  const [settingWebhook, setSettingWebhook] = useState(false)
+
   useEffect(() => {
     fetchGroups()
   }, [])
+
+  // 웹훅 상태 조회
+  const fetchWebhookInfo = useCallback(async () => {
+    if (!user?.id) return
+    setWebhookLoading(true)
+    try {
+      const res = await fetch(`/api/telegram/setup-webhook?userId=${user.id}`)
+      const json = await res.json()
+      if (json.data) {
+        setWebhookInfo(json.data)
+      }
+    } catch {
+      // 무시 - 웹훅 상태 조회 실패는 치명적이지 않음
+    }
+    setWebhookLoading(false)
+  }, [user?.id])
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchWebhookInfo()
+    }
+  }, [user?.id, fetchWebhookInfo])
 
   const fetchGroups = async () => {
     setLoading(true)
@@ -60,17 +97,50 @@ export default function AdminTelegramManager() {
 
   // 수동 요약 트리거
   const handleTriggerSummary = async (groupId: string) => {
+    if (!user?.id) return
     setTriggeringSummary(groupId)
     try {
-      const res = await fetch(`/api/telegram/groups/${groupId}/trigger-summary`, { method: 'POST' })
+      const res = await fetch(`/api/telegram/groups/${groupId}/trigger-summary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      const json = await res.json()
       if (!res.ok) {
-        const data = await res.json()
-        setError(data.error || '요약 생성에 실패했습니다')
+        setError(json.error || '요약 생성에 실패했습니다')
+      } else {
+        setSuccess(`요약이 생성되었습니다 (${json.data?.messageCount || 0}개 메시지, ${json.data?.topicCount || 0}개 주제)`)
+        setTimeout(() => setSuccess(null), 5000)
       }
     } catch {
       setError('요약 트리거 중 오류가 발생했습니다')
     }
     setTriggeringSummary(null)
+  }
+
+  // 웹훅 등록
+  const handleSetupWebhook = async () => {
+    if (!user?.id) return
+    setSettingWebhook(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/telegram/setup-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json.error || '웹훅 등록에 실패했습니다')
+      } else {
+        setSuccess('텔레그램 웹훅이 성공적으로 등록되었습니다')
+        setTimeout(() => setSuccess(null), 5000)
+        await fetchWebhookInfo()
+      }
+    } catch {
+      setError('웹훅 등록 중 오류가 발생했습니다')
+    }
+    setSettingWebhook(false)
   }
 
   if (loading) {
@@ -90,6 +160,76 @@ export default function AdminTelegramManager() {
           <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">×</button>
         </div>
       )}
+
+      {success && (
+        <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-4 py-3 rounded-lg">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+          {success}
+          <button onClick={() => setSuccess(null)} className="ml-auto text-green-400 hover:text-green-600">×</button>
+        </div>
+      )}
+
+      {/* 웹훅 설정 섹션 */}
+      <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Webhook className="w-4 h-4 text-slate-500" />
+            <h3 className="text-sm font-semibold text-gray-700">텔레그램 웹훅</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchWebhookInfo}
+              disabled={webhookLoading}
+              className="h-7 w-7 p-0"
+              title="상태 새로고침"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${webhookLoading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSetupWebhook}
+              disabled={settingWebhook}
+              className="h-8 text-xs"
+            >
+              {settingWebhook ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Webhook className="w-3.5 h-3.5 mr-1" />}
+              {webhookInfo?.url ? '웹훅 재등록' : '웹훅 등록'}
+            </Button>
+          </div>
+        </div>
+
+        {webhookInfo && (
+          <div className="space-y-1.5 text-xs">
+            <div className="flex items-center gap-2">
+              {webhookInfo.url ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+              ) : (
+                <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+              )}
+              <span className="text-gray-600">
+                {webhookInfo.url ? '웹훅 등록됨' : '웹훅 미등록'}
+              </span>
+              {webhookInfo.url && (
+                <code className="text-[10px] text-gray-400 truncate max-w-[300px]">{webhookInfo.url}</code>
+              )}
+            </div>
+            {webhookInfo.pending_update_count > 0 && (
+              <p className="text-amber-600 ml-5">대기 중인 업데이트: {webhookInfo.pending_update_count}개</p>
+            )}
+            {webhookInfo.last_error_message && (
+              <p className="text-red-500 ml-5">
+                마지막 오류: {webhookInfo.last_error_message}
+                {webhookInfo.last_error_date && (
+                  <span className="text-gray-400 ml-1">
+                    ({new Date(webhookInfo.last_error_date * 1000).toLocaleString('ko-KR')})
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* 헤더 */}
       <div className="flex items-center justify-between">
@@ -122,7 +262,7 @@ export default function AdminTelegramManager() {
         <div className="text-center py-12 text-gray-400">
           <Send className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm">연동된 텔레그램 그룹이 없습니다</p>
-          <p className="text-xs mt-1">위의 "새 그룹 연동" 버튼을 눌러 시작하세요</p>
+          <p className="text-xs mt-1">위의 &quot;새 그룹 연동&quot; 버튼을 눌러 시작하세요</p>
         </div>
       ) : (
         <div className="space-y-3">

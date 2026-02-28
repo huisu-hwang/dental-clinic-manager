@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    console.log("[telegram-webhook] Found group:", group.id, group.group_name)
+    console.log("[telegram-webhook] Found group:", group.id, group.chat_title)
 
     // 메시지 타입 및 메타데이터 분석
     const text: string = message.text || message.caption || ''
@@ -166,22 +166,21 @@ Deno.serve(async (req) => {
 
     // telegram_messages에 저장
     const messageInsert: Record<string, unknown> = {
-      group_id: group.id,
-      clinic_id: group.clinic_id,
+      telegram_group_id: group.id,
       telegram_message_id: message.message_id,
-      telegram_chat_id: String(chatId),
+      telegram_chat_id: chatId,
       sender_name: senderName,
-      sender_telegram_id: message.from?.id ? String(message.from.id) : null,
+      sender_username: message.from?.username || null,
+      message_text: text || null,
       message_type: messageType,
-      text_content: text || null,
       file_id: fileId,
       file_name: fileName,
       file_size: fileSize,
-      mime_type: mimeType,
+      file_mime_type: mimeType,
       file_url: fileUrl,
       has_file: hasFile,
       has_link: hasLink,
-      link_urls: allUrls.length > 0 ? allUrls : null,
+      extracted_links: allUrls.length > 0 ? allUrls : [],
       raw_update: update,
       telegram_date: new Date(message.date * 1000).toISOString(),
       is_posted: false,
@@ -238,15 +237,13 @@ Deno.serve(async (req) => {
       }
 
       const postInsert: Record<string, unknown> = {
-        group_id: group.id,
-        clinic_id: group.clinic_id,
+        telegram_group_id: group.id,
         title: postTitle,
         content: contentHtml,
         post_type: postType,
         source_message_ids: [savedMessage.id],
-        file_urls: fileUrls,
-        link_urls: linkUrls,
-        sender_name: senderName,
+        file_urls: fileUrls || [],
+        link_urls: linkUrls || [],
       }
 
       const { error: postError } = await supabase

@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     // 요약 대상 그룹 조회 (활성 + 요약 활성화)
     const { data: groups, error: groupsError } = await supabase
       .from('telegram_groups')
-      .select('id, title')
+      .select('id, chat_title')
       .eq('is_active', true)
       .eq('summary_enabled', true)
 
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
         if (messagesError) {
           results.push({
             group_id: group.id,
-            group_title: group.title,
+            group_title: group.chat_title,
             status: 'error',
             reason: messagesError.message
           })
@@ -99,7 +99,7 @@ export async function GET(request: Request) {
         if (!messages || messages.length < 3) {
           results.push({
             group_id: group.id,
-            group_title: group.title,
+            group_title: group.chat_title,
             status: 'skipped',
             reason: `메시지 수 부족 (${messages?.length ?? 0}개)`
           })
@@ -107,7 +107,7 @@ export async function GET(request: Request) {
         }
 
         // AI 요약 생성
-        const summary = await generateDailySummary(messages, group.title, kstDateStr)
+        const summary = await generateDailySummary(messages, group.chat_title, kstDateStr)
 
         // telegram_board_posts 에 삽입
         const sourceMessageIds = messages.map(m => m.id)
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
         if (insertError) {
           results.push({
             group_id: group.id,
-            group_title: group.title,
+            group_title: group.chat_title,
             status: 'error',
             reason: `포스트 저장 실패: ${insertError.message}`
           })
@@ -147,7 +147,7 @@ export async function GET(request: Request) {
 
         results.push({
           group_id: group.id,
-          group_title: group.title,
+          group_title: group.chat_title,
           status: 'success',
           messageCount: summary.messageCount,
           topicCount: summary.topicCount
@@ -155,7 +155,7 @@ export async function GET(request: Request) {
       } catch (groupError) {
         results.push({
           group_id: group.id,
-          group_title: group.title,
+          group_title: group.chat_title,
           status: 'error',
           reason: groupError instanceof Error ? groupError.message : 'Unknown error'
         })
