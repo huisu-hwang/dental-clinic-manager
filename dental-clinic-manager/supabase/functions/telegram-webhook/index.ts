@@ -55,14 +55,14 @@ Deno.serve(async (req) => {
       }
     })
 
-    // telegram_groups에서 chat_id로 그룹 조회
+    // telegram_groups에서 chat_id로 그룹 조회 (telegram_chat_id는 bigint)
     const chatId = message.chat.id
     console.log("[telegram-webhook] Looking up group for chat_id:", chatId)
 
     const { data: group, error: groupError } = await supabase
       .from('telegram_groups')
       .select('*')
-      .eq('telegram_chat_id', String(chatId))
+      .eq('telegram_chat_id', chatId)
       .eq('is_active', true)
       .single()
 
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    console.log("[telegram-webhook] Found group:", group.id, group.group_name)
+    console.log("[telegram-webhook] Found group:", group.id, group.chat_title)
 
     // 메시지 타입 및 메타데이터 분석
     const text: string = message.text || message.caption || ''
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     let fileId: string | null = null
     let fileName: string | null = null
     let fileSize: number | null = null
-    let mimeType: string | null = null
+    let fileMimeType: string | null = null
     let messageType = 'text'
     let hasFile = false
 
@@ -97,14 +97,14 @@ Deno.serve(async (req) => {
       fileId = message.document.file_id
       fileName = message.document.file_name || `document_${message.message_id}`
       fileSize = message.document.file_size || null
-      mimeType = message.document.mime_type || null
+      fileMimeType = message.document.mime_type || null
       messageType = 'document'
       hasFile = true
     } else if (message.video) {
       fileId = message.video.file_id
       fileName = message.video.file_name || `video_${message.message_id}.mp4`
       fileSize = message.video.file_size || null
-      mimeType = message.video.mime_type || null
+      fileMimeType = message.video.mime_type || null
       messageType = 'video'
       hasFile = true
     }
@@ -142,6 +142,7 @@ Deno.serve(async (req) => {
     const firstName = message.from?.first_name || ''
     const lastName = message.from?.last_name ? ` ${message.from.last_name}` : ''
     const senderName = `${firstName}${lastName}`.trim() || 'Unknown'
+    const senderUsername = message.from?.username || null
 
     console.log("[telegram-webhook] Message type:", messageType, "hasFile:", hasFile, "hasLink:", hasLink, "sender:", senderName)
 
@@ -164,24 +165,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    // telegram_messages에 저장
+    // extracted_links: { url: string; title?: string }[] 형식
+    const extractedLinks = allUrls.length > 0
+      ? allUrls.map(u => ({ url: u }))
+      : null
+
+    // telegram_messages에 저장 (DB 스키마에 맞는 컬럼명 사용)
     const messageInsert: Record<string, unknown> = {
-      group_id: group.id,
-      clinic_id: group.clinic_id,
+      telegram_group_id: group.id,
       telegram_message_id: message.message_id,
-      telegram_chat_id: String(chatId),
+      telegram_chat_id: chatId,
       sender_name: senderName,
-      sender_telegram_id: message.from?.id ? String(message.from.id) : null,
+      sender_username: senderUsername,
       message_type: messageType,
-      text_content: text || null,
+      message_text: text || null,
       file_id: fileId,
       file_name: fileName,
       file_size: fileSize,
-      mime_type: mimeType,
+      file_mime_type: fileMimeType,
       file_url: fileUrl,
       has_file: hasFile,
       has_link: hasLink,
-      link_urls: allUrls.length > 0 ? allUrls : null,
+      extracted_links: extractedLinks,
       raw_update: update,
       telegram_date: new Date(message.date * 1000).toISOString(),
       is_posted: false,
@@ -208,13 +213,13 @@ Deno.serve(async (req) => {
       let postTitle = ''
       let postType = ''
       let contentHtml = ''
-      let fileUrls: string[] | null = null
-      let linkUrls: string[] | null = null
+      let postFileUrls: { url: string; name?: string; type?: string; size?: number }[] | null = null
+      let postLinkUrls: { url: string; title?: string }[] | null = null
 
       if (hasFile) {
         postTitle = `[파일] ${fileName || messageType} - ${senderName}`
         postType = 'file'
-        fileUrls = fileUrl ? [fileUrl] : []
+        postFileUrls = fileUrl ? [{ url: fileUrl, name: fileName || undefined, type: fileMimeType || undefined, size: fileSize || undefined }] : []
 
         contentHtml = `<p>${text ? text.replace(/\n/g, '<br>') : ''}</p>`
         if (fileUrl) {
@@ -225,28 +230,26 @@ Deno.serve(async (req) => {
         }
         if (allUrls.length > 0) {
           contentHtml += `<p><strong>링크:</strong></p><ul>${allUrls.map(u => `<li><a href="${u}" target="_blank">${u}</a></li>`).join('')}</ul>`
-          linkUrls = allUrls
+          postLinkUrls = allUrls.map(u => ({ url: u }))
         }
       } else if (hasLink) {
         const firstUrl = allUrls[0]
         postTitle = `[링크] ${firstUrl.substring(0, 80)} - ${senderName}`
         postType = 'link'
-        linkUrls = allUrls
+        postLinkUrls = allUrls.map(u => ({ url: u }))
 
         contentHtml = `<p>${text ? text.replace(/\n/g, '<br>') : ''}</p>`
         contentHtml += `<p><strong>링크:</strong></p><ul>${allUrls.map(u => `<li><a href="${u}" target="_blank">${u}</a></li>`).join('')}</ul>`
       }
 
       const postInsert: Record<string, unknown> = {
-        group_id: group.id,
-        clinic_id: group.clinic_id,
+        telegram_group_id: group.id,
         title: postTitle,
         content: contentHtml,
         post_type: postType,
         source_message_ids: [savedMessage.id],
-        file_urls: fileUrls,
-        link_urls: linkUrls,
-        sender_name: senderName,
+        file_urls: postFileUrls,
+        link_urls: postLinkUrls,
       }
 
       const { error: postError } = await supabase
