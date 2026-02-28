@@ -104,8 +104,8 @@ const getCodefConfig = () => {
       break;
     case 'DEMO':
     case '1':
-      // DEMO 환경은 NT(홈택스) 상품 API 미지원 → SANDBOX로 전환
-      serviceType = 2;
+      // DEMO 환경 (development.codef.io) - NT 상품 API 지원
+      serviceType = 1;
       break;
     default:
       serviceType = 2;

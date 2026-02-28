@@ -28,18 +28,9 @@ function getServiceClient() {
 // POST: 홈택스 계정 연결
 export async function POST(request: NextRequest) {
   try {
-    // DEMO VERSION: Always allow connection for demonstration purposes
-    const isDemoMode = false; // Set to false to use actual CODEF API
-
-    if (!isDemoMode) {
-      // CODEF 설정 확인
-      if (!isCodefConfigured()) {
-        return NextResponse.json(
-          { success: false, error: 'CODEF API가 설정되지 않았습니다. 환경변수를 확인하세요.' },
-          { status: 500 }
-        );
-      }
-    }
+    // CODEF 설정 여부에 따라 자동으로 데모 모드 활성화
+    // CODEF_DEMO_MODE=true 또는 CODEF API 미설정 시 데모 모드 동작
+    const isDemoMode = process.env.CODEF_DEMO_MODE === 'true' || !isCodefConfigured();
 
     const body = await request.json();
     const { clinicId, userId, password, identity, loginType, certFile, keyFile, certPassword, certType } = body;
@@ -233,12 +224,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let serviceType = getCodefServiceType();
-
-    // 데모 모드일때는 성공 메시지와 정식 서비스 타입 반환
-    if (isDemoMode) {
-      serviceType = '정식 (데모데이터)';
-    }
+    const serviceType = isDemoMode ? '데모' : getCodefServiceType();
 
     return NextResponse.json({
       success: true,
@@ -341,9 +327,9 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .single();
 
-    const isDemoMode = false; // 데모 목적 해제
+    const isDemoMode = process.env.CODEF_DEMO_MODE === 'true' || !isCodefConfigured();
     const configured = isDemoMode ? true : isCodefConfigured();
-    const serviceType = isDemoMode ? '정식 (데모데이터)' : getCodefServiceType();
+    const serviceType = isDemoMode ? '데모' : getCodefServiceType();
 
     if (error || !connection) {
       return NextResponse.json({

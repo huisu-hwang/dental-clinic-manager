@@ -30,20 +30,15 @@ function getServiceClient() {
 // POST: 홈택스 데이터 동기화
 export async function POST(request: NextRequest) {
   try {
-    // DEMO VERSION: Bypass Codef Config & Connection Checks
-    // For the demo version, we will simulate a successful connection and sync
-    // using the actual data provided from the Hometax PDFs.
+    // CODEF 설정 여부에 따라 자동으로 데모 모드 활성화
+    // CODEF_DEMO_MODE=true 또는 CODEF API 미설정 시 데모 모드 동작
+    const isDemoMode = process.env.CODEF_DEMO_MODE === 'true' || !isCodefConfigured();
 
-    const isDemoMode = false; // Set to false to use actual CODEF API
-
-    if (!isDemoMode) {
-      // CODEF 설정 확인
-      if (!isCodefConfigured()) {
-        return NextResponse.json(
-          { success: false, error: 'CODEF API가 설정되지 않았습니다.' },
-          { status: 500 }
-        );
-      }
+    if (!isDemoMode && !isCodefConfigured()) {
+      return NextResponse.json(
+        { success: false, error: 'CODEF API가 설정되지 않았습니다.' },
+        { status: 500 }
+      );
     }
 
     const body = await request.json();
@@ -58,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceClient();
 
-    let hometaxId = 'demo-user-123';
+    let hometaxId = 'demo-user';
     let hometaxPassword = 'demo-password';
 
     if (!isDemoMode) {
@@ -96,6 +91,26 @@ export async function POST(request: NextRequest) {
       }
 
       hometaxId = connection.hometax_user_id;
+    } else {
+      // 데모 모드: codef_connections에 데모 연결 정보 없으면 자동 생성
+      const { data: existingConn } = await supabase
+        .from('codef_connections')
+        .select('clinic_id')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .single();
+
+      if (!existingConn) {
+        await supabase.from('codef_connections').upsert({
+          clinic_id: clinicId,
+          connected_id: 'demo-hometax-id-1234',
+          hometax_user_id: 'demo_user',
+          encrypted_password: 'dummy-password',
+          is_active: true,
+          service_type: 'DEMO',
+          connected_at: new Date().toISOString(),
+        }, { onConflict: 'clinic_id' });
+      }
     }
 
     // 조회 기간 설정
@@ -144,28 +159,36 @@ export async function POST(request: NextRequest) {
       try {
         console.log(`CODEF sync: 세금계산서 통계 조회 (${yearMonth})`);
 
-        // 데모 모드일 경우 실제 PDF 데이터를 기반으로 한 하드코딩된 모의 데이터 사용
+        // 데모 모드: PDF 스펙 기반 현실적인 치과 세금계산서 모의 데이터
         const taxStats = isDemoMode ? [
           {
-            resType: "0", // 매출
-            resNumber: "142",
-            resSupplyValue: "185000000",
-            resTaxAmt: "18500000",
-            resPartnerSpecList: []
+            resType: "0",            // 매출
+            resYearMonth: yearMonth,
+            resPartnerCnt: "3",
+            resNumber: "8",
+            resSupplyValue: "15000000",
+            resTaxAmt: "1500000",
+            resPartnerSpecList: [
+              { resCompanyIdentityNo: "1234567890", resCompanyNm: "(주)건강보험공단", resNumber: "5", resSupplyValue: "9000000", resTaxAmt: "900000" },
+              { resCompanyIdentityNo: "2345678901", resCompanyNm: "(주)삼성화재", resNumber: "2", resSupplyValue: "4000000", resTaxAmt: "400000" },
+              { resCompanyIdentityNo: "3456789012", resCompanyNm: "(주)메리츠화재", resNumber: "1", resSupplyValue: "2000000", resTaxAmt: "200000" },
+            ],
           },
           {
-            resType: "1", // 매입
+            resType: "1",            // 매입
+            resYearMonth: yearMonth,
+            resPartnerCnt: "5",
             resNumber: "57",
             resSupplyValue: "42000000",
             resTaxAmt: "4200000",
             resPartnerSpecList: [
-              { resCompanyIdentityNo: "123-45-67890", resCompanyNm: "(주)오스템임플란트", resNumber: "15", resSupplyValue: "12000000", resTaxAmt: "1200000" },
-              { resCompanyIdentityNo: "234-56-78901", resCompanyNm: "(주)덴티움", resNumber: "8", resSupplyValue: "8500000", resTaxAmt: "850000" },
-              { resCompanyIdentityNo: "345-67-89012", resCompanyNm: "네오바이오텍", resNumber: "5", resSupplyValue: "4700000", resTaxAmt: "470000" },
-              { resCompanyIdentityNo: "456-78-90123", resCompanyNm: "신원덴탈", resNumber: "12", resSupplyValue: "3200000", resTaxAmt: "320000" },
-              { resCompanyIdentityNo: "567-89-01234", resCompanyNm: "메가젠임플란트", resNumber: "6", resSupplyValue: "5600000", resTaxAmt: "560000" }
-            ]
-          }
+              { resCompanyIdentityNo: "1234567890", resCompanyNm: "(주)오스템임플란트", resNumber: "15", resSupplyValue: "12000000", resTaxAmt: "1200000" },
+              { resCompanyIdentityNo: "2345678901", resCompanyNm: "(주)덴티움", resNumber: "8", resSupplyValue: "8500000", resTaxAmt: "850000" },
+              { resCompanyIdentityNo: "3456789012", resCompanyNm: "네오바이오텍", resNumber: "5", resSupplyValue: "4700000", resTaxAmt: "470000" },
+              { resCompanyIdentityNo: "4567890123", resCompanyNm: "신원덴탈", resNumber: "12", resSupplyValue: "3200000", resTaxAmt: "320000" },
+              { resCompanyIdentityNo: "5678901234", resCompanyNm: "메가젠임플란트", resNumber: "6", resSupplyValue: "5600000", resTaxAmt: "560000" },
+            ],
+          },
         ] as any[] : await getTaxInvoiceStatistics(hometaxId, hometaxPassword, yearMonth);
 
         for (const item of taxStats) {
@@ -340,23 +363,12 @@ export async function POST(request: NextRequest) {
       ...results.cashReceiptPurchase.errors,
     ];
 
-    const serviceType = isDemoMode ? '정식 (데모데이터)' : getCodefServiceType();
-    let message = `${totalSynced}건의 데이터가 홈택스(실제 데이터 맵핑)에서 동기화되었습니다.`;
-    if (totalSynced === 0 && serviceType !== '정식') {
-      message = `동기화된 데이터가 없습니다. 현재 ${serviceType} 모드에서는 실제 홈택스 데이터가 제한될 수 있습니다. 실제 데이터 연동을 위해서는 CODEF 정식(PRODUCT) 서비스가 필요합니다.`;
-    }
-
-    // 데모 모드일때, 연결 상태도 "연결됨"으로 표시되도록 codef_connections를 dummy로 UPSERT
+    const serviceType = isDemoMode ? '데모' : getCodefServiceType();
+    let message = `${totalSynced}건의 데이터가 홈택스에서 동기화되었습니다.`;
     if (isDemoMode) {
-      await supabase.from('codef_connections').upsert({
-        clinic_id: clinicId,
-        connected_id: 'demo-hometax-id-1234',
-        hometax_user_id: 'demo_user',
-        encrypted_password: 'dummy-password',
-        is_active: true,
-        service_type: 'PRODUCT',
-        last_sync_date: new Date().toISOString()
-      }, { onConflict: 'clinic_id' });
+      message = `데모 모드: ${totalSynced}건의 모의 데이터가 동기화되었습니다.`;
+    } else if (totalSynced === 0) {
+      message = `동기화된 데이터가 없습니다. 현재 ${serviceType} 모드에서는 실제 홈택스 데이터가 제한될 수 있습니다. 실제 데이터 연동을 위해서는 CODEF 정식(PRODUCT) 서비스가 필요합니다.`;
     }
 
     return NextResponse.json({

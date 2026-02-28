@@ -13,7 +13,10 @@ import {
 // POST: 공동인증서 기반 신용카드 매출자료 조회
 export async function POST(request: NextRequest) {
   try {
-    if (!isCodefConfigured()) {
+    // CODEF 설정 여부에 따라 자동으로 데모 모드 활성화
+    const isDemoMode = process.env.CODEF_DEMO_MODE === 'true' || !isCodefConfigured();
+
+    if (!isDemoMode && !isCodefConfigured()) {
       return NextResponse.json(
         { success: false, error: 'CODEF API가 설정되지 않았습니다. 환경변수를 확인하세요.' },
         { status: 500 }
@@ -31,12 +34,34 @@ export async function POST(request: NextRequest) {
       endQuarter,     // "1"~"4"
     } = body;
 
-    // 필수값 검증
-    if (!certFile || !certPassword || !certType || !year || !startQuarter || !endQuarter) {
+    // 필수값 검증 (데모 모드에서는 인증서 관련 파라미터 불필요)
+    if (!year || !startQuarter || !endQuarter) {
       return NextResponse.json(
-        { success: false, error: '필수 파라미터가 누락되었습니다. (certFile, certPassword, certType, year, startQuarter, endQuarter)' },
+        {
+          success: false,
+          error: '필수 파라미터가 누락되었습니다. (year, startQuarter, endQuarter)',
+        },
         { status: 400 }
       );
+    }
+
+    if (!isDemoMode) {
+      if (!certFile || !certPassword || !certType) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: '인증서 파라미터가 누락되었습니다. (certFile, certPassword, certType)',
+          },
+          { status: 400 }
+        );
+      }
+      // der/key 타입일 때 keyFile 필수
+      if (certType === '1' && !keyFile) {
+        return NextResponse.json(
+          { success: false, error: 'der/key 타입 인증서는 keyFile이 필요합니다.' },
+          { status: 400 }
+        );
+      }
     }
 
     // 분기 값 검증
@@ -55,10 +80,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const serviceType = getActualCodefServiceType();
-    console.log(`CODEF 신용카드 매출 조회: year=${year}, Q${startQuarter}~Q${endQuarter}, serviceType=${serviceType}, certType=${certType}`);
+    const serviceType = isDemoMode ? '데모' : getActualCodefServiceType();
+    console.log(`CODEF 신용카드 매출 조회: year=${year}, Q${startQuarter}~Q${endQuarter}, serviceType=${serviceType}, isDemoMode=${isDemoMode}`);
 
-    const salesData = await getCreditCardSalesData(
+    // 데모 모드: PDF 스펙 기반 모의 데이터 (필드명 PDF 스펙 준수)
+    const salesData = isDemoMode ? {
+      resSalesHistoryList: [
+        { resYearMonth: `${year}01`, resCount: "134", resTotalAmount: "45000000", resPaymentAmt: "40000000", resPaymentAmt1: "5000000", resCashBack: "0" },
+        { resYearMonth: `${year}02`, resCount: "112", resTotalAmount: "38500000", resPaymentAmt: "34000000", resPaymentAmt1: "4500000", resCashBack: "0" },
+        { resYearMonth: `${year}03`, resCount: "156", resTotalAmount: "52000000", resPaymentAmt: "46000000", resPaymentAmt1: "6000000", resCashBack: "0" },
+      ],
+      resTotalList: [
+        { resQuarter: "1", resType: "0", resCount: "402", resTotalAmount: "135500000" },
+      ],
+      resSalesHistoryList1: [
+        { resYearMonth: `${year}01`, resCount: "28", resSalesAmount: "9500000", resCompanyNm: "PG사 결제" },
+        { resYearMonth: `${year}02`, resCount: "24", resSalesAmount: "8200000", resCompanyNm: "PG사 결제" },
+        { resYearMonth: `${year}03`, resCount: "33", resSalesAmount: "11000000", resCompanyNm: "PG사 결제" },
+      ],
+    } as any : await getCreditCardSalesData(
       certFile,
       certPassword,
       keyFile || '',
