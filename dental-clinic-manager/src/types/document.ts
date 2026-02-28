@@ -4,7 +4,7 @@
  */
 
 // 문서 타입
-export type DocumentType = 'resignation' | 'employment_certificate' | 'recommended_resignation' | 'termination_notice' | 'welfare_payment'
+export type DocumentType = 'resignation' | 'employment_certificate' | 'recommended_resignation' | 'termination_notice' | 'welfare_payment' | 'cash_payment'
 
 // 문서 타입 한글 라벨
 export const DocumentTypeLabels: Record<DocumentType, string> = {
@@ -12,7 +12,8 @@ export const DocumentTypeLabels: Record<DocumentType, string> = {
   employment_certificate: '재직증명서',
   recommended_resignation: '권고사직서',
   termination_notice: '해고통보서',
-  welfare_payment: '복지비 지급 확인서'
+  welfare_payment: '복지비 지급 확인서',
+  cash_payment: '현금 지급 확인서'
 }
 
 // 원장 전용 문서 타입 (직원은 작성 불가)
@@ -320,4 +321,46 @@ export const getDefaultWelfarePaymentData = (
   requestDate: new Date().toISOString().split('T')[0],
   paymentAmount: '',
   paymentReason: '해당 직원의 업무 기여도 및 향후 업무증진을 위해 운동비 등'
+})
+
+// 현금 지급 확인서 데이터
+export interface CashPaymentData {
+  // 직원 정보
+  employeeName: string
+  employeePosition: string
+  department: string
+
+  // 치과 정보
+  clinicName: string
+  representativeName: string
+
+  // 지급 정보
+  paymentMonth: string  // YYYY-MM
+  paymentAmount: string
+  paymentDate: string
+  paymentReason: string
+
+  // 작성일
+  submissionDate: string
+
+  // 서명
+  employeeSignature?: string
+  ownerSignature?: string
+}
+
+// 기본 현금 지급 확인서 데이터
+export const getDefaultCashPaymentData = (
+  clinicName?: string,
+  representativeName?: string
+): CashPaymentData => ({
+  employeeName: '',
+  employeePosition: '',
+  department: '진료실',
+  clinicName: clinicName || '',
+  representativeName: representativeName || '',
+  paymentMonth: new Date().toISOString().slice(0, 7),
+  paymentAmount: '',
+  paymentDate: new Date().toISOString().split('T')[0],
+  paymentReason: '병원 정책에 협조적이고 업무 능력이 뛰어남',
+  submissionDate: new Date().toISOString().split('T')[0]
 })
