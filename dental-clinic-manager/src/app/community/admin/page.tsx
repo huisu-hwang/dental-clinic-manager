@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Shield, Flag, ShieldAlert, ChevronLeft, Tags } from 'lucide-react'
+import { Shield, Flag, ShieldAlert, ChevronLeft, Tags, Send } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
@@ -10,9 +10,10 @@ import { Button } from '@/components/ui/Button'
 import AdminReportList from '@/components/Community/AdminReportList'
 import AdminPenaltyHistory from '@/components/Community/AdminPenaltyHistory'
 import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
+import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 import { getTabRoute } from '@/utils/tabRouting'
 
-type AdminTab = 'reports' | 'penalties' | 'categories'
+type AdminTab = 'reports' | 'penalties' | 'categories' | 'telegram'
 
 export default function CommunityAdminPage() {
   const router = useRouter()
@@ -174,6 +175,17 @@ export default function CommunityAdminPage() {
                   <Tags className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                   주제 관리
                 </button>
+                <button
+                  onClick={() => setActiveTab('telegram')}
+                  className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all ${
+                    activeTab === 'telegram'
+                      ? 'bg-white text-red-600 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                  }`}
+                >
+                  <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  텔레그램 연동
+                </button>
               </nav>
             </div>
 
@@ -183,6 +195,7 @@ export default function CommunityAdminPage() {
                 {activeTab === 'reports' && <AdminReportList />}
                 {activeTab === 'penalties' && <AdminPenaltyHistory />}
                 {activeTab === 'categories' && <AdminCategoryManager />}
+                {activeTab === 'telegram' && <AdminTelegramManager />}
               </div>
             </div>
           </div>
