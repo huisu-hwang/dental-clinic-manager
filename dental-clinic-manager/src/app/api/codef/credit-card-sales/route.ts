@@ -1,30 +1,19 @@
 // ============================================
-// CODEF 신용카드 매출자료 조회 API (홈택스 ID/PW 방식)
-// POST: 홈택스 아이디/비밀번호 기반 신용카드 매출 데이터 조회
+// CODEF 신용카드 매출자료 조회 API (공동인증서 전용)
+// POST: 공동인증서 기반 신용카드 매출 데이터 조회
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import {
   getCreditCardSalesData,
   isCodefConfigured,
   getActualCodefServiceType,
-  decryptPasswordFromStorage,
 } from '@/lib/codefService';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function getServiceClient() {
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
-
-// POST: 홈택스 ID/PW 기반 신용카드 매출자료 조회
+// POST: 공동인증서 기반 신용카드 매출자료 조회
 export async function POST(request: NextRequest) {
   try {
-    const isDemoMode = false;
-
-    if (!isDemoMode && !isCodefConfigured()) {
+    if (!isCodefConfigured()) {
       return NextResponse.json(
         { success: false, error: 'CODEF API가 설정되지 않았습니다. 환경변수를 확인하세요.' },
         { status: 500 }
@@ -33,16 +22,19 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      clinicId,       // 클리닉 ID
+      certFile,       // BASE64 인코딩된 인증서 der/pfx 파일
+      certPassword,   // 인증서 비밀번호 (평문)
+      keyFile,        // BASE64 인코딩된 인증서 key 파일 (der/key 타입)
+      certType,       // "1": der/key, "pfx": pfx
       year,           // YYYY
       startQuarter,   // "1"~"4"
       endQuarter,     // "1"~"4"
     } = body;
 
     // 필수값 검증
-    if (!clinicId || !year || !startQuarter || !endQuarter) {
+    if (!certFile || !certPassword || !certType || !year || !startQuarter || !endQuarter) {
       return NextResponse.json(
-        { success: false, error: '필수 파라미터가 누락되었습니다. (clinicId, year, startQuarter, endQuarter)' },
+        { success: false, error: '필수 파라미터가 누락되었습니다. (certFile, certPassword, certType, year, startQuarter, endQuarter)' },
         { status: 400 }
       );
     }
@@ -63,47 +55,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // DB에서 홈택스 연결 정보 조회
-    const supabase = getServiceClient();
-    const { data: connection, error: connError } = await supabase
-      .from('codef_connections')
-      .select('connected_id, hometax_user_id, encrypted_password')
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true)
-      .single();
-
-    if (connError || !connection) {
-      return NextResponse.json(
-        { success: false, error: '홈택스 연결 정보가 없습니다. 먼저 홈택스 계정을 연결해주세요.' },
-        { status: 400 }
-      );
-    }
-
-    let hometaxPassword: string;
-    try {
-      hometaxPassword = decryptPasswordFromStorage(connection.encrypted_password);
-    } catch {
-      return NextResponse.json(
-        { success: false, error: '저장된 비밀번호 복호화에 실패했습니다. 계정을 다시 연결해주세요.' },
-        { status: 400 }
-      );
-    }
-
-    const hometaxId = connection.hometax_user_id;
     const serviceType = getActualCodefServiceType();
-    console.log(`CODEF 신용카드 매출 조회: year=${year}, Q${startQuarter}~Q${endQuarter}, serviceType=${serviceType}, id=${hometaxId}`);
+    console.log(`CODEF 신용카드 매출 조회: year=${year}, Q${startQuarter}~Q${endQuarter}, serviceType=${serviceType}, certType=${certType}`);
 
-    const salesData = isDemoMode ? {
-      resSalesHistoryList: [
-        { resMonth: `${year}01`, resSalesCount: "134", resSalesAmount: "45000000" },
-        { resMonth: `${year}02`, resSalesCount: "112", resSalesAmount: "38500000" },
-        { resMonth: `${year}03`, resSalesCount: "156", resSalesAmount: "52000000" }
-      ],
-      resTotalList: [],
-      resSalesHistoryList1: []
-    } as any : await getCreditCardSalesData(
-      hometaxId,
-      hometaxPassword,
+    const salesData = await getCreditCardSalesData(
+      certFile,
+      certPassword,
+      keyFile || '',
+      certType,
       year,
       startQuarter,
       endQuarter
@@ -117,7 +76,7 @@ export async function POST(request: NextRequest) {
           totalList: [],
           pgSalesHistory: [],
           serviceType,
-          message: '조회된 데이터가 없습니다. 홈택스 연결 정보를 확인해주세요.',
+          message: '조회된 데이터가 없습니다.',
         },
       });
     }
@@ -130,7 +89,7 @@ export async function POST(request: NextRequest) {
         salesHistory: salesData.resSalesHistoryList || [],
         totalList: salesData.resTotalList || [],
         pgSalesHistory: salesData.resSalesHistoryList1 || [],
-        serviceType: isDemoMode ? '정식 (데모데이터)' : serviceType,
+        serviceType,
         message: `${salesCount}개월 매출 데이터가 조회되었습니다.`,
       },
     });

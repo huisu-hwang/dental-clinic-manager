@@ -589,35 +589,36 @@ async function requestProductForCertApi<T>(productUrl: string, params: object): 
 }
 
 // ============================================
-// 신용카드 매출자료 조회 (ID/PW 로그인 방식)
+// 신용카드 매출자료 조회 (공동인증서 전용)
 // Endpoint: /v1/kr/public/nt/tax-payment/credit-card-sales-data-list
 // Organization: 0006
-// 인증 방식: 홈택스 아이디/비밀번호 (loginType=1)
+// 인증 방식: 공동인증서 (certFile, keyFile, certPassword)
 // ============================================
 
 export async function getCreditCardSalesData(
-  hometaxId: string,       // 홈택스 아이디
-  hometaxPassword: string, // 홈택스 비밀번호 (평문 - 내부에서 RSA 암호화)
+  certFile: string,        // Base64 인코딩된 인증서 DER 또는 PFX 파일
+  certPassword: string,    // 인증서 비밀번호 (평문 - 내부에서 RSA 암호화)
+  keyFile: string,         // Base64 인코딩된 키 파일 (DER/KEY 방식일 때)
+  certType: string,        // "1": DER/KEY, "pfx": PFX
   year: string,            // YYYY 형식
   startQuarter: string,    // 조회시작 분기 "1", "2", "3", "4"
   endQuarter: string       // 조회종료 분기 "1", "2", "3", "4"
 ): Promise<CreditCardSalesData | null> {
   const config = getCodefConfig();
-  const encryptedPassword = encryptRSAWithForge(config.publicKey, hometaxPassword);
+  const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
 
   const params = {
     organization: CODEF_ORGANIZATION.CREDIT_CARD_SALES,  // 0006
-    loginType: '1',          // ID/PW 로그인
-    id: hometaxId,
-    userPassword: encryptedPassword,
+    certFile,
+    certPassword: encryptedPassword,
+    keyFile: keyFile || '',
+    certType: certType || '1',
     year,
     startDate: startQuarter,    // 분기 번호 ("1"~"4")
     endDate: endQuarter,        // 분기 번호 ("1"~"4")
-    identity: '',
-    telecom: '',
   };
 
-  const response = await requestProduct<CreditCardSalesData>(
+  const response = await requestProductForCertApi<CreditCardSalesData>(
     CODEF_ENDPOINTS.CREDIT_CARD_SALES,
     params
   );
