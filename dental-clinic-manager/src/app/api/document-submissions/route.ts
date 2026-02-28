@@ -166,6 +166,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 문서 제출 생성 (법적 효력 요건 포함)
+    // 권고사직서: 원장 서명 후 직원에게 발송 (pending 상태, 직원 서명 대기)
+    // 해고통보서: 원장 서명 후 자동 승인 (approved 상태)
+    const isAutoApproved = documentType === 'termination_notice'
     const submissionData: Record<string, any> = {
       clinic_id: clinicId,
       submitted_by: userId,
@@ -174,9 +177,9 @@ export async function POST(request: NextRequest) {
       document_data: documentData,
       employee_signature: ownerOnlyTypes.includes(documentType) ? null : (signature || null),
       owner_signature: ownerOnlyTypes.includes(documentType) ? (signature || null) : null,
-      status: ownerOnlyTypes.includes(documentType) ? 'approved' : 'pending',
-      approved_by: ownerOnlyTypes.includes(documentType) ? userId : null,
-      approved_at: ownerOnlyTypes.includes(documentType) ? new Date().toISOString() : null,
+      status: isAutoApproved ? 'approved' : 'pending',
+      approved_by: isAutoApproved ? userId : null,
+      approved_at: isAutoApproved ? new Date().toISOString() : null,
       // 법적 효력 요건 필드 (전자서명법 준수)
       document_hash: documentHash,
       signature_ip_address: clientIp,
@@ -215,7 +218,7 @@ export async function POST(request: NextRequest) {
 
       if (!targetError && targetEmployee && targetEmployee.clinic_id === clinicId && targetEmployee.status === 'active') {
         if (documentType === 'recommended_resignation') {
-          // 권고사직서: 사직서 작성 요청 알림
+          // 권고사직서: 확인 및 서명 요청 알림
           await supabaseAdmin
             .from('user_notifications')
             .insert({
@@ -223,8 +226,8 @@ export async function POST(request: NextRequest) {
               user_id: targetEmployeeId,
               type: 'document',
               title: '권고사직서가 발송되었습니다',
-              content: `원장님이 권고사직서를 발송하였습니다. 내용을 확인하시고, 동의하시는 경우 사직서를 작성하여 제출해 주세요.`,
-              link: '/dashboard?tab=documents',
+              content: `원장님이 권고사직서를 발송하였습니다. 내용을 확인하시고 서명해 주세요.`,
+              link: '/dashboard?tab=documents&view=received',
               reference_type: 'document_submission',
               reference_id: submission.id,
               created_by: userId,
@@ -295,11 +298,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH: 문서 승인/반려 또는 원장 서명
+// PATCH: 문서 승인/반려, 원장 서명, 직원 서명(권고사직서 확인)
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { clinicId, userId, submissionId, action, ownerSignature, rejectReason } = body
+    const { clinicId, userId, submissionId, action, ownerSignature, employeeSignature, rejectReason, signatureMetadata } = body
 
     if (!clinicId || !userId || !submissionId || !action) {
       return NextResponse.json(
@@ -316,7 +319,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // 사용자 권한 검증 (owner만 승인/반려 가능)
+    // 사용자 권한 검증
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, name, clinic_id, role, status')
@@ -337,6 +340,10 @@ export async function PATCH(request: NextRequest) {
         { status: 403 }
       )
     }
+
+    // 클라이언트 IP 주소 추출
+    const forwarded = request.headers.get('x-forwarded-for')
+    const clientIp = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown'
 
     let updateData: any = {
       updated_at: new Date().toISOString()
@@ -363,6 +370,51 @@ export async function PATCH(request: NextRequest) {
         )
       }
       updateData.owner_signature = ownerSignature
+    } else if (action === 'employee_sign') {
+      // 직원이 권고사직서에 서명 (확인 및 동의)
+      // 해당 문서의 target_employee_id가 현재 사용자인지 확인
+      const { data: doc, error: docError } = await supabaseAdmin
+        .from('document_submissions')
+        .select('id, target_employee_id, document_type, status')
+        .eq('id', submissionId)
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (docError || !doc) {
+        return NextResponse.json(
+          { error: '문서를 찾을 수 없습니다.' },
+          { status: 404 }
+        )
+      }
+
+      if (doc.target_employee_id !== userId) {
+        return NextResponse.json(
+          { error: '해당 문서의 대상자가 아닙니다.' },
+          { status: 403 }
+        )
+      }
+
+      if (doc.status !== 'pending') {
+        return NextResponse.json(
+          { error: '이미 처리된 문서입니다.' },
+          { status: 400 }
+        )
+      }
+
+      if (!employeeSignature) {
+        return NextResponse.json(
+          { error: '서명이 필요합니다.' },
+          { status: 400 }
+        )
+      }
+
+      updateData.employee_signature = employeeSignature
+      updateData.status = 'approved'
+      updateData.approved_at = new Date().toISOString()
+      updateData.signed_at = new Date().toISOString()
+      updateData.signature_ip_address = clientIp
+      updateData.signature_device_info = signatureMetadata?.device_info || null
+      updateData.signature_user_agent = signatureMetadata?.user_agent || null
     }
 
     const { data, error: updateError } = await supabaseAdmin
@@ -379,6 +431,36 @@ export async function PATCH(request: NextRequest) {
         { error: `Failed to update submission: ${updateError.message}` },
         { status: 500 }
       )
+    }
+
+    // 직원 서명 완료 시 원장에게 알림 발송
+    if (action === 'employee_sign' && data) {
+      const { data: owners } = await supabaseAdmin
+        .from('users')
+        .select('id, name')
+        .eq('clinic_id', clinicId)
+        .eq('role', 'owner')
+        .eq('status', 'active')
+
+      if (owners && owners.length > 0) {
+        const notificationInserts = owners.map((owner: { id: string; name: string }) => ({
+          clinic_id: clinicId,
+          user_id: owner.id,
+          type: 'document',
+          title: `권고사직서 서명 완료 - ${user.name}`,
+          content: `${user.name}님이 권고사직서를 확인하고 서명하였습니다.`,
+          link: '/dashboard?tab=documents&view=sent',
+          reference_type: 'document_submission',
+          reference_id: submissionId,
+          is_read: false,
+          created_by: userId,
+          created_at: new Date().toISOString(),
+        }))
+
+        await supabaseAdmin
+          .from('user_notifications')
+          .insert(notificationInserts)
+      }
     }
 
     return NextResponse.json({ data, success: true })

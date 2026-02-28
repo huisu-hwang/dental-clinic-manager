@@ -90,6 +90,8 @@ export default function DocumentTemplates() {
   const [showSignatureModal, setShowSignatureModal] = useState(false)
   const [showOwnerSignatureModal, setShowOwnerSignatureModal] = useState(false)
   const [showOwnerDocumentSignatureModal, setShowOwnerDocumentSignatureModal] = useState(false) // 권고사직서/해고통보서용
+  const [showEmployeeSignatureModal, setShowEmployeeSignatureModal] = useState(false) // 직원 권고사직서 서명용
+  const [employeeSigningDoc, setEmployeeSigningDoc] = useState<DocumentSubmission | null>(null) // 직원이 서명할 문서
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sentDocuments, setSentDocuments] = useState<DocumentSubmission[]>([]) // 보낸 문서
   const [receivedDocuments, setReceivedDocuments] = useState<DocumentSubmission[]>([]) // 받은 문서
@@ -364,6 +366,46 @@ export default function DocumentTemplates() {
   const handleOwnerSignAndApprove = (signatureData: string) => {
     if (selectedDocument) {
       handleApproveReject(selectedDocument.id, 'approve', signatureData)
+    }
+  }
+
+  // 직원이 권고사직서에 서명 (확인 및 동의)
+  const handleEmployeeSign = async (signatureData: string) => {
+    if (!user?.clinic_id || !user?.id || !employeeSigningDoc) return
+
+    setShowEmployeeSignatureModal(false)
+    setIsSubmitting(true)
+    try {
+      const signatureMetadata = collectSignatureMetadata()
+
+      const response = await fetch('/api/document-submissions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinicId: user.clinic_id,
+          userId: user.id,
+          submissionId: employeeSigningDoc.id,
+          action: 'employee_sign',
+          employeeSignature: signatureData,
+          signatureMetadata
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        alert('권고사직서에 서명이 완료되었습니다.')
+        loadReceivedDocuments()
+        loadSentDocuments()
+        setEmployeeSigningDoc(null)
+        setSelectedDocument(null)
+      } else {
+        alert(`서명 실패: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Employee sign error:', error)
+      alert('서명 처리 중 오류가 발생했습니다.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -682,7 +724,7 @@ export default function DocumentTemplates() {
       const result = await response.json()
       if (result.success) {
         const actionMessage = documentType === 'recommended_resignation'
-          ? '권고사직서가 발송되었습니다. 해당 직원에게 사직서 작성 요청 알림이 전송되었습니다.'
+          ? '권고사직서가 발송되었습니다. 해당 직원에게 확인 및 서명 요청 알림이 전송되었습니다.'
           : '해고통보서가 발송되었습니다. 해당 직원에게 해고 통보 알림이 전송되었습니다.'
         alert(actionMessage)
 
@@ -739,7 +781,8 @@ export default function DocumentTemplates() {
     } else if (doc.document_type === 'recommended_resignation') {
       setRecommendedResignationData({
         ...doc.document_data,
-        ownerSignature: doc.owner_signature
+        ownerSignature: doc.owner_signature,
+        employeeSignature: doc.employee_signature
       })
       setDocumentType('recommended_resignation')
     } else if (doc.document_type === 'termination_notice') {
@@ -927,14 +970,19 @@ export default function DocumentTemplates() {
                         </span>
                       </p>
                       {/* 권고사직서/해고통보서 안내 메시지 */}
-                      {!isOwner && doc.status === 'approved' && (
+                      {!isOwner && doc.document_type === 'recommended_resignation' && doc.status === 'pending' && (
                         <p className="text-sm mt-1">
-                          {doc.document_type === 'recommended_resignation' && (
-                            <span className="text-orange-600">※ 권고사직에 동의하시면 사직서를 작성하여 제출해 주세요.</span>
-                          )}
-                          {doc.document_type === 'termination_notice' && (
-                            <span className="text-red-600">※ 해고통보서입니다. 내용을 확인해 주세요.</span>
-                          )}
+                          <span className="text-orange-600 font-medium">※ 권고사직서를 확인하고 서명해 주세요.</span>
+                        </p>
+                      )}
+                      {!isOwner && doc.document_type === 'recommended_resignation' && doc.status === 'approved' && (
+                        <p className="text-sm mt-1">
+                          <span className="text-green-600">※ 서명이 완료된 권고사직서입니다.</span>
+                        </p>
+                      )}
+                      {!isOwner && doc.document_type === 'termination_notice' && doc.status === 'approved' && (
+                        <p className="text-sm mt-1">
+                          <span className="text-red-600">※ 해고통보서입니다. 내용을 확인해 주세요.</span>
                         </p>
                       )}
                     </div>
@@ -946,6 +994,21 @@ export default function DocumentTemplates() {
                     >
                       상세보기
                     </button>
+                    {/* 직원의 권고사직서 서명 버튼 */}
+                    {!isOwner && doc.document_type === 'recommended_resignation' && doc.status === 'pending' && (
+                      <button
+                        onClick={() => {
+                          setEmployeeSigningDoc(doc)
+                          handleViewDocument(doc)
+                          setShowEmployeeSignatureModal(true)
+                        }}
+                        disabled={isSubmitting}
+                        className="px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm disabled:opacity-50"
+                      >
+                        <PenTool className="w-3.5 h-3.5 inline-block mr-1" />
+                        서명하기
+                      </button>
+                    )}
                     {/* 원장의 승인/반려 버튼 */}
                     {isOwner && doc.status === 'pending' && (
                       <>
@@ -1117,7 +1180,7 @@ export default function DocumentTemplates() {
                 <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
                   <li>서명 후 발송하면 선택한 직원에게 <strong>알림이 전송</strong>됩니다</li>
                   {documentType === 'recommended_resignation' ? (
-                    <li>해당 직원은 알림을 통해 <strong>사직서 작성 요청</strong>을 받게 됩니다</li>
+                    <li>해당 직원은 알림을 통해 <strong>권고사직서 확인 및 서명 요청</strong>을 받게 됩니다</li>
                   ) : (
                     <li>해당 직원은 알림을 통해 <strong>해고 통보</strong>를 받게 됩니다</li>
                   )}
@@ -1362,6 +1425,46 @@ export default function DocumentTemplates() {
                 : handleTerminationNoticeSignature
               }
               onCancel={() => setShowOwnerDocumentSignatureModal(false)}
+              width={450}
+              height={180}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 직원 서명 모달 (권고사직서 확인용) */}
+      {showEmployeeSignatureModal && employeeSigningDoc && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setShowEmployeeSignatureModal(false)
+            setEmployeeSigningDoc(null)
+          }}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">권고사직서 확인 서명</h3>
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+              <p className="text-sm text-amber-800">
+                권고사직서의 내용을 확인하셨다면, 아래에 서명해 주세요.<br />
+                서명 후 문서가 최종 완성됩니다.
+              </p>
+            </div>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg mb-4 text-xs text-slate-600">
+              <p className="font-medium mb-1">※ 전자서명 법적 효력 안내</p>
+              <ul className="space-y-0.5 list-disc list-inside">
+                <li>본 전자서명은 전자서명법 제3조에 따라 자필 서명과 동일한 법적 효력을 가집니다.</li>
+                <li>서명 시 IP 주소, 서명 시간 등이 기록됩니다.</li>
+              </ul>
+            </div>
+            <SignaturePad
+              onSave={handleEmployeeSign}
+              onCancel={() => {
+                setShowEmployeeSignatureModal(false)
+                setEmployeeSigningDoc(null)
+              }}
               width={450}
               height={180}
             />
@@ -2488,10 +2591,10 @@ function RecommendedResignationPreview({
           <p className="text-xs leading-5 text-justify">
             회사는 위 대상자에게 상기 사유로 인하여 권고사직을 통보하오니,
             <span className="font-semibold">{formatDate(data.expectedResignationDate) || '____년 __월 __일'}</span>까지
-            사직서를 제출하여 주시기 바랍니다.
+            퇴직 절차를 진행하여 주시기 바랍니다.
           </p>
           <p className="text-xs leading-5 text-justify mt-1">
-            본 권고사직에 동의하시는 경우 별도의 사직서를 작성하여 제출하여 주시고,
+            본 권고사직에 동의하시는 경우 아래에 서명하여 주시고,
             퇴직 조건에 대해 협의가 필요하신 경우 인사담당자에게 문의하여 주시기 바랍니다.
           </p>
         </section>
@@ -2509,8 +2612,8 @@ function RecommendedResignationPreview({
           <p className="text-sm">{formatDate(data.submissionDate) || '____년 __월 __일'}</p>
         </section>
 
-        {/* 회사 정보 */}
-        <section className="mt-auto text-center">
+        {/* 회사 정보 및 원장 서명 */}
+        <section className="text-center">
           <div className="inline-block text-left text-xs">
             <p className="mb-1">
               <span className="inline-block w-16">회 사 명:</span>
@@ -2519,7 +2622,11 @@ function RecommendedResignationPreview({
             <p className="mb-1">
               <span className="inline-block w-16">대 표 자:</span>
               <span className="font-semibold">{data.representativeName || '　　　　　'}</span>
-              <span className="ml-3 text-slate-400">(직인)</span>
+              {data.ownerSignature ? (
+                <img src={data.ownerSignature} alt="원장 서명" className="h-8 inline-block ml-2" />
+              ) : (
+                <span className="ml-3 text-slate-400">(직인)</span>
+              )}
             </p>
             <p>
               <span className="inline-block w-16">주 소:</span>
@@ -2527,6 +2634,31 @@ function RecommendedResignationPreview({
             </p>
           </div>
         </section>
+
+        {/* 직원 확인 서명란 */}
+        <section className="mt-3 pt-3 border-t-2 border-slate-300">
+          <h3 className="text-xs font-semibold mb-2 text-slate-600">대상자 확인</h3>
+          <div className="flex justify-end items-center gap-3">
+            <span className="text-xs">위 내용을 확인하였습니다.</span>
+            <span className="font-medium text-xs">확인자:</span>
+            <span className="text-sm">{data.employeeName || '　　　　　'}</span>
+            {data.employeeSignature ? (
+              <img src={data.employeeSignature} alt="직원 서명" className="h-8 ml-2" />
+            ) : (
+              <span className="text-slate-400 text-xs">(서명)</span>
+            )}
+          </div>
+        </section>
+
+        {/* 전자서명 법적 효력 고지 */}
+        {(data.ownerSignature || data.employeeSignature) && (
+          <section className="mt-2 pt-2 border-t border-slate-200">
+            <div className="bg-slate-50 p-2 rounded text-[10px] text-slate-500 leading-3">
+              <p>※ 본 전자문서는 전자서명법 제3조에 따라 자필 서명과 동일한 법적 효력을 가집니다.</p>
+              <p>※ 전자서명 후 문서의 무결성이 보장됩니다 (SHA-256 해시).</p>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   )

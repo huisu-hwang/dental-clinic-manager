@@ -136,6 +136,7 @@ export interface RecommendedResignationData {
 
   // 서명
   ownerSignature?: string
+  employeeSignature?: string
 }
 
 // 해고통보서 데이터
