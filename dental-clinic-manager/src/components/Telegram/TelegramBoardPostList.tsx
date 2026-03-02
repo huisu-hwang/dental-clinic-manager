@@ -14,6 +14,7 @@ interface TelegramBoardPostListProps {
   groupId: string
   currentUserId?: string | null
   isMasterAdmin?: boolean
+  initialPostId?: string | null
 }
 
 const POST_TYPE_FILTERS = [
@@ -30,6 +31,7 @@ export default function TelegramBoardPostList({
   groupId,
   currentUserId,
   isMasterAdmin = false,
+  initialPostId,
 }: TelegramBoardPostListProps) {
   const [posts, setPosts] = useState<TelegramBoardPost[]>([])
   const [total, setTotal] = useState(0)
@@ -59,6 +61,17 @@ export default function TelegramBoardPostList({
   useEffect(() => {
     fetchPosts()
   }, [fetchPosts])
+
+  // URL의 postId 파라미터로 특정 글 바로 열기
+  useEffect(() => {
+    if (initialPostId && !selectedPost) {
+      const openPost = async () => {
+        const { data } = await telegramBoardPostService.getPost(initialPostId)
+        if (data) setSelectedPost(data)
+      }
+      openPost()
+    }
+  }, [initialPostId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 필터 변경 시 페이지 리셋
   const handleFilterChange = (filter: string) => {

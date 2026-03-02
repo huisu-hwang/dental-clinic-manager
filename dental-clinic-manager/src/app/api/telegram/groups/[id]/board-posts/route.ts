@@ -72,7 +72,7 @@ export async function POST(
     if (notifyTelegram && group.telegram_chat_id && group.board_slug) {
       try {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
-        const boardUrl = `${appUrl}/community/telegram/${group.board_slug}`
+        const postUrl = `${appUrl}/community/telegram/${group.board_slug}?postId=${post.id}`
 
         const message = [
           `<b>[새 글] ${group.board_title}</b>`,
@@ -80,7 +80,7 @@ export async function POST(
           `<b>${title}</b>`,
           `작성자: ${user.name || '익명'}`,
           '',
-          `<a href="${boardUrl}">게시판 바로가기</a>`,
+          `<a href="${postUrl}">글 바로가기</a>`,
         ].join('\n')
 
         await sendMessageToGroup(group.telegram_chat_id, message, 'HTML')

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { Send, Loader2, ShieldAlert, ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Layout/Header'
@@ -15,7 +15,9 @@ import type { TelegramGroup } from '@/types/telegram'
 export default function TelegramBoardPage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const slug = params.slug as string
+  const initialPostId = searchParams.get('postId')
   const { user, logout, loading: authLoading } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [group, setGroup] = useState<TelegramGroup | null>(null)
@@ -163,6 +165,7 @@ export default function TelegramBoardPage() {
                     groupId={group.id}
                     currentUserId={user?.id ?? null}
                     isMasterAdmin={user?.role === 'master_admin'}
+                    initialPostId={initialPostId}
                   />
                 </div>
               </>
