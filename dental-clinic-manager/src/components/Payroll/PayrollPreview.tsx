@@ -76,6 +76,7 @@ export default function PayrollPreview({
   const paymentItems = [
     { label: '기본급', value: statement.payments.baseSalary || 0 },
     { label: '상여', value: statement.payments.bonus || 0 },
+    { label: '현금 상여', value: statement.payments.cashBonus || 0 },
     { label: '식대', value: statement.payments.mealAllowance || 0 },
     { label: '자가운전', value: statement.payments.vehicleAllowance || 0 },
     { label: '연차수당', value: statement.payments.annualLeaveAllowance || 0 },

@@ -55,6 +55,7 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     familyCount,
     childCount,
     bonus = 0,
+    cashBonus = 0,
     overtimePay = 0,
     otherAllowances = {},
     otherDeductions = 0
@@ -90,7 +91,7 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     )
 
     // 지급 항목 구성
-    totalPayment = grossPay + bonus + overtimePay + otherAllowancesTotal
+    totalPayment = grossPay + bonus + cashBonus + overtimePay + otherAllowancesTotal
     taxableIncome = totalPayment - nonTaxableTotal
 
     // 최종 세금 재계산 (추가 수당 포함)
@@ -102,8 +103,9 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     const finalLocalTax = calculateLocalIncomeTax(finalIncomeTax)
 
     payments = {
-      baseSalary: baseSalary + bonus + overtimePay + otherAllowancesTotal - mealAllowance - vehicleAllowance,
+      baseSalary: baseSalary + bonus + cashBonus + overtimePay + otherAllowancesTotal - mealAllowance - vehicleAllowance,
       bonus: bonus > 0 ? bonus : undefined,
+      cashBonus: cashBonus > 0 ? cashBonus : undefined,
       mealAllowance: mealAllowance > 0 ? mealAllowance : undefined,
       vehicleAllowance: vehicleAllowance > 0 ? vehicleAllowance : undefined,
       overtimePay: overtimePay > 0 ? overtimePay : undefined,
@@ -126,7 +128,7 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
   } else {
     // 세전 계약: 세전 금액에서 공제액 계산
     const baseSalaryWithAllowances = targetAmount + mealAllowance + vehicleAllowance
-    totalPayment = baseSalaryWithAllowances + bonus + overtimePay + otherAllowancesTotal
+    totalPayment = baseSalaryWithAllowances + bonus + cashBonus + overtimePay + otherAllowancesTotal
     taxableIncome = totalPayment - nonTaxableTotal
 
     const { incomeTax, localIncomeTax } = calculateNetFromGross(
@@ -141,6 +143,7 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     payments = {
       baseSalary: targetAmount,
       bonus: bonus > 0 ? bonus : undefined,
+      cashBonus: cashBonus > 0 ? cashBonus : undefined,
       mealAllowance: mealAllowance > 0 ? mealAllowance : undefined,
       vehicleAllowance: vehicleAllowance > 0 ? vehicleAllowance : undefined,
       overtimePay: overtimePay > 0 ? overtimePay : undefined,
@@ -188,6 +191,7 @@ export function calculatePayrollFromFormState(formState: PayrollFormState): Payr
     familyCount: formState.familyCount,
     childCount: formState.childCount,
     bonus: formState.bonus,
+    cashBonus: formState.cashBonus,
     overtimePay: formState.overtimePay,
     otherDeductions: formState.otherDeductions
   }

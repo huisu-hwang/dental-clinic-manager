@@ -16,6 +16,7 @@ export type SalaryType = 'gross' | 'net' // gross: 세전, net: 세후
 export interface PaymentItems {
   baseSalary: number         // 기본급
   bonus?: number             // 상여
+  cashBonus?: number         // 현금 상여 (매월 변동 가능)
   mealAllowance?: number     // 식대 (비과세)
   vehicleAllowance?: number  // 자가운전 보조금 (비과세)
   annualLeaveAllowance?: number // 연차수당
@@ -168,6 +169,7 @@ export interface PayrollCalculationInput {
 
   // 추가 지급/공제
   bonus?: number
+  cashBonus?: number           // 현금 상여 (매월 변동 가능)
   overtimePay?: number
   otherAllowances?: Record<string, number>
   otherDeductions?: number
@@ -220,6 +222,7 @@ export interface PayrollFormState {
   // 지급 항목
   baseSalary: number
   bonus: number
+  cashBonus: number            // 현금 상여 (매월 변동 가능)
   mealAllowance: number
   vehicleAllowance: number
   annualLeaveAllowance: number
@@ -261,6 +264,7 @@ export const DEFAULT_PAYROLL_FORM_STATE: PayrollFormState = {
 
   baseSalary: 0,
   bonus: 0,
+  cashBonus: 0,
   mealAllowance: 200000, // 기본 식대 20만원
   vehicleAllowance: 0,
   annualLeaveAllowance: 0,

@@ -29,7 +29,7 @@ import {
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import { getPublicHolidaySet } from '@/lib/holidayService'
 import PayrollPreview from './PayrollPreview'
-import { AlertCircle, FileText, Settings, Clock, Calendar, AlertTriangle, Lock, UserPlus } from 'lucide-react'
+import { AlertCircle, FileText, Settings, Clock, Calendar, AlertTriangle, Lock, UserPlus, Coins } from 'lucide-react'
 import type { WorkSchedule } from '@/types/workSchedule'
 import { workScheduleService } from '@/lib/workScheduleService'
 
@@ -418,6 +418,15 @@ export default function PayrollForm() {
         const adjustedVehicleAllowance = midMonthHire ? Math.round(settings.vehicleAllowance * prorataRatio) : settings.vehicleAllowance
         const adjustedBonus = midMonthHire ? Math.round(settings.bonus * prorataRatio) : settings.bonus
 
+        // 저장된 급여명세서에서 현금 상여 값 확인
+        const savedPayroll = await getPayrollStatement(
+          user.clinic_id,
+          selectedEmployeeId,
+          selectedYear,
+          selectedMonth
+        )
+        const savedCashBonus = savedPayroll?.payments?.cashBonus || 0
+
         const newFormState: PayrollFormState = {
           ...DEFAULT_PAYROLL_FORM_STATE,
           selectedEmployeeId,
@@ -429,6 +438,7 @@ export default function PayrollForm() {
           mealAllowance: adjustedMealAllowance,
           vehicleAllowance: adjustedVehicleAllowance,
           bonus: adjustedBonus,
+          cashBonus: savedCashBonus,
           nationalPension: appliedNationalPension,
           healthInsurance: appliedHealthInsurance,
           longTermCare: appliedLongTermCare,
@@ -441,14 +451,6 @@ export default function PayrollForm() {
         setFormState(newFormState)
         const result = calculatePayrollFromFormState(newFormState)
         setCalculationResult(result)
-
-        // 저장된 급여명세서 확인
-        const savedPayroll = await getPayrollStatement(
-          user.clinic_id,
-          selectedEmployeeId,
-          selectedYear,
-          selectedMonth
-        )
 
         if (savedPayroll) {
           // 저장된 데이터가 있지만, 설정이 변경되었는지 확인
@@ -499,6 +501,7 @@ export default function PayrollForm() {
       const payments = {
         baseSalary: result.payments.baseSalary,
         bonus: state.bonus > 0 ? state.bonus : undefined,
+        cashBonus: state.cashBonus > 0 ? state.cashBonus : undefined,
         mealAllowance: state.mealAllowance > 0 ? state.mealAllowance : undefined,
         vehicleAllowance: state.vehicleAllowance > 0 ? state.vehicleAllowance : undefined,
       }
@@ -546,6 +549,19 @@ export default function PayrollForm() {
       setHasSavedPayroll(true)
     } catch (error) {
       console.error('Error auto-saving payroll:', error)
+    }
+  }
+
+  // 현금 상여 변경 핸들러
+  const handleCashBonusChange = async (value: number) => {
+    const newFormState = { ...formState, cashBonus: value }
+    setFormState(newFormState)
+    const result = calculatePayrollFromFormState(newFormState)
+    setCalculationResult(result)
+
+    // 자동 저장
+    if (isOwner && selectedEmployee && user?.clinic_id) {
+      await autoSavePayroll(selectedEmployee, newFormState, result, attendanceSummary, attendanceDeduction)
     }
   }
 
@@ -834,6 +850,45 @@ export default function PayrollForm() {
         )
       )}
 
+      {/* 현금 상여 입력 (owner만) */}
+      {isOwner && calculationResult && selectedEmployeeId && !noSettingsWarning && accessResult?.canAccess && (
+        <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-6">
+          <div className="flex items-center mb-4">
+            <Coins className="w-5 h-5 mr-2 text-amber-500" />
+            <h3 className="text-lg font-semibold text-slate-800">현금 상여</h3>
+            <span className="ml-2 text-xs text-slate-500">(매월 변동 가능)</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 max-w-xs">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                {selectedYear}년 {selectedMonth}월 현금 상여 금액
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={formState.cashBonus || ''}
+                  onChange={(e) => handleCashBonusChange(parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 pr-12 border border-amber-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  placeholder="0"
+                  min="0"
+                />
+                <span className="absolute right-3 top-2 text-slate-500">원</span>
+              </div>
+            </div>
+            {formState.cashBonus > 0 && (
+              <div className="flex items-center px-3 py-1.5 bg-amber-50 rounded-md border border-amber-200 mt-6">
+                <span className="text-sm text-amber-700 font-medium">
+                  {formatCurrency(formState.cashBonus)}원
+                </span>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 mt-2">
+            * 현금 상여는 해당 월에만 적용되며, 매월 별도로 입력해야 합니다.
+          </p>
+        </div>
+      )}
+
       {/* 계산 결과 표시 */}
       {calculationResult && selectedEmployeeId && !noSettingsWarning && accessResult?.canAccess && (
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
@@ -924,6 +979,12 @@ export default function PayrollForm() {
                     <tr className="border-b">
                       <td className="py-2 text-slate-600">상여</td>
                       <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.payments.bonus)}원</td>
+                    </tr>
+                  )}
+                  {calculationResult.payments.cashBonus && calculationResult.payments.cashBonus > 0 && (
+                    <tr className="border-b bg-amber-50">
+                      <td className="py-2 text-amber-700">현금 상여</td>
+                      <td className="py-2 text-right font-medium text-amber-700">{formatCurrency(calculationResult.payments.cashBonus)}원</td>
                     </tr>
                   )}
                   {calculationResult.payments.mealAllowance && calculationResult.payments.mealAllowance > 0 && (
