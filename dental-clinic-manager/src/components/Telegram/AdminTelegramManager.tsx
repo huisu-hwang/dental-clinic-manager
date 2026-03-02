@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import AdminTelegramGroupForm from './AdminTelegramGroupForm'
 import AdminTelegramMembers from './AdminTelegramMembers'
 import AdminTelegramSyncStatus from './AdminTelegramSyncStatus'
+import AdminTelegramApplications from './AdminTelegramApplications'
 import type { TelegramGroup, CreateTelegramGroupDto } from '@/types/telegram'
 
 export default function AdminTelegramManager() {
@@ -96,6 +97,9 @@ export default function AdminTelegramManager() {
           <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">×</button>
         </div>
       )}
+
+      {/* 신청 대기 목록 */}
+      <AdminTelegramApplications onReviewComplete={fetchGroups} />
 
       {/* 헤더 */}
       <div className="flex items-center justify-between">

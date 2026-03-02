@@ -2,6 +2,9 @@
 // 텔레그램 그룹채팅 연동 타입 정의
 // =====================================================
 
+// 텔레그램 그룹 상태
+export type TelegramGroupStatus = 'pending' | 'approved' | 'rejected'
+
 // 텔레그램 그룹
 export interface TelegramGroup {
   id: string
@@ -18,6 +21,11 @@ export interface TelegramGroup {
   last_sync_at: string | null
   summary_enabled: boolean
   summary_time: string
+  status: TelegramGroupStatus
+  application_reason: string | null
+  rejection_reason: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
   created_by: string
   created_at: string
   updated_at: string
@@ -125,6 +133,22 @@ export interface CreateInviteLinkDto {
   max_uses?: number | null
 }
 
+// 게시판 신청 DTO
+export interface ApplyTelegramGroupDto {
+  telegram_chat_id: number
+  chat_title: string
+  board_slug: string
+  board_title: string
+  board_description?: string
+  application_reason?: string
+}
+
+// 게시판 심사 DTO
+export interface ReviewTelegramGroupDto {
+  action: 'approve' | 'reject'
+  rejection_reason?: string
+}
+
 // =====================================================
 // 상수
 // =====================================================
@@ -139,4 +163,16 @@ export const TELEGRAM_POST_TYPE_COLORS: Record<string, { bg: string; text: strin
   summary: { bg: 'bg-purple-100', text: 'text-purple-700' },
   file: { bg: 'bg-blue-100', text: 'text-blue-700' },
   link: { bg: 'bg-green-100', text: 'text-green-700' },
+}
+
+export const TELEGRAM_GROUP_STATUS_LABELS: Record<TelegramGroupStatus, string> = {
+  pending: '승인 대기',
+  approved: '승인됨',
+  rejected: '반려됨',
+}
+
+export const TELEGRAM_GROUP_STATUS_COLORS: Record<TelegramGroupStatus, { bg: string; text: string }> = {
+  pending: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  approved: { bg: 'bg-green-100', text: 'text-green-700' },
+  rejected: { bg: 'bg-red-100', text: 'text-red-700' },
 }

@@ -303,6 +303,9 @@ export type UserNotificationType =
   | 'document_approved'           // 문서 승인됨 (신청자에게)
   | 'document_rejected'           // 문서 반려됨 (신청자에게)
   | 'document'                    // 일반 문서 알림
+  | 'telegram_board_approved'     // 텔레그램 게시판 승인 (신청자에게)
+  | 'telegram_board_rejected'     // 텔레그램 게시판 반려 (신청자에게)
+  | 'telegram_board_pending'      // 텔레그램 게시판 신청 접수 (관리자에게)
   | 'important'                   // 중요 알림
   | 'system'                      // 시스템 알림
 
@@ -320,6 +323,9 @@ export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string>
   document_approved: '문서 승인',
   document_rejected: '문서 반려',
   document: '문서 알림',
+  telegram_board_approved: '게시판 승인',
+  telegram_board_rejected: '게시판 반려',
+  telegram_board_pending: '게시판 신청',
   important: '중요 알림',
   system: '시스템 알림'
 }
@@ -338,6 +344,9 @@ export const USER_NOTIFICATION_TYPE_ICONS: Record<UserNotificationType, string> 
   document_approved: 'check-circle',
   document_rejected: 'x-circle',
   document: 'document-text',
+  telegram_board_approved: 'check-circle',
+  telegram_board_rejected: 'x-circle',
+  telegram_board_pending: 'clock',
   important: 'exclamation-circle',
   system: 'bell'
 }
@@ -356,6 +365,9 @@ export const USER_NOTIFICATION_TYPE_COLORS: Record<UserNotificationType, { icon:
   document_approved: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
   document_rejected: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
   document: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' },
+  telegram_board_approved: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
+  telegram_board_rejected: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
+  telegram_board_pending: { icon: 'text-amber-500', bg: 'bg-amber-50', text: 'text-amber-700' },
   important: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
   system: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' }
 }

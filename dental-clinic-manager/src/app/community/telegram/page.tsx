@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Send, Loader2, Inbox, ChevronLeft } from 'lucide-react'
+import { Send, Loader2, Inbox, ChevronLeft, Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { Button } from '@/components/ui/Button'
 import { telegramGroupService } from '@/lib/telegramService'
+import TelegramBoardApplicationForm from '@/components/Telegram/TelegramBoardApplicationForm'
+import TelegramMyApplications from '@/components/Telegram/TelegramMyApplications'
 import { getTabRoute } from '@/utils/tabRouting'
-import type { TelegramGroup } from '@/types/telegram'
+import type { TelegramGroup, ApplyTelegramGroupDto } from '@/types/telegram'
 
 export default function TelegramBoardListPage() {
   const router = useRouter()
@@ -17,6 +19,10 @@ export default function TelegramBoardListPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [groups, setGroups] = useState<TelegramGroup[]>([])
   const [loading, setLoading] = useState(true)
+  const [showApplyForm, setShowApplyForm] = useState(false)
+  const [applying, setApplying] = useState(false)
+  const [applyError, setApplyError] = useState<string | null>(null)
+  const [applySuccess, setApplySuccess] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -48,6 +54,20 @@ export default function TelegramBoardListPage() {
       return
     }
     router.push(getTabRoute(tab))
+  }
+
+  const handleApply = async (dto: ApplyTelegramGroupDto) => {
+    setApplying(true)
+    setApplyError(null)
+    const { error } = await telegramGroupService.applyForGroup(dto)
+    if (error) {
+      setApplyError(error)
+    } else {
+      setShowApplyForm(false)
+      setApplySuccess(true)
+      setTimeout(() => setApplySuccess(false), 5000)
+    }
+    setApplying(false)
   }
 
   if (authLoading || !user) {
@@ -107,19 +127,53 @@ export default function TelegramBoardListPage() {
                     <p className="text-sky-100 text-xs sm:text-sm hidden sm:block">Telegram Group Boards</p>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push('/community')}
-                  className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />커뮤니티
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => { setShowApplyForm(!showApplyForm); setApplyError(null) }}
+                    className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-xs"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />게시판 신청
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push('/community')}
+                    className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />커뮤니티
+                  </Button>
+                </div>
               </div>
             </div>
 
-            {/* 그룹 카드 목록 */}
-            <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-4 sm:p-6">
+            {/* 메인 콘텐츠 */}
+            <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-4 sm:p-6 space-y-6">
+              {/* 신청 성공 메시지 */}
+              {applySuccess && (
+                <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
+                  게시판 신청이 접수되었습니다. 관리자 승인 후 활성화됩니다.
+                </div>
+              )}
+
+              {/* 신청 에러 메시지 */}
+              {applyError && (
+                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-4 py-3 rounded-lg border border-red-200">
+                  {applyError}
+                  <button onClick={() => setApplyError(null)} className="ml-auto text-red-400 hover:text-red-600">×</button>
+                </div>
+              )}
+
+              {/* 신청 폼 */}
+              {showApplyForm && (
+                <TelegramBoardApplicationForm
+                  onSubmit={handleApply}
+                  onCancel={() => { setShowApplyForm(false); setApplyError(null) }}
+                  loading={applying}
+                />
+              )}
+
+              {/* 그룹 카드 목록 */}
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-6 h-6 animate-spin text-sky-500" />
@@ -128,7 +182,7 @@ export default function TelegramBoardListPage() {
                 <div className="text-center py-12 text-gray-400">
                   <Inbox className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p className="text-sm font-medium">참여 중인 모임이 없습니다</p>
-                  <p className="text-xs mt-1">초대 링크를 통해 모임에 가입할 수 있습니다</p>
+                  <p className="text-xs mt-1">초대 링크를 통해 모임에 가입하거나, 위의 "게시판 신청" 버튼으로 새 게시판을 신청할 수 있습니다</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -153,6 +207,9 @@ export default function TelegramBoardListPage() {
                   ))}
                 </div>
               )}
+
+              {/* 내 신청 현황 */}
+              <TelegramMyApplications />
             </div>
           </div>
         </main>

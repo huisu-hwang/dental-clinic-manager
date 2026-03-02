@@ -12,6 +12,8 @@ import type {
   CreateTelegramGroupDto,
   UpdateTelegramGroupDto,
   CreateInviteLinkDto,
+  ApplyTelegramGroupDto,
+  ReviewTelegramGroupDto,
 } from '@/types/telegram'
 
 // Helper: 에러 메시지 추출
@@ -63,6 +65,7 @@ export const telegramGroupService = {
         .from('telegram_groups')
         .select('*')
         .eq('is_active', true)
+        .eq('status', 'approved')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -221,6 +224,123 @@ export const telegramGroupService = {
       return { data: null, error: null }
     } catch (error) {
       console.error('[telegramGroupService.deleteGroup] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 게시판 신청 (일반 사용자)
+   */
+  async applyForGroup(dto: ApplyTelegramGroupDto): Promise<{ data: TelegramGroup | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch('/api/telegram/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, ...dto }),
+      })
+
+      const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error(result.error || '신청에 실패했습니다.')
+      }
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramGroupService.applyForGroup] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 내 신청 목록 조회 (모든 status)
+   */
+  async getMyApplications(): Promise<{ data: TelegramGroup[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const { data, error } = await (supabase as any)
+        .from('telegram_groups')
+        .select('*')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[telegramGroupService.getMyApplications] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 대기 중인 신청 목록 조회 (admin용)
+   */
+  async getPendingApplications(): Promise<{ data: (TelegramGroup & { creator?: { name: string; email: string } })[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .from('telegram_groups')
+        .select('*, creator:users!telegram_groups_created_by_fkey(name, email)')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        // foreign key 이름이 다를 수 있으므로 fallback 시도
+        const { data: fallbackData, error: fallbackError } = await (supabase as any)
+          .from('telegram_groups')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: true })
+
+        if (fallbackError) throw fallbackError
+        return { data: fallbackData, error: null }
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[telegramGroupService.getPendingApplications] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 신청 심사 (승인/반려)
+   */
+  async reviewApplication(
+    groupId: string,
+    action: 'approve' | 'reject',
+    rejectionReason?: string
+  ): Promise<{ data: TelegramGroup | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch(`/api/telegram/groups/${groupId}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action, rejectionReason }),
+      })
+
+      const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error(result.error || '처리에 실패했습니다.')
+      }
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramGroupService.reviewApplication] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
     }
   },
