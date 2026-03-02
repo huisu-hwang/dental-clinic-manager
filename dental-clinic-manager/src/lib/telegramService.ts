@@ -9,11 +9,14 @@ import type {
   TelegramGroupMember,
   TelegramInviteLink,
   TelegramBoardPost,
+  TelegramBoardComment,
   CreateTelegramGroupDto,
   UpdateTelegramGroupDto,
   CreateInviteLinkDto,
   ApplyTelegramGroupDto,
   ReviewTelegramGroupDto,
+  CreateTelegramBoardPostDto,
+  UpdateTelegramBoardPostDto,
 } from '@/types/telegram'
 
 // Helper: 에러 메시지 추출
@@ -706,7 +709,7 @@ export const telegramBoardPostService = {
   async getPosts(
     groupId: string,
     options?: {
-      postType?: 'summary' | 'file' | 'link'
+      postType?: 'summary' | 'file' | 'link' | 'general'
       limit?: number
       offset?: number
       search?: string
@@ -718,7 +721,7 @@ export const telegramBoardPostService = {
 
       let query = (supabase as any)
         .from('telegram_board_posts')
-        .select('*', { count: 'exact' })
+        .select('*, author:users!telegram_board_posts_created_by_fkey(name, email)', { count: 'exact' })
         .eq('telegram_group_id', groupId)
         .order('created_at', { ascending: false })
 
@@ -759,7 +762,7 @@ export const telegramBoardPostService = {
 
       const { data, error } = await (supabase as any)
         .from('telegram_board_posts')
-        .select('*')
+        .select('*, author:users!telegram_board_posts_created_by_fkey(name, email)')
         .eq('id', id)
         .maybeSingle()
 
@@ -768,6 +771,87 @@ export const telegramBoardPostService = {
       return { data, error: null }
     } catch (error) {
       console.error('[telegramBoardPostService.getPost] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 글 작성 (API 경유)
+   */
+  async createPost(
+    groupId: string,
+    dto: CreateTelegramBoardPostDto
+  ): Promise<{ data: TelegramBoardPost | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch(`/api/telegram/groups/${groupId}/board-posts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          title: dto.title,
+          content: dto.content,
+          notifyTelegram: dto.notify_telegram ?? false,
+        }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '글 작성에 실패했습니다.')
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardPostService.createPost] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 글 수정 (API 경유)
+   */
+  async updatePost(
+    postId: string,
+    dto: UpdateTelegramBoardPostDto
+  ): Promise<{ data: TelegramBoardPost | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch(`/api/telegram/board-posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, ...dto }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '글 수정에 실패했습니다.')
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardPostService.updatePost] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 글 삭제 (API 경유)
+   */
+  async deletePost(postId: string): Promise<{ data: null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch(`/api/telegram/board-posts/${postId}?userId=${userId}`, {
+        method: 'DELETE',
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '글 삭제에 실패했습니다.')
+
+      return { data: null, error: null }
+    } catch (error) {
+      console.error('[telegramBoardPostService.deletePost] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
     }
   },
@@ -821,6 +905,107 @@ export const telegramBoardPostService = {
       }
     } catch (error) {
       console.error('[telegramBoardPostService.getSyncStatus] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+}
+
+// =====================================================
+// 텔레그램 게시글 댓글 서비스
+// =====================================================
+export const telegramBoardCommentService = {
+  /**
+   * 댓글 목록 조회 (API 경유)
+   */
+  async getComments(postId: string): Promise<{ data: TelegramBoardComment[] | null; error: string | null }> {
+    try {
+      const res = await fetch(`/api/telegram/board-posts/${postId}/comments`)
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '댓글 조회에 실패했습니다.')
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardCommentService.getComments] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 댓글 작성 (API 경유)
+   */
+  async createComment(
+    postId: string,
+    content: string
+  ): Promise<{ data: TelegramBoardComment | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch(`/api/telegram/board-posts/${postId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, content }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '댓글 작성에 실패했습니다.')
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardCommentService.createComment] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 댓글 수정 (API 경유)
+   */
+  async updateComment(
+    postId: string,
+    commentId: string,
+    content: string
+  ): Promise<{ data: TelegramBoardComment | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch(`/api/telegram/board-posts/${postId}/comments/${commentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, content }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '댓글 수정에 실패했습니다.')
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardCommentService.updateComment] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 댓글 삭제 (API 경유)
+   */
+  async deleteComment(
+    postId: string,
+    commentId: string
+  ): Promise<{ data: null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch(`/api/telegram/board-posts/${postId}/comments/${commentId}?userId=${userId}`, {
+        method: 'DELETE',
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '댓글 삭제에 실패했습니다.')
+
+      return { data: null, error: null }
+    } catch (error) {
+      console.error('[telegramBoardCommentService.deleteComment] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
     }
   },

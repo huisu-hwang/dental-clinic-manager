@@ -159,7 +159,11 @@ export default function TelegramBoardPage() {
 
                 {/* 게시글 목록 */}
                 <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-4 sm:p-6">
-                  <TelegramBoardPostList groupId={group.id} />
+                  <TelegramBoardPostList
+                    groupId={group.id}
+                    currentUserId={user?.id ?? null}
+                    isMasterAdmin={user?.role === 'master_admin'}
+                  />
                 </div>
               </>
             )}

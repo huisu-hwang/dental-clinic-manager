@@ -1,6 +1,6 @@
 'use client'
 
-import { Eye, FileText, Link2, Brain, Pin } from 'lucide-react'
+import { Eye, FileText, Link2, Brain, Pin, PenLine, MessageCircle } from 'lucide-react'
 import type { TelegramBoardPost } from '@/types/telegram'
 import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
 
@@ -30,6 +30,7 @@ export default function TelegramBoardPostCard({ post, onClick }: TelegramBoardPo
 
   const TypeIcon = post.post_type === 'summary' ? Brain
     : post.post_type === 'file' ? FileText
+    : post.post_type === 'general' ? PenLine
     : Link2
 
   return (
@@ -55,10 +56,18 @@ export default function TelegramBoardPostCard({ post, onClick }: TelegramBoardPo
           </div>
           <h3 className="text-gray-900 font-medium truncate">{post.title}</h3>
           <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+            {post.author?.name && (
+              <span className="text-gray-500 font-medium">{post.author.name}</span>
+            )}
             <span>{formatDate(post.created_at)}</span>
             <span className="flex items-center gap-1">
               <Eye className="w-3 h-3" />{post.view_count}
             </span>
+            {post.comment_count > 0 && (
+              <span className="flex items-center gap-1">
+                <MessageCircle className="w-3 h-3" />{post.comment_count}
+              </span>
+            )}
             {post.file_urls.length > 0 && (
               <span className="flex items-center gap-1">
                 <FileText className="w-3 h-3" />{post.file_urls.length}개 파일

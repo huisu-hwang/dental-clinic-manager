@@ -1,21 +1,37 @@
 'use client'
 
-import { ArrowLeft, Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar } from 'lucide-react'
+import { ArrowLeft, Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar, PenLine, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { TelegramBoardPost } from '@/types/telegram'
 import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
+import TelegramBoardCommentSection from './TelegramBoardCommentSection'
 
 interface TelegramBoardPostDetailProps {
   post: TelegramBoardPost
   onBack: () => void
+  currentUserId?: string | null
+  isMasterAdmin?: boolean
+  onEdit?: (post: TelegramBoardPost) => void
+  onDelete?: (post: TelegramBoardPost) => void
 }
 
-export default function TelegramBoardPostDetail({ post, onBack }: TelegramBoardPostDetailProps) {
+export default function TelegramBoardPostDetail({
+  post,
+  onBack,
+  currentUserId,
+  isMasterAdmin = false,
+  onEdit,
+  onDelete,
+}: TelegramBoardPostDetailProps) {
+  const canModify = post.post_type === 'general' && (
+    post.created_by === currentUserId || isMasterAdmin
+  )
   const typeColor = TELEGRAM_POST_TYPE_COLORS[post.post_type] || { bg: 'bg-gray-100', text: 'text-gray-700' }
   const typeLabel = TELEGRAM_POST_TYPE_LABELS[post.post_type] || post.post_type
 
   const TypeIcon = post.post_type === 'summary' ? Brain
     : post.post_type === 'file' ? FileText
+    : post.post_type === 'general' ? PenLine
     : Link2
 
   const formatDate = (dateString: string) => {
@@ -72,11 +88,30 @@ export default function TelegramBoardPostDetail({ post, onBack }: TelegramBoardP
           </h1>
 
           {/* 메타 정보 */}
-          <div className="flex items-center gap-3 text-xs text-gray-400 mb-4 pb-4 border-b border-gray-100">
-            <span>{formatDate(post.created_at)}</span>
-            <span className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />{post.view_count}
-            </span>
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+            <div className="flex items-center gap-3 text-xs text-gray-400">
+              {post.author?.name && (
+                <span className="text-gray-600 font-medium">{post.author.name}</span>
+              )}
+              <span>{formatDate(post.created_at)}</span>
+              <span className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />{post.view_count}
+              </span>
+            </div>
+            {canModify && (
+              <div className="flex items-center gap-1">
+                {onEdit && (
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600">
+                    <Pencil className="w-3.5 h-3.5 mr-1" />수정
+                  </Button>
+                )}
+                {onDelete && (
+                  <Button variant="ghost" size="sm" onClick={() => onDelete(post)} className="text-gray-400 hover:text-red-500">
+                    <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 파일 목록 */}
@@ -138,6 +173,13 @@ export default function TelegramBoardPostDetail({ post, onBack }: TelegramBoardP
               prose-ul:my-2 prose-li:my-0.5
               prose-p:my-2 prose-a:text-blue-600"
             dangerouslySetInnerHTML={{ __html: post.content }}
+          />
+
+          {/* 댓글 섹션 */}
+          <TelegramBoardCommentSection
+            postId={post.id}
+            currentUserId={currentUserId ?? null}
+            isMasterAdmin={isMasterAdmin}
           />
         </div>
       </div>

@@ -86,11 +86,11 @@ export interface TelegramMessage {
   created_at: string
 }
 
-// 게시글 (AI 요약 / 파일 / 링크)
+// 게시글 (AI 요약 / 파일 / 링크 / 일반)
 export interface TelegramBoardPost {
   id: string
   telegram_group_id: string
-  post_type: 'summary' | 'file' | 'link'
+  post_type: 'summary' | 'file' | 'link' | 'general'
   title: string
   content: string
   source_message_ids: string[]
@@ -100,8 +100,30 @@ export interface TelegramBoardPost {
   view_count: number
   is_pinned: boolean
   ai_model: string | null
+  created_by: string | null
+  comment_count: number
   created_at: string
   updated_at: string
+  // join 시 작성자 정보
+  author?: {
+    name: string
+    email: string
+  }
+}
+
+// 댓글
+export interface TelegramBoardComment {
+  id: string
+  post_id: string
+  user_id: string
+  content: string
+  created_at: string
+  updated_at: string
+  // join 시 사용자 정보
+  user?: {
+    name: string
+    email: string
+  }
 }
 
 // =====================================================
@@ -150,6 +172,24 @@ export interface ReviewTelegramGroupDto {
   rejection_reason?: string
 }
 
+// 게시글 작성 DTO
+export interface CreateTelegramBoardPostDto {
+  title: string
+  content: string
+  notify_telegram?: boolean
+}
+
+// 게시글 수정 DTO
+export interface UpdateTelegramBoardPostDto {
+  title?: string
+  content?: string
+}
+
+// 댓글 작성 DTO
+export interface CreateTelegramBoardCommentDto {
+  content: string
+}
+
 // =====================================================
 // 상수
 // =====================================================
@@ -158,12 +198,14 @@ export const TELEGRAM_POST_TYPE_LABELS: Record<string, string> = {
   summary: 'AI 요약',
   file: '공유 파일',
   link: '공유 링크',
+  general: '일반 글',
 }
 
 export const TELEGRAM_POST_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   summary: { bg: 'bg-purple-100', text: 'text-purple-700' },
   file: { bg: 'bg-blue-100', text: 'text-blue-700' },
   link: { bg: 'bg-green-100', text: 'text-green-700' },
+  general: { bg: 'bg-gray-100', text: 'text-gray-700' },
 }
 
 export const TELEGRAM_GROUP_STATUS_LABELS: Record<TelegramGroupStatus, string> = {
