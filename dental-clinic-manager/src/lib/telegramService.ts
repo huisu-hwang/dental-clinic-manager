@@ -10,6 +10,8 @@ import type {
   TelegramInviteLink,
   TelegramBoardPost,
   TelegramBoardComment,
+  TelegramBoardVote,
+  ContributionVoteResults,
   CreateTelegramGroupDto,
   UpdateTelegramGroupDto,
   CreateInviteLinkDto,
@@ -17,6 +19,7 @@ import type {
   ReviewTelegramGroupDto,
   CreateTelegramBoardPostDto,
   UpdateTelegramBoardPostDto,
+  CreateContributionVoteDto,
 } from '@/types/telegram'
 
 // Helper: 에러 메시지 추출
@@ -709,7 +712,7 @@ export const telegramBoardPostService = {
   async getPosts(
     groupId: string,
     options?: {
-      postType?: 'summary' | 'file' | 'link' | 'general'
+      postType?: 'summary' | 'file' | 'link' | 'general' | 'vote'
       limit?: number
       offset?: number
       search?: string
@@ -1175,5 +1178,147 @@ export const telegramBoardCommentService = {
       console.error('[telegramBoardCommentService.deleteComment] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
     }
+  },
+}
+
+// =====================================================
+// 텔레그램 기여도 투표 서비스
+// =====================================================
+export const telegramBoardVoteService = {
+  /**
+   * 투표 세션 조회 (post_id 기반)
+   */
+  async getVote(postId: string): Promise<{ data: TelegramBoardVote | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .from('telegram_board_votes')
+        .select('*')
+        .eq('post_id', postId)
+        .maybeSingle()
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardVoteService.getVote] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 투표 결과 조회 (RPC)
+   */
+  async getResults(voteId: string): Promise<{ data: ContributionVoteResults | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const { data, error } = await (supabase as any)
+        .rpc('get_contribution_vote_results', {
+          p_vote_id: voteId,
+          p_requester_id: userId,
+        })
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardVoteService.getResults] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 투표 생성 (API 경유)
+   */
+  async createVote(
+    groupId: string,
+    dto: CreateContributionVoteDto
+  ): Promise<{ data: TelegramBoardPost | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch(`/api/telegram/groups/${groupId}/board-votes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, ...dto }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '투표 생성에 실패했습니다.')
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardVoteService.createVote] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 투표 제출 (RPC)
+   */
+  async castVote(
+    voteId: string,
+    candidateIds: string[]
+  ): Promise<{ data: { success: boolean; error?: string; total_voters?: number } | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const { data, error } = await (supabase as any)
+        .rpc('cast_contribution_votes', {
+          p_vote_id: voteId,
+          p_voter_id: userId,
+          p_candidate_ids: candidateIds,
+        })
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardVoteService.castVote] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 투표 종료 (API 경유)
+   */
+  async closeVote(voteId: string): Promise<{ data: null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch(`/api/telegram/board-votes/${voteId}/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '투표 종료에 실패했습니다.')
+
+      return { data: null, error: null }
+    } catch (error) {
+      console.error('[telegramBoardVoteService.closeVote] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 후보자 목록 조회 (그룹 멤버 재사용)
+   */
+  async getCandidates(groupId: string): Promise<{ data: TelegramGroupMember[] | null; error: string | null }> {
+    return telegramMemberService.getMembers(groupId)
   },
 }

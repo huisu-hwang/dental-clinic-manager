@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar, PenLine, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar, PenLine, Pencil, Trash2, Vote } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { TelegramBoardPost } from '@/types/telegram'
 import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
 import TelegramBoardCommentSection from './TelegramBoardCommentSection'
 import TelegramBoardPostActions from './TelegramBoardPostActions'
+import ContributionVoteDisplay from './ContributionVoteDisplay'
 import { telegramBoardPostService } from '@/lib/telegramService'
 
 interface TelegramBoardPostDetailProps {
@@ -52,12 +53,16 @@ export default function TelegramBoardPostDetail({
   const canModify = post.post_type === 'general' && (
     post.created_by === currentUserId || isMasterAdmin
   )
+  const canDeleteVote = post.post_type === 'vote' && (
+    post.created_by === currentUserId || isMasterAdmin
+  )
   const typeColor = TELEGRAM_POST_TYPE_COLORS[post.post_type] || { bg: 'bg-gray-100', text: 'text-gray-700' }
   const typeLabel = TELEGRAM_POST_TYPE_LABELS[post.post_type] || post.post_type
 
   const TypeIcon = post.post_type === 'summary' ? Brain
     : post.post_type === 'file' ? FileText
     : post.post_type === 'general' ? PenLine
+    : post.post_type === 'vote' ? Vote
     : Link2
 
   const formatDate = (dateString: string) => {
@@ -124,14 +129,14 @@ export default function TelegramBoardPostDetail({
                 <Eye className="w-3 h-3" />{post.view_count}
               </span>
             </div>
-            {canModify && (
+            {(canModify || canDeleteVote) && (
               <div className="flex items-center gap-1">
-                {onEdit && (
+                {canModify && onEdit && (
                   <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600">
                     <Pencil className="w-3.5 h-3.5 mr-1" />수정
                   </Button>
                 )}
-                {onDelete && (
+                {(canModify || canDeleteVote) && onDelete && (
                   <Button variant="ghost" size="sm" onClick={() => onDelete(post)} className="text-gray-400 hover:text-red-500">
                     <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
                   </Button>
@@ -192,14 +197,27 @@ export default function TelegramBoardPostDetail({
           )}
 
           {/* 본문 콘텐츠 */}
-          <div
-            className="prose prose-sm max-w-none text-gray-700
-              prose-headings:text-gray-900 prose-headings:font-semibold
-              prose-h3:text-base prose-h3:mt-4 prose-h3:mb-2
-              prose-ul:my-2 prose-li:my-0.5
-              prose-p:my-2 prose-a:text-blue-600"
-            dangerouslySetInnerHTML={{ __html: post.content }}
-          />
+          {post.content && (
+            <div
+              className="prose prose-sm max-w-none text-gray-700
+                prose-headings:text-gray-900 prose-headings:font-semibold
+                prose-h3:text-base prose-h3:mt-4 prose-h3:mb-2
+                prose-ul:my-2 prose-li:my-0.5
+                prose-p:my-2 prose-a:text-blue-600"
+              dangerouslySetInnerHTML={{ __html: post.content }}
+            />
+          )}
+
+          {/* 기여도 투표 표시 */}
+          {post.post_type === 'vote' && (
+            <ContributionVoteDisplay
+              postId={post.id}
+              groupId={post.telegram_group_id}
+              currentUserId={currentUserId}
+              isMasterAdmin={isMasterAdmin}
+              postCreatedBy={post.created_by}
+            />
+          )}
 
           {/* 좋아요/스크랩 액션 */}
           {currentUserId && (

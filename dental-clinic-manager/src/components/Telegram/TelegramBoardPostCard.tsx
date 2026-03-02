@@ -1,6 +1,6 @@
 'use client'
 
-import { Eye, FileText, Link2, Brain, Pin, PenLine, MessageCircle, Heart } from 'lucide-react'
+import { Eye, FileText, Link2, Brain, Pin, PenLine, MessageCircle, Heart, Vote } from 'lucide-react'
 import type { TelegramBoardPost } from '@/types/telegram'
 import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
 
@@ -31,6 +31,7 @@ export default function TelegramBoardPostCard({ post, onClick }: TelegramBoardPo
   const TypeIcon = post.post_type === 'summary' ? Brain
     : post.post_type === 'file' ? FileText
     : post.post_type === 'general' ? PenLine
+    : post.post_type === 'vote' ? Vote
     : Link2
 
   return (

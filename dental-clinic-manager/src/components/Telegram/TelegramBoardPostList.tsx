@@ -1,14 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Brain, FileText, Link2, PenLine, Loader2, Inbox, Plus, Heart, Bookmark } from 'lucide-react'
+import { Search, Brain, FileText, Link2, PenLine, Loader2, Inbox, Plus, Heart, Bookmark, Vote, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import TelegramBoardPostCard from './TelegramBoardPostCard'
 import TelegramBoardPostDetail from './TelegramBoardPostDetail'
 import TelegramBoardPostForm from './TelegramBoardPostForm'
-import { telegramBoardPostService } from '@/lib/telegramService'
-import type { TelegramBoardPost } from '@/types/telegram'
+import ContributionVoteForm from './ContributionVoteForm'
+import { telegramBoardPostService, telegramBoardVoteService } from '@/lib/telegramService'
+import type { TelegramBoardPost, CreateContributionVoteDto } from '@/types/telegram'
 
 interface TelegramBoardPostListProps {
   groupId: string
@@ -23,6 +24,7 @@ const POST_TYPE_FILTERS = [
   { key: 'file', label: '파일', icon: FileText },
   { key: 'link', label: '링크', icon: Link2 },
   { key: 'general', label: '일반 글', icon: PenLine },
+  { key: 'vote', label: '기여도 투표', icon: Vote },
 ] as const
 
 const PAGE_SIZE = 20
@@ -42,6 +44,8 @@ export default function TelegramBoardPostList({
   const [selectedPost, setSelectedPost] = useState<TelegramBoardPost | null>(null)
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingPost, setEditingPost] = useState<TelegramBoardPost | null>(null)
+  const [voteFormMode, setVoteFormMode] = useState(false)
+  const [writeMenuOpen, setWriteMenuOpen] = useState(false)
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
@@ -66,7 +70,7 @@ export default function TelegramBoardPostList({
       }
     } else {
       const { data, total: totalCount, error } = await telegramBoardPostService.getPosts(groupId, {
-        postType: activeFilter === 'all' ? undefined : activeFilter as 'summary' | 'file' | 'link' | 'general',
+        postType: activeFilter === 'all' ? undefined : activeFilter as 'summary' | 'file' | 'link' | 'general' | 'vote',
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
         search: searchQuery || undefined,
@@ -171,6 +175,27 @@ export default function TelegramBoardPostList({
     fetchPosts()
   }
 
+  // 투표 폼 제출
+  const handleVoteFormSubmit = async (data: CreateContributionVoteDto) => {
+    const { error } = await telegramBoardVoteService.createVote(groupId, data)
+    if (error) {
+      alert(error)
+      return
+    }
+    setVoteFormMode(false)
+    fetchPosts()
+  }
+
+  // 투표 폼 모드
+  if (voteFormMode) {
+    return (
+      <ContributionVoteForm
+        onSubmit={handleVoteFormSubmit}
+        onCancel={() => setVoteFormMode(false)}
+      />
+    )
+  }
+
   // 폼 모드
   if (formMode) {
     return (
@@ -250,9 +275,35 @@ export default function TelegramBoardPostList({
             )}
           </div>
           {currentUserId && (
-            <Button size="sm" onClick={handleOpenCreate} className="flex-shrink-0">
-              <Plus className="w-4 h-4 mr-1" />글쓰기
-            </Button>
+            <div className="relative flex-shrink-0">
+              <Button
+                size="sm"
+                onClick={() => setWriteMenuOpen(!writeMenuOpen)}
+                className="flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />글쓰기
+                <ChevronDown className="w-3 h-3" />
+              </Button>
+              {writeMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setWriteMenuOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden">
+                    <button
+                      onClick={() => { handleOpenCreate(); setWriteMenuOpen(false) }}
+                      className="w-full px-3 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <PenLine className="w-4 h-4 text-gray-500" />일반 글쓰기
+                    </button>
+                    <button
+                      onClick={() => { setVoteFormMode(true); setWriteMenuOpen(false) }}
+                      className="w-full px-3 py-2.5 text-left text-sm hover:bg-orange-50 flex items-center gap-2"
+                    >
+                      <Vote className="w-4 h-4 text-orange-500" />투표 만들기
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
 

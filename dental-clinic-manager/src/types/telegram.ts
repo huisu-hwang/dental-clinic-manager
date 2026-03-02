@@ -90,7 +90,7 @@ export interface TelegramMessage {
 export interface TelegramBoardPost {
   id: string
   telegram_group_id: string
-  post_type: 'summary' | 'file' | 'link' | 'general'
+  post_type: 'summary' | 'file' | 'link' | 'general' | 'vote'
   title: string
   content: string
   source_message_ids: string[]
@@ -204,6 +204,7 @@ export const TELEGRAM_POST_TYPE_LABELS: Record<string, string> = {
   file: '공유 파일',
   link: '공유 링크',
   general: '일반 글',
+  vote: '기여도 투표',
 }
 
 export const TELEGRAM_POST_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -211,6 +212,82 @@ export const TELEGRAM_POST_TYPE_COLORS: Record<string, { bg: string; text: strin
   file: { bg: 'bg-blue-100', text: 'text-blue-700' },
   link: { bg: 'bg-green-100', text: 'text-green-700' },
   general: { bg: 'bg-gray-100', text: 'text-gray-700' },
+  vote: { bg: 'bg-orange-100', text: 'text-orange-700' },
+}
+
+// 기여도 투표 결과 공개 시점
+export type ContributionVoteResultVisibility = 'realtime' | 'after_vote' | 'after_end'
+
+// 기여도 투표 세션
+export interface TelegramBoardVote {
+  id: string
+  post_id: string
+  telegram_group_id: string
+  max_votes_per_person: number
+  is_anonymous: boolean
+  show_top_n: number | null
+  result_visibility: ContributionVoteResultVisibility
+  allow_self_vote: boolean
+  status: 'active' | 'closed' | 'cancelled'
+  starts_at: string
+  ends_at: string | null
+  closed_at: string | null
+  closed_by: string | null
+  total_voters: number
+  total_votes_cast: number
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+// 기여도 투표 후보별 결과
+export interface ContributionVoteCandidate {
+  user_id: string
+  user_name: string
+  vote_count: number
+  rank: number
+}
+
+// 기여도 투표 결과 (RPC 반환)
+export interface ContributionVoteResults {
+  results: ContributionVoteCandidate[]
+  has_voted: boolean
+  my_selections: string[]
+  my_rank: number | null
+  my_votes: number
+  is_closed: boolean
+  total_voters: number
+  total_votes_cast: number
+  result_visibility: ContributionVoteResultVisibility
+  max_votes_per_person: number
+  is_anonymous: boolean
+  show_top_n: number | null
+  allow_self_vote: boolean
+  can_see_results: boolean
+}
+
+// 기여도 투표 생성 DTO
+export interface CreateContributionVoteDto {
+  title: string
+  content: string
+  max_votes_per_person: number
+  is_anonymous: boolean
+  show_top_n: number | null
+  result_visibility: ContributionVoteResultVisibility
+  allow_self_vote: boolean
+  ends_at: string | null
+  notify_telegram: boolean
+}
+
+// 기여도 투표 제출 DTO
+export interface CastContributionVoteDto {
+  candidate_ids: string[]
+}
+
+export const CONTRIBUTION_VOTE_RESULT_VISIBILITY_LABELS: Record<ContributionVoteResultVisibility, string> = {
+  realtime: '실시간 공개',
+  after_vote: '투표 후 공개',
+  after_end: '종료 후 공개',
 }
 
 export const TELEGRAM_GROUP_STATUS_LABELS: Record<TelegramGroupStatus, string> = {
