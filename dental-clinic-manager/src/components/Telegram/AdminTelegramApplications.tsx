@@ -17,6 +17,9 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
+  const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [boardSlug, setBoardSlug] = useState('')
+  const [boardTitle, setBoardTitle] = useState('')
 
   const fetchApplications = async () => {
     setLoading(true)
@@ -34,13 +37,30 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
   }, [])
 
   const handleApprove = async (groupId: string) => {
+    if (!boardSlug.trim() || !boardTitle.trim()) {
+      setError('게시판 경로와 이름을 모두 입력해주세요.')
+      return
+    }
+    // Validation for slug (only alphanumeric and hyphens)
+    if (!/^[a-zA-Z0-9-]+$/.test(boardSlug.trim())) {
+      setError('게시판 경로는 영문, 숫자, 하이픈(-)만 사용할 수 있습니다.')
+      return
+    }
+
     setProcessingId(groupId)
     setError(null)
-    const { error: reviewError } = await telegramGroupService.reviewApplication(groupId, 'approve')
+    const { error: reviewError } = await telegramGroupService.reviewApplication(
+      groupId,
+      'approve',
+      undefined,
+      boardSlug.trim(),
+      boardTitle.trim()
+    )
     if (reviewError) {
       setError(reviewError)
     } else {
       setApplications(prev => prev.filter(a => a.id !== groupId))
+      setApprovingId(null)
       onReviewComplete?.()
     }
     setProcessingId(null)
@@ -161,8 +181,59 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
               </div>
             )}
 
+            {/* 승인 정보 입력 */}
+            {approvingId === app.id && (
+              <div className="mt-3 space-y-3 p-3 bg-white rounded-lg border border-green-100">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">게시판 이름</label>
+                  <input
+                    type="text"
+                    value={boardTitle}
+                    onChange={e => setBoardTitle(e.target.value)}
+                    placeholder="예: 치과 공지방"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">게시판 식별자 (URL 경로)</label>
+                  <div className="flex items-center">
+                    <span className="bg-gray-50 border border-r-0 border-gray-200 px-3 py-2 text-sm text-gray-500 rounded-l-md font-mono">
+                      /community/telegram/
+                    </span>
+                    <input
+                      type="text"
+                      value={boardSlug}
+                      onChange={e => setBoardSlug(e.target.value)}
+                      placeholder="notice"
+                      className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setApprovingId(null); setBoardSlug(''); setBoardTitle('') }}
+                    className="h-7 text-xs"
+                  >
+                    취소
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleApprove(app.id)}
+                    disabled={processingId === app.id || !boardSlug.trim() || !boardTitle.trim()}
+                    className="h-7 text-xs bg-green-500 hover:bg-green-600 text-white"
+                  >
+                    {processingId === app.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <CheckCircle className="w-3 h-3 mr-1" />}
+                    연동 완료
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* 승인/반려 버튼 */}
-            {rejectingId !== app.id && (
+            {rejectingId !== app.id && approvingId !== app.id && (
               <div className="flex gap-2 justify-end mt-3">
                 <Button
                   variant="outline"
@@ -175,12 +246,17 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
                 </Button>
                 <Button
                   size="sm"
-                  onClick={() => handleApprove(app.id)}
+                  onClick={() => {
+                    setApprovingId(app.id);
+                    setRejectingId(null);
+                    setBoardTitle(app.board_title.startsWith('pending_') ? '' : app.board_title);
+                    setBoardSlug(app.board_slug.startsWith('pending_') ? '' : app.board_slug);
+                  }}
                   disabled={!!processingId}
                   className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
                 >
                   {processingId === app.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <CheckCircle className="w-3 h-3 mr-1" />}
-                  승인
+                  설정 후 승인
                 </Button>
               </div>
             )}

@@ -38,6 +38,64 @@ Deno.serve(async (req) => {
     const update = await req.json()
     console.log("[telegram-webhook] Received update id:", update.update_id)
 
+    // Supabase 클라이언트 생성 (SERVICE_ROLE_KEY 사용)
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+
+    // --- 봇이 그룹에 초대되었을 때 자동 등록 (Pending 상태) ---
+    async function handleBotAddedToGroup(chat: any, fromUser: any) {
+      if (!chat || (chat.type !== 'group' && chat.type !== 'supergroup')) return;
+
+      const chatId = chat.id;
+      const chatTitle = chat.title || '알 수 없는 그룹';
+      const senderName = fromUser ? `${fromUser.first_name || ''} ${fromUser.last_name || ''}`.trim() : '관리자';
+
+      console.log(`[telegram-webhook] Auto-registering group ${chatId} (${chatTitle}) added by ${senderName}`);
+
+      // 이미 연동되거나 보류 중인 상태인지 확인
+      const { data: existing } = await supabase
+        .from('telegram_groups')
+        .select('id')
+        .eq('telegram_chat_id', chatId)
+        .maybeSingle();
+
+      if (!existing) {
+        const dummySlug = `pending_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const { error } = await supabase.from('telegram_groups').insert({
+          telegram_chat_id: chatId,
+          chat_title: chatTitle,
+          chat_type: chat.type,
+          board_slug: dummySlug,
+          board_title: `${senderName}님이 연결한 그룹`,
+          status: 'pending',
+          is_active: false,
+          color_bg: 'bg-slate-100',
+          color_text: 'text-slate-800',
+          summary_enabled: false,
+        });
+
+        if (error) {
+          console.error("[telegram-webhook] Error auto-registering group:", error);
+        } else {
+          console.log("[telegram-webhook] Successfully registered pending group:", chatTitle);
+        }
+      }
+    }
+
+    // 1. my_chat_member 업데이트 확인 (봇이 그룹에 추가되거나 권한이 변경될 때)
+    if (update.my_chat_member) {
+      const myMember = update.my_chat_member;
+      const newStatus = myMember.new_chat_member?.status;
+      if (newStatus === 'member' || newStatus === 'administrator') {
+        await handleBotAddedToGroup(myMember.chat, myMember.from);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
     // 메시지 추출
     const message = update.message || update.edited_message || update.channel_post
     if (!message) {
@@ -47,13 +105,17 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Supabase 클라이언트 생성 (SERVICE_ROLE_KEY 사용)
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
+    // 2. new_chat_members 메시지 확인 (다른 사용자가 그룹에 봇을 추가했을 때 메세지로 올 경우)
+    if (message.new_chat_members && Array.isArray(message.new_chat_members)) {
+      if (botToken) {
+        const botId = botToken.split(':')[0];
+        const isBotAdded = message.new_chat_members.some((member: any) => member.id.toString() === botId);
+        if (isBotAdded) {
+          await handleBotAddedToGroup(message.chat, message.from);
+          return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+        }
       }
-    })
+    }
 
     // telegram_groups에서 chat_id로 그룹 조회 (telegram_chat_id는 bigint)
     const chatId = message.chat.id

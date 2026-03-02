@@ -34,7 +34,7 @@ export async function POST(
 
     const { id: groupId } = await params
     const body = await request.json()
-    const { userId, action, rejectionReason } = body
+    const { userId, action, rejectionReason, boardSlug, boardTitle } = body
 
     // 권한 확인
     const isAdmin = await checkMasterAdmin(userId)
@@ -73,14 +73,19 @@ export async function POST(
 
     if (action === 'approve') {
       // 승인: status → approved, is_active → true
+      const updateData: any = {
+        status: 'approved',
+        is_active: true,
+        reviewed_by: userId,
+        reviewed_at: now,
+      }
+
+      if (boardSlug) updateData.board_slug = boardSlug
+      if (boardTitle) updateData.board_title = boardTitle
+
       const { data: updated, error: updateError } = await supabase
         .from('telegram_groups')
-        .update({
-          status: 'approved',
-          is_active: true,
-          reviewed_by: userId,
-          reviewed_at: now,
-        })
+        .update(updateData)
         .eq('id', groupId)
         .select()
         .single()

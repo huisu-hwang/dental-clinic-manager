@@ -320,7 +320,9 @@ export const telegramGroupService = {
   async reviewApplication(
     groupId: string,
     action: 'approve' | 'reject',
-    rejectionReason?: string
+    rejectionReason?: string,
+    boardSlug?: string,
+    boardTitle?: string
   ): Promise<{ data: TelegramGroup | null; error: string | null }> {
     try {
       const userId = getCurrentUserId()
@@ -329,7 +331,7 @@ export const telegramGroupService = {
       const res = await fetch(`/api/telegram/groups/${groupId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, action, rejectionReason }),
+        body: JSON.stringify({ userId, action, rejectionReason, boardSlug, boardTitle }),
       })
 
       const result = await res.json()

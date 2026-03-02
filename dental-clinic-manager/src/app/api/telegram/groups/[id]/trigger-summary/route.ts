@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { generateDailySummary } from '@/lib/telegramSummaryService'
+import { sendSummaryNotification } from '@/lib/telegramBotService'
 
 async function checkMasterAdmin(userId: string | null): Promise<boolean> {
   if (!userId) return false
@@ -124,6 +125,20 @@ export async function POST(
       .from('telegram_groups')
       .update({ last_sync_at: new Date().toISOString() })
       .eq('id', groupId)
+
+    // 텔레그램 그룹에 요약 알림 전송
+    if (group.telegram_chat_id && group.board_slug) {
+      try {
+        await sendSummaryNotification(
+          group.telegram_chat_id,
+          group.chat_title,
+          targetDate,
+          group.board_slug
+        )
+      } catch (notifyError) {
+        console.error('[trigger-summary] Telegram notification failed:', notifyError)
+      }
+    }
 
     return NextResponse.json({
       data: {

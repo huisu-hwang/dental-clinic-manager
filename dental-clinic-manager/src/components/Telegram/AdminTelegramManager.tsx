@@ -5,7 +5,7 @@ import { Plus, Send, ChevronDown, ChevronUp, Power, PowerOff, Loader2, AlertCirc
 import { Button } from '@/components/ui/Button'
 import { telegramGroupService } from '@/lib/telegramService'
 import { useAuth } from '@/contexts/AuthContext'
-import AdminTelegramGroupForm from './AdminTelegramGroupForm'
+import AdminTelegramGroupSetupGuide from './AdminTelegramGroupSetupGuide'
 import AdminTelegramMembers from './AdminTelegramMembers'
 import AdminTelegramSyncStatus from './AdminTelegramSyncStatus'
 import AdminTelegramApplications from './AdminTelegramApplications'
@@ -17,7 +17,6 @@ export default function AdminTelegramManager() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [addingGroup, setAddingGroup] = useState(false)
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null)
   const [triggeringSummary, setTriggeringSummary] = useState<string | null>(null)
 
@@ -34,20 +33,6 @@ export default function AdminTelegramManager() {
       setGroups(data || [])
     }
     setLoading(false)
-  }
-
-  // 그룹 추가
-  const handleAddGroup = async (dto: CreateTelegramGroupDto) => {
-    setAddingGroup(true)
-    setError(null)
-    const { error: createError } = await telegramGroupService.createGroup(dto)
-    if (createError) {
-      setError(createError)
-    } else {
-      setShowAddForm(false)
-      await fetchGroups()
-    }
-    setAddingGroup(false)
   }
 
   // 그룹 활성/비활성 토글
@@ -118,12 +103,10 @@ export default function AdminTelegramManager() {
         </Button>
       </div>
 
-      {/* 추가 폼 */}
+      {/* 추가 가이드 */}
       {showAddForm && (
-        <AdminTelegramGroupForm
-          onSubmit={handleAddGroup}
+        <AdminTelegramGroupSetupGuide
           onCancel={() => setShowAddForm(false)}
-          loading={addingGroup}
         />
       )}
 
@@ -139,9 +122,8 @@ export default function AdminTelegramManager() {
           {groups.map(group => (
             <div
               key={group.id}
-              className={`rounded-xl border overflow-hidden transition-colors ${
-                group.is_active ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50'
-              }`}
+              className={`rounded-xl border overflow-hidden transition-colors ${group.is_active ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50'
+                }`}
             >
               {/* 그룹 헤더 */}
               <div className="p-4">

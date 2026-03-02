@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { generateDailySummary } from '@/lib/telegramSummaryService'
+import { sendSummaryNotification } from '@/lib/telegramBotService'
 
 export const maxDuration = 60
 
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
     // 요약 대상 그룹 조회 (활성 + 요약 활성화)
     const { data: groups, error: groupsError } = await supabase
       .from('telegram_groups')
-      .select('id, chat_title')
+      .select('id, chat_title, telegram_chat_id, board_slug')
       .eq('is_active', true)
       .eq('summary_enabled', true)
 
@@ -144,6 +145,20 @@ export async function GET(request: Request) {
           .from('telegram_groups')
           .update({ last_sync_at: new Date().toISOString() })
           .eq('id', group.id)
+
+        // 텔레그램 그룹에 요약 알림 전송
+        if (group.telegram_chat_id && group.board_slug) {
+          try {
+            await sendSummaryNotification(
+              group.telegram_chat_id,
+              group.chat_title,
+              kstDateStr,
+              group.board_slug
+            )
+          } catch (notifyError) {
+            console.error(`[Cron Telegram Summary] Notification failed for group ${group.id}:`, notifyError)
+          }
+        }
 
         results.push({
           group_id: group.id,
