@@ -71,7 +71,7 @@ export async function POST(
     // 텔레그램 알림 전송 (옵션)
     if (notifyTelegram && group.telegram_chat_id && group.board_slug) {
       try {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hi-clinic.co.kr'
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
         const boardUrl = `${appUrl}/community/telegram/${group.board_slug}`
 
         const message = [
