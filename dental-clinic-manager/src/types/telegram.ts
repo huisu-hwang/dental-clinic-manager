@@ -26,6 +26,7 @@ export interface TelegramGroup {
   rejection_reason: string | null
   reviewed_by: string | null
   reviewed_at: string | null
+  link_token: string | null
   created_by: string
   created_at: string
   updated_at: string

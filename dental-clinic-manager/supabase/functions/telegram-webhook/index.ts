@@ -105,6 +105,46 @@ Deno.serve(async (req) => {
       })
     }
 
+    // 1.5. /start 명령어 처리 (딥 링크로 봇 추가 시 link_token 저장)
+    const msgText: string = message.text || ''
+    if (msgText.startsWith('/start') && (message.chat.type === 'group' || message.chat.type === 'supergroup')) {
+      // /start@botname token 또는 /start token 패턴 매칭
+      const startMatch = msgText.match(/^\/start(?:@\S+)?\s+(.+)$/)
+      if (startMatch) {
+        const linkToken = startMatch[1].trim()
+        const startChatId = message.chat.id
+        console.log(`[telegram-webhook] /start command with link_token: ${linkToken} in chat ${startChatId}`)
+
+        // pending 레코드 찾아서 link_token 저장
+        const { data: pendingGroup, error: pendingError } = await supabase
+          .from('telegram_groups')
+          .select('id, board_slug')
+          .eq('telegram_chat_id', startChatId)
+          .like('board_slug', 'pending_%')
+          .maybeSingle()
+
+        if (pendingGroup) {
+          const { error: tokenUpdateError } = await supabase
+            .from('telegram_groups')
+            .update({ link_token: linkToken })
+            .eq('id', pendingGroup.id)
+
+          if (tokenUpdateError) {
+            console.error("[telegram-webhook] Error updating link_token:", tokenUpdateError)
+          } else {
+            console.log(`[telegram-webhook] link_token saved for group ${pendingGroup.id}`)
+          }
+        } else {
+          console.log("[telegram-webhook] No pending group found for chat_id:", startChatId, "- will be handled by handleBotAddedToGroup fallback")
+        }
+
+        // /start 메시지는 일반 메시지로 저장하지 않음
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { "Content-Type": "application/json" }
+        })
+      }
+    }
+
     // 2. new_chat_members 메시지 확인 (다른 사용자가 그룹에 봇을 추가했을 때 메세지로 올 경우)
     if (message.new_chat_members && Array.isArray(message.new_chat_members)) {
       if (botToken) {

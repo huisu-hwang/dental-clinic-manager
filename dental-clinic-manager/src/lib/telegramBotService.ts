@@ -61,6 +61,30 @@ export async function sendMessageToGroup(
  * @param summaryDate 요약 날짜 (YYYY-MM-DD)
  * @param boardSlug 게시판 슬러그
  */
+/**
+ * 텔레그램 봇의 username 조회 (봇 추가 링크 생성용)
+ */
+export async function getBotUsername(): Promise<{ username: string | null; error?: string }> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  if (!botToken) {
+    return { username: null, error: 'TELEGRAM_BOT_TOKEN not configured' }
+  }
+
+  try {
+    const response = await fetch(`${TELEGRAM_API_BASE}/bot${botToken}/getMe`)
+    const result = await response.json()
+
+    if (!response.ok || !result.ok) {
+      return { username: null, error: result.description || `HTTP ${response.status}` }
+    }
+
+    return { username: result.result.username }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+    return { username: null, error: errorMsg }
+  }
+}
+
 export async function sendSummaryNotification(
   chatId: number,
   groupTitle: string,

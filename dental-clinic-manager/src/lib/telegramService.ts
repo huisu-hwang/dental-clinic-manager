@@ -256,6 +256,53 @@ export const telegramGroupService = {
   },
 
   /**
+   * 봇 정보 조회 (딥 링크 생성용)
+   */
+  async getBotInfo(): Promise<{ data: { username: string } | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch(`/api/telegram/bot-info?userId=${userId}`)
+      const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error(result.error || '봇 정보를 가져올 수 없습니다.')
+      }
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramGroupService.getBotInfo] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 감지된 그룹 조회 (딥 링크 플로우에서 폴링용)
+   */
+  async getDetectedGroups(token?: string): Promise<{ data: { id: string; telegram_chat_id: number; chat_title: string; chat_type: string; created_at: string }[] | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const params = new URLSearchParams({ userId })
+      if (token) params.set('token', token)
+
+      const res = await fetch(`/api/telegram/groups/detected?${params.toString()}`)
+      const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error(result.error || '감지된 그룹을 가져올 수 없습니다.')
+      }
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramGroupService.getDetectedGroups] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 내 신청 목록 조회 (모든 status)
    */
   async getMyApplications(): Promise<{ data: TelegramGroup[] | null; error: string | null }> {

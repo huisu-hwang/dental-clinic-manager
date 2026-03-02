@@ -113,8 +113,72 @@ export async function POST(request: NextRequest) {
 
     if (existing && existing.length > 0) {
       const dupChatId = existing.find((g: any) => g.telegram_chat_id === Number(telegram_chat_id))
-      const dupSlug = existing.find((g: any) => g.board_slug === board_slug)
+      const dupSlug = existing.find((g: any) => g.board_slug === board_slug && !g.board_slug.startsWith('pending_'))
 
+      // 웹훅으로 자동 생성된 pending 레코드 → claim (UPDATE)
+      if (dupChatId && dupChatId.board_slug.startsWith('pending_')) {
+        const { application_reason, board_description, ...groupFields } = dto
+
+        const updateData: Record<string, unknown> = {
+          board_slug,
+          board_title,
+          board_description: board_description || null,
+          application_reason: application_reason || null,
+          created_by: userId,
+        }
+
+        if (isMasterAdmin) {
+          updateData.status = 'approved'
+          updateData.is_active = true
+          updateData.reviewed_by = userId
+          updateData.reviewed_at = new Date().toISOString()
+        }
+
+        const { data: claimedGroup, error: claimError } = await supabase
+          .from('telegram_groups')
+          .update(updateData)
+          .eq('id', dupChatId.id)
+          .select()
+          .single()
+
+        if (claimError) {
+          console.error('[POST /api/telegram/groups] Claim error:', claimError)
+          return NextResponse.json({ data: null, error: claimError.message }, { status: 500 })
+        }
+
+        // 일반 사용자의 경우 master_admin에게 알림
+        if (!isMasterAdmin) {
+          try {
+            const { data: admins } = await supabase
+              .from('users')
+              .select('id')
+              .eq('role', 'master_admin')
+
+            if (admins && admins.length > 0) {
+              const clinicId = userInfo.clinic_id
+              const notifications = admins.map((admin: any) => ({
+                clinic_id: clinicId,
+                user_id: admin.id,
+                type: 'telegram_board_pending',
+                title: '텔레그램 게시판 신청이 접수되었습니다',
+                content: `${userInfo.name}님이 "${board_title}" 게시판을 신청했습니다.`,
+                link: '/community/admin?tab=telegram',
+                reference_type: 'telegram_group',
+                reference_id: claimedGroup.id,
+                created_by: userId,
+              }))
+
+              await supabase.from('user_notifications').insert(notifications)
+            }
+          } catch (notifError) {
+            console.error('[POST /api/telegram/groups] Notification error:', notifError)
+          }
+        }
+
+        return NextResponse.json({ data: claimedGroup, error: null }, { status: 201 })
+      }
+
+      // 이미 사용자가 claim했거나 승인된 그룹
       if (dupChatId) {
         const statusLabel = dupChatId.status === 'pending' ? '(승인 대기 중)' : ''
         return NextResponse.json(
