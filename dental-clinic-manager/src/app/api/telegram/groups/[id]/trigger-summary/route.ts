@@ -52,10 +52,17 @@ export async function POST(
       return NextResponse.json({ data: null, error: '그룹을 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // 요약 대상 날짜 결정 (기본: 오늘)
-    const targetDate = summaryDate || new Date().toISOString().split('T')[0]
-    const startOfDay = `${targetDate}T00:00:00.000Z`
-    const endOfDay = `${targetDate}T23:59:59.999Z`
+    // 요약 대상 날짜 결정 (기본: 오늘 KST)
+    let targetDate = summaryDate
+    if (!targetDate) {
+      const nowUtc = new Date()
+      const kstOffsetMs = 9 * 60 * 60 * 1000
+      const nowKst = new Date(nowUtc.getTime() + kstOffsetMs)
+      targetDate = nowKst.toISOString().slice(0, 10)
+    }
+    // KST 날짜 범위를 UTC로 변환 (KST 00:00 = UTC 전날 15:00)
+    const startOfDay = new Date(`${targetDate}T00:00:00+09:00`).toISOString()
+    const endOfDay = new Date(`${targetDate}T23:59:59+09:00`).toISOString()
 
     // 해당 날짜 메시지 조회
     const { data: messages, error: msgError } = await supabase
@@ -111,6 +118,12 @@ export async function POST(
       .eq('telegram_group_id', groupId)
       .gte('telegram_date', startOfDay)
       .lte('telegram_date', endOfDay)
+
+    // 그룹 last_sync_at 업데이트
+    await supabase
+      .from('telegram_groups')
+      .update({ last_sync_at: new Date().toISOString() })
+      .eq('id', groupId)
 
     return NextResponse.json({
       data: {

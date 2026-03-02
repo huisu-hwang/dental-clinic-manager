@@ -50,7 +50,29 @@ export async function GET(
       return NextResponse.json({ data: null, error: '초대 링크 사용 횟수가 초과되었습니다.' }, { status: 410 })
     }
 
-    return NextResponse.json({ data: link, error: null })
+    const group = link.telegram_groups as any
+
+    // 이미 멤버인지 확인
+    const { data: existing } = await supabase
+      .from('telegram_group_members')
+      .select('id')
+      .eq('telegram_group_id', link.telegram_group_id)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (existing) {
+      return NextResponse.json(
+        { error: '이미 그룹 멤버입니다.', alreadyMember: true, boardSlug: group?.board_slug },
+        { status: 409 }
+      )
+    }
+
+    // 컴포넌트가 필요한 그룹 정보만 반환
+    return NextResponse.json({
+      board_title: group?.board_title ?? null,
+      board_description: group?.board_description ?? null,
+      board_slug: group?.board_slug ?? null,
+    })
   } catch (error) {
     console.error('[GET /api/telegram/join/[code]] Error:', error)
     return NextResponse.json(
@@ -154,12 +176,8 @@ export async function POST(
     }
 
     return NextResponse.json({
-      data: {
-        success: true,
-        groupSlug: group?.board_slug ?? null,
-        groupTitle: group?.board_title ?? null,
-      },
-      error: null,
+      boardSlug: group?.board_slug ?? null,
+      boardTitle: group?.board_title ?? null,
     })
   } catch (error) {
     console.error('[POST /api/telegram/join/[code]] Error:', error)

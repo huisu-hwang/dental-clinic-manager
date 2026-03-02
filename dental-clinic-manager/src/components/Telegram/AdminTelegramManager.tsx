@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react'
 import { Plus, Send, ChevronDown, ChevronUp, Power, PowerOff, Loader2, AlertCircle, Users } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { telegramGroupService } from '@/lib/telegramService'
+import { useAuth } from '@/contexts/AuthContext'
 import AdminTelegramGroupForm from './AdminTelegramGroupForm'
 import AdminTelegramMembers from './AdminTelegramMembers'
 import AdminTelegramSyncStatus from './AdminTelegramSyncStatus'
 import type { TelegramGroup, CreateTelegramGroupDto } from '@/types/telegram'
 
 export default function AdminTelegramManager() {
+  const { user } = useAuth()
   const [groups, setGroups] = useState<TelegramGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -62,7 +64,11 @@ export default function AdminTelegramManager() {
   const handleTriggerSummary = async (groupId: string) => {
     setTriggeringSummary(groupId)
     try {
-      const res = await fetch(`/api/telegram/groups/${groupId}/trigger-summary`, { method: 'POST' })
+      const res = await fetch(`/api/telegram/groups/${groupId}/trigger-summary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id }),
+      })
       if (!res.ok) {
         const data = await res.json()
         setError(data.error || '요약 생성에 실패했습니다')
