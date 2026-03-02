@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     // Vercel Cron 인증 확인 (production 환경에서만)
     if (process.env.NODE_ENV === 'production') {
       const authHeader = request.headers.get('authorization')
-      if (authHeader !== `Bearer ${CRON_SECRET}`) {
+      if (authHeader !== `Bearer ${CRON_SECRET?.trim()}`) {
         console.error('[Cron process-resignations] Unauthorized access attempt')
         return NextResponse.json(
           { error: 'Unauthorized' },

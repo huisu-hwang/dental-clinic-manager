@@ -264,6 +264,12 @@
       "type": "file"
     },
     {
+      "path": "CLAUDE.md",
+      "accessCount": 2,
+      "lastAccessed": 1772428891874,
+      "type": "file"
+    },
+    {
       "path": "src/types/telegram.ts",
       "accessCount": 1,
       "lastAccessed": 1772426651929,
