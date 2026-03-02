@@ -16,6 +16,7 @@ export type SalaryType = 'gross' | 'net' // gross: 세전, net: 세후
 export interface PaymentItems {
   baseSalary: number         // 기본급
   bonus?: number             // 상여
+  cashBonus?: number         // 현금 상여 (매월 변동 가능)
   mealAllowance?: number     // 식대 (비과세)
   vehicleAllowance?: number  // 자가운전 보조금 (비과세)
   annualLeaveAllowance?: number // 연차수당
@@ -39,6 +40,11 @@ export interface DeductionItems {
   healthInsuranceAdjustment?: number    // 건강보험료정산
   longTermCareAdjustment?: number       // 장기요양보험료정산
   agricultureTax?: number      // 농특세
+  // 연말정산 항목 (매년 2월 반영, 원장 수동 입력)
+  yearEndIncomeTax?: number              // 소득세 연말정산 (양수: 추가납부, 음수: 환급)
+  yearEndLocalTax?: number               // 지방소득세 연말정산 (양수: 추가납부, 음수: 환급)
+  nationalPensionAdjustment?: number     // 국민연금 정산
+  employmentInsuranceAdjustment?: number // 고용보험 정산
 }
 
 // =====================================================================
@@ -168,6 +174,7 @@ export interface PayrollCalculationInput {
 
   // 추가 지급/공제
   bonus?: number
+  cashBonus?: number           // 현금 상여 (매월 변동 가능)
   overtimePay?: number
   otherAllowances?: Record<string, number>
   otherDeductions?: number
@@ -188,6 +195,12 @@ export interface PayrollCalculationResult {
 
   // 최종 금액
   netPay: number
+
+  // 기지급액 (현금 상여 등 이미 지급된 금액)
+  prepaidAmount: number
+
+  // 차인지급액 (실제 이체 금액 = netPay - prepaidAmount)
+  actualTransfer: number
 
   // 비과세 합계
   nonTaxableTotal: number
@@ -220,6 +233,7 @@ export interface PayrollFormState {
   // 지급 항목
   baseSalary: number
   bonus: number
+  cashBonus: number            // 현금 상여 (매월 변동 가능)
   mealAllowance: number
   vehicleAllowance: number
   annualLeaveAllowance: number
@@ -238,6 +252,14 @@ export interface PayrollFormState {
   // 소득세 관련
   familyCount: number
   childCount: number
+
+  // 연말정산 항목 (매년 2월, 원장 수동 입력)
+  yearEndIncomeTax: number               // 소득세 연말정산
+  yearEndLocalTax: number                // 지방소득세 연말정산
+  nationalPensionAdjustment: number      // 국민연금 정산
+  healthInsuranceAdjustment: number      // 건강보험료 정산
+  longTermCareAdjustment: number         // 장기요양보험료 정산
+  employmentInsuranceAdjustment: number  // 고용보험 정산
 
   // 근무 정보
   workDays: number
@@ -261,6 +283,7 @@ export const DEFAULT_PAYROLL_FORM_STATE: PayrollFormState = {
 
   baseSalary: 0,
   bonus: 0,
+  cashBonus: 0,
   mealAllowance: 200000, // 기본 식대 20만원
   vehicleAllowance: 0,
   annualLeaveAllowance: 0,
@@ -276,6 +299,13 @@ export const DEFAULT_PAYROLL_FORM_STATE: PayrollFormState = {
 
   familyCount: 1, // 본인
   childCount: 0,
+
+  yearEndIncomeTax: 0,
+  yearEndLocalTax: 0,
+  nationalPensionAdjustment: 0,
+  healthInsuranceAdjustment: 0,
+  longTermCareAdjustment: 0,
+  employmentInsuranceAdjustment: 0,
 
   workDays: 0,
   totalWorkHours: 0,

@@ -399,6 +399,11 @@ export async function POST(request: NextRequest) {
               ? (otherDeductions || 0) + attendanceDeductionAmount
               : (otherDeductions || 0)
 
+            // 저장된 명세서의 현금 상여 값 보존 (매월 변동 항목이므로 설정에서 가져오지 않음)
+            const savedCashBonus = statement.payments?.cashBonus || 0
+            // 저장된 명세서의 연말정산 값 보존 (수동 입력 항목)
+            const savedDeductions = statement.deductions || {}
+
             const newFormState: PayrollFormState = {
               ...DEFAULT_PAYROLL_FORM_STATE,
               selectedEmployeeId: employeeId,
@@ -410,6 +415,14 @@ export async function POST(request: NextRequest) {
               mealAllowance: mealAllowance || 0,
               vehicleAllowance: vehicleAllowance || 0,
               bonus: bonus || 0,
+              cashBonus: savedCashBonus,
+              // 연말정산 항목 보존
+              yearEndIncomeTax: savedDeductions.yearEndIncomeTax || 0,
+              yearEndLocalTax: savedDeductions.yearEndLocalTax || 0,
+              nationalPensionAdjustment: savedDeductions.nationalPensionAdjustment || 0,
+              healthInsuranceAdjustment: savedDeductions.healthInsuranceAdjustment || 0,
+              longTermCareAdjustment: savedDeductions.longTermCareAdjustment || 0,
+              employmentInsuranceAdjustment: savedDeductions.employmentInsuranceAdjustment || 0,
               nationalPension: nationalPension || 0,
               healthInsurance: healthInsurance || 0,
               longTermCare: longTermCare || 0,
