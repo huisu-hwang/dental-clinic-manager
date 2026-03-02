@@ -1,10 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { ArrowLeft, Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar, PenLine, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { TelegramBoardPost } from '@/types/telegram'
 import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
 import TelegramBoardCommentSection from './TelegramBoardCommentSection'
+import TelegramBoardPostActions from './TelegramBoardPostActions'
+import { telegramBoardPostService } from '@/lib/telegramService'
 
 interface TelegramBoardPostDetailProps {
   post: TelegramBoardPost
@@ -23,6 +26,29 @@ export default function TelegramBoardPostDetail({
   onEdit,
   onDelete,
 }: TelegramBoardPostDetailProps) {
+  const [isLiked, setIsLiked] = useState(post.is_liked ?? false)
+  const [isScraped, setIsScraped] = useState(post.is_scraped ?? false)
+  const [likeCount, setLikeCount] = useState(post.like_count ?? 0)
+  const [scrapCount, setScrapCount] = useState(post.scrap_count ?? 0)
+
+  const handleToggleLike = async () => {
+    if (!currentUserId) return
+    const { data } = await telegramBoardPostService.toggleLike(currentUserId, post.id)
+    if (data) {
+      setIsLiked(data.liked)
+      setLikeCount(data.like_count)
+    }
+  }
+
+  const handleToggleScrap = async () => {
+    if (!currentUserId) return
+    const { data } = await telegramBoardPostService.toggleScrap(currentUserId, post.id)
+    if (data) {
+      setIsScraped(data.scraped)
+      setScrapCount(data.scrap_count)
+    }
+  }
+
   const canModify = post.post_type === 'general' && (
     post.created_by === currentUserId || isMasterAdmin
   )
@@ -174,6 +200,20 @@ export default function TelegramBoardPostDetail({
               prose-p:my-2 prose-a:text-blue-600"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
+
+          {/* 좋아요/스크랩 액션 */}
+          {currentUserId && (
+            <div className="mt-6">
+              <TelegramBoardPostActions
+                isLiked={isLiked}
+                isScraped={isScraped}
+                likeCount={likeCount}
+                scrapCount={scrapCount}
+                onToggleLike={handleToggleLike}
+                onToggleScrap={handleToggleScrap}
+              />
+            </div>
+          )}
 
           {/* 댓글 섹션 */}
           <TelegramBoardCommentSection

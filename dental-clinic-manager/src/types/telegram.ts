@@ -98,12 +98,17 @@ export interface TelegramBoardPost {
   file_urls: { url: string; name?: string; type?: string; size?: number }[]
   link_urls: { url: string; title?: string; description?: string }[]
   view_count: number
+  like_count: number
+  scrap_count: number
   is_pinned: boolean
   ai_model: string | null
   created_by: string | null
   comment_count: number
   created_at: string
   updated_at: string
+  // 현재 사용자의 좋아요/스크랩 상태
+  is_liked?: boolean
+  is_scraped?: boolean
   // join 시 작성자 정보
   author?: {
     name: string

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Plus, ChevronLeft, ChevronRight, AlertCircle, MessageCircle, TrendingUp } from 'lucide-react'
+import { Search, Plus, ChevronLeft, ChevronRight, AlertCircle, MessageCircle, TrendingUp, Heart, Bookmark } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { communityPostService } from '@/lib/communityService'
@@ -25,7 +25,7 @@ export default function CommunityPostList({ profileId, isBanned, categories, lab
   const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<CommunityCategory | ''>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [sort, setSort] = useState<'latest' | 'popular'>('latest')
+  const [sort, setSort] = useState<'latest' | 'popular' | 'my_likes' | 'my_scraps'>('latest')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const ITEMS_PER_PAGE = 20
@@ -34,22 +34,45 @@ export default function CommunityPostList({ profileId, isBanned, categories, lab
     setLoading(true)
     setError(null)
 
-    const { data, total: totalCount, error: fetchError } = await communityPostService.getPosts({
-      category: selectedCategory || undefined,
-      search: searchQuery || undefined,
-      sort,
-      limit: ITEMS_PER_PAGE,
-      offset: (page - 1) * ITEMS_PER_PAGE,
-    })
-
-    if (fetchError) {
-      setError(fetchError)
+    if (sort === 'my_likes' && profileId) {
+      const { data, total: totalCount, error: fetchError } = await communityPostService.getMyLikes(profileId, {
+        limit: ITEMS_PER_PAGE,
+        offset: (page - 1) * ITEMS_PER_PAGE,
+      })
+      if (fetchError) {
+        setError(fetchError)
+      } else {
+        setPosts(data || [])
+        setTotal(totalCount)
+      }
+    } else if (sort === 'my_scraps' && profileId) {
+      const { data, total: totalCount, error: fetchError } = await communityPostService.getMyBookmarks(profileId, {
+        limit: ITEMS_PER_PAGE,
+        offset: (page - 1) * ITEMS_PER_PAGE,
+      })
+      if (fetchError) {
+        setError(fetchError)
+      } else {
+        setPosts(data || [])
+        setTotal(totalCount)
+      }
     } else {
-      setPosts(data || [])
-      setTotal(totalCount)
+      const { data, total: totalCount, error: fetchError } = await communityPostService.getPosts({
+        category: selectedCategory || undefined,
+        search: searchQuery || undefined,
+        sort: sort as 'latest' | 'popular',
+        limit: ITEMS_PER_PAGE,
+        offset: (page - 1) * ITEMS_PER_PAGE,
+      })
+      if (fetchError) {
+        setError(fetchError)
+      } else {
+        setPosts(data || [])
+        setTotal(totalCount)
+      }
     }
     setLoading(false)
-  }, [selectedCategory, searchQuery, sort, page])
+  }, [selectedCategory, searchQuery, sort, page, profileId])
 
   useEffect(() => {
     fetchPosts()
@@ -80,6 +103,23 @@ export default function CommunityPostList({ profileId, isBanned, categories, lab
           >
             <TrendingUp className="w-3.5 h-3.5 inline mr-1" />인기
           </button>
+          {profileId && (
+            <>
+              <span className="w-px h-4 bg-gray-200 mx-0.5" />
+              <button
+                onClick={() => { setSort('my_likes'); setPage(1) }}
+                className={`text-sm font-medium px-3 py-1 rounded-lg ${sort === 'my_likes' ? 'bg-red-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+              >
+                <Heart className="w-3.5 h-3.5 inline mr-1" />내 좋아요
+              </button>
+              <button
+                onClick={() => { setSort('my_scraps'); setPage(1) }}
+                className={`text-sm font-medium px-3 py-1 rounded-lg ${sort === 'my_scraps' ? 'bg-yellow-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+              >
+                <Bookmark className="w-3.5 h-3.5 inline mr-1" />내 스크랩
+              </button>
+            </>
+          )}
         </div>
         {profileId && !isBanned && (
           <Button onClick={onNewPost} className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 'use client'
 
-import { Eye, FileText, Link2, Brain, Pin, PenLine, MessageCircle } from 'lucide-react'
+import { Eye, FileText, Link2, Brain, Pin, PenLine, MessageCircle, Heart } from 'lucide-react'
 import type { TelegramBoardPost } from '@/types/telegram'
 import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
 
@@ -63,6 +63,11 @@ export default function TelegramBoardPostCard({ post, onClick }: TelegramBoardPo
             <span className="flex items-center gap-1">
               <Eye className="w-3 h-3" />{post.view_count}
             </span>
+            {(post.like_count ?? 0) > 0 && (
+              <span className="flex items-center gap-1 text-red-400">
+                <Heart className="w-3 h-3" />{post.like_count}
+              </span>
+            )}
             {(post.comment_count ?? 0) > 0 && (
               <span className="flex items-center gap-1">
                 <MessageCircle className="w-3 h-3" />{post.comment_count}

@@ -742,7 +742,40 @@ export const telegramBoardPostService = {
 
       if (error) throw error
 
-      return { data, total: count ?? 0, error: null }
+      // 좋아요/스크랩 상태 확인
+      const userId = getCurrentUserId()
+      let posts = data || []
+
+      if (userId && posts.length > 0) {
+        const postIds = posts.map((p: any) => p.id)
+        const supabaseConn = await ensureConnection()
+
+        if (supabaseConn) {
+          const [likesResult, scrapsResult] = await Promise.all([
+            (supabaseConn as any)
+              .from('telegram_board_likes')
+              .select('post_id')
+              .eq('user_id', userId)
+              .in('post_id', postIds),
+            (supabaseConn as any)
+              .from('telegram_board_scraps')
+              .select('post_id')
+              .eq('user_id', userId)
+              .in('post_id', postIds),
+          ])
+
+          const likedPostIds = new Set((likesResult.data || []).map((l: any) => l.post_id))
+          const scrapedPostIds = new Set((scrapsResult.data || []).map((s: any) => s.post_id))
+
+          posts = posts.map((post: any) => ({
+            ...post,
+            is_liked: likedPostIds.has(post.id),
+            is_scraped: scrapedPostIds.has(post.id),
+          }))
+        }
+      }
+
+      return { data: posts, total: count ?? 0, error: null }
     } catch (error) {
       console.error('[telegramBoardPostService.getPosts] Error:', error)
       return { data: null, total: 0, error: extractErrorMessage(error) }
@@ -768,7 +801,31 @@ export const telegramBoardPostService = {
 
       if (error) throw error
 
-      return { data, error: null }
+      // 좋아요/스크랩 상태 확인
+      const userId = getCurrentUserId()
+      let post = { ...data, is_liked: false, is_scraped: false }
+
+      if (userId && data) {
+        const [likeResult, scrapResult] = await Promise.all([
+          (supabase as any)
+            .from('telegram_board_likes')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('post_id', id)
+            .maybeSingle(),
+          (supabase as any)
+            .from('telegram_board_scraps')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('post_id', id)
+            .maybeSingle(),
+        ])
+
+        post.is_liked = !!likeResult.data
+        post.is_scraped = !!scrapResult.data
+      }
+
+      return { data: post, error: null }
     } catch (error) {
       console.error('[telegramBoardPostService.getPost] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
@@ -853,6 +910,116 @@ export const telegramBoardPostService = {
     } catch (error) {
       console.error('[telegramBoardPostService.deletePost] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 좋아요 토글
+   */
+  async toggleLike(userId: string, postId: string): Promise<{ data: { liked: boolean; like_count: number } | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .rpc('toggle_telegram_board_like', { p_user_id: userId, p_post_id: postId })
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardPostService.toggleLike] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 스크랩 토글
+   */
+  async toggleScrap(userId: string, postId: string): Promise<{ data: { scraped: boolean; scrap_count: number } | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .rpc('toggle_telegram_board_scrap', { p_user_id: userId, p_post_id: postId })
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardPostService.toggleScrap] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 내 좋아요 목록
+   */
+  async getMyLikes(userId: string, groupId: string, options?: {
+    limit?: number
+    offset?: number
+  }): Promise<{ data: TelegramBoardPost[] | null; total: number; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const limit = options?.limit || 20
+      const offset = options?.offset || 0
+
+      const { data, error, count } = await (supabase as any)
+        .from('telegram_board_likes')
+        .select('post:telegram_board_posts(*, author:users!telegram_board_posts_created_by_fkey(name, email))', { count: 'exact' })
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+      if (error) throw error
+
+      // groupId로 필터 (join 후 필터)
+      const posts = (data || [])
+        .map((item: any) => ({ ...item.post, is_liked: true }))
+        .filter((post: any) => post && post.telegram_group_id === groupId)
+
+      return { data: posts, total: count || 0, error: null }
+    } catch (error) {
+      console.error('[telegramBoardPostService.getMyLikes] Error:', error)
+      return { data: null, total: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 내 스크랩 목록
+   */
+  async getMyScraps(userId: string, groupId: string, options?: {
+    limit?: number
+    offset?: number
+  }): Promise<{ data: TelegramBoardPost[] | null; total: number; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const limit = options?.limit || 20
+      const offset = options?.offset || 0
+
+      const { data, error, count } = await (supabase as any)
+        .from('telegram_board_scraps')
+        .select('post:telegram_board_posts(*, author:users!telegram_board_posts_created_by_fkey(name, email))', { count: 'exact' })
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+      if (error) throw error
+
+      // groupId로 필터 (join 후 필터)
+      const posts = (data || [])
+        .map((item: any) => ({ ...item.post, is_scraped: true }))
+        .filter((post: any) => post && post.telegram_group_id === groupId)
+
+      return { data: posts, total: count || 0, error: null }
+    } catch (error) {
+      console.error('[telegramBoardPostService.getMyScraps] Error:', error)
+      return { data: null, total: 0, error: extractErrorMessage(error) }
     }
   },
 

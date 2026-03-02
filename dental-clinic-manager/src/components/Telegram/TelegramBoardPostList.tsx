@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Brain, FileText, Link2, PenLine, Loader2, Inbox, Plus } from 'lucide-react'
+import { Search, Brain, FileText, Link2, PenLine, Loader2, Inbox, Plus, Heart, Bookmark } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import TelegramBoardPostCard from './TelegramBoardPostCard'
@@ -45,18 +45,39 @@ export default function TelegramBoardPostList({
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
-    const { data, total: totalCount, error } = await telegramBoardPostService.getPosts(groupId, {
-      postType: activeFilter === 'all' ? undefined : activeFilter as 'summary' | 'file' | 'link' | 'general',
-      limit: PAGE_SIZE,
-      offset: page * PAGE_SIZE,
-      search: searchQuery || undefined,
-    })
-    if (!error && data) {
-      setPosts(data)
-      setTotal(totalCount)
+
+    if (activeFilter === 'my_likes' && currentUserId) {
+      const { data, total: totalCount, error } = await telegramBoardPostService.getMyLikes(currentUserId, groupId, {
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+      })
+      if (!error && data) {
+        setPosts(data)
+        setTotal(totalCount)
+      }
+    } else if (activeFilter === 'my_scraps' && currentUserId) {
+      const { data, total: totalCount, error } = await telegramBoardPostService.getMyScraps(currentUserId, groupId, {
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+      })
+      if (!error && data) {
+        setPosts(data)
+        setTotal(totalCount)
+      }
+    } else {
+      const { data, total: totalCount, error } = await telegramBoardPostService.getPosts(groupId, {
+        postType: activeFilter === 'all' ? undefined : activeFilter as 'summary' | 'file' | 'link' | 'general',
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+        search: searchQuery || undefined,
+      })
+      if (!error && data) {
+        setPosts(data)
+        setTotal(totalCount)
+      }
     }
     setLoading(false)
-  }, [groupId, activeFilter, searchQuery, page])
+  }, [groupId, activeFilter, searchQuery, page, currentUserId])
 
   useEffect(() => {
     fetchPosts()
@@ -202,6 +223,31 @@ export default function TelegramBoardPostList({
                 </button>
               )
             })}
+            {currentUserId && (
+              <>
+                <span className="w-px h-4 bg-gray-200 mx-0.5" />
+                <button
+                  onClick={() => handleFilterChange('my_likes')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors inline-flex items-center gap-1 ${
+                    activeFilter === 'my_likes'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  <Heart className="w-3 h-3" />내 좋아요
+                </button>
+                <button
+                  onClick={() => handleFilterChange('my_scraps')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors inline-flex items-center gap-1 ${
+                    activeFilter === 'my_scraps'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  <Bookmark className="w-3 h-3" />내 스크랩
+                </button>
+              </>
+            )}
           </div>
           {currentUserId && (
             <Button size="sm" onClick={handleOpenCreate} className="flex-shrink-0">
