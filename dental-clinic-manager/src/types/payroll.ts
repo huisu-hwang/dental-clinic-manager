@@ -196,6 +196,12 @@ export interface PayrollCalculationResult {
   // 최종 금액
   netPay: number
 
+  // 기지급액 (현금 상여 등 이미 지급된 금액)
+  prepaidAmount: number
+
+  // 차인지급액 (실제 이체 금액 = netPay - prepaidAmount)
+  actualTransfer: number
+
   // 비과세 합계
   nonTaxableTotal: number
 

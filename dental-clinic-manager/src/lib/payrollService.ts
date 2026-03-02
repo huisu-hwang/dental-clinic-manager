@@ -164,12 +164,19 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     netPay = totalPayment - totalDeduction
   }
 
+  // 기지급액 (현금 상여 등 이미 중간에 지급한 금액)
+  const prepaidAmount = cashBonus
+  // 차인지급액 (월말 실제 이체 금액)
+  const actualTransfer = netPay - prepaidAmount
+
   return {
     payments,
     totalPayment,
     deductions,
     totalDeduction,
     netPay,
+    prepaidAmount,
+    actualTransfer,
     nonTaxableTotal,
     taxableIncome
   }
@@ -221,6 +228,8 @@ export function calculatePayrollFromFormState(formState: PayrollFormState): Payr
     }
     result.totalDeduction += yearEndTotal
     result.netPay -= yearEndTotal
+    // 차인지급액도 연말정산 반영
+    result.actualTransfer = result.netPay - result.prepaidAmount
   }
 
   return result

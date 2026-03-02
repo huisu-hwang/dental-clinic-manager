@@ -125,6 +125,9 @@ export default function PayrollForm() {
 
   const yearMonthOptions = useMemo(() => generatePayrollYearMonthOptions(), [])
 
+  // 자동 저장 디바운스 타이머
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // 권한 체크
   const isOwner = user?.role === 'owner'
 
@@ -575,28 +578,38 @@ export default function PayrollForm() {
     }
   }
 
+  // 디바운스 자동 저장 (입력 시 즉시 UI 반영, 저장은 지연)
+  const debouncedAutoSave = (employee: Employee, state: PayrollFormState, result: PayrollCalculationResult) => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+    autoSaveTimerRef.current = setTimeout(async () => {
+      await autoSavePayroll(employee, state, result, attendanceSummary, attendanceDeduction)
+    }, 800)
+  }
+
   // 현금 상여 변경 핸들러
-  const handleCashBonusChange = async (value: number) => {
+  const handleCashBonusChange = (value: number) => {
     const newFormState = { ...formState, cashBonus: value }
     setFormState(newFormState)
     const result = calculatePayrollFromFormState(newFormState)
     setCalculationResult(result)
 
-    // 자동 저장
+    // 디바운스된 자동 저장
     if (isOwner && selectedEmployee && user?.clinic_id) {
-      await autoSavePayroll(selectedEmployee, newFormState, result, attendanceSummary, attendanceDeduction)
+      debouncedAutoSave(selectedEmployee, newFormState, result)
     }
   }
 
   // 연말정산 항목 변경 핸들러
-  const handleYearEndSettlementChange = async (field: string, value: number) => {
+  const handleYearEndSettlementChange = (field: string, value: number) => {
     const newFormState = { ...formState, [field]: value }
     setFormState(newFormState)
     const result = calculatePayrollFromFormState(newFormState)
     setCalculationResult(result)
 
     if (isOwner && selectedEmployee && user?.clinic_id) {
-      await autoSavePayroll(selectedEmployee, newFormState, result, attendanceSummary, attendanceDeduction)
+      debouncedAutoSave(selectedEmployee, newFormState, result)
     }
   }
 
@@ -919,7 +932,7 @@ export default function PayrollForm() {
             )}
           </div>
           <p className="text-xs text-slate-500 mt-2">
-            * 현금 상여는 해당 월에만 적용되며, 매월 별도로 입력해야 합니다.
+            * 현금 상여는 이미 중간에 지급한 금액으로, 월말 이체 금액(차인지급액)에서 차감됩니다.
           </p>
         </div>
       )}
@@ -1064,7 +1077,7 @@ export default function PayrollForm() {
           </div>
 
           {/* 요약 카드 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className={`grid grid-cols-1 gap-6 mb-6 ${calculationResult.prepaidAmount > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
             {/* 지급액계 */}
             <div className="p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-600 mb-1">지급액계</p>
@@ -1087,12 +1100,32 @@ export default function PayrollForm() {
               </p>
             </div>
 
-            {/* 실수령액 */}
-            <div className="p-4 bg-green-50 rounded-lg">
-              <p className="text-sm text-green-600 mb-1">실수령액</p>
-              <p className="text-2xl font-bold text-green-800">
-                {formatCurrency(calculationResult.netPay)}원
+            {/* 기지급 현금 상여 (있을 때만 표시) */}
+            {calculationResult.prepaidAmount > 0 && (
+              <div className="p-4 bg-amber-50 rounded-lg">
+                <p className="text-sm text-amber-600 mb-1">기지급 현금 상여</p>
+                <p className="text-2xl font-bold text-amber-800">
+                  -{formatCurrency(calculationResult.prepaidAmount)}원
+                </p>
+                <p className="text-xs text-amber-500 mt-1">
+                  이미 지급 완료
+                </p>
+              </div>
+            )}
+
+            {/* 차인지급액 (기지급이 있으면) / 실수령액 (없으면) */}
+            <div className="p-4 bg-green-50 rounded-lg border-2 border-green-200">
+              <p className="text-sm text-green-600 mb-1">
+                {calculationResult.prepaidAmount > 0 ? '차인지급액 (월말 이체)' : '실수령액'}
               </p>
+              <p className="text-2xl font-bold text-green-800">
+                {formatCurrency(calculationResult.actualTransfer)}원
+              </p>
+              {calculationResult.prepaidAmount > 0 && (
+                <p className="text-xs text-green-500 mt-1">
+                  실수령 {formatCurrency(calculationResult.netPay)}원 - 기지급 {formatCurrency(calculationResult.prepaidAmount)}원
+                </p>
+              )}
             </div>
           </div>
 
@@ -1142,7 +1175,9 @@ export default function PayrollForm() {
                   )}
                   {calculationResult.payments.cashBonus && calculationResult.payments.cashBonus > 0 && (
                     <tr className="border-b bg-amber-50">
-                      <td className="py-2 text-amber-700">현금 상여</td>
+                      <td className="py-2 text-amber-700">
+                        현금 상여 <span className="text-xs">(기지급)</span>
+                      </td>
                       <td className="py-2 text-right font-medium text-amber-700">{formatCurrency(calculationResult.payments.cashBonus)}원</td>
                     </tr>
                   )}
@@ -1287,6 +1322,28 @@ export default function PayrollForm() {
               </table>
             </div>
           </div>
+
+          {/* 기지급 및 차인지급액 */}
+          {calculationResult.prepaidAmount > 0 && (
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <table className="w-full text-sm">
+                <tbody>
+                  <tr>
+                    <td className="py-1 text-slate-700">실수령액</td>
+                    <td className="py-1 text-right font-medium">{formatCurrency(calculationResult.netPay)}원</td>
+                  </tr>
+                  <tr className="border-t border-amber-200">
+                    <td className="py-1 text-amber-700">기지급 현금 상여</td>
+                    <td className="py-1 text-right font-medium text-amber-700">-{formatCurrency(calculationResult.prepaidAmount)}원</td>
+                  </tr>
+                  <tr className="border-t-2 border-green-400">
+                    <td className="py-2 font-bold text-green-800">차인지급액 (월말 이체)</td>
+                    <td className="py-2 text-right font-bold text-xl text-green-800">{formatCurrency(calculationResult.actualTransfer)}원</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* 버튼 */}
           <div className="mt-6 flex justify-end">

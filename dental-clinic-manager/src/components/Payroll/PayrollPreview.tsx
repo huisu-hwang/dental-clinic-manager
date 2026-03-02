@@ -206,8 +206,8 @@ export default function PayrollPreview({
                     <td className="border border-slate-400 py-1.5 px-2">
                       {deduction?.label || ''}
                     </td>
-                    <td className="border border-slate-400 py-1.5 px-2 text-right">
-                      {deduction && deduction.value > 0 ? formatCurrency(deduction.value) : ''}
+                    <td className={`border border-slate-400 py-1.5 px-2 text-right ${deduction && deduction.value < 0 ? 'text-green-700' : ''}`}>
+                      {deduction && deduction.value !== 0 ? (deduction.value < 0 ? `△${formatCurrency(Math.abs(deduction.value))}` : formatCurrency(deduction.value)) : ''}
                     </td>
                   </tr>
                 )
@@ -239,6 +239,30 @@ export default function PayrollPreview({
                   {formatCurrency(statement.netPay)}
                 </td>
               </tr>
+
+              {/* 기지급 현금 상여 및 차인지급액 */}
+              {(statement.payments.cashBonus || 0) > 0 && (
+                <>
+                  <tr className="bg-amber-50">
+                    <td colSpan={2} className="border border-slate-400"></td>
+                    <td className="border border-slate-400 py-1.5 px-2 text-center text-amber-700">
+                      기지급 현금 상여
+                    </td>
+                    <td className="border border-slate-400 py-1.5 px-2 text-right text-amber-700">
+                      -{formatCurrency(statement.payments.cashBonus || 0)}
+                    </td>
+                  </tr>
+                  <tr className="bg-green-100 font-bold">
+                    <td colSpan={2} className="border border-slate-400"></td>
+                    <td className="border border-slate-400 py-2 px-2 text-center text-green-800">
+                      차 인 지 급 액
+                    </td>
+                    <td className="border border-slate-400 py-2 px-2 text-right text-green-800">
+                      {formatCurrency(statement.netPay - (statement.payments.cashBonus || 0))}
+                    </td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
 
