@@ -29,8 +29,8 @@ function getServiceClient() {
 export async function POST(request: NextRequest) {
   try {
     // CODEF 설정 여부에 따라 자동으로 데모 모드 활성화
-    // CODEF_DEMO_MODE=true 또는 CODEF API 미설정 시 데모 모드 동작
-    const isDemoMode = process.env.CODEF_DEMO_MODE === 'true' || !isCodefConfigured();
+    // CODEF 자격증명 미설정 시 UI 데모 모드 (실제 CODEF API 호출 생략)
+    const isDemoMode = !isCodefConfigured();
 
     const body = await request.json();
     const { clinicId, userId, password, identity, loginType, certFile, keyFile, certPassword, certType } = body;
@@ -327,7 +327,7 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .single();
 
-    const isDemoMode = process.env.CODEF_DEMO_MODE === 'true' || !isCodefConfigured();
+    const isDemoMode = !isCodefConfigured();
     const configured = isDemoMode ? true : isCodefConfigured();
     const serviceType = isDemoMode ? '데모' : getCodefServiceType();
 

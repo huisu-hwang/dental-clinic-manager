@@ -13,15 +13,9 @@ import {
 // POST: 공동인증서 기반 신용카드 매출자료 조회
 export async function POST(request: NextRequest) {
   try {
-    // CODEF 설정 여부에 따라 자동으로 데모 모드 활성화
-    const isDemoMode = process.env.CODEF_DEMO_MODE === 'true' || !isCodefConfigured();
-
-    if (!isDemoMode && !isCodefConfigured()) {
-      return NextResponse.json(
-        { success: false, error: 'CODEF API가 설정되지 않았습니다. 환경변수를 확인하세요.' },
-        { status: 500 }
-      );
-    }
+    // CODEF 자격증명 설정 여부에 따라 실제 API 호출 또는 UI 데모 데이터 사용
+    // CODEF_SERVICE_TYPE=DEMO(development.codef.io)도 실제 데이터를 반환하는 진짜 API 환경
+    const useMockData = !isCodefConfigured();
 
     const body = await request.json();
     const {
@@ -34,7 +28,7 @@ export async function POST(request: NextRequest) {
       endQuarter,     // "1"~"4"
     } = body;
 
-    // 필수값 검증 (데모 모드에서는 인증서 관련 파라미터 불필요)
+    // 필수값 검증 (UI 데모 모드에서는 인증서 관련 파라미터 불필요)
     if (!year || !startQuarter || !endQuarter) {
       return NextResponse.json(
         {
@@ -45,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isDemoMode) {
+    if (!useMockData) {
       if (!certFile || !certPassword || !certType) {
         return NextResponse.json(
           {
@@ -80,11 +74,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const serviceType = isDemoMode ? '데모' : getActualCodefServiceType();
-    console.log(`CODEF 신용카드 매출 조회: year=${year}, Q${startQuarter}~Q${endQuarter}, serviceType=${serviceType}, isDemoMode=${isDemoMode}`);
+    const serviceType = useMockData ? 'UI데모' : getActualCodefServiceType();
+    console.log(`CODEF 신용카드 매출 조회: year=${year}, Q${startQuarter}~Q${endQuarter}, serviceType=${serviceType}, useMockData=${useMockData}`);
 
-    // 데모 모드: PDF 스펙 기반 모의 데이터 (필드명 PDF 스펙 준수)
-    const salesData = isDemoMode ? {
+    // UI 데모용 (CODEF 미설정 시): PDF 스펙 기반 모의 데이터 (필드명 PDF 스펙 준수)
+    const salesData = useMockData ? {
       resSalesHistoryList: [
         { resYearMonth: `${year}01`, resCount: "134", resTotalAmount: "45000000", resPaymentAmt: "40000000", resPaymentAmt1: "5000000", resCashBack: "0" },
         { resYearMonth: `${year}02`, resCount: "112", resTotalAmount: "38500000", resPaymentAmt: "34000000", resPaymentAmt1: "4500000", resCashBack: "0" },

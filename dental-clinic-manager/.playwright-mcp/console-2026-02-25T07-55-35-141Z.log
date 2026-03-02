@@ -1,0 +1,34 @@
+[   94389ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/activity-log:0
+[   95718ms] Invalid or unexpected token
+[  216669ms] ChunkLoadError: Loading chunk app/layout failed.
+(timeout: http://localhost:3000/_next/static/chunks/app/layout.js)
+    at __webpack_require__.f.j (http://localhost:3000/_next/static/chunks/webpack.js?v=1772006230399:850:29)
+    at http://localhost:3000/_next/static/chunks/webpack.js?v=1772006230399:145:40
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1772006230399:144:67)
+    at fn.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1772006230399:381:50)
+    at loadChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:113:34)
+    at preloadModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:82:31)
+    at resolveModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2078:20)
+    at processFullStringRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2769:11)
+    at processFullBinaryRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2764:7)
+    at processBinaryChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2967:15)
+    at progress (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:3231:13)
+[  217757ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  218624ms] Invalid or unexpected token
+[  339574ms] ChunkLoadError: Loading chunk app/layout failed.
+(timeout: http://localhost:3000/_next/static/chunks/app/layout.js)
+    at __webpack_require__.f.j (http://localhost:3000/_next/static/chunks/webpack.js?v=1772006353027:850:29)
+    at http://localhost:3000/_next/static/chunks/webpack.js?v=1772006353027:145:40
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1772006353027:144:67)
+    at fn.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1772006353027:381:50)
+    at loadChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:113:34)
+    at preloadModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:82:31)
+    at resolveModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2078:20)
+    at processFullStringRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2769:11)
+    at processFullBinaryRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2764:7)
+    at processBinaryChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2967:15)
+    at progress (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:3231:13)
+[  340906ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  342690ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/activity-log:0
