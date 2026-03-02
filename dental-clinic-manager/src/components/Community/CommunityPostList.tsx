@@ -12,6 +12,7 @@ import CommunityPostCard from './CommunityPostCard'
 interface CommunityPostListProps {
   profileId: string | null
   isBanned: boolean
+  isLoggedIn?: boolean
   categories: CommunityCategoryItem[]
   labelMap: Record<string, string>
   colorMap: Record<string, string>
@@ -19,7 +20,7 @@ interface CommunityPostListProps {
   onNewPost: () => void
 }
 
-export default function CommunityPostList({ profileId, isBanned, categories, labelMap, colorMap, onPostClick, onNewPost }: CommunityPostListProps) {
+export default function CommunityPostList({ profileId, isBanned, isLoggedIn, categories, labelMap, colorMap, onPostClick, onNewPost }: CommunityPostListProps) {
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +35,13 @@ export default function CommunityPostList({ profileId, isBanned, categories, lab
     setLoading(true)
     setError(null)
 
-    if (sort === 'my_likes' && profileId) {
+    if (sort === 'my_likes') {
+      if (!profileId) {
+        setPosts([])
+        setTotal(0)
+        setLoading(false)
+        return
+      }
       const { data, total: totalCount, error: fetchError } = await communityPostService.getMyLikes(profileId, {
         limit: ITEMS_PER_PAGE,
         offset: (page - 1) * ITEMS_PER_PAGE,
@@ -45,7 +52,13 @@ export default function CommunityPostList({ profileId, isBanned, categories, lab
         setPosts(data || [])
         setTotal(totalCount)
       }
-    } else if (sort === 'my_scraps' && profileId) {
+    } else if (sort === 'my_scraps') {
+      if (!profileId) {
+        setPosts([])
+        setTotal(0)
+        setLoading(false)
+        return
+      }
       const { data, total: totalCount, error: fetchError } = await communityPostService.getMyBookmarks(profileId, {
         limit: ITEMS_PER_PAGE,
         offset: (page - 1) * ITEMS_PER_PAGE,
@@ -103,7 +116,7 @@ export default function CommunityPostList({ profileId, isBanned, categories, lab
           >
             <TrendingUp className="w-3.5 h-3.5 inline mr-1" />인기
           </button>
-          {profileId && (
+          {(isLoggedIn || profileId) && (
             <>
               <span className="w-px h-4 bg-gray-200 mx-0.5" />
               <button

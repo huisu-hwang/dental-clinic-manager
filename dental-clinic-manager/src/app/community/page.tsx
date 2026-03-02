@@ -239,6 +239,7 @@ export default function CommunityPage() {
                     <CommunityPostList
                       profileId={profile?.id || null}
                       isBanned={!!isBanned}
+                      isLoggedIn={!!user}
                       categories={categories}
                       labelMap={labelMap}
                       colorMap={colorMap}
