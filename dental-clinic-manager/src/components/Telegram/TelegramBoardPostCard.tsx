@@ -63,17 +63,17 @@ export default function TelegramBoardPostCard({ post, onClick }: TelegramBoardPo
             <span className="flex items-center gap-1">
               <Eye className="w-3 h-3" />{post.view_count}
             </span>
-            {post.comment_count > 0 && (
+            {(post.comment_count ?? 0) > 0 && (
               <span className="flex items-center gap-1">
                 <MessageCircle className="w-3 h-3" />{post.comment_count}
               </span>
             )}
-            {post.file_urls.length > 0 && (
+            {(post.file_urls?.length ?? 0) > 0 && (
               <span className="flex items-center gap-1">
                 <FileText className="w-3 h-3" />{post.file_urls.length}개 파일
               </span>
             )}
-            {post.link_urls.length > 0 && (
+            {(post.link_urls?.length ?? 0) > 0 && (
               <span className="flex items-center gap-1">
                 <Link2 className="w-3 h-3" />{post.link_urls.length}개 링크
               </span>

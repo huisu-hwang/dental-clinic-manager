@@ -115,7 +115,7 @@ export default function TelegramBoardPostDetail({
           </div>
 
           {/* 파일 목록 */}
-          {post.file_urls.length > 0 && (
+          {(post.file_urls?.length ?? 0) > 0 && (
             <div className="mb-4 p-3 bg-blue-50 rounded-lg">
               <h4 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-1">
                 <FileText className="w-4 h-4" />첨부 파일
@@ -143,7 +143,7 @@ export default function TelegramBoardPostDetail({
           )}
 
           {/* 링크 목록 */}
-          {post.link_urls.length > 0 && (
+          {(post.link_urls?.length ?? 0) > 0 && (
             <div className="mb-4 p-3 bg-green-50 rounded-lg">
               <h4 className="text-sm font-medium text-green-800 mb-2 flex items-center gap-1">
                 <Link2 className="w-4 h-4" />공유 링크
