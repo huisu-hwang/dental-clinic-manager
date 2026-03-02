@@ -96,6 +96,10 @@ export default function PayrollPreview({
     { label: '소득세', value: statement.deductions.incomeTax },
     { label: '지방소득세', value: statement.deductions.localIncomeTax },
     { label: '농특세', value: statement.deductions.agricultureTax || 0 },
+    { label: '소득세 정산', value: statement.deductions.yearEndIncomeTax || 0 },
+    { label: '지방소득세 정산', value: statement.deductions.yearEndLocalTax || 0 },
+    { label: '국민연금 정산', value: statement.deductions.nationalPensionAdjustment || 0 },
+    { label: '고용보험 정산', value: statement.deductions.employmentInsuranceAdjustment || 0 },
   ]
 
   // 행 수 맞추기 (최소 11행)

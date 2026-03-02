@@ -196,7 +196,34 @@ export function calculatePayrollFromFormState(formState: PayrollFormState): Payr
     otherDeductions: formState.otherDeductions
   }
 
-  return calculatePayroll(input)
+  const result = calculatePayroll(input)
+
+  // 연말정산 항목 적용 (2월 급여에 원장이 수동 입력한 값)
+  const yearEndIncomeTax = formState.yearEndIncomeTax || 0
+  const yearEndLocalTax = formState.yearEndLocalTax || 0
+  const nationalPensionAdj = formState.nationalPensionAdjustment || 0
+  const healthInsuranceAdj = formState.healthInsuranceAdjustment || 0
+  const longTermCareAdj = formState.longTermCareAdjustment || 0
+  const employmentInsuranceAdj = formState.employmentInsuranceAdjustment || 0
+
+  const yearEndTotal = yearEndIncomeTax + yearEndLocalTax
+    + nationalPensionAdj + healthInsuranceAdj + longTermCareAdj + employmentInsuranceAdj
+
+  if (yearEndTotal !== 0) {
+    result.deductions = {
+      ...result.deductions,
+      yearEndIncomeTax: yearEndIncomeTax !== 0 ? yearEndIncomeTax : undefined,
+      yearEndLocalTax: yearEndLocalTax !== 0 ? yearEndLocalTax : undefined,
+      nationalPensionAdjustment: nationalPensionAdj !== 0 ? nationalPensionAdj : undefined,
+      healthInsuranceAdjustment: healthInsuranceAdj !== 0 ? healthInsuranceAdj : undefined,
+      longTermCareAdjustment: longTermCareAdj !== 0 ? longTermCareAdj : undefined,
+      employmentInsuranceAdjustment: employmentInsuranceAdj !== 0 ? employmentInsuranceAdj : undefined,
+    }
+    result.totalDeduction += yearEndTotal
+    result.netPay -= yearEndTotal
+  }
+
+  return result
 }
 
 // =====================================================================

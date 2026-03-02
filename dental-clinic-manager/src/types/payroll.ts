@@ -40,6 +40,11 @@ export interface DeductionItems {
   healthInsuranceAdjustment?: number    // 건강보험료정산
   longTermCareAdjustment?: number       // 장기요양보험료정산
   agricultureTax?: number      // 농특세
+  // 연말정산 항목 (매년 2월 반영, 원장 수동 입력)
+  yearEndIncomeTax?: number              // 소득세 연말정산 (양수: 추가납부, 음수: 환급)
+  yearEndLocalTax?: number               // 지방소득세 연말정산 (양수: 추가납부, 음수: 환급)
+  nationalPensionAdjustment?: number     // 국민연금 정산
+  employmentInsuranceAdjustment?: number // 고용보험 정산
 }
 
 // =====================================================================
@@ -242,6 +247,14 @@ export interface PayrollFormState {
   familyCount: number
   childCount: number
 
+  // 연말정산 항목 (매년 2월, 원장 수동 입력)
+  yearEndIncomeTax: number               // 소득세 연말정산
+  yearEndLocalTax: number                // 지방소득세 연말정산
+  nationalPensionAdjustment: number      // 국민연금 정산
+  healthInsuranceAdjustment: number      // 건강보험료 정산
+  longTermCareAdjustment: number         // 장기요양보험료 정산
+  employmentInsuranceAdjustment: number  // 고용보험 정산
+
   // 근무 정보
   workDays: number
   totalWorkHours: number
@@ -280,6 +293,13 @@ export const DEFAULT_PAYROLL_FORM_STATE: PayrollFormState = {
 
   familyCount: 1, // 본인
   childCount: 0,
+
+  yearEndIncomeTax: 0,
+  yearEndLocalTax: 0,
+  nationalPensionAdjustment: 0,
+  healthInsuranceAdjustment: 0,
+  longTermCareAdjustment: 0,
+  employmentInsuranceAdjustment: 0,
 
   workDays: 0,
   totalWorkHours: 0,
