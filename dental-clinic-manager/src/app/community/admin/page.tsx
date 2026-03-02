@@ -141,12 +141,12 @@ export default function CommunityAdminPage() {
 
             {/* 탭 */}
             <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50 overflow-x-auto scrollbar-hide">
-              <nav className="flex space-x-1 p-1.5 sm:p-2 min-w-max">
+              <nav className="flex flex-nowrap space-x-1 p-1.5 sm:p-2 min-w-max">
                 <button
                   onClick={() => setActiveTab('reports')}
                   className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center flex-shrink-0 whitespace-nowrap rounded-lg font-medium text-xs sm:text-sm transition-all ${activeTab === 'reports'
-                      ? 'bg-white text-red-600 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                    ? 'bg-white text-red-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                     }`}
                 >
                   <Flag className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -155,8 +155,8 @@ export default function CommunityAdminPage() {
                 <button
                   onClick={() => setActiveTab('penalties')}
                   className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center flex-shrink-0 whitespace-nowrap rounded-lg font-medium text-xs sm:text-sm transition-all ${activeTab === 'penalties'
-                      ? 'bg-white text-red-600 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                    ? 'bg-white text-red-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                     }`}
                 >
                   <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -165,8 +165,8 @@ export default function CommunityAdminPage() {
                 <button
                   onClick={() => setActiveTab('categories')}
                   className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center flex-shrink-0 whitespace-nowrap rounded-lg font-medium text-xs sm:text-sm transition-all ${activeTab === 'categories'
-                      ? 'bg-white text-red-600 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                    ? 'bg-white text-red-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                     }`}
                 >
                   <Tags className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -175,8 +175,8 @@ export default function CommunityAdminPage() {
                 <button
                   onClick={() => setActiveTab('telegram')}
                   className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center flex-shrink-0 whitespace-nowrap rounded-lg font-medium text-xs sm:text-sm transition-all ${activeTab === 'telegram'
-                      ? 'bg-white text-red-600 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                    ? 'bg-white text-red-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                     }`}
                 >
                   <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
