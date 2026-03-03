@@ -49,10 +49,7 @@ export default function TelegramBoardListPage() {
   }, [isMobileMenuOpen])
 
   const handleMainTabChange = (tab: string) => {
-    if (tab === 'community') {
-      router.push('/community')
-      return
-    }
+    if (tab === 'community-groups') return
     router.push(getTabRoute(tab))
   }
 
@@ -105,7 +102,7 @@ export default function TelegramBoardListPage() {
         `}
       >
         <TabNavigation
-          activeTab="community"
+          activeTab="community-groups"
           onTabChange={handleMainTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
           skipAutoRedirect={true}

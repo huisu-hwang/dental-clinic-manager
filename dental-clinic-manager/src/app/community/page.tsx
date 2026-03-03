@@ -103,7 +103,7 @@ export default function CommunityPage() {
 
   // 메인 탭 네비게이션
   const handleMainTabChange = (tab: string) => {
-    if (tab === 'community') return
+    if (tab === 'community-board') return
     router.push(getTabRoute(tab))
   }
 
@@ -181,7 +181,7 @@ export default function CommunityPage() {
         `}
       >
         <TabNavigation
-          activeTab="community"
+          activeTab="community-board"
           onTabChange={handleMainTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
           skipAutoRedirect={true}

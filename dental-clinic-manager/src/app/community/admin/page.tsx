@@ -46,10 +46,7 @@ export default function CommunityAdminPage() {
   }, [isMobileMenuOpen])
 
   const handleMainTabChange = (tab: string) => {
-    if (tab === 'community') {
-      router.push('/community')
-      return
-    }
+    if (tab === 'community-board') return
     router.push(getTabRoute(tab))
   }
 
@@ -105,7 +102,7 @@ export default function CommunityAdminPage() {
         `}
       >
         <TabNavigation
-          activeTab="community"
+          activeTab="community-board"
           onTabChange={handleMainTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
           skipAutoRedirect={true}
