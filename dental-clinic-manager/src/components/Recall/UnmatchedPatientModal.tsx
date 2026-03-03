@@ -135,13 +135,22 @@ export default function UnmatchedPatientModal({
     ))
   }
 
-  // 매칭 취소
-  const handleUndoMatch = (index: number) => {
-    setItems(prev => prev.map((item, i) =>
-      i === index
-        ? { ...item, status: 'pending' as const, matchedPatientId: undefined, matchedPatientName: undefined }
-        : item
-    ))
+  // 매칭 취소 (DB 복원 포함)
+  const handleUndoMatch = async (index: number) => {
+    const item = items[index]
+    if (!item?.matchedPatientId) return
+
+    setMatchingIndex(index)
+    // DB에서 exclude_reason을 null로 복원
+    const result = await recallService.patients.manualMatchExclude(item.matchedPatientId, null)
+    if (result.success) {
+      setItems(prev => prev.map((it, i) =>
+        i === index
+          ? { ...it, status: 'pending' as const, matchedPatientId: undefined, matchedPatientName: undefined }
+          : it
+      ))
+    }
+    setMatchingIndex(null)
   }
 
   // 전체 건너뛰기

@@ -891,11 +891,11 @@ export const recallPatientService = {
         if (!uploaded.phone_number && !uploaded.patient_name && !uploaded.chart_number) continue
 
         // 업로드 데이터에 포함된 모든 필드가 일치하는 기존 환자만 매칭
-        // 전화번호는 숫자만 추출하여 비교, 차트번호는 String 변환하여 비교 (Excel 숫자 타입 대응)
+        // 전화번호는 숫자만 추출, 이름은 trim, 차트번호는 String 변환하여 비교
         const candidates = existingPatients.filter(p => {
           if (uploaded.phone_number && normalizePhone(p.phone_number) !== normalizePhone(uploaded.phone_number)) return false
-          if (uploaded.patient_name && p.patient_name !== String(uploaded.patient_name)) return false
-          if (uploaded.chart_number && String(p.chart_number || '') !== String(uploaded.chart_number)) return false
+          if (uploaded.patient_name && p.patient_name.trim() !== String(uploaded.patient_name).trim()) return false
+          if (uploaded.chart_number && String(p.chart_number || '').trim() !== String(uploaded.chart_number).trim()) return false
           return true
         })
 
@@ -970,14 +970,27 @@ export const recallPatientService = {
         .limit(limit)
       if (nameData) nameData.forEach((p: RecallPatient) => results.set(p.id, p))
 
-      // 전화번호 검색
-      const { data: phoneData } = await supabase
-        .from('recall_patients')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .ilike('phone_number', `%${query}%`)
-        .limit(limit)
-      if (phoneData) phoneData.forEach((p: RecallPatient) => results.set(p.id, p))
+      // 전화번호 검색 (다양한 포맷 대응: 숫자만, 하이픈 포함)
+      const digits = query.replace(/[^0-9]/g, '')
+      const phoneQueries = new Set<string>()
+      phoneQueries.add(query)
+      if (digits.length >= 3) {
+        phoneQueries.add(digits)
+        if (digits.length === 11) {
+          phoneQueries.add(`${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`)
+        } else if (digits.length === 10) {
+          phoneQueries.add(`${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`)
+        }
+      }
+      for (const pq of phoneQueries) {
+        const { data: phoneData } = await supabase
+          .from('recall_patients')
+          .select('*')
+          .eq('clinic_id', clinicId)
+          .ilike('phone_number', `%${pq}%`)
+          .limit(limit)
+        if (phoneData) phoneData.forEach((p: RecallPatient) => results.set(p.id, p))
+      }
 
       // 차트번호 검색
       const { data: chartData } = await supabase
@@ -995,10 +1008,10 @@ export const recallPatientService = {
     }
   },
 
-  // 수동 매칭 제외 처리 (기존 환자의 exclude_reason 업데이트)
+  // 수동 매칭 제외 처리 (기존 환자의 exclude_reason 업데이트, null로 제외 해제 가능)
   async manualMatchExclude(
     existingPatientId: string,
-    excludeReason: RecallExcludeReason
+    excludeReason: RecallExcludeReason | null
   ): Promise<{ success: boolean; error?: string }> {
     const supabase = await ensureConnection()
     if (!supabase) return { success: false, error: 'Database connection not available' }
@@ -1641,9 +1654,9 @@ export const recallExcludeRulesService = {
       for (const rule of rules) {
         for (const patient of newPatients) {
           let allMatch = true
-          if (rule.patient_name && patient.patient_name !== String(rule.patient_name)) allMatch = false
+          if (rule.patient_name && patient.patient_name.trim() !== String(rule.patient_name).trim()) allMatch = false
           if (rule.phone_number && normalizePhone(patient.phone_number) !== normalizePhone(rule.phone_number)) allMatch = false
-          if (rule.chart_number && String(patient.chart_number || '') !== String(rule.chart_number)) allMatch = false
+          if (rule.chart_number && String(patient.chart_number || '').trim() !== String(rule.chart_number).trim()) allMatch = false
 
           if (allMatch) {
             // 환자 제외 처리
