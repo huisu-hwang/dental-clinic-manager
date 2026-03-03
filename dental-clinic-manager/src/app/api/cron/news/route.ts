@@ -26,7 +26,7 @@ interface ArticleData {
 export async function GET(request: Request) {
   // Cron Secret 검증 (보안)
   const authHeader = request.headers.get('authorization')
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET.trim()}`) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 

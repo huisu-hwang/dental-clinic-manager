@@ -9,8 +9,10 @@ import type { UserActivityLog } from '@/types/auth'
 import Header from '@/components/Layout/Header'
 
 import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
+import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 
 type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community'
+type CommunitySubTab = 'categories' | 'telegram'
 
 export default function MasterAdminPage() {
   const router = useRouter()
@@ -31,6 +33,7 @@ export default function MasterAdminPage() {
   const [showUsersModal, setShowUsersModal] = useState(false)
   const [clinicUsers, setClinicUsers] = useState<any[]>([])
   const [loadingClinicUsers, setLoadingClinicUsers] = useState(false)
+  const [communitySubTab, setCommunitySubTab] = useState<CommunitySubTab>('categories')
 
   // 활동 기록 관련 상태
   const [showActivityModal, setShowActivityModal] = useState(false)
@@ -868,11 +871,37 @@ export default function MasterAdminPage() {
         {activeTab === 'community' && (
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold">커뮤니티 게시판 관리</h2>
-              <p className="text-sm text-gray-500 mt-1">게시판 주제(카테고리)를 추가, 수정, 삭제하고 순서를 변경할 수 있습니다.</p>
+              <h2 className="text-xl font-semibold">커뮤니티 관리</h2>
+              <p className="text-sm text-gray-500 mt-1">게시판 주제 관리 및 텔레그램 연동을 설정할 수 있습니다.</p>
+            </div>
+            {/* 커뮤니티 서브탭 */}
+            <div className="border-b border-gray-200">
+              <nav className="flex space-x-1 px-6 pt-2">
+                <button
+                  onClick={() => setCommunitySubTab('categories')}
+                  className={`py-2.5 px-4 text-sm font-medium rounded-t-lg transition-colors ${
+                    communitySubTab === 'categories'
+                      ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  주제 관리
+                </button>
+                <button
+                  onClick={() => setCommunitySubTab('telegram')}
+                  className={`py-2.5 px-4 text-sm font-medium rounded-t-lg transition-colors ${
+                    communitySubTab === 'telegram'
+                      ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  텔레그램 연동
+                </button>
+              </nav>
             </div>
             <div className="p-6">
-              <AdminCategoryManager />
+              {communitySubTab === 'categories' && <AdminCategoryManager />}
+              {communitySubTab === 'telegram' && <AdminTelegramManager />}
             </div>
           </div>
         )}

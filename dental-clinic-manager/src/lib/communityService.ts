@@ -603,6 +603,39 @@ export const communityPostService = {
       return { data: null, total: 0, error: extractErrorMessage(error) }
     }
   },
+
+  /**
+   * 내 좋아요 목록
+   */
+  async getMyLikes(profileId: string, options?: {
+    limit?: number
+    offset?: number
+  }): Promise<{ data: CommunityPost[] | null; total: number; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const limit = options?.limit || 20
+      const offset = options?.offset || 0
+
+      const { data, error, count } = await (supabase as any)
+        .from('community_likes')
+        .select('post:community_posts(*, profile:community_profiles(*))', { count: 'exact' })
+        .eq('profile_id', profileId)
+        .not('post_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+      if (error) throw error
+
+      const posts = (data || []).map((item: any) => ({ ...item.post, is_liked: true }))
+
+      return { data: posts, total: count || 0, error: null }
+    } catch (error) {
+      console.error('[communityPostService.getMyLikes] Error:', error)
+      return { data: null, total: 0, error: extractErrorMessage(error) }
+    }
+  },
 }
 
 // =====================================================

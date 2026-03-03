@@ -10,6 +10,93 @@
 
 ---
 
+## 2026-02-26
+
+### [기능 개발] 저장매체 선택 시 서버사이드 NPKI 인증서 자동 검색
+
+**키워드:** #CODEF #홈택스 #공동인증서 #NPKI #서버사이드스캔 #자동검색
+
+#### 📋 작업 내용
+- `/api/codef/scan-certs` API 라우트 신규 생성 (서버사이드 파일시스템 스캔)
+  - Mac: `~/Library/Preferences/NPKI/` (하드디스크), `/Volumes/*/NPKI/` (이동식)
+  - Windows: `AppData/LocalLow/NPKI/` (하드디스크), `D~Z:\NPKI` (이동식)
+  - Linux: `~/NPKI/` (하드디스크), `/media/*/NPKI/` (이동식)
+- `CreditCardSalesPanel.tsx`: 클라이언트 폴더 선택 다이얼로그 제거 → 서버 API 호출로 대체
+- 저장매체 클릭만으로 인증서 자동 검색/파싱/표시 (추가 사용자 조작 불필요)
+- 클라이언트 `certificateParser` 의존성 제거, `ScannedCert` 서버 타입으로 통합
+
+#### ✅ 해결 방법
+- 웹 브라우저는 파일시스템 자동 접근 불가 → Next.js API Route에서 Node.js `fs` 모듈로 서버사이드 스캔
+- NPKI 인증서 기본 저장 경로는 OS별로 표준화되어 있으므로 해당 경로를 자동 스캔
+- node-forge로 DER 인증서 서버사이드 파싱 (소유자, 발급기관, 유효기간 등)
+
+#### 🧪 테스트 결과
+- `npm run build` 성공
+- API 테스트: `GET /api/codef/scan-certs?mediaType=hard&certType=der` → 정상 응답 (Mac에 NPKI 없어 빈 배열)
+- Chrome DevTools: 하드디스크 클릭 → 자동 검색 → 결과 표시, 콘솔 에러 없음
+- 커밋: `e95e157` → develop 브랜치 푸시 완료
+
+---
+
+### [기능 개발] 신용카드 매출 조회 - 인증서 자동 폴더 스캔 및 목록 선택 UX
+
+**키워드:** #CODEF #홈택스 #공동인증서 #폴더스캔 #인증서선택 #CreditCardSalesPanel
+
+#### 📋 작업 내용
+- `CreditCardSalesPanel.tsx` 전면 리팩토링: 수동 파일 업로드 → 자동 폴더 스캔 방식
+- 저장매체(하드디스크/이동식디스크) 선택 시 `webkitdirectory` 폴더 선택 다이얼로그 자동 실행
+- 선택한 폴더 내 인증서(DER/KEY 쌍 또는 PFX/P12) 자동 검색 및 파싱
+- 인증서 목록에 소유자, 발급기관, 유효기간, 만료 상태 표시
+- 만료된 인증서 비활성화, 만료 임박(30일) 경고 배지
+- 인증서 선택 후 암호 입력 영역 표시, 유효 인증서 1개면 자동 선택
+- `certificateParser.ts`의 기존 유틸 함수 활용 (findCertificatePairs, findPfxFiles, parseCertificate 등)
+
+#### ✅ 해결 방법
+- 기존 `certFile`/`keyFile` 개별 파일 상태 → `foundCerts`/`selectedCert` 목록 방식으로 전환
+- `FoundCertificate` 유니온 타입으로 DER/KEY와 PFX 통합 처리
+- `handleFolderScan` 콜백으로 폴더 내 인증서 일괄 검색/파싱
+- API 요청 시 `selectedCert`에서 certType에 따라 적절한 base64 데이터 추출
+
+#### 🧪 테스트 결과
+- `npm run build` 성공 (TypeScript 오류 없음)
+- Chrome DevTools로 경영 현황 페이지 확인: UI 정상 렌더링, 콘솔 에러 없음
+- 커밋: `7958db2` → develop 브랜치 푸시 완료
+
+---
+
+### [기능 개발] PFX/P12 인증서 지원 및 CODEF 환경변수 설정
+
+**키워드:** #CODEF #홈택스 #공동인증서 #PFX #P12 #인증서 #환경변수
+
+#### 📋 작업 내용
+- `.env.local`에 누락된 환경변수 추가: `SUPABASE_SERVICE_ROLE_KEY`, `CODEF_CLIENT_ID`, `CODEF_CLIENT_SECRET`, `CODEF_PUBLIC_KEY`, `CODEF_SERVICE_TYPE`
+- `certificateParser.ts`: PFX/P12 인증서 파일 탐색/파싱 기능 추가 (PfxCertificateFile, PfxParsedCertificate 타입, findPfxFiles, createPfxCertInfo)
+- `CertificateSelector.tsx`: PFX/P12 파일 선택 UI 지원 (폴더 스캔, 개별 파일 선택, PFX 뱃지 표시)
+- `CodefSyncPanel.tsx`: PFX 인증서 연결 시 certType='pfx' 파라미터 전달
+- `connect/route.ts`: PFX 인증서 유효성 검사 및 DB 저장 로직 분기 처리
+- DER/KEY 확장자 매칭 확장 (signCert.der 외 *.der, *.key 지원)
+
+#### 🐛 문제
+1. 모든 CODEF 기능 미작동 → `.env.local`에 환경변수 누락이 근본 원인
+2. 인증서 선택에서 PFX/P12 파일 미지원
+3. Mac에서 NPKI 폴더가 기본적으로 없음 → 수동 폴더/파일 선택 필요
+
+#### ✅ 해결 방법
+- 환경변수 4종 추가 (CODEF 키 3종 + SUPABASE_SERVICE_ROLE_KEY)
+- PFX/P12 타입 지원 추가 (비밀번호 없이는 파싱 불가하므로 파일명만 표시)
+- SelectedCertificate 유니온 타입으로 DER/KEY와 PFX를 타입 안전하게 처리
+
+#### 🧪 테스트 결과
+- `npm run build` 성공
+- API 테스트: `GET /api/codef/connect?clinicId=test-clinic` → `isConfigured: true`, `serviceType: "데모(샌드박스)"` 확인
+- 커밋: `07e0c91` → develop 브랜치 푸시 완료
+
+#### 💡 배운 점
+- CODEF DEMO 서비스: 계정 관리는 SANDBOX, 인증서 기반 API(카드매출)는 실제 DEMO 엔드포인트 사용
+- PFX/P12는 비밀번호 없이 내용 파싱 불가 → 파일명만 표시하고 서버에서 처리
+
+---
+
 ## 2026-02-24
 
 ### [버그 수정/성능 개선] 리콜 환자 엑셀 업로드 컬럼명 변경, 날짜 파싱 오류 수정, 성능 최적화

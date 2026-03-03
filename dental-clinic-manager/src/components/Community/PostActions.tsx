@@ -53,7 +53,7 @@ export default function PostActions({
         className={isBookmarked ? 'text-yellow-600 border-yellow-200 bg-yellow-50' : ''}
       >
         <Bookmark className={`w-4 h-4 mr-1.5 ${isBookmarked ? 'fill-yellow-500' : ''}`} />
-        북마크 {bookmarkCount > 0 && bookmarkCount}
+        스크랩 {bookmarkCount > 0 && bookmarkCount}
       </Button>
       <div className="flex-1" />
       <Button variant="outline" size="sm" onClick={onReport} className="text-gray-400">

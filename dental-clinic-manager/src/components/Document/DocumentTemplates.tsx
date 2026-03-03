@@ -20,6 +20,7 @@ import {
   RecommendedResignationData,
   TerminationNoticeData,
   WelfarePaymentData,
+  CashPaymentData,
   ResignationReasons,
   RecommendedResignationReasons,
   TerminationReasons,
@@ -28,7 +29,8 @@ import {
   getDefaultEmploymentCertificateData,
   getDefaultRecommendedResignationData,
   getDefaultTerminationNoticeData,
-  getDefaultWelfarePaymentData
+  getDefaultWelfarePaymentData,
+  getDefaultCashPaymentData
 } from '@/types/document'
 import { FileText, Printer, Download, ChevronLeft, ChevronRight, Users, PenTool, Send, CheckCircle, Clock, XCircle, List } from 'lucide-react'
 import SignaturePad from '@/components/Contract/SignaturePad'
@@ -90,6 +92,8 @@ export default function DocumentTemplates() {
   const [showSignatureModal, setShowSignatureModal] = useState(false)
   const [showOwnerSignatureModal, setShowOwnerSignatureModal] = useState(false)
   const [showOwnerDocumentSignatureModal, setShowOwnerDocumentSignatureModal] = useState(false) // 권고사직서/해고통보서용
+  const [showEmployeeSignatureModal, setShowEmployeeSignatureModal] = useState(false) // 직원 권고사직서 서명용
+  const [employeeSigningDoc, setEmployeeSigningDoc] = useState<DocumentSubmission | null>(null) // 직원이 서명할 문서
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sentDocuments, setSentDocuments] = useState<DocumentSubmission[]>([]) // 보낸 문서
   const [receivedDocuments, setReceivedDocuments] = useState<DocumentSubmission[]>([]) // 받은 문서
@@ -133,6 +137,11 @@ export default function DocumentTemplates() {
   // 복지비 지급 확인서 데이터
   const [welfarePaymentData, setWelfarePaymentData] = useState<WelfarePaymentData>(
     getDefaultWelfarePaymentData(user?.clinic?.name)
+  )
+
+  // 현금 지급 확인서 데이터
+  const [cashPaymentData, setCashPaymentData] = useState<CashPaymentData>(
+    getDefaultCashPaymentData(user?.clinic?.name, user?.clinic?.owner_name)
   )
 
   // 직원 목록 로드
@@ -234,6 +243,15 @@ export default function DocumentTemplates() {
         phone: prev.phone || user.phone || '',
         birthDate: prev.birthDate || birthDateFromRrn || user.birth_date || ''
       }))
+
+      // 현금 지급 확인서 업데이트
+      setCashPaymentData(prev => ({
+        ...prev,
+        clinicName: user.clinic?.name || '',
+        representativeName: user.clinic?.owner_name || '',
+        employeeName: prev.employeeName || user.name || '',
+        employeePosition: prev.employeePosition || user.position || translateRole(user.role) || '',
+      }))
     }
 
     updateUserInfo()
@@ -289,7 +307,9 @@ export default function DocumentTemplates() {
 
     setIsSubmitting(true)
     try {
-      const documentData = documentType === 'resignation' ? resignationData : certificateData
+      const documentData = documentType === 'resignation' ? resignationData
+        : documentType === 'cash_payment' ? cashPaymentData
+        : certificateData
       const signature = documentType === 'resignation' ? resignationData.employeeSignature : undefined
 
       // 서명 메타데이터 수집 (법적 효력 요건 - 전자서명법 준수)
@@ -367,6 +387,46 @@ export default function DocumentTemplates() {
     }
   }
 
+  // 직원이 권고사직서에 서명 (확인 및 동의)
+  const handleEmployeeSign = async (signatureData: string) => {
+    if (!user?.clinic_id || !user?.id || !employeeSigningDoc) return
+
+    setShowEmployeeSignatureModal(false)
+    setIsSubmitting(true)
+    try {
+      const signatureMetadata = collectSignatureMetadata()
+
+      const response = await fetch('/api/document-submissions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinicId: user.clinic_id,
+          userId: user.id,
+          submissionId: employeeSigningDoc.id,
+          action: 'employee_sign',
+          employeeSignature: signatureData,
+          signatureMetadata
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        alert('권고사직서에 서명이 완료되었습니다.')
+        loadReceivedDocuments()
+        loadSentDocuments()
+        setEmployeeSigningDoc(null)
+        setSelectedDocument(null)
+      } else {
+        alert(`서명 실패: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Employee sign error:', error)
+      alert('서명 처리 중 오류가 발생했습니다.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   // 직원 선택 시 데이터 자동 입력
   const handleStaffSelect = async (staffId: string) => {
     setSelectedStaff(staffId)
@@ -423,6 +483,12 @@ export default function DocumentTemplates() {
         employeeName: staff.name || '',
         phone: staff.phone || '',
         birthDate: birthDateFromRrn || staff.birth_date || ''
+      }))
+    } else if (documentType === 'cash_payment') {
+      setCashPaymentData(prev => ({
+        ...prev,
+        employeeName: staff.name || '',
+        employeePosition: staff.position || translateRole(staff.role) || '',
       }))
     }
   }
@@ -486,6 +552,8 @@ export default function DocumentTemplates() {
             return `해고통보서_${terminationNoticeData.employeeName || '문서'}.pdf`
           case 'welfare_payment':
             return `복지비지급확인서_${welfarePaymentData.employeeName || '문서'}.pdf`
+          case 'cash_payment':
+            return `현금지급확인서_${cashPaymentData.employeeName || '문서'}.pdf`
           default:
             return '문서.pdf'
         }
@@ -682,7 +750,7 @@ export default function DocumentTemplates() {
       const result = await response.json()
       if (result.success) {
         const actionMessage = documentType === 'recommended_resignation'
-          ? '권고사직서가 발송되었습니다. 해당 직원에게 사직서 작성 요청 알림이 전송되었습니다.'
+          ? '권고사직서가 발송되었습니다. 해당 직원에게 확인 및 서명 요청 알림이 전송되었습니다.'
           : '해고통보서가 발송되었습니다. 해당 직원에게 해고 통보 알림이 전송되었습니다.'
         alert(actionMessage)
 
@@ -714,7 +782,8 @@ export default function DocumentTemplates() {
       'employment_certificate': '재직증명서',
       'recommended_resignation': '권고사직서',
       'termination_notice': '해고통보서',
-      'welfare_payment': '복지비 지급 확인서'
+      'welfare_payment': '복지비 지급 확인서',
+      'cash_payment': '현금 지급 확인서'
     }
     return labels[type] || type
   }
@@ -739,7 +808,8 @@ export default function DocumentTemplates() {
     } else if (doc.document_type === 'recommended_resignation') {
       setRecommendedResignationData({
         ...doc.document_data,
-        ownerSignature: doc.owner_signature
+        ownerSignature: doc.owner_signature,
+        employeeSignature: doc.employee_signature
       })
       setDocumentType('recommended_resignation')
     } else if (doc.document_type === 'termination_notice') {
@@ -754,6 +824,13 @@ export default function DocumentTemplates() {
         applicantSignature: doc.employee_signature
       })
       setDocumentType('welfare_payment')
+    } else if (doc.document_type === 'cash_payment') {
+      setCashPaymentData({
+        ...doc.document_data,
+        employeeSignature: doc.employee_signature,
+        ownerSignature: doc.owner_signature
+      })
+      setDocumentType('cash_payment')
     }
 
     setShowPreview(true)
@@ -927,14 +1004,19 @@ export default function DocumentTemplates() {
                         </span>
                       </p>
                       {/* 권고사직서/해고통보서 안내 메시지 */}
-                      {!isOwner && doc.status === 'approved' && (
+                      {!isOwner && doc.document_type === 'recommended_resignation' && doc.status === 'pending' && (
                         <p className="text-sm mt-1">
-                          {doc.document_type === 'recommended_resignation' && (
-                            <span className="text-orange-600">※ 권고사직에 동의하시면 사직서를 작성하여 제출해 주세요.</span>
-                          )}
-                          {doc.document_type === 'termination_notice' && (
-                            <span className="text-red-600">※ 해고통보서입니다. 내용을 확인해 주세요.</span>
-                          )}
+                          <span className="text-orange-600 font-medium">※ 권고사직서를 확인하고 서명해 주세요.</span>
+                        </p>
+                      )}
+                      {!isOwner && doc.document_type === 'recommended_resignation' && doc.status === 'approved' && (
+                        <p className="text-sm mt-1">
+                          <span className="text-green-600">※ 서명이 완료된 권고사직서입니다.</span>
+                        </p>
+                      )}
+                      {!isOwner && doc.document_type === 'termination_notice' && doc.status === 'approved' && (
+                        <p className="text-sm mt-1">
+                          <span className="text-red-600">※ 해고통보서입니다. 내용을 확인해 주세요.</span>
                         </p>
                       )}
                     </div>
@@ -946,6 +1028,21 @@ export default function DocumentTemplates() {
                     >
                       상세보기
                     </button>
+                    {/* 직원의 권고사직서 서명 버튼 */}
+                    {!isOwner && doc.document_type === 'recommended_resignation' && doc.status === 'pending' && (
+                      <button
+                        onClick={() => {
+                          setEmployeeSigningDoc(doc)
+                          handleViewDocument(doc)
+                          setShowEmployeeSignatureModal(true)
+                        }}
+                        disabled={isSubmitting}
+                        className="px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm disabled:opacity-50"
+                      >
+                        <PenTool className="w-3.5 h-3.5 inline-block mr-1" />
+                        서명하기
+                      </button>
+                    )}
                     {/* 원장의 승인/반려 버튼 */}
                     {isOwner && doc.status === 'pending' && (
                       <>
@@ -1070,6 +1167,9 @@ export default function DocumentTemplates() {
           {documentType === 'welfare_payment' && (
             <WelfarePaymentForm data={welfarePaymentData} onChange={setWelfarePaymentData} />
           )}
+          {documentType === 'cash_payment' && (
+            <CashPaymentForm data={cashPaymentData} onChange={setCashPaymentData} />
+          )}
 
           {/* 서명 섹션 (사직서만) */}
           {documentType === 'resignation' && (
@@ -1117,7 +1217,7 @@ export default function DocumentTemplates() {
                 <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
                   <li>서명 후 발송하면 선택한 직원에게 <strong>알림이 전송</strong>됩니다</li>
                   {documentType === 'recommended_resignation' ? (
-                    <li>해당 직원은 알림을 통해 <strong>사직서 작성 요청</strong>을 받게 됩니다</li>
+                    <li>해당 직원은 알림을 통해 <strong>권고사직서 확인 및 서명 요청</strong>을 받게 됩니다</li>
                   ) : (
                     <li>해당 직원은 알림을 통해 <strong>해고 통보</strong>를 받게 됩니다</li>
                   )}
@@ -1282,6 +1382,9 @@ export default function DocumentTemplates() {
               {documentType === 'welfare_payment' && (
                 <WelfarePaymentPreview data={welfarePaymentData} formatDate={formatDate} />
               )}
+              {documentType === 'cash_payment' && (
+                <CashPaymentPreview data={cashPaymentData} formatDate={formatDate} />
+              )}
             </div>
           </div>
         </div>
@@ -1362,6 +1465,46 @@ export default function DocumentTemplates() {
                 : handleTerminationNoticeSignature
               }
               onCancel={() => setShowOwnerDocumentSignatureModal(false)}
+              width={450}
+              height={180}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 직원 서명 모달 (권고사직서 확인용) */}
+      {showEmployeeSignatureModal && employeeSigningDoc && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setShowEmployeeSignatureModal(false)
+            setEmployeeSigningDoc(null)
+          }}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">권고사직서 확인 서명</h3>
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+              <p className="text-sm text-amber-800">
+                권고사직서의 내용을 확인하셨다면, 아래에 서명해 주세요.<br />
+                서명 후 문서가 최종 완성됩니다.
+              </p>
+            </div>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg mb-4 text-xs text-slate-600">
+              <p className="font-medium mb-1">※ 전자서명 법적 효력 안내</p>
+              <ul className="space-y-0.5 list-disc list-inside">
+                <li>본 전자서명은 전자서명법 제3조에 따라 자필 서명과 동일한 법적 효력을 가집니다.</li>
+                <li>서명 시 IP 주소, 서명 시간 등이 기록됩니다.</li>
+              </ul>
+            </div>
+            <SignaturePad
+              onSave={handleEmployeeSign}
+              onCancel={() => {
+                setShowEmployeeSignatureModal(false)
+                setEmployeeSigningDoc(null)
+              }}
               width={450}
               height={180}
             />
@@ -1721,7 +1864,7 @@ function ResignationPreview({
   formatDate: (date: string) => string
 }) {
   return (
-    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-sm">
+    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-sm overflow-hidden">
       {/* 제목 */}
       <h1 className="text-2xl font-bold text-center mb-6">사 직 서</h1>
 
@@ -1729,23 +1872,23 @@ function ResignationPreview({
       <div className="flex-1 flex flex-col justify-between">
         {/* 인적사항 */}
         <section>
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full table-fixed border-collapse text-sm">
             <tbody>
               <tr className="border-t border-b border-slate-300">
-                <td className="py-2 px-3 bg-slate-50 font-medium w-24 whitespace-nowrap">성 명</td>
-                <td className="py-2 px-3 whitespace-nowrap">{data.employeeName || '　'}</td>
-                <td className="py-2 px-3 bg-slate-50 font-medium w-24 whitespace-nowrap">직 급</td>
-                <td className="py-2 px-3 whitespace-nowrap">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
+                <td className="py-2 px-2 bg-slate-50 font-medium w-[18%]">성 명</td>
+                <td className="py-2 px-2 w-[32%]">{data.employeeName || '　'}</td>
+                <td className="py-2 px-2 bg-slate-50 font-medium w-[18%]">직 급</td>
+                <td className="py-2 px-2 w-[32%]">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
               </tr>
               <tr className="border-b border-slate-300">
-                <td className="py-2 px-3 bg-slate-50 font-medium whitespace-nowrap">부 서</td>
-                <td className="py-2 px-3" colSpan={3}>{data.department || '　'}</td>
+                <td className="py-2 px-2 bg-slate-50 font-medium">부 서</td>
+                <td className="py-2 px-2" colSpan={3}>{data.department || '　'}</td>
               </tr>
               <tr className="border-b border-slate-300">
-                <td className="py-2 px-3 bg-slate-50 font-medium whitespace-nowrap">입사일</td>
-                <td className="py-2 px-3 whitespace-nowrap">{formatDate(data.hireDate) || '　'}</td>
-                <td className="py-2 px-3 bg-slate-50 font-medium whitespace-nowrap">퇴사 희망일</td>
-                <td className="py-2 px-3 whitespace-nowrap">{formatDate(data.resignationDate) || '　'}</td>
+                <td className="py-2 px-2 bg-slate-50 font-medium">입사일</td>
+                <td className="py-2 px-2">{formatDate(data.hireDate) || '　'}</td>
+                <td className="py-2 px-2 bg-slate-50 font-medium">퇴사 희망일</td>
+                <td className="py-2 px-2">{formatDate(data.resignationDate) || '　'}</td>
               </tr>
             </tbody>
           </table>
@@ -1828,7 +1971,7 @@ function EmploymentCertificatePreview({
   formatDate: (date: string) => string
 }) {
   return (
-    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-xs">
+    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-xs overflow-hidden">
       {/* 문서 번호 */}
       {data.certificateNumber && (
         <p className="text-right text-[10px] text-slate-500 mb-1">{data.certificateNumber}</p>
@@ -1842,17 +1985,17 @@ function EmploymentCertificatePreview({
         {/* 직원 정보 */}
         <section className="mb-2">
           <h3 className="text-xs font-semibold mb-1 text-slate-600">인 적 사 항</h3>
-          <table className="w-full border-collapse border border-slate-300 text-xs">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-xs">
             <tbody>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">성 명</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.employeeName || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">생년월일</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{formatDate(data.employeeBirthDate || '') || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">성 명</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{data.employeeName || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">생년월일</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{formatDate(data.employeeBirthDate || '') || '　'}</td>
               </tr>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">주 소</td>
-                <td className="py-1 px-2 border border-slate-300" colSpan={3}>{data.employeeAddress || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300">주 소</td>
+                <td className="py-1 px-1.5 border border-slate-300 break-words" colSpan={3}>{data.employeeAddress || '　'}</td>
               </tr>
             </tbody>
           </table>
@@ -1861,17 +2004,17 @@ function EmploymentCertificatePreview({
         {/* 재직 정보 */}
         <section className="mb-2">
           <h3 className="text-xs font-semibold mb-1 text-slate-600">재 직 사 항</h3>
-          <table className="w-full border-collapse border border-slate-300 text-xs">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-xs">
             <tbody>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">소 속</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.department || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">직 급</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{translateRole(data.position) || data.position || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">소 속</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{data.department || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">직 급</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{translateRole(data.position) || data.position || '　'}</td>
               </tr>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">재직기간</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap" colSpan={3}>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300">재직기간</td>
+                <td className="py-1 px-1.5 border border-slate-300" colSpan={3}>
                   {formatDate(data.hireDate) || '____년 __월 __일'} ~{' '}
                   {data.currentlyEmployed
                     ? '현재'
@@ -1885,23 +2028,23 @@ function EmploymentCertificatePreview({
         {/* 회사 정보 */}
         <section className="mb-2">
           <h3 className="text-xs font-semibold mb-1 text-slate-600">회 사 정 보</h3>
-          <table className="w-full border-collapse border border-slate-300 text-xs">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-xs">
             <tbody>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">회사명</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.clinicName || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">대표자</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.representativeName || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">회사명</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{data.clinicName || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">대표자</td>
+                <td className="py-1 px-1.5 border border-slate-300 w-[32%]">{data.representativeName || '　'}</td>
               </tr>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">사업자번호</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.businessNumber || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">전화번호</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.clinicPhone || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300">사업자번호</td>
+                <td className="py-1 px-1.5 border border-slate-300">{data.businessNumber || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300">전화번호</td>
+                <td className="py-1 px-1.5 border border-slate-300">{data.clinicPhone || '　'}</td>
               </tr>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">소재지</td>
-                <td className="py-1 px-2 border border-slate-300" colSpan={3}>{data.clinicAddress || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300">소재지</td>
+                <td className="py-1 px-1.5 border border-slate-300 break-words" colSpan={3}>{data.clinicAddress || '　'}</td>
               </tr>
             </tbody>
           </table>
@@ -1909,11 +2052,11 @@ function EmploymentCertificatePreview({
 
         {/* 발급 목적 */}
         <section className="mb-2">
-          <table className="w-full border-collapse border border-slate-300 text-xs">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-xs">
             <tbody>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">용 도</td>
-                <td className="py-1 px-2 border border-slate-300">{data.purpose || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">용 도</td>
+                <td className="py-1 px-1.5 border border-slate-300">{data.purpose || '　'}</td>
               </tr>
             </tbody>
           </table>
@@ -2402,52 +2545,52 @@ function RecommendedResignationPreview({
   formatDate: (date: string) => string
 }) {
   return (
-    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col text-xs">
+    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col text-[11px] overflow-hidden">
       {/* 제목 */}
-      <h1 className="text-xl font-bold text-center mb-3">권 고 사 직 서</h1>
+      <h1 className="text-lg font-bold text-center mb-2">권 고 사 직 서</h1>
 
       {/* 본문 */}
       <div className="flex-1 flex flex-col">
         {/* 대상자 정보 */}
-        <section className="mb-2">
-          <h3 className="text-xs font-semibold mb-1 text-slate-600">대 상 자</h3>
-          <table className="w-full border-collapse border border-slate-300 text-xs">
+        <section className="mb-1.5">
+          <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">대 상 자</h3>
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
             <tbody>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-16 whitespace-nowrap">성 명</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.employeeName || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-16 whitespace-nowrap">직 급</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">성 명</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%]">{data.employeeName || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">직 급</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%]">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
               </tr>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">부 서</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{data.department || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">입사일</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{formatDate(data.hireDate) || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">부 서</td>
+                <td className="py-0.5 px-1.5 border border-slate-300">{data.department || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">입사일</td>
+                <td className="py-0.5 px-1.5 border border-slate-300">{formatDate(data.hireDate) || '　'}</td>
               </tr>
             </tbody>
           </table>
         </section>
 
         {/* 권고사직 내용 */}
-        <section className="mb-2">
-          <h3 className="text-xs font-semibold mb-1 text-slate-600">권고사직 내용</h3>
-          <table className="w-full border-collapse border border-slate-300 text-xs">
+        <section className="mb-1.5">
+          <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">권고사직 내용</h3>
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
             <tbody>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">권고일</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{formatDate(data.recommendedDate) || '　'}</td>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">예정 퇴직일</td>
-                <td className="py-1 px-2 border border-slate-300 whitespace-nowrap">{formatDate(data.expectedResignationDate) || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">권고일</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[32%]">{formatDate(data.recommendedDate) || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">예정 퇴직일</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[32%]">{formatDate(data.expectedResignationDate) || '　'}</td>
               </tr>
               <tr>
-                <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">사 유</td>
-                <td className="py-1 px-2 border border-slate-300" colSpan={3}>{data.reason || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">사 유</td>
+                <td className="py-0.5 px-1.5 border border-slate-300" colSpan={3}>{data.reason || '　'}</td>
               </tr>
               {data.detailedReason && (
                 <tr>
-                  <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">상세 사유</td>
-                  <td className="py-1 px-2 border border-slate-300" colSpan={3}>{data.detailedReason}</td>
+                  <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">상세 사유</td>
+                  <td className="py-0.5 px-1.5 border border-slate-300 break-words" colSpan={3}>{data.detailedReason}</td>
                 </tr>
               )}
             </tbody>
@@ -2456,26 +2599,26 @@ function RecommendedResignationPreview({
 
         {/* 퇴직 조건 */}
         {(data.severancePay || data.additionalCompensation || data.otherConditions) && (
-          <section className="mb-2">
-            <h3 className="text-xs font-semibold mb-1 text-slate-600">퇴직 조건</h3>
-            <table className="w-full border-collapse border border-slate-300 text-xs">
+          <section className="mb-1.5">
+            <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">퇴직 조건</h3>
+            <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
               <tbody>
                 {data.severancePay && (
                   <tr>
-                    <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">퇴직금</td>
-                    <td className="py-1 px-2 border border-slate-300">{data.severancePay}</td>
+                    <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">퇴직금</td>
+                    <td className="py-0.5 px-1.5 border border-slate-300">{data.severancePay}</td>
                   </tr>
                 )}
                 {data.additionalCompensation && (
                   <tr>
-                    <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">추가 위로금</td>
-                    <td className="py-1 px-2 border border-slate-300">{data.additionalCompensation}</td>
+                    <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">추가 위로금</td>
+                    <td className="py-0.5 px-1.5 border border-slate-300">{data.additionalCompensation}</td>
                   </tr>
                 )}
                 {data.otherConditions && (
                   <tr>
-                    <td className="py-1 px-2 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">기타 조건</td>
-                    <td className="py-1 px-2 border border-slate-300">{data.otherConditions}</td>
+                    <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">기타 조건</td>
+                    <td className="py-0.5 px-1.5 border border-slate-300 break-words">{data.otherConditions}</td>
                   </tr>
                 )}
               </tbody>
@@ -2484,49 +2627,78 @@ function RecommendedResignationPreview({
         )}
 
         {/* 본문 */}
-        <section className="my-3">
-          <p className="text-xs leading-5 text-justify">
+        <section className="my-2">
+          <p className="text-[11px] leading-5 text-justify">
             회사는 위 대상자에게 상기 사유로 인하여 권고사직을 통보하오니,
             <span className="font-semibold">{formatDate(data.expectedResignationDate) || '____년 __월 __일'}</span>까지
-            사직서를 제출하여 주시기 바랍니다.
+            퇴직 절차를 진행하여 주시기 바랍니다.
           </p>
-          <p className="text-xs leading-5 text-justify mt-1">
-            본 권고사직에 동의하시는 경우 별도의 사직서를 작성하여 제출하여 주시고,
+          <p className="text-[11px] leading-5 text-justify mt-1">
+            본 권고사직에 동의하시는 경우 아래에 서명하여 주시고,
             퇴직 조건에 대해 협의가 필요하신 경우 인사담당자에게 문의하여 주시기 바랍니다.
           </p>
         </section>
 
         {/* 안내 문구 */}
-        <section className="my-2 p-2 bg-slate-50 rounded">
-          <p className="text-[11px] text-slate-600 leading-4">
+        <section className="my-1.5 p-1.5 bg-slate-50 rounded">
+          <p className="text-[10px] text-slate-600 leading-4">
             ※ 본 권고사직은 강제가 아닌 권고이며, 귀하의 의사에 따라 수락 여부를 결정하실 수 있습니다.<br />
             ※ 권고사직에 동의하여 퇴직하는 경우, 고용보험법에 따른 실업급여 수급 자격이 부여됩니다.
           </p>
         </section>
 
         {/* 작성일 */}
-        <section className="text-center my-3">
-          <p className="text-sm">{formatDate(data.submissionDate) || '____년 __월 __일'}</p>
+        <section className="text-center my-2">
+          <p className="text-xs">{formatDate(data.submissionDate) || '____년 __월 __일'}</p>
         </section>
 
-        {/* 회사 정보 */}
-        <section className="mt-auto text-center">
-          <div className="inline-block text-left text-xs">
-            <p className="mb-1">
-              <span className="inline-block w-16">회 사 명:</span>
+        {/* 회사 정보 및 원장 서명 */}
+        <section className="text-center">
+          <div className="inline-block text-left text-[11px]">
+            <p className="mb-0.5">
+              <span className="inline-block w-14">회사명:</span>
               <span className="font-semibold">{data.clinicName || '　　　　　'}</span>
             </p>
-            <p className="mb-1">
-              <span className="inline-block w-16">대 표 자:</span>
+            <p className="mb-0.5">
+              <span className="inline-block w-14">대표자:</span>
               <span className="font-semibold">{data.representativeName || '　　　　　'}</span>
-              <span className="ml-3 text-slate-400">(직인)</span>
+              {data.ownerSignature ? (
+                <img src={data.ownerSignature} alt="원장 서명" className="h-7 inline-block ml-2" />
+              ) : (
+                <span className="ml-2 text-slate-400">(직인)</span>
+              )}
             </p>
             <p>
-              <span className="inline-block w-16">주 소:</span>
+              <span className="inline-block w-14">주 소:</span>
               <span>{data.clinicAddress || '　　　　　'}</span>
             </p>
           </div>
         </section>
+
+        {/* 직원 확인 서명란 */}
+        <section className="mt-2 pt-2 border-t-2 border-slate-300">
+          <h3 className="text-[11px] font-semibold mb-1.5 text-slate-600">대상자 확인</h3>
+          <div className="flex justify-end items-center gap-2">
+            <span className="text-[11px]">위 내용을 확인하였습니다.</span>
+            <span className="font-medium text-[11px]">확인자:</span>
+            <span className="text-xs">{data.employeeName || '　　　　　'}</span>
+            {data.employeeSignature ? (
+              <img src={data.employeeSignature} alt="직원 서명" className="h-7 ml-1" />
+            ) : (
+              <span className="text-slate-400 text-[11px]">(서명)</span>
+            )}
+          </div>
+        </section>
+
+        {/* 전자서명 법적 효력 고지 */}
+        {(data.ownerSignature || data.employeeSignature) && (
+          <section className="mt-1.5 pt-1.5 border-t border-slate-200">
+            <div className="bg-slate-50 p-1.5 rounded text-[10px] text-slate-500 leading-3">
+              <p>※ 본 전자문서는 전자서명법 제3조에 따라 자필 서명과 동일한 법적 효력을 가집니다.</p>
+              <p>※ 전자서명 후 문서의 무결성이 보장됩니다 (SHA-256 해시).</p>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   )
@@ -2541,7 +2713,7 @@ function TerminationNoticePreview({
   formatDate: (date: string) => string
 }) {
   return (
-    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-[11px]">
+    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-[11px] overflow-hidden">
       {/* 제목 */}
       <h1 className="text-lg font-bold text-center mb-0.5">해 고 통 보 서</h1>
 
@@ -2555,19 +2727,19 @@ function TerminationNoticePreview({
         {/* 대상자 정보 */}
         <section className="mb-1">
           <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">해고 대상자</h3>
-          <table className="w-full border-collapse border border-slate-300 text-[11px]">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
             <tbody>
               <tr>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-14 whitespace-nowrap">성 명</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">{data.employeeName || '　'}</td>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-14 whitespace-nowrap">직 급</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">성 명</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%]">{data.employeeName || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">직 급</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%]">{translateRole(data.employeePosition) || data.employeePosition || '　'}</td>
               </tr>
               <tr>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">부 서</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">{data.department || '　'}</td>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">입사일</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">{formatDate(data.hireDate) || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">부 서</td>
+                <td className="py-0.5 px-1.5 border border-slate-300">{data.department || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">입사일</td>
+                <td className="py-0.5 px-1.5 border border-slate-300">{formatDate(data.hireDate) || '　'}</td>
               </tr>
             </tbody>
           </table>
@@ -2576,16 +2748,16 @@ function TerminationNoticePreview({
         {/* 해고 내용 */}
         <section className="mb-1">
           <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">해고 내용</h3>
-          <table className="w-full border-collapse border border-slate-300 text-[11px]">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
             <tbody>
               <tr>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-14 whitespace-nowrap">통보일</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">{formatDate(data.noticeDate) || '　'}</td>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-14 whitespace-nowrap">해고일</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 font-semibold text-red-600 whitespace-nowrap">{formatDate(data.terminationDate) || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">통보일</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%]">{formatDate(data.noticeDate) || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">해고일</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%] font-semibold text-red-600">{formatDate(data.terminationDate) || '　'}</td>
               </tr>
               <tr>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 whitespace-nowrap">해고 사유</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">해고 사유</td>
                 <td className="py-0.5 px-1.5 border border-slate-300" colSpan={3}>{data.reason || '　'}</td>
               </tr>
             </tbody>
@@ -2596,23 +2768,23 @@ function TerminationNoticePreview({
         <section className="mb-1">
           <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">상세 해고 사유</h3>
           <div className="p-1 border border-slate-300 rounded bg-white min-h-[24px]">
-            <p className="text-[11px] leading-4 whitespace-pre-wrap">{data.detailedReason || '　'}</p>
+            <p className="text-[11px] leading-4 whitespace-pre-wrap break-words">{data.detailedReason || '　'}</p>
           </div>
         </section>
 
         {/* 해고예고 관련 */}
         <section className="mb-1">
           <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">해고예고 관련</h3>
-          <table className="w-full border-collapse border border-slate-300 text-[11px]">
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
             <tbody>
               <tr>
-                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">해고예고 여부</td>
-                <td className="py-0.5 px-1.5 border border-slate-300 whitespace-nowrap">
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[20%]">해고예고 여부</td>
+                <td className="py-0.5 px-1.5 border border-slate-300">
                   {data.advanceNotice ? '30일 전 예고 완료' : '30일 전 예고 미완료'}
                 </td>
                 {!data.advanceNotice && data.severancePayInLieu && (
                   <>
-                    <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-20 whitespace-nowrap">해고예고수당</td>
+                    <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[20%]">해고예고수당</td>
                     <td className="py-0.5 px-1.5 border border-slate-300">{data.severancePayInLieu}</td>
                   </>
                 )}
@@ -2890,29 +3062,29 @@ function WelfarePaymentPreview({
   const requestDateParts = parseDateParts(data.requestDate)
 
   return (
-    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-[11px]">
+    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col justify-between text-[11px] overflow-hidden">
       {/* 제목 */}
       <h1 className="text-lg font-bold text-center mb-2 tracking-[0.2em]">복 지 비 지 급 확 인 서</h1>
 
       <div className="flex-1 flex flex-col justify-between">
         {/* 신청자 정보 테이블 */}
-        <table className="w-full border-collapse border border-slate-400 mb-2 text-[10px]">
+        <table className="w-full table-fixed border-collapse border border-slate-400 mb-2 text-[10px]">
           <tbody>
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 w-16 text-center whitespace-nowrap">성명</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">{data.employeeName || '　'}</td>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 w-16 text-center whitespace-nowrap">생년월일</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">{formatDate(data.birthDate) || '　'}</td>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 w-[16%] text-center">성명</td>
+              <td className="py-1 px-1.5 border border-slate-400 w-[34%]">{data.employeeName || '　'}</td>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 w-[16%] text-center">생년월일</td>
+              <td className="py-1 px-1.5 border border-slate-400 w-[34%]">{formatDate(data.birthDate) || '　'}</td>
             </tr>
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">연락처</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">{data.phone || '　'}</td>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">상호명</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">{data.clinicName || '　'}</td>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">연락처</td>
+              <td className="py-1 px-1.5 border border-slate-400">{data.phone || '　'}</td>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">상호명</td>
+              <td className="py-1 px-1.5 border border-slate-400">{data.clinicName || '　'}</td>
             </tr>
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">지급방법</td>
-              <td className="py-1 px-2 border border-slate-400" colSpan={3}>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">지급방법</td>
+              <td className="py-1 px-1.5 border border-slate-400" colSpan={3}>
                 <span className="mr-2">{data.paymentMethod === 'cash' ? '◉' : '○'} 현금</span>
                 <span className="mr-2">{data.paymentMethod === 'transfer' ? '◉' : '○'} 계좌이체</span>
                 <span>{data.paymentMethod === 'hospital_card' ? '◉' : '○'} 병원카드</span>
@@ -2920,35 +3092,35 @@ function WelfarePaymentPreview({
             </tr>
             {data.paymentMethod === 'transfer' && (
               <tr>
-                <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">예금주/은행</td>
-                <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">
+                <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">예금주/은행</td>
+                <td className="py-1 px-1.5 border border-slate-400">
                   {data.accountHolder || '　'} / {data.bankName || '　'}
                 </td>
-                <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">계좌번호</td>
-                <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">{data.accountNumber || '　'}</td>
+                <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">계좌번호</td>
+                <td className="py-1 px-1.5 border border-slate-400">{data.accountNumber || '　'}</td>
               </tr>
             )}
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">지급요청일</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">지급요청일</td>
+              <td className="py-1 px-1.5 border border-slate-400">
                 {requestDateParts.year || '____'}년 {requestDateParts.month || '__'}월 {requestDateParts.day || '__'}일
               </td>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">지급일자</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap">
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">지급일자</td>
+              <td className="py-1 px-1.5 border border-slate-400">
                 20{paymentDateParts.year ? paymentDateParts.year.slice(-2) : '__'}년 {paymentDateParts.month || '__'}월 {paymentDateParts.day || '__'}일
               </td>
             </tr>
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">지급금액</td>
-              <td className="py-1 px-2 border border-slate-400 whitespace-nowrap" colSpan={3}>
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">지급금액</td>
+              <td className="py-1 px-1.5 border border-slate-400" colSpan={3}>
                 일금 {data.paymentAmount || '           '} 원정
               </td>
             </tr>
             <tr>
-              <td className="py-1 px-2 bg-slate-100 font-medium border border-slate-400 text-center whitespace-nowrap">
+              <td className="py-1 px-1.5 bg-slate-100 font-medium border border-slate-400 text-center">
                 지급사유
               </td>
-              <td className="py-1 px-2 border border-slate-400" colSpan={3}>
+              <td className="py-1 px-1.5 border border-slate-400 break-words" colSpan={3}>
                 {data.paymentReason || '　'}
               </td>
             </tr>
@@ -3035,6 +3207,302 @@ function WelfarePaymentPreview({
             <ul className="space-y-0 list-disc list-inside">
               <li>본 전자 확인서는 전자서명법에 따라 자필 서명과 동일한 법적 효력을 가집니다.</li>
               <li>복지비 수령 사실을 확인하는 증빙 서류로 사용됩니다.</li>
+              <li>전자서명 후 문서의 무결성이 보장됩니다.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 현금 지급 확인서 입력 폼
+function CashPaymentForm({
+  data,
+  onChange
+}: {
+  data: CashPaymentData
+  onChange: (data: CashPaymentData) => void
+}) {
+  const handleChange = (field: keyof CashPaymentData, value: string) => {
+    onChange({ ...data, [field]: value })
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* 본인 정보 안내 */}
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-700">
+          본인의 정보가 자동으로 입력되었습니다. 수정이 필요한 경우 인사담당자에게 문의하세요.
+        </p>
+      </div>
+
+      <p className="text-sm font-semibold text-slate-600">직원 정보</p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">직원명</label>
+          <input
+            type="text"
+            value={data.employeeName}
+            disabled
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-700 cursor-not-allowed"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">직급</label>
+          <input
+            type="text"
+            value={data.employeePosition}
+            disabled
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-700 cursor-not-allowed"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">부서</label>
+          <input
+            type="text"
+            value={data.department}
+            disabled
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-700 cursor-not-allowed"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">치과명</label>
+          <input
+            type="text"
+            value={data.clinicName}
+            disabled
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-700 cursor-not-allowed"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">대표자</label>
+        <input
+          type="text"
+          value={data.representativeName}
+          disabled
+          className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-700 cursor-not-allowed"
+        />
+      </div>
+
+      <hr className="my-4" />
+      <p className="text-sm font-semibold text-slate-600">지급 정보</p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">지급월</label>
+          <input
+            type="month"
+            value={data.paymentMonth}
+            onChange={(e) => handleChange('paymentMonth', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">지급액</label>
+          <input
+            type="text"
+            value={data.paymentAmount}
+            onChange={(e) => handleChange('paymentAmount', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="1,000,000"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">지급일</label>
+        <input
+          type="date"
+          value={data.paymentDate}
+          onChange={(e) => handleChange('paymentDate', e.target.value)}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">지급사유</label>
+        <textarea
+          value={data.paymentReason}
+          onChange={(e) => handleChange('paymentReason', e.target.value)}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          rows={3}
+          placeholder="병원 정책에 협조적이고 업무 능력이 뛰어남"
+        />
+      </div>
+
+      <hr className="my-4" />
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">작성일</label>
+        <input
+          type="date"
+          value={data.submissionDate}
+          onChange={(e) => handleChange('submissionDate', e.target.value)}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+    </div>
+  )
+}
+
+// 현금 지급 확인서 미리보기
+function CashPaymentPreview({
+  data,
+  formatDate
+}: {
+  data: CashPaymentData
+  formatDate: (date: string) => string
+}) {
+  // 지급월을 년/월로 분리
+  const parseMonthParts = (monthStr: string) => {
+    if (!monthStr) return { year: '', month: '' }
+    const [year, month] = monthStr.split('-')
+    return { year: year || '', month: month || '' }
+  }
+
+  const paymentMonthParts = parseMonthParts(data.paymentMonth)
+
+  // 작성일을 년/월/일로 분리
+  const parseDateParts = (dateStr: string) => {
+    if (!dateStr) return { year: '', month: '', day: '' }
+    const date = new Date(dateStr)
+    return {
+      year: date.getFullYear().toString(),
+      month: (date.getMonth() + 1).toString(),
+      day: date.getDate().toString()
+    }
+  }
+
+  const submissionDateParts = parseDateParts(data.submissionDate)
+
+  return (
+    <div className="font-['Noto_Sans_KR'] text-slate-800 h-full flex flex-col text-[11px] overflow-hidden">
+      {/* 제목 */}
+      <h1 className="text-lg font-bold text-center mb-3 tracking-[0.2em]">현 금 지 급 확 인 서</h1>
+
+      <div className="flex-1 flex flex-col justify-between">
+        {/* 직원 정보 테이블 */}
+        <section className="mb-2">
+          <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">직원 정보</h3>
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
+            <tbody>
+              <tr>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">성 명</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%]">{data.employeeName || '　'}</td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[15%]">직 급</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[35%]">{data.employeePosition || '　'}</td>
+              </tr>
+              <tr>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">부 서</td>
+                <td className="py-0.5 px-1.5 border border-slate-300" colSpan={3}>{data.department || '　'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        {/* 지급 정보 테이블 */}
+        <section className="mb-2">
+          <h3 className="text-[11px] font-semibold mb-0.5 text-slate-600">지급 정보</h3>
+          <table className="w-full table-fixed border-collapse border border-slate-300 text-[11px]">
+            <tbody>
+              <tr>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">지 급 월</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[32%]">
+                  {paymentMonthParts.year || '____'}년 {paymentMonthParts.month || '__'}월
+                </td>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300 w-[18%]">지 급 액</td>
+                <td className="py-0.5 px-1.5 border border-slate-300 w-[32%]">
+                  {data.paymentAmount ? `${data.paymentAmount}원` : '　'}
+                </td>
+              </tr>
+              <tr>
+                <td className="py-0.5 px-1.5 bg-slate-50 font-medium border border-slate-300">지 급 일</td>
+                <td className="py-0.5 px-1.5 border border-slate-300" colSpan={3}>
+                  {formatDate(data.paymentDate) || '　'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        {/* 본문 */}
+        <section className="my-2">
+          <p className="text-[11px] leading-5 text-justify">
+            {data.clinicName || '(치과명)'}의 직원 {data.employeeName || '(성명)'}은(는) 병원 정책에 협조적이고 업무 능력이 뛰어나 해당월({paymentMonthParts.year || '____'}년 {paymentMonthParts.month || '__'}월) 총 {data.paymentAmount ? `${data.paymentAmount}원` : '　　　원'}의 현금 상여를 받음.
+          </p>
+        </section>
+
+        {/* 작성일 */}
+        <div className="text-center my-2 text-[11px]">
+          <p>{submissionDateParts.year || '____'}년 {submissionDateParts.month || '__'}월 {submissionDateParts.day || '__'}일</p>
+        </div>
+
+        {/* 회사 정보 */}
+        <div className="mt-auto space-y-1 text-[11px]">
+          <div className="flex justify-center items-center gap-2">
+            <span className="w-16 text-right">치 과 명 :</span>
+            <span className="inline-block w-32 border-b border-slate-400 text-center">
+              {data.clinicName || '　'}
+            </span>
+          </div>
+          <div className="flex justify-center items-center gap-2">
+            <span className="w-16 text-right">대 표 자 :</span>
+            <span className="inline-block w-32 border-b border-slate-400 text-center">
+              {data.representativeName || '　'}
+            </span>
+            {data.ownerSignature ? (
+              <img
+                src={data.ownerSignature}
+                alt="대표자 서명"
+                className="h-5"
+              />
+            ) : (
+              <span>(인)</span>
+            )}
+          </div>
+          <div className="flex justify-center items-center gap-2">
+            <span className="w-16 text-right">주 소 :</span>
+            <span className="inline-block w-32 border-b border-slate-400 text-center">　</span>
+          </div>
+        </div>
+
+        {/* 수령 확인란 */}
+        <div className="border border-slate-400 p-1.5 mt-2">
+          <p className="font-semibold mb-0.5 text-[10px]">수령 확인</p>
+          <p className="text-[10px] leading-4">
+            상기 금액을 정히 수령하였음을 확인합니다.
+          </p>
+          <div className="flex justify-end items-center gap-2 mt-1 text-[10px]">
+            <span>수령자</span>
+            <span className="inline-block w-20 border-b border-slate-400 text-center">
+              {data.employeeName || '　'}
+            </span>
+            {data.employeeSignature ? (
+              <img
+                src={data.employeeSignature}
+                alt="수령자 서명"
+                className="h-5"
+              />
+            ) : (
+              <span>(인)</span>
+            )}
+          </div>
+        </div>
+
+        {/* 전자서명 법적 효력 고지 */}
+        <div className="mt-2 pt-1 border-t border-slate-200">
+          <div className="bg-slate-50 p-1.5 rounded text-[9px] text-slate-600">
+            <p className="font-medium mb-0.5">※ 전자문서 법적 효력 안내</p>
+            <ul className="space-y-0 list-disc list-inside">
+              <li>본 전자 확인서는 전자서명법에 따라 자필 서명과 동일한 법적 효력을 가집니다.</li>
+              <li>현금 지급 사실을 확인하는 증빙 서류로 사용됩니다.</li>
               <li>전자서명 후 문서의 무결성이 보장됩니다.</li>
             </ul>
           </div>

@@ -16,17 +16,24 @@ import {
   Settings,
   TrendingUp,
   TrendingDown,
+  KeyRound,
+  FileKey,
 } from 'lucide-react'
+import CertificateSelector from './CertificateSelector'
+import type { ParsedCertificate, PfxParsedCertificate } from '@/lib/certificateParser'
 
 interface CodefConnection {
   isConnected: boolean
   connectedId: string | null
   hometaxUserId?: string
+  loginType?: string  // '0': 공동인증서, '1': ID/PW
   connectedAt?: string
   lastSyncDate?: string
   isConfigured?: boolean
   serviceType?: string
 }
+
+type LoginTypeTab = 'idpw' | 'cert'
 
 interface SyncLog {
   id: string
@@ -71,9 +78,11 @@ export default function CodefSyncPanel({
   const [showLogs, setShowLogs] = useState(false)
 
   // 연결 폼 상태
+  const [loginTypeTab, setLoginTypeTab] = useState<LoginTypeTab>('idpw')
   const [hometaxId, setHometaxId] = useState('')
   const [hometaxPassword, setHometaxPassword] = useState('')
   const [identity, setIdentity] = useState('')  // 대표자 주민등록번호 앞 7자리
+  const [certIdentity, setCertIdentity] = useState('')  // 인증서 인증용 주민번호 앞 7자리
   const [formError, setFormError] = useState('')
 
   // 연결 상태 확인
@@ -173,6 +182,69 @@ export default function CodefSyncPanel({
     }
   }
 
+  // 공동인증서 연결 (DER/KEY 또는 PFX)
+  const handleCertConnect = async (cert: ParsedCertificate | PfxParsedCertificate, certPassword: string) => {
+    if (!certIdentity) {
+      setFormError('대표자 주민등록번호 앞 7자리를 입력해주세요.')
+      return
+    }
+
+    const identityDigits = certIdentity.replace(/[^0-9]/g, '')
+    if (identityDigits.length !== 7) {
+      setFormError('주민등록번호 앞 7자리를 정확히 입력해주세요. (예: 8106091)')
+      return
+    }
+
+    setConnecting(true)
+    setFormError('')
+
+    try {
+      const isPfx = 'isPfx' in cert && cert.isPfx
+      const body = isPfx
+        ? {
+            clinicId,
+            loginType: '0',
+            certFile: (cert as PfxParsedCertificate).pfxBase64,
+            certPassword,
+            identity: identityDigits,
+            certType: 'pfx',
+          }
+        : {
+            clinicId,
+            loginType: '0',
+            certFile: (cert as ParsedCertificate).certDerBase64,
+            keyFile: (cert as ParsedCertificate).keyDerBase64,
+            certPassword,
+            identity: identityDigits,
+          }
+
+      const response = await fetch('/api/codef/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setConnection({
+          isConnected: true,
+          connectedId: result.data.connectedId,
+          loginType: '0',
+          connectedAt: new Date().toISOString(),
+        })
+        setShowConnectForm(false)
+        setCertIdentity('')
+      } else {
+        setFormError(result.error || '인증서 연결에 실패했습니다.')
+      }
+    } catch (error) {
+      setFormError('인증서 연결 중 오류가 발생했습니다.')
+    } finally {
+      setConnecting(false)
+    }
+  }
+
   // 홈택스 계정 연결 해제
   const handleDisconnect = async () => {
     if (!confirm('홈택스 계정 연결을 해제하시겠습니까?')) return
@@ -257,7 +329,7 @@ export default function CodefSyncPanel({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border p-6">
+      <div className="w-full">
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         </div>
@@ -266,11 +338,11 @@ export default function CodefSyncPanel({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-6">
+    <div className="w-full">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Settings className="w-5 h-5 text-blue-600" />
-          홈택스 자동 연동 (CODEF)
+        <h3 className="text-sm font-bold flex items-center gap-2 text-slate-700">
+          <Settings className="w-4 h-4 text-indigo-500" />
+          연동 설정
         </h3>
 
         {connection.isConnected && (
@@ -285,11 +357,10 @@ export default function CodefSyncPanel({
       </div>
 
       {/* 연결 상태 표시 */}
-      <div className={`p-4 rounded-lg mb-4 ${
-        connection.isConnected
+      <div className={`p-4 rounded-lg mb-4 ${connection.isConnected
           ? 'bg-green-50 border border-green-200'
           : 'bg-gray-50 border border-gray-200'
-      }`}>
+        }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {connection.isConnected ? (
@@ -300,6 +371,11 @@ export default function CodefSyncPanel({
                 <div>
                   <p className="font-medium text-green-800">
                     홈택스 연결됨
+                    {connection.loginType === '0' && (
+                      <span className="ml-2 text-xs font-normal px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                        공동인증서
+                      </span>
+                    )}
                     {connection.serviceType && connection.serviceType !== '정식' && (
                       <span className="ml-2 text-xs font-normal px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">
                         {connection.serviceType} 모드
@@ -307,7 +383,9 @@ export default function CodefSyncPanel({
                     )}
                   </p>
                   <p className="text-sm text-green-600">
-                    {connection.hometaxUserId && `ID: ${connection.hometaxUserId}`}
+                    {connection.loginType === '0'
+                      ? '공동인증서로 연결됨'
+                      : connection.hometaxUserId && `ID: ${connection.hometaxUserId}`}
                     {connection.lastSyncDate && (
                       <span className="ml-2">
                         마지막 동기화: {new Date(connection.lastSyncDate).toLocaleDateString('ko-KR')}
@@ -352,100 +430,174 @@ export default function CodefSyncPanel({
 
       {/* 연결 폼 */}
       {showConnectForm && !connection.isConnected && (
-        <div className="border rounded-lg p-4 mb-4 bg-blue-50">
-          <h4 className="font-medium mb-3">홈택스 계정 연결</h4>
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                홈택스 아이디
-              </label>
-              <input
-                type="text"
-                value={hometaxId}
-                onChange={e => setHometaxId(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="홈택스 로그인 아이디"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                비밀번호
-              </label>
-              <input
-                type="password"
-                value={hometaxPassword}
-                onChange={e => setHometaxPassword(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="홈택스 로그인 비밀번호"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                대표자 주민등록번호 앞 7자리
-              </label>
-              <input
-                type="text"
-                value={identity}
-                onChange={e => {
-                  // 숫자와 하이픈만 허용, 최대 8자 (하이픈 포함)
-                  const val = e.target.value.replace(/[^0-9-]/g, '')
-                  if (val.replace(/[^0-9]/g, '').length <= 7) {
-                    setIdentity(val)
-                  }
-                }}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="예: 810609-1 또는 8106091"
-                maxLength={8}
-              />
-              <p className="mt-1 text-xs text-gray-400">
-                홈택스 2차 인증에 사용되는 주민등록번호 앞 6자리 + 성별 구분 1자리
-              </p>
-            </div>
-
-            {formError && (
-              <div className="flex items-center gap-2 text-red-600 text-sm">
-                <AlertCircle className="w-4 h-4" />
-                {formError}
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <button
-                onClick={handleConnect}
-                disabled={connecting}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {connecting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    연결 중...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4" />
-                    연결하기
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setShowConnectForm(false)
-                  setFormError('')
-                  setIdentity('')
-                }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                취소
-              </button>
-            </div>
+        <div className="border rounded-lg mb-4 bg-white overflow-hidden">
+          {/* 인증 방식 탭 */}
+          <div className="flex border-b bg-gray-50">
+            <button
+              onClick={() => { setLoginTypeTab('idpw'); setFormError('') }}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                loginTypeTab === 'idpw'
+                  ? 'text-blue-700 border-b-2 border-blue-600 bg-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <KeyRound className="w-4 h-4" />
+              아이디/비밀번호
+            </button>
+            <button
+              onClick={() => { setLoginTypeTab('cert'); setFormError('') }}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                loginTypeTab === 'cert'
+                  ? 'text-blue-700 border-b-2 border-blue-600 bg-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <FileKey className="w-4 h-4" />
+              공동인증서
+            </button>
           </div>
 
-          <p className="mt-3 text-xs text-gray-500">
-            * 홈택스(hometax.go.kr) 본인 계정의 아이디와 비밀번호를 입력해주세요.
-          </p>
+          {/* ID/PW 연결 폼 */}
+          {loginTypeTab === 'idpw' && (
+            <div className="p-4">
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    홈택스 아이디
+                  </label>
+                  <input
+                    type="text"
+                    value={hometaxId}
+                    onChange={e => setHometaxId(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="홈택스 로그인 아이디"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    비밀번호
+                  </label>
+                  <input
+                    type="password"
+                    value={hometaxPassword}
+                    onChange={e => setHometaxPassword(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="홈택스 로그인 비밀번호"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    대표자 주민등록번호 앞 7자리
+                  </label>
+                  <input
+                    type="text"
+                    value={identity}
+                    onChange={e => {
+                      const val = e.target.value.replace(/[^0-9-]/g, '')
+                      if (val.replace(/[^0-9]/g, '').length <= 7) {
+                        setIdentity(val)
+                      }
+                    }}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="예: 810609-1 또는 8106091"
+                    maxLength={8}
+                  />
+                  <p className="mt-1 text-xs text-gray-400">
+                    홈택스 2차 인증에 사용되는 주민등록번호 앞 6자리 + 성별 구분 1자리
+                  </p>
+                </div>
+
+                {formError && (
+                  <div className="flex items-center gap-2 text-red-600 text-sm">
+                    <AlertCircle className="w-4 h-4" />
+                    {formError}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleConnect}
+                    disabled={connecting}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {connecting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        연결 중...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        연결하기
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowConnectForm(false)
+                      setFormError('')
+                      setIdentity('')
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs text-gray-500">
+                * 홈택스(hometax.go.kr) 본인 계정의 아이디와 비밀번호를 입력해주세요.
+              </p>
+            </div>
+          )}
+
+          {/* 공동인증서 연결 폼 */}
+          {loginTypeTab === 'cert' && (
+            <div className="p-4 space-y-3">
+              {/* 주민등록번호 입력 (인증서 선택 전) */}
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">
+                  대표자 주민등록번호 앞 7자리
+                </label>
+                <input
+                  type="text"
+                  value={certIdentity}
+                  onChange={e => {
+                    const val = e.target.value.replace(/[^0-9-]/g, '')
+                    if (val.replace(/[^0-9]/g, '').length <= 7) {
+                      setCertIdentity(val)
+                    }
+                  }}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="예: 810609-1 또는 8106091"
+                  maxLength={8}
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  홈택스 2차 인증에 사용되는 주민등록번호 앞 6자리 + 성별 구분 1자리
+                </p>
+              </div>
+
+              {formError && (
+                <div className="flex items-center gap-2 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  {formError}
+                </div>
+              )}
+
+              {/* 인증서 선택 컴포넌트 */}
+              <CertificateSelector
+                onSelect={handleCertConnect}
+                onCancel={() => {
+                  setShowConnectForm(false)
+                  setFormError('')
+                  setCertIdentity('')
+                }}
+                loading={connecting}
+              />
+            </div>
+          )}
         </div>
       )}
 

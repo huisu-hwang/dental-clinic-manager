@@ -11,6 +11,7 @@ import {
   TaxInvoiceStatisticsItem,
   CashReceiptPurchaseItem,
   CashReceiptSalesItem,
+  CreditCardSalesData,
   SyncResult,
   CODEF_ORGANIZATION,
   CODEF_ENDPOINTS,
@@ -103,8 +104,8 @@ const getCodefConfig = () => {
       break;
     case 'DEMO':
     case '1':
-      // DEMO 환경은 NT(홈택스) 상품 API 미지원 → SANDBOX로 전환
-      serviceType = 2;
+      // DEMO 환경 (development.codef.io) - NT 상품 API 지원
+      serviceType = 1;
       break;
     default:
       serviceType = 2;
@@ -235,6 +236,82 @@ export async function updateCodefAccount(
   } catch (error: any) {
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error('CODEF updateAccount error:', errMsg);
+    return {
+      result: { code: 'CF-99999', extraMessage: String(error?.stack || ''), message: errMsg, transactionId: '' },
+      data: null as any,
+    };
+  }
+}
+
+// ============================================
+// 공동인증서 기반 계정 관리 API
+// loginType: '0' (인증서 로그인)
+// ============================================
+
+export async function createCodefAccountWithCert(
+  certDerBase64: string, keyDerBase64: string, certPassword: string, identity: string
+): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
+  try {
+    const { codef, serviceType } = await createCodefInstance();
+    const config = getCodefConfig();
+    const serviceTypeConstant = await getServiceTypeConstant(serviceType);
+    const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
+
+    const param = {
+      accountList: [{
+        countryCode: 'KR',
+        businessType: 'NT',
+        clientType: 'P',
+        organization: CODEF_ORGANIZATION.HOMETAX,
+        loginType: '0',
+        certFile: certDerBase64,
+        keyFile: keyDerBase64,
+        password: encryptedPassword,
+        identity: identity,
+      }],
+    };
+
+    const response = await codef.createAccount(serviceTypeConstant, param);
+    return typeof response === 'string' ? JSON.parse(response) : response;
+  } catch (error: any) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('CODEF createAccountWithCert error:', errMsg);
+    return {
+      result: { code: 'CF-99999', extraMessage: String(error?.stack || ''), message: errMsg, transactionId: '' },
+      data: null as any,
+    };
+  }
+}
+
+export async function updateCodefAccountWithCert(
+  connectedId: string, certDerBase64: string, keyDerBase64: string, certPassword: string, identity: string
+): Promise<CodefApiResponse<CodefAccountCreateResponse['data']>> {
+  try {
+    const { codef, serviceType } = await createCodefInstance();
+    const config = getCodefConfig();
+    const serviceTypeConstant = await getServiceTypeConstant(serviceType);
+    const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
+
+    const param = {
+      connectedId,
+      accountList: [{
+        countryCode: 'KR',
+        businessType: 'NT',
+        clientType: 'P',
+        organization: CODEF_ORGANIZATION.HOMETAX,
+        loginType: '0',
+        certFile: certDerBase64,
+        keyFile: keyDerBase64,
+        password: encryptedPassword,
+        identity: identity,
+      }],
+    };
+
+    const response = await codef.updateAccount(serviceTypeConstant, param);
+    return typeof response === 'string' ? JSON.parse(response) : response;
+  } catch (error: any) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('CODEF updateAccountWithCert error:', errMsg);
     return {
       result: { code: 'CF-99999', extraMessage: String(error?.stack || ''), message: errMsg, transactionId: '' },
       data: null as any,
@@ -455,6 +532,112 @@ export async function getCashReceiptSalesDetails(
   if (Array.isArray(data)) return data;
   if (data && typeof data === 'object' && 'resUsedDate' in (data as any)) return [data as CashReceiptSalesItem];
   return [];
+}
+
+// ============================================
+// 인증서 기반 API 전용 인스턴스 (DEMO 모드 지원)
+// 공동인증서 전용 API는 DEMO 환경에서도 실제 데이터 조회 가능
+// ============================================
+
+function getActualServiceType(): number {
+  const env = (process.env.CODEF_SERVICE_TYPE || 'SANDBOX').trim().toUpperCase();
+  switch (env) {
+    case 'PRODUCT': case '0': return 0;
+    case 'DEMO': case '1': return 1;
+    default: return 2;
+  }
+}
+
+async function createCodefInstanceForCertApi() {
+  const { EasyCodef } = await loadEasyCodef();
+  const config = getCodefConfig();
+  const actualServiceType = getActualServiceType();
+
+  if (!config.clientId || !config.clientSecret || !config.publicKey) {
+    throw new Error('CODEF API 설정이 완료되지 않았습니다.');
+  }
+
+  const codef = new EasyCodef();
+  codef.setPublicKey(config.publicKey);
+
+  if (actualServiceType === 0) {
+    codef.setClientInfo(config.clientId, config.clientSecret);
+  } else {
+    codef.setClientInfoForDemo(config.clientId, config.clientSecret);
+  }
+
+  return { codef, serviceType: actualServiceType };
+}
+
+async function requestProductForCertApi<T>(productUrl: string, params: object): Promise<CodefApiResponse<T>> {
+  try {
+    const { codef, serviceType } = await createCodefInstanceForCertApi();
+    const serviceTypeConstant = await getServiceTypeConstant(serviceType);
+    console.log(`CODEF requestProduct (cert API, serviceType=${serviceType}): ${productUrl}`);
+    console.log(`CODEF params:`, JSON.stringify(params).substring(0, 300));
+    const response = await codef.requestProduct(productUrl, serviceTypeConstant, params);
+    const result = typeof response === 'string' ? JSON.parse(response) : response;
+    console.log(`CODEF response code: ${result?.result?.code}, message: ${result?.result?.message}`);
+    return result;
+  } catch (error) {
+    console.error('CODEF requestProduct (cert) error:', error);
+    return {
+      result: { code: 'CF-99999', extraMessage: '', message: error instanceof Error ? error.message : '상품 조회 실패', transactionId: '' },
+      data: null as any,
+    };
+  }
+}
+
+// ============================================
+// 신용카드 매출자료 조회 (공동인증서 전용)
+// Endpoint: /v1/kr/public/nt/tax-payment/credit-card-sales-data-list
+// Organization: 0006
+// 인증 방식: 공동인증서 (certFile, keyFile, certPassword)
+// ============================================
+
+export async function getCreditCardSalesData(
+  certFile: string,        // Base64 인코딩된 인증서 DER 또는 PFX 파일
+  certPassword: string,    // 인증서 비밀번호 (평문 - 내부에서 RSA 암호화)
+  keyFile: string,         // Base64 인코딩된 키 파일 (DER/KEY 방식일 때)
+  certType: string,        // "1": DER/KEY, "pfx": PFX
+  year: string,            // YYYY 형식
+  startQuarter: string,    // 조회시작 분기 "1", "2", "3", "4"
+  endQuarter: string       // 조회종료 분기 "1", "2", "3", "4"
+): Promise<CreditCardSalesData | null> {
+  const config = getCodefConfig();
+  const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
+
+  const params = {
+    organization: CODEF_ORGANIZATION.CREDIT_CARD_SALES,  // 0006
+    certFile,
+    certPassword: encryptedPassword,
+    keyFile: keyFile || '',
+    certType: certType || '1',
+    year,
+    startDate: startQuarter,    // 분기 번호 ("1"~"4")
+    endDate: endQuarter,        // 분기 번호 ("1"~"4")
+  };
+
+  const response = await requestProductForCertApi<CreditCardSalesData>(
+    CODEF_ENDPOINTS.CREDIT_CARD_SALES,
+    params
+  );
+
+  if (response.result.code !== 'CF-00000') {
+    console.error('Credit card sales data error:', response.result);
+    throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
+  }
+
+  return response.data;
+}
+
+export function getActualCodefServiceType(): string {
+  const actualType = getActualServiceType();
+  switch (actualType) {
+    case 0: return '정식';
+    case 1: return '데모';
+    default: return '샌드박스';
+  }
 }
 
 // ============================================
