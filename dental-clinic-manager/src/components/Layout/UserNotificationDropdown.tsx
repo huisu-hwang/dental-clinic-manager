@@ -16,6 +16,7 @@ import {
   TrashIcon,
   ExclamationCircleIcon,
   ChatBubbleLeftRightIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline'
 import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid'
 import type { UserNotification, UserNotificationType } from '@/types/notification'
@@ -41,6 +42,8 @@ const NotificationTypeIcons: Record<UserNotificationType, React.ComponentType<{ 
   telegram_board_approved: CheckCircleIcon,
   telegram_board_rejected: XCircleIcon,
   telegram_board_pending: ClockIcon,
+  task_assigned: ClipboardDocumentListIcon,
+  task_completed: CheckCircleIcon,
 }
 
 // 상대 시간 계산

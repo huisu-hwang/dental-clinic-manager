@@ -37,10 +37,24 @@ interface TaskListProps {
   showMyTasksOnly?: boolean
 }
 
+// 현재 사용자 ID 가져오기
+const getCurrentUserId = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
+  if (!userStr) return null
+  try {
+    const user = JSON.parse(userStr)
+    return user.id
+  } catch {
+    return null
+  }
+}
+
 export default function TaskList({ canCreate = false, showMyTasksOnly = false }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const currentUserId = getCurrentUserId()
   const [selectedStatus, setSelectedStatus] = useState<TaskStatus | ''>('')
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority | ''>('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -175,6 +189,12 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
       case 'cancelled':
         return <XCircle className="w-4 h-4" />
     }
+  }
+
+  // HTML 태그 제거하여 plain text 추출
+  const stripHtml = (html: string) => {
+    if (!html) return ''
+    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim()
   }
 
   const formatDate = (dateString: string) => {
@@ -348,7 +368,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
                     </div>
                     <h3 className="text-gray-900 font-medium">{task.title}</h3>
                     {task.description && (
-                      <p className="text-sm text-gray-500 truncate mt-1">{task.description}</p>
+                      <p className="text-sm text-gray-500 truncate mt-1">{stripHtml(task.description)}</p>
                     )}
 
                     {/* 진행률 바 */}
@@ -387,9 +407,9 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
                     </div>
                   </div>
 
-                  {/* 빠른 상태 변경 버튼 */}
+                  {/* 빠른 상태 변경 버튼 - 담당자만 표시 */}
                   <div className="flex-shrink-0 flex gap-1">
-                    {task.status === 'pending' && (
+                    {task.status === 'pending' && currentUserId === task.assignee_id && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -399,10 +419,10 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
                         }}
                         className="text-blue-600"
                       >
-                        시작
+                        업무 시작
                       </Button>
                     )}
-                    {task.status === 'in_progress' && (
+                    {task.status === 'in_progress' && currentUserId === task.assignee_id && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -412,7 +432,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
                         }}
                         className="text-green-600"
                       >
-                        완료
+                        완료 보고
                       </Button>
                     )}
                   </div>

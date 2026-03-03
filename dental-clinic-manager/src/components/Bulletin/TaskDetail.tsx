@@ -241,18 +241,8 @@ export default function TaskDetail({
             <div className="mt-4 pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-500 mb-2">상태 변경</p>
               <div className="flex flex-wrap gap-2">
-                {task.status !== 'pending' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onStatusUpdate('pending')}
-                    className="text-gray-600"
-                  >
-                    <Circle className="w-4 h-4 mr-1" />
-                    대기
-                  </Button>
-                )}
-                {task.status !== 'in_progress' && (
+                {/* 담당자: 업무 시작 버튼 (대기 → 진행 중) */}
+                {isAssignee && task.status === 'pending' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -260,21 +250,11 @@ export default function TaskDetail({
                     className="text-blue-600"
                   >
                     <Loader2 className="w-4 h-4 mr-1" />
-                    진행 중
+                    업무 시작
                   </Button>
                 )}
-                {task.status !== 'on_hold' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onStatusUpdate('on_hold')}
-                    className="text-yellow-600"
-                  >
-                    <Pause className="w-4 h-4 mr-1" />
-                    보류
-                  </Button>
-                )}
-                {task.status !== 'completed' && (
+                {/* 담당자: 완료 보고 버튼 (진행 중 → 완료) */}
+                {isAssignee && task.status === 'in_progress' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -282,8 +262,57 @@ export default function TaskDetail({
                     className="text-green-600"
                   >
                     <CheckCircle2 className="w-4 h-4 mr-1" />
-                    완료
+                    완료 보고
                   </Button>
+                )}
+                {/* 관리자(할당자): 모든 상태 변경 가능 */}
+                {onEdit && !isAssignee && (
+                  <>
+                    {task.status !== 'pending' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onStatusUpdate('pending')}
+                        className="text-gray-600"
+                      >
+                        <Circle className="w-4 h-4 mr-1" />
+                        대기
+                      </Button>
+                    )}
+                    {task.status !== 'in_progress' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onStatusUpdate('in_progress')}
+                        className="text-blue-600"
+                      >
+                        <Loader2 className="w-4 h-4 mr-1" />
+                        진행 중
+                      </Button>
+                    )}
+                    {task.status !== 'on_hold' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onStatusUpdate('on_hold')}
+                        className="text-yellow-600"
+                      >
+                        <Pause className="w-4 h-4 mr-1" />
+                        보류
+                      </Button>
+                    )}
+                    {task.status !== 'completed' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onStatusUpdate('completed')}
+                        className="text-green-600"
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        완료
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -294,7 +323,10 @@ export default function TaskDetail({
         {task.description && (
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-sm font-medium text-gray-700 mb-2">상세 내용</h3>
-            <p className="text-gray-600 whitespace-pre-wrap">{task.description}</p>
+            <div
+              className="text-gray-600 prose prose-sm max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1"
+              dangerouslySetInnerHTML={{ __html: task.description }}
+            />
           </div>
         )}
 
