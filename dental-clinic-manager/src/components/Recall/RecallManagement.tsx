@@ -485,6 +485,15 @@ export default function RecallManagement() {
               </button>
 
               <button
+                onClick={() => setShowExcludeUpload(true)}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
+              >
+                <UserX className="w-4 h-4" />
+                <span className="hidden sm:inline">제외 환자 업로드</span>
+                <span className="sm:hidden">제외 업로드</span>
+              </button>
+
+              <button
                 onClick={() => setPatientAddModalOpen(true)}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
               >
@@ -604,18 +613,6 @@ export default function RecallManagement() {
                     )}
                   </div>
                 </>
-              )}
-
-              {/* 제외 환자 파일 업로드 버튼 */}
-              {filters.showExcluded && (
-                <button
-                  onClick={() => setShowExcludeUpload(true)}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span className="hidden sm:inline">제외 환자 업로드</span>
-                  <span className="sm:hidden">업로드</span>
-                </button>
               )}
 
               <button
