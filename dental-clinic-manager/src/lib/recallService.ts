@@ -777,6 +777,40 @@ export const recallPatientService = {
     }
   },
 
+  // 전화번호 기준 일괄 리콜 제외 설정 (엑셀 업로드용)
+  async excludeByPhoneNumbers(
+    phoneNumbers: string[],
+    excludeReason: RecallExcludeReason
+  ): Promise<{ success: boolean; count: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, count: 0, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, count: 0, error: 'Clinic ID not found' }
+
+    const BATCH_SIZE = 500
+    let totalCount = 0
+
+    try {
+      for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
+        const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
+        const { data, error } = await supabase
+          .from('recall_patients')
+          .update({ exclude_reason: excludeReason })
+          .eq('clinic_id', clinicId)
+          .in('phone_number', batch)
+          .select('id')
+
+        if (error) throw error
+        totalCount += data?.length || 0
+      }
+
+      return { success: true, count: totalCount }
+    } catch (error) {
+      return { success: false, count: 0, error: extractErrorMessage(error) }
+    }
+  },
+
   // 환자 삭제
   async deletePatient(id: string): Promise<{ success: boolean; error?: string }> {
     const supabase = await ensureConnection()

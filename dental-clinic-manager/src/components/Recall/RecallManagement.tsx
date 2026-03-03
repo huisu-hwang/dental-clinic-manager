@@ -319,45 +319,41 @@ export default function RecallManagement() {
     setIsUploading(true)
 
     try {
-      // 항상 새 캠페인 생성
+      // 캠페인 생성 + 환자 일괄 등록 (신규 환자는 시스템에 추가)
       const campaignName = filename.replace(/\.[^/.]+$/, '') || `리콜 제외 ${new Date().toLocaleDateString('ko-KR')}`
       const newCampaign = await handleCreateCampaign(campaignName)
       if (!newCampaign) {
         setIsUploading(false)
         return
       }
-      const campaignId = newCampaign.id
 
-      // 환자 일괄 등록 (중복 제거)
       const result = await recallService.patients.addPatientsBulk(
         uploadedPatients,
-        campaignId,
+        newCampaign.id,
         filename
       )
 
-      if (result.success && result.newCount > 0) {
-        // 등록된 환자들을 조회하여 ID 가져오기 (최근 등록된 환자들)
-        const patientsResult = await recallService.patients.getPatients({
-          campaign_id: campaignId,
-          page: 1,
-          pageSize: result.newCount,
-          showExcluded: false
-        })
+      if (result.success) {
+        // 전화번호 기준으로 제외 처리 (신규+기존 모두 포함)
+        const phoneNumbers = uploadedPatients
+          .map(p => p.phone_number)
+          .filter(Boolean)
 
-        if (patientsResult.success && patientsResult.data) {
-          // 방금 등록한 환자들 (pending 상태, exclude_reason이 null인)
-          const newPatientIds = patientsResult.data.data
-            .filter(p => !p.exclude_reason)
-            .slice(0, result.newCount)
-            .map(p => p.id)
+        if (phoneNumbers.length > 0) {
+          const excludeResult = await recallService.patients.excludeByPhoneNumbers(phoneNumbers, excludeUploadReason)
 
-          if (newPatientIds.length > 0) {
-            await recallService.patients.updateExcludeReasonBulk(newPatientIds, excludeUploadReason)
+          if (excludeResult.success) {
+            const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'
+            const parts: string[] = []
+            if (result.newCount > 0) parts.push(`신규 ${result.newCount}명`)
+            if (result.updatedCount > 0) parts.push(`기존 ${result.updatedCount}명`)
+            if (result.skippedCount > 0) parts.push(`건너뜀 ${result.skippedCount}명`)
+            showToast(`제외 환자(${label}) 등록 완료: ${parts.join(', ')} (총 ${excludeResult.count}명 제외)`, 'success')
+          } else {
+            showToast(excludeResult.error || '제외 처리에 실패했습니다.', 'error')
           }
         }
 
-        const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'
-        showToast(`${result.newCount}명이 제외 환자(${label})로 등록되었습니다.`, 'success')
         setShowExcludeUpload(false)
         loadPatients()
         loadStats()
