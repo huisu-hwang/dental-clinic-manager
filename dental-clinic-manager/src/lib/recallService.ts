@@ -532,11 +532,11 @@ export const recallPatientService = {
       const phoneNumbers = validPatients.map(p => p.phone_number)
 
       // 2. DB에서 같은 clinic_id + phone_number를 가진 기존 환자 조회 (병렬 배치)
-      const existingPatients: { id: string; phone_number: string; exclude_reason: string | null }[] = []
+      const existingPatients: { id: string; phone_number: string; patient_name: string; exclude_reason: string | null }[] = []
       await runBatchesParallel(phoneNumbers, FETCH_BATCH_SIZE, async (batch) => {
         const { data, error: fetchError } = await supabase
           .from('recall_patients')
-          .select('id, phone_number, exclude_reason')
+          .select('id, phone_number, patient_name, exclude_reason')
           .eq('clinic_id', clinicId)
           .in('phone_number', batch)
 
@@ -545,27 +545,30 @@ export const recallPatientService = {
         return data
       })
 
-      // 3. phone_number → 기존 환자 Map 생성 (exclude_reason NULL인 레코드 우선)
+      // 3. (phone_number + patient_name) 복합키 기준 기존 환자 Map 생성
+      const compositeKey = (phone: string, name: string) => `${phone}::${name}`
       const existingMap = new Map<string, { id: string; exclude_reason: string | null }>()
       for (const ep of existingPatients) {
-        const current = existingMap.get(ep.phone_number)
+        const key = compositeKey(ep.phone_number, ep.patient_name)
+        const current = existingMap.get(key)
         if (!current || (current.exclude_reason !== null && ep.exclude_reason === null)) {
-          existingMap.set(ep.phone_number, { id: ep.id, exclude_reason: ep.exclude_reason })
+          existingMap.set(key, { id: ep.id, exclude_reason: ep.exclude_reason })
         }
       }
 
-      // 4. 신규 vs 기존 분류 (동일 phone_number 중복 시 마지막 행 우선)
+      // 4. 신규 vs 기존 분류 (동일 phone_number+patient_name 중복 시 마지막 행 우선)
       const newPatientsMap = new Map<string, RecallPatientUploadData>()
       const updateTargetsMap = new Map<string, { id: string; data: RecallPatientUploadData }>()
 
       for (const p of validPatients) {
-        const existing = existingMap.get(p.phone_number)
+        const key = compositeKey(p.phone_number, p.patient_name)
+        const existing = existingMap.get(key)
         if (existing) {
           // 같은 id로 중복 upsert 시 "cannot affect row a second time" 방지
           updateTargetsMap.set(existing.id, { id: existing.id, data: p })
         } else {
-          // 신규 환자도 phone_number 기준 중복 제거 (마지막 행 우선)
-          newPatientsMap.set(p.phone_number, p)
+          // 신규 환자도 (phone_number + patient_name) 기준 중복 제거 (마지막 행 우선)
+          newPatientsMap.set(key, p)
         }
       }
 
@@ -805,26 +808,29 @@ export const recallPatientService = {
       if (mode === 'phone') {
         // === 전화번호 기준 매칭 ===
         const validData = uploadData.filter(p => p.phone_number)
-        const phoneNumbers = validData.map(p => p.phone_number)
+        const phoneNumbers = [...new Set(validData.map(p => p.phone_number))]
 
-        // 1. 기존 환자 조회
-        const existingPhones = new Set<string>()
+        // 1. 기존 환자 조회 (phone_number + patient_name 복합키)
+        const existingKeys = new Set<string>()
+        const compositeKey = (phone: string, name: string) => `${phone}::${name}`
+
         for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
           const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
           const { data } = await supabase
             .from('recall_patients')
-            .select('phone_number')
+            .select('phone_number, patient_name')
             .eq('clinic_id', clinicId)
             .in('phone_number', batch)
 
-          if (data) data.forEach((p: { phone_number: string }) => existingPhones.add(p.phone_number))
+          if (data) data.forEach((p: { phone_number: string; patient_name: string }) =>
+            existingKeys.add(compositeKey(p.phone_number, p.patient_name))
+          )
         }
 
-        // 2. 기존 환자 제외 처리
-        if (existingPhones.size > 0) {
-          const existingArr = Array.from(existingPhones)
-          for (let i = 0; i < existingArr.length; i += BATCH_SIZE) {
-            const batch = existingArr.slice(i, i + BATCH_SIZE)
+        // 2. 기존 환자 제외 처리 (전화번호 기준으로 모두 제외)
+        if (phoneNumbers.length > 0) {
+          for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
+            const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
             const { data, error } = await supabase
               .from('recall_patients')
               .update({ exclude_reason: excludeReason })
@@ -837,11 +843,13 @@ export const recallPatientService = {
           }
         }
 
-        // 3. 미등록 환자 → 제외 상태로 사전 등록
-        const newPatients = validData.filter(p => !existingPhones.has(p.phone_number))
+        // 3. 미등록 환자 → 제외 상태로 사전 등록 (phone+name 복합키로 중복 방지)
         const uniqueNew = new Map<string, RecallPatientUploadData>()
-        for (const p of newPatients) {
-          uniqueNew.set(p.phone_number, p)
+        for (const p of validData) {
+          const key = compositeKey(p.phone_number, p.patient_name || p.phone_number)
+          if (!existingKeys.has(key)) {
+            uniqueNew.set(key, p)
+          }
         }
 
         if (uniqueNew.size > 0) {
