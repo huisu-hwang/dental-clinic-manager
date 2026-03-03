@@ -913,22 +913,20 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
     return (
       <div
         key={contact.id}
-        className={`relative bg-white rounded-xl border cursor-pointer transition-all hover:shadow-md ${
+        className={`relative bg-white rounded-xl border cursor-pointer transition-all hover:shadow-md flex flex-col ${
           isDialing ? 'ring-2 ring-blue-400 shadow-blue-100 shadow-md' : 'border-slate-200 shadow-sm'
         } ${selectedContacts.has(contact.id) ? 'ring-2 ring-blue-300 bg-blue-50/30' : ''}`}
         onClick={() => makePhoneCall(contact.phone)}
       >
-        {/* 상단: 카테고리 색상 바 */}
-        {contact.category && (
-          <div
-            className="h-1 rounded-t-xl"
-            style={{ backgroundColor: contact.category.color }}
-          />
-        )}
+        {/* 카테고리 색상 바 (항상 표시) */}
+        <div
+          className="h-1 rounded-t-xl"
+          style={{ backgroundColor: contact.category?.color || '#cbd5e1' }}
+        />
 
-        <div className="p-4">
+        <div className="p-4 flex flex-col flex-1">
           {/* 1행: 체크박스 + 즐겨찾기 + 업체명 + 더보기 */}
-          <div className="flex items-start justify-between gap-1 mb-2">
+          <div className="flex items-start justify-between gap-1">
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               {canDelete && (
                 <input
@@ -1016,36 +1014,38 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             </div>
           </div>
 
-          {/* 2행: 담당자 + 카테고리 */}
-          <div className="flex items-center gap-1.5 mb-3 ml-0.5">
-            {contact.contact_person && (
+          {/* 2행: 담당자 + 카테고리 (고정 높이) */}
+          <div className="h-5 flex items-center gap-1.5 mt-1 ml-0.5">
+            {contact.contact_person ? (
               <span className="text-xs text-slate-500 flex items-center gap-1">
                 <User className="w-3 h-3" />
                 {contact.contact_person}
               </span>
-            )}
-            {contact.contact_person && contact.category && (
-              <span className="text-xs text-slate-300">·</span>
+            ) : (
+              <span className="text-xs text-slate-400">-</span>
             )}
             {contact.category && (
-              showCategoryBadge ? (
-                <span
-                  className="px-1.5 py-0.5 text-[10px] rounded-full text-white"
-                  style={{ backgroundColor: contact.category.color }}
-                >
-                  {contact.category.name}
-                </span>
-              ) : (
-                <span className="text-xs text-slate-500">{contact.category.name}</span>
-              )
+              <>
+                <span className="text-xs text-slate-300">·</span>
+                {showCategoryBadge ? (
+                  <span
+                    className="px-1.5 py-0.5 text-[10px] rounded-full text-white"
+                    style={{ backgroundColor: contact.category.color }}
+                  >
+                    {contact.category.name}
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-500">{contact.category.name}</span>
+                )}
+              </>
             )}
           </div>
 
           {/* 구분선 */}
-          <div className="border-t border-dashed border-slate-200 mb-3" />
+          <div className="border-t border-dashed border-slate-200 my-2.5" />
 
-          {/* 3행: 전화번호 */}
-          <div className="space-y-1.5">
+          {/* 3행: 전화번호 (flex-1로 남은 공간 차지) */}
+          <div className="flex-1 flex flex-col justify-center space-y-1.5">
             <button
               onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone) }}
               disabled={dialingPhone === contact.phone}
@@ -1074,13 +1074,15 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             )}
           </div>
 
-          {/* 4행: 메모 (있을 때만) */}
-          {contact.notes && (
-            <p className="mt-2.5 text-xs text-slate-400 truncate flex items-center gap-1">
-              <FileText className="w-3 h-3 flex-shrink-0" />
-              {contact.notes}
-            </p>
-          )}
+          {/* 4행: 메모 (고정 높이 — 항상 공간 확보) */}
+          <div className="h-5 mt-2 flex items-center">
+            {contact.notes ? (
+              <p className="text-xs text-slate-400 truncate flex items-center gap-1 w-full">
+                <FileText className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{contact.notes}</span>
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     )
