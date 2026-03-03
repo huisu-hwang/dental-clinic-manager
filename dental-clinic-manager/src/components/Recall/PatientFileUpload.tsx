@@ -9,6 +9,7 @@ interface PatientFileUploadProps {
   onUpload: (patients: RecallPatientUploadData[], filename: string) => void
   onCancel: () => void
   isLoading?: boolean
+  excludeMode?: boolean // true: 전화번호만 필수 (제외 환자 업로드용)
 }
 
 interface ParsedColumn {
@@ -17,7 +18,7 @@ interface ParsedColumn {
   required: boolean
 }
 
-const EXPECTED_COLUMNS: ParsedColumn[] = [
+const BASE_COLUMNS: ParsedColumn[] = [
   { key: 'patient_name', label: '환자명', required: true },
   { key: 'phone_number', label: '전화번호', required: true },
   { key: 'chart_number', label: '차트번호', required: false },
@@ -25,6 +26,13 @@ const EXPECTED_COLUMNS: ParsedColumn[] = [
   { key: 'gender', label: '성별', required: false },
   { key: 'last_visit_date', label: '최종 내원일', required: false },
   { key: 'treatment_type', label: '시술 종류', required: false },
+  { key: 'notes', label: '비고', required: false }
+]
+
+const EXCLUDE_COLUMNS: ParsedColumn[] = [
+  { key: 'phone_number', label: '전화번호', required: true },
+  { key: 'patient_name', label: '환자명', required: false },
+  { key: 'chart_number', label: '차트번호', required: false },
   { key: 'notes', label: '비고', required: false }
 ]
 
@@ -92,7 +100,8 @@ const COLUMN_MAPPINGS: Record<string, keyof RecallPatientUploadData> = {
   'remark': 'notes'
 }
 
-export default function PatientFileUpload({ onUpload, onCancel, isLoading }: PatientFileUploadProps) {
+export default function PatientFileUpload({ onUpload, onCancel, isLoading, excludeMode }: PatientFileUploadProps) {
+  const COLUMNS = excludeMode ? EXCLUDE_COLUMNS : BASE_COLUMNS
   const [isDragging, setIsDragging] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
@@ -279,9 +288,16 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
   const convertToPatientData = useCallback((): RecallPatientUploadData[] | null => {
     // 필수 컬럼 확인
     const mappedKeys = Object.values(columnMapping)
-    if (!mappedKeys.includes('patient_name') || !mappedKeys.includes('phone_number')) {
-      setParseError('환자명과 전화번호 컬럼을 매핑해주세요.')
-      return null
+    if (excludeMode) {
+      if (!mappedKeys.includes('phone_number')) {
+        setParseError('전화번호 컬럼을 매핑해주세요.')
+        return null
+      }
+    } else {
+      if (!mappedKeys.includes('patient_name') || !mappedKeys.includes('phone_number')) {
+        setParseError('환자명과 전화번호 컬럼을 매핑해주세요.')
+        return null
+      }
     }
 
     const allRows = allParsedRowsRef.current
@@ -322,21 +338,35 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
         }
       })
 
-      // 필수 필드 검증
-      if (patient.patient_name && patient.phone_number) {
-        patients.push(patient as RecallPatientUploadData)
+      // 필수 필드 검증 (excludeMode: 전화번호만 필수)
+      if (excludeMode) {
+        if (patient.phone_number) {
+          if (!patient.patient_name) {
+            patient.patient_name = patient.phone_number // 이름 없으면 전화번호로 대체
+          }
+          patients.push(patient as RecallPatientUploadData)
+        } else {
+          invalidRows.push(index + 2)
+        }
       } else {
-        invalidRows.push(index + 2)
+        if (patient.patient_name && patient.phone_number) {
+          patients.push(patient as RecallPatientUploadData)
+        } else {
+          invalidRows.push(index + 2)
+        }
       }
     })
 
     if (invalidRows.length > 0 && patients.length === 0) {
-      setParseError('유효한 데이터가 없습니다. 환자명과 전화번호를 확인해주세요.')
+      setParseError(excludeMode
+        ? '유효한 데이터가 없습니다. 전화번호를 확인해주세요.'
+        : '유효한 데이터가 없습니다. 환자명과 전화번호를 확인해주세요.'
+      )
       return null
     }
 
     return patients
-  }, [columnMapping])
+  }, [columnMapping, excludeMode])
 
   // 업로드 처리
   const handleUpload = () => {
@@ -435,7 +465,7 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
               아래 컬럼명을 포함한 Excel 또는 CSV 파일을 업로드해주세요.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-              {EXPECTED_COLUMNS.map(col => (
+              {COLUMNS.map(col => (
                 <div key={col.key} className="flex items-center gap-1">
                   <span className={col.required ? 'text-red-500' : 'text-gray-400'}>
                     {col.required ? '*' : ''}
@@ -497,7 +527,7 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
                     className="flex-1 p-2 border border-gray-300 rounded-md text-sm"
                   >
                     <option value="">선택 안함</option>
-                    {EXPECTED_COLUMNS.map(col => (
+                    {COLUMNS.map(col => (
                       <option key={col.key} value={col.key}>
                         {col.label} {col.required ? '*' : ''}
                       </option>
@@ -555,7 +585,7 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading }: Pat
             </button>
             <button
               onClick={handleUpload}
-              disabled={isLoading || !Object.values(columnMapping).includes('patient_name') || !Object.values(columnMapping).includes('phone_number')}
+              disabled={isLoading || (!excludeMode && !Object.values(columnMapping).includes('patient_name')) || !Object.values(columnMapping).includes('phone_number')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isLoading ? (

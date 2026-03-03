@@ -320,46 +320,19 @@ export default function RecallManagement() {
     setIsUploading(true)
 
     try {
-      // 캠페인 생성 + 환자 일괄 등록 (신규 환자는 시스템에 추가)
-      const campaignName = filename.replace(/\.[^/.]+$/, '') || `리콜 제외 ${new Date().toLocaleDateString('ko-KR')}`
-      const newCampaign = await handleCreateCampaign(campaignName)
-      if (!newCampaign) {
-        setIsUploading(false)
-        return
-      }
-
-      const result = await recallService.patients.addPatientsBulk(
-        uploadedPatients,
-        newCampaign.id,
-        filename
-      )
+      const result = await recallService.patients.excludeFromFile(uploadedPatients, excludeUploadReason)
 
       if (result.success) {
-        // 전화번호 기준으로 제외 처리 (신규+기존 모두 포함)
-        const phoneNumbers = uploadedPatients
-          .map(p => p.phone_number)
-          .filter(Boolean)
-
-        if (phoneNumbers.length > 0) {
-          const excludeResult = await recallService.patients.excludeByPhoneNumbers(phoneNumbers, excludeUploadReason)
-
-          if (excludeResult.success) {
-            const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'
-            const parts: string[] = []
-            if (result.newCount > 0) parts.push(`신규 ${result.newCount}명`)
-            if (result.updatedCount > 0) parts.push(`기존 ${result.updatedCount}명`)
-            if (result.skippedCount > 0) parts.push(`건너뜀 ${result.skippedCount}명`)
-            showToast(`제외 환자(${label}) 등록 완료: ${parts.join(', ')} (총 ${excludeResult.count}명 제외)`, 'success')
-          } else {
-            showToast(excludeResult.error || '제외 처리에 실패했습니다.', 'error')
-          }
-        }
-
+        const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'
+        const parts: string[] = []
+        if (result.matchedCount > 0) parts.push(`기존 환자 ${result.matchedCount}명 제외`)
+        if (result.newCount > 0) parts.push(`미등록 ${result.newCount}명 사전 등록`)
+        showToast(`제외(${label}) 완료: ${parts.join(', ')}`, 'success')
         setShowExcludeUpload(false)
         loadPatients()
         loadStats()
       } else {
-        showToast(result.error || '환자 등록에 실패했습니다.', 'error')
+        showToast(result.error || '제외 처리에 실패했습니다.', 'error')
       }
     } catch (error) {
       console.error('Exclude upload error:', error)
@@ -658,6 +631,7 @@ export default function RecallManagement() {
                   onUpload={handleExcludeFileUpload}
                   onCancel={() => setShowExcludeUpload(false)}
                   isLoading={isUploading}
+                  excludeMode
                 />
               </div>
             )}
