@@ -100,6 +100,7 @@ export default function PatientList({
   const [sortField, setSortField] = useState<'patient_name' | 'status' | 'last_contact_date' | 'last_visit_date'>('patient_name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [showFilters, setShowFilters] = useState(false)
+  const [excludeDropdownId, setExcludeDropdownId] = useState<string | null>(null)
 
   // 정렬된 환자 목록
   const sortedPatients = useMemo(() => {
@@ -656,31 +657,37 @@ export default function PatientList({
                             <History className="w-5 h-5" />
                           </button>
                           {/* 제외 드롭다운 */}
-                          <div className="relative group">
+                          <div className="relative">
                             <button
                               title="리콜 제외"
+                              onClick={() => setExcludeDropdownId(excludeDropdownId === patient.id ? null : patient.id)}
                               className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                             >
                               <UserX className="w-5 h-5" />
                             </button>
-                            <div className="absolute right-0 top-full pt-1 z-30 hidden group-hover:block">
-                              <div className="w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
-                                <button
-                                  onClick={() => onExcludePatient(patient, 'family')}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
-                                >
-                                  <Heart className="w-4 h-4 text-amber-500" />
-                                  지인
-                                </button>
-                                <button
-                                  onClick={() => onExcludePatient(patient, 'unfavorable')}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
-                                >
-                                  <ShieldOff className="w-4 h-4 text-rose-500" />
-                                  비우호적
-                                </button>
-                              </div>
-                            </div>
+                            {excludeDropdownId === patient.id && (
+                              <>
+                                <div className="fixed inset-0 z-20" onClick={() => setExcludeDropdownId(null)} />
+                                <div className="absolute right-0 top-full mt-1 z-30">
+                                  <div className="w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                                    <button
+                                      onClick={() => { onExcludePatient(patient, 'family'); setExcludeDropdownId(null) }}
+                                      className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
+                                    >
+                                      <Heart className="w-4 h-4 text-amber-500" />
+                                      지인
+                                    </button>
+                                    <button
+                                      onClick={() => { onExcludePatient(patient, 'unfavorable'); setExcludeDropdownId(null) }}
+                                      className="w-full px-3 py-2 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
+                                    >
+                                      <ShieldOff className="w-4 h-4 text-rose-500" />
+                                      비우호적
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </>
                       )}

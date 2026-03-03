@@ -48,6 +48,7 @@ export default function RecallManagement() {
   const [showUpload, setShowUpload] = useState(false)
   const [showExcludeUpload, setShowExcludeUpload] = useState(false)
   const [excludeUploadReason, setExcludeUploadReason] = useState<RecallExcludeReason>('family')
+  const [showExcludeDropdown, setShowExcludeDropdown] = useState(false)
 
   // 데이터 상태
   const [patients, setPatients] = useState<RecallPatient[]>([])
@@ -515,9 +516,14 @@ export default function RecallManagement() {
                     )}
                   </div>
 
-                  {/* 일괄 제외 드롭다운 (항상 표시) */}
-                  <div className="relative group">
+                  {/* 일괄 제외 드롭다운 */}
+                  <div className="relative">
                     <button
+                      onClick={() => {
+                        if (selectedPatients.length > 0) {
+                          setShowExcludeDropdown(!showExcludeDropdown)
+                        }
+                      }}
                       className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
                         selectedPatients.length > 0
                           ? 'bg-rose-600 text-white hover:bg-rose-700 cursor-pointer'
@@ -528,30 +534,28 @@ export default function RecallManagement() {
                       제외 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
                       {selectedPatients.length > 0 && <ChevronDown className="w-3 h-3" />}
                     </button>
-                    {selectedPatients.length === 0 ? (
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
-                        환자를 선택한 후 클릭하세요
-                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
-                      </div>
-                    ) : (
-                      <div className="absolute left-0 top-full pt-1 z-30 hidden group-hover:block">
-                        <div className="w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
-                          <button
-                            onClick={() => handleBulkExclude('family')}
-                            className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
-                          >
-                            <Heart className="w-4 h-4 text-amber-500" />
-                            지인
-                          </button>
-                          <button
-                            onClick={() => handleBulkExclude('unfavorable')}
-                            className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
-                          >
-                            <ShieldOff className="w-4 h-4 text-rose-500" />
-                            비우호적
-                          </button>
+                    {showExcludeDropdown && selectedPatients.length > 0 && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setShowExcludeDropdown(false)} />
+                        <div className="absolute left-0 top-full mt-1 z-30">
+                          <div className="w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                            <button
+                              onClick={() => { handleBulkExclude('family'); setShowExcludeDropdown(false) }}
+                              className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
+                            >
+                              <Heart className="w-4 h-4 text-amber-500" />
+                              지인
+                            </button>
+                            <button
+                              onClick={() => { handleBulkExclude('unfavorable'); setShowExcludeDropdown(false) }}
+                              className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
+                            >
+                              <ShieldOff className="w-4 h-4 text-rose-500" />
+                              비우호적
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
                 </>
