@@ -324,30 +324,17 @@ export default function RecallManagement() {
 
   // 제외 환자 파일 업로드
   const handleExcludeFileUpload = async (uploadedPatients: RecallPatientUploadData[], filename: string) => {
-    // 매칭 모드 판단
-    const hasPhones = uploadedPatients.some(p => p.phone_number)
-    const hasNames = uploadedPatients.some(p => p.patient_name)
+    const hasAnyData = uploadedPatients.some(p => p.phone_number || p.patient_name || p.chart_number)
 
-    if (!hasPhones && !hasNames) {
-      showToast('전화번호 또는 환자명 데이터가 없습니다. 컬럼 매핑을 확인해주세요.', 'error')
+    if (!hasAnyData) {
+      showToast('전화번호, 환자명, 차트번호 중 하나 이상의 데이터가 필요합니다.', 'error')
       return
-    }
-
-    // 전화번호 없이 이름만으로 매칭할 경우 사용자 확인
-    if (!hasPhones && hasNames) {
-      const confirmed = window.confirm(
-        '전화번호 데이터가 없어 환자명으로만 매칭합니다.\n' +
-        '동명이인이 있는 경우 모두 제외 처리됩니다.\n\n' +
-        '계속하시겠습니까?'
-      )
-      if (!confirmed) return
     }
 
     setIsUploading(true)
 
     try {
-      const matchMode = hasPhones ? 'phone' as const : 'name' as const
-      const result = await recallService.patients.excludeFromFile(uploadedPatients, excludeUploadReason, matchMode)
+      const result = await recallService.patients.excludeFromFile(uploadedPatients, excludeUploadReason)
 
       if (result.success) {
         const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'

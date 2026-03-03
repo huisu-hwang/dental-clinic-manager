@@ -780,13 +780,12 @@ export const recallPatientService = {
     }
   },
 
-  // 제외 환자 파일 업로드 전용 (기존 환자 제외 + 미등록 환자 사전 등록)
-  // matchMode: 'phone' = 전화번호 매칭, 'name' = 환자명 매칭
+  // 제외 환자 파일 업로드 전용 (기존 환자 제외 + 미등록 환자는 수동 매칭용 반환)
+  // 업로드 데이터의 전화번호, 환자명, 차트번호를 모두 활용하여 매칭
   async excludeFromFile(
     uploadData: RecallPatientUploadData[],
-    excludeReason: RecallExcludeReason,
-    matchMode?: 'phone' | 'name'
-  ): Promise<{ success: boolean; matchedCount: number; newCount: number; unmatchedNames?: string[]; unmatchedPatients?: RecallPatientUploadData[]; error?: string }> {
+    excludeReason: RecallExcludeReason
+  ): Promise<{ success: boolean; matchedCount: number; newCount: number; unmatchedPatients?: RecallPatientUploadData[]; error?: string }> {
     const supabase = await ensureConnection()
     if (!supabase) return { success: false, matchedCount: 0, newCount: 0, error: 'Database connection not available' }
 
@@ -795,124 +794,129 @@ export const recallPatientService = {
 
     const BATCH_SIZE = 500
 
-    // 매칭 모드 자동 결정
-    const hasPhones = uploadData.some(p => p.phone_number)
-    const hasNames = uploadData.some(p => p.patient_name)
-    const mode = matchMode || (hasPhones ? 'phone' : 'name')
-
     try {
-      let matchedCount = 0
-      let newCount = 0
-      const unmatchedNames: string[] = []
+      // 1. 업로드 데이터에서 검색 키 수집
+      const phoneNumbers = [...new Set(uploadData.filter(p => p.phone_number).map(p => p.phone_number))]
+      const names = [...new Set(uploadData.filter(p => p.patient_name).map(p => p.patient_name))]
+      const chartNumbers = [...new Set(uploadData.filter(p => p.chart_number).map(p => p.chart_number!))]
+
+      // 2. 기존 환자 조회 (전화번호 OR 이름 OR 차트번호로 후보 조회)
+      const existingPatients: { id: string; phone_number: string; patient_name: string; chart_number?: string }[] = []
+
+      // 전화번호로 조회
+      for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
+        const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
+        const { data } = await supabase
+          .from('recall_patients')
+          .select('id, phone_number, patient_name, chart_number')
+          .eq('clinic_id', clinicId)
+          .in('phone_number', batch)
+        if (data) existingPatients.push(...data)
+      }
+
+      // 이름으로 조회 (전화번호로 이미 찾은 환자 제외)
+      const foundIds = new Set(existingPatients.map(p => p.id))
+      for (let i = 0; i < names.length; i += BATCH_SIZE) {
+        const batch = names.slice(i, i + BATCH_SIZE)
+        const { data } = await supabase
+          .from('recall_patients')
+          .select('id, phone_number, patient_name, chart_number')
+          .eq('clinic_id', clinicId)
+          .in('patient_name', batch)
+        if (data) {
+          for (const p of data) {
+            if (!foundIds.has(p.id)) {
+              existingPatients.push(p)
+              foundIds.add(p.id)
+            }
+          }
+        }
+      }
+
+      // 차트번호로 조회 (이미 찾은 환자 제외)
+      for (let i = 0; i < chartNumbers.length; i += BATCH_SIZE) {
+        const batch = chartNumbers.slice(i, i + BATCH_SIZE)
+        const { data } = await supabase
+          .from('recall_patients')
+          .select('id, phone_number, patient_name, chart_number')
+          .eq('clinic_id', clinicId)
+          .in('chart_number', batch)
+        if (data) {
+          for (const p of data) {
+            if (!foundIds.has(p.id)) {
+              existingPatients.push(p)
+              foundIds.add(p.id)
+            }
+          }
+        }
+      }
+
+      // 3. 업로드 데이터별 매칭 (전화번호 > 차트번호 > 이름 우선순위)
+      const matchedIds = new Set<string>()
       const unmatchedPatientsData: RecallPatientUploadData[] = []
 
-      if (mode === 'phone') {
-        // === 전화번호 기준 매칭 ===
-        const validData = uploadData.filter(p => p.phone_number)
-        const phoneNumbers = [...new Set(validData.map(p => p.phone_number))]
+      for (const uploaded of uploadData) {
+        if (!uploaded.phone_number && !uploaded.patient_name && !uploaded.chart_number) continue
 
-        // 1. 기존 환자 조회 (phone_number + patient_name 복합키)
-        const existingKeys = new Set<string>()
-        const compositeKey = (phone: string, name: string) => `${phone}::${name}`
+        let matched = false
 
-        for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
-          const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
-          const { data } = await supabase
-            .from('recall_patients')
-            .select('phone_number, patient_name')
-            .eq('clinic_id', clinicId)
-            .in('phone_number', batch)
-
-          if (data) data.forEach((p: { phone_number: string; patient_name: string }) =>
-            existingKeys.add(compositeKey(p.phone_number, p.patient_name))
-          )
-        }
-
-        // 2. 기존 환자 제외 처리 (전화번호 기준으로 모두 제외)
-        if (phoneNumbers.length > 0) {
-          for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
-            const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
-            const { data, error } = await supabase
-              .from('recall_patients')
-              .update({ exclude_reason: excludeReason })
-              .eq('clinic_id', clinicId)
-              .in('phone_number', batch)
-              .select('id')
-
-            if (error) throw error
-            matchedCount += data?.length || 0
+        // 전화번호 매칭 (가장 정확)
+        if (uploaded.phone_number) {
+          const phoneMatches = existingPatients.filter(p => p.phone_number === uploaded.phone_number)
+          if (phoneMatches.length > 0) {
+            // 이름도 일치하면 우선 선택
+            const exactMatch = uploaded.patient_name
+              ? phoneMatches.find(p => p.patient_name === uploaded.patient_name)
+              : null
+            const targets = exactMatch ? [exactMatch] : phoneMatches
+            targets.forEach(p => matchedIds.add(p.id))
+            matched = true
           }
         }
 
-        // 3. 미등록 환자 → 제외 상태로 사전 등록 (phone+name 복합키로 중복 방지)
-        const uniqueNew = new Map<string, RecallPatientUploadData>()
-        for (const p of validData) {
-          const key = compositeKey(p.phone_number, p.patient_name || p.phone_number)
-          if (!existingKeys.has(key)) {
-            uniqueNew.set(key, p)
+        // 차트번호 매칭
+        if (!matched && uploaded.chart_number) {
+          const chartMatches = existingPatients.filter(p => p.chart_number === uploaded.chart_number)
+          if (chartMatches.length > 0) {
+            chartMatches.forEach(p => matchedIds.add(p.id))
+            matched = true
           }
         }
 
-        // 미매칭 데이터 수집 (사전등록 전)
-        for (const p of uniqueNew.values()) {
-          unmatchedPatientsData.push(p)
-        }
-
-        if (uniqueNew.size > 0) {
-          const newRecords = Array.from(uniqueNew.values()).map(p => ({
-            patient_name: p.patient_name || p.phone_number,
-            phone_number: p.phone_number,
-            chart_number: p.chart_number || null,
-            clinic_id: clinicId,
-            status: 'pending' as PatientRecallStatus,
-            exclude_reason: excludeReason
-          }))
-
-          for (let i = 0; i < newRecords.length; i += BATCH_SIZE) {
-            const batch = newRecords.slice(i, i + BATCH_SIZE)
-            const { error } = await supabase
-              .from('recall_patients')
-              .insert(batch)
-
-            if (error) throw error
-            newCount += batch.length
+        // 이름 매칭 (가장 느슨)
+        if (!matched && uploaded.patient_name) {
+          const nameMatches = existingPatients.filter(p => p.patient_name === uploaded.patient_name)
+          if (nameMatches.length > 0) {
+            nameMatches.forEach(p => matchedIds.add(p.id))
+            matched = true
           }
         }
-      } else {
-        // === 환자명 기준 매칭 ===
-        const validData = uploadData.filter(p => p.patient_name)
-        const names = validData.map(p => p.patient_name)
 
-        for (let i = 0; i < names.length; i += BATCH_SIZE) {
-          const batch = names.slice(i, i + BATCH_SIZE)
-          const { data, error } = await supabase
-            .from('recall_patients')
-            .update({ exclude_reason: excludeReason })
-            .eq('clinic_id', clinicId)
-            .in('patient_name', batch)
-            .is('exclude_reason', null)
-            .select('id, patient_name')
-
-          if (error) throw error
-          const matchedNames = new Set(data?.map((p: { patient_name: string }) => p.patient_name) || [])
-          matchedCount += data?.length || 0
-
-          // 매칭되지 않은 이름 수집
-          batch.forEach(name => {
-            if (!matchedNames.has(name)) {
-              unmatchedNames.push(name)
-              const originalData = validData.find(p => p.patient_name === name)
-              if (originalData) unmatchedPatientsData.push(originalData)
-            }
-          })
+        if (!matched) {
+          unmatchedPatientsData.push(uploaded)
         }
+      }
+
+      // 4. 매칭된 환자 일괄 제외 처리
+      let matchedCount = 0
+      const matchedIdArray = Array.from(matchedIds)
+      for (let i = 0; i < matchedIdArray.length; i += BATCH_SIZE) {
+        const batch = matchedIdArray.slice(i, i + BATCH_SIZE)
+        const { data, error } = await supabase
+          .from('recall_patients')
+          .update({ exclude_reason: excludeReason })
+          .eq('clinic_id', clinicId)
+          .in('id', batch)
+          .select('id')
+
+        if (error) throw error
+        matchedCount += data?.length || 0
       }
 
       return {
         success: true,
         matchedCount,
-        newCount,
-        unmatchedNames: unmatchedNames.length > 0 ? unmatchedNames : undefined,
+        newCount: 0,
         unmatchedPatients: unmatchedPatientsData.length > 0 ? unmatchedPatientsData : undefined
       }
     } catch (error) {
