@@ -147,6 +147,7 @@ interface EnhancedTiptapEditorProps {
   onImageUpload?: (url: string) => void
   onMediaUpload?: (file: File) => Promise<{ url?: string; error?: string }>
   enableVideoUpload?: boolean
+  enableTable?: boolean
 }
 
 const isBrowser = typeof window !== 'undefined'
@@ -500,6 +501,7 @@ export default function EnhancedTiptapEditor({
   onImageUpload,
   onMediaUpload,
   enableVideoUpload = false,
+  enableTable = true,
 }: EnhancedTiptapEditorProps) {
   // 색상 팔레트 표시 상태
   const [showColorPicker, setShowColorPicker] = useState(false)
@@ -563,27 +565,29 @@ export default function EnhancedTiptapEditor({
           class: 'youtube-video rounded-lg'
         }
       }),
-      Table.configure({
-        resizable: true,
-        HTMLAttributes: {
-          class: 'protocol-table border-collapse border border-slate-300'
-        }
-      }),
-      TableRow.configure({
-        HTMLAttributes: {
-          class: 'border border-slate-300'
-        }
-      }),
-      TableHeader.configure({
-        HTMLAttributes: {
-          class: 'border border-slate-300 bg-slate-100 p-2 font-bold text-left'
-        }
-      }),
-      TableCell.configure({
-        HTMLAttributes: {
-          class: 'border border-slate-300 p-2'
-        }
-      }),
+      ...(enableTable ? [
+        Table.configure({
+          resizable: true,
+          HTMLAttributes: {
+            class: 'protocol-table border-collapse border border-slate-300'
+          }
+        }),
+        TableRow.configure({
+          HTMLAttributes: {
+            class: 'border border-slate-300'
+          }
+        }),
+        TableHeader.configure({
+          HTMLAttributes: {
+            class: 'border border-slate-300 bg-slate-100 p-2 font-bold text-left'
+          }
+        }),
+        TableCell.configure({
+          HTMLAttributes: {
+            class: 'border border-slate-300 p-2'
+          }
+        }),
+      ] : []),
       TaskList,
       TaskItem.configure({
         nested: true,
@@ -1064,14 +1068,16 @@ export default function EnhancedTiptapEditor({
               />
             </label>
           )}
-          <button
-            type="button"
-            onClick={addTable}
-            className="p-2 rounded hover:bg-slate-200 transition-colors"
-            title="표 삽입"
-          >
-            <TableCellsIcon className="h-4 w-4" />
-          </button>
+          {enableTable && (
+            <button
+              type="button"
+              onClick={addTable}
+              className="p-2 rounded hover:bg-slate-200 transition-colors"
+              title="표 삽입"
+            >
+              <TableCellsIcon className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={addWarningBox}
