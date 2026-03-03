@@ -27,7 +27,8 @@ import {
   Download,
   ChevronDown,
   ChevronRight,
-  MoreVertical
+  MoreVertical,
+  FolderInput
 } from 'lucide-react'
 import type { VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData } from '@/types'
 import PhoneDialSettingsModal from './PhoneDialSettingsModal'
@@ -108,8 +109,11 @@ export default function VendorContactManagement() {
   const [showPhoneSettings, setShowPhoneSettings] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+  const [showBulkMoveModal, setShowBulkMoveModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [isBulkMoving, setIsBulkMoving] = useState(false)
+  const [bulkMoveTargetCategory, setBulkMoveTargetCategory] = useState<string>('')
 
   // 전화 다이얼 설정 (DB에서 자동 로드)
   const { settings: phoneDialSettings } = usePhoneDialSettings()
@@ -380,6 +384,45 @@ export default function VendorContactManagement() {
       loadData()
     } else {
       showToast('삭제에 실패했습니다.', 'error')
+    }
+  }
+
+  // 선택 항목 일괄 카테고리 이동
+  const handleBulkMove = async () => {
+    if (selectedContacts.size === 0) return
+
+    setIsBulkMoving(true)
+    let successCount = 0
+    let failCount = 0
+
+    const categoryId = bulkMoveTargetCategory === '__uncategorized__' ? null : bulkMoveTargetCategory
+
+    for (const contactId of selectedContacts) {
+      try {
+        const result = await dataService.updateVendorContact(contactId, { category_id: categoryId || '' })
+        if (result.error) {
+          failCount++
+        } else {
+          successCount++
+        }
+      } catch {
+        failCount++
+      }
+    }
+
+    setIsBulkMoving(false)
+    setShowBulkMoveModal(false)
+    setBulkMoveTargetCategory('')
+    setSelectedContacts(new Set())
+
+    if (successCount > 0) {
+      const targetName = categoryId
+        ? categories.find(c => c.id === categoryId)?.name || '알 수 없음'
+        : '미분류'
+      showToast(`${successCount}개 업체가 "${targetName}"(으)로 이동되었습니다.${failCount > 0 ? ` (${failCount}개 실패)` : ''}`, 'success')
+      loadData()
+    } else {
+      showToast('카테고리 이동에 실패했습니다.', 'error')
     }
   }
 
@@ -1242,13 +1285,22 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 )}
               </div>
               {selectedContacts.size > 0 && (
-                <button
-                  onClick={() => setShowBulkDeleteConfirm(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  선택 삭제 ({selectedContacts.size})
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setBulkMoveTargetCategory(''); setShowBulkMoveModal(true) }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <FolderInput className="w-4 h-4" />
+                    카테고리 이동 ({selectedContacts.size})
+                  </button>
+                  <button
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    선택 삭제 ({selectedContacts.size})
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -2251,6 +2303,79 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   </>
                 ) : (
                   `${selectedContacts.size}개 삭제`
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 일괄 카테고리 이동 모달 */}
+      {showBulkMoveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <FolderInput className="w-5 h-5 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800">카테고리 이동</h3>
+            </div>
+            <p className="text-slate-600 mb-4">
+              선택한 <strong className="text-blue-600">{selectedContacts.size}개</strong> 업체를 이동할 카테고리를 선택하세요.
+            </p>
+            <div className="max-h-60 overflow-y-auto space-y-1 mb-6">
+              {/* 미분류 옵션 */}
+              <label className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                <input
+                  type="radio"
+                  name="bulkMoveCategory"
+                  value="__uncategorized__"
+                  checked={bulkMoveTargetCategory === '__uncategorized__'}
+                  onChange={(e) => setBulkMoveTargetCategory(e.target.value)}
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="w-3 h-3 rounded-full bg-slate-400 flex-shrink-0" />
+                <span className="text-sm text-slate-700">미분류</span>
+              </label>
+              {/* 카테고리 목록 */}
+              {categories.map(cat => (
+                <label key={cat.id} className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="bulkMoveCategory"
+                    value={cat.id}
+                    checked={bulkMoveTargetCategory === cat.id}
+                    onChange={(e) => setBulkMoveTargetCategory(e.target.value)}
+                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: cat.color }}
+                  />
+                  <span className="text-sm text-slate-700">{cat.name}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setShowBulkMoveModal(false); setBulkMoveTargetCategory('') }}
+                disabled={isBulkMoving}
+                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 disabled:opacity-50 rounded-lg transition-colors text-sm font-medium"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleBulkMove}
+                disabled={isBulkMoving || !bulkMoveTargetCategory}
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+              >
+                {isBulkMoving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    이동 중...
+                  </>
+                ) : (
+                  '이동'
                 )}
               </button>
             </div>

@@ -3668,12 +3668,15 @@ export const dataService = {
         return { error: '병원 정보를 찾을 수 없습니다.' }
       }
 
+      // 빈 문자열은 null로 변환 (UUID 타입에 빈 문자열 전달 시 오류 방지)
+      const updateData: Record<string, unknown> = { ...contactData, updated_at: new Date().toISOString() }
+      if ('category_id' in updateData) {
+        updateData.category_id = updateData.category_id || null
+      }
+
       const { error } = await supabase
         .from('vendor_contacts')
-        .update({
-          ...contactData,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', contactId)
         .eq('clinic_id', clinicId)
 
