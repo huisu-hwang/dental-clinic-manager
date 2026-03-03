@@ -802,18 +802,42 @@ export const recallPatientService = {
 
     const BATCH_SIZE = 500
 
+    // 전화번호 정규화 (숫자만 추출)
+    const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '')
+
+    // 전화번호의 다양한 형식 생성 (DB 형식 불일치 대비)
+    const phoneVariants = (phone: string): string[] => {
+      const digits = normalizePhone(phone)
+      if (!digits) return []
+      const variants = new Set<string>()
+      variants.add(digits) // 01012345678
+      variants.add(phone)  // 원본
+      // 하이픈 형식 생성
+      if (digits.length === 11) {
+        variants.add(`${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`)
+      } else if (digits.length === 10) {
+        variants.add(`${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`)
+      }
+      return Array.from(variants)
+    }
+
     try {
       // 1. 업로드 데이터에서 검색 키 수집
-      const phoneNumbers = [...new Set(uploadData.filter(p => p.phone_number).map(p => p.phone_number))]
+      const rawPhones = [...new Set(uploadData.filter(p => p.phone_number).map(p => p.phone_number))]
+      // 전화번호의 모든 형식 변형을 포함하여 검색
+      const phoneSearchSet = new Set<string>()
+      rawPhones.forEach(p => phoneVariants(p).forEach(v => phoneSearchSet.add(v)))
+      const phoneSearchList = Array.from(phoneSearchSet)
+
       const names = [...new Set(uploadData.filter(p => p.patient_name).map(p => p.patient_name))]
       const chartNumbers = [...new Set(uploadData.filter(p => p.chart_number).map(p => p.chart_number!))]
 
       // 2. 기존 환자 조회 (전화번호 OR 이름 OR 차트번호로 후보 조회)
       const existingPatients: { id: string; phone_number: string; patient_name: string; chart_number?: string }[] = []
 
-      // 전화번호로 조회
-      for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
-        const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
+      // 전화번호로 조회 (다양한 형식 포함)
+      for (let i = 0; i < phoneSearchList.length; i += BATCH_SIZE) {
+        const batch = phoneSearchList.slice(i, i + BATCH_SIZE)
         const { data } = await supabase
           .from('recall_patients')
           .select('id, phone_number, patient_name, chart_number')
@@ -867,8 +891,9 @@ export const recallPatientService = {
         if (!uploaded.phone_number && !uploaded.patient_name && !uploaded.chart_number) continue
 
         // 업로드 데이터에 포함된 모든 필드가 일치하는 기존 환자만 매칭
+        // 전화번호는 숫자만 추출하여 비교 (형식 차이 무시)
         const candidates = existingPatients.filter(p => {
-          if (uploaded.phone_number && p.phone_number !== uploaded.phone_number) return false
+          if (uploaded.phone_number && normalizePhone(p.phone_number) !== normalizePhone(uploaded.phone_number)) return false
           if (uploaded.patient_name && p.patient_name !== uploaded.patient_name) return false
           if (uploaded.chart_number && p.chart_number !== uploaded.chart_number) return false
           return true
