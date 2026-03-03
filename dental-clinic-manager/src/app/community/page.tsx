@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageCircle, Shield, Send } from 'lucide-react'
+import { MessageCircle, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
@@ -195,36 +195,26 @@ export default function CommunityPage() {
             {/* 메인 영역 */}
             <div className="flex-1 max-w-4xl">
               {/* 헤더 */}
-              <div className="sticky top-14 z-10 bg-gradient-to-r from-emerald-600 to-teal-600 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
+              <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
                       <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-base sm:text-lg font-bold text-white">커뮤니티</h2>
-                      <p className="text-emerald-100 text-xs sm:text-sm hidden sm:block">Community Board</p>
+                      <h2 className="text-base sm:text-lg font-bold text-white">자유게시판</h2>
+                      <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Free Board</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  {user?.role === 'master_admin' && (
                     <button
-                      onClick={() => router.push('/community/telegram')}
+                      onClick={() => router.push('/community/admin')}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors"
                     >
-                      <Send className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">텔레그램 모임</span>
-                      <span className="sm:hidden">모임</span>
+                      <Shield className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">관리</span>
                     </button>
-                    {user?.role === 'master_admin' && (
-                      <button
-                        onClick={() => router.push('/community/admin')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors"
-                      >
-                        <Shield className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">관리</span>
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
 
