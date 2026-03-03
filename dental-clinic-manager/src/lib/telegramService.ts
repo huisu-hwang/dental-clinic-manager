@@ -826,9 +826,6 @@ export const telegramBoardPostService = {
       const supabase = await ensureConnection()
       if (!supabase) throw new Error('Database connection failed')
 
-      // 조회수 RPC 호출
-      await (supabase as any).rpc('increment_telegram_post_view_count', { post_id: id })
-
       const { data, error } = await (supabase as any)
         .from('telegram_board_posts')
         .select('*, author:users!telegram_board_posts_created_by_fkey(name, email)')
@@ -839,6 +836,12 @@ export const telegramBoardPostService = {
 
       // 좋아요/스크랩 상태 확인
       const userId = getCurrentUserId()
+
+      // 조회수 증가 (작성자 본인은 1회만 - 본인이면 증가 안 함)
+      const isAuthor = userId && data?.created_by === userId
+      if (!isAuthor) {
+        await (supabase as any).rpc('increment_telegram_post_view_count', { post_id: id })
+      }
       let post = { ...data, is_liked: false, is_scraped: false }
 
       if (userId && data) {

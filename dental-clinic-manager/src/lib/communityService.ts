@@ -309,11 +309,14 @@ export const communityPostService = {
 
       if (error) throw error
 
-      // 조회수 증가
-      await (supabase as any).rpc('increment_community_post_view_count', { p_post_id: id })
-
       // 좋아요/북마크 상태 확인
       const userId = getCurrentUserId()
+
+      // 조회수 증가 (작성자 본인은 1회만 - 본인이면 증가 안 함)
+      const isAuthor = userId && data.profile?.user_id === userId
+      if (!isAuthor) {
+        await (supabase as any).rpc('increment_community_post_view_count', { p_post_id: id })
+      }
       let post = { ...data, is_liked: false, is_bookmarked: false }
 
       if (userId) {
