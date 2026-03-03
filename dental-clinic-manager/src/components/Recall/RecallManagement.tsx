@@ -352,8 +352,11 @@ export default function RecallManagement() {
           setUnmatchedExcludeReason(excludeUploadReason)
           setUnmatchedModalOpen(true)
 
+          const rulesPart = result.savedRulesCount ? ` (${result.savedRulesCount}명 자동 제외 규칙 저장)` : ''
           if (parts.length > 0) {
-            showToast(`제외(${label}): ${parts.join(', ')}. 미매칭 ${result.unmatchedPatients.length}명 수동 매칭이 필요합니다.`, 'warning')
+            showToast(`제외(${label}): ${parts.join(', ')}. 미매칭 ${result.unmatchedPatients.length}명 수동 매칭이 필요합니다.${rulesPart}`, 'warning')
+          } else {
+            showToast(`미매칭 ${result.unmatchedPatients.length}명 수동 매칭이 필요합니다.${rulesPart}`, 'warning')
           }
         } else if (parts.length > 0) {
           showToast(`제외(${label}) 완료: ${parts.join(', ')}`, 'success')

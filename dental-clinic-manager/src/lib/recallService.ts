@@ -575,8 +575,9 @@ export const recallPatientService = {
       const newPatients = Array.from(newPatientsMap.values())
       const updateTargets = Array.from(updateTargetsMap.values())
 
-      // 5. 신규 환자 일괄 삽입 (병렬 배치, .select() 제거로 응답 크기 축소)
+      // 5. 신규 환자 일괄 삽입 (병렬 배치)
       let newCount = 0
+      const newPatientIds: string[] = []
       if (newPatients.length > 0) {
         const newRecords = newPatients.map(p => ({
           ...p,
@@ -586,14 +587,21 @@ export const recallPatientService = {
         }))
 
         const insertResults = await runBatchesParallel(newRecords, WRITE_BATCH_SIZE, async (batch) => {
-          const { error: insertError } = await supabase
+          const { data, error: insertError } = await supabase
             .from('recall_patients')
             .insert(batch)
+            .select('id')
 
           if (insertError) throw insertError
+          if (data) data.forEach((p: { id: string }) => newPatientIds.push(p.id))
           return batch.length
         })
         newCount = insertResults.reduce((sum, n) => sum + n, 0)
+      }
+
+      // 5-1. 신규 환자에 제외 규칙 자동 적용
+      if (newPatientIds.length > 0) {
+        await recallExcludeRulesService.applyRulesToPatients(newPatientIds)
       }
 
       // 6. 기존 환자 정보 배치 업데이트 (병렬)
@@ -785,7 +793,7 @@ export const recallPatientService = {
   async excludeFromFile(
     uploadData: RecallPatientUploadData[],
     excludeReason: RecallExcludeReason
-  ): Promise<{ success: boolean; matchedCount: number; newCount: number; unmatchedPatients?: RecallPatientUploadData[]; error?: string }> {
+  ): Promise<{ success: boolean; matchedCount: number; newCount: number; savedRulesCount?: number; unmatchedPatients?: RecallPatientUploadData[]; error?: string }> {
     const supabase = await ensureConnection()
     if (!supabase) return { success: false, matchedCount: 0, newCount: 0, error: 'Database connection not available' }
 
@@ -851,48 +859,24 @@ export const recallPatientService = {
         }
       }
 
-      // 3. 업로드 데이터별 매칭 (전화번호 > 차트번호 > 이름 우선순위)
+      // 3. 업로드 데이터별 매칭 (업로드에 포함된 모든 필드가 일치해야 매칭)
       const matchedIds = new Set<string>()
       const unmatchedPatientsData: RecallPatientUploadData[] = []
 
       for (const uploaded of uploadData) {
         if (!uploaded.phone_number && !uploaded.patient_name && !uploaded.chart_number) continue
 
-        let matched = false
+        // 업로드 데이터에 포함된 모든 필드가 일치하는 기존 환자만 매칭
+        const candidates = existingPatients.filter(p => {
+          if (uploaded.phone_number && p.phone_number !== uploaded.phone_number) return false
+          if (uploaded.patient_name && p.patient_name !== uploaded.patient_name) return false
+          if (uploaded.chart_number && p.chart_number !== uploaded.chart_number) return false
+          return true
+        })
 
-        // 전화번호 매칭 (가장 정확)
-        if (uploaded.phone_number) {
-          const phoneMatches = existingPatients.filter(p => p.phone_number === uploaded.phone_number)
-          if (phoneMatches.length > 0) {
-            // 이름도 일치하면 우선 선택
-            const exactMatch = uploaded.patient_name
-              ? phoneMatches.find(p => p.patient_name === uploaded.patient_name)
-              : null
-            const targets = exactMatch ? [exactMatch] : phoneMatches
-            targets.forEach(p => matchedIds.add(p.id))
-            matched = true
-          }
-        }
-
-        // 차트번호 매칭
-        if (!matched && uploaded.chart_number) {
-          const chartMatches = existingPatients.filter(p => p.chart_number === uploaded.chart_number)
-          if (chartMatches.length > 0) {
-            chartMatches.forEach(p => matchedIds.add(p.id))
-            matched = true
-          }
-        }
-
-        // 이름 매칭 (가장 느슨)
-        if (!matched && uploaded.patient_name) {
-          const nameMatches = existingPatients.filter(p => p.patient_name === uploaded.patient_name)
-          if (nameMatches.length > 0) {
-            nameMatches.forEach(p => matchedIds.add(p.id))
-            matched = true
-          }
-        }
-
-        if (!matched) {
+        if (candidates.length > 0) {
+          candidates.forEach(p => matchedIds.add(p.id))
+        } else {
           unmatchedPatientsData.push(uploaded)
         }
       }
@@ -913,10 +897,20 @@ export const recallPatientService = {
         matchedCount += data?.length || 0
       }
 
+      // 5. 미매칭 환자를 제외 규칙으로 저장 (추후 자동 매칭용)
+      let savedRulesCount = 0
+      if (unmatchedPatientsData.length > 0) {
+        const rulesResult = await recallExcludeRulesService.saveRules(unmatchedPatientsData, excludeReason)
+        if (rulesResult.success) {
+          savedRulesCount = rulesResult.savedCount
+        }
+      }
+
       return {
         success: true,
         matchedCount,
         newCount: 0,
+        savedRulesCount,
         unmatchedPatients: unmatchedPatientsData.length > 0 ? unmatchedPatientsData : undefined
       }
     } catch (error) {
@@ -1542,12 +1536,121 @@ export const aligoSettingsService = {
 // Combined Export
 // ========================================
 
+// ========================================
+// Recall Exclude Rules Service
+// ========================================
+export const recallExcludeRulesService = {
+  // 미매칭 제외 환자를 규칙으로 저장
+  async saveRules(
+    unmatchedPatients: RecallPatientUploadData[],
+    excludeReason: RecallExcludeReason
+  ): Promise<{ success: boolean; savedCount: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, savedCount: 0, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, savedCount: 0, error: 'Clinic ID not found' }
+
+    try {
+      const rules = unmatchedPatients
+        .filter(p => p.patient_name || p.phone_number || p.chart_number)
+        .map(p => ({
+          clinic_id: clinicId,
+          patient_name: p.patient_name || null,
+          phone_number: p.phone_number || null,
+          chart_number: p.chart_number || null,
+          exclude_reason: excludeReason
+        }))
+
+      if (rules.length === 0) return { success: true, savedCount: 0 }
+
+      const { error } = await supabase
+        .from('recall_exclude_rules')
+        .insert(rules)
+
+      if (error) throw error
+      return { success: true, savedCount: rules.length }
+    } catch (error) {
+      return { success: false, savedCount: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 새로 등록된 환자들에 대해 제외 규칙 적용
+  async applyRulesToPatients(
+    patientIds: string[]
+  ): Promise<{ success: boolean; appliedCount: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, appliedCount: 0, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, appliedCount: 0, error: 'Clinic ID not found' }
+
+    try {
+      // 1. 활성 규칙 조회
+      const { data: rules, error: rulesError } = await supabase
+        .from('recall_exclude_rules')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+
+      if (rulesError) throw rulesError
+      if (!rules || rules.length === 0) return { success: true, appliedCount: 0 }
+
+      // 2. 새로 등록된 환자 정보 조회
+      const BATCH_SIZE = 500
+      const newPatients: { id: string; patient_name: string; phone_number: string; chart_number?: string }[] = []
+      for (let i = 0; i < patientIds.length; i += BATCH_SIZE) {
+        const batch = patientIds.slice(i, i + BATCH_SIZE)
+        const { data } = await supabase
+          .from('recall_patients')
+          .select('id, patient_name, phone_number, chart_number')
+          .in('id', batch)
+        if (data) newPatients.push(...data)
+      }
+
+      // 3. 규칙별 매칭 (규칙의 모든 필드가 환자와 일치해야 적용)
+      let appliedCount = 0
+      for (const rule of rules) {
+        for (const patient of newPatients) {
+          let allMatch = true
+          if (rule.patient_name && patient.patient_name !== rule.patient_name) allMatch = false
+          if (rule.phone_number && patient.phone_number !== rule.phone_number) allMatch = false
+          if (rule.chart_number && patient.chart_number !== rule.chart_number) allMatch = false
+
+          if (allMatch) {
+            // 환자 제외 처리
+            const { error: updateError } = await supabase
+              .from('recall_patients')
+              .update({ exclude_reason: rule.exclude_reason })
+              .eq('id', patient.id)
+
+            if (!updateError) {
+              // 규칙 매칭 완료 처리
+              await supabase
+                .from('recall_exclude_rules')
+                .update({ is_active: false, matched_at: new Date().toISOString(), matched_patient_id: patient.id })
+                .eq('id', rule.id)
+
+              appliedCount++
+            }
+          }
+        }
+      }
+
+      return { success: true, appliedCount }
+    } catch (error) {
+      return { success: false, appliedCount: 0, error: extractErrorMessage(error) }
+    }
+  }
+}
+
 export const recallService = {
   campaigns: recallCampaignService,
   patients: recallPatientService,
   contactLogs: recallContactLogService,
   smsTemplates: recallSmsTemplateService,
-  aligoSettings: aligoSettingsService
+  aligoSettings: aligoSettingsService,
+  excludeRules: recallExcludeRulesService
 }
 
 export default recallService
