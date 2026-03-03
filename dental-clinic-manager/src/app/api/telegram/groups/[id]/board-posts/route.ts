@@ -19,7 +19,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { userId, title, content, notifyTelegram } = body
+    const { userId, title, content, notifyTelegram, fileUrls } = body
 
     if (!userId || !title || !content) {
       return NextResponse.json({ data: null, error: '필수 항목이 누락되었습니다.' }, { status: 400 })
@@ -57,7 +57,7 @@ export async function POST(
         content,
         created_by: userId,
         source_message_ids: [],
-        file_urls: [],
+        file_urls: fileUrls || [],
         link_urls: [],
       })
       .select()

@@ -2,7 +2,7 @@
 
 import { useEditor, EditorContent } from '@tiptap/react'
 import { useCallback, useEffect, useState } from 'react'
-import { Extension } from '@tiptap/core'
+import { Extension, Node, mergeAttributes } from '@tiptap/core'
 
 import StarterKit from '@tiptap/starter-kit'
 import Heading from '@tiptap/extension-heading'
@@ -31,12 +31,51 @@ import {
   CodeBracketIcon,
   PhotoIcon,
   VideoCameraIcon,
+  FilmIcon,
   TableCellsIcon,
   ExclamationTriangleIcon,
   ArrowUturnLeftIcon,
   ArrowUturnRightIcon,
   Bars3Icon
 } from '@heroicons/react/24/outline'
+
+// 커스텀 Video 노드 익스텐션
+const VideoNode = Node.create({
+  name: 'video',
+  group: 'block',
+  atom: true,
+
+  addAttributes() {
+    return {
+      src: { default: null },
+      controls: { default: true },
+      width: { default: '100%' },
+    }
+  },
+
+  parseHTML() {
+    return [{ tag: 'video' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['video', mergeAttributes(HTMLAttributes, {
+      controls: true,
+      class: 'rounded-lg max-w-full',
+      style: `width: ${HTMLAttributes.width || '100%'}`,
+    })]
+  },
+
+  addCommands() {
+    return {
+      setVideo: (options: { src: string }) => ({ commands }: any) => {
+        return commands.insertContent({
+          type: this.name,
+          attrs: options,
+        })
+      },
+    } as any
+  },
+})
 
 // 줄간격 커스텀 익스텐션
 declare module '@tiptap/core' {
@@ -106,6 +145,8 @@ interface EnhancedTiptapEditorProps {
   placeholder?: string
   editable?: boolean
   onImageUpload?: (url: string) => void
+  onMediaUpload?: (file: File) => Promise<{ url?: string; error?: string }>
+  enableVideoUpload?: boolean
 }
 
 const isBrowser = typeof window !== 'undefined'
@@ -456,12 +497,16 @@ export default function EnhancedTiptapEditor({
   onChange,
   placeholder = '프로토콜 내용을 작성하세요...',
   editable = true,
-  onImageUpload
+  onImageUpload,
+  onMediaUpload,
+  enableVideoUpload = false,
 }: EnhancedTiptapEditorProps) {
   // 색상 팔레트 표시 상태
   const [showColorPicker, setShowColorPicker] = useState(false)
   // 줄간격 드롭다운 표시 상태
   const [showLineHeightPicker, setShowLineHeightPicker] = useState(false)
+  // 비디오 업로드 중 상태
+  const [videoUploading, setVideoUploading] = useState(false)
 
   // Tiptap Editor 설정
   const editor = useEditor({
@@ -549,7 +594,8 @@ export default function EnhancedTiptapEditor({
       Placeholder.configure({
         placeholder,
         emptyEditorClass: 'is-editor-empty'
-      })
+      }),
+      ...(enableVideoUpload ? [VideoNode] : []),
     ],
     content,
     editable,
@@ -566,6 +612,10 @@ export default function EnhancedTiptapEditor({
           const file = event.dataTransfer.files[0]
           if (file.type.startsWith('image/')) {
             handleImageUpload(file)
+            return true
+          }
+          if (enableVideoUpload && (file.type === 'video/mp4' || file.type === 'video/webm')) {
+            handleVideoUpload(file)
             return true
           }
         }
@@ -643,8 +693,10 @@ export default function EnhancedTiptapEditor({
     const tempUrl = URL.createObjectURL(file)
     editor.chain().focus().setImage({ src: tempUrl }).run()
 
-    // 실제 업로드
-    const result = await mediaService.uploadProtocolImage(file)
+    // 실제 업로드 (onMediaUpload prop이 있으면 사용, 없으면 기본 mediaService)
+    const result = onMediaUpload
+      ? await onMediaUpload(file)
+      : await mediaService.uploadProtocolImage(file)
     const uploadedUrl = result.url
 
     if (uploadedUrl) {
@@ -673,20 +725,43 @@ export default function EnhancedTiptapEditor({
     }
 
     URL.revokeObjectURL(tempUrl)
-  }, [editor, onImageUpload])
+  }, [editor, onImageUpload, onMediaUpload])
+
+  // 동영상 업로드 핸들러
+  const handleVideoUpload = useCallback(async (file: File) => {
+    if (!editor || !onMediaUpload) return
+
+    setVideoUploading(true)
+    try {
+      const result = await onMediaUpload(file)
+      if (result.url) {
+        editor.chain().focus().insertContent({
+          type: 'video',
+          attrs: { src: result.url },
+        }).run()
+      } else {
+        alert(result.error || '동영상 업로드에 실패했습니다.')
+      }
+    } finally {
+      setVideoUploading(false)
+    }
+  }, [editor, onMediaUpload])
 
   // 파일 드롭존 설정
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles) => {
-      const imageFile = acceptedFiles.find(file => file.type.startsWith('image/'))
-      if (imageFile) {
-        await handleImageUpload(imageFile)
+      for (const file of acceptedFiles) {
+        if (file.type.startsWith('image/')) {
+          await handleImageUpload(file)
+        } else if (enableVideoUpload && (file.type === 'video/mp4' || file.type === 'video/webm')) {
+          await handleVideoUpload(file)
+        }
       }
     },
     noClick: true,
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp']
-    }
+    accept: enableVideoUpload
+      ? { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'], 'video/*': ['.mp4', '.webm'] }
+      : { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'] }
   })
 
   // YouTube URL 추가
@@ -974,6 +1049,21 @@ export default function EnhancedTiptapEditor({
           >
             <VideoCameraIcon className="h-4 w-4" />
           </button>
+          {enableVideoUpload && (
+            <label className={`p-2 rounded hover:bg-slate-200 cursor-pointer transition-colors flex items-center justify-center ${videoUploading ? 'opacity-50 pointer-events-none' : ''}`} title="동영상 파일 업로드">
+              <FilmIcon className="h-4 w-4" />
+              <input
+                type="file"
+                accept="video/mp4,video/webm"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (file) await handleVideoUpload(file)
+                  e.target.value = ''
+                }}
+              />
+            </label>
+          )}
           <button
             type="button"
             onClick={addTable}
@@ -1024,7 +1114,7 @@ export default function EnhancedTiptapEditor({
           <div className="absolute inset-0 flex items-center justify-center bg-blue-100 bg-opacity-50 pointer-events-none">
             <div className="bg-white p-4 rounded-lg shadow-lg">
               <PhotoIcon className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <p className="text-blue-600 font-medium">이미지를 여기에 드롭하세요</p>
+              <p className="text-blue-600 font-medium">{enableVideoUpload ? '이미지/동영상을 여기에 드롭하세요' : '이미지를 여기에 드롭하세요'}</p>
             </div>
           </div>
         )}

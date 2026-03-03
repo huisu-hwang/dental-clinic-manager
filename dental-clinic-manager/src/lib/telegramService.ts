@@ -581,6 +581,39 @@ export const telegramMemberService = {
       return { data: null, error: extractErrorMessage(error) }
     }
   },
+
+  /**
+   * 사용자 검색 (멤버 초대용) — 기존 멤버 제외
+   */
+  async searchUsersForInvite(
+    query: string,
+    groupId: string
+  ): Promise<{ data: { id: string; name: string; email: string }[]; error: string | null }> {
+    try {
+      if (query.trim().length < 2) {
+        return { data: [], error: null }
+      }
+
+      const userId = getCurrentUserId()
+      const res = await fetch(
+        `/api/users/search?q=${encodeURIComponent(query)}&groupId=${encodeURIComponent(groupId)}`,
+        {
+          headers: userId ? { 'x-user-id': userId } : {},
+        }
+      )
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || '사용자 검색에 실패했습니다.')
+      }
+
+      const { data } = await res.json()
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[telegramMemberService.searchUsersForInvite] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
 }
 
 // =====================================================
@@ -854,6 +887,7 @@ export const telegramBoardPostService = {
           title: dto.title,
           content: dto.content,
           notifyTelegram: dto.notify_telegram ?? false,
+          fileUrls: dto.file_urls ?? [],
         }),
       })
 
@@ -881,7 +915,12 @@ export const telegramBoardPostService = {
       const res = await fetch(`/api/telegram/board-posts/${postId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, ...dto }),
+        body: JSON.stringify({
+          userId,
+          title: dto.title,
+          content: dto.content,
+          fileUrls: dto.file_urls,
+        }),
       })
 
       const result = await res.json()

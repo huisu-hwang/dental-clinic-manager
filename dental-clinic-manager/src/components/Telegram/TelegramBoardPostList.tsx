@@ -149,12 +149,13 @@ export default function TelegramBoardPostList({
   }
 
   // 폼 제출 (생성/수정)
-  const handleFormSubmit = async (data: { title: string; content: string; notifyTelegram: boolean }) => {
+  const handleFormSubmit = async (data: { title: string; content: string; notifyTelegram: boolean; fileUrls: { url: string; name: string; type?: string; size?: number }[] }) => {
     if (formMode === 'create') {
       const { error } = await telegramBoardPostService.createPost(groupId, {
         title: data.title,
         content: data.content,
         notify_telegram: data.notifyTelegram,
+        file_urls: data.fileUrls,
       })
       if (error) {
         alert(error)
@@ -164,6 +165,7 @@ export default function TelegramBoardPostList({
       const { error } = await telegramBoardPostService.updatePost(editingPost.id, {
         title: data.title,
         content: data.content,
+        file_urls: data.fileUrls,
       })
       if (error) {
         alert(error)

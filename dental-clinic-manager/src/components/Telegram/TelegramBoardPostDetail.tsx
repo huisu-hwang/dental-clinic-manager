@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { ArrowLeft, Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar, PenLine, Pencil, Trash2, Vote } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { TelegramBoardPost } from '@/types/telegram'
@@ -8,6 +8,7 @@ import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/te
 import TelegramBoardCommentSection from './TelegramBoardCommentSection'
 import TelegramBoardPostActions from './TelegramBoardPostActions'
 import ContributionVoteDisplay from './ContributionVoteDisplay'
+import LinkPreviewCard from './LinkPreviewCard'
 import { telegramBoardPostService } from '@/lib/telegramService'
 
 interface TelegramBoardPostDetailProps {
@@ -49,6 +50,26 @@ export default function TelegramBoardPostDetail({
       setScrapCount(data.scrap_count)
     }
   }
+
+  // 본문에서 링크 추출 (link_urls + content 내 a 태그)
+  const extractedLinks = useMemo(() => {
+    const links = new Set<string>()
+    // link_urls에서
+    post.link_urls?.forEach(l => links.add(l.url))
+    // content HTML에서 a 태그 추출
+    if (post.content) {
+      const regex = /<a[^>]+href=["']([^"']+)["']/gi
+      let match
+      while ((match = regex.exec(post.content)) !== null) {
+        const href = match[1]
+        // 외부 링크만 (내부 앵커 제외)
+        if (href.startsWith('http://') || href.startsWith('https://')) {
+          links.add(href)
+        }
+      }
+    }
+    return Array.from(links).slice(0, 5) // 최대 5개
+  }, [post.content, post.link_urls])
 
   const canModify = post.post_type === 'general' && (
     post.created_by === currentUserId || isMasterAdmin
@@ -203,9 +224,19 @@ export default function TelegramBoardPostDetail({
                 prose-headings:text-gray-900 prose-headings:font-semibold
                 prose-h3:text-base prose-h3:mt-4 prose-h3:mb-2
                 prose-ul:my-2 prose-li:my-0.5
-                prose-p:my-2 prose-a:text-blue-600"
+                prose-p:my-2 prose-a:text-blue-600
+                [&_video]:rounded-lg [&_video]:max-w-full [&_video]:my-4"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
+          )}
+
+          {/* 링크 미리보기 */}
+          {extractedLinks.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {extractedLinks.map((link, i) => (
+                <LinkPreviewCard key={i} url={link} />
+              ))}
+            </div>
           )}
 
           {/* 기여도 투표 표시 */}

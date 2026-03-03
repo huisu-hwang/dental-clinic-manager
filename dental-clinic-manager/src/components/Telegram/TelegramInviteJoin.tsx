@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Users, Loader2, CheckCircle, AlertCircle, Send } from 'lucide-react'
+import { Users, Loader2, CheckCircle, AlertCircle, Send, LogIn, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -13,24 +13,24 @@ interface TelegramInviteJoinProps {
 export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinProps) {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
-  const [groupInfo, setGroupInfo] = useState<{ board_title: string; board_description: string | null; board_slug: string } | null>(null)
+  const [groupInfo, setGroupInfo] = useState<{ board_title: string; board_description: string | null; board_slug: string; requiresAuth?: boolean } | null>(null)
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [joined, setJoined] = useState(false)
 
-  // 초대 링크 검증
+  // 초대 링크 검증 — 비로그인도 그룹 정보 조회 가능
   useEffect(() => {
     if (authLoading) return
-    if (!user) {
-      // 비로그인 → 로그인 후 돌아오기
-      router.push(`/?redirect=/community/telegram/join/${inviteCode}`)
-      return
-    }
 
     const validateInvite = async () => {
       try {
-        const res = await fetch(`/api/telegram/join/${inviteCode}`)
+        const headers: Record<string, string> = {}
+        if (user?.id) {
+          headers['x-user-id'] = user.id
+        }
+
+        const res = await fetch(`/api/telegram/join/${inviteCode}`, { headers })
         const data = await res.json()
         if (!res.ok) {
           if (data.alreadyMember) {
@@ -118,6 +118,9 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
     )
   }
 
+  // 비로그인 사용자: 그룹 정보 + 로그인/회원가입 안내
+  const isNotLoggedIn = !user || groupInfo?.requiresAuth
+
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
       <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -147,19 +150,41 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
             <span>가입하면 이 모임의 게시판을 열람할 수 있습니다</span>
           </div>
 
-          <Button
-            onClick={handleJoin}
-            disabled={joining}
-            className="w-full bg-sky-500 hover:bg-sky-600 text-white"
-          >
-            {joining ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />가입 처리 중...
-              </>
-            ) : (
-              '가입하기'
-            )}
-          </Button>
+          {isNotLoggedIn ? (
+            /* 비로그인: 로그인/회원가입 안내 */
+            <div className="space-y-3">
+              <Button
+                onClick={() => router.push(`/?redirect=/community/telegram/join/${inviteCode}`)}
+                className="w-full bg-sky-500 hover:bg-sky-600 text-white"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                로그인하고 가입하기
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/?show=signup&redirect=/community/telegram/join/${inviteCode}`)}
+                className="w-full"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                계정이 없으신가요? 회원가입
+              </Button>
+            </div>
+          ) : (
+            /* 로그인 상태: 가입 버튼 */
+            <Button
+              onClick={handleJoin}
+              disabled={joining}
+              className="w-full bg-sky-500 hover:bg-sky-600 text-white"
+            >
+              {joining ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />가입 처리 중...
+                </>
+              ) : (
+                '가입하기'
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>

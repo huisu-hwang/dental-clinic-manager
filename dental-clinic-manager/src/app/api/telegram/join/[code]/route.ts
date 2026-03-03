@@ -1,6 +1,6 @@
 /**
  * Telegram Join via Invite Code API
- * GET  /api/telegram/join/[code] - 초대 코드 유효성 확인 및 그룹 정보 반환 (인증된 사용자)
+ * GET  /api/telegram/join/[code] - 초대 코드 유효성 확인 및 그룹 정보 반환 (비인증도 허용)
  * POST /api/telegram/join/[code] - 초대 코드로 그룹 참가 (인증된 사용자)
  */
 
@@ -18,10 +18,8 @@ export async function GET(
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
+    // userId는 선택적 — 비로그인도 그룹 정보 조회 가능
     const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
-    if (!userId) {
-      return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
-    }
 
     // 초대 링크 조회 (그룹 정보 포함)
     const { data: link, error: linkError } = await supabase
@@ -52,26 +50,29 @@ export async function GET(
 
     const group = link.telegram_groups as any
 
-    // 이미 멤버인지 확인
-    const { data: existing } = await supabase
-      .from('telegram_group_members')
-      .select('id')
-      .eq('telegram_group_id', link.telegram_group_id)
-      .eq('user_id', userId)
-      .maybeSingle()
+    // userId가 있으면 멤버 확인, 없으면 requiresAuth 반환
+    if (userId) {
+      const { data: existing } = await supabase
+        .from('telegram_group_members')
+        .select('id')
+        .eq('telegram_group_id', link.telegram_group_id)
+        .eq('user_id', userId)
+        .maybeSingle()
 
-    if (existing) {
-      return NextResponse.json(
-        { error: '이미 그룹 멤버입니다.', alreadyMember: true, boardSlug: group?.board_slug },
-        { status: 409 }
-      )
+      if (existing) {
+        return NextResponse.json(
+          { error: '이미 그룹 멤버입니다.', alreadyMember: true, boardSlug: group?.board_slug },
+          { status: 409 }
+        )
+      }
     }
 
-    // 컴포넌트가 필요한 그룹 정보만 반환
+    // 그룹 정보 반환 (비인증 시 requiresAuth: true 추가)
     return NextResponse.json({
       board_title: group?.board_title ?? null,
       board_description: group?.board_description ?? null,
       board_slug: group?.board_slug ?? null,
+      requiresAuth: !userId,
     })
   } catch (error) {
     console.error('[GET /api/telegram/join/[code]] Error:', error)

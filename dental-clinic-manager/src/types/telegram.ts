@@ -182,12 +182,14 @@ export interface CreateTelegramBoardPostDto {
   title: string
   content: string
   notify_telegram?: boolean
+  file_urls?: { url: string; name: string; type?: string; size?: number }[]
 }
 
 // 게시글 수정 DTO
 export interface UpdateTelegramBoardPostDto {
   title?: string
   content?: string
+  file_urls?: { url: string; name: string; type?: string; size?: number }[]
 }
 
 // 댓글 작성 DTO

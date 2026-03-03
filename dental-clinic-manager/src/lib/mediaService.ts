@@ -111,6 +111,130 @@ export const mediaService = {
   },
 
   /**
+   * 텔레그램 게시판 미디어 업로드 (이미지/동영상 - 본문 삽입용)
+   */
+  async uploadTelegramBoardMedia(file: File): Promise<UploadResult> {
+    try {
+      const supabase = createClient()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        return { error: '로그인이 필요합니다.' }
+      }
+
+      // 파일 검증
+      const isImage = file.type.startsWith('image/')
+      const isVideo = file.type === 'video/mp4' || file.type === 'video/webm'
+      if (!isImage && !isVideo) {
+        return { error: '지원하지 않는 파일 형식입니다. (이미지 또는 MP4/WebM 동영상만 가능)' }
+      }
+
+      const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+      if (file.size > maxSize) {
+        return { error: isVideo ? '동영상 크기는 50MB를 초과할 수 없습니다.' : '이미지 크기는 10MB를 초과할 수 없습니다.' }
+      }
+
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 15)
+      const fileExt = file.name.split('.').pop()
+      const fileName = `telegram-board/${timestamp}_${randomString}.${fileExt}`
+
+      const { data, error } = await supabase.storage
+        .from('protocol-media')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (error) {
+        console.error('[MediaService] Telegram board media upload error:', error)
+        return { error: '파일 업로드에 실패했습니다.' }
+      }
+
+      if (!data) {
+        return { error: '업로드 결과를 가져오지 못했습니다.' }
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('protocol-media')
+        .getPublicUrl(data.path)
+
+      if (!publicUrlData) {
+        return { error: '파일 URL을 생성하지 못했습니다.' }
+      }
+
+      return { url: publicUrlData.publicUrl }
+    } catch (error) {
+      console.error('[MediaService] Telegram board media upload error:', error)
+      return { error: '파일 업로드 중 오류가 발생했습니다.' }
+    }
+  },
+
+  /**
+   * 텔레그램 게시판 첨부 파일 업로드 (일반 파일)
+   */
+  async uploadTelegramBoardFile(file: File): Promise<UploadResult & { name?: string; size?: number; type?: string }> {
+    try {
+      const supabase = createClient()
+      if (!supabase) {
+        return { error: 'Supabase client not available' }
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        return { error: '로그인이 필요합니다.' }
+      }
+
+      const maxSize = 50 * 1024 * 1024
+      if (file.size > maxSize) {
+        return { error: '파일 크기는 50MB를 초과할 수 없습니다.' }
+      }
+
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 15)
+      const fileExt = file.name.split('.').pop()
+      const fileName = `telegram-board-files/${timestamp}_${randomString}.${fileExt}`
+
+      const { data, error } = await supabase.storage
+        .from('bulletin-files')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (error) {
+        console.error('[MediaService] Telegram board file upload error:', error)
+        return { error: '파일 업로드에 실패했습니다.' }
+      }
+
+      if (!data) {
+        return { error: '업로드 결과를 가져오지 못했습니다.' }
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('bulletin-files')
+        .getPublicUrl(data.path)
+
+      if (!publicUrlData) {
+        return { error: '파일 URL을 생성하지 못했습니다.' }
+      }
+
+      return {
+        url: publicUrlData.publicUrl,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      }
+    } catch (error) {
+      console.error('[MediaService] Telegram board file upload error:', error)
+      return { error: '파일 업로드 중 오류가 발생했습니다.' }
+    }
+  },
+
+  /**
    * 여러 이미지 URL 추출 (콘텐츠에서)
    */
   extractImageUrls(content: string): string[] {

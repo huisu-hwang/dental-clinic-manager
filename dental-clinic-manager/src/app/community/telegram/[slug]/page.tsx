@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { Send, Loader2, ShieldAlert, ChevronLeft } from 'lucide-react'
+import { Send, Loader2, ShieldAlert, ChevronLeft, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { Button } from '@/components/ui/Button'
 import TelegramBoardPostList from '@/components/Telegram/TelegramBoardPostList'
+import TelegramBoardMemberPanel from '@/components/Telegram/TelegramBoardMemberPanel'
 import { telegramGroupService, telegramMemberService } from '@/lib/telegramService'
 import { getTabRoute } from '@/utils/tabRouting'
 import type { TelegramGroup } from '@/types/telegram'
@@ -23,6 +24,7 @@ export default function TelegramBoardPage() {
   const [group, setGroup] = useState<TelegramGroup | null>(null)
   const [isMember, setIsMember] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showMemberPanel, setShowMemberPanel] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -148,14 +150,27 @@ export default function TelegramBoardPage() {
                         )}
                       </div>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push('/community/telegram')}
-                      className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                    >
-                      <ChevronLeft className="w-4 h-4 mr-1" />목록
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {(group.created_by === user?.id || user?.role === 'master_admin') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowMemberPanel(true)}
+                          className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                        >
+                          <Settings className="w-4 h-4 sm:mr-1" />
+                          <span className="hidden sm:inline">관리</span>
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push('/community/telegram')}
+                        className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />목록
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
@@ -168,6 +183,17 @@ export default function TelegramBoardPage() {
                     initialPostId={initialPostId}
                   />
                 </div>
+
+                {/* 멤버 관리 패널 */}
+                {(group.created_by === user?.id || user?.role === 'master_admin') && (
+                  <TelegramBoardMemberPanel
+                    groupId={group.id}
+                    currentUserId={user?.id ?? ''}
+                    createdBy={group.created_by}
+                    isOpen={showMemberPanel}
+                    onClose={() => setShowMemberPanel(false)}
+                  />
+                )}
               </>
             )}
           </div>
