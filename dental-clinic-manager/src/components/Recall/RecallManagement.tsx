@@ -317,17 +317,50 @@ export default function RecallManagement() {
 
   // 제외 환자 파일 업로드
   const handleExcludeFileUpload = async (uploadedPatients: RecallPatientUploadData[], filename: string) => {
+    // 매칭 모드 판단
+    const hasPhones = uploadedPatients.some(p => p.phone_number)
+    const hasNames = uploadedPatients.some(p => p.patient_name)
+
+    if (!hasPhones && !hasNames) {
+      showToast('전화번호 또는 환자명 데이터가 없습니다. 컬럼 매핑을 확인해주세요.', 'error')
+      return
+    }
+
+    // 전화번호 없이 이름만으로 매칭할 경우 사용자 확인
+    if (!hasPhones && hasNames) {
+      const confirmed = window.confirm(
+        '전화번호 데이터가 없어 환자명으로만 매칭합니다.\n' +
+        '동명이인이 있는 경우 모두 제외 처리됩니다.\n\n' +
+        '계속하시겠습니까?'
+      )
+      if (!confirmed) return
+    }
+
     setIsUploading(true)
 
     try {
-      const result = await recallService.patients.excludeFromFile(uploadedPatients, excludeUploadReason)
+      const matchMode = hasPhones ? 'phone' as const : 'name' as const
+      const result = await recallService.patients.excludeFromFile(uploadedPatients, excludeUploadReason, matchMode)
 
       if (result.success) {
         const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'
         const parts: string[] = []
         if (result.matchedCount > 0) parts.push(`기존 환자 ${result.matchedCount}명 제외`)
         if (result.newCount > 0) parts.push(`미등록 ${result.newCount}명 사전 등록`)
-        showToast(`제외(${label}) 완료: ${parts.join(', ')}`, 'success')
+
+        if (result.unmatchedNames && result.unmatchedNames.length > 0) {
+          const unmatchedList = result.unmatchedNames.slice(0, 10).join(', ')
+          const moreCount = result.unmatchedNames.length > 10 ? ` 외 ${result.unmatchedNames.length - 10}명` : ''
+          showToast(
+            `제외(${label}) 완료: ${parts.join(', ')}\n매칭 안 됨: ${unmatchedList}${moreCount}`,
+            parts.length > 0 ? 'warning' : 'error'
+          )
+        } else if (parts.length > 0) {
+          showToast(`제외(${label}) 완료: ${parts.join(', ')}`, 'success')
+        } else {
+          showToast('매칭되는 환자가 없습니다. 데이터를 확인해주세요.', 'warning')
+        }
+
         setShowExcludeUpload(false)
         loadPatients()
         loadStats()

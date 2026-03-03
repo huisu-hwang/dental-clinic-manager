@@ -778,10 +778,12 @@ export const recallPatientService = {
   },
 
   // 제외 환자 파일 업로드 전용 (기존 환자 제외 + 미등록 환자 사전 등록)
+  // matchMode: 'phone' = 전화번호 매칭, 'name' = 환자명 매칭
   async excludeFromFile(
     uploadData: RecallPatientUploadData[],
-    excludeReason: RecallExcludeReason
-  ): Promise<{ success: boolean; matchedCount: number; newCount: number; error?: string }> {
+    excludeReason: RecallExcludeReason,
+    matchMode?: 'phone' | 'name'
+  ): Promise<{ success: boolean; matchedCount: number; newCount: number; unmatchedNames?: string[]; error?: string }> {
     const supabase = await ensureConnection()
     if (!supabase) return { success: false, matchedCount: 0, newCount: 0, error: 'Database connection not available' }
 
@@ -790,72 +792,107 @@ export const recallPatientService = {
 
     const BATCH_SIZE = 500
 
+    // 매칭 모드 자동 결정
+    const hasPhones = uploadData.some(p => p.phone_number)
+    const hasNames = uploadData.some(p => p.patient_name)
+    const mode = matchMode || (hasPhones ? 'phone' : 'name')
+
     try {
-      const validData = uploadData.filter(p => p.phone_number)
-      const phoneNumbers = validData.map(p => p.phone_number)
-
-      // 1. 기존 환자 조회 (phone_number 기준)
-      const existingPhones = new Set<string>()
-      for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
-        const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
-        const { data } = await supabase
-          .from('recall_patients')
-          .select('phone_number')
-          .eq('clinic_id', clinicId)
-          .in('phone_number', batch)
-
-        if (data) data.forEach((p: { phone_number: string }) => existingPhones.add(p.phone_number))
-      }
-
-      // 2. 기존 환자 제외 처리
       let matchedCount = 0
-      if (existingPhones.size > 0) {
-        const existingArr = Array.from(existingPhones)
-        for (let i = 0; i < existingArr.length; i += BATCH_SIZE) {
-          const batch = existingArr.slice(i, i + BATCH_SIZE)
+      let newCount = 0
+      const unmatchedNames: string[] = []
+
+      if (mode === 'phone') {
+        // === 전화번호 기준 매칭 ===
+        const validData = uploadData.filter(p => p.phone_number)
+        const phoneNumbers = validData.map(p => p.phone_number)
+
+        // 1. 기존 환자 조회
+        const existingPhones = new Set<string>()
+        for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
+          const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
+          const { data } = await supabase
+            .from('recall_patients')
+            .select('phone_number')
+            .eq('clinic_id', clinicId)
+            .in('phone_number', batch)
+
+          if (data) data.forEach((p: { phone_number: string }) => existingPhones.add(p.phone_number))
+        }
+
+        // 2. 기존 환자 제외 처리
+        if (existingPhones.size > 0) {
+          const existingArr = Array.from(existingPhones)
+          for (let i = 0; i < existingArr.length; i += BATCH_SIZE) {
+            const batch = existingArr.slice(i, i + BATCH_SIZE)
+            const { data, error } = await supabase
+              .from('recall_patients')
+              .update({ exclude_reason: excludeReason })
+              .eq('clinic_id', clinicId)
+              .in('phone_number', batch)
+              .select('id')
+
+            if (error) throw error
+            matchedCount += data?.length || 0
+          }
+        }
+
+        // 3. 미등록 환자 → 제외 상태로 사전 등록
+        const newPatients = validData.filter(p => !existingPhones.has(p.phone_number))
+        const uniqueNew = new Map<string, RecallPatientUploadData>()
+        for (const p of newPatients) {
+          uniqueNew.set(p.phone_number, p)
+        }
+
+        if (uniqueNew.size > 0) {
+          const newRecords = Array.from(uniqueNew.values()).map(p => ({
+            patient_name: p.patient_name || p.phone_number,
+            phone_number: p.phone_number,
+            chart_number: p.chart_number || null,
+            clinic_id: clinicId,
+            status: 'pending' as PatientRecallStatus,
+            exclude_reason: excludeReason
+          }))
+
+          for (let i = 0; i < newRecords.length; i += BATCH_SIZE) {
+            const batch = newRecords.slice(i, i + BATCH_SIZE)
+            const { error } = await supabase
+              .from('recall_patients')
+              .insert(batch)
+
+            if (error) throw error
+            newCount += batch.length
+          }
+        }
+      } else {
+        // === 환자명 기준 매칭 ===
+        const validData = uploadData.filter(p => p.patient_name)
+        const names = validData.map(p => p.patient_name)
+
+        for (let i = 0; i < names.length; i += BATCH_SIZE) {
+          const batch = names.slice(i, i + BATCH_SIZE)
           const { data, error } = await supabase
             .from('recall_patients')
             .update({ exclude_reason: excludeReason })
             .eq('clinic_id', clinicId)
-            .in('phone_number', batch)
-            .select('id')
+            .in('patient_name', batch)
+            .is('exclude_reason', null)
+            .select('id, patient_name')
 
           if (error) throw error
+          const matchedNames = new Set(data?.map((p: { patient_name: string }) => p.patient_name) || [])
           matchedCount += data?.length || 0
+
+          // 매칭되지 않은 이름 수집
+          batch.forEach(name => {
+            if (!matchedNames.has(name)) {
+              unmatchedNames.push(name)
+            }
+          })
         }
       }
 
-      // 3. 미등록 환자 → 제외 상태로 사전 등록 (나중에 환자 업로드 시 자동 제외 유지)
-      const newPatients = validData.filter(p => !existingPhones.has(p.phone_number))
-      // phone_number 중복 제거
-      const uniqueNew = new Map<string, RecallPatientUploadData>()
-      for (const p of newPatients) {
-        uniqueNew.set(p.phone_number, p)
-      }
-
-      let newCount = 0
-      if (uniqueNew.size > 0) {
-        const newRecords = Array.from(uniqueNew.values()).map(p => ({
-          patient_name: p.patient_name || p.phone_number,
-          phone_number: p.phone_number,
-          chart_number: p.chart_number || null,
-          clinic_id: clinicId,
-          status: 'pending' as PatientRecallStatus,
-          exclude_reason: excludeReason
-        }))
-
-        for (let i = 0; i < newRecords.length; i += BATCH_SIZE) {
-          const batch = newRecords.slice(i, i + BATCH_SIZE)
-          const { error } = await supabase
-            .from('recall_patients')
-            .insert(batch)
-
-          if (error) throw error
-          newCount += batch.length
-        }
-      }
-
-      return { success: true, matchedCount, newCount }
+      return { success: true, matchedCount, newCount, unmatchedNames: unmatchedNames.length > 0 ? unmatchedNames : undefined }
     } catch (error) {
       return { success: false, matchedCount: 0, newCount: 0, error: extractErrorMessage(error) }
     }

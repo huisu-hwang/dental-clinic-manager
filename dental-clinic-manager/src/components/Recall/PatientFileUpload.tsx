@@ -30,7 +30,7 @@ const BASE_COLUMNS: ParsedColumn[] = [
 ]
 
 const EXCLUDE_COLUMNS: ParsedColumn[] = [
-  { key: 'phone_number', label: '전화번호', required: true },
+  { key: 'phone_number', label: '전화번호', required: false },
   { key: 'patient_name', label: '환자명', required: false },
   { key: 'chart_number', label: '차트번호', required: false },
   { key: 'notes', label: '비고', required: false }
@@ -286,11 +286,14 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
 
   // 최종 데이터 변환 (저장된 파싱 데이터 사용 — 재파싱 없음)
   const convertToPatientData = useCallback((): RecallPatientUploadData[] | null => {
-    // 필수 컬럼 확인
     const mappedKeys = Object.values(columnMapping)
+
     if (excludeMode) {
-      if (!mappedKeys.includes('phone_number')) {
-        setParseError('전화번호 컬럼을 매핑해주세요.')
+      // 제외 모드: 전화번호 또는 환자명 중 하나라도 매핑되어 있으면 진행
+      const hasPhone = mappedKeys.includes('phone_number')
+      const hasName = mappedKeys.includes('patient_name')
+      if (!hasPhone && !hasName) {
+        setParseError('전화번호 또는 환자명 컬럼을 하나 이상 매핑해주세요.')
         return null
       }
     } else {
@@ -338,12 +341,9 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
         }
       })
 
-      // 필수 필드 검증 (excludeMode: 전화번호만 필수)
       if (excludeMode) {
-        if (patient.phone_number) {
-          if (!patient.patient_name) {
-            patient.patient_name = patient.phone_number // 이름 없으면 전화번호로 대체
-          }
+        // 제외 모드: 전화번호 또는 환자명 중 하나라도 있으면 유효
+        if (patient.phone_number || patient.patient_name) {
           patients.push(patient as RecallPatientUploadData)
         } else {
           invalidRows.push(index + 2)
@@ -359,7 +359,7 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
 
     if (invalidRows.length > 0 && patients.length === 0) {
       setParseError(excludeMode
-        ? '유효한 데이터가 없습니다. 전화번호를 확인해주세요.'
+        ? '유효한 데이터가 없습니다. 전화번호 또는 환자명을 확인해주세요.'
         : '유효한 데이터가 없습니다. 환자명과 전화번호를 확인해주세요.'
       )
       return null
@@ -585,7 +585,10 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
             </button>
             <button
               onClick={handleUpload}
-              disabled={isLoading || (!excludeMode && !Object.values(columnMapping).includes('patient_name')) || !Object.values(columnMapping).includes('phone_number')}
+              disabled={isLoading || (excludeMode
+                ? (!Object.values(columnMapping).includes('phone_number') && !Object.values(columnMapping).includes('patient_name'))
+                : (!Object.values(columnMapping).includes('patient_name') || !Object.values(columnMapping).includes('phone_number'))
+              )}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isLoading ? (
