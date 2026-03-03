@@ -1634,12 +1634,15 @@ export const recallExcludeRulesService = {
       }
 
       // 3. 규칙별 매칭 (규칙의 모든 필드가 환자와 일치해야 적용)
+      // 전화번호 정규화 (숫자만 추출하여 형식 차이 무시)
+      const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '')
+
       let appliedCount = 0
       for (const rule of rules) {
         for (const patient of newPatients) {
           let allMatch = true
           if (rule.patient_name && patient.patient_name !== rule.patient_name) allMatch = false
-          if (rule.phone_number && patient.phone_number !== rule.phone_number) allMatch = false
+          if (rule.phone_number && normalizePhone(patient.phone_number) !== normalizePhone(rule.phone_number)) allMatch = false
           if (rule.chart_number && patient.chart_number !== rule.chart_number) allMatch = false
 
           if (allMatch) {
