@@ -436,6 +436,16 @@ export function formatElapsedTime(dateStr: string): string {
 }
 
 // ========================================
+// 미매칭 환자 수동 매칭
+// ========================================
+export interface UnmatchedPatientItem {
+  uploadData: RecallPatientUploadData
+  status: 'pending' | 'matched' | 'skipped'
+  matchedPatientId?: string
+  matchedPatientName?: string
+}
+
+// ========================================
 // 일괄 업로드 결과
 // ========================================
 export interface BulkUploadResult {

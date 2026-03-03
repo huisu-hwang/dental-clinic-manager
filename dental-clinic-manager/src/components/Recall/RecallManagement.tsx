@@ -24,7 +24,8 @@ import type {
   RecallPatientFilters,
   RecallStats as RecallStatsType,
   PatientRecallStatus,
-  RecallExcludeReason
+  RecallExcludeReason,
+  UnmatchedPatientItem
 } from '@/types/recall'
 import { recallService } from '@/lib/recallService'
 import PatientFileUpload from './PatientFileUpload'
@@ -36,6 +37,7 @@ import StatusUpdateModal from './StatusUpdateModal'
 import ContactHistoryModal from './ContactHistoryModal'
 import RecallStats from './RecallStats'
 import RecallSettings from './RecallSettings'
+import UnmatchedPatientModal from './UnmatchedPatientModal'
 import Toast from '@/components/ui/Toast'
 
 type TabType = 'patients' | 'stats' | 'settings'
@@ -49,6 +51,11 @@ export default function RecallManagement() {
   const [showExcludeUpload, setShowExcludeUpload] = useState(false)
   const [excludeUploadReason, setExcludeUploadReason] = useState<RecallExcludeReason>('family')
   const [showExcludeDropdown, setShowExcludeDropdown] = useState(false)
+
+  // 미매칭 모달 상태
+  const [unmatchedPatients, setUnmatchedPatients] = useState<UnmatchedPatientItem[]>([])
+  const [unmatchedModalOpen, setUnmatchedModalOpen] = useState(false)
+  const [unmatchedExcludeReason, setUnmatchedExcludeReason] = useState<RecallExcludeReason>('family')
 
   // 데이터 상태
   const [patients, setPatients] = useState<RecallPatient[]>([])
@@ -348,13 +355,19 @@ export default function RecallManagement() {
         if (result.matchedCount > 0) parts.push(`기존 환자 ${result.matchedCount}명 제외`)
         if (result.newCount > 0) parts.push(`미등록 ${result.newCount}명 사전 등록`)
 
-        if (result.unmatchedNames && result.unmatchedNames.length > 0) {
-          const unmatchedList = result.unmatchedNames.slice(0, 10).join(', ')
-          const moreCount = result.unmatchedNames.length > 10 ? ` 외 ${result.unmatchedNames.length - 10}명` : ''
-          showToast(
-            `제외(${label}) 완료: ${parts.join(', ')}\n매칭 안 됨: ${unmatchedList}${moreCount}`,
-            parts.length > 0 ? 'warning' : 'error'
-          )
+        if (result.unmatchedPatients && result.unmatchedPatients.length > 0) {
+          // 미매칭 환자가 있으면 모달 열기
+          const unmatchedItems: UnmatchedPatientItem[] = result.unmatchedPatients.map(p => ({
+            uploadData: p,
+            status: 'pending' as const
+          }))
+          setUnmatchedPatients(unmatchedItems)
+          setUnmatchedExcludeReason(excludeUploadReason)
+          setUnmatchedModalOpen(true)
+
+          if (parts.length > 0) {
+            showToast(`제외(${label}): ${parts.join(', ')}. 미매칭 ${result.unmatchedPatients.length}명 수동 매칭이 필요합니다.`, 'warning')
+          }
         } else if (parts.length > 0) {
           showToast(`제외(${label}) 완료: ${parts.join(', ')}`, 'success')
         } else {
@@ -745,6 +758,17 @@ export default function RecallManagement() {
         isOpen={!!historyModalPatient}
         onClose={() => setHistoryModalPatient(null)}
         patient={historyModalPatient}
+      />
+
+      <UnmatchedPatientModal
+        isOpen={unmatchedModalOpen}
+        onClose={() => setUnmatchedModalOpen(false)}
+        unmatchedPatients={unmatchedPatients}
+        excludeReason={unmatchedExcludeReason}
+        onComplete={() => {
+          loadPatients()
+          loadStats()
+        }}
       />
 
       {/* 토스트 */}

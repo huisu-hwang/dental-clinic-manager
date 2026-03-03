@@ -786,7 +786,7 @@ export const recallPatientService = {
     uploadData: RecallPatientUploadData[],
     excludeReason: RecallExcludeReason,
     matchMode?: 'phone' | 'name'
-  ): Promise<{ success: boolean; matchedCount: number; newCount: number; unmatchedNames?: string[]; error?: string }> {
+  ): Promise<{ success: boolean; matchedCount: number; newCount: number; unmatchedNames?: string[]; unmatchedPatients?: RecallPatientUploadData[]; error?: string }> {
     const supabase = await ensureConnection()
     if (!supabase) return { success: false, matchedCount: 0, newCount: 0, error: 'Database connection not available' }
 
@@ -804,6 +804,7 @@ export const recallPatientService = {
       let matchedCount = 0
       let newCount = 0
       const unmatchedNames: string[] = []
+      const unmatchedPatientsData: RecallPatientUploadData[] = []
 
       if (mode === 'phone') {
         // === 전화번호 기준 매칭 ===
@@ -852,6 +853,11 @@ export const recallPatientService = {
           }
         }
 
+        // 미매칭 데이터 수집 (사전등록 전)
+        for (const p of uniqueNew.values()) {
+          unmatchedPatientsData.push(p)
+        }
+
         if (uniqueNew.size > 0) {
           const newRecords = Array.from(uniqueNew.values()).map(p => ({
             patient_name: p.patient_name || p.phone_number,
@@ -895,14 +901,72 @@ export const recallPatientService = {
           batch.forEach(name => {
             if (!matchedNames.has(name)) {
               unmatchedNames.push(name)
+              const originalData = validData.find(p => p.patient_name === name)
+              if (originalData) unmatchedPatientsData.push(originalData)
             }
           })
         }
       }
 
-      return { success: true, matchedCount, newCount, unmatchedNames: unmatchedNames.length > 0 ? unmatchedNames : undefined }
+      return {
+        success: true,
+        matchedCount,
+        newCount,
+        unmatchedNames: unmatchedNames.length > 0 ? unmatchedNames : undefined,
+        unmatchedPatients: unmatchedPatientsData.length > 0 ? unmatchedPatientsData : undefined
+      }
     } catch (error) {
       return { success: false, matchedCount: 0, newCount: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 환자 검색 (수동 매칭용 - 제외 환자 포함 전체 검색)
+  async searchPatientsForMatching(
+    searchQuery: string,
+    limit: number = 10
+  ): Promise<{ success: boolean; data?: RecallPatient[]; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, error: 'Clinic ID not found' }
+
+    try {
+      const query = searchQuery.trim()
+      if (!query) return { success: true, data: [] }
+
+      const { data, error } = await supabase
+        .from('recall_patients')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .or(`patient_name.ilike.%${query}%,phone_number.ilike.%${query}%,chart_number.ilike.%${query}%`)
+        .limit(limit)
+
+      if (error) throw error
+      return { success: true, data: data as RecallPatient[] }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 수동 매칭 제외 처리 (기존 환자의 exclude_reason 업데이트)
+  async manualMatchExclude(
+    existingPatientId: string,
+    excludeReason: RecallExcludeReason
+  ): Promise<{ success: boolean; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    try {
+      const { error } = await supabase
+        .from('recall_patients')
+        .update({ exclude_reason: excludeReason })
+        .eq('id', existingPatientId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
     }
   },
 
