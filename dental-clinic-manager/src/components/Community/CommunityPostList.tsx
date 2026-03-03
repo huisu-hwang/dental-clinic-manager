@@ -180,6 +180,15 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
       ) : (
         <>
           <div className="bg-white rounded-lg border border-gray-200">
+            {/* 테이블 헤더 */}
+            <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
+              <div className="w-5 flex-shrink-0" />
+              <div className="hidden sm:block w-20 flex-shrink-0 text-center">분류</div>
+              <div className="flex-1 min-w-0 text-center">제목</div>
+              <div className="hidden sm:block w-20 text-center flex-shrink-0">작성자</div>
+              <div className="w-20 text-center flex-shrink-0">작성일</div>
+              <div className="hidden sm:block w-12 text-center flex-shrink-0">조회</div>
+            </div>
             {posts.map((post) => (
               <CommunityPostCard key={post.id} post={post} onClick={onPostClick} labelMap={labelMap} colorMap={colorMap} />
             ))}
