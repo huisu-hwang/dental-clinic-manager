@@ -40,23 +40,55 @@ export default function UnmatchedPatientModal({
   const [matchingIndex, setMatchingIndex] = useState<number | null>(null)
   const debounceTimers = useRef<Record<number, NodeJS.Timeout>>({})
 
-  // 초기화
+  // 검색 실행 함수 (디바운스 없이 즉시 실행)
+  const executeSearch = useCallback(async (index: number, query: string) => {
+    const q = query.trim()
+    if (!q) {
+      setSearchResults(prev => ({ ...prev, [index]: [] }))
+      return
+    }
+    setSearchLoading(prev => ({ ...prev, [index]: true }))
+    try {
+      const result = await recallService.patients.searchPatientsForMatching(q)
+      if (result.success && result.data) {
+        setSearchResults(prev => ({ ...prev, [index]: result.data! }))
+      } else {
+        console.error('Search error:', result.error)
+        setSearchResults(prev => ({ ...prev, [index]: [] }))
+      }
+    } catch (err) {
+      console.error('Search exception:', err)
+      setSearchResults(prev => ({ ...prev, [index]: [] }))
+    }
+    setSearchLoading(prev => ({ ...prev, [index]: false }))
+  }, [])
+
+  // 초기화 + 자동 검색 실행
   useEffect(() => {
     if (isOpen && unmatchedPatients.length > 0) {
       setItems([...unmatchedPatients])
-      // 검색어 자동 채움 (이름 또는 전화번호)
+      setSearchResults({})
+      setSearchLoading({})
+      setMatchingIndex(null)
+
+      // 검색어 자동 채움 + 초기 검색 실행
       const initialQueries: Record<number, string> = {}
       unmatchedPatients.forEach((p, i) => {
         initialQueries[i] = p.uploadData.patient_name || p.uploadData.phone_number || ''
       })
       setSearchQueries(initialQueries)
-      setSearchResults({})
-      setSearchLoading({})
-      setMatchingIndex(null)
-    }
-  }, [isOpen, unmatchedPatients])
 
-  // 검색 실행 (300ms 디바운스)
+      // 각 미매칭 환자에 대해 초기 검색 실행
+      unmatchedPatients.forEach((p, i) => {
+        const q = p.uploadData.patient_name || p.uploadData.phone_number || ''
+        if (q.trim()) {
+          executeSearch(i, q)
+        }
+      })
+    }
+  }, [isOpen, unmatchedPatients, executeSearch])
+
+  // 검색 입력 핸들러 (300ms 디바운스)
   const handleSearch = useCallback((index: number, query: string) => {
     setSearchQueries(prev => ({ ...prev, [index]: query }))
 
@@ -69,15 +101,10 @@ export default function UnmatchedPatientModal({
       return
     }
 
-    debounceTimers.current[index] = setTimeout(async () => {
-      setSearchLoading(prev => ({ ...prev, [index]: true }))
-      const result = await recallService.patients.searchPatientsForMatching(query)
-      if (result.success && result.data) {
-        setSearchResults(prev => ({ ...prev, [index]: result.data! }))
-      }
-      setSearchLoading(prev => ({ ...prev, [index]: false }))
+    debounceTimers.current[index] = setTimeout(() => {
+      executeSearch(index, query)
     }, 300)
-  }, [])
+  }, [executeSearch])
 
   // cleanup timers
   useEffect(() => {

@@ -939,16 +939,39 @@ export const recallPatientService = {
       const query = searchQuery.trim()
       if (!query) return { success: true, data: [] }
 
-      const { data, error } = await supabase
+      // 개별 필드별 검색 후 합치기 (or 필터 파싱 이슈 방지)
+      const results = new Map<string, RecallPatient>()
+
+      // 이름 검색
+      const { data: nameData } = await supabase
         .from('recall_patients')
         .select('*')
         .eq('clinic_id', clinicId)
-        .or(`patient_name.ilike.%${query}%,phone_number.ilike.%${query}%,chart_number.ilike.%${query}%`)
+        .ilike('patient_name', `%${query}%`)
         .limit(limit)
+      if (nameData) nameData.forEach((p: RecallPatient) => results.set(p.id, p))
 
-      if (error) throw error
-      return { success: true, data: data as RecallPatient[] }
+      // 전화번호 검색
+      const { data: phoneData } = await supabase
+        .from('recall_patients')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .ilike('phone_number', `%${query}%`)
+        .limit(limit)
+      if (phoneData) phoneData.forEach((p: RecallPatient) => results.set(p.id, p))
+
+      // 차트번호 검색
+      const { data: chartData } = await supabase
+        .from('recall_patients')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .ilike('chart_number', `%${query}%`)
+        .limit(limit)
+      if (chartData) chartData.forEach((p: RecallPatient) => results.set(p.id, p))
+
+      return { success: true, data: Array.from(results.values()).slice(0, limit) }
     } catch (error) {
+      console.error('searchPatientsForMatching error:', error)
       return { success: false, error: extractErrorMessage(error) }
     }
   },
