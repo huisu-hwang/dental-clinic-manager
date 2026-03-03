@@ -224,10 +224,13 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
           <div className="bg-white rounded-lg border border-gray-200">
             {/* 테이블 헤더 */}
             <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
+              <div className="w-5 flex-shrink-0" />
+              <div className="hidden sm:block w-16 flex-shrink-0 text-center">분류</div>
+              <div className="hidden sm:block w-10 flex-shrink-0 text-center">중요</div>
               <div className="flex-1 min-w-0">제목</div>
-              <div className="hidden sm:block w-20 text-center">작성자</div>
-              <div className="w-20 text-center">작성일</div>
-              <div className="hidden sm:block w-12 text-center">조회</div>
+              <div className="hidden sm:block w-20 text-center flex-shrink-0">작성자</div>
+              <div className="w-20 text-center flex-shrink-0">작성일</div>
+              <div className="hidden sm:block w-12 text-center flex-shrink-0">조회</div>
             </div>
             {/* 목록 */}
             <div className="divide-y divide-gray-200">
@@ -237,16 +240,34 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
                   onClick={() => handleAnnouncementClick(announcement)}
                   className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
                 >
-                  {/* 제목 영역 */}
-                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                  {/* 고정 아이콘 */}
+                  <div className="w-5 flex-shrink-0 flex items-center justify-center">
                     {announcement.is_pinned && (
-                      <Pin className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                      <Pin className="w-3.5 h-3.5 text-red-500" />
                     )}
-                    <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${getCategoryBadgeColor(announcement.category)}`}>
+                  </div>
+                  {/* 분류 */}
+                  <div className="hidden sm:block w-16 flex-shrink-0 text-center">
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${getCategoryBadgeColor(announcement.category)}`}>
+                      {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]}
+                    </span>
+                  </div>
+                  {/* 중요 */}
+                  <div className="hidden sm:block w-10 flex-shrink-0 text-center">
+                    {announcement.is_important && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">
+                        중요
+                      </span>
+                    )}
+                  </div>
+                  {/* 제목 */}
+                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                    {/* 모바일: 배지를 제목 앞에 인라인 표시 */}
+                    <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${getCategoryBadgeColor(announcement.category)}`}>
                       {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]}
                     </span>
                     {announcement.is_important && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 flex-shrink-0">
+                      <span className="sm:hidden text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 flex-shrink-0">
                         중요
                       </span>
                     )}
