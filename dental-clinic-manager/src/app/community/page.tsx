@@ -6,6 +6,7 @@ import { MessageCircle, Shield, Send } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
+import AccountProfile from '@/components/Management/AccountProfile'
 import { communityProfileService } from '@/lib/communityService'
 import type { CommunityProfile, CommunityPost } from '@/types/community'
 import { useCommunityCategories } from '@/hooks/useCommunityCategories'
@@ -22,8 +23,9 @@ type ViewMode = 'list' | 'detail' | 'form'
 
 export default function CommunityPage() {
   const router = useRouter()
-  const { user, logout, loading: authLoading } = useAuth()
+  const { user, logout, updateUser, loading: authLoading } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
 
   // 동적 카테고리
   const { categories, labelMap, colorMap } = useCommunityCategories()
@@ -160,6 +162,7 @@ export default function CommunityPage() {
             dbStatus="connected"
             user={user}
             onLogout={() => logout()}
+            onProfileClick={() => setShowProfile(true)}
             onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             isMenuOpen={isMobileMenuOpen}
           />
@@ -281,6 +284,27 @@ export default function CommunityPage() {
           </div>
         </main>
       </div>
+      {/* Profile Modal */}
+      {showProfile && user && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+          onClick={() => setShowProfile(false)}
+        >
+          <div
+            className="max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <AccountProfile
+              currentUser={user}
+              onClose={() => setShowProfile(false)}
+              onUpdate={(updatedUserData) => {
+                updateUser(updatedUserData)
+                setShowProfile(false)
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
