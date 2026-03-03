@@ -333,6 +333,9 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
           value = normalizeGender(value)
         } else if (typeof value === 'string') {
           value = value.trim() || undefined
+        } else if (value != null) {
+          // Excel에서 숫자로 파싱된 값 (차트번호 등)을 문자열로 변환
+          value = String(value).trim() || undefined
         }
 
         // undefined가 아닌 값만 추가

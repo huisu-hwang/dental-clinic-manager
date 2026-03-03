@@ -891,11 +891,11 @@ export const recallPatientService = {
         if (!uploaded.phone_number && !uploaded.patient_name && !uploaded.chart_number) continue
 
         // 업로드 데이터에 포함된 모든 필드가 일치하는 기존 환자만 매칭
-        // 전화번호는 숫자만 추출하여 비교 (형식 차이 무시)
+        // 전화번호는 숫자만 추출하여 비교, 차트번호는 String 변환하여 비교 (Excel 숫자 타입 대응)
         const candidates = existingPatients.filter(p => {
           if (uploaded.phone_number && normalizePhone(p.phone_number) !== normalizePhone(uploaded.phone_number)) return false
-          if (uploaded.patient_name && p.patient_name !== uploaded.patient_name) return false
-          if (uploaded.chart_number && p.chart_number !== uploaded.chart_number) return false
+          if (uploaded.patient_name && p.patient_name !== String(uploaded.patient_name)) return false
+          if (uploaded.chart_number && String(p.chart_number || '') !== String(uploaded.chart_number)) return false
           return true
         })
 
@@ -1641,9 +1641,9 @@ export const recallExcludeRulesService = {
       for (const rule of rules) {
         for (const patient of newPatients) {
           let allMatch = true
-          if (rule.patient_name && patient.patient_name !== rule.patient_name) allMatch = false
+          if (rule.patient_name && patient.patient_name !== String(rule.patient_name)) allMatch = false
           if (rule.phone_number && normalizePhone(patient.phone_number) !== normalizePhone(rule.phone_number)) allMatch = false
-          if (rule.chart_number && patient.chart_number !== rule.chart_number) allMatch = false
+          if (rule.chart_number && String(patient.chart_number || '') !== String(rule.chart_number)) allMatch = false
 
           if (allMatch) {
             // 환자 제외 처리
