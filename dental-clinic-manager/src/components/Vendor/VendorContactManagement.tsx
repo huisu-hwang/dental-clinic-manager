@@ -910,178 +910,176 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
   // 명함 스타일 카드 렌더링
   const renderContactCard = (contact: VendorContact, showCategoryBadge: boolean) => {
     const isDialing = dialingPhone === contact.phone || dialingPhone === contact.phone2
+    const categoryColor = contact.category?.color || '#94a3b8'
     return (
       <div
         key={contact.id}
-        className={`relative bg-white rounded-xl border cursor-pointer transition-all hover:shadow-md flex flex-col ${
-          isDialing ? 'ring-2 ring-blue-400 shadow-blue-100 shadow-md' : 'border-slate-200 shadow-sm'
-        } ${selectedContacts.has(contact.id) ? 'ring-2 ring-blue-300 bg-blue-50/30' : ''}`}
+        className={`relative bg-white rounded-xl border border-slate-200 shadow-sm cursor-pointer transition-all hover:shadow-md flex flex-col overflow-hidden ${
+          isDialing ? 'bg-blue-50/40' : ''
+        } ${selectedContacts.has(contact.id) ? 'bg-blue-50/30' : ''}`}
         onClick={() => makePhoneCall(contact.phone)}
       >
-        {/* 카테고리 색상 바 (항상 표시) */}
-        <div
-          className="h-1 rounded-t-xl"
-          style={{ backgroundColor: contact.category?.color || '#cbd5e1' }}
-        />
+        {/* 좌측 카테고리 색상 바 */}
+        <div className="flex flex-1">
+          <div
+            className="w-1.5 flex-shrink-0"
+            style={{ backgroundColor: categoryColor }}
+          />
 
-        <div className="p-4 flex flex-col flex-1">
-          {/* 1행: 체크박스 + 즐겨찾기 + 업체명 + 더보기 */}
-          <div className="flex items-start justify-between gap-1">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              {canDelete && (
-                <input
-                  type="checkbox"
-                  checked={selectedContacts.has(contact.id)}
-                  onChange={() => toggleSelectContact(contact.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer flex-shrink-0"
-                />
-              )}
-              <button
-                onClick={(e) => { e.stopPropagation(); handleToggleFavorite(contact) }}
-                className="flex-shrink-0"
-              >
-                <Star className={`w-4 h-4 ${contact.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-300 hover:text-slate-400'}`} />
-              </button>
-              <span className="font-bold text-base text-slate-800 truncate">{contact.company_name}</span>
-            </div>
-            {/* 더보기 메뉴 */}
-            <div className="relative flex-shrink-0" ref={openMenuId === contact.id ? menuRef : undefined}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === contact.id ? null : contact.id) }}
-                className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <MoreVertical className="w-4 h-4 text-slate-400" />
-              </button>
-              {openMenuId === contact.id && (
-                <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1">
-                  {(contact.email || contact.address) && (
-                    <div className="px-4 py-2 border-b border-slate-100">
-                      <p className="text-xs font-medium text-slate-400 mb-1.5">상세 정보</p>
-                      {contact.email && (
-                        <p className="text-sm text-slate-600 flex items-center gap-1.5 mb-1">
-                          <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                          <span className="truncate">{contact.email}</span>
-                        </p>
-                      )}
-                      {contact.address && (
-                        <p className="text-sm text-slate-600 flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                          <span className="truncate">{contact.address}</span>
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleToggleFavorite(contact)
-                      setOpenMenuId(null)
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                  >
-                    <Star className={`w-4 h-4 ${contact.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-400'}`} />
-                    {contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
-                  </button>
-                  {canEdit && (
+          <div className="p-3.5 flex flex-col flex-1 min-w-0">
+            {/* 1행: 업체명 + 액션 */}
+            <div className="flex items-center justify-between gap-1 mb-1.5">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                {canDelete && (
+                  <input
+                    type="checkbox"
+                    checked={selectedContacts.has(contact.id)}
+                    onChange={() => toggleSelectContact(contact.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                  />
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleToggleFavorite(contact) }}
+                  className="flex-shrink-0"
+                >
+                  <Star className={`w-4 h-4 ${contact.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200 hover:text-slate-300'}`} />
+                </button>
+                <span className="font-bold text-[15px] text-slate-800 truncate leading-tight">{contact.company_name}</span>
+              </div>
+              {/* 더보기 메뉴 */}
+              <div className="relative flex-shrink-0" ref={openMenuId === contact.id ? menuRef : undefined}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === contact.id ? null : contact.id) }}
+                  className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <MoreVertical className="w-4 h-4 text-slate-300" />
+                </button>
+                {openMenuId === contact.id && (
+                  <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1">
+                    {(contact.email || contact.address) && (
+                      <div className="px-4 py-2 border-b border-slate-100">
+                        <p className="text-xs font-medium text-slate-400 mb-1.5">상세 정보</p>
+                        {contact.email && (
+                          <p className="text-sm text-slate-600 flex items-center gap-1.5 mb-1">
+                            <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{contact.email}</span>
+                          </p>
+                        )}
+                        {contact.address && (
+                          <p className="text-sm text-slate-600 flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{contact.address}</span>
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        openEditContact(contact)
+                        handleToggleFavorite(contact)
                         setOpenMenuId(null)
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                     >
-                      <Edit2 className="w-4 h-4 text-slate-400" />
-                      수정
+                      <Star className={`w-4 h-4 ${contact.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-400'}`} />
+                      {contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
                     </button>
-                  )}
-                  {canDelete && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowDeleteConfirm(contact.id)
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    {canEdit && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openEditContact(contact)
+                          setOpenMenuId(null)
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4 text-slate-400" />
+                        수정
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowDeleteConfirm(contact.id)
+                          setOpenMenuId(null)
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                        삭제
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 2행: 담당자 + 카테고리 (고정 높이) */}
+            <div className="h-5 flex items-center gap-1.5 mb-2">
+              <span className="text-xs text-slate-500 flex items-center gap-1">
+                <User className="w-3 h-3 text-slate-400" />
+                {contact.contact_person || '-'}
+              </span>
+              {contact.category && (
+                <>
+                  <span className="text-xs text-slate-300">·</span>
+                  {showCategoryBadge ? (
+                    <span
+                      className="px-1.5 py-0.5 text-[10px] rounded-full text-white leading-none"
+                      style={{ backgroundColor: contact.category.color }}
                     >
-                      <Trash2 className="w-4 h-4 text-red-400" />
-                      삭제
-                    </button>
+                      {contact.category.name}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">{contact.category.name}</span>
                   )}
-                </div>
+                </>
               )}
             </div>
-          </div>
 
-          {/* 2행: 담당자 + 카테고리 (고정 높이) */}
-          <div className="h-5 flex items-center gap-1.5 mt-1 ml-0.5">
-            {contact.contact_person ? (
-              <span className="text-xs text-slate-500 flex items-center gap-1">
-                <User className="w-3 h-3" />
-                {contact.contact_person}
-              </span>
-            ) : (
-              <span className="text-xs text-slate-400">-</span>
-            )}
-            {contact.category && (
-              <>
-                <span className="text-xs text-slate-300">·</span>
-                {showCategoryBadge ? (
-                  <span
-                    className="px-1.5 py-0.5 text-[10px] rounded-full text-white"
-                    style={{ backgroundColor: contact.category.color }}
-                  >
-                    {contact.category.name}
-                  </span>
-                ) : (
-                  <span className="text-xs text-slate-500">{contact.category.name}</span>
-                )}
-              </>
-            )}
-          </div>
+            {/* 구분선 */}
+            <div className="border-t border-slate-100 mb-2.5" />
 
-          {/* 구분선 */}
-          <div className="border-t border-dashed border-slate-200 my-2.5" />
-
-          {/* 3행: 전화번호 (flex-1로 남은 공간 차지) */}
-          <div className="flex-1 flex flex-col justify-center space-y-1.5">
-            <button
-              onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone) }}
-              disabled={dialingPhone === contact.phone}
-              className="flex items-center gap-2 text-blue-600 font-semibold text-sm hover:text-blue-700 transition-colors w-full"
-            >
-              {dialingPhone === contact.phone ? (
-                <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin flex-shrink-0" />
-              ) : (
-                <PhoneCall className="w-4 h-4 flex-shrink-0" />
-              )}
-              <span>{formatPhone(contact.phone)}</span>
-            </button>
-            {contact.phone2 && (
+            {/* 3행: 전화번호 (flex-1로 남은 공간 차지) */}
+            <div className="flex-1 flex flex-col justify-center space-y-1">
               <button
-                onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone2!) }}
-                disabled={dialingPhone === contact.phone2}
-                className="flex items-center gap-2 text-slate-600 font-medium text-sm hover:text-blue-600 transition-colors w-full"
+                onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone) }}
+                disabled={dialingPhone === contact.phone}
+                className="flex items-center gap-2 text-blue-600 font-semibold text-sm hover:text-blue-700 transition-colors"
               >
-                {dialingPhone === contact.phone2 ? (
-                  <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin flex-shrink-0" />
+                {dialingPhone === contact.phone ? (
+                  <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin flex-shrink-0" />
                 ) : (
-                  <Phone className="w-4 h-4 flex-shrink-0" />
+                  <PhoneCall className="w-4 h-4 flex-shrink-0" />
                 )}
-                <span>{formatPhone(contact.phone2)}</span>
+                <span>{formatPhone(contact.phone)}</span>
               </button>
-            )}
-          </div>
+              {contact.phone2 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone2!) }}
+                  disabled={dialingPhone === contact.phone2}
+                  className="flex items-center gap-2 text-slate-500 text-sm hover:text-blue-600 transition-colors"
+                >
+                  {dialingPhone === contact.phone2 ? (
+                    <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin flex-shrink-0" />
+                  ) : (
+                    <Phone className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span>{formatPhone(contact.phone2)}</span>
+                </button>
+              )}
+            </div>
 
-          {/* 4행: 메모 (고정 높이 — 항상 공간 확보) */}
-          <div className="h-5 mt-2 flex items-center">
-            {contact.notes ? (
-              <p className="text-xs text-slate-400 truncate flex items-center gap-1 w-full">
-                <FileText className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{contact.notes}</span>
-              </p>
-            ) : null}
+            {/* 4행: 메모 (고정 높이) */}
+            <div className="h-4 mt-2 flex items-center">
+              {contact.notes && (
+                <p className="text-[11px] text-slate-400 truncate w-full">
+                  {contact.notes}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
