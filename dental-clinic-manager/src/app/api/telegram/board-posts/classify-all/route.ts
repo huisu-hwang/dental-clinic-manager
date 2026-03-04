@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import { classifyPostCategory } from '@/lib/telegramCategoryService'
+import { classifyAndAssignCategory } from '@/lib/telegramCategoryService'
 
 const BATCH_SIZE = 10
 
@@ -32,15 +32,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '그룹을 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    const groupTitle = group.board_title || group.chat_title || ''
+    // 기본 "미분류" 카테고리 ID 조회
+    const { data: defaultCat } = await supabase
+      .from('telegram_board_categories')
+      .select('id')
+      .eq('telegram_group_id', groupId)
+      .eq('is_default', true)
+      .maybeSingle()
 
-    // 미분류(category_id IS NULL) 게시글 조회
-    const { data: posts, error: postsError } = await supabase
+    const defaultCategoryId = defaultCat?.id || null
+
+    // 미분류(category_id IS NULL 또는 기본 "미분류" 카테고리) 게시글 조회
+    let query = supabase
       .from('telegram_board_posts')
       .select('id, title, content')
       .eq('telegram_group_id', groupId)
-      .is('category_id', null)
       .order('created_at', { ascending: true })
+
+    if (defaultCategoryId) {
+      query = query.or(`category_id.is.null,category_id.eq.${defaultCategoryId}`)
+    } else {
+      query = query.is('category_id', null)
+    }
+
+    const { data: posts, error: postsError } = await query
 
     if (postsError) {
       return NextResponse.json({ error: postsError.message }, { status: 500 })
@@ -50,8 +65,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ data: { classified: 0, total: 0 }, error: null })
     }
 
+    // 분류 전 category_id를 NULL로 리셋 (재분류를 위해)
+    const postIds = posts.map(p => p.id)
+    await supabase
+      .from('telegram_board_posts')
+      .update({ category_id: null })
+      .in('id', postIds)
+
     let classified = 0
-    const colorPresets = ['blue', 'green', 'purple', 'orange', 'teal', 'red', 'pink', 'indigo', 'amber']
 
     // 배치 처리
     for (let i = 0; i < posts.length; i += BATCH_SIZE) {
@@ -59,93 +80,14 @@ export async function POST(request: NextRequest) {
 
       for (const post of batch) {
         try {
-          // 매번 최신 카테고리 목록 조회 (새 카테고리가 생길 수 있으므로)
-          const { data: categories } = await supabase
-            .from('telegram_board_categories')
-            .select('id, name')
-            .eq('telegram_group_id', groupId)
-            .order('sort_order', { ascending: true })
-
-          const existingCategories = categories || []
-
-          const result = await classifyPostCategory(
+          const result = await classifyAndAssignCategory(
+            supabase,
+            post.id,
             post.title,
             post.content,
-            existingCategories,
-            groupTitle
+            groupId
           )
-
-          let categoryId: string | null = null
-
-          if (result) {
-            if (result.action === 'existing' && result.categoryId) {
-              categoryId = result.categoryId
-            } else if (result.action === 'new') {
-              const slug = result.categoryName
-                .toLowerCase()
-                .replace(/\s+/g, '-')
-                .replace(/[^a-z0-9가-힣-]/g, '')
-                .slice(0, 50)
-
-              const { data: existing } = await supabase
-                .from('telegram_board_categories')
-                .select('id')
-                .eq('telegram_group_id', groupId)
-                .eq('slug', slug)
-                .maybeSingle()
-
-              if (existing) {
-                categoryId = existing.id
-              } else {
-                const { data: maxSort } = await supabase
-                  .from('telegram_board_categories')
-                  .select('sort_order')
-                  .eq('telegram_group_id', groupId)
-                  .eq('is_default', false)
-                  .order('sort_order', { ascending: false })
-                  .limit(1)
-                  .maybeSingle()
-
-                const nextOrder = (maxSort?.sort_order ?? -1) + 1
-                const colorIndex = (existingCategories.filter(c => c.name !== '미분류').length) % colorPresets.length
-
-                const { data: newCat } = await supabase
-                  .from('telegram_board_categories')
-                  .insert({
-                    telegram_group_id: groupId,
-                    name: result.categoryName,
-                    slug,
-                    color: colorPresets[colorIndex],
-                    sort_order: nextOrder,
-                  })
-                  .select('id')
-                  .single()
-
-                if (newCat) {
-                  categoryId = newCat.id
-                }
-              }
-            }
-          }
-
-          // 폴백: 미분류
-          if (!categoryId) {
-            const { data: defaultCat } = await supabase
-              .from('telegram_board_categories')
-              .select('id')
-              .eq('telegram_group_id', groupId)
-              .eq('is_default', true)
-              .maybeSingle()
-
-            categoryId = defaultCat?.id || null
-          }
-
-          if (categoryId) {
-            await supabase
-              .from('telegram_board_posts')
-              .update({ category_id: categoryId })
-              .eq('id', post.id)
-
+          if (result.categoryName !== '미분류') {
             classified++
           }
         } catch (err) {
