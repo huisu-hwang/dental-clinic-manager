@@ -2361,6 +2361,31 @@ export const dataService = {
     }
   },
 
+  // 프로토콜 카테고리만 변경 (DnD용 경량 업데이트 - 버전 생성 없음)
+  async updateProtocolCategoryId(protocolId: string, categoryId: string | null) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) {
+        throw new Error('User clinic information not available')
+      }
+
+      const { error } = await (supabase
+        .from('protocols') as any)
+        .update({ category_id: categoryId, updated_at: new Date().toISOString() })
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating protocol category:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
   // 프로토콜 삭제 (소프트 삭제)
   async deleteProtocol(protocolId: string) {
     const supabase = await ensureConnection()
