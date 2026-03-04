@@ -73,14 +73,17 @@ ${categoryList || '(아직 카테고리가 없습니다)'}
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         temperature: 0.2,
-        responseMimeType: 'application/json',
       },
     })
 
-    const text = response.candidates?.[0]?.content?.parts
+    const rawText = response.candidates?.[0]?.content?.parts
       ?.filter(p => p.text)
       .map(p => p.text)
       .join('') ?? ''
+
+    // JSON 블록 추출 (```json ... ``` 또는 { ... } 형태)
+    const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/) || rawText.match(/(\{[\s\S]*\})/)
+    const text = jsonMatch ? jsonMatch[1].trim() : rawText.trim()
 
     const parsed = JSON.parse(text)
 
