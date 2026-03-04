@@ -1,15 +1,19 @@
 'use client'
 
-import { FileText, Link2, Brain, Pin, PenLine, Heart, MessageCircle, Vote } from 'lucide-react'
+import { FileText, Link2, Brain, Pin, PenLine, Heart, MessageCircle, Vote, Check } from 'lucide-react'
 import type { TelegramBoardPost } from '@/types/telegram'
 import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
 
 interface TelegramBoardPostCardProps {
   post: TelegramBoardPost
   onClick: (post: TelegramBoardPost) => void
+  selectMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (postId: string) => void
+  selectable?: boolean
 }
 
-export default function TelegramBoardPostCard({ post, onClick }: TelegramBoardPostCardProps) {
+export default function TelegramBoardPostCard({ post, onClick, selectMode = false, selected = false, onToggleSelect, selectable = true }: TelegramBoardPostCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -31,15 +35,37 @@ export default function TelegramBoardPostCard({ post, onClick }: TelegramBoardPo
     : post.post_type === 'vote' ? Vote
     : Link2
 
+  const handleClick = () => {
+    if (selectMode && selectable && onToggleSelect) {
+      onToggleSelect(post.id)
+    } else if (!selectMode) {
+      onClick(post)
+    }
+  }
+
   return (
     <div
-      onClick={() => onClick(post)}
-      className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
+      onClick={handleClick}
+      className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 ${
+        selectMode && selected ? 'bg-sky-50' : ''
+      } ${selectMode && !selectable ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
-      {/* 고정 */}
+      {/* 고정 또는 체크박스 */}
       <div className="w-5 flex-shrink-0 flex items-center justify-center">
-        {post.is_pinned && (
-          <Pin className="w-3.5 h-3.5 text-red-500" />
+        {selectMode ? (
+          <div
+            className={`w-4 h-4 rounded border flex items-center justify-center ${
+              !selectable
+                ? 'border-gray-200 bg-gray-100'
+                : selected
+                  ? 'border-sky-500 bg-sky-500'
+                  : 'border-gray-300 hover:border-sky-400'
+            }`}
+          >
+            {selected && <Check className="w-3 h-3 text-white" />}
+          </div>
+        ) : (
+          post.is_pinned && <Pin className="w-3.5 h-3.5 text-red-500" />
         )}
       </div>
       {/* 유형 */}

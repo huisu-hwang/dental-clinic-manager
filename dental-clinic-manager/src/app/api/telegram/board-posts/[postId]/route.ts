@@ -118,9 +118,19 @@ export async function DELETE(
       return NextResponse.json({ data: null, error: '자동 생성된 게시글은 삭제할 수 없습니다.' }, { status: 403 })
     }
 
-    // 권한 확인: 작성자 본인 또는 master_admin
+    // 권한 확인: 작성자 본인, master_admin, 또는 게시판 생성자
     const role = await getUserRole(supabase, userId)
-    if (post.created_by !== userId && role !== 'master_admin') {
+    let isGroupCreator = false
+    if (post.telegram_group_id) {
+      const { data: group } = await supabase
+        .from('telegram_groups')
+        .select('created_by')
+        .eq('id', post.telegram_group_id)
+        .maybeSingle()
+      isGroupCreator = group?.created_by === userId
+    }
+
+    if (post.created_by !== userId && role !== 'master_admin' && !isGroupCreator) {
       return NextResponse.json({ data: null, error: '삭제 권한이 없습니다.' }, { status: 403 })
     }
 

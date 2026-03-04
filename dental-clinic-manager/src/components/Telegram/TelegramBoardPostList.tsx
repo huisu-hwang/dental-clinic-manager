@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Brain, FileText, Link2, PenLine, Loader2, Inbox, Plus, Heart, Bookmark, Vote, ChevronDown } from 'lucide-react'
+import { Search, Brain, FileText, Link2, PenLine, Loader2, Inbox, Plus, Heart, Bookmark, Vote, ChevronDown, CheckSquare, X } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import TelegramBoardPostCard from './TelegramBoardPostCard'
@@ -16,6 +16,7 @@ interface TelegramBoardPostListProps {
   groupId: string
   currentUserId?: string | null
   isMasterAdmin?: boolean
+  isGroupCreator?: boolean
   initialPostId?: string | null
 }
 
@@ -34,6 +35,7 @@ export default function TelegramBoardPostList({
   groupId,
   currentUserId,
   isMasterAdmin = false,
+  isGroupCreator = false,
   initialPostId,
 }: TelegramBoardPostListProps) {
   const [posts, setPosts] = useState<TelegramBoardPost[]>([])
@@ -47,6 +49,9 @@ export default function TelegramBoardPostList({
   const [editingPost, setEditingPost] = useState<TelegramBoardPost | null>(null)
   const [voteFormMode, setVoteFormMode] = useState(false)
   const [writeMenuOpen, setWriteMenuOpen] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
@@ -149,6 +154,63 @@ export default function TelegramBoardPostList({
     }
   }
 
+  // 선택 모드 토글
+  const handleToggleSelectMode = () => {
+    if (selectMode) {
+      setSelectMode(false)
+      setSelectedIds(new Set())
+    } else {
+      setSelectMode(true)
+      setSelectedIds(new Set())
+    }
+  }
+
+  // 개별 선택 토글
+  const handleToggleSelect = (postId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(postId)) {
+        next.delete(postId)
+      } else {
+        next.add(postId)
+      }
+      return next
+    })
+  }
+
+  // 전체 선택 (삭제 가능한 것만)
+  const selectablePosts = posts.filter(p => p.post_type === 'general' || p.post_type === 'vote')
+  const allSelected = selectablePosts.length > 0 && selectablePosts.every(p => selectedIds.has(p.id))
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(selectablePosts.map(p => p.id)))
+    }
+  }
+
+  // 일괄 삭제
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!(await appConfirm(`선택한 ${selectedIds.size}개의 게시글을 삭제하시겠습니까?`))) return
+
+    setBulkDeleting(true)
+    const { data, error } = await telegramBoardPostService.bulkDeletePosts(Array.from(selectedIds))
+    setBulkDeleting(false)
+
+    if (error) {
+      await appAlert(error)
+    } else if (data) {
+      if (data.failed > 0) {
+        await appAlert(`${data.deleted}개 삭제 완료, ${data.failed}개는 권한이 없어 삭제하지 못했습니다.`)
+      }
+      setSelectMode(false)
+      setSelectedIds(new Set())
+      fetchPosts()
+    }
+  }
+
   // 폼 제출 (생성/수정)
   const handleFormSubmit = async (data: { title: string; content: string; notifyTelegram: boolean; fileUrls: { url: string; name: string; type?: string; size?: number }[] }) => {
     if (formMode === 'create') {
@@ -219,6 +281,7 @@ export default function TelegramBoardPostList({
         onBack={handleBack}
         currentUserId={currentUserId}
         isMasterAdmin={isMasterAdmin}
+        isGroupCreator={isGroupCreator}
         onEdit={handleEdit}
         onDelete={handleDelete}
       />
@@ -226,6 +289,7 @@ export default function TelegramBoardPostList({
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
+  const canBulkDelete = isMasterAdmin || isGroupCreator
 
   return (
     <div>
@@ -277,38 +341,90 @@ export default function TelegramBoardPostList({
               </>
             )}
           </div>
-          {currentUserId && (
-            <div className="relative flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {canBulkDelete && !selectMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleSelectMode}
+                className="text-gray-500"
+              >
+                <CheckSquare className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">선택 삭제</span>
+              </Button>
+            )}
+            {currentUserId && !selectMode && (
+              <div className="relative">
+                <Button
+                  size="sm"
+                  onClick={() => setWriteMenuOpen(!writeMenuOpen)}
+                  className="flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />글쓰기
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+                {writeMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setWriteMenuOpen(false)} />
+                    <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden">
+                      <button
+                        onClick={() => { handleOpenCreate(); setWriteMenuOpen(false) }}
+                        className="w-full px-3 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <PenLine className="w-4 h-4 text-gray-500" />일반 글쓰기
+                      </button>
+                      <button
+                        onClick={() => { setVoteFormMode(true); setWriteMenuOpen(false) }}
+                        className="w-full px-3 py-2.5 text-left text-sm hover:bg-orange-50 flex items-center gap-2"
+                      >
+                        <Vote className="w-4 h-4 text-orange-500" />투표 만들기
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 선택 모드 액션 바 */}
+        {selectMode && (
+          <div className="flex items-center justify-between bg-sky-50 border border-sky-200 rounded-lg px-4 py-2">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSelectAll}
+                className="text-xs font-medium text-sky-700 hover:text-sky-900"
+              >
+                {allSelected ? '전체 해제' : '전체 선택'}
+              </button>
+              <span className="text-xs text-sky-600">
+                {selectedIds.size}개 선택됨
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
               <Button
                 size="sm"
-                onClick={() => setWriteMenuOpen(!writeMenuOpen)}
-                className="flex items-center gap-1"
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={selectedIds.size === 0 || bulkDeleting}
+                className="text-xs"
               >
-                <Plus className="w-4 h-4" />글쓰기
-                <ChevronDown className="w-3 h-3" />
+                {bulkDeleting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                ) : null}
+                {selectedIds.size}개 삭제
               </Button>
-              {writeMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setWriteMenuOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden">
-                    <button
-                      onClick={() => { handleOpenCreate(); setWriteMenuOpen(false) }}
-                      className="w-full px-3 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <PenLine className="w-4 h-4 text-gray-500" />일반 글쓰기
-                    </button>
-                    <button
-                      onClick={() => { setVoteFormMode(true); setWriteMenuOpen(false) }}
-                      className="w-full px-3 py-2.5 text-left text-sm hover:bg-orange-50 flex items-center gap-2"
-                    >
-                      <Vote className="w-4 h-4 text-orange-500" />투표 만들기
-                    </button>
-                  </div>
-                </>
-              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleToggleSelectMode}
+                className="text-xs text-gray-500"
+              >
+                <X className="w-3.5 h-3.5 mr-0.5" />취소
+              </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* 검색바 */}
         <form onSubmit={handleSearch} className="relative">
@@ -345,7 +461,15 @@ export default function TelegramBoardPostList({
               <div className="hidden sm:block w-12 text-center flex-shrink-0">조회</div>
             </div>
             {posts.map(post => (
-              <TelegramBoardPostCard key={post.id} post={post} onClick={handlePostClick} />
+              <TelegramBoardPostCard
+                key={post.id}
+                post={post}
+                onClick={handlePostClick}
+                selectMode={selectMode}
+                selected={selectedIds.has(post.id)}
+                onToggleSelect={handleToggleSelect}
+                selectable={post.post_type === 'general' || post.post_type === 'vote'}
+              />
             ))}
           </>
         )}

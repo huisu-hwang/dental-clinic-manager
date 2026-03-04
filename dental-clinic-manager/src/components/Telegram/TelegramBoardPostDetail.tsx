@@ -16,6 +16,7 @@ interface TelegramBoardPostDetailProps {
   onBack: () => void
   currentUserId?: string | null
   isMasterAdmin?: boolean
+  isGroupCreator?: boolean
   onEdit?: (post: TelegramBoardPost) => void
   onDelete?: (post: TelegramBoardPost) => void
 }
@@ -25,6 +26,7 @@ export default function TelegramBoardPostDetail({
   onBack,
   currentUserId,
   isMasterAdmin = false,
+  isGroupCreator = false,
   onEdit,
   onDelete,
 }: TelegramBoardPostDetailProps) {
@@ -74,8 +76,8 @@ export default function TelegramBoardPostDetail({
   const canModify = post.post_type === 'general' && (
     post.created_by === currentUserId || isMasterAdmin
   )
-  const canDeleteVote = post.post_type === 'vote' && (
-    post.created_by === currentUserId || isMasterAdmin
+  const canDelete = (post.post_type === 'general' || post.post_type === 'vote') && (
+    post.created_by === currentUserId || isMasterAdmin || isGroupCreator
   )
   const typeColor = TELEGRAM_POST_TYPE_COLORS[post.post_type] || { bg: 'bg-gray-100', text: 'text-gray-700' }
   const typeLabel = TELEGRAM_POST_TYPE_LABELS[post.post_type] || post.post_type
@@ -150,14 +152,14 @@ export default function TelegramBoardPostDetail({
                 <Eye className="w-3 h-3" />{post.view_count}
               </span>
             </div>
-            {(canModify || canDeleteVote) && (
+            {(canModify || canDelete) && (
               <div className="flex items-center gap-1">
                 {canModify && onEdit && (
                   <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600">
                     <Pencil className="w-3.5 h-3.5 mr-1" />수정
                   </Button>
                 )}
-                {(canModify || canDeleteVote) && onDelete && (
+                {canDelete && onDelete && (
                   <Button variant="ghost" size="sm" onClick={() => onDelete(post)} className="text-gray-400 hover:text-red-500">
                     <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
                   </Button>

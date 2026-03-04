@@ -959,6 +959,30 @@ export const telegramBoardPostService = {
   },
 
   /**
+   * 일괄 삭제 (API 경유)
+   */
+  async bulkDeletePosts(postIds: string[]): Promise<{ data: { deleted: number; failed: number } | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch('/api/telegram/board-posts/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, postIds }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '일괄 삭제에 실패했습니다.')
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardPostService.bulkDeletePosts] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 좋아요 토글
    */
   async toggleLike(userId: string, postId: string): Promise<{ data: { liked: boolean; like_count: number } | null; error: string | null }> {
