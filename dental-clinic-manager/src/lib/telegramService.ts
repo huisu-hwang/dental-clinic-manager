@@ -407,25 +407,18 @@ export const telegramGroupService = {
 // =====================================================
 export const telegramMemberService = {
   /**
-   * 그룹 멤버 목록 조회 (사용자 정보 포함)
+   * 그룹 멤버 목록 조회 (API 경유 - RLS 우회)
    */
   async getMembers(groupId: string): Promise<{ data: TelegramGroupMember[] | null; error: string | null }> {
     try {
-      const supabase = await ensureConnection()
-      if (!supabase) throw new Error('Database connection failed')
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
 
-      const { data, error } = await (supabase as any)
-        .from('telegram_group_members')
-        .select(`
-          *,
-          user:users(name, email)
-        `)
-        .eq('telegram_group_id', groupId)
-        .order('created_at', { ascending: false })
+      const res = await fetch(`/api/telegram/groups/${groupId}/members?userId=${userId}`)
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '멤버 목록 조회에 실패했습니다.')
 
-      if (error) throw error
-
-      return { data, error: null }
+      return { data: result.data, error: null }
     } catch (error) {
       console.error('[telegramMemberService.getMembers] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
@@ -465,20 +458,21 @@ export const telegramMemberService = {
   },
 
   /**
-   * 멤버 제거
+   * 멤버 제거 (API 경유 - RLS 우회)
    */
-  async removeMember(groupId: string, userId: string): Promise<{ data: null; error: string | null }> {
+  async removeMember(groupId: string, targetUserId: string): Promise<{ data: null; error: string | null }> {
     try {
-      const supabase = await ensureConnection()
-      if (!supabase) throw new Error('Database connection failed')
+      const currentUserId = getCurrentUserId()
+      if (!currentUserId) throw new Error('User not found')
 
-      const { error } = await (supabase as any)
-        .from('telegram_group_members')
-        .delete()
-        .eq('telegram_group_id', groupId)
-        .eq('user_id', userId)
+      const res = await fetch(`/api/telegram/groups/${groupId}/members?userId=${targetUserId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUserId }),
+      })
 
-      if (error) throw error
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '멤버 제거에 실패했습니다.')
 
       return { data: null, error: null }
     } catch (error) {
