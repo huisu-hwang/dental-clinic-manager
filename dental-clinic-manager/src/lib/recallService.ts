@@ -457,6 +457,44 @@ export const recallPatientService = {
     }
   },
 
+  // 제외 규칙 매칭 체크 (환자 추가 전 호출)
+  async checkExcludeRules(
+    patientName: string,
+    phoneNumber?: string,
+    chartNumber?: string
+  ): Promise<{ matched: boolean; rules: { id: string; exclude_reason: string; patient_name?: string; phone_number?: string; chart_number?: string }[] }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { matched: false, rules: [] }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { matched: false, rules: [] }
+
+    try {
+      const { data: rules } = await supabase
+        .from('recall_exclude_rules')
+        .select('id, patient_name, phone_number, chart_number, exclude_reason')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+
+      if (!rules || rules.length === 0) return { matched: false, rules: [] }
+
+      const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '')
+      const matchedRules = rules.filter((rule: any) => {
+        // 규칙의 모든 non-null 필드가 일치해야 매칭
+        if (rule.patient_name && patientName.trim() !== String(rule.patient_name).trim()) return false
+        if (rule.phone_number && phoneNumber && normalizePhone(phoneNumber) !== normalizePhone(rule.phone_number)) return false
+        if (rule.phone_number && !phoneNumber) return false
+        if (rule.chart_number && chartNumber && String(chartNumber).trim() !== String(rule.chart_number).trim()) return false
+        if (rule.chart_number && !chartNumber) return false
+        return true
+      })
+
+      return { matched: matchedRules.length > 0, rules: matchedRules }
+    } catch {
+      return { matched: false, rules: [] }
+    }
+  },
+
   // 환자 추가 (단일)
   async addPatient(formData: RecallPatientFormData, campaignId?: string): Promise<{ success: boolean; data?: RecallPatient; error?: string }> {
     const supabase = await ensureConnection()

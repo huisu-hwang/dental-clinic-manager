@@ -11,8 +11,8 @@ import {
   Clipboard,
   AlertCircle
 } from 'lucide-react'
-import type { RecallPatientFormData, Gender } from '@/types/recall'
-import { GENDER_LABELS } from '@/types/recall'
+import type { RecallPatientFormData, Gender, RecallExcludeReason } from '@/types/recall'
+import { GENDER_LABELS, EXCLUDE_REASON_LABELS } from '@/types/recall'
 import { recallPatientService } from '@/lib/recallService'
 
 interface PatientAddModalProps {
@@ -40,6 +40,11 @@ export default function PatientAddModal({
   })
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [excludeConfirm, setExcludeConfirm] = useState<{
+    show: boolean
+    reason: RecallExcludeReason | null
+    ruleName?: string
+  }>({ show: false, reason: null })
 
   // 폼 초기화
   const resetForm = () => {
@@ -83,30 +88,35 @@ export default function PatientAddModal({
     handleChange('phone_number', formatted)
   }
 
-  // 저장
-  const handleSave = async () => {
-    // 유효성 검사
+  // 유효성 검사
+  const validateForm = (): boolean => {
     if (!formData.patient_name.trim()) {
       setError('환자 이름을 입력해주세요.')
-      return
+      return false
     }
     if (!formData.phone_number.trim()) {
       setError('전화번호를 입력해주세요.')
-      return
+      return false
     }
-
-    // 전화번호 형식 검사
     const phoneNumbers = formData.phone_number.replace(/\D/g, '')
     if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
       setError('올바른 전화번호를 입력해주세요.')
-      return
+      return false
     }
+    return true
+  }
 
+  // 실제 저장 실행
+  const doSave = async (excludeReason?: RecallExcludeReason | null) => {
     setIsSaving(true)
     setError(null)
 
     try {
-      const result = await recallPatientService.addPatient(formData, campaignId)
+      const dataToSave = excludeReason
+        ? { ...formData, exclude_reason: excludeReason }
+        : formData
+
+      const result = await recallPatientService.addPatient(dataToSave, campaignId)
 
       if (result.success) {
         onAddComplete()
@@ -121,6 +131,53 @@ export default function PatientAddModal({
     } finally {
       setIsSaving(false)
     }
+  }
+
+  // 저장 (제외 규칙 체크 후)
+  const handleSave = async () => {
+    if (!validateForm()) return
+
+    setIsSaving(true)
+    setError(null)
+
+    try {
+      // 제외 규칙 매칭 체크
+      const { matched, rules } = await recallPatientService.checkExcludeRules(
+        formData.patient_name,
+        formData.phone_number,
+        formData.chart_number
+      )
+
+      if (matched && rules.length > 0) {
+        const rule = rules[0]
+        setExcludeConfirm({
+          show: true,
+          reason: rule.exclude_reason as RecallExcludeReason,
+          ruleName: rule.patient_name || formData.patient_name
+        })
+        setIsSaving(false)
+        return
+      }
+
+      // 매칭 없으면 바로 저장
+      await doSave()
+    } catch (err) {
+      console.error('Patient add error:', err)
+      setError('환자 추가 중 오류가 발생했습니다.')
+      setIsSaving(false)
+    }
+  }
+
+  // 제외 환자로 저장
+  const handleSaveAsExcluded = async () => {
+    setExcludeConfirm({ show: false, reason: null })
+    await doSave(excludeConfirm.reason)
+  }
+
+  // 제외하지 않고 일반 저장
+  const handleSaveWithoutExclude = async () => {
+    setExcludeConfirm({ show: false, reason: null })
+    await doSave()
   }
 
   // 모달 닫기
@@ -289,6 +346,39 @@ export default function PatientAddModal({
           </div>
         </div>
 
+        {/* 제외 환자 확인 다이얼로그 */}
+        {excludeConfirm.show && (
+          <div className="mx-4 mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-2 mb-3">
+              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">
+                  제외 환자 목록에 등록된 환자입니다
+                </p>
+                <p className="text-sm text-amber-700 mt-1">
+                  &quot;{excludeConfirm.ruleName}&quot; 환자가 제외 사유 <span className="font-semibold">&quot;{excludeConfirm.reason ? EXCLUDE_REASON_LABELS[excludeConfirm.reason] : ''}&quot;</span>(으)로 등록되어 있습니다.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={handleSaveWithoutExclude}
+                disabled={isSaving}
+                className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                제외하지 않고 추가
+              </button>
+              <button
+                onClick={handleSaveAsExcluded}
+                disabled={isSaving}
+                className="px-3 py-1.5 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              >
+                제외 환자로 추가
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 푸터 */}
         <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
           <button
@@ -299,7 +389,7 @@ export default function PatientAddModal({
           </button>
           <button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || excludeConfirm.show}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (
