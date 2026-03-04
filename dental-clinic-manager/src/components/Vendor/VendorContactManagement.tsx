@@ -535,14 +535,25 @@ export default function VendorContactManagement() {
 
   // 즐겨찾기 토글
   const handleToggleFavorite = async (contact: VendorContact) => {
+    const newFavorite = !contact.is_favorite
+    // 옵티미스틱 업데이트 - 즉시 UI 반영 (깜빡임 방지)
+    setContacts(prev => prev.map(c =>
+      c.id === contact.id ? { ...c, is_favorite: newFavorite } : c
+    ))
     try {
-      const result = await dataService.toggleVendorContactFavorite(contact.id, !contact.is_favorite)
+      const result = await dataService.toggleVendorContactFavorite(contact.id, newFavorite)
       if (result.error) {
+        // 실패 시 롤백
+        setContacts(prev => prev.map(c =>
+          c.id === contact.id ? { ...c, is_favorite: !newFavorite } : c
+        ))
         showToast(`즐겨찾기 변경 실패: ${result.error}`, 'error')
-        return
       }
-      loadData()
     } catch (error) {
+      // 실패 시 롤백
+      setContacts(prev => prev.map(c =>
+        c.id === contact.id ? { ...c, is_favorite: !newFavorite } : c
+      ))
       showToast('즐겨찾기 변경에 실패했습니다.', 'error')
     }
   }
