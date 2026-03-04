@@ -340,25 +340,9 @@ export default function RecallManagement() {
         const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'
         const parts: string[] = []
         if (result.matchedCount > 0) parts.push(`기존 환자 ${result.matchedCount}명 제외`)
-        if (result.newCount > 0) parts.push(`미등록 ${result.newCount}명 사전 등록`)
+        if (result.newCount > 0) parts.push(`미매칭 ${result.newCount}명 제외 환자로 추가`)
 
-        if (result.unmatchedPatients && result.unmatchedPatients.length > 0) {
-          // 미매칭 환자가 있으면 모달 열기
-          const unmatchedItems: UnmatchedPatientItem[] = result.unmatchedPatients.map(p => ({
-            uploadData: p,
-            status: 'pending' as const
-          }))
-          setUnmatchedPatients(unmatchedItems)
-          setUnmatchedExcludeReason(excludeUploadReason)
-          setUnmatchedModalOpen(true)
-
-          const rulesPart = result.savedRulesCount ? ` (${result.savedRulesCount}명 자동 제외 규칙 저장)` : ''
-          if (parts.length > 0) {
-            showToast(`제외(${label}): ${parts.join(', ')}. 미매칭 ${result.unmatchedPatients.length}명 수동 매칭이 필요합니다.${rulesPart}`, 'warning')
-          } else {
-            showToast(`미매칭 ${result.unmatchedPatients.length}명 수동 매칭이 필요합니다.${rulesPart}`, 'warning')
-          }
-        } else if (parts.length > 0) {
+        if (parts.length > 0) {
           showToast(`제외(${label}) 완료: ${parts.join(', ')}`, 'success')
         } else {
           showToast('매칭되는 환자가 없습니다. 데이터를 확인해주세요.', 'warning')

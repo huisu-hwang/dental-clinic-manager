@@ -986,9 +986,36 @@ export const recallPatientService = {
         matchedCount += data?.length || 0
       }
 
-      // 5. 미매칭 환자를 제외 규칙으로 저장 (추후 자동 매칭용)
+      // 5. 미매칭 환자도 recall_patients에 제외 환자로 추가 + 규칙 저장
+      let newCount = 0
       let savedRulesCount = 0
       if (unmatchedPatientsData.length > 0) {
+        // 5-1. recall_patients에 제외 환자로 삽입
+        const newPatients = unmatchedPatientsData.map(p => ({
+          patient_name: p.patient_name || '미확인',
+          phone_number: p.phone_number || '',
+          chart_number: p.chart_number || null,
+          birth_date: p.birth_date || null,
+          gender: p.gender || null,
+          last_visit_date: p.last_visit_date || null,
+          treatment_type: p.treatment_type || null,
+          notes: p.notes || null,
+          clinic_id: clinicId,
+          campaign_id: null,
+          exclude_reason: excludeReason,
+          status: 'pending' as const,
+        }))
+
+        for (let i = 0; i < newPatients.length; i += BATCH_SIZE) {
+          const batch = newPatients.slice(i, i + BATCH_SIZE)
+          const { data } = await supabase
+            .from('recall_patients')
+            .insert(batch)
+            .select('id')
+          newCount += data?.length || 0
+        }
+
+        // 5-2. 규칙으로도 저장 (추후 자동 매칭용)
         const rulesResult = await recallExcludeRulesService.saveRules(unmatchedPatientsData, excludeReason)
         if (rulesResult.success) {
           savedRulesCount = rulesResult.savedCount
@@ -998,9 +1025,9 @@ export const recallPatientService = {
       return {
         success: true,
         matchedCount,
-        newCount: 0,
+        newCount,
         savedRulesCount,
-        unmatchedPatients: unmatchedPatientsData.length > 0 ? unmatchedPatientsData : undefined
+        unmatchedPatients: undefined
       }
     } catch (error) {
       return { success: false, matchedCount: 0, newCount: 0, error: extractErrorMessage(error) }
