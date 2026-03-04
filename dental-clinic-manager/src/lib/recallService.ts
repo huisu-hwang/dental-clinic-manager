@@ -1636,7 +1636,7 @@ export const recallExcludeRulesService = {
         .eq('is_active', true)
 
       const existingKeys = new Set(
-        (existingRules || []).map(r =>
+        (existingRules || []).map((r: { phone_number: string | null; patient_name: string | null; chart_number: string | null }) =>
           `${(r.phone_number || '').replace(/[^0-9]/g, '')}|${(r.patient_name || '').trim()}|${(r.chart_number || '').trim()}`
         )
       )

@@ -26,8 +26,8 @@ import {
   AlertCircle,
   Download,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
-  MoreVertical,
   FolderInput
 } from 'lucide-react'
 import type { VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData } from '@/types'
@@ -121,8 +121,7 @@ export default function VendorContactManagement() {
 
   // 전화번호부 UI 상태
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const [expandedContactId, setExpandedContactId] = useState<string | null>(null)
 
   // 선택 상태
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set())
@@ -212,19 +211,6 @@ export default function VendorContactManagement() {
   useEffect(() => {
     loadData()
   }, [loadData])
-
-  // 더보기 메뉴 외부 클릭 감지
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpenMenuId(null)
-      }
-    }
-    if (openMenuId) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [openMenuId])
 
   // 전화 다이얼 설정은 usePhoneDialSettings 훅에서 자동 로드
 
@@ -950,181 +936,190 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
     URL.revokeObjectURL(url)
   }
 
-  // 명함 스타일 카드 렌더링
+  // 아코디언 명함 카드 렌더링
   const renderContactCard = (contact: VendorContact, showCategoryBadge: boolean) => {
     const isDialing = dialingPhone === contact.phone || dialingPhone === contact.phone2
     const categoryColor = contact.category?.color || '#94a3b8'
+    const isExpanded = expandedContactId === contact.id
+
     return (
       <div
         key={contact.id}
-        className={`relative bg-white rounded-xl border border-slate-200 shadow-sm cursor-pointer transition-all hover:shadow-md flex flex-col overflow-hidden ${
-          isDialing ? 'bg-blue-50/40' : ''
-        } ${selectedContacts.has(contact.id) ? 'bg-blue-50/30' : ''}`}
-        onClick={() => makePhoneCall(contact.phone)}
+        className={`relative bg-white rounded-lg border transition-all ${
+          isExpanded ? 'border-slate-300 shadow-md' : 'border-slate-200 hover:border-slate-300 shadow-sm'
+        } ${isDialing ? 'bg-blue-50/40' : ''} ${selectedContacts.has(contact.id) ? 'ring-2 ring-blue-200' : ''}`}
       >
-        {/* 좌측 카테고리 색상 바 */}
-        <div className="flex flex-1">
+        {/* 접힌 상태: 1줄 요약 */}
+        <div
+          className="flex items-center gap-2 cursor-pointer select-none"
+          onClick={() => setExpandedContactId(isExpanded ? null : contact.id)}
+        >
+          {/* 카테고리 색상 바 */}
           <div
-            className="w-1.5 flex-shrink-0"
+            className="w-1 self-stretch rounded-l-lg flex-shrink-0"
             style={{ backgroundColor: categoryColor }}
           />
 
-          <div className="p-3.5 flex flex-col flex-1 min-w-0">
-            {/* 1행: 업체명 + 액션 */}
-            <div className="flex items-center justify-between gap-1 mb-1.5">
-              <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                {canDelete && (
-                  <input
-                    type="checkbox"
-                    checked={selectedContacts.has(contact.id)}
-                    onChange={() => toggleSelectContact(contact.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer flex-shrink-0"
-                  />
-                )}
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleToggleFavorite(contact) }}
-                  className="flex-shrink-0"
-                >
-                  <Star className={`w-4 h-4 ${contact.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200 hover:text-slate-300'}`} />
-                </button>
-                <span className="font-bold text-[15px] text-slate-800 truncate leading-tight">{contact.company_name}</span>
-              </div>
-              {/* 더보기 메뉴 */}
-              <div className="relative flex-shrink-0" ref={openMenuId === contact.id ? menuRef : undefined}>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === contact.id ? null : contact.id) }}
-                  className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                  <MoreVertical className="w-4 h-4 text-slate-300" />
-                </button>
-                {openMenuId === contact.id && (
-                  <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1">
-                    {(contact.email || contact.address) && (
-                      <div className="px-4 py-2 border-b border-slate-100">
-                        <p className="text-xs font-medium text-slate-400 mb-1.5">상세 정보</p>
-                        {contact.email && (
-                          <p className="text-sm text-slate-600 flex items-center gap-1.5 mb-1">
-                            <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                            <span className="truncate">{contact.email}</span>
-                          </p>
-                        )}
-                        {contact.address && (
-                          <p className="text-sm text-slate-600 flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                            <span className="truncate">{contact.address}</span>
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleToggleFavorite(contact)
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                    >
-                      <Star className={`w-4 h-4 ${contact.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-400'}`} />
-                      {contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
-                    </button>
-                    {canEdit && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openEditContact(contact)
-                          setOpenMenuId(null)
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                      >
-                        <Edit2 className="w-4 h-4 text-slate-400" />
-                        수정
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setShowDeleteConfirm(contact.id)
-                          setOpenMenuId(null)
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-400" />
-                        삭제
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="flex items-center gap-2 flex-1 min-w-0 py-2.5 pr-3">
+            {/* 체크박스 */}
+            {canDelete && (
+              <input
+                type="checkbox"
+                checked={selectedContacts.has(contact.id)}
+                onChange={() => toggleSelectContact(contact.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer flex-shrink-0"
+              />
+            )}
 
-            {/* 2행: 담당자 + 카테고리 (고정 높이) */}
-            <div className="h-5 flex items-center gap-1.5 mb-2">
-              <span className="text-xs text-slate-500 flex items-center gap-1">
-                <User className="w-3 h-3 text-slate-400" />
-                {contact.contact_person || '-'}
-              </span>
-              {contact.category && (
-                <>
-                  <span className="text-xs text-slate-300">·</span>
-                  {showCategoryBadge ? (
-                    <span
-                      className="px-1.5 py-0.5 text-[10px] rounded-full text-white leading-none"
-                      style={{ backgroundColor: contact.category.color }}
-                    >
-                      {contact.category.name}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-400">{contact.category.name}</span>
-                  )}
-                </>
-              )}
-            </div>
+            {/* 즐겨찾기 별 */}
+            <Star className={`w-4 h-4 flex-shrink-0 ${contact.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200'}`} />
 
-            {/* 구분선 */}
-            <div className="border-t border-slate-100 mb-2.5" />
+            {/* 업체명 */}
+            <span className="font-semibold text-sm text-slate-800 truncate">{contact.company_name}</span>
 
-            {/* 3행: 전화번호 (flex-1로 남은 공간 차지) */}
-            <div className="flex-1 flex flex-col justify-center space-y-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone) }}
-                disabled={dialingPhone === contact.phone}
-                className="flex items-center gap-2 text-blue-600 font-semibold text-sm hover:text-blue-700 transition-colors"
+            {/* 카테고리 뱃지 (필터뷰에서만) */}
+            {showCategoryBadge && contact.category && (
+              <span
+                className="px-1.5 py-0.5 text-[10px] rounded-full text-white leading-none flex-shrink-0"
+                style={{ backgroundColor: contact.category.color }}
               >
-                {dialingPhone === contact.phone ? (
-                  <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin flex-shrink-0" />
-                ) : (
-                  <PhoneCall className="w-4 h-4 flex-shrink-0" />
-                )}
-                <span>{formatPhone(contact.phone)}</span>
-              </button>
-              {contact.phone2 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone2!) }}
-                  disabled={dialingPhone === contact.phone2}
-                  className="flex items-center gap-2 text-slate-500 text-sm hover:text-blue-600 transition-colors"
-                >
-                  {dialingPhone === contact.phone2 ? (
-                    <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin flex-shrink-0" />
-                  ) : (
-                    <Phone className="w-4 h-4 flex-shrink-0" />
-                  )}
-                  <span>{formatPhone(contact.phone2)}</span>
-                </button>
-              )}
-            </div>
+                {contact.category.name}
+              </span>
+            )}
 
-            {/* 4행: 메모 (고정 높이) */}
-            <div className="h-4 mt-2 flex items-center">
-              {contact.notes && (
-                <p className="text-[11px] text-slate-400 truncate w-full">
+            {/* 오른쪽: 메모 미리보기 + 화살표 */}
+            <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+              {!isExpanded && contact.notes && (
+                <span className="text-xs text-slate-400 truncate max-w-[150px] hidden sm:inline">
                   {contact.notes}
-                </p>
+                </span>
+              )}
+              {isExpanded ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
               )}
             </div>
           </div>
         </div>
+
+        {/* 펼친 상태: 아코디언 */}
+        {isExpanded && (
+          <div className="border-t border-slate-100">
+            {/* 상세 정보 */}
+            <div className="px-4 py-3 space-y-2">
+              {/* 전화번호 1 */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
+                  <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{formatPhone(contact.phone)}</span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone) }}
+                  disabled={dialingPhone === contact.phone}
+                  className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1 flex-shrink-0"
+                >
+                  {dialingPhone === contact.phone ? (
+                    <div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                  ) : (
+                    <PhoneCall className="w-3 h-3" />
+                  )}
+                  전화걸기
+                </button>
+              </div>
+
+              {/* 전화번호 2 */}
+              {contact.phone2 && (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
+                    <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <span className="truncate">{formatPhone(contact.phone2)}</span>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone2!) }}
+                    disabled={dialingPhone === contact.phone2}
+                    className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1 flex-shrink-0"
+                  >
+                    {dialingPhone === contact.phone2 ? (
+                      <div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                    ) : (
+                      <PhoneCall className="w-3 h-3" />
+                    )}
+                    전화걸기
+                  </button>
+                </div>
+              )}
+
+              {/* 담당자 */}
+              {contact.contact_person && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span>{contact.contact_person}</span>
+                </div>
+              )}
+
+              {/* 이메일 */}
+              {contact.email && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{contact.email}</span>
+                </div>
+              )}
+
+              {/* 주소 */}
+              {contact.address && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{contact.address}</span>
+                </div>
+              )}
+
+              {/* 메모 */}
+              {contact.notes && (
+                <div className="flex items-start gap-2 text-sm text-slate-600">
+                  <FileText className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                  <span className="whitespace-pre-wrap break-words">{contact.notes}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 액션 버튼 */}
+            <div className="border-t border-slate-100 px-4 py-2.5 flex items-center gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleToggleFavorite(contact) }}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                  contact.is_favorite
+                    ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Star className={`w-3.5 h-3.5 ${contact.is_favorite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                {contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기'}
+              </button>
+
+              {canEdit && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); openEditContact(contact) }}
+                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-1.5"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  수정
+                </button>
+              )}
+
+              {canDelete && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(contact.id) }}
+                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-1.5 ml-auto"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  삭제
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -1339,7 +1334,8 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   <div key={groupId}>
                     <button
                       onClick={() => toggleGroup(groupId)}
-                      className="w-full flex items-center gap-2 px-2 py-2 hover:bg-slate-50 rounded-lg transition-colors mb-2"
+                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
+                      style={{ backgroundColor: `${group.category?.color || '#94a3b8'}15`, borderLeft: `3px solid ${group.category?.color || '#94a3b8'}` }}
                     >
                       {isCollapsed ? (
                         <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -1347,18 +1343,17 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                         <ChevronDown className="w-4 h-4 text-slate-400" />
                       )}
                       <span
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: group.category?.color || '#94a3b8' }}
-                      />
-                      <span className="font-medium text-sm text-slate-700">
+                        className="font-semibold text-sm"
+                        style={{ color: group.category?.color || '#94a3b8' }}
+                      >
                         {group.category?.name || '미분류'}
                       </span>
-                      <span className="text-xs text-slate-400 ml-1">
+                      <span className="text-xs text-slate-400">
                         ({group.contacts.length})
                       </span>
                     </button>
                     {!isCollapsed && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="flex flex-col gap-1.5">
                         {group.contacts.map(contact => renderContactCard(contact, false))}
                       </div>
                     )}
@@ -1367,7 +1362,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               })}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="flex flex-col gap-1.5">
               {filteredContacts.map(contact => renderContactCard(contact, true))}
             </div>
           )}
