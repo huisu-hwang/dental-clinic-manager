@@ -840,18 +840,85 @@ export const recallPatientService = {
   async updateExcludeReasonBulk(
     ids: string[],
     excludeReason: RecallExcludeReason | null
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; restoredCount?: number; duplicateCount?: number; error?: string }> {
     const supabase = await ensureConnection()
     if (!supabase) return { success: false, error: 'Database connection not available' }
 
+    const clinicId = await getCurrentClinicId()
+
     try {
+      // 복원(excludeReason === null)일 때 중복 체크
+      if (excludeReason === null && clinicId) {
+        // 복원 대상 환자 정보 조회
+        const { data: excludedPatients } = await supabase
+          .from('recall_patients')
+          .select('id, patient_name, phone_number, chart_number')
+          .in('id', ids)
+
+        if (excludedPatients && excludedPatients.length > 0) {
+          // 같은 클리닉의 제외되지 않은 환자 목록 조회
+          const { data: activePatients } = await supabase
+            .from('recall_patients')
+            .select('id, patient_name, phone_number, chart_number')
+            .eq('clinic_id', clinicId)
+            .is('exclude_reason', null)
+
+          const duplicateIds: string[] = []
+          const restoreIds: string[] = []
+
+          const normalize = (v: string | null | undefined) => (v || '').trim().toLowerCase()
+          const normalizePhone = (v: string | null | undefined) => (v || '').replace(/[^0-9]/g, '')
+
+          for (const ep of excludedPatients) {
+            let isDuplicate = false
+            if (activePatients) {
+              for (const ap of activePatients) {
+                let matchCount = 0
+                if (normalize(ep.patient_name) && normalize(ep.patient_name) === normalize(ap.patient_name)) matchCount++
+                if (normalizePhone(ep.phone_number) && normalizePhone(ep.phone_number) === normalizePhone(ap.phone_number)) matchCount++
+                if (normalize(ep.chart_number) && normalize(ep.chart_number) === normalize(ap.chart_number)) matchCount++
+                if (matchCount >= 2) {
+                  isDuplicate = true
+                  break
+                }
+              }
+            }
+            if (isDuplicate) {
+              duplicateIds.push(ep.id)
+            } else {
+              restoreIds.push(ep.id)
+            }
+          }
+
+          // 중복 환자는 삭제 (이미 활성 목록에 존재)
+          if (duplicateIds.length > 0) {
+            await supabase
+              .from('recall_patients')
+              .delete()
+              .in('id', duplicateIds)
+          }
+
+          // 나머지는 정상 복원
+          if (restoreIds.length > 0) {
+            const { error } = await supabase
+              .from('recall_patients')
+              .update({ exclude_reason: null })
+              .in('id', restoreIds)
+            if (error) throw error
+          }
+
+          return { success: true, restoredCount: restoreIds.length, duplicateCount: duplicateIds.length }
+        }
+      }
+
+      // 제외 처리 또는 일반 업데이트
       const { error } = await supabase
         .from('recall_patients')
         .update({ exclude_reason: excludeReason })
         .in('id', ids)
 
       if (error) throw error
-      return { success: true }
+      return { success: true, restoredCount: ids.length, duplicateCount: 0 }
     } catch (error) {
       return { success: false, error: extractErrorMessage(error) }
     }

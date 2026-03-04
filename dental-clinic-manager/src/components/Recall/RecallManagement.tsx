@@ -273,18 +273,30 @@ export default function RecallManagement() {
 
   // 리콜 제외/복원
   const handleExcludePatient = async (patient: RecallPatient, reason: RecallExcludeReason | null) => {
-    const result = await recallService.patients.updateExcludeReason(patient.id, reason)
-    if (result.success) {
-      if (reason) {
+    if (reason === null) {
+      // 복원 시 중복 체크 포함된 bulk 메서드 사용
+      const result = await recallService.patients.updateExcludeReasonBulk([patient.id], null)
+      if (result.success) {
+        if (result.duplicateCount && result.duplicateCount > 0) {
+          showToast(`${patient.patient_name}님은 이미 환자 목록에 있어 중복 제거되었습니다.`, 'info')
+        } else {
+          showToast(`${patient.patient_name}님이 리콜 대상으로 복원되었습니다.`, 'success')
+        }
+        loadPatients()
+        loadStats()
+      } else {
+        showToast(result.error || '처리에 실패했습니다.', 'error')
+      }
+    } else {
+      const result = await recallService.patients.updateExcludeReason(patient.id, reason)
+      if (result.success) {
         const label = reason === 'family' ? '지인' : '비우호적'
         showToast(`${patient.patient_name}님이 리콜 제외(${label})되었습니다.`, 'success')
+        loadPatients()
+        loadStats()
       } else {
-        showToast(`${patient.patient_name}님이 리콜 대상으로 복원되었습니다.`, 'success')
+        showToast(result.error || '처리에 실패했습니다.', 'error')
       }
-      loadPatients()
-      loadStats()
-    } else {
-      showToast(result.error || '처리에 실패했습니다.', 'error')
     }
   }
 
@@ -314,7 +326,10 @@ export default function RecallManagement() {
     }
     const result = await recallService.patients.updateExcludeReasonBulk(selectedPatients, null)
     if (result.success) {
-      showToast(`${selectedPatients.length}명이 리콜 대상으로 복원되었습니다.`, 'success')
+      const parts: string[] = []
+      if (result.restoredCount) parts.push(`${result.restoredCount}명 복원`)
+      if (result.duplicateCount) parts.push(`${result.duplicateCount}명 중복 제거`)
+      showToast(parts.length > 0 ? parts.join(', ') : `${selectedPatients.length}명이 리콜 대상으로 복원되었습니다.`, 'success')
       setSelectedPatients([])
       loadPatients()
       loadStats()
