@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import PasswordResetHandler from "@/components/PasswordResetHandler";
+import { AppDialogRoot } from "@/components/ui/AppDialog";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,6 +20,7 @@ export default function RootLayout({
         <AuthProvider>
           <PasswordResetHandler />
           {children}
+          <AppDialogRoot />
         </AuthProvider>
       </body>
     </html>

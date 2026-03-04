@@ -10,6 +10,7 @@ import TelegramBoardPostForm from './TelegramBoardPostForm'
 import ContributionVoteForm from './ContributionVoteForm'
 import { telegramBoardPostService, telegramBoardVoteService } from '@/lib/telegramService'
 import type { TelegramBoardPost, CreateContributionVoteDto } from '@/types/telegram'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface TelegramBoardPostListProps {
   groupId: string
@@ -138,13 +139,13 @@ export default function TelegramBoardPostList({
 
   // 글 삭제
   const handleDelete = async (post: TelegramBoardPost) => {
-    if (!confirm('게시글을 삭제하시겠습니까?')) return
+    if (!(await appConfirm('게시글을 삭제하시겠습니까?'))) return
     const { error } = await telegramBoardPostService.deletePost(post.id)
     if (!error) {
       setSelectedPost(null)
       fetchPosts()
     } else {
-      alert(error)
+      await appAlert(error)
     }
   }
 
@@ -158,7 +159,7 @@ export default function TelegramBoardPostList({
         file_urls: data.fileUrls,
       })
       if (error) {
-        alert(error)
+        await appAlert(error)
         return
       }
     } else if (formMode === 'edit' && editingPost) {
@@ -168,7 +169,7 @@ export default function TelegramBoardPostList({
         file_urls: data.fileUrls,
       })
       if (error) {
-        alert(error)
+        await appAlert(error)
         return
       }
     }
@@ -181,7 +182,7 @@ export default function TelegramBoardPostList({
   const handleVoteFormSubmit = async (data: CreateContributionVoteDto) => {
     const { error } = await telegramBoardVoteService.createVote(groupId, data)
     if (error) {
-      alert(error)
+      await appAlert(error)
       return
     }
     setVoteFormMode(false)

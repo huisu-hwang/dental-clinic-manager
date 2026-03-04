@@ -7,6 +7,7 @@ import type { CommunityComment } from '@/types/community'
 import CommentForm from './CommentForm'
 import CommentItem from './CommentItem'
 import ReportModal from './ReportModal'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface CommentListProps {
   postId: string
@@ -42,7 +43,7 @@ export default function CommentList({ postId, profileId, commentCount }: Comment
   }
 
   const handleDelete = async (commentId: string) => {
-    if (!confirm('댓글을 삭제하시겠습니까?')) return
+    if (!await appConfirm('댓글을 삭제하시겠습니까?')) return
     await communityCommentService.deleteComment(commentId)
     fetchComments()
   }

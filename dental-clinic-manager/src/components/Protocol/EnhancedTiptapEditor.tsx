@@ -38,6 +38,7 @@ import {
   ArrowUturnRightIcon,
   Bars3Icon
 } from '@heroicons/react/24/outline'
+import { appAlert, appPrompt } from '@/components/ui/AppDialog'
 
 // 커스텀 Video 노드 익스텐션
 const VideoNode = Node.create({
@@ -718,7 +719,7 @@ export default function EnhancedTiptapEditor({
       console.log('[Editor] Image uploaded successfully:', uploadedUrl)
     } else {
       // 업로드 실패 시 임시 이미지 제거
-      alert(result.error || '이미지 업로드에 실패했습니다.')
+      await appAlert(result.error || '이미지 업로드에 실패했습니다.')
       const { state } = editor
       const { doc } = state
       doc.descendants((node, pos) => {
@@ -744,7 +745,7 @@ export default function EnhancedTiptapEditor({
           attrs: { src: result.url },
         }).run()
       } else {
-        alert(result.error || '동영상 업로드에 실패했습니다.')
+        await appAlert(result.error || '동영상 업로드에 실패했습니다.')
       }
     } finally {
       setVideoUploading(false)
@@ -769,8 +770,8 @@ export default function EnhancedTiptapEditor({
   })
 
   // YouTube URL 추가
-  const addYoutubeVideo = useCallback(() => {
-    const url = prompt('YouTube 동영상 URL을 입력하세요:')
+  const addYoutubeVideo = useCallback(async () => {
+    const url = await appPrompt('YouTube 동영상 URL을 입력하세요:')
 
     if (url && editor) {
       editor.chain().focus().setYoutubeVideo({

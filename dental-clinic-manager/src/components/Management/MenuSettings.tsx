@@ -93,6 +93,7 @@ import type { MenuItemSetting, MenuCategorySetting } from '@/types/menuSettings'
 import { DEFAULT_MENU_ITEMS, DEFAULT_CATEGORIES, AVAILABLE_CATEGORY_ICONS, createNewCategory } from '@/types/menuSettings'
 import { getUserMenuSettings, saveUserMenuSettings, resetUserMenuSettings } from '@/lib/menuSettingsService'
 import { useAuth } from '@/contexts/AuthContext'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 // 메뉴 아이콘 매핑
 const menuIcons: Record<string, React.ElementType> = {
@@ -1008,11 +1009,11 @@ export default function MenuSettings() {
   }
 
   // 카테고리 삭제
-  const deleteCategory = (categoryId: string) => {
+  const deleteCategory = async (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId)
     if (!category?.isCustom) return
 
-    if (!confirm(`"${category.label}" 카테고리를 삭제하시겠습니까?\n\n해당 카테고리에 속한 메뉴는 미사용 메뉴로 이동됩니다.`)) return
+    if (!await appConfirm(`"${category.label}" 카테고리를 삭제하시겠습니까?\n\n해당 카테고리에 속한 메뉴는 미사용 메뉴로 이동됩니다.`)) return
 
     setMenuItems(prev => prev.map(m =>
       m.categoryId === categoryId ? { ...m, categoryId: undefined, visible: false, fixedPosition: undefined } : m
@@ -1355,7 +1356,7 @@ export default function MenuSettings() {
   const handleReset = async () => {
     if (!user?.id) return
 
-    if (!confirm('메뉴 설정을 기본값으로 초기화하시겠습니까?\n\n모든 커스텀 설정이 삭제됩니다.')) return
+    if (!await appConfirm('메뉴 설정을 기본값으로 초기화하시겠습니까?\n\n모든 커스텀 설정이 삭제됩니다.')) return
 
     setSaving(true)
     setError('')

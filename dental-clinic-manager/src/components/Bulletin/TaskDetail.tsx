@@ -25,6 +25,7 @@ import {
   TASK_PRIORITY_LABELS,
   TASK_PRIORITY_COLORS
 } from '@/types/bulletin'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface TaskDetailProps {
   task: Task
@@ -78,7 +79,7 @@ export default function TaskDetail({
   }
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!confirm('댓글을 삭제하시겠습니까?')) return
+    if (!await appConfirm('댓글을 삭제하시겠습니까?')) return
 
     const { success } = await taskCommentService.deleteComment(commentId)
     if (success) {

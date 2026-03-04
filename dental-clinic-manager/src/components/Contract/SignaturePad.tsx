@@ -6,6 +6,7 @@
  */
 
 import { useRef, useState, useEffect } from 'react'
+import { appAlert } from '@/components/ui/AppDialog'
 
 interface SignaturePadProps {
   onSave: (signatureData: string) => void
@@ -144,9 +145,9 @@ export default function SignaturePad({
   }
 
   // Save signature
-  const saveSignature = () => {
+  const saveSignature = async () => {
     if (isEmpty) {
-      alert('서명을 작성해주세요.')
+      await appAlert('서명을 작성해주세요.')
       return
     }
 

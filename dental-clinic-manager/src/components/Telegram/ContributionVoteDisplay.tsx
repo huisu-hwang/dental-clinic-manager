@@ -5,6 +5,7 @@ import { Vote, Loader2, Trophy, RefreshCw, CheckCircle2, Lock, Clock, RotateCcw,
 import { Button } from '@/components/ui/Button'
 import { telegramBoardVoteService, telegramMemberService } from '@/lib/telegramService'
 import type { TelegramBoardVote, ContributionVoteResults, TelegramGroupMember } from '@/types/telegram'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface ContributionVoteDisplayProps {
   postId: string
@@ -117,7 +118,7 @@ export default function ContributionVoteDisplay({
 
   const handleCloseVote = async () => {
     if (!vote) return
-    if (!confirm('투표를 종료하시겠습니까? 종료 후에는 더 이상 투표할 수 없습니다.')) return
+    if (!(await appConfirm('투표를 종료하시겠습니까? 종료 후에는 더 이상 투표할 수 없습니다.'))) return
 
     setClosing(true)
     const { error: closeError } = await telegramBoardVoteService.closeVote(vote.id)

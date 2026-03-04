@@ -18,6 +18,7 @@ import type { Announcement, AnnouncementCategory } from '@/types/bulletin'
 import { ANNOUNCEMENT_CATEGORY_LABELS } from '@/types/bulletin'
 import AnnouncementDetail from './AnnouncementDetail'
 import AnnouncementForm from './AnnouncementForm'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface AnnouncementListProps {
   canCreate?: boolean
@@ -86,14 +87,14 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return
+    if (!await appConfirm('정말 삭제하시겠습니까?')) return
 
     const { success, error: deleteError } = await announcementService.deleteAnnouncement(id)
     if (success) {
       fetchAnnouncements()
       setSelectedAnnouncement(null)
     } else {
-      alert(deleteError || '삭제에 실패했습니다.')
+      await appAlert(deleteError || '삭제에 실패했습니다.')
     }
   }
 

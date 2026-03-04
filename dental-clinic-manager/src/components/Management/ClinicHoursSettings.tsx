@@ -15,6 +15,7 @@ import {
   type DayOfWeek,
 } from '@/types/clinic'
 import { ClockIcon, CalendarDaysIcon, PlusIcon, TrashIcon, PlusCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface ClinicHoursSettingsProps {
   clinicId: string
@@ -283,7 +284,7 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
   }
 
   const handleDeleteHoliday = async (holidayId: string) => {
-    if (!confirm('이 휴진일을 삭제하시겠습니까?')) return
+    if (!await appConfirm('이 휴진일을 삭제하시겠습니까?')) return
 
     try {
       const result = await clinicHoursService.deleteClinicHoliday(holidayId)

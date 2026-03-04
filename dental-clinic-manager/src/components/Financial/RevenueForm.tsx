@@ -9,6 +9,7 @@ import {
 } from '@/types/financial'
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import { Upload, FileSpreadsheet, Image, X, Loader2, Check, AlertCircle } from 'lucide-react'
+import { appAlert } from '@/components/ui/AppDialog'
 
 interface RevenueFormProps {
   clinicId: string
@@ -169,11 +170,11 @@ export default function RevenueForm({
       if (result.success) {
         onSave()
       } else {
-        alert(result.error || '저장에 실패했습니다.')
+        await appAlert(result.error || '저장에 실패했습니다.')
       }
     } catch (error) {
       console.error('Save error:', error)
-      alert('저장 중 오류가 발생했습니다.')
+      await appAlert('저장 중 오류가 발생했습니다.')
     } finally {
       setSaving(false)
     }

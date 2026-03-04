@@ -10,6 +10,7 @@ import { UserProfile } from '@/contexts/AuthContext'
 import PermissionSelector from './PermissionSelector'
 import type { Permission } from '@/types/permissions'
 import { decryptResidentNumber, encryptResidentNumber } from '@/utils/encryptionUtils'
+import { appPrompt } from '@/components/ui/AppDialog'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
@@ -740,8 +741,8 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                           승인
                         </button>
                         <button
-                          onClick={() => {
-                            const reason = prompt('거부 사유를 입력하세요:') || '조건에 맞지 않음'
+                          onClick={async () => {
+                            const reason = await appPrompt('거부 사유를 입력하세요:') || '조건에 맞지 않음'
                             handleRejectRequest(request.id, reason)
                           }}
                           className="flex items-center px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"

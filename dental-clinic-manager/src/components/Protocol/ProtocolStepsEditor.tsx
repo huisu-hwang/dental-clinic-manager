@@ -28,6 +28,7 @@ import {
 } from '@heroicons/react/24/outline'
 import EnhancedTiptapEditor from './EnhancedTiptapEditor'
 import type { ProtocolStep } from '@/types'
+import { appAlert } from '@/components/ui/AppDialog'
 
 interface ProtocolStepsEditorProps {
   steps: ProtocolStep[]
@@ -236,9 +237,9 @@ export default function ProtocolStepsEditor({
   }
 
   // 단계 삭제
-  const deleteStep = (index: number) => {
+  const deleteStep = async (index: number) => {
     if (localSteps.length <= 1) {
-      alert('최소 1개 이상의 단계가 필요합니다.')
+      await appAlert('최소 1개 이상의 단계가 필요합니다.')
       return
     }
 

@@ -16,6 +16,7 @@ import type { UserProfile } from '@/contexts/AuthContext'
 import { formatResidentNumber, maskResidentNumber } from '@/utils/residentNumberUtils'
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
 import { collectSignatureMetadata } from '@/utils/documentLegalUtils'
+import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
 
 interface ContractDetailProps {
   contractId: string
@@ -113,15 +114,15 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       const response = await contractService.signContract(clientInfo)
 
       if (response.success) {
-        alert('서명이 완료되었습니다.')
+        await appAlert('서명이 완료되었습니다.')
         setShowSignatureModal(false)
         loadContract() // Reload to show updated status
       } else {
-        alert(`서명 실패: ${response.error}`)
+        await appAlert(`서명 실패: ${response.error}`)
       }
     } catch (err) {
       console.error('Failed to sign contract:', err)
-      alert('서명 중 오류가 발생했습니다.')
+      await appAlert('서명 중 오류가 발생했습니다.')
     }
   }
 
@@ -200,7 +201,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       pdf.save(`근로계약서_${contract?.employee?.name || '문서'}.pdf`)
     } catch (error) {
       console.error('PDF 생성 중 오류 발생:', error)
-      alert(`PDF를 생성하는 데 실패했습니다.\n오류: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+      await appAlert(`PDF를 생성하는 데 실패했습니다.\n오류: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
     } finally {
       setIsPdfGenerating(false)
     }
@@ -211,22 +212,22 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
   }
 
   const handleCancel = async () => {
-    if (!confirm('이 계약서를 취소하시겠습니까?')) return
+    if (!await appConfirm('이 계약서를 취소하시겠습니까?')) return
 
-    const reason = prompt('취소 사유를 입력해주세요:')
+    const reason = await appPrompt('취소 사유를 입력해주세요:')
     if (!reason) return
 
     try {
       const response = await contractService.cancelContract(contractId, currentUser.id, reason)
       if (response.success) {
-        alert('계약서가 취소되었습니다.')
+        await appAlert('계약서가 취소되었습니다.')
         loadContract()
       } else {
-        alert(`취소 실패: ${response.error}`)
+        await appAlert(`취소 실패: ${response.error}`)
       }
     } catch (err) {
       console.error('Failed to cancel contract:', err)
-      alert('취소 중 오류가 발생했습니다.')
+      await appAlert('취소 중 오류가 발생했습니다.')
     }
   }
 

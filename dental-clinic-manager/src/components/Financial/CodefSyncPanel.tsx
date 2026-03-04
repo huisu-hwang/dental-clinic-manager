@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import CertificateSelector from './CertificateSelector'
 import type { ParsedCertificate, PfxParsedCertificate } from '@/lib/certificateParser'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface CodefConnection {
   isConnected: boolean
@@ -247,7 +248,7 @@ export default function CodefSyncPanel({
 
   // 홈택스 계정 연결 해제
   const handleDisconnect = async () => {
-    if (!confirm('홈택스 계정 연결을 해제하시겠습니까?')) return
+    if (!await appConfirm('홈택스 계정 연결을 해제하시겠습니까?')) return
 
     try {
       const response = await fetch(`/api/codef/connect?clinicId=${clinicId}`, {
@@ -262,10 +263,10 @@ export default function CodefSyncPanel({
           connectedId: null,
         })
       } else {
-        alert(result.error || '연결 해제에 실패했습니다.')
+        await appAlert(result.error || '연결 해제에 실패했습니다.')
       }
     } catch (error) {
-      alert('연결 해제 중 오류가 발생했습니다.')
+      await appAlert('연결 해제 중 오류가 발생했습니다.')
     }
   }
 
@@ -288,7 +289,7 @@ export default function CodefSyncPanel({
       const result = await response.json()
 
       if (result.success) {
-        alert(result.data.message)
+        await appAlert(result.data.message)
         onSyncComplete?.()
 
         // 동기화 이력 새로고침
@@ -298,10 +299,10 @@ export default function CodefSyncPanel({
           setSyncLogs(logsResult.data)
         }
       } else {
-        alert(result.error || '동기화에 실패했습니다.')
+        await appAlert(result.error || '동기화에 실패했습니다.')
       }
     } catch (error) {
-      alert('동기화 중 오류가 발생했습니다.')
+      await appAlert('동기화 중 오류가 발생했습니다.')
     } finally {
       setSyncing(false)
     }

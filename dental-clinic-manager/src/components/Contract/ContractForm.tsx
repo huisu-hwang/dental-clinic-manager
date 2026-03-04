@@ -16,6 +16,7 @@ import type { UserProfile } from '@/contexts/AuthContext'
 import { formatResidentNumber } from '@/utils/residentNumberUtils'
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
 import type { DaySchedule, WorkSchedule, DayName } from '@/types/workSchedule'
+import { appAlert } from '@/components/ui/AppDialog'
 
 interface ContractFormProps {
   currentUser: UserProfile
@@ -173,12 +174,12 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
     e.preventDefault()
 
     if (!selectedEmployee) {
-      alert('직원을 선택해주세요.')
+      await appAlert('직원을 선택해주세요.')
       return
     }
 
     if (!formData.employment_period_start || !formData.salary_base) {
-      alert('필수 항목을 입력해주세요.')
+      await appAlert('필수 항목을 입력해주세요.')
       return
     }
 
@@ -194,18 +195,18 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       const response = await contractService.createContract(contractFormData, currentUser.id)
 
       if (response.success && response.contract) {
-        alert('근로계약서가 성공적으로 생성되었습니다.')
+        await appAlert('근로계약서가 성공적으로 생성되었습니다.')
         if (onSuccess) {
           onSuccess(response.contract.id)
         } else {
           router.push(`/dashboard/contracts/${response.contract.id}`)
         }
       } else {
-        alert(`오류: ${response.error}`)
+        await appAlert(`오류: ${response.error}`)
       }
     } catch (error) {
       console.error('Failed to create contract:', error)
-      alert('근로계약서 생성 중 오류가 발생했습니다.')
+      await appAlert('근로계약서 생성 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }

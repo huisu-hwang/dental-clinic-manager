@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, FolderIcon } from '@heroicons/react/24/outline'
 import { dataService } from '@/lib/dataService'
 import type { ProtocolCategory } from '@/types'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface ProtocolCategoryManagerProps {
   onCategoryChange?: () => void
@@ -100,7 +101,7 @@ export default function ProtocolCategoryManager({ onCategoryChange }: ProtocolCa
   }
 
   const handleDelete = async (categoryId: string) => {
-    if (!confirm('이 카테고리를 삭제하시겠습니까?\n이 카테고리를 사용하는 프로토콜은 "카테고리 없음"으로 변경됩니다.')) {
+    if (!await appConfirm('이 카테고리를 삭제하시겠습니까?\n이 카테고리를 사용하는 프로토콜은 "카테고리 없음"으로 변경됩니다.')) {
       return
     }
 

@@ -13,6 +13,7 @@ import { saveDailyReport } from '@/app/actions/dailyReport'
 import { createClient } from '@/lib/supabase/client'
 import type { ConsultRowData, GiftRowData, HappyCallRowData, CashRegisterRowData, GiftInventory, GiftLog, GiftCategory } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
+import { appAlert } from '@/components/ui/AppDialog'
 
 // Feature Flag: 신규 아키텍처 사용 여부
 const USE_NEW_ARCHITECTURE = process.env.NEXT_PUBLIC_USE_NEW_DAILY_REPORT === 'true'
@@ -433,7 +434,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     }
 
     if (!reportDate) {
-      alert('보고 일자를 선택해주세요.')
+      await appAlert('보고 일자를 선택해주세요.')
       return
     }
 
@@ -515,7 +516,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         }
 
         console.log('[DailyInputForm] Server Action succeeded:', result)
-        alert('보고서가 성공적으로 저장되었습니다.')
+        await appAlert('보고서가 성공적으로 저장되었습니다.')
         // 저장 성공 후 부모에게 알려서 데이터 새로고침
         onSaveSuccess?.()
       } else {
@@ -541,7 +542,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     } catch (error) {
       console.error('[DailyInputForm] Save error:', error)
       const errorMessage = error instanceof Error ? error.message : '보고서 저장 중 오류가 발생했습니다.'
-      alert(errorMessage + ' 다시 시도해주세요.')
+      await appAlert(errorMessage + ' 다시 시도해주세요.')
     } finally {
       setLoading(false)
       // 저장 완료 후 약간의 지연을 두고 플래그 해제 (Realtime 이벤트 무시 기간)
@@ -653,7 +654,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
       } catch (error) {
         console.error('[DailyInputForm] Save before navigate error:', error)
         const errorMessage = error instanceof Error ? error.message : '저장 중 오류가 발생했습니다.'
-        alert(errorMessage + ' 페이지 이동을 취소합니다.')
+        await appAlert(errorMessage + ' 페이지 이동을 취소합니다.')
         setLoading(false)
         isSavingRef.current = false
         return // 저장 실패 시 이동하지 않음

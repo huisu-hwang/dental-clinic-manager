@@ -10,6 +10,7 @@ import { contractService } from '@/lib/contractService'
 import type { ContractTemplate } from '@/types/contract'
 import type { UserProfile } from '@/contexts/AuthContext'
 import { DEFAULT_HAYAN_TEMPLATE } from '@/types/contract'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface TemplateManagementProps {
   currentUser: UserProfile
@@ -57,7 +58,7 @@ export default function TemplateManagement({ currentUser, clinicId }: TemplateMa
 
   const handleCreateTemplate = async () => {
     if (!formData.name.trim()) {
-      alert('템플릿 이름을 입력해주세요.')
+      await appAlert('템플릿 이름을 입력해주세요.')
       return
     }
 
@@ -75,16 +76,16 @@ export default function TemplateManagement({ currentUser, clinicId }: TemplateMa
       )
 
       if (response.error) {
-        alert(`템플릿 생성 실패: ${response.error}`)
+        await appAlert(`템플릿 생성 실패: ${response.error}`)
       } else {
-        alert('템플릿이 생성되었습니다.')
+        await appAlert('템플릿이 생성되었습니다.')
         setShowCreateModal(false)
         resetForm()
         loadTemplates()
       }
     } catch (err) {
       console.error('Failed to create template:', err)
-      alert('템플릿 생성 중 오류가 발생했습니다.')
+      await appAlert('템플릿 생성 중 오류가 발생했습니다.')
     }
   }
 
@@ -99,33 +100,33 @@ export default function TemplateManagement({ currentUser, clinicId }: TemplateMa
       })
 
       if (response.error) {
-        alert(`템플릿 수정 실패: ${response.error}`)
+        await appAlert(`템플릿 수정 실패: ${response.error}`)
       } else {
-        alert('템플릿이 수정되었습니다.')
+        await appAlert('템플릿이 수정되었습니다.')
         setEditingTemplate(null)
         loadTemplates()
       }
     } catch (err) {
       console.error('Failed to update template:', err)
-      alert('템플릿 수정 중 오류가 발생했습니다.')
+      await appAlert('템플릿 수정 중 오류가 발생했습니다.')
     }
   }
 
   const handleDeleteTemplate = async (templateId: string, templateName: string) => {
-    if (!confirm(`"${templateName}" 템플릿을 삭제하시겠습니까?`)) return
+    if (!await appConfirm(`"${templateName}" 템플릿을 삭제하시겠습니까?`)) return
 
     try {
       const response = await contractService.deleteTemplate(templateId)
 
       if (response.error) {
-        alert(`템플릿 삭제 실패: ${response.error}`)
+        await appAlert(`템플릿 삭제 실패: ${response.error}`)
       } else {
-        alert('템플릿이 삭제되었습니다.')
+        await appAlert('템플릿이 삭제되었습니다.')
         loadTemplates()
       }
     } catch (err) {
       console.error('Failed to delete template:', err)
-      alert('템플릿 삭제 중 오류가 발생했습니다.')
+      await appAlert('템플릿 삭제 중 오류가 발생했습니다.')
     }
   }
 

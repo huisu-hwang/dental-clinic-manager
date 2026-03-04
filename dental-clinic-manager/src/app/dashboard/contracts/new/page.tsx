@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import ContractForm from '@/components/Contract/ContractForm'
 import { getSupabase } from '@/lib/supabase'
 import type { User } from '@/types/auth'
+import { appAlert } from '@/components/ui/AppDialog'
 
 export default function NewContractPage() {
   const { user } = useAuth()
@@ -55,14 +56,14 @@ export default function NewContractPage() {
 
       if (error) {
         console.error('[Contract New] Failed to load employees:', error)
-        alert(`직원 목록을 불러오는데 실패했습니다: ${error.message}`)
+        await appAlert(`직원 목록을 불러오는데 실패했습니다: ${error.message}`)
       } else {
         console.log('[Contract New] Successfully loaded employees:', data)
         setEmployees(data as User[])
       }
     } catch (err) {
       console.error('[Contract New] Exception while loading employees:', err)
-      alert(`직원 목록 로딩 중 오류 발생: ${err instanceof Error ? err.message : '알 수 없는 오류'}`)
+      await appAlert(`직원 목록 로딩 중 오류 발생: ${err instanceof Error ? err.message : '알 수 없는 오류'}`)
     } finally {
       setLoading(false)
     }

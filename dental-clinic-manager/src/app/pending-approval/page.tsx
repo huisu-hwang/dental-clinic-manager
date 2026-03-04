@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ClockIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { appAlert } from '@/components/ui/AppDialog'
 
 export default function PendingApprovalPage() {
   const router = useRouter()
@@ -72,7 +73,7 @@ export default function PendingApprovalPage() {
 
       if (error) {
         console.error('Error checking status:', error)
-        alert('상태 확인 중 오류가 발생했습니다.')
+        await appAlert('상태 확인 중 오류가 발생했습니다.')
         return
       }
 
@@ -83,10 +84,10 @@ export default function PendingApprovalPage() {
       }
 
       // 여전히 대기 중이면 알림
-      alert('아직 승인 대기 중입니다. 조금만 더 기다려주세요.')
+      await appAlert('아직 승인 대기 중입니다. 조금만 더 기다려주세요.')
     } catch (error) {
       console.error('Error checking status:', error)
-      alert('상태 확인 중 오류가 발생했습니다.')
+      await appAlert('상태 확인 중 오류가 발생했습니다.')
     } finally {
       setCheckingStatus(false)
     }

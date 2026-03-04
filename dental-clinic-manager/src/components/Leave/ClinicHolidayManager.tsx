@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Building2, Plus, Trash2, Calendar, Users, AlertCircle, CheckCircle, Info, ChevronDown, ChevronUp } from 'lucide-react'
 import { leaveService } from '@/lib/leaveService'
 import { UserProfile } from '@/contexts/AuthContext'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface ClinicHolidayManagerProps {
   currentUser: UserProfile
@@ -158,7 +159,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
   }
 
   const handleDelete = async (holidayId: string) => {
-    if (!confirm('이 휴무일을 삭제하시겠습니까?')) return
+    if (!await appConfirm('이 휴무일을 삭제하시겠습니까?')) return
 
     const result = await leaveService.deleteClinicHoliday(holidayId)
     if (result.error) {
@@ -174,7 +175,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
   }
 
   const handleApply = async (holidayId: string) => {
-    if (!confirm('이 휴무일을 직원들의 연차에 적용하시겠습니까?\n적용 후에는 취소할 수 없습니다.')) return
+    if (!await appConfirm('이 휴무일을 직원들의 연차에 적용하시겠습니까?\n적용 후에는 취소할 수 없습니다.')) return
 
     setApplying(holidayId)
     const result = await leaveService.applyHolidayToLeave(holidayId)

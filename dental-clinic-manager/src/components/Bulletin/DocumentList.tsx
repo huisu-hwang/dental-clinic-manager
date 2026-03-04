@@ -22,6 +22,7 @@ import type { Document, DocumentCategory } from '@/types/bulletin'
 import { DOCUMENT_CATEGORY_LABELS } from '@/types/bulletin'
 import DocumentDetail from './DocumentDetail'
 import DocumentForm from './DocumentForm'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface DocumentListProps {
   canCreate?: boolean
@@ -90,14 +91,14 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return
+    if (!await appConfirm('정말 삭제하시겠습니까?')) return
 
     const { success, error: deleteError } = await documentService.deleteDocument(id)
     if (success) {
       fetchDocuments()
       setSelectedDocument(null)
     } else {
-      alert(deleteError || '삭제에 실패했습니다.')
+      await appAlert(deleteError || '삭제에 실패했습니다.')
     }
   }
 

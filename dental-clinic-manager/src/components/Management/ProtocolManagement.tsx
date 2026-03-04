@@ -23,6 +23,7 @@ import ProtocolPermissionManager from '../Protocol/ProtocolPermissionManager'
 import ProtocolPermissionOverview from '../Protocol/ProtocolPermissionOverview'
 import type { UserProfile } from '@/contexts/AuthContext'
 import type { Protocol, ProtocolCategory, ProtocolFormData } from '@/types'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface ProtocolManagementProps {
   currentUser: UserProfile
@@ -154,7 +155,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
         console.error('[ProtocolManagement] Error:', result.error)
 
         if (result.error.includes('인증 세션이 만료') || result.error.includes('SESSION_EXPIRED')) {
-          alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+          await appAlert('세션이 만료되었습니다. 다시 로그인해주세요.')
           localStorage.removeItem('dental_auth')
           localStorage.removeItem('dental_user')
           sessionStorage.removeItem('dental_auth')
@@ -187,7 +188,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
       const errorMessage = err instanceof Error ? err.message : '프로토콜을 불러오는 중 오류가 발생했습니다.'
 
       if (errorMessage.includes('인증 세션이 만료')) {
-        alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+        await appAlert('세션이 만료되었습니다. 다시 로그인해주세요.')
         localStorage.removeItem('dental_auth')
         localStorage.removeItem('dental_user')
         sessionStorage.removeItem('dental_auth')
@@ -274,7 +275,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
   const handleDeleteProtocolDirect = async (protocol: Protocol, e: React.MouseEvent) => {
     e.stopPropagation()
 
-    if (!window.confirm(`"${protocol.title}" 프로토콜을 삭제하시겠습니까?`)) {
+    if (!await appConfirm(`"${protocol.title}" 프로토콜을 삭제하시겠습니까?`)) {
       return
     }
 

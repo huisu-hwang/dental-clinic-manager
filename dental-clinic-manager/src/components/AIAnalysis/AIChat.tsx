@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import type { AIMessage, FileAttachment } from '@/types/aiAnalysis';
 import { parseFile, formatFileSize, validateFile } from '@/lib/fileParsingUtils';
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface AIChatProps {
   clinicId: string;
@@ -177,7 +178,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
 
   // 대화 삭제
   const deleteConversation = async (conversationId: string) => {
-    if (!confirm('이 대화를 삭제하시겠습니까?')) return;
+    if (!await appConfirm('이 대화를 삭제하시겠습니까?')) return;
 
     try {
       const response = await fetch(`/api/ai-conversations/${conversationId}`, {

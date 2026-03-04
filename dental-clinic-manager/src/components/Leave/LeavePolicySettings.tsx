@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Settings, Save, AlertCircle, CheckCircle, Info } from 'lucide-react'
 import { leaveService } from '@/lib/leaveService'
 import type { LeavePolicy, YearlyLeaveRule, ManagerApprovalByRank } from '@/types/leave'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 // 기본 직급별 실장 결재 설정
 const DEFAULT_MANAGER_APPROVAL_BY_RANK: ManagerApprovalByRank = {
@@ -142,8 +143,8 @@ export default function LeavePolicySettings() {
     }
   }
 
-  const handleResetToDefault = () => {
-    if (!confirm('근로기준법 기본 설정으로 초기화하시겠습니까?')) return
+  const handleResetToDefault = async () => {
+    if (!await appConfirm('근로기준법 기본 설정으로 초기화하시겠습니까?')) return
 
     setFormData({
       ...formData,

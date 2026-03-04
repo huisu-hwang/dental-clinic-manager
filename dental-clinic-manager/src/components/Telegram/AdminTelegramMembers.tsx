@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { telegramMemberService, telegramInviteLinkService } from '@/lib/telegramService'
 import type { TelegramGroupMember, TelegramInviteLink } from '@/types/telegram'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface AdminTelegramMembersProps {
   groupId: string
@@ -76,7 +77,7 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
 
   // 멤버 제거
   const handleRemoveMember = async (userId: string) => {
-    if (!confirm('이 멤버를 제거하시겠습니까?')) return
+    if (!(await appConfirm('이 멤버를 제거하시겠습니까?'))) return
     const { error: removeError } = await telegramMemberService.removeMember(groupId, userId)
     if (removeError) {
       setError(removeError)
