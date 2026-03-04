@@ -1326,12 +1326,12 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               )}
             </div>
           ) : groupedContacts ? (
-            <div className="space-y-4">
+            <div className="flex gap-4 overflow-x-auto pb-2">
               {groupedContacts.map(group => {
                 const groupId = group.category?.id || 'uncategorized'
                 const isCollapsed = collapsedGroups.has(groupId)
                 return (
-                  <div key={groupId}>
+                  <div key={groupId} className="min-w-[280px] max-w-[320px] flex-shrink-0">
                     <button
                       onClick={() => toggleGroup(groupId)}
                       className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
@@ -1353,7 +1353,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                       </span>
                     </button>
                     {!isCollapsed && (
-                      <div className="flex flex-col gap-1.5">
+                      <div className="flex flex-col gap-1.5 max-h-[calc(100vh-280px)] overflow-y-auto">
                         {group.contacts.map(contact => renderContactCard(contact, false))}
                       </div>
                     )}
@@ -1362,7 +1362,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               })}
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 max-w-[400px]">
               {filteredContacts.map(contact => renderContactCard(contact, true))}
             </div>
           )}
