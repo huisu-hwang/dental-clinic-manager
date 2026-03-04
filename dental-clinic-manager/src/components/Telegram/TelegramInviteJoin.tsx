@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Users, Loader2, CheckCircle, AlertCircle, Send, LogIn, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -12,12 +12,15 @@ interface TelegramInviteJoinProps {
 
 export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const autoJoin = searchParams.get('autoJoin') === '1'
   const { user, loading: authLoading } = useAuth()
   const [groupInfo, setGroupInfo] = useState<{ board_title: string; board_description: string | null; board_slug: string; requiresAuth?: boolean } | null>(null)
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [joined, setJoined] = useState(false)
+  const autoJoinTriggered = useRef(false)
 
   // 초대 링크 검증 — 비로그인도 그룹 정보 조회 가능
   useEffect(() => {
@@ -75,6 +78,14 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
       setJoining(false)
     }
   }
+
+  // autoJoin=1이면 로그인 상태 + 그룹 정보 로드 완료 시 자동 가입
+  useEffect(() => {
+    if (user && groupInfo && !groupInfo.requiresAuth && autoJoin && !joined && !joining && !error && !autoJoinTriggered.current) {
+      autoJoinTriggered.current = true
+      handleJoin()
+    }
+  }, [user, groupInfo, autoJoin, joined, joining, error])
 
   if (authLoading || loading) {
     return (
@@ -154,7 +165,10 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
             /* 비로그인: 로그인/회원가입 안내 */
             <div className="space-y-3">
               <Button
-                onClick={() => router.push(`/?redirect=/community/telegram/join/${inviteCode}`)}
+                onClick={() => {
+                  const redirectUrl = `/community/telegram/join/${inviteCode}${autoJoin ? '?autoJoin=1' : ''}`
+                  router.push(`/?redirect=${encodeURIComponent(redirectUrl)}`)
+                }}
                 className="w-full bg-sky-500 hover:bg-sky-600 text-white"
               >
                 <LogIn className="w-4 h-4 mr-2" />
@@ -162,7 +176,10 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
               </Button>
               <Button
                 variant="outline"
-                onClick={() => router.push(`/?show=signup&redirect=/community/telegram/join/${inviteCode}`)}
+                onClick={() => {
+                  const redirectUrl = `/community/telegram/join/${inviteCode}${autoJoin ? '?autoJoin=1' : ''}`
+                  router.push(`/?show=signup&redirect=${encodeURIComponent(redirectUrl)}`)
+                }}
                 className="w-full"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
