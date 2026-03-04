@@ -168,16 +168,15 @@ export default function PatientAddModal({
     }
   }
 
-  // 제외 환자로 저장
-  const handleSaveAsExcluded = async () => {
-    setExcludeConfirm({ show: false, reason: null })
-    await doSave(excludeConfirm.reason)
-  }
-
-  // 제외하지 않고 일반 저장
-  const handleSaveWithoutExclude = async () => {
+  // 제외 대상이지만 그래도 추가
+  const handleConfirmAdd = async () => {
     setExcludeConfirm({ show: false, reason: null })
     await doSave()
+  }
+
+  // 추가 취소
+  const handleCancelAdd = () => {
+    setExcludeConfirm({ show: false, reason: null })
   }
 
   // 모달 닫기
@@ -356,24 +355,24 @@ export default function PatientAddModal({
                   제외 환자 목록에 등록된 환자입니다
                 </p>
                 <p className="text-sm text-amber-700 mt-1">
-                  &quot;{excludeConfirm.ruleName}&quot; 환자가 제외 사유 <span className="font-semibold">&quot;{excludeConfirm.reason ? EXCLUDE_REASON_LABELS[excludeConfirm.reason] : ''}&quot;</span>(으)로 등록되어 있습니다.
+                  &quot;{excludeConfirm.ruleName}&quot; 환자가 제외 사유 <span className="font-semibold">&quot;{excludeConfirm.reason ? EXCLUDE_REASON_LABELS[excludeConfirm.reason] : ''}&quot;</span>(으)로 등록되어 있습니다. 그래도 환자 목록에 추가하시겠습니까?
                 </p>
               </div>
             </div>
             <div className="flex justify-end gap-2">
               <button
-                onClick={handleSaveWithoutExclude}
+                onClick={handleCancelAdd}
                 disabled={isSaving}
                 className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
               >
-                제외하지 않고 추가
+                추가하지 않기
               </button>
               <button
-                onClick={handleSaveAsExcluded}
+                onClick={handleConfirmAdd}
                 disabled={isSaving}
-                className="px-3 py-1.5 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                제외 환자로 추가
+                그래도 추가
               </button>
             </div>
           </div>
