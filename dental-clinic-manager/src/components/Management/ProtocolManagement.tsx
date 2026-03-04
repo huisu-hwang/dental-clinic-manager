@@ -91,6 +91,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
   // Modal states
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createCategoryId, setCreateCategoryId] = useState<string | undefined>(undefined)
   const [showEditForm, setShowEditForm] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
   const [showPermissionManager, setShowPermissionManager] = useState(false)
@@ -400,6 +401,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
     }
     setSuccess('프로토콜이 생성되었습니다.')
     setShowCreateForm(false)
+    setCreateCategoryId(undefined)
     fetchProtocols()
     setTimeout(() => setSuccess(''), 3000)
   }
@@ -693,7 +695,10 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
               </div>
               {canEdit && (
                 <button
-                  onClick={() => setShowCreateForm(true)}
+                  onClick={() => {
+                    setCreateCategoryId(undefined)
+                    setShowCreateForm(true)
+                  }}
                   className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -825,26 +830,43 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                     const categoryId = group.category?.id || null
                     return (
                       <DroppableColumn key={groupId} id={`drop-column-${groupId}`} categoryId={categoryId}>
-                        <button
-                          onClick={() => toggleGroup(groupId)}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
+                        <div
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
                           style={{ backgroundColor: `${group.category?.color || '#94a3b8'}15`, borderLeft: `3px solid ${group.category?.color || '#94a3b8'}` }}
                         >
-                          {isCollapsed ? (
-                            <ChevronRight className="w-4 h-4 text-slate-400" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 text-slate-400" />
-                          )}
-                          <span
-                            className="font-semibold text-sm"
-                            style={{ color: group.category?.color || '#94a3b8' }}
+                          <button
+                            onClick={() => toggleGroup(groupId)}
+                            className="flex items-center gap-2 flex-1 min-w-0"
                           >
-                            {group.category?.name || '미분류'}
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            ({group.protocols.length})
-                          </span>
-                        </button>
+                            {isCollapsed ? (
+                              <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            )}
+                            <span
+                              className="font-semibold text-sm truncate"
+                              style={{ color: group.category?.color || '#94a3b8' }}
+                            >
+                              {group.category?.name || '미분류'}
+                            </span>
+                            <span className="text-xs text-slate-400 flex-shrink-0">
+                              ({group.protocols.length})
+                            </span>
+                          </button>
+                          {canEdit && group.category && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setCreateCategoryId(group.category!.id)
+                                setShowCreateForm(true)
+                              }}
+                              className="p-1 rounded hover:bg-white/60 transition-colors flex-shrink-0"
+                              title={`"${group.category.name}" 카테고리에 새 프로토콜 작성`}
+                            >
+                              <Plus className="w-4 h-4" style={{ color: group.category.color }} />
+                            </button>
+                          )}
+                        </div>
                         {!isCollapsed && (
                           <div className="flex flex-col gap-1.5 max-h-[calc(100vh-320px)] overflow-y-auto">
                             {group.protocols.map(protocol => (
@@ -887,8 +909,18 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
             {showCreateForm && (
               <ProtocolForm
                 mode="create"
+                initialData={createCategoryId ? {
+                  title: '',
+                  category_id: createCategoryId,
+                  content: '',
+                  status: 'draft',
+                  tags: [],
+                } : undefined}
                 onSubmit={handleCreateProtocol}
-                onCancel={() => setShowCreateForm(false)}
+                onCancel={() => {
+                  setShowCreateForm(false)
+                  setCreateCategoryId(undefined)
+                }}
               />
             )}
 
