@@ -76,8 +76,9 @@ export default function TelegramBoardPostDetail({
   const canModify = post.post_type === 'general' && (
     post.created_by === currentUserId || isMasterAdmin
   )
-  const canDelete = (post.post_type === 'general' || post.post_type === 'vote') && (
-    post.created_by === currentUserId || isMasterAdmin || isGroupCreator
+  const canDelete = isMasterAdmin || (
+    (post.post_type === 'general' || post.post_type === 'vote') &&
+    (post.created_by === currentUserId || isGroupCreator)
   )
   const typeColor = TELEGRAM_POST_TYPE_COLORS[post.post_type] || { bg: 'bg-gray-100', text: 'text-gray-700' }
   const typeLabel = TELEGRAM_POST_TYPE_LABELS[post.post_type] || post.post_type

@@ -113,11 +113,6 @@ export async function DELETE(
       return NextResponse.json({ data: null, error: '게시글을 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // general, vote 타입만 삭제 가능 (summary, file, link 등 자동 생성 글은 삭제 불가)
-    if (post.post_type !== 'general' && post.post_type !== 'vote') {
-      return NextResponse.json({ data: null, error: '자동 생성된 게시글은 삭제할 수 없습니다.' }, { status: 403 })
-    }
-
     // 권한 확인: 작성자 본인, master_admin, 또는 게시판 생성자
     const role = await getUserRole(supabase, userId)
     let isGroupCreator = false
@@ -128,6 +123,11 @@ export async function DELETE(
         .eq('id', post.telegram_group_id)
         .maybeSingle()
       isGroupCreator = group?.created_by === userId
+    }
+
+    // master_admin은 모든 타입 삭제 가능, 그 외는 general/vote만 삭제 가능
+    if (role !== 'master_admin' && post.post_type !== 'general' && post.post_type !== 'vote') {
+      return NextResponse.json({ data: null, error: '자동 생성된 게시글은 삭제할 수 없습니다.' }, { status: 403 })
     }
 
     if (post.created_by !== userId && role !== 'master_admin' && !isGroupCreator) {

@@ -69,17 +69,17 @@ export async function POST(request: NextRequest) {
     let failed = 0
 
     for (const post of posts) {
-      // general, vote 타입만 삭제 가능
-      if (post.post_type !== 'general' && post.post_type !== 'vote') {
+      const isAuthor = post.created_by === userId
+      const isMasterAdmin = role === 'master_admin'
+      const isGroupCreator = post.telegram_group_id && groupCreatorMap[post.telegram_group_id] === userId
+
+      // master_admin은 모든 타입 삭제 가능, 그 외는 general/vote만 삭제 가능
+      if (!isMasterAdmin && post.post_type !== 'general' && post.post_type !== 'vote') {
         failed++
         continue
       }
 
       // 권한 확인: 작성자 본인, master_admin, 또는 게시판 생성자
-      const isAuthor = post.created_by === userId
-      const isMasterAdmin = role === 'master_admin'
-      const isGroupCreator = post.telegram_group_id && groupCreatorMap[post.telegram_group_id] === userId
-
       if (isAuthor || isMasterAdmin || isGroupCreator) {
         deletableIds.push(post.id)
       } else {
