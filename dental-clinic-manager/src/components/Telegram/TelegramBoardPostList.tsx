@@ -444,19 +444,20 @@ export default function TelegramBoardPostList({
           </div>
         )}
 
-        {/* 포스트 유형 탭 (2차 필터) + 글쓰기 */}
+        {/* 글쓰기 + 유형/개인 필터 */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-1 overflow-x-auto pb-1 flex-1">
-            {POST_TYPE_FILTERS.map(f => {
+            {/* 유형 필터 (2차, 작은 텍스트) */}
+            {POST_TYPE_FILTERS.filter(f => f.key !== 'all').map(f => {
               const Icon = f.icon
               return (
                 <button
                   key={f.key}
-                  onClick={() => handleFilterChange(f.key)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors inline-flex items-center gap-1 ${
+                  onClick={() => handleFilterChange(activeFilter === f.key ? 'all' : f.key)}
+                  className={`px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-colors inline-flex items-center gap-0.5 ${
                     activeFilter === f.key
                       ? 'bg-sky-100 text-sky-700'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   {Icon && <Icon className="w-3 h-3" />}
@@ -468,30 +469,29 @@ export default function TelegramBoardPostList({
               <>
                 <span className="w-px h-4 bg-gray-200 mx-0.5" />
                 <button
-                  onClick={() => handleFilterChange('my_likes')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors inline-flex items-center gap-1 ${
+                  onClick={() => handleFilterChange(activeFilter === 'my_likes' ? 'all' : 'my_likes')}
+                  className={`px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-colors inline-flex items-center gap-0.5 ${
                     activeFilter === 'my_likes'
                       ? 'bg-red-100 text-red-700'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <Heart className="w-3 h-3" />내 좋아요
+                  <Heart className="w-3 h-3" />좋아요
                 </button>
                 <button
-                  onClick={() => handleFilterChange('my_scraps')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors inline-flex items-center gap-1 ${
+                  onClick={() => handleFilterChange(activeFilter === 'my_scraps' ? 'all' : 'my_scraps')}
+                  className={`px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-colors inline-flex items-center gap-0.5 ${
                     activeFilter === 'my_scraps'
                       ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <Bookmark className="w-3 h-3" />내 스크랩
+                  <Bookmark className="w-3 h-3" />스크랩
                 </button>
               </>
             )}
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {/* 일반 사용자용 선택 삭제 버튼 (canBulkManage가 아닌 경우만) */}
             {canBulkDelete && !canBulkManage && !selectMode && (
               <Button
                 variant="outline"
@@ -658,7 +658,7 @@ export default function TelegramBoardPostList({
             {/* 테이블 헤더 */}
             <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
               <div className="w-5 flex-shrink-0" />
-              <div className="hidden sm:block w-20 flex-shrink-0 text-center">유형</div>
+              <div className="hidden sm:block w-20 flex-shrink-0 text-center">카테고리</div>
               <div className="flex-1 min-w-0 text-center">제목</div>
               <div className="hidden sm:block w-20 text-center flex-shrink-0">작성자</div>
               <div className="w-20 text-center flex-shrink-0">작성일</div>

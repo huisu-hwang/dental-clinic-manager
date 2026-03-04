@@ -2,7 +2,7 @@
 
 import { FileText, Link2, Brain, Pin, PenLine, Heart, MessageCircle, Vote, Check } from 'lucide-react'
 import type { TelegramBoardPost } from '@/types/telegram'
-import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS, getCategoryColorClasses } from '@/types/telegram'
+import { TELEGRAM_POST_TYPE_COLORS, getCategoryColorClasses } from '@/types/telegram'
 
 interface TelegramBoardPostCardProps {
   post: TelegramBoardPost
@@ -27,14 +27,18 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
     return `${year}.${month}.${day}`
   }
 
-  const typeColor = TELEGRAM_POST_TYPE_COLORS[post.post_type] || { bg: 'bg-gray-100', text: 'text-gray-700' }
-  const typeLabel = TELEGRAM_POST_TYPE_LABELS[post.post_type] || post.post_type
+  // 카테고리 배지 (메인)
+  const categoryName = post.category?.name || '미분류'
+  const categoryColor = post.category?.color || 'gray'
+  const catColorClasses = getCategoryColorClasses(categoryColor)
 
+  // 유형 아이콘 (제목 옆 작은 아이콘으로만)
   const TypeIcon = post.post_type === 'summary' ? Brain
     : post.post_type === 'file' ? FileText
     : post.post_type === 'general' ? PenLine
     : post.post_type === 'vote' ? Vote
     : Link2
+  const typeColor = TELEGRAM_POST_TYPE_COLORS[post.post_type] || { text: 'text-gray-400' }
 
   const showCheckbox = selectMode || alwaysShowCheckbox
 
@@ -79,28 +83,21 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
           post.is_pinned && <Pin className="w-3.5 h-3.5 text-red-500" />
         )}
       </div>
-      {/* 유형 */}
+      {/* 카테고리 배지 */}
       <div className="hidden sm:block w-20 flex-shrink-0 text-center">
-        <span className={`text-xs px-1.5 py-0.5 rounded inline-flex items-center gap-0.5 ${typeColor.bg} ${typeColor.text}`}>
-          <TypeIcon className="w-3 h-3" />
-          {typeLabel}
+        <span className={`text-xs px-1.5 py-0.5 rounded ${catColorClasses.bg} ${catColorClasses.text}`}>
+          {categoryName}
         </span>
       </div>
       {/* 제목 */}
       <div className="flex-1 min-w-0 flex items-center gap-1.5">
-        <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded inline-flex items-center gap-0.5 flex-shrink-0 ${typeColor.bg} ${typeColor.text}`}>
-          <TypeIcon className="w-3 h-3" />
-          {typeLabel}
+        {/* 모바일: 카테고리 배지 */}
+        <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${catColorClasses.bg} ${catColorClasses.text}`}>
+          {categoryName}
         </span>
         {alwaysShowCheckbox && post.is_pinned && <Pin className="w-3 h-3 text-red-500 flex-shrink-0" />}
-        {post.category && !post.category.is_default && (() => {
-          const catColor = getCategoryColorClasses(post.category.color)
-          return (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${catColor.bg} ${catColor.text}`}>
-              {post.category.name}
-            </span>
-          )
-        })()}
+        {/* 유형 아이콘 (작은 아이콘) */}
+        <TypeIcon className={`w-3.5 h-3.5 flex-shrink-0 ${typeColor.text}`} />
         <span className="text-sm text-gray-900 truncate">{post.title}</span>
         {(post.comment_count ?? 0) > 0 && (
           <span className="flex items-center gap-0.5 text-xs text-sky-500 flex-shrink-0">
