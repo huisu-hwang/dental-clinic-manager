@@ -1,15 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, Brain, FileText, Link2, PenLine, Loader2, Inbox, Plus, Heart, Bookmark, Vote, ChevronDown, CheckSquare, X, FolderInput } from 'lucide-react'
+import { Search, Brain, FileText, Link2, PenLine, Loader2, Inbox, Plus, Heart, Bookmark, Vote, ChevronDown, CheckSquare, X, FolderInput, Settings2, Sparkles } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import TelegramBoardPostCard from './TelegramBoardPostCard'
 import TelegramBoardPostDetail from './TelegramBoardPostDetail'
 import TelegramBoardPostForm from './TelegramBoardPostForm'
 import ContributionVoteForm from './ContributionVoteForm'
-import { telegramBoardPostService, telegramBoardVoteService } from '@/lib/telegramService'
-import type { TelegramBoardPost, CreateContributionVoteDto } from '@/types/telegram'
+import TelegramBoardCategoryManager from './TelegramBoardCategoryManager'
+import { telegramBoardPostService, telegramBoardVoteService, telegramBoardCategoryService } from '@/lib/telegramService'
+import type { TelegramBoardPost, TelegramBoardCategory, CreateContributionVoteDto } from '@/types/telegram'
+import { getCategoryColorClasses } from '@/types/telegram'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface TelegramBoardPostListProps {
@@ -42,6 +44,8 @@ export default function TelegramBoardPostList({
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<string>('all')
+  const [activeCategory, setActiveCategory] = useState<string>('all')
+  const [categories, setCategories] = useState<TelegramBoardCategory[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(0)
   const [selectedPost, setSelectedPost] = useState<TelegramBoardPost | null>(null)
@@ -54,7 +58,15 @@ export default function TelegramBoardPostList({
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [bulkMoving, setBulkMoving] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
+  const [showCategoryManager, setShowCategoryManager] = useState(false)
+  const [classifyingAll, setClassifyingAll] = useState(false)
   const moveMenuRef = useRef<HTMLDivElement>(null)
+
+  // 카테고리 목록 조회
+  const fetchCategories = useCallback(async () => {
+    const { data } = await telegramBoardCategoryService.getCategories(groupId)
+    if (data) setCategories(data)
+  }, [groupId])
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
@@ -80,6 +92,7 @@ export default function TelegramBoardPostList({
     } else {
       const { data, total: totalCount, error } = await telegramBoardPostService.getPosts(groupId, {
         postType: activeFilter === 'all' ? undefined : activeFilter as 'summary' | 'file' | 'link' | 'general' | 'vote',
+        categoryId: activeCategory === 'all' ? undefined : activeCategory,
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
         search: searchQuery || undefined,
@@ -90,7 +103,11 @@ export default function TelegramBoardPostList({
       }
     }
     setLoading(false)
-  }, [groupId, activeFilter, searchQuery, page, currentUserId])
+  }, [groupId, activeFilter, activeCategory, searchQuery, page, currentUserId])
+
+  useEffect(() => {
+    fetchCategories()
+  }, [fetchCategories])
 
   useEffect(() => {
     fetchPosts()
@@ -107,10 +124,41 @@ export default function TelegramBoardPostList({
     }
   }, [initialPostId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 카테고리 변경 시 페이지 리셋
+  const handleCategoryChange = (categoryId: string) => {
+    setActiveCategory(categoryId)
+    setPage(0)
+  }
+
   // 필터 변경 시 페이지 리셋
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter)
     setPage(0)
+  }
+
+  // 일괄 AI 분류
+  const handleClassifyAll = async () => {
+    if (!(await appConfirm('미분류 게시글을 AI로 자동 분류하시겠습니까?\n시간이 다소 걸릴 수 있습니다.'))) return
+    setClassifyingAll(true)
+    try {
+      const res = await fetch('/api/telegram/board-posts/classify-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId }),
+      })
+      const result = await res.json()
+      if (result.error) {
+        await appAlert(result.error)
+      } else {
+        await appAlert(`${result.data.classified}/${result.data.total}개 게시글이 분류되었습니다.`)
+        fetchCategories()
+        fetchPosts()
+      }
+    } catch {
+      await appAlert('일괄 분류에 실패했습니다.')
+    } finally {
+      setClassifyingAll(false)
+    }
   }
 
   // 검색
@@ -241,13 +289,14 @@ export default function TelegramBoardPostList({
   }
 
   // 폼 제출 (생성/수정)
-  const handleFormSubmit = async (data: { title: string; content: string; notifyTelegram: boolean; fileUrls: { url: string; name: string; type?: string; size?: number }[] }) => {
+  const handleFormSubmit = async (data: { title: string; content: string; notifyTelegram: boolean; fileUrls: { url: string; name: string; type?: string; size?: number }[]; categoryId?: string | null }) => {
     if (formMode === 'create') {
       const { error } = await telegramBoardPostService.createPost(groupId, {
         title: data.title,
         content: data.content,
         notify_telegram: data.notifyTelegram,
         file_urls: data.fileUrls,
+        category_id: data.categoryId,
       })
       if (error) {
         await appAlert(error)
@@ -280,6 +329,16 @@ export default function TelegramBoardPostList({
     fetchPosts()
   }
 
+  // 카테고리 관리 모드
+  if (showCategoryManager) {
+    return (
+      <TelegramBoardCategoryManager
+        groupId={groupId}
+        onBack={() => { setShowCategoryManager(false); fetchCategories(); fetchPosts() }}
+      />
+    )
+  }
+
   // 투표 폼 모드
   if (voteFormMode) {
     return (
@@ -296,6 +355,7 @@ export default function TelegramBoardPostList({
       <TelegramBoardPostForm
         mode={formMode}
         post={editingPost}
+        categories={categories}
         onSubmit={handleFormSubmit}
         onCancel={() => { setFormMode(null); setEditingPost(null) }}
       />
@@ -327,7 +387,64 @@ export default function TelegramBoardPostList({
     <div>
       {/* 글쓰기 버튼 + 검색 + 필터 */}
       <div className="mb-4 space-y-3">
-        {/* 필터 탭 + 글쓰기 */}
+        {/* 카테고리 탭 (1차 필터) */}
+        {categories.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <div className="flex gap-1 overflow-x-auto pb-1 flex-1">
+              <button
+                onClick={() => handleCategoryChange('all')}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                  activeCategory === 'all'
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                }`}
+              >
+                전체
+              </button>
+              {categories.map(cat => {
+                const colorClasses = getCategoryColorClasses(cat.color)
+                const isActive = activeCategory === cat.id
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategoryChange(cat.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                      isActive
+                        ? `${colorClasses.bg} ${colorClasses.text} ring-1 ring-current`
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {cat.name}
+                    {cat.post_count > 0 && (
+                      <span className="ml-1 opacity-60">{cat.post_count}</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            {(isMasterAdmin || isGroupCreator) && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={handleClassifyAll}
+                  disabled={classifyingAll}
+                  className="p-1.5 text-gray-400 hover:text-purple-600 transition-colors"
+                  title="미분류 글 AI 자동 분류"
+                >
+                  {classifyingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => setShowCategoryManager(true)}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="카테고리 관리"
+                >
+                  <Settings2 className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 포스트 유형 탭 (2차 필터) + 글쓰기 */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-1 overflow-x-auto pb-1 flex-1">
             {POST_TYPE_FILTERS.map(f => {

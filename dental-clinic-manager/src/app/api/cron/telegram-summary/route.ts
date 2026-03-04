@@ -112,7 +112,7 @@ export async function GET(request: Request) {
 
         // telegram_board_posts 에 삽입
         const sourceMessageIds = messages.map(m => m.id)
-        const { error: insertError } = await supabase
+        const { data: insertedPost, error: insertError } = await supabase
           .from('telegram_board_posts')
           .insert({
             telegram_group_id: group.id,
@@ -123,6 +123,8 @@ export async function GET(request: Request) {
             source_message_ids: sourceMessageIds,
             ai_model: 'gemini-2.0-flash',
           })
+          .select('id')
+          .single()
 
         if (insertError) {
           results.push({
@@ -132,6 +134,22 @@ export async function GET(request: Request) {
             reason: `포스트 저장 실패: ${insertError.message}`
           })
           continue
+        }
+
+        // AI 카테고리 자동 분류
+        if (insertedPost?.id) {
+          try {
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+            if (appUrl) {
+              await fetch(`${appUrl}/api/telegram/board-posts/classify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ postId: insertedPost.id }),
+              })
+            }
+          } catch (classifyErr) {
+            console.error(`[Cron Telegram Summary] Classify failed for post ${insertedPost.id}:`, classifyErr)
+          }
         }
 
         // 메시지 is_summarized = true 업데이트

@@ -11,6 +11,7 @@ import type {
   TelegramBoardPost,
   TelegramBoardComment,
   TelegramBoardVote,
+  TelegramBoardCategory,
   ContributionVoteResults,
   CreateTelegramGroupDto,
   UpdateTelegramGroupDto,
@@ -746,6 +747,7 @@ export const telegramBoardPostService = {
     groupId: string,
     options?: {
       postType?: 'summary' | 'file' | 'link' | 'general' | 'vote'
+      categoryId?: string
       limit?: number
       offset?: number
       search?: string
@@ -757,12 +759,16 @@ export const telegramBoardPostService = {
 
       let query = (supabase as any)
         .from('telegram_board_posts')
-        .select('*, author:users!telegram_board_posts_created_by_fkey(name, email)', { count: 'exact' })
+        .select('*, author:users!telegram_board_posts_created_by_fkey(name, email), category:telegram_board_categories(id, name, slug, color)', { count: 'exact' })
         .eq('telegram_group_id', groupId)
         .order('created_at', { ascending: false })
 
       if (options?.postType) {
         query = query.eq('post_type', options.postType)
+      }
+
+      if (options?.categoryId) {
+        query = query.eq('category_id', options.categoryId)
       }
 
       if (options?.search) {
@@ -828,7 +834,7 @@ export const telegramBoardPostService = {
 
       const { data, error } = await (supabase as any)
         .from('telegram_board_posts')
-        .select('*, author:users!telegram_board_posts_created_by_fkey(name, email)')
+        .select('*, author:users!telegram_board_posts_created_by_fkey(name, email), category:telegram_board_categories(id, name, slug, color)')
         .eq('id', id)
         .maybeSingle()
 
@@ -891,6 +897,7 @@ export const telegramBoardPostService = {
           content: dto.content,
           notifyTelegram: dto.notify_telegram ?? false,
           fileUrls: dto.file_urls ?? [],
+          categoryId: dto.category_id ?? null,
         }),
       })
 
@@ -1410,5 +1417,164 @@ export const telegramBoardVoteService = {
    */
   async getCandidates(groupId: string): Promise<{ data: TelegramGroupMember[] | null; error: string | null }> {
     return telegramMemberService.getMembers(groupId)
+  },
+}
+
+// =====================================================
+// 게시판 카테고리 서비스
+// =====================================================
+export const telegramBoardCategoryService = {
+  /**
+   * 카테고리 목록 조회
+   */
+  async getCategories(groupId: string): Promise<{ data: TelegramBoardCategory[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .from('telegram_board_categories')
+        .select('*')
+        .eq('telegram_group_id', groupId)
+        .order('sort_order', { ascending: true })
+
+      if (error) throw error
+      return { data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardCategoryService.getCategories] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 카테고리 생성
+   */
+  async createCategory(
+    groupId: string,
+    data: { name: string; slug: string; color?: string; sort_order?: number }
+  ): Promise<{ data: TelegramBoardCategory | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data: category, error } = await (supabase as any)
+        .from('telegram_board_categories')
+        .insert({
+          telegram_group_id: groupId,
+          name: data.name,
+          slug: data.slug,
+          color: data.color || 'gray',
+          sort_order: data.sort_order ?? 0,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return { data: category, error: null }
+    } catch (error) {
+      console.error('[telegramBoardCategoryService.createCategory] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 카테고리 수정
+   */
+  async updateCategory(
+    categoryId: string,
+    updates: { name?: string; color?: string; sort_order?: number }
+  ): Promise<{ data: TelegramBoardCategory | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .from('telegram_board_categories')
+        .update(updates)
+        .eq('id', categoryId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardCategoryService.updateCategory] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 카테고리 삭제 (해당 글은 미분류로 이동)
+   */
+  async deleteCategory(categoryId: string, groupId: string): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      // 미분류 카테고리 찾기
+      const { data: defaultCat } = await (supabase as any)
+        .from('telegram_board_categories')
+        .select('id')
+        .eq('telegram_group_id', groupId)
+        .eq('is_default', true)
+        .maybeSingle()
+
+      // 해당 카테고리의 글을 미분류로 이동
+      if (defaultCat) {
+        await (supabase as any)
+          .from('telegram_board_posts')
+          .update({ category_id: defaultCat.id })
+          .eq('category_id', categoryId)
+      } else {
+        await (supabase as any)
+          .from('telegram_board_posts')
+          .update({ category_id: null })
+          .eq('category_id', categoryId)
+      }
+
+      const { error } = await (supabase as any)
+        .from('telegram_board_categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('is_default', false) // 기본 카테고리 삭제 방지
+
+      if (error) throw error
+      return { error: null }
+    } catch (error) {
+      console.error('[telegramBoardCategoryService.deleteCategory] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 카테고리 병합 (source → target, source 삭제)
+   */
+  async mergeCategories(
+    sourceCategoryId: string,
+    targetCategoryId: string,
+    groupId: string
+  ): Promise<{ error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      // source의 모든 글을 target으로 이동
+      await (supabase as any)
+        .from('telegram_board_posts')
+        .update({ category_id: targetCategoryId })
+        .eq('category_id', sourceCategoryId)
+
+      // source 카테고리 삭제
+      await (supabase as any)
+        .from('telegram_board_categories')
+        .delete()
+        .eq('id', sourceCategoryId)
+        .eq('is_default', false)
+
+      return { error: null }
+    } catch (error) {
+      console.error('[telegramBoardCategoryService.mergeCategories] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
   },
 }

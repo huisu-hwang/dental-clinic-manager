@@ -86,6 +86,39 @@ export interface TelegramMessage {
   created_at: string
 }
 
+// 게시판 카테고리 (주제별 분류)
+export interface TelegramBoardCategory {
+  id: string
+  telegram_group_id: string
+  name: string
+  slug: string
+  color: string
+  sort_order: number
+  is_default: boolean
+  post_count: number
+  created_at: string
+}
+
+// 카테고리 색상 프리셋
+export const TELEGRAM_CATEGORY_COLORS: { name: string; value: string; bg: string; text: string }[] = [
+  { name: '회색', value: 'gray', bg: 'bg-gray-100', text: 'text-gray-700' },
+  { name: '빨강', value: 'red', bg: 'bg-red-100', text: 'text-red-700' },
+  { name: '주황', value: 'orange', bg: 'bg-orange-100', text: 'text-orange-700' },
+  { name: '노랑', value: 'amber', bg: 'bg-amber-100', text: 'text-amber-700' },
+  { name: '초록', value: 'green', bg: 'bg-green-100', text: 'text-green-700' },
+  { name: '청록', value: 'teal', bg: 'bg-teal-100', text: 'text-teal-700' },
+  { name: '파랑', value: 'blue', bg: 'bg-blue-100', text: 'text-blue-700' },
+  { name: '남색', value: 'indigo', bg: 'bg-indigo-100', text: 'text-indigo-700' },
+  { name: '보라', value: 'purple', bg: 'bg-purple-100', text: 'text-purple-700' },
+  { name: '분홍', value: 'pink', bg: 'bg-pink-100', text: 'text-pink-700' },
+]
+
+// 카테고리 색상 헬퍼
+export function getCategoryColorClasses(color: string): { bg: string; text: string } {
+  const found = TELEGRAM_CATEGORY_COLORS.find(c => c.value === color)
+  return found ? { bg: found.bg, text: found.text } : { bg: 'bg-gray-100', text: 'text-gray-700' }
+}
+
 // 게시글 (AI 요약 / 파일 / 링크 / 일반)
 export interface TelegramBoardPost {
   id: string
@@ -104,6 +137,7 @@ export interface TelegramBoardPost {
   ai_model: string | null
   created_by: string | null
   comment_count: number
+  category_id: string | null
   created_at: string
   updated_at: string
   // 현재 사용자의 좋아요/스크랩 상태
@@ -114,6 +148,8 @@ export interface TelegramBoardPost {
     name: string
     email: string
   }
+  // join 시 카테고리 정보
+  category?: TelegramBoardCategory | null
 }
 
 // 댓글
@@ -183,6 +219,7 @@ export interface CreateTelegramBoardPostDto {
   content: string
   notify_telegram?: boolean
   file_urls?: { url: string; name: string; type?: string; size?: number }[]
+  category_id?: string | null
 }
 
 // 게시글 수정 DTO

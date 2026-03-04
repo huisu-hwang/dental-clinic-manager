@@ -2,7 +2,7 @@
 
 import { FileText, Link2, Brain, Pin, PenLine, Heart, MessageCircle, Vote, Check } from 'lucide-react'
 import type { TelegramBoardPost } from '@/types/telegram'
-import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
+import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS, getCategoryColorClasses } from '@/types/telegram'
 
 interface TelegramBoardPostCardProps {
   post: TelegramBoardPost
@@ -93,6 +93,14 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
           {typeLabel}
         </span>
         {alwaysShowCheckbox && post.is_pinned && <Pin className="w-3 h-3 text-red-500 flex-shrink-0" />}
+        {post.category && !post.category.is_default && (() => {
+          const catColor = getCategoryColorClasses(post.category.color)
+          return (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${catColor.bg} ${catColor.text}`}>
+              {post.category.name}
+            </span>
+          )
+        })()}
         <span className="text-sm text-gray-900 truncate">{post.title}</span>
         {(post.comment_count ?? 0) > 0 && (
           <span className="flex items-center gap-0.5 text-xs text-sky-500 flex-shrink-0">
