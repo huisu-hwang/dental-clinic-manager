@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { generateDailySummary } from '@/lib/telegramSummaryService'
 import { sendSummaryNotification } from '@/lib/telegramBotService'
+import { classifyAndAssignCategory } from '@/lib/telegramCategoryService'
 
 export const maxDuration = 60
 
@@ -136,17 +137,16 @@ export async function GET(request: Request) {
           continue
         }
 
-        // AI 카테고리 자동 분류
+        // AI 카테고리 자동 분류 (인라인 실행)
         if (insertedPost?.id) {
           try {
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-            if (appUrl) {
-              await fetch(`${appUrl}/api/telegram/board-posts/classify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postId: insertedPost.id }),
-              })
-            }
+            await classifyAndAssignCategory(
+              supabase,
+              insertedPost.id,
+              summary.title,
+              summary.content,
+              group.id
+            )
           } catch (classifyErr) {
             console.error(`[Cron Telegram Summary] Classify failed for post ${insertedPost.id}:`, classifyErr)
           }

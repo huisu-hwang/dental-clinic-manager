@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendMessageToGroup } from '@/lib/telegramBotService'
+import { classifyAndAssignCategory } from '@/lib/telegramCategoryService'
 
 export async function POST(
   request: NextRequest,
@@ -75,17 +76,12 @@ export async function POST(
       return NextResponse.json({ data: null, error: postError.message }, { status: 500 })
     }
 
-    // AI 자동 분류 (카테고리 미지정 시 fire-and-forget)
+    // AI 자동 분류 (카테고리 미지정 시 인라인 실행)
     if (!categoryId && post) {
       try {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
-        fetch(`${appUrl}/api/telegram/board-posts/classify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ postId: post.id }),
-        }).catch(err => console.error('[board-posts] AI classify fire-and-forget error:', err))
+        await classifyAndAssignCategory(supabase, post.id, title, content, groupId)
       } catch (classifyErr) {
-        console.error('[board-posts] AI classify trigger error:', classifyErr)
+        console.error('[board-posts] AI classify error:', classifyErr)
       }
     }
 

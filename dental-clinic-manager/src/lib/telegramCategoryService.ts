@@ -1,5 +1,6 @@
 // 게시판 카테고리 AI 자동 분류 서비스 (Google Gemini)
 import { GoogleGenAI } from '@google/genai'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 interface ExistingCategory {
   id: string
@@ -145,5 +146,126 @@ ${categoryList || '(아직 카테고리가 없습니다)'}
   } catch (error) {
     console.error('AI category classification failed:', error)
     return null
+  }
+}
+
+/**
+ * 게시글에 AI 카테고리를 직접 분류하고 DB 업데이트까지 수행하는 인라인 헬퍼
+ * - fire-and-forget fetch 대신 서버사이드에서 직접 호출용
+ */
+export async function classifyAndAssignCategory(
+  supabase: SupabaseClient,
+  postId: string,
+  postTitle: string,
+  postContent: string,
+  groupId: string,
+): Promise<{ categoryId: string | null; categoryName: string }> {
+  try {
+    // 그룹 정보
+    const { data: group } = await supabase
+      .from('telegram_groups')
+      .select('id, chat_title, board_title')
+      .eq('id', groupId)
+      .maybeSingle()
+
+    const groupTitle = group?.board_title || group?.chat_title || ''
+
+    // 기존 카테고리 목록
+    const { data: categories } = await supabase
+      .from('telegram_board_categories')
+      .select('id, name')
+      .eq('telegram_group_id', groupId)
+      .order('sort_order', { ascending: true })
+
+    const existingCategories = categories || []
+
+    // AI 분류
+    const result = await classifyPostCategory(
+      postTitle,
+      postContent,
+      existingCategories,
+      groupTitle
+    )
+
+    let categoryId: string | null = null
+
+    if (result) {
+      if (result.action === 'existing' && result.categoryId) {
+        categoryId = result.categoryId
+      } else if (result.action === 'new') {
+        // 새 카테고리 생성
+        const slug = result.categoryName
+          .toLowerCase()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9가-힣-]/g, '')
+          .slice(0, 50)
+
+        // slug 중복 체크
+        const { data: existing } = await supabase
+          .from('telegram_board_categories')
+          .select('id')
+          .eq('telegram_group_id', groupId)
+          .eq('slug', slug)
+          .maybeSingle()
+
+        if (existing) {
+          categoryId = existing.id
+        } else {
+          const { data: maxSort } = await supabase
+            .from('telegram_board_categories')
+            .select('sort_order')
+            .eq('telegram_group_id', groupId)
+            .eq('is_default', false)
+            .order('sort_order', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          const nextOrder = (maxSort?.sort_order ?? -1) + 1
+          const colorPresets = ['blue', 'green', 'purple', 'orange', 'teal', 'red', 'pink', 'indigo', 'amber']
+          const colorIndex = (existingCategories.filter(c => c.name !== '미분류').length) % colorPresets.length
+
+          const { data: newCat, error: catError } = await supabase
+            .from('telegram_board_categories')
+            .insert({
+              telegram_group_id: groupId,
+              name: result.categoryName,
+              slug,
+              color: colorPresets[colorIndex],
+              sort_order: nextOrder,
+            })
+            .select('id')
+            .single()
+
+          if (!catError && newCat) {
+            categoryId = newCat.id
+          }
+        }
+      }
+    }
+
+    // 폴백: 미분류 카테고리
+    if (!categoryId) {
+      const { data: defaultCat } = await supabase
+        .from('telegram_board_categories')
+        .select('id')
+        .eq('telegram_group_id', groupId)
+        .eq('is_default', true)
+        .maybeSingle()
+
+      categoryId = defaultCat?.id || null
+    }
+
+    // 게시글 업데이트
+    if (categoryId) {
+      await supabase
+        .from('telegram_board_posts')
+        .update({ category_id: categoryId })
+        .eq('id', postId)
+    }
+
+    return { categoryId, categoryName: result?.categoryName || '미분류' }
+  } catch (error) {
+    console.error(`[classifyAndAssignCategory] Error for post ${postId}:`, error)
+    return { categoryId: null, categoryName: '미분류' }
   }
 }
