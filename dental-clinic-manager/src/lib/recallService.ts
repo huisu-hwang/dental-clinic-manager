@@ -466,10 +466,15 @@ export const recallPatientService = {
     if (!clinicId) return { success: false, error: 'Clinic ID not found' }
 
     try {
+      // 빈 문자열을 null로 변환 (PostgreSQL date 컬럼에 '' 전달 방지)
+      const sanitized = Object.fromEntries(
+        Object.entries(formData).map(([k, v]) => [k, v === '' ? null : v])
+      )
+
       const { data, error } = await supabase
         .from('recall_patients')
         .insert([{
-          ...formData,
+          ...sanitized,
           clinic_id: clinicId,
           campaign_id: campaignId
         }])
@@ -657,9 +662,14 @@ export const recallPatientService = {
     if (!supabase) return { success: false, error: 'Database connection not available' }
 
     try {
+      // 빈 문자열을 null로 변환 (PostgreSQL date 컬럼에 '' 전달 방지)
+      const sanitized = Object.fromEntries(
+        Object.entries(updates).map(([k, v]) => [k, v === '' ? null : v])
+      )
+
       const { error } = await supabase
         .from('recall_patients')
-        .update(updates)
+        .update(sanitized)
         .eq('id', id)
 
       if (error) throw error
