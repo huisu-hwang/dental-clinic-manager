@@ -11,9 +11,10 @@ interface TelegramBoardPostCardProps {
   selected?: boolean
   onToggleSelect?: (postId: string) => void
   selectable?: boolean
+  alwaysShowCheckbox?: boolean
 }
 
-export default function TelegramBoardPostCard({ post, onClick, selectMode = false, selected = false, onToggleSelect, selectable = true }: TelegramBoardPostCardProps) {
+export default function TelegramBoardPostCard({ post, onClick, selectMode = false, selected = false, onToggleSelect, selectable = true, alwaysShowCheckbox = false }: TelegramBoardPostCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -35,6 +36,8 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
     : post.post_type === 'vote' ? Vote
     : Link2
 
+  const showCheckbox = selectMode || alwaysShowCheckbox
+
   const handleClick = () => {
     if (selectMode && selectable && onToggleSelect) {
       onToggleSelect(post.id)
@@ -43,17 +46,25 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
     }
   }
 
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (selectable && onToggleSelect) {
+      onToggleSelect(post.id)
+    }
+  }
+
   return (
     <div
-      onClick={handleClick}
+      onClick={alwaysShowCheckbox && !selectMode ? () => onClick(post) : handleClick}
       className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 ${
-        selectMode && selected ? 'bg-sky-50' : ''
+        showCheckbox && selected ? 'bg-sky-50' : ''
       } ${selectMode && !selectable ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       {/* 고정 또는 체크박스 */}
       <div className="w-5 flex-shrink-0 flex items-center justify-center">
-        {selectMode ? (
+        {showCheckbox ? (
           <div
+            onClick={handleCheckboxClick}
             className={`w-4 h-4 rounded border flex items-center justify-center ${
               !selectable
                 ? 'border-gray-200 bg-gray-100'
@@ -81,6 +92,7 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
           <TypeIcon className="w-3 h-3" />
           {typeLabel}
         </span>
+        {alwaysShowCheckbox && post.is_pinned && <Pin className="w-3 h-3 text-red-500 flex-shrink-0" />}
         <span className="text-sm text-gray-900 truncate">{post.title}</span>
         {(post.comment_count ?? 0) > 0 && (
           <span className="flex items-center gap-0.5 text-xs text-sky-500 flex-shrink-0">

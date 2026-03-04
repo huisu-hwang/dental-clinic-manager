@@ -983,6 +983,30 @@ export const telegramBoardPostService = {
   },
 
   /**
+   * 카테고리 일괄 이동 (API 경유)
+   */
+  async bulkMovePosts(postIds: string[], targetPostType: string): Promise<{ data: { moved: number; failed: number } | null; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
+
+      const res = await fetch('/api/telegram/board-posts/bulk-move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, postIds, targetPostType }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '카테고리 이동에 실패했습니다.')
+
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramBoardPostService.bulkMovePosts] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 좋아요 토글
    */
   async toggleLike(userId: string, postId: string): Promise<{ data: { liked: boolean; like_count: number } | null; error: string | null }> {

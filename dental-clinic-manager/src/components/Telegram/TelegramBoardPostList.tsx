@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Search, Brain, FileText, Link2, PenLine, Loader2, Inbox, Plus, Heart, Bookmark, Vote, ChevronDown, CheckSquare, X } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Search, Brain, FileText, Link2, PenLine, Loader2, Inbox, Plus, Heart, Bookmark, Vote, ChevronDown, CheckSquare, X, FolderInput } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import TelegramBoardPostCard from './TelegramBoardPostCard'
@@ -52,6 +52,9 @@ export default function TelegramBoardPostList({
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkMoving, setBulkMoving] = useState(false)
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false)
+  const moveMenuRef = useRef<HTMLDivElement>(null)
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
@@ -190,6 +193,32 @@ export default function TelegramBoardPostList({
     }
   }
 
+  // 관리자 또는 게시판 생성자는 상시 체크박스 모드
+  const canBulkManage = isMasterAdmin || isGroupCreator
+
+  // 카테고리 일괄 이동
+  const handleBulkMove = async (targetPostType: string) => {
+    if (selectedIds.size === 0) return
+    setMoveMenuOpen(false)
+
+    const targetLabel = POST_TYPE_FILTERS.find(f => f.key === targetPostType)?.label || targetPostType
+    if (!(await appConfirm(`선택한 ${selectedIds.size}개의 게시글을 "${targetLabel}"(으)로 이동하시겠습니까?`))) return
+
+    setBulkMoving(true)
+    const { data, error } = await telegramBoardPostService.bulkMovePosts(Array.from(selectedIds), targetPostType)
+    setBulkMoving(false)
+
+    if (error) {
+      await appAlert(error)
+    } else if (data) {
+      if (data.failed > 0) {
+        await appAlert(`${data.moved}개 이동 완료, ${data.failed}개는 권한이 없어 이동하지 못했습니다.`)
+      }
+      setSelectedIds(new Set())
+      fetchPosts()
+    }
+  }
+
   // 일괄 삭제
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return
@@ -290,6 +319,9 @@ export default function TelegramBoardPostList({
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const canBulkDelete = isMasterAdmin || isGroupCreator
+  const showActionBar = canBulkManage ? selectedIds.size > 0 : selectMode
+
+  const MOVE_TARGET_OPTIONS = POST_TYPE_FILTERS.filter(f => f.key !== 'all')
 
   return (
     <div>
@@ -342,7 +374,8 @@ export default function TelegramBoardPostList({
             )}
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {canBulkDelete && !selectMode && (
+            {/* 일반 사용자용 선택 삭제 버튼 (canBulkManage가 아닌 경우만) */}
+            {canBulkDelete && !canBulkManage && !selectMode && (
               <Button
                 variant="outline"
                 size="sm"
@@ -387,8 +420,8 @@ export default function TelegramBoardPostList({
           </div>
         </div>
 
-        {/* 선택 모드 액션 바 */}
-        {selectMode && (
+        {/* 액션 바: canBulkManage는 선택 항목 있을 때, 일반 사용자는 selectMode일 때 */}
+        {showActionBar && (
           <div className="flex items-center justify-between bg-sky-50 border border-sky-200 rounded-lg px-4 py-2">
             <div className="flex items-center gap-3">
               <button
@@ -402,6 +435,46 @@ export default function TelegramBoardPostList({
               </span>
             </div>
             <div className="flex items-center gap-2">
+              {/* 카테고리 이동 (canBulkManage만) */}
+              {canBulkManage && (
+                <div className="relative" ref={moveMenuRef}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setMoveMenuOpen(!moveMenuOpen)}
+                    disabled={selectedIds.size === 0 || bulkMoving}
+                    className="text-xs"
+                  >
+                    {bulkMoving ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                    ) : (
+                      <FolderInput className="w-3.5 h-3.5 mr-1" />
+                    )}
+                    카테고리 이동
+                    <ChevronDown className="w-3 h-3 ml-0.5" />
+                  </Button>
+                  {moveMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setMoveMenuOpen(false)} />
+                      <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden">
+                        {MOVE_TARGET_OPTIONS.map(opt => {
+                          const Icon = opt.icon
+                          return (
+                            <button
+                              key={opt.key}
+                              onClick={() => handleBulkMove(opt.key)}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              {Icon && <Icon className="w-3.5 h-3.5 text-gray-500" />}
+                              {opt.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               <Button
                 size="sm"
                 variant="destructive"
@@ -414,14 +487,28 @@ export default function TelegramBoardPostList({
                 ) : null}
                 {selectedIds.size}개 삭제
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleToggleSelectMode}
-                className="text-xs text-gray-500"
-              >
-                <X className="w-3.5 h-3.5 mr-0.5" />취소
-              </Button>
+              {/* 취소 버튼은 일반 사용자 selectMode에서만 표시 */}
+              {!canBulkManage && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleToggleSelectMode}
+                  className="text-xs text-gray-500"
+                >
+                  <X className="w-3.5 h-3.5 mr-0.5" />취소
+                </Button>
+              )}
+              {/* canBulkManage는 선택 해제 버튼 */}
+              {canBulkManage && selectedIds.size > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-xs text-gray-500"
+                >
+                  <X className="w-3.5 h-3.5 mr-0.5" />선택 해제
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -469,6 +556,7 @@ export default function TelegramBoardPostList({
                 selected={selectedIds.has(post.id)}
                 onToggleSelect={handleToggleSelect}
                 selectable={isMasterAdmin || isGroupCreator || post.post_type === 'general' || post.post_type === 'vote'}
+                alwaysShowCheckbox={canBulkManage}
               />
             ))}
           </>

@@ -34,6 +34,12 @@ import type { VendorContact, VendorCategory, VendorContactFormData, VendorCatego
 import PhoneDialSettingsModal from './PhoneDialSettingsModal'
 import { dialPhone } from '@/utils/phoneDialer'
 import { usePhoneDialSettings } from '@/hooks/usePhoneDialSettings'
+import {
+  DndContext, DragOverlay, closestCenter,
+  PointerSensor, useSensor, useSensors,
+  useDroppable, useDraggable,
+  type DragStartEvent, type DragEndEvent,
+} from '@dnd-kit/core'
 
 // 전화번호 패턴 감지 함수
 const isPhoneNumber = (value: string): boolean => {
@@ -84,6 +90,44 @@ const detectPhoneColumns = (data: string[][]): number[] => {
   return phoneColumnIndices
 }
 
+// 드래그 앤 드롭: 드롭 가능한 카테고리 컬럼
+function DroppableColumn({ id, categoryId, children }: { id: string; categoryId: string | null; children: React.ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id,
+    data: { type: 'category-column', categoryId }
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-w-[280px] max-w-[320px] flex-shrink-0 rounded-lg transition-all ${
+        isOver ? 'ring-2 ring-blue-400 bg-blue-50/50' : ''
+      }`}
+    >
+      {children}
+    </div>
+  )
+}
+
+// 드래그 앤 드롭: 드래그 가능한 명함 카드
+function DraggableContactCard({ id, contactId, isDragActive, children }: { id: string; contactId: string; isDragActive: boolean; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id,
+    data: { type: 'contact', contactId }
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ opacity: isDragActive ? 0.3 : 1 }}
+      {...listeners}
+      {...attributes}
+    >
+      {children}
+    </div>
+  )
+}
+
 export default function VendorContactManagement() {
   const { hasPermission } = usePermissions()
 
@@ -125,6 +169,12 @@ export default function VendorContactManagement() {
 
   // 선택 상태
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set())
+
+  // 드래그 앤 드롭 상태
+  const [activeDragContactId, setActiveDragContactId] = useState<string | null>(null)
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
 
   // 폼 상태
   const [editingContact, setEditingContact] = useState<VendorContact | null>(null)
@@ -411,6 +461,69 @@ export default function VendorContactManagement() {
       showToast('카테고리 이동에 실패했습니다.', 'error')
     }
   }
+
+  // 드래그 앤 드롭 핸들러
+  const handleDndDragStart = (event: DragStartEvent) => {
+    const contactId = event.active.data.current?.contactId as string
+    if (contactId) {
+      setActiveDragContactId(contactId)
+    }
+  }
+
+  const handleDndDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveDragContactId(null)
+
+    if (!over) return
+
+    const draggedContactId = active.data.current?.contactId as string
+    const targetCategoryId = over.data.current?.categoryId as (string | null)
+
+    if (!draggedContactId || targetCategoryId === undefined) return
+
+    const draggedContact = contacts.find(c => c.id === draggedContactId)
+    if (!draggedContact) return
+
+    // 같은 카테고리로 드롭 시 무시
+    const currentCategoryId = draggedContact.category_id || null
+    if (currentCategoryId === targetCategoryId) return
+
+    // 선택된 카드 드래그 → 선택된 전체 이동, 미선택 → 1개만 이동
+    const contactsToMove = selectedContacts.has(draggedContactId)
+      ? Array.from(selectedContacts)
+      : [draggedContactId]
+
+    let successCount = 0
+    let failCount = 0
+
+    for (const contactId of contactsToMove) {
+      try {
+        const result = await dataService.updateVendorContact(contactId, { category_id: targetCategoryId || '' })
+        if (result.error) {
+          failCount++
+        } else {
+          successCount++
+        }
+      } catch {
+        failCount++
+      }
+    }
+
+    if (successCount > 0) {
+      const targetName = targetCategoryId
+        ? categories.find(c => c.id === targetCategoryId)?.name || '알 수 없음'
+        : '미분류'
+      showToast(`${successCount}개 업체가 "${targetName}"(으)로 이동되었습니다.${failCount > 0 ? ` (${failCount}개 실패)` : ''}`, 'success')
+      setSelectedContacts(new Set())
+      loadData()
+    } else if (failCount > 0) {
+      showToast('카테고리 이동에 실패했습니다.', 'error')
+    }
+  }
+
+  // 드래그 오버레이용 데이터
+  const activeDragContact = activeDragContactId ? contacts.find(c => c.id === activeDragContactId) : null
+  const dragItemCount = activeDragContactId && selectedContacts.has(activeDragContactId) ? selectedContacts.size : 1
 
   // 즐겨찾기 토글
   const handleToggleFavorite = async (contact: VendorContact) => {
@@ -1326,41 +1439,72 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               )}
             </div>
           ) : groupedContacts ? (
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {groupedContacts.map(group => {
-                const groupId = group.category?.id || 'uncategorized'
-                const isCollapsed = collapsedGroups.has(groupId)
-                return (
-                  <div key={groupId} className="min-w-[280px] max-w-[320px] flex-shrink-0">
-                    <button
-                      onClick={() => toggleGroup(groupId)}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
-                      style={{ backgroundColor: `${group.category?.color || '#94a3b8'}15`, borderLeft: `3px solid ${group.category?.color || '#94a3b8'}` }}
-                    >
-                      {isCollapsed ? (
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-400" />
-                      )}
-                      <span
-                        className="font-semibold text-sm"
-                        style={{ color: group.category?.color || '#94a3b8' }}
+            <DndContext
+              sensors={dndSensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDndDragStart}
+              onDragEnd={handleDndDragEnd}
+            >
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                {groupedContacts.map(group => {
+                  const groupId = group.category?.id || 'uncategorized'
+                  const isCollapsed = collapsedGroups.has(groupId)
+                  const categoryId = group.category?.id || null
+                  return (
+                    <DroppableColumn key={groupId} id={`drop-column-${groupId}`} categoryId={categoryId}>
+                      <button
+                        onClick={() => toggleGroup(groupId)}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
+                        style={{ backgroundColor: `${group.category?.color || '#94a3b8'}15`, borderLeft: `3px solid ${group.category?.color || '#94a3b8'}` }}
                       >
-                        {group.category?.name || '미분류'}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        ({group.contacts.length})
-                      </span>
-                    </button>
-                    {!isCollapsed && (
-                      <div className="flex flex-col gap-1.5 max-h-[calc(100vh-280px)] overflow-y-auto">
-                        {group.contacts.map(contact => renderContactCard(contact, false))}
-                      </div>
-                    )}
+                        {isCollapsed ? (
+                          <ChevronRight className="w-4 h-4 text-slate-400" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        )}
+                        <span
+                          className="font-semibold text-sm"
+                          style={{ color: group.category?.color || '#94a3b8' }}
+                        >
+                          {group.category?.name || '미분류'}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          ({group.contacts.length})
+                        </span>
+                      </button>
+                      {!isCollapsed && (
+                        <div className="flex flex-col gap-1.5 max-h-[calc(100vh-280px)] overflow-y-auto">
+                          {group.contacts.map(contact => (
+                            <DraggableContactCard
+                              key={contact.id}
+                              id={`contact-${contact.id}`}
+                              contactId={contact.id}
+                              isDragActive={activeDragContactId === contact.id || (!!activeDragContactId && selectedContacts.has(activeDragContactId) && selectedContacts.has(contact.id))}
+                            >
+                              {renderContactCard(contact, false)}
+                            </DraggableContactCard>
+                          ))}
+                        </div>
+                      )}
+                    </DroppableColumn>
+                  )
+                })}
+              </div>
+              <DragOverlay dropAnimation={null}>
+                {activeDragContact && (
+                  <div className="bg-white border-2 border-blue-400 rounded-lg shadow-xl p-3 w-[280px]">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-slate-800 truncate">{activeDragContact.company_name}</span>
+                      {dragItemCount > 1 && (
+                        <span className="px-2 py-0.5 bg-blue-500 text-white text-xs font-medium rounded-full flex-shrink-0">
+                          {dragItemCount}개 이동 중
+                        </span>
+                      )}
+                    </div>
                   </div>
-                )
-              })}
-            </div>
+                )}
+              </DragOverlay>
+            </DndContext>
           ) : (
             <div className="flex flex-col gap-1.5 max-w-[400px]">
               {filteredContacts.map(contact => renderContactCard(contact, true))}
