@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
           board_title,
           board_description: board_description || null,
           application_reason: application_reason || null,
+          visibility: dto.visibility || 'private',
           created_by: userId,
         }
 
@@ -200,6 +201,7 @@ export async function POST(request: NextRequest) {
         .from('telegram_groups')
         .insert({
           ...dto,
+          visibility: dto.visibility || 'private',
           status: 'approved',
           is_active: true,
           created_by: userId,
@@ -224,6 +226,7 @@ export async function POST(request: NextRequest) {
         .insert({
           ...groupDto,
           application_reason: application_reason || null,
+          visibility: dto.visibility || 'private',
           status: 'pending',
           is_active: false,
           created_by: userId,

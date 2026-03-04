@@ -5,6 +5,9 @@
 // 텔레그램 그룹 상태
 export type TelegramGroupStatus = 'pending' | 'approved' | 'rejected'
 
+// 텔레그램 그룹 공개 범위
+export type TelegramGroupVisibility = 'private' | 'public_list' | 'public_read' | 'public_full'
+
 // 텔레그램 그룹
 export interface TelegramGroup {
   id: string
@@ -22,6 +25,7 @@ export interface TelegramGroup {
   summary_enabled: boolean
   summary_time: string
   status: TelegramGroupStatus
+  visibility: TelegramGroupVisibility
   application_reason: string | null
   rejection_reason: string | null
   reviewed_by: string | null
@@ -189,6 +193,7 @@ export interface UpdateTelegramGroupDto {
   summary_time?: string
   color_bg?: string
   color_text?: string
+  visibility?: TelegramGroupVisibility
 }
 
 export interface CreateInviteLinkDto {
@@ -205,6 +210,7 @@ export interface ApplyTelegramGroupDto {
   board_title: string
   board_description?: string
   application_reason?: string
+  visibility?: TelegramGroupVisibility
 }
 
 // 게시판 심사 DTO
@@ -328,6 +334,20 @@ export const CONTRIBUTION_VOTE_RESULT_VISIBILITY_LABELS: Record<ContributionVote
   realtime: '실시간 공개',
   after_vote: '투표 후 공개',
   after_end: '종료 후 공개',
+}
+
+export const TELEGRAM_VISIBILITY_LABELS: Record<TelegramGroupVisibility, string> = {
+  private: '비공개',
+  public_list: '목록 공개',
+  public_read: '열람 공개',
+  public_full: '열람+댓글 공개',
+}
+
+export const TELEGRAM_VISIBILITY_DESCRIPTIONS: Record<TelegramGroupVisibility, string> = {
+  private: '멤버만 목록에서 볼 수 있고, 게시글/댓글/글쓰기 모두 멤버 전용',
+  public_list: '모든 사용자가 목록에서 볼 수 있지만, 게시글 열람은 멤버만 가능',
+  public_read: '모든 사용자가 게시글을 열람할 수 있지만, 댓글/글쓰기는 멤버만 가능',
+  public_full: '모든 사용자가 게시글 열람+댓글이 가능하지만, 글쓰기는 멤버만 가능',
 }
 
 export const TELEGRAM_GROUP_STATUS_LABELS: Record<TelegramGroupStatus, string> = {

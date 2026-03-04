@@ -7,10 +7,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
-async function checkMasterAdmin(userId: string | null): Promise<boolean> {
-  if (!userId) return false
+async function getUserRole(userId: string | null): Promise<string | null> {
+  if (!userId) return null
   const supabase = getSupabaseAdmin()
-  if (!supabase) return false
+  if (!supabase) return null
 
   const { data, error } = await supabase
     .from('users')
@@ -18,8 +18,12 @@ async function checkMasterAdmin(userId: string | null): Promise<boolean> {
     .eq('id', userId)
     .maybeSingle()
 
-  if (error || !data) return false
-  return data.role === 'master_admin'
+  if (error || !data) return null
+  return data.role
+}
+
+async function checkMasterAdmin(userId: string | null): Promise<boolean> {
+  return (await getUserRole(userId)) === 'master_admin'
 }
 
 export async function PATCH(
@@ -36,14 +40,28 @@ export async function PATCH(
     const body = await request.json()
     const { userId, ...dto } = body
 
-    const isAdmin = await checkMasterAdmin(userId)
-    if (!isAdmin) {
+    const userRole = await getUserRole(userId)
+    const isAdmin = userRole === 'master_admin'
+
+    // 그룹 생성자인지 확인
+    const { data: groupData } = await supabase
+      .from('telegram_groups')
+      .select('created_by')
+      .eq('id', id)
+      .maybeSingle()
+
+    const isCreator = groupData?.created_by === userId
+
+    if (!isAdmin && !isCreator) {
       return NextResponse.json({ data: null, error: '권한이 없습니다.' }, { status: 403 })
     }
 
+    // 그룹 생성자는 visibility만 수정 가능
+    const allowedDto = isAdmin ? dto : { visibility: dto.visibility }
+
     const { data, error } = await supabase
       .from('telegram_groups')
-      .update(dto)
+      .update(allowedDto)
       .eq('id', id)
       .select()
       .single()

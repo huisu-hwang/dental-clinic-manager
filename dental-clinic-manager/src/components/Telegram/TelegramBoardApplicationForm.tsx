@@ -5,7 +5,8 @@ import { Loader2, Info, CheckCircle2, RefreshCw, ExternalLink, ChevronDown } fro
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { telegramGroupService } from '@/lib/telegramService'
-import type { ApplyTelegramGroupDto } from '@/types/telegram'
+import type { ApplyTelegramGroupDto, TelegramGroupVisibility } from '@/types/telegram'
+import { TELEGRAM_VISIBILITY_LABELS, TELEGRAM_VISIBILITY_DESCRIPTIONS } from '@/types/telegram'
 
 interface DetectedGroup {
   id: string
@@ -33,6 +34,7 @@ export default function TelegramBoardApplicationForm({ onSubmit, onCancel, loadi
   const pollingStartRef = useRef<number>(0)
 
   // Step 2: 게시판 정보
+  const [visibility, setVisibility] = useState<TelegramGroupVisibility>('private')
   const [chatId, setChatId] = useState('')
   const [chatTitle, setChatTitle] = useState('')
   const [boardSlug, setBoardSlug] = useState('')
@@ -148,6 +150,7 @@ export default function TelegramBoardApplicationForm({ onSubmit, onCancel, loadi
       board_title: boardTitle,
       board_description: boardDescription || undefined,
       application_reason: applicationReason || undefined,
+      visibility,
     })
   }
 
@@ -316,6 +319,32 @@ export default function TelegramBoardApplicationForm({ onSubmit, onCancel, loadi
             placeholder="이 모임의 대화 내용이 자동으로 정리됩니다"
             className="h-8 text-sm"
           />
+        </div>
+
+        {/* 공개 범위 설정 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5">공개 범위</label>
+          <div className="grid grid-cols-2 gap-2">
+            {(Object.keys(TELEGRAM_VISIBILITY_LABELS) as TelegramGroupVisibility[]).map(v => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setVisibility(v)}
+                className={`p-2.5 rounded-lg border text-left transition-all ${
+                  visibility === v
+                    ? 'border-sky-400 bg-sky-50 ring-1 ring-sky-400'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <span className={`text-xs font-semibold ${visibility === v ? 'text-sky-700' : 'text-gray-700'}`}>
+                  {TELEGRAM_VISIBILITY_LABELS[v]}
+                </span>
+                <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+                  {TELEGRAM_VISIBILITY_DESCRIPTIONS[v]}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>

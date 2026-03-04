@@ -10,7 +10,7 @@ import TelegramBoardPostForm from './TelegramBoardPostForm'
 import ContributionVoteForm from './ContributionVoteForm'
 import TelegramBoardCategoryManager from './TelegramBoardCategoryManager'
 import { telegramBoardPostService, telegramBoardVoteService, telegramBoardCategoryService } from '@/lib/telegramService'
-import type { TelegramBoardPost, TelegramBoardCategory, CreateContributionVoteDto } from '@/types/telegram'
+import type { TelegramBoardPost, TelegramBoardCategory, CreateContributionVoteDto, TelegramGroupVisibility } from '@/types/telegram'
 import { getCategoryColorClasses } from '@/types/telegram'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
@@ -20,6 +20,8 @@ interface TelegramBoardPostListProps {
   isMasterAdmin?: boolean
   isGroupCreator?: boolean
   initialPostId?: string | null
+  isMember?: boolean
+  groupVisibility?: TelegramGroupVisibility
 }
 
 const POST_TYPE_FILTERS = [
@@ -39,7 +41,11 @@ export default function TelegramBoardPostList({
   isMasterAdmin = false,
   isGroupCreator = false,
   initialPostId,
+  isMember = true,
+  groupVisibility = 'private',
 }: TelegramBoardPostListProps) {
+  // 비멤버는 글쓰기 불가
+  const canWrite = isMember
   const [posts, setPosts] = useState<TelegramBoardPost[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -374,6 +380,8 @@ export default function TelegramBoardPostList({
         isGroupCreator={isGroupCreator}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        isMember={isMember}
+        groupVisibility={groupVisibility}
       />
     )
   }
@@ -504,7 +512,7 @@ export default function TelegramBoardPostList({
                 <span className="hidden sm:inline">선택 삭제</span>
               </Button>
             )}
-            {currentUserId && !selectMode && (
+            {canWrite && currentUserId && !selectMode && (
               <div className="relative">
                 <Button
                   size="sm"

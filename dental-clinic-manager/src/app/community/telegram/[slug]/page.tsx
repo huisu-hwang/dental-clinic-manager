@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { Send, Loader2, ShieldAlert, ChevronLeft, Settings } from 'lucide-react'
+import { Send, Loader2, ShieldAlert, ChevronLeft, Settings, Globe, UserPlus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
@@ -11,7 +11,8 @@ import TelegramBoardPostList from '@/components/Telegram/TelegramBoardPostList'
 import TelegramBoardMemberPanel from '@/components/Telegram/TelegramBoardMemberPanel'
 import { telegramGroupService, telegramMemberService } from '@/lib/telegramService'
 import { getTabRoute } from '@/utils/tabRouting'
-import type { TelegramGroup } from '@/types/telegram'
+import type { TelegramGroup, TelegramGroupVisibility } from '@/types/telegram'
+import { TELEGRAM_VISIBILITY_LABELS } from '@/types/telegram'
 
 export default function TelegramBoardPage() {
   const router = useRouter()
@@ -119,14 +120,29 @@ export default function TelegramBoardPage() {
                   목록으로 돌아가기
                 </Button>
               </div>
-            ) : isMember === false ? (
-              /* 비멤버 접근 차단 */
+            ) : isMember === false && (group.visibility === 'private' || !group.visibility) ? (
+              /* 비공개 - 비멤버 접근 완전 차단 */
               <div className="text-center py-20">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <ShieldAlert className="w-8 h-8 text-amber-500" />
                 </div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-2">접근 권한이 없습니다</h2>
                 <p className="text-sm text-gray-500 mb-6">이 게시판은 모임 멤버만 열람할 수 있습니다.<br />초대 링크를 통해 가입해 주세요.</p>
+                <Button variant="outline" onClick={() => router.push('/community/telegram')}>
+                  게시판 목록으로
+                </Button>
+              </div>
+            ) : isMember === false && group.visibility === 'public_list' ? (
+              /* 목록만 공개 - 게시글 열람 불가 */
+              <div className="text-center py-20">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Globe className="w-8 h-8 text-blue-500" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">{group.board_title}</h2>
+                {group.board_description && (
+                  <p className="text-sm text-gray-500 mb-2">{group.board_description}</p>
+                )}
+                <p className="text-sm text-gray-400 mb-6">게시글을 열람하려면 모임에 가입해야 합니다.</p>
                 <Button variant="outline" onClick={() => router.push('/community/telegram')}>
                   게시판 목록으로
                 </Button>
@@ -171,6 +187,18 @@ export default function TelegramBoardPage() {
                   </div>
                 </div>
 
+                {/* 비멤버 안내 배너 */}
+                {isMember === false && (
+                  <div className="bg-amber-50 border-x border-amber-200 px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-amber-700">
+                      <Globe className="w-4 h-4 flex-shrink-0" />
+                      <span>
+                        {group.visibility === 'public_read' ? '읽기전용 모드입니다. 댓글/글쓰기는 멤버만 가능합니다.' : '열람+댓글이 가능하지만, 글쓰기는 멤버만 가능합니다.'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* 게시글 목록 */}
                 <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-4 sm:p-6">
                   <TelegramBoardPostList
@@ -179,6 +207,8 @@ export default function TelegramBoardPage() {
                     isMasterAdmin={user?.role === 'master_admin'}
                     isGroupCreator={group.created_by === user?.id}
                     initialPostId={initialPostId}
+                    isMember={isMember ?? true}
+                    groupVisibility={group.visibility}
                   />
                 </div>
 
@@ -190,6 +220,8 @@ export default function TelegramBoardPage() {
                     createdBy={group.created_by}
                     isOpen={showMemberPanel}
                     onClose={() => setShowMemberPanel(false)}
+                    currentVisibility={group.visibility}
+                    onVisibilityChange={(v) => setGroup(prev => prev ? { ...prev, visibility: v } : prev)}
                   />
                 )}
               </>

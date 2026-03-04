@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { ArrowLeft, Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar, PenLine, Pencil, Trash2, Vote } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import type { TelegramBoardPost } from '@/types/telegram'
+import type { TelegramBoardPost, TelegramGroupVisibility } from '@/types/telegram'
 import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
 import TelegramBoardCommentSection from './TelegramBoardCommentSection'
 import TelegramBoardPostActions from './TelegramBoardPostActions'
@@ -19,6 +19,8 @@ interface TelegramBoardPostDetailProps {
   isGroupCreator?: boolean
   onEdit?: (post: TelegramBoardPost) => void
   onDelete?: (post: TelegramBoardPost) => void
+  isMember?: boolean
+  groupVisibility?: TelegramGroupVisibility
 }
 
 export default function TelegramBoardPostDetail({
@@ -29,6 +31,8 @@ export default function TelegramBoardPostDetail({
   isGroupCreator = false,
   onEdit,
   onDelete,
+  isMember = true,
+  groupVisibility = 'private',
 }: TelegramBoardPostDetailProps) {
   const [isLiked, setIsLiked] = useState(post.is_liked ?? false)
   const [isScraped, setIsScraped] = useState(post.is_scraped ?? false)
@@ -272,6 +276,8 @@ export default function TelegramBoardPostDetail({
             postId={post.id}
             currentUserId={currentUserId ?? null}
             isMasterAdmin={isMasterAdmin}
+            isMember={isMember}
+            groupVisibility={groupVisibility}
           />
         </div>
       </div>

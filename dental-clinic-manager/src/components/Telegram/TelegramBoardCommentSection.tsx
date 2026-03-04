@@ -4,20 +4,26 @@ import { useState, useEffect, useCallback } from 'react'
 import { MessageCircle, Loader2, Pencil, Trash2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { telegramBoardCommentService } from '@/lib/telegramService'
-import type { TelegramBoardComment } from '@/types/telegram'
+import type { TelegramBoardComment, TelegramGroupVisibility } from '@/types/telegram'
 import { appConfirm } from '@/components/ui/AppDialog'
 
 interface TelegramBoardCommentSectionProps {
   postId: string
   currentUserId: string | null
   isMasterAdmin: boolean
+  isMember?: boolean
+  groupVisibility?: TelegramGroupVisibility
 }
 
 export default function TelegramBoardCommentSection({
   postId,
   currentUserId,
   isMasterAdmin,
+  isMember = true,
+  groupVisibility = 'private',
 }: TelegramBoardCommentSectionProps) {
+  // 비멤버는 public_full에서만 댓글 가능
+  const canComment = isMember || groupVisibility === 'public_full'
   const [comments, setComments] = useState<TelegramBoardComment[]>([])
   const [loading, setLoading] = useState(true)
   const [newComment, setNewComment] = useState('')
@@ -181,7 +187,7 @@ export default function TelegramBoardCommentSection({
       )}
 
       {/* 댓글 입력 */}
-      {currentUserId && (
+      {currentUserId && canComment && (
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             value={newComment}

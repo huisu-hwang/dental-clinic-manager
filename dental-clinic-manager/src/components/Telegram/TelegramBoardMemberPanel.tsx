@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   X, Users, Copy, Check, Trash2, Plus, Link2, Loader2,
-  AlertCircle, XCircle, Search, UserPlus,
+  AlertCircle, XCircle, Search, UserPlus, Mail, Globe,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { telegramMemberService, telegramInviteLinkService } from '@/lib/telegramService'
-import type { TelegramGroupMember, TelegramInviteLink } from '@/types/telegram'
+import { telegramMemberService, telegramInviteLinkService, telegramGroupService } from '@/lib/telegramService'
+import type { TelegramGroupMember, TelegramInviteLink, TelegramGroupVisibility } from '@/types/telegram'
+import { TELEGRAM_VISIBILITY_LABELS, TELEGRAM_VISIBILITY_DESCRIPTIONS } from '@/types/telegram'
 import { appConfirm } from '@/components/ui/AppDialog'
 
 interface TelegramBoardMemberPanelProps {
@@ -17,6 +18,8 @@ interface TelegramBoardMemberPanelProps {
   createdBy: string
   isOpen: boolean
   onClose: () => void
+  currentVisibility?: TelegramGroupVisibility
+  onVisibilityChange?: (visibility: TelegramGroupVisibility) => void
 }
 
 export default function TelegramBoardMemberPanel({
@@ -25,6 +28,8 @@ export default function TelegramBoardMemberPanel({
   createdBy,
   isOpen,
   onClose,
+  currentVisibility = 'private',
+  onVisibilityChange,
 }: TelegramBoardMemberPanelProps) {
   const [members, setMembers] = useState<TelegramGroupMember[]>([])
   const [inviteLinks, setInviteLinks] = useState<TelegramInviteLink[]>([])
@@ -35,14 +40,60 @@ export default function TelegramBoardMemberPanel({
   const [creatingLink, setCreatingLink] = useState(false)
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null)
 
+  // 공개 설정
+  const [visibility, setVisibility] = useState<TelegramGroupVisibility>(currentVisibility)
+  const [savingVisibility, setSavingVisibility] = useState(false)
+
   // 사용자 검색
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<{ id: string; name: string; email: string }[]>([])
   const [searching, setSearching] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [addingUserId, setAddingUserId] = useState<string | null>(null)
+  const [sendingInvite, setSendingInvite] = useState(false)
+  const [inviteSent, setInviteSent] = useState<string | null>(null)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // 공개 범위 변경
+  const handleVisibilityChange = async (newVisibility: TelegramGroupVisibility) => {
+    setVisibility(newVisibility)
+    setSavingVisibility(true)
+    setError(null)
+    const { error: updateError } = await telegramGroupService.updateGroup(groupId, { visibility: newVisibility })
+    if (updateError) {
+      setError(updateError)
+      setVisibility(currentVisibility) // revert
+    } else {
+      onVisibilityChange?.(newVisibility)
+    }
+    setSavingVisibility(false)
+  }
+
+  // 이메일 유효성 검사
+  const isValidEmail = (str: string) => /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(str)
+
+  // 이메일 초대 핸들러
+  const handleSendEmailInvite = async () => {
+    setSendingInvite(true)
+    setError(null)
+    const { data, error: inviteError } = await telegramMemberService.sendEmailInvite(groupId, searchQuery.trim())
+    if (inviteError) {
+      setError(inviteError)
+    } else {
+      setInviteSent(searchQuery.trim())
+      setSearchQuery('')
+      setSearchResults([])
+      // 생성/재사용된 초대 링크를 목록에 즉시 반영
+      if (data?.inviteLink) {
+        setInviteLinks(prev => {
+          const exists = prev.some(l => l.id === data.inviteLink.id)
+          return exists ? prev : [data.inviteLink, ...prev]
+        })
+      }
+    }
+    setSendingInvite(false)
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -198,6 +249,36 @@ export default function TelegramBoardMemberPanel({
                 </div>
               )}
 
+              {/* 공개 설정 섹션 */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5 mb-3">
+                  <Globe className="w-4 h-4" />공개 설정
+                  {savingVisibility && <Loader2 className="w-3 h-3 animate-spin text-sky-500" />}
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(TELEGRAM_VISIBILITY_LABELS) as TelegramGroupVisibility[]).map(v => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => handleVisibilityChange(v)}
+                      disabled={savingVisibility}
+                      className={`p-2.5 rounded-lg border text-left transition-all ${
+                        visibility === v
+                          ? 'border-sky-400 bg-sky-50 ring-1 ring-sky-400'
+                          : 'border-gray-200 hover:border-gray-300'
+                      } ${savingVisibility ? 'opacity-50' : ''}`}
+                    >
+                      <span className={`text-xs font-semibold ${visibility === v ? 'text-sky-700' : 'text-gray-700'}`}>
+                        {TELEGRAM_VISIBILITY_LABELS[v]}
+                      </span>
+                      <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+                        {TELEGRAM_VISIBILITY_DESCRIPTIONS[v]}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* 초대 링크 섹션 */}
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -294,6 +375,16 @@ export default function TelegramBoardMemberPanel({
                   </Button>
                 </div>
 
+                {inviteSent && (
+                  <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg mb-2">
+                    <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="flex-1">{inviteSent}으로 초대 이메일을 발송했습니다</span>
+                    <button onClick={() => setInviteSent(null)}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
                 {showSearch && (
                   <div className="mb-3">
                     <div className="relative">
@@ -314,7 +405,28 @@ export default function TelegramBoardMemberPanel({
                     {searchQuery.trim().length >= 2 && !searching && (
                       <div className="mt-1.5 border border-gray-200 rounded-lg overflow-hidden">
                         {searchResults.length === 0 ? (
-                          <p className="text-xs text-gray-400 text-center py-3">검색 결과가 없습니다</p>
+                          <div className="p-3 text-center">
+                            <p className="text-xs text-gray-400 mb-2">검색 결과가 없습니다</p>
+                            {isValidEmail(searchQuery.trim()) && (
+                              <div className="border-t border-gray-100 pt-2 mt-2">
+                                <p className="text-xs text-gray-500 mb-2">
+                                  <span className="font-medium">{searchQuery.trim()}</span>으로 초대 이메일을 보낼 수 있습니다
+                                </p>
+                                <Button
+                                  size="sm"
+                                  onClick={handleSendEmailInvite}
+                                  disabled={sendingInvite}
+                                  className="h-7 text-xs"
+                                >
+                                  {sendingInvite ? (
+                                    <><Loader2 className="w-3 h-3 animate-spin mr-1" />발송 중...</>
+                                  ) : (
+                                    <><Mail className="w-3 h-3 mr-1" />이메일로 초대</>
+                                  )}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <div className="max-h-48 overflow-y-auto">
                             {searchResults.map(user => (

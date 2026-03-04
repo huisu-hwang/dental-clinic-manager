@@ -161,6 +161,31 @@ export const telegramGroupService = {
   },
 
   /**
+   * 공개 그룹 조회 (visibility !== 'private')
+   */
+  async getPublicGroups(): Promise<{ data: TelegramGroup[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .from('telegram_groups')
+        .select('*')
+        .eq('is_active', true)
+        .eq('status', 'approved')
+        .neq('visibility', 'private')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[telegramGroupService.getPublicGroups] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 그룹 생성
    */
   async createGroup(dto: CreateTelegramGroupDto): Promise<{ data: TelegramGroup | null; error: string | null }> {
@@ -194,19 +219,17 @@ export const telegramGroupService = {
    */
   async updateGroup(id: string, dto: UpdateTelegramGroupDto): Promise<{ data: TelegramGroup | null; error: string | null }> {
     try {
-      const supabase = await ensureConnection()
-      if (!supabase) throw new Error('Database connection failed')
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('User not found')
 
-      const { data, error } = await (supabase as any)
-        .from('telegram_groups')
-        .update(dto)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      return { data, error: null }
+      const res = await fetch(`/api/telegram/groups/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, ...dto }),
+      })
+      const result = await res.json()
+      if (result.error) throw new Error(result.error)
+      return { data: result.data, error: null }
     } catch (error) {
       console.error('[telegramGroupService.updateGroup] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
@@ -608,6 +631,34 @@ export const telegramMemberService = {
     } catch (error) {
       console.error('[telegramMemberService.searchUsersForInvite] Error:', error)
       return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 이메일로 비회원 초대 발송
+   */
+  async sendEmailInvite(
+    groupId: string,
+    email: string
+  ): Promise<{ data: any; error: string | null }> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) return { data: null, error: '로그인이 필요합니다.' }
+
+      const res = await fetch('/api/telegram/email-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, groupId, email }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) {
+        return { data: null, error: result.error || '이메일 초대에 실패했습니다.' }
+      }
+      return { data: result.data, error: null }
+    } catch (error) {
+      console.error('[telegramMemberService.sendEmailInvite] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
     }
   },
 }
