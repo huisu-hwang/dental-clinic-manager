@@ -822,15 +822,31 @@ export const recallPatientService = {
     }
 
     try {
+      // 0. 업로드 데이터 중복 제거 (전화번호+이름+차트번호 기준)
+      const deduplicateKey = (p: RecallPatientUploadData) => {
+        const phone = p.phone_number ? normalizePhone(p.phone_number) : ''
+        const name = p.patient_name ? String(p.patient_name).trim() : ''
+        const chart = p.chart_number ? String(p.chart_number).trim() : ''
+        return `${phone}|${name}|${chart}`
+      }
+      const seenKeys = new Set<string>()
+      const dedupedUploadData = uploadData.filter(p => {
+        const key = deduplicateKey(p)
+        if (key === '||') return false // 모든 필드 비어있으면 제외
+        if (seenKeys.has(key)) return false
+        seenKeys.add(key)
+        return true
+      })
+
       // 1. 업로드 데이터에서 검색 키 수집
-      const rawPhones = [...new Set(uploadData.filter(p => p.phone_number).map(p => p.phone_number))]
+      const rawPhones = [...new Set(dedupedUploadData.filter(p => p.phone_number).map(p => p.phone_number))]
       // 전화번호의 모든 형식 변형을 포함하여 검색
       const phoneSearchSet = new Set<string>()
       rawPhones.forEach(p => phoneVariants(p).forEach(v => phoneSearchSet.add(v)))
       const phoneSearchList = Array.from(phoneSearchSet)
 
-      const names = [...new Set(uploadData.filter(p => p.patient_name).map(p => p.patient_name))]
-      const chartNumbers = [...new Set(uploadData.filter(p => p.chart_number).map(p => p.chart_number!))]
+      const names = [...new Set(dedupedUploadData.filter(p => p.patient_name).map(p => p.patient_name))]
+      const chartNumbers = [...new Set(dedupedUploadData.filter(p => p.chart_number).map(p => p.chart_number!))]
 
       // 2. 기존 환자 조회 (전화번호 OR 이름 OR 차트번호로 후보 조회)
       const existingPatients: { id: string; phone_number: string; patient_name: string; chart_number?: string }[] = []
@@ -887,7 +903,7 @@ export const recallPatientService = {
       const matchedIds = new Set<string>()
       const unmatchedPatientsData: RecallPatientUploadData[] = []
 
-      for (const uploaded of uploadData) {
+      for (const uploaded of dedupedUploadData) {
         if (!uploaded.phone_number && !uploaded.patient_name && !uploaded.chart_number) continue
 
         // 업로드 데이터에 포함된 모든 필드가 일치하는 기존 환자만 매칭
@@ -1590,24 +1606,54 @@ export const recallExcludeRulesService = {
     if (!clinicId) return { success: false, savedCount: 0, error: 'Clinic ID not found' }
 
     try {
+      const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '')
+
+      // 입력 데이터 중복 제거
+      const seenKeys = new Set<string>()
       const rules = unmatchedPatients
         .filter(p => p.patient_name || p.phone_number || p.chart_number)
+        .filter(p => {
+          const key = `${p.phone_number ? normalizePhone(p.phone_number) : ''}|${(p.patient_name || '').trim()}|${(p.chart_number || '').trim()}`
+          if (seenKeys.has(key)) return false
+          seenKeys.add(key)
+          return true
+        })
         .map(p => ({
           clinic_id: clinicId,
-          patient_name: p.patient_name || null,
-          phone_number: p.phone_number || null,
-          chart_number: p.chart_number || null,
+          patient_name: p.patient_name ? String(p.patient_name).trim() : null,
+          phone_number: p.phone_number ? normalizePhone(p.phone_number) : null,
+          chart_number: p.chart_number ? String(p.chart_number).trim() : null,
           exclude_reason: excludeReason
         }))
 
       if (rules.length === 0) return { success: true, savedCount: 0 }
 
+      // 기존 활성 규칙 조회하여 중복 제거
+      const { data: existingRules } = await supabase
+        .from('recall_exclude_rules')
+        .select('patient_name, phone_number, chart_number')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+
+      const existingKeys = new Set(
+        (existingRules || []).map(r =>
+          `${(r.phone_number || '').replace(/[^0-9]/g, '')}|${(r.patient_name || '').trim()}|${(r.chart_number || '').trim()}`
+        )
+      )
+
+      const newRules = rules.filter(r => {
+        const key = `${(r.phone_number || '')}|${(r.patient_name || '')}|${(r.chart_number || '')}`
+        return !existingKeys.has(key)
+      })
+
+      if (newRules.length === 0) return { success: true, savedCount: 0 }
+
       const { error } = await supabase
         .from('recall_exclude_rules')
-        .insert(rules)
+        .insert(newRules)
 
       if (error) throw error
-      return { success: true, savedCount: rules.length }
+      return { success: true, savedCount: newRules.length }
     } catch (error) {
       return { success: false, savedCount: 0, error: extractErrorMessage(error) }
     }
