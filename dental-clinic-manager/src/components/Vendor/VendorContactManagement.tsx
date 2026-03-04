@@ -1093,8 +1093,14 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               />
             )}
 
-            {/* 즐겨찾기 별 */}
-            <Star className={`w-4 h-4 flex-shrink-0 ${contact.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200'}`} />
+            {/* 즐겨찾기 별 (바로 클릭 가능) */}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleToggleFavorite(contact) }}
+              className="flex-shrink-0 hover:scale-110 transition-transform"
+              title={contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기'}
+            >
+              <Star className={`w-4 h-4 ${contact.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200 hover:text-yellow-300'}`} />
+            </button>
 
             {/* 업체명 */}
             <span className="font-semibold text-sm text-slate-800 truncate">{contact.company_name}</span>
