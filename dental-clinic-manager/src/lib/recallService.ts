@@ -1206,6 +1206,43 @@ export const recallPatientService = {
     }
   },
 
+  // 환자 일괄 삭제
+  async deletePatientsBulk(ids: string[]): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    try {
+      // 삭제 대상 환자들의 캠페인 ID 조회
+      const { data: patients } = await supabase
+        .from('recall_patients')
+        .select('campaign_id')
+        .in('id', ids)
+
+      const { error } = await supabase
+        .from('recall_patients')
+        .delete()
+        .in('id', ids)
+
+      if (error) throw error
+
+      // 관련 캠페인 통계 업데이트
+      if (patients) {
+        const seen = new Set<string>()
+        for (const p of patients) {
+          const cid = p.campaign_id as string | null
+          if (cid && !seen.has(cid)) {
+            seen.add(cid)
+            await recallCampaignService.updateCampaignStats(cid)
+          }
+        }
+      }
+
+      return { success: true, deletedCount: ids.length }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
   // 오늘 활동 통계 조회 (recall_datetime 기반)
   async getTodayActivity(campaignId?: string): Promise<{
     success: boolean;

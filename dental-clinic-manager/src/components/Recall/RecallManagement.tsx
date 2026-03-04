@@ -15,7 +15,8 @@ import {
   UserX,
   Heart,
   ShieldOff,
-  Undo2
+  Undo2,
+  Trash2
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
@@ -322,6 +323,26 @@ export default function RecallManagement() {
     }
   }
 
+  // 일괄 삭제
+  const handleBulkDelete = async () => {
+    if (selectedPatients.length === 0) {
+      showToast('환자를 선택해주세요.', 'warning')
+      return
+    }
+    const confirmed = window.confirm(`선택한 ${selectedPatients.length}명의 환자를 삭제하시겠습니까?\n삭제된 환자는 복구할 수 없습니다.`)
+    if (!confirmed) return
+
+    const result = await recallService.patients.deletePatientsBulk(selectedPatients)
+    if (result.success) {
+      showToast(`${selectedPatients.length}명의 환자가 삭제되었습니다.`, 'success')
+      setSelectedPatients([])
+      loadPatients()
+      loadStats()
+    } else {
+      showToast(result.error || '일괄 삭제에 실패했습니다.', 'error')
+    }
+  }
+
   // 제외 환자 파일 업로드
   const handleExcludeFileUpload = async (uploadedPatients: RecallPatientUploadData[], filename: string) => {
     const hasAnyData = uploadedPatients.some(p => p.phone_number || p.patient_name || p.chart_number)
@@ -560,6 +581,27 @@ export default function RecallManagement() {
                       </>
                     )}
                   </div>
+
+                  {/* 일괄 삭제 */}
+                  <div className="relative group">
+                    <button
+                      onClick={selectedPatients.length > 0 ? handleBulkDelete : undefined}
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+                        selectedPatients.length > 0
+                          ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer'
+                          : 'bg-gray-200 text-gray-400 cursor-default'
+                      }`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      삭제 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
+                    </button>
+                    {selectedPatients.length === 0 && (
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                        환자를 선택한 후 클릭하세요
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
 
@@ -597,6 +639,27 @@ export default function RecallManagement() {
                     >
                       <Undo2 className="w-4 h-4" />
                       복원 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
+                    </button>
+                    {selectedPatients.length === 0 && (
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                        환자를 선택한 후 클릭하세요
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 일괄 삭제 (제외 목록) */}
+                  <div className="relative group">
+                    <button
+                      onClick={selectedPatients.length > 0 ? handleBulkDelete : undefined}
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+                        selectedPatients.length > 0
+                          ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer'
+                          : 'bg-gray-200 text-gray-400 cursor-default'
+                      }`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      삭제 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
                     </button>
                     {selectedPatients.length === 0 && (
                       <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
