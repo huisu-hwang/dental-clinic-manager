@@ -179,7 +179,7 @@ export default function TelegramBoardPostList({
   }
 
   // 전체 선택 (삭제 가능한 것만)
-  const selectablePosts = isMasterAdmin ? posts : posts.filter(p => p.post_type === 'general' || p.post_type === 'vote')
+  const selectablePosts = (isMasterAdmin || isGroupCreator) ? posts : posts.filter(p => p.post_type === 'general' || p.post_type === 'vote')
   const allSelected = selectablePosts.length > 0 && selectablePosts.every(p => selectedIds.has(p.id))
 
   const handleSelectAll = () => {
@@ -468,7 +468,7 @@ export default function TelegramBoardPostList({
                 selectMode={selectMode}
                 selected={selectedIds.has(post.id)}
                 onToggleSelect={handleToggleSelect}
-                selectable={isMasterAdmin || post.post_type === 'general' || post.post_type === 'vote'}
+                selectable={isMasterAdmin || isGroupCreator || post.post_type === 'general' || post.post_type === 'vote'}
               />
             ))}
           </>

@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
       const isMasterAdmin = role === 'master_admin'
       const isGroupCreator = post.telegram_group_id && groupCreatorMap[post.telegram_group_id] === userId
 
-      // master_admin은 모든 타입 삭제 가능, 그 외는 general/vote만 삭제 가능
-      if (!isMasterAdmin && post.post_type !== 'general' && post.post_type !== 'vote') {
+      // master_admin 또는 게시판 생성자는 모든 타입 삭제 가능, 그 외는 general/vote만 삭제 가능
+      if (!isMasterAdmin && !isGroupCreator && post.post_type !== 'general' && post.post_type !== 'vote') {
         failed++
         continue
       }

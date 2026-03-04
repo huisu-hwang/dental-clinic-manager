@@ -125,8 +125,8 @@ export async function DELETE(
       isGroupCreator = group?.created_by === userId
     }
 
-    // master_admin은 모든 타입 삭제 가능, 그 외는 general/vote만 삭제 가능
-    if (role !== 'master_admin' && post.post_type !== 'general' && post.post_type !== 'vote') {
+    // master_admin 또는 게시판 생성자는 모든 타입 삭제 가능, 그 외는 general/vote만 삭제 가능
+    if (role !== 'master_admin' && !isGroupCreator && post.post_type !== 'general' && post.post_type !== 'vote') {
       return NextResponse.json({ data: null, error: '자동 생성된 게시글은 삭제할 수 없습니다.' }, { status: 403 })
     }
 
