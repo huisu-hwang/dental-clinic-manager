@@ -1477,26 +1477,44 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   const categoryId = group.category?.id || null
                   return (
                     <DroppableColumn key={groupId} id={`drop-column-${groupId}`} categoryId={categoryId}>
-                      <button
-                        onClick={() => toggleGroup(groupId)}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
+                      <div
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
                         style={{ backgroundColor: `${group.category?.color || '#94a3b8'}15`, borderLeft: `3px solid ${group.category?.color || '#94a3b8'}` }}
                       >
-                        {isCollapsed ? (
-                          <ChevronRight className="w-4 h-4 text-slate-400" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-slate-400" />
-                        )}
-                        <span
-                          className="font-semibold text-sm"
-                          style={{ color: group.category?.color || '#94a3b8' }}
+                        <button
+                          onClick={() => toggleGroup(groupId)}
+                          className="flex items-center gap-2 flex-1 min-w-0"
                         >
-                          {group.category?.name || '미분류'}
-                        </span>
-                        <span className="text-xs text-slate-400">
-                          ({group.contacts.length})
-                        </span>
-                      </button>
+                          {isCollapsed ? (
+                            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          )}
+                          <span
+                            className="font-semibold text-sm truncate"
+                            style={{ color: group.category?.color || '#94a3b8' }}
+                          >
+                            {group.category?.name || '미분류'}
+                          </span>
+                          <span className="text-xs text-slate-400 flex-shrink-0">
+                            ({group.contacts.length})
+                          </span>
+                        </button>
+                        {canCreate && group.category && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              resetContactForm()
+                              setContactForm(prev => ({ ...prev, category_id: group.category!.id }))
+                              setShowContactModal(true)
+                            }}
+                            className="p-1 rounded hover:bg-white/60 transition-colors flex-shrink-0"
+                            title={`"${group.category.name}" 카테고리에 새 업체 등록`}
+                          >
+                            <Plus className="w-4 h-4" style={{ color: group.category.color }} />
+                          </button>
+                        )}
+                      </div>
                       {!isCollapsed && (
                         <div className="flex flex-col gap-1.5 max-h-[calc(100vh-280px)] overflow-y-auto">
                           {group.contacts.map(contact => (
