@@ -113,8 +113,8 @@ export async function DELETE(
       return NextResponse.json({ data: null, error: '게시글을 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // general 타입만 삭제 가능
-    if (post.post_type !== 'general') {
+    // general, vote 타입만 삭제 가능 (summary, file, link 등 자동 생성 글은 삭제 불가)
+    if (post.post_type !== 'general' && post.post_type !== 'vote') {
       return NextResponse.json({ data: null, error: '자동 생성된 게시글은 삭제할 수 없습니다.' }, { status: 403 })
     }
 
