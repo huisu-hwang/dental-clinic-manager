@@ -514,8 +514,16 @@ export default function VendorContactManagement() {
         ? categories.find(c => c.id === targetCategoryId)?.name || '알 수 없음'
         : '미분류'
       showToast(`${successCount}개 업체가 "${targetName}"(으)로 이동되었습니다.${failCount > 0 ? ` (${failCount}개 실패)` : ''}`, 'success')
+      // 옵티미스틱 업데이트 - loadData() 대신 로컬 상태 즉시 반영 (깜빡임 방지)
+      const targetCategory = targetCategoryId
+        ? categories.find(c => c.id === targetCategoryId) || null
+        : null
+      setContacts(prev => prev.map(c =>
+        contactsToMove.includes(c.id)
+          ? { ...c, category_id: targetCategoryId ?? undefined, category: targetCategory ?? undefined }
+          : c
+      ))
       setSelectedContacts(new Set())
-      loadData()
     } else if (failCount > 0) {
       showToast('카테고리 이동에 실패했습니다.', 'error')
     }
