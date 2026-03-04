@@ -458,6 +458,7 @@ export const recallPatientService = {
   },
 
   // 제외 규칙 매칭 체크 (환자 추가 전 호출)
+  // recall_patients에서 이미 제외된 환자 + recall_exclude_rules 모두 확인
   async checkExcludeRules(
     patientName: string,
     phoneNumber?: string,
@@ -470,26 +471,46 @@ export const recallPatientService = {
     if (!clinicId) return { matched: false, rules: [] }
 
     try {
+      const results: { id: string; exclude_reason: string; patient_name?: string; phone_number?: string; chart_number?: string }[] = []
+
+      // 1. recall_patients에서 이름이 일치하는 제외 환자 조회
+      const { data: excludedPatients } = await supabase
+        .from('recall_patients')
+        .select('id, patient_name, phone_number, chart_number, exclude_reason')
+        .eq('clinic_id', clinicId)
+        .not('exclude_reason', 'is', null)
+        .ilike('patient_name', patientName.trim())
+
+      if (excludedPatients && excludedPatients.length > 0) {
+        excludedPatients.forEach((p: { id: string; patient_name: string; phone_number: string; chart_number?: string; exclude_reason: string }) => {
+          results.push({
+            id: p.id,
+            exclude_reason: p.exclude_reason,
+            patient_name: p.patient_name,
+            phone_number: p.phone_number,
+            chart_number: p.chart_number
+          })
+        })
+      }
+
+      // 2. recall_exclude_rules에서 이름 기반 매칭 확인
       const { data: rules } = await supabase
         .from('recall_exclude_rules')
         .select('id, patient_name, phone_number, chart_number, exclude_reason')
         .eq('clinic_id', clinicId)
         .eq('is_active', true)
+        .ilike('patient_name', patientName.trim())
 
-      if (!rules || rules.length === 0) return { matched: false, rules: [] }
+      if (rules && rules.length > 0) {
+        rules.forEach((r: { id: string; exclude_reason: string; patient_name?: string; phone_number?: string; chart_number?: string }) => {
+          // 중복 방지 (같은 이름이 이미 recall_patients에서 찾아진 경우)
+          if (!results.some(existing => existing.patient_name === r.patient_name)) {
+            results.push(r)
+          }
+        })
+      }
 
-      const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '')
-      const matchedRules = rules.filter((rule: any) => {
-        // 규칙의 모든 non-null 필드가 일치해야 매칭
-        if (rule.patient_name && patientName.trim() !== String(rule.patient_name).trim()) return false
-        if (rule.phone_number && phoneNumber && normalizePhone(phoneNumber) !== normalizePhone(rule.phone_number)) return false
-        if (rule.phone_number && !phoneNumber) return false
-        if (rule.chart_number && chartNumber && String(chartNumber).trim() !== String(rule.chart_number).trim()) return false
-        if (rule.chart_number && !chartNumber) return false
-        return true
-      })
-
-      return { matched: matchedRules.length > 0, rules: matchedRules }
+      return { matched: results.length > 0, rules: results }
     } catch {
       return { matched: false, rules: [] }
     }
