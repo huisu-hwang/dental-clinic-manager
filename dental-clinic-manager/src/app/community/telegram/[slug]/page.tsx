@@ -177,6 +177,7 @@ export default function TelegramBoardPage() {
                     groupId={group.id}
                     currentUserId={user?.id ?? null}
                     isMasterAdmin={user?.role === 'master_admin'}
+                    isGroupCreator={group.created_by === user?.id}
                     initialPostId={initialPostId}
                   />
                 </div>
