@@ -10,6 +10,7 @@ import { SESSION_CHECK_TIMEOUT, safeLocalStorage, isIOSDevice } from '@/lib/sess
 import { TIMEOUTS } from '@/lib/constants/timeouts'
 import { useRouter } from 'next/navigation'
 import { clearAllSupabaseCookies, refreshSessionCookies } from '@/lib/cookieStorageAdapter'
+import { appAlert } from '@/components/ui/AppDialog'
 
 export interface UserProfile {
   id: string
@@ -197,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 // 소속 병원이 중지된 경우 로그아웃
                 if (result.data.clinic?.status === 'suspended') {
-                  alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
+                  await appAlert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
                   await supabase.auth.signOut()
                   window.location.href = '/'
                   return
@@ -283,7 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         }
 
                         if (result.data.clinic?.status === 'suspended') {
-                          alert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
+                          await appAlert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
                           await supabase.auth.signOut()
                           window.location.href = '/'
                           return

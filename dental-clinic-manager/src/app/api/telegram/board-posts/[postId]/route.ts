@@ -29,7 +29,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { userId, title, content, fileUrls } = body
+    const { userId, title, content, fileUrls, categoryId } = body
 
     if (!userId) {
       return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
@@ -62,6 +62,7 @@ export async function PATCH(
     if (title !== undefined) updateData.title = title
     if (content !== undefined) updateData.content = content
     if (fileUrls !== undefined) updateData.file_urls = fileUrls
+    if (categoryId !== undefined) updateData.category_id = categoryId
 
     const { data: updated, error: updateError } = await supabase
       .from('telegram_board_posts')
@@ -113,14 +114,24 @@ export async function DELETE(
       return NextResponse.json({ data: null, error: '게시글을 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // general 타입만 삭제 가능
-    if (post.post_type !== 'general') {
+    // 권한 확인: 작성자 본인, master_admin, 또는 게시판 생성자
+    const role = await getUserRole(supabase, userId)
+    let isGroupCreator = false
+    if (post.telegram_group_id) {
+      const { data: group } = await supabase
+        .from('telegram_groups')
+        .select('created_by')
+        .eq('id', post.telegram_group_id)
+        .maybeSingle()
+      isGroupCreator = group?.created_by === userId
+    }
+
+    // master_admin 또는 게시판 생성자는 모든 타입 삭제 가능, 그 외는 general/vote만 삭제 가능
+    if (role !== 'master_admin' && !isGroupCreator && post.post_type !== 'general' && post.post_type !== 'vote') {
       return NextResponse.json({ data: null, error: '자동 생성된 게시글은 삭제할 수 없습니다.' }, { status: 403 })
     }
 
-    // 권한 확인: 작성자 본인 또는 master_admin
-    const role = await getUserRole(supabase, userId)
-    if (post.created_by !== userId && role !== 'master_admin') {
+    if (post.created_by !== userId && role !== 'master_admin' && !isGroupCreator) {
       return NextResponse.json({ data: null, error: '삭제 권한이 없습니다.' }, { status: 403 })
     }
 

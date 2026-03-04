@@ -26,6 +26,7 @@ import LeaveAdminInput from './LeaveAdminInput'
 import LeavePolicySettings from './LeavePolicySettings'
 import ClinicHolidayManager from './ClinicHolidayManager'
 import Toast from '@/components/ui/Toast'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
@@ -219,7 +220,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
   }
 
   const handleCancelRequest = async (requestId: string) => {
-    if (!confirm('연차 신청을 취소하시겠습니까?')) return
+    if (!await appConfirm('연차 신청을 취소하시겠습니까?')) return
 
     const result = await leaveService.cancelRequest(requestId)
     if (result.error) {

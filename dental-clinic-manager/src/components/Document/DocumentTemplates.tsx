@@ -37,6 +37,7 @@ import SignaturePad from '@/components/Contract/SignaturePad'
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
 import { getBirthDateFromResidentNumber } from '@/utils/residentNumberUtils'
 import { collectSignatureMetadata, ELECTRONIC_SIGNATURE_CONSENT } from '@/utils/documentLegalUtils'
+import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
 
 // 문서 제출 상태 타입
 interface DocumentSubmission {
@@ -301,7 +302,7 @@ export default function DocumentTemplates() {
 
     // 사직서는 서명 필수
     if (documentType === 'resignation' && !resignationData.employeeSignature) {
-      alert('사직서 제출을 위해 서명이 필요합니다.')
+      await appAlert('사직서 제출을 위해 서명이 필요합니다.')
       return
     }
 
@@ -332,15 +333,15 @@ export default function DocumentTemplates() {
 
       const result = await response.json()
       if (result.success) {
-        alert(`${DocumentTypeLabels[documentType]}가 제출되었습니다. 원장님의 확인을 기다려주세요.`)
+        await appAlert(`${DocumentTypeLabels[documentType]}가 제출되었습니다. 원장님의 확인을 기다려주세요.`)
         // 보낸 문서 목록 새로고침
         loadSentDocuments()
       } else {
-        alert(`제출 실패: ${result.error}`)
+        await appAlert(`제출 실패: ${result.error}`)
       }
     } catch (error) {
       console.error('Submit error:', error)
-      alert('문서 제출 중 오류가 발생했습니다.')
+      await appAlert('문서 제출 중 오류가 발생했습니다.')
     } finally {
       setIsSubmitting(false)
     }
@@ -366,17 +367,17 @@ export default function DocumentTemplates() {
 
       const result = await response.json()
       if (result.success) {
-        alert(action === 'approve' ? '승인되었습니다.' : '반려되었습니다.')
+        await appAlert(action === 'approve' ? '승인되었습니다.' : '반려되었습니다.')
         // 받은 문서 목록 새로고침
         loadReceivedDocuments()
         setSelectedDocument(null)
         setShowOwnerSignatureModal(false)
       } else {
-        alert(`처리 실패: ${result.error}`)
+        await appAlert(`처리 실패: ${result.error}`)
       }
     } catch (error) {
       console.error('Approve/Reject error:', error)
-      alert('처리 중 오류가 발생했습니다.')
+      await appAlert('처리 중 오류가 발생했습니다.')
     }
   }
 
@@ -411,17 +412,17 @@ export default function DocumentTemplates() {
 
       const result = await response.json()
       if (result.success) {
-        alert('권고사직서에 서명이 완료되었습니다.')
+        await appAlert('권고사직서에 서명이 완료되었습니다.')
         loadReceivedDocuments()
         loadSentDocuments()
         setEmployeeSigningDoc(null)
         setSelectedDocument(null)
       } else {
-        alert(`서명 실패: ${result.error}`)
+        await appAlert(`서명 실패: ${result.error}`)
       }
     } catch (error) {
       console.error('Employee sign error:', error)
-      alert('서명 처리 중 오류가 발생했습니다.')
+      await appAlert('서명 처리 중 오류가 발생했습니다.')
     } finally {
       setIsSubmitting(false)
     }
@@ -563,7 +564,7 @@ export default function DocumentTemplates() {
       pdf.save(fileName)
     } catch (error) {
       console.error('PDF 생성 중 오류 발생:', error)
-      alert('PDF를 생성하는 데 실패했습니다.')
+      await appAlert('PDF를 생성하는 데 실패했습니다.')
     } finally {
       setIsPdfGenerating(false)
     }
@@ -625,7 +626,7 @@ export default function DocumentTemplates() {
       }
     } catch (error) {
       console.error('인쇄 준비 중 오류 발생:', error)
-      alert('인쇄를 준비하는 데 실패했습니다.')
+      await appAlert('인쇄를 준비하는 데 실패했습니다.')
     } finally {
       setIsPdfGenerating(false)
     }
@@ -660,8 +661,8 @@ export default function DocumentTemplates() {
   }
 
   // 서명 삭제 핸들러
-  const handleSignatureDelete = () => {
-    if (confirm('서명을 삭제하시겠습니까?')) {
+  const handleSignatureDelete = async () => {
+    if (await appConfirm('서명을 삭제하시겠습니까?')) {
       setResignationData(prev => ({ ...prev, employeeSignature: undefined }))
     }
   }
@@ -679,8 +680,8 @@ export default function DocumentTemplates() {
   }
 
   // 권고사직서/해고통보서 서명 삭제 핸들러
-  const handleOwnerDocumentSignatureDelete = () => {
-    if (confirm('서명을 삭제하시겠습니까?')) {
+  const handleOwnerDocumentSignatureDelete = async () => {
+    if (await appConfirm('서명을 삭제하시겠습니까?')) {
       if (documentType === 'recommended_resignation') {
         setRecommendedResignationData(prev => ({ ...prev, ownerSignature: undefined }))
       } else if (documentType === 'termination_notice') {
@@ -692,30 +693,30 @@ export default function DocumentTemplates() {
   // 권고사직서/해고통보서 발송 핸들러
   const handleSendOwnerDocument = async () => {
     if (!user?.clinic_id || !user?.id || !selectedStaff) {
-      alert('대상 직원을 선택해주세요.')
+      await appAlert('대상 직원을 선택해주세요.')
       return
     }
 
     // 서명 필수 확인
     if (documentType === 'recommended_resignation' && !recommendedResignationData.ownerSignature) {
-      alert('서명이 필요합니다.')
+      await appAlert('서명이 필요합니다.')
       return
     }
     if (documentType === 'termination_notice' && !terminationNoticeData.ownerSignature) {
-      alert('서명이 필요합니다.')
+      await appAlert('서명이 필요합니다.')
       return
     }
 
     // 해고통보서의 경우 상세 사유 필수
     if (documentType === 'termination_notice' && !terminationNoticeData.detailedReason.trim()) {
-      alert('해고 상세 사유는 필수입니다. (근로기준법 제27조)')
+      await appAlert('해고 상세 사유는 필수입니다. (근로기준법 제27조)')
       return
     }
 
     const targetStaff = staffList.find(s => s.id === selectedStaff)
     const documentTypeLabel = documentType === 'recommended_resignation' ? '권고사직서' : '해고통보서'
 
-    if (!confirm(`${targetStaff?.name}님에게 ${documentTypeLabel}를 발송하시겠습니까?\n\n발송 후 해당 직원에게 알림이 전송됩니다.`)) {
+    if (!await appConfirm(`${targetStaff?.name}님에게 ${documentTypeLabel}를 발송하시겠습니까?\n\n발송 후 해당 직원에게 알림이 전송됩니다.`)) {
       return
     }
 
@@ -752,7 +753,7 @@ export default function DocumentTemplates() {
         const actionMessage = documentType === 'recommended_resignation'
           ? '권고사직서가 발송되었습니다. 해당 직원에게 확인 및 서명 요청 알림이 전송되었습니다.'
           : '해고통보서가 발송되었습니다. 해당 직원에게 해고 통보 알림이 전송되었습니다.'
-        alert(actionMessage)
+        await appAlert(actionMessage)
 
         // 보낸 문서 목록 새로고침
         loadSentDocuments()
@@ -765,11 +766,11 @@ export default function DocumentTemplates() {
         }
         setSelectedStaff('')
       } else {
-        alert(`발송 실패: ${result.error}`)
+        await appAlert(`발송 실패: ${result.error}`)
       }
     } catch (error) {
       console.error('Send error:', error)
-      alert('문서 발송 중 오류가 발생했습니다.')
+      await appAlert('문서 발송 중 오류가 발생했습니다.')
     } finally {
       setIsSubmitting(false)
     }
@@ -1065,8 +1066,8 @@ export default function DocumentTemplates() {
                           </button>
                         )}
                         <button
-                          onClick={() => {
-                            const reason = prompt('반려 사유를 입력하세요:')
+                          onClick={async () => {
+                            const reason = await appPrompt('반려 사유를 입력하세요:')
                             if (reason) {
                               handleApproveReject(doc.id, 'reject', undefined, reason)
                             }

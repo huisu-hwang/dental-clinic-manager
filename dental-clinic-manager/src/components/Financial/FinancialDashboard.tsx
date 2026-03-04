@@ -32,6 +32,7 @@ import {
   Building,
   ArrowRight
 } from 'lucide-react'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 export default function FinancialDashboard() {
   const { user } = useAuth()
@@ -105,7 +106,7 @@ export default function FinancialDashboard() {
 
   // 지출 삭제
   const handleDeleteExpense = async (expenseId: string) => {
-    if (!confirm('이 지출 기록을 삭제하시겠습니까?')) return
+    if (!await appConfirm('이 지출 기록을 삭제하시겠습니까?')) return
 
     try {
       const response = await fetch(`/api/financial/expense?id=${expenseId}`, {
@@ -115,11 +116,11 @@ export default function FinancialDashboard() {
       if (result.success) {
         loadData()
       } else {
-        alert('삭제에 실패했습니다.')
+        await appAlert('삭제에 실패했습니다.')
       }
     } catch (error) {
       console.error('Delete error:', error)
-      alert('삭제 중 오류가 발생했습니다.')
+      await appAlert('삭제 중 오류가 발생했습니다.')
     }
   }
 

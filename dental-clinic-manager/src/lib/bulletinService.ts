@@ -4,6 +4,7 @@
  */
 
 import { ensureConnection } from './supabase/connectionCheck'
+import { userNotificationService } from './userNotificationService'
 import type {
   Announcement,
   CreateAnnouncementDto,
@@ -50,6 +51,19 @@ const getCurrentUserId = (): string | null => {
   try {
     const user = JSON.parse(userStr)
     return user.id
+  } catch {
+    return null
+  }
+}
+
+// 현재 사용자 이름 가져오기
+const getCurrentUserName = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
+  if (!userStr) return null
+  try {
+    const user = JSON.parse(userStr)
+    return user.name
   } catch {
     return null
   }
@@ -684,6 +698,17 @@ export const taskService = {
 
       if (error) throw error
 
+      // 담당자에게 업무 할당 알림 전송
+      if (data && input.assignee_id) {
+        const userName = getCurrentUserName()
+        userNotificationService.notifyTaskAssigned(
+          input.assignee_id,
+          userName || '관리자',
+          input.title,
+          data.id
+        ).catch(err => console.error('[taskService.createTask] Notification error:', err))
+      }
+
       return { data, error: null }
     } catch (error) {
       console.error('[taskService.createTask] Error:', error)
@@ -714,6 +739,17 @@ export const taskService = {
       if (input.due_date !== undefined) updateData.due_date = input.due_date || null
       if (input.progress !== undefined) updateData.progress = input.progress
 
+      // 완료 알림을 위해 현재 업무 정보를 먼저 조회
+      let existingTask: any = null
+      if (input.status === 'completed') {
+        const { data: taskData } = await (supabase as any)
+          .from('tasks')
+          .select('assignee_id, assigner_id, title')
+          .eq('id', id)
+          .single()
+        existingTask = taskData
+      }
+
       const { data, error } = await (supabase as any)
         .from('tasks')
         .update(updateData)
@@ -722,6 +758,17 @@ export const taskService = {
         .single()
 
       if (error) throw error
+
+      // 업무 완료 시 할당자(원장)에게 알림 전송
+      if (input.status === 'completed' && existingTask?.assigner_id) {
+        const userName = getCurrentUserName()
+        userNotificationService.notifyTaskCompleted(
+          existingTask.assigner_id,
+          userName || '담당자',
+          existingTask.title,
+          id
+        ).catch(err => console.error('[taskService.updateTask] Notification error:', err))
+      }
 
       return { data, error: null }
     } catch (error) {

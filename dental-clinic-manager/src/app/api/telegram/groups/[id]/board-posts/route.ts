@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendMessageToGroup } from '@/lib/telegramBotService'
+import { classifyAndAssignCategory } from '@/lib/telegramCategoryService'
 
 export async function POST(
   request: NextRequest,
@@ -19,7 +20,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { userId, title, content, notifyTelegram, fileUrls } = body
+    const { userId, title, content, notifyTelegram, fileUrls, categoryId } = body
 
     if (!userId || !title || !content) {
       return NextResponse.json({ data: null, error: '필수 항목이 누락되었습니다.' }, { status: 400 })
@@ -48,24 +49,40 @@ export async function POST(
     }
 
     // 게시글 저장
+    const insertData: Record<string, unknown> = {
+      telegram_group_id: groupId,
+      post_type: 'general',
+      title,
+      content,
+      created_by: userId,
+      source_message_ids: [],
+      file_urls: fileUrls || [],
+      link_urls: [],
+    }
+
+    // 사용자가 카테고리를 직접 지정한 경우
+    if (categoryId) {
+      insertData.category_id = categoryId
+    }
+
     const { data: post, error: postError } = await supabase
       .from('telegram_board_posts')
-      .insert({
-        telegram_group_id: groupId,
-        post_type: 'general',
-        title,
-        content,
-        created_by: userId,
-        source_message_ids: [],
-        file_urls: fileUrls || [],
-        link_urls: [],
-      })
+      .insert(insertData)
       .select()
       .single()
 
     if (postError) {
       console.error('[POST /api/telegram/groups/[id]/board-posts] Insert error:', postError)
       return NextResponse.json({ data: null, error: postError.message }, { status: 500 })
+    }
+
+    // AI 자동 분류 (카테고리 미지정 시 인라인 실행)
+    if (!categoryId && post) {
+      try {
+        await classifyAndAssignCategory(supabase, post.id, title, content, groupId)
+      } catch (classifyErr) {
+        console.error('[board-posts] AI classify error:', classifyErr)
+      }
     }
 
     // 텔레그램 알림 전송 (옵션)

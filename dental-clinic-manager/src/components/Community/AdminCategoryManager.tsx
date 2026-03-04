@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { communityCategoryService } from '@/lib/communityService'
 import type { CommunityCategoryItem, CreateCategoryDto } from '@/types/community'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 // 사용 가능한 색상 프리셋
 const COLOR_PRESETS = [
@@ -127,7 +128,7 @@ export default function AdminCategoryManager() {
 
   // 삭제
   const handleDelete = async (cat: CommunityCategoryItem) => {
-    if (!confirm(`"${cat.label}" 주제를 삭제하시겠습니까?\n게시글이 있으면 삭제할 수 없습니다.`)) return
+    if (!await appConfirm(`"${cat.label}" 주제를 삭제하시겠습니까?\n게시글이 있으면 삭제할 수 없습니다.`)) return
     setSaving(true)
     setError(null)
 

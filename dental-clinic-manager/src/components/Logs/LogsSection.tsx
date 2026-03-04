@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { FileText, MessageSquare, Gift, Package, ArrowRight, Check, Search, X, Banknote } from 'lucide-react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog, CashRegisterLog } from '@/types'
 import SpecialNotesHistory from './SpecialNotesHistory'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface LogsSectionProps {
   dailyReports: DailyReport[]
@@ -90,10 +91,10 @@ export default function LogsSection({
           })
         }, 5000)
       } else if (result.error) {
-        alert(result.error)
+        await appAlert(result.error)
       }
     } catch (error) {
-      alert('상태 변경 중 오류가 발생했습니다.')
+      await appAlert('상태 변경 중 오류가 발생했습니다.')
     } finally {
       setUpdatingId(null)
     }
@@ -191,8 +192,8 @@ export default function LogsSection({
                           )}
                           {canDelete && (
                             <button
-                              onClick={() => {
-                                if (confirm(`${report.date}의 모든 기록을 삭제하시겠습니까? 재고는 복구되지 않습니다.`)) {
+                              onClick={async () => {
+                                if (await appConfirm(`${report.date}의 모든 기록을 삭제하시겠습니까? 재고는 복구되지 않습니다.`)) {
                                   onDeleteReport(report.date)
                                 }
                               }}

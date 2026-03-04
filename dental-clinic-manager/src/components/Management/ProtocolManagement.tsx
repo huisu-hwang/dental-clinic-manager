@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   FileText,
   Plus,
@@ -12,8 +12,17 @@ import {
   Pencil,
   Trash2,
   Filter,
-  ShieldCheck
+  ShieldCheck,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp
 } from 'lucide-react'
+import {
+  DndContext, DragOverlay, closestCenter,
+  PointerSensor, useSensor, useSensors,
+  useDroppable, useDraggable,
+  type DragStartEvent, type DragEndEvent,
+} from '@dnd-kit/core'
 import { dataService } from '@/lib/dataService'
 import { usePermissions } from '@/hooks/usePermissions'
 import ProtocolForm from '../Protocol/ProtocolForm'
@@ -23,6 +32,45 @@ import ProtocolPermissionManager from '../Protocol/ProtocolPermissionManager'
 import ProtocolPermissionOverview from '../Protocol/ProtocolPermissionOverview'
 import type { UserProfile } from '@/contexts/AuthContext'
 import type { Protocol, ProtocolCategory, ProtocolFormData } from '@/types'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
+
+// 드래그 앤 드롭: 드롭 가능한 카테고리 컬럼
+function DroppableColumn({ id, categoryId, children }: { id: string; categoryId: string | null; children: React.ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id,
+    data: { type: 'category-column', categoryId }
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-w-[300px] max-w-[360px] flex-shrink-0 rounded-lg transition-all ${
+        isOver ? 'ring-2 ring-blue-400 bg-blue-50/50' : ''
+      }`}
+    >
+      {children}
+    </div>
+  )
+}
+
+// 드래그 앤 드롭: 드래그 가능한 프로토콜 카드
+function DraggableProtocolCard({ id, protocolId, isDragActive, children }: { id: string; protocolId: string; isDragActive: boolean; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id,
+    data: { type: 'protocol', protocolId }
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ opacity: isDragActive ? 0.3 : 1 }}
+      {...listeners}
+      {...attributes}
+    >
+      {children}
+    </div>
+  )
+}
 
 interface ProtocolManagementProps {
   currentUser: UserProfile
@@ -44,6 +92,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
   // Modal states
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createCategoryId, setCreateCategoryId] = useState<string | undefined>(undefined)
   const [showEditForm, setShowEditForm] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
   const [showPermissionManager, setShowPermissionManager] = useState(false)
@@ -54,6 +103,16 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
   // 개별 권한 상태
   const [editableProtocolIds, setEditableProtocolIds] = useState<Set<string>>(new Set())
   const [deletableProtocolIds, setDeletableProtocolIds] = useState<Set<string>>(new Set())
+
+  // 카드 확장 상태
+  const [expandedProtocolId, setExpandedProtocolId] = useState<string | null>(null)
+
+  // 칸반 DnD 상태
+  const [activeDragProtocolId, setActiveDragProtocolId] = useState<string | null>(null)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
 
   const canEdit = hasPermission('protocol_create') || hasPermission('protocol_edit')
   const isOwner = currentUser.role === 'owner'
@@ -81,25 +140,17 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
   // 특정 프로토콜에 대한 수정 권한 확인
   const canEditProtocol = (protocol: Protocol): boolean => {
-    // 대표원장은 모든 프로토콜 수정 가능
     if (isOwner) return true
-    // 전역 수정 권한이 있으면 수정 가능
     if (canEdit) return true
-    // 본인이 작성한 프로토콜은 수정 가능
     if (protocol.created_by === currentUser.id) return true
-    // 개별 수정 권한이 있으면 수정 가능
     return editableProtocolIds.has(protocol.id)
   }
 
   // 특정 프로토콜에 대한 삭제 권한 확인
   const canDeleteProtocol = (protocol: Protocol): boolean => {
-    // 대표원장은 모든 프로토콜 삭제 가능
     if (isOwner) return true
-    // 전역 수정 권한이 있으면 삭제 가능 (기존 동작 유지)
     if (canEdit) return true
-    // 본인이 작성한 프로토콜은 삭제 가능
     if (protocol.created_by === currentUser.id) return true
-    // 개별 삭제 권한이 있으면 삭제 가능
     return deletableProtocolIds.has(protocol.id)
   }
 
@@ -153,7 +204,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
         console.error('[ProtocolManagement] Error:', result.error)
 
         if (result.error.includes('인증 세션이 만료') || result.error.includes('SESSION_EXPIRED')) {
-          alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+          await appAlert('세션이 만료되었습니다. 다시 로그인해주세요.')
           localStorage.removeItem('dental_auth')
           localStorage.removeItem('dental_user')
           sessionStorage.removeItem('dental_auth')
@@ -171,7 +222,6 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
           const permResult = await dataService.getUserAccessibleProtocolIds(currentUser.id)
           if (!permResult.error && permResult.data) {
             const accessibleIds = new Set(permResult.data)
-            // 프로토콜 생성자 본인의 프로토콜은 항상 접근 가능
             loadedProtocols = loadedProtocols.filter(
               p => p.created_by === currentUser.id || accessibleIds.has(p.id)
             )
@@ -186,7 +236,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
       const errorMessage = err instanceof Error ? err.message : '프로토콜을 불러오는 중 오류가 발생했습니다.'
 
       if (errorMessage.includes('인증 세션이 만료')) {
-        alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+        await appAlert('세션이 만료되었습니다. 다시 로그인해주세요.')
         localStorage.removeItem('dental_auth')
         localStorage.removeItem('dental_user')
         sessionStorage.removeItem('dental_auth')
@@ -235,6 +285,118 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
     }
   }, [searchTerm, selectedStatus, selectedCategory, initialLoadDone])
 
+  // 칸반 그룹 데이터 (전체 카테고리 보기일 때만 사용)
+  const groupedProtocols = useMemo(() => {
+    if (selectedCategory !== 'all') return null
+
+    const groups: { category: ProtocolCategory | null; protocols: Protocol[] }[] = []
+    const categoryMap = new Map<string, Protocol[]>()
+    const uncategorized: Protocol[] = []
+
+    protocols.forEach(p => {
+      if (p.category_id && p.category) {
+        const list = categoryMap.get(p.category_id) || []
+        list.push(p)
+        categoryMap.set(p.category_id, list)
+      } else {
+        uncategorized.push(p)
+      }
+    })
+
+    categories.forEach(cat => {
+      const list = categoryMap.get(cat.id)
+      if (list && list.length > 0) {
+        groups.push({ category: cat, protocols: list })
+      }
+    })
+    if (uncategorized.length > 0) {
+      groups.push({ category: null, protocols: uncategorized })
+    }
+    return groups
+  }, [protocols, categories, selectedCategory])
+
+  // 그룹 접기/펼치기 토글
+  const toggleGroup = (groupId: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(groupId)) {
+        next.delete(groupId)
+      } else {
+        next.add(groupId)
+      }
+      return next
+    })
+  }
+
+  // DnD 핸들러
+  const handleDndDragStart = (event: DragStartEvent) => {
+    const protocolId = event.active.data.current?.protocolId as string
+    if (protocolId) {
+      setActiveDragProtocolId(protocolId)
+    }
+  }
+
+  const handleDndDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveDragProtocolId(null)
+
+    if (!over) return
+
+    const draggedProtocolId = active.data.current?.protocolId as string
+    const targetCategoryId = over.data.current?.categoryId as (string | null)
+
+    if (!draggedProtocolId || targetCategoryId === undefined) return
+
+    const draggedProtocol = protocols.find(p => p.id === draggedProtocolId)
+    if (!draggedProtocol) return
+
+    // 같은 카테고리로 드롭 시 무시
+    const currentCategoryId = draggedProtocol.category_id || null
+    if (currentCategoryId === targetCategoryId) return
+
+    // 옵티미스틱 업데이트 - 즉시 UI 반영 (깜빡임 방지)
+    const targetCategory = targetCategoryId
+      ? categories.find(c => c.id === targetCategoryId) || null
+      : null
+    setProtocols(prev => prev.map(p =>
+      p.id === draggedProtocolId
+        ? { ...p, category_id: targetCategoryId ?? undefined, category: targetCategory ?? undefined }
+        : p
+    ))
+
+    try {
+      const result = await dataService.updateProtocolCategoryId(draggedProtocolId, targetCategoryId)
+      if (result.error) {
+        // 실패 시 롤백
+        setProtocols(prev => prev.map(p =>
+          p.id === draggedProtocolId
+            ? { ...p, category_id: draggedProtocol.category_id, category: draggedProtocol.category }
+            : p
+        ))
+        setError(`카테고리 이동 실패: ${result.error}`)
+        setTimeout(() => setError(''), 3000)
+      } else {
+        const targetName = targetCategoryId
+          ? categories.find(c => c.id === targetCategoryId)?.name || '알 수 없음'
+          : '미분류'
+        setSuccess(`"${draggedProtocol.title}"이(가) "${targetName}"(으)로 이동되었습니다.`)
+        setTimeout(() => setSuccess(''), 3000)
+      }
+    } catch {
+      // 실패 시 롤백
+      setProtocols(prev => prev.map(p =>
+        p.id === draggedProtocolId
+          ? { ...p, category_id: draggedProtocol.category_id, category: draggedProtocol.category }
+          : p
+      ))
+      setError('카테고리 이동에 실패했습니다.')
+      setTimeout(() => setError(''), 3000)
+    }
+  }
+
+  // 드래그 오버레이용 데이터
+  const activeDragProtocol = activeDragProtocolId ? protocols.find(p => p.id === activeDragProtocolId) : null
+
   const handleCreateProtocol = async (formData: ProtocolFormData) => {
     const result = await dataService.createProtocol(formData)
     if (result.error) {
@@ -242,6 +404,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
     }
     setSuccess('프로토콜이 생성되었습니다.')
     setShowCreateForm(false)
+    setCreateCategoryId(undefined)
     fetchProtocols()
     setTimeout(() => setSuccess(''), 3000)
   }
@@ -273,7 +436,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
   const handleDeleteProtocolDirect = async (protocol: Protocol, e: React.MouseEvent) => {
     e.stopPropagation()
 
-    if (!window.confirm(`"${protocol.title}" 프로토콜을 삭제하시겠습니까?`)) {
+    if (!await appConfirm(`"${protocol.title}" 프로토콜을 삭제하시겠습니까?`)) {
       return
     }
 
@@ -352,6 +515,146 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
     })
   }
 
+  // 프로토콜 카드 렌더링 (칸반/리스트 공용)
+  const renderProtocolCard = (protocol: Protocol, showCategoryBadge: boolean) => {
+    const isExpanded = expandedProtocolId === protocol.id
+
+    return (
+      <div
+        className={`border rounded-lg transition-all bg-white relative ${
+          isExpanded ? 'border-slate-300 shadow-md' : 'border-slate-200 hover:border-slate-300 shadow-sm'
+        }`}
+        style={protocol.category ? { borderLeft: `3px solid ${protocol.category.color}` } : undefined}
+      >
+        {/* 접힌 상태: 1줄 요약 */}
+        <div
+          className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
+          onClick={() => setExpandedProtocolId(isExpanded ? null : protocol.id)}
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+            <h4 className="text-sm font-semibold text-slate-800 leading-tight truncate">
+              {protocol.title}
+            </h4>
+            <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${getStatusBadgeClass(protocol.status)}`}>
+              {getStatusLabel(protocol.status)}
+            </span>
+            {showCategoryBadge && protocol.category && (
+              <span
+                className="inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0"
+                style={{
+                  backgroundColor: `${protocol.category.color}20`,
+                  color: protocol.category.color
+                }}
+              >
+                {protocol.category.name}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+            {!isExpanded && protocol.currentVersion && (
+              <span className="text-xs text-slate-400 hidden sm:inline">
+                v{protocol.currentVersion.version_number}
+              </span>
+            )}
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            )}
+          </div>
+        </div>
+
+        {/* 펼친 상태: 상세 정보 + 액션 버튼 */}
+        {isExpanded && (
+          <div className="border-t border-slate-100">
+            <div className="px-3 py-2.5 space-y-2">
+              <div className="flex items-center gap-3 text-xs text-slate-500">
+                {protocol.currentVersion && (
+                  <>
+                    <span className="flex items-center">
+                      <Clock className="w-3 h-3 mr-0.5" />
+                      {formatDate(protocol.currentVersion.created_at)}
+                    </span>
+                    <span>버전 {protocol.currentVersion.version_number}</span>
+                  </>
+                )}
+                {protocol.created_by_user && (
+                  <span>작성자: {protocol.created_by_user.name}</span>
+                )}
+              </div>
+
+              {protocol.tags && protocol.tags.length > 0 && (
+                <div className="flex items-center flex-wrap gap-1">
+                  <Tag className="w-3 h-3 text-slate-400" />
+                  {protocol.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex px-1.5 py-0.5 text-[10px] rounded bg-slate-100 text-slate-600"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 액션 버튼 */}
+            <div className="flex items-center gap-1 px-3 py-2 border-t border-slate-100 bg-slate-50/50 rounded-b-lg">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleViewProtocol(protocol)
+                }}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                title="보기"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                보기
+              </button>
+              {isOwner && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setPermissionProtocol(protocol)
+                    setShowPermissionManager(true)
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded transition-colors"
+                  title="접근 권한 관리"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  권한
+                </button>
+              )}
+              {canEditProtocol(protocol) && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleEditProtocol(protocol)
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                  title="수정"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  수정
+                </button>
+              )}
+              {canDeleteProtocol(protocol) && (
+                <button
+                  onClick={(e) => handleDeleteProtocolDirect(protocol, e)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors ml-auto"
+                  title="삭제"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  삭제
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
       {/* 블루 그라데이션 헤더 - hideHeader가 true면 숨김, 스크롤 시 고정 */}
@@ -426,7 +729,10 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
               </div>
               {canEdit && (
                 <button
-                  onClick={() => setShowCreateForm(true)}
+                  onClick={() => {
+                    setCreateCategoryId(undefined)
+                    setShowCreateForm(true)
+                  }}
                   className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -543,117 +849,93 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                   </button>
                 )}
               </div>
-            ) : (
-              <div className="space-y-3">
-                {protocols.map((protocol) => (
-                  <div
-                    key={protocol.id}
-                    className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div
-                        className="flex-1 cursor-pointer"
-                        onClick={() => handleViewProtocol(protocol)}
-                      >
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-lg font-semibold text-slate-800 hover:text-blue-600">
-                            {protocol.title}
-                          </h3>
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(protocol.status)}`}>
-                            {getStatusLabel(protocol.status)}
-                          </span>
-                          {protocol.category && (
+            ) : groupedProtocols ? (
+              /* 칸반 뷰 (전체 카테고리 보기) */
+              <DndContext
+                sensors={dndSensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDndDragStart}
+                onDragEnd={handleDndDragEnd}
+              >
+                <div className="flex gap-4 overflow-x-auto pb-2">
+                  {groupedProtocols.map(group => {
+                    const groupId = group.category?.id || 'uncategorized'
+                    const isCollapsed = collapsedGroups.has(groupId)
+                    const categoryId = group.category?.id || null
+                    return (
+                      <DroppableColumn key={groupId} id={`drop-column-${groupId}`} categoryId={categoryId}>
+                        <div
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
+                          style={{ backgroundColor: `${group.category?.color || '#94a3b8'}15`, borderLeft: `3px solid ${group.category?.color || '#94a3b8'}` }}
+                        >
+                          <button
+                            onClick={() => toggleGroup(groupId)}
+                            className="flex items-center gap-2 flex-1 min-w-0"
+                          >
+                            {isCollapsed ? (
+                              <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            )}
                             <span
-                              className="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                              style={{
-                                backgroundColor: `${protocol.category.color}20`,
-                                color: protocol.category.color
-                              }}
+                              className="font-semibold text-sm truncate"
+                              style={{ color: group.category?.color || '#94a3b8' }}
                             >
-                              {protocol.category.name}
+                              {group.category?.name || '미분류'}
                             </span>
+                            <span className="text-xs text-slate-400 flex-shrink-0">
+                              ({group.protocols.length})
+                            </span>
+                          </button>
+                          {canEdit && group.category && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setCreateCategoryId(group.category!.id)
+                                setShowCreateForm(true)
+                              }}
+                              className="p-1 rounded hover:bg-white/60 transition-colors flex-shrink-0"
+                              title={`"${group.category.name}" 카테고리에 새 프로토콜 작성`}
+                            >
+                              <Plus className="w-4 h-4" style={{ color: group.category.color }} />
+                            </button>
                           )}
                         </div>
-
-                        <div className="flex items-center space-x-4 text-sm text-slate-600 mb-2">
-                          <span className="flex items-center">
-                            <Clock className="w-4 h-4 mr-1" />
-                            {protocol.currentVersion && formatDate(protocol.currentVersion.created_at)}
-                          </span>
-                          {protocol.currentVersion && (
-                            <span>버전 {protocol.currentVersion.version_number}</span>
-                          )}
-                          {protocol.created_by_user && (
-                            <span>작성자: {protocol.created_by_user.name}</span>
-                          )}
-                        </div>
-
-                        {protocol.tags && protocol.tags.length > 0 && (
-                          <div className="flex items-center flex-wrap gap-2">
-                            <Tag className="w-4 h-4 text-slate-400" />
-                            {protocol.tags.map((tag, index) => (
-                              <span
-                                key={index}
-                                className="inline-flex px-2 py-0.5 text-xs rounded-md bg-slate-100 text-slate-600"
+                        {!isCollapsed && (
+                          <div className="flex flex-col gap-1.5 max-h-[calc(100vh-320px)] overflow-y-auto">
+                            {group.protocols.map(protocol => (
+                              <DraggableProtocolCard
+                                key={protocol.id}
+                                id={`protocol-${protocol.id}`}
+                                protocolId={protocol.id}
+                                isDragActive={activeDragProtocolId === protocol.id}
                               >
-                                {tag}
-                              </span>
+                                {renderProtocolCard(protocol, false)}
+                              </DraggableProtocolCard>
                             ))}
                           </div>
                         )}
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleViewProtocol(protocol)
-                          }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="보기"
-                        >
-                          <Eye className="w-5 h-5" />
-                        </button>
-                        {isOwner && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setPermissionProtocol(protocol)
-                              setShowPermissionManager(true)
-                            }}
-                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                            title="접근 권한 관리"
-                          >
-                            <ShieldCheck className="w-5 h-5" />
-                          </button>
-                        )}
-                        {/* 수정 권한이 있는 경우 수정 버튼 표시 */}
-                        {canEditProtocol(protocol) && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleEditProtocol(protocol)
-                            }}
-                            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                            title="수정"
-                          >
-                            <Pencil className="w-5 h-5" />
-                          </button>
-                        )}
-                        {/* 삭제 권한이 있는 경우 삭제 버튼 표시 */}
-                        {canDeleteProtocol(protocol) && (
-                          <button
-                            onClick={(e) => handleDeleteProtocolDirect(protocol, e)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="삭제"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        )}
+                      </DroppableColumn>
+                    )
+                  })}
+                </div>
+                <DragOverlay dropAnimation={null}>
+                  {activeDragProtocol && (
+                    <div className="bg-white border-2 border-blue-400 rounded-lg shadow-xl p-3 w-[300px]">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-slate-800 truncate">{activeDragProtocol.title}</span>
+                        <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${getStatusBadgeClass(activeDragProtocol.status)}`}>
+                          {getStatusLabel(activeDragProtocol.status)}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )}
+                </DragOverlay>
+              </DndContext>
+            ) : (
+              /* flat list 뷰 (특정 카테고리 선택 시) */
+              <div className="space-y-3">
+                {protocols.map((protocol) => renderProtocolCard(protocol, true))}
               </div>
             )}
 
@@ -661,8 +943,18 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
             {showCreateForm && (
               <ProtocolForm
                 mode="create"
+                initialData={createCategoryId ? {
+                  title: '',
+                  category_id: createCategoryId,
+                  content: '',
+                  status: 'draft',
+                  tags: [],
+                } : undefined}
                 onSubmit={handleCreateProtocol}
-                onCancel={() => setShowCreateForm(false)}
+                onCancel={() => {
+                  setShowCreateForm(false)
+                  setCreateCategoryId(undefined)
+                }}
               />
             )}
 

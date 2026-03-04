@@ -130,12 +130,23 @@ export const MENU_CONFIG: MenuConfigItem[] = [
   },
 
   {
-    id: 'community',
-    label: '커뮤니티',
+    id: 'community-board',
+    label: '자유게시판',
     icon: 'MessageCircle',
     route: '/community',
     permissions: [],
+    categoryId: 'community',
     order: 7.5,
+    visible: true,
+  },
+  {
+    id: 'community-groups',
+    label: '소모임',
+    icon: 'Send',
+    route: '/community/telegram',
+    permissions: [],
+    categoryId: 'community',
+    order: 7.6,
     visible: true,
   },
 

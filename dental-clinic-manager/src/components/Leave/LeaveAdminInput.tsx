@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { FileText, Plus, Trash2, User, Calendar, AlertCircle, CheckCircle } from 'lucide-react'
 import { leaveService } from '@/lib/leaveService'
 import type { LeaveType } from '@/types/leave'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface LeaveAdminInputProps {
   year: number
@@ -124,7 +125,7 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
   }
 
   const handleDeleteAdjustment = async (adjustmentId: string) => {
-    if (!confirm('이 조정을 삭제하시겠습니까?')) return
+    if (!await appConfirm('이 조정을 삭제하시겠습니까?')) return
 
     const result = await leaveService.deleteAdjustment(adjustmentId)
     if (result.error) {

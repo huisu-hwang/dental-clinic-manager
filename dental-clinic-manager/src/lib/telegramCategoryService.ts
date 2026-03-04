@@ -1,0 +1,274 @@
+// 게시판 카테고리 AI 자동 분류 서비스 (Google Gemini)
+import { GoogleGenAI } from '@google/genai'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+interface ExistingCategory {
+  id: string
+  name: string
+}
+
+interface ClassifyResult {
+  action: 'existing' | 'new'
+  categoryName: string
+  categoryId?: string
+}
+
+/**
+ * AI로 게시글 카테고리를 자동 분류
+ * - 기존 카테고리 중 매칭되면 해당 카테고리 반환
+ * - 새로운 주제면 짧은 카테고리명 제안
+ * - 실패 시 null 반환 (호출 측에서 "미분류" 폴백)
+ */
+export async function classifyPostCategory(
+  title: string,
+  content: string,
+  existingCategories: ExistingCategory[],
+  groupTitle: string
+): Promise<ClassifyResult | null> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) {
+    console.error('GEMINI_API_KEY is not configured')
+    return null
+  }
+
+  const genAI = new GoogleGenAI({ apiKey })
+
+  // HTML 태그 제거 + 500자 제한
+  const plainContent = content
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 500)
+
+  const categoryList = existingCategories
+    .filter(c => c.name !== '미분류')
+    .map(c => `- ${c.name}`)
+    .join('\n')
+
+  const prompt = `당신은 "${groupTitle}" 게시판의 게시글 분류 전문가입니다.
+
+아래 게시글의 제목과 내용을 읽고, 적절한 카테고리로 분류해주세요.
+
+## 게시글
+제목: ${title}
+내용: ${plainContent}
+
+## 기존 카테고리 목록
+${categoryList || '(아직 카테고리가 없습니다)'}
+
+## 규칙
+1. 기존 카테고리 중 적합한 것이 있으면 반드시 그것을 선택하세요.
+2. 기존 카테고리에 맞지 않는 새로운 주제라면 짧고 명확한 카테고리명을 제안하세요 (2~4글자 권장, 최대 10자).
+3. 카테고리명은 한국어로, 일반적이고 재사용 가능한 이름이어야 합니다.
+4. "미분류"는 선택하지 마세요.
+
+## 출력 형식 (JSON만 출력)
+기존 카테고리 선택 시: {"action": "existing", "categoryName": "카테고리명"}
+새 카테고리 제안 시: {"action": "new", "categoryName": "새카테고리명"}`
+
+  try {
+    const response = await genAI.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: {
+        temperature: 0.2,
+      },
+    })
+
+    const rawText = response.candidates?.[0]?.content?.parts
+      ?.filter(p => p.text)
+      .map(p => p.text)
+      .join('') ?? ''
+
+    // JSON 블록 추출 (```json ... ``` 또는 { ... } 형태)
+    const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/) || rawText.match(/(\{[\s\S]*\})/)
+    const text = jsonMatch ? jsonMatch[1].trim() : rawText.trim()
+
+    const parsed = JSON.parse(text)
+
+    if (!parsed.action || !parsed.categoryName) {
+      return null
+    }
+
+    // 기존 카테고리 매칭 시 ID 찾기
+    if (parsed.action === 'existing') {
+      const matched = existingCategories.find(
+        c => c.name === parsed.categoryName
+      )
+      if (matched) {
+        return {
+          action: 'existing',
+          categoryName: matched.name,
+          categoryId: matched.id,
+        }
+      }
+      // AI가 existing이라 했지만 매칭되지 않으면 유사도 체크
+      const fuzzyMatch = existingCategories.find(
+        c => c.name !== '미분류' && (
+          c.name.includes(parsed.categoryName) ||
+          parsed.categoryName.includes(c.name)
+        )
+      )
+      if (fuzzyMatch) {
+        return {
+          action: 'existing',
+          categoryName: fuzzyMatch.name,
+          categoryId: fuzzyMatch.id,
+        }
+      }
+      // 매칭 실패 → 새 카테고리로 전환
+      return {
+        action: 'new',
+        categoryName: parsed.categoryName,
+      }
+    }
+
+    // 새 카테고리 제안 시 기존과 유사한지 체크
+    if (parsed.action === 'new') {
+      const similarExisting = existingCategories.find(
+        c => c.name !== '미분류' && (
+          c.name.includes(parsed.categoryName) ||
+          parsed.categoryName.includes(c.name)
+        )
+      )
+      if (similarExisting) {
+        return {
+          action: 'existing',
+          categoryName: similarExisting.name,
+          categoryId: similarExisting.id,
+        }
+      }
+      return {
+        action: 'new',
+        categoryName: parsed.categoryName.slice(0, 50),
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.error('AI category classification failed:', error)
+    return null
+  }
+}
+
+/**
+ * 게시글에 AI 카테고리를 직접 분류하고 DB 업데이트까지 수행하는 인라인 헬퍼
+ * - fire-and-forget fetch 대신 서버사이드에서 직접 호출용
+ */
+export async function classifyAndAssignCategory(
+  supabase: SupabaseClient,
+  postId: string,
+  postTitle: string,
+  postContent: string,
+  groupId: string,
+): Promise<{ categoryId: string | null; categoryName: string }> {
+  try {
+    // 그룹 정보
+    const { data: group } = await supabase
+      .from('telegram_groups')
+      .select('id, chat_title, board_title')
+      .eq('id', groupId)
+      .maybeSingle()
+
+    const groupTitle = group?.board_title || group?.chat_title || ''
+
+    // 기존 카테고리 목록
+    const { data: categories } = await supabase
+      .from('telegram_board_categories')
+      .select('id, name')
+      .eq('telegram_group_id', groupId)
+      .order('sort_order', { ascending: true })
+
+    const existingCategories = categories || []
+
+    // AI 분류
+    const result = await classifyPostCategory(
+      postTitle,
+      postContent,
+      existingCategories,
+      groupTitle
+    )
+
+    let categoryId: string | null = null
+
+    if (result) {
+      if (result.action === 'existing' && result.categoryId) {
+        categoryId = result.categoryId
+      } else if (result.action === 'new') {
+        // 새 카테고리 생성
+        const slug = result.categoryName
+          .toLowerCase()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9가-힣-]/g, '')
+          .slice(0, 50)
+
+        // slug 중복 체크
+        const { data: existing } = await supabase
+          .from('telegram_board_categories')
+          .select('id')
+          .eq('telegram_group_id', groupId)
+          .eq('slug', slug)
+          .maybeSingle()
+
+        if (existing) {
+          categoryId = existing.id
+        } else {
+          const { data: maxSort } = await supabase
+            .from('telegram_board_categories')
+            .select('sort_order')
+            .eq('telegram_group_id', groupId)
+            .eq('is_default', false)
+            .order('sort_order', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          const nextOrder = (maxSort?.sort_order ?? -1) + 1
+          const colorPresets = ['blue', 'green', 'purple', 'orange', 'teal', 'red', 'pink', 'indigo', 'amber']
+          const colorIndex = (existingCategories.filter(c => c.name !== '미분류').length) % colorPresets.length
+
+          const { data: newCat, error: catError } = await supabase
+            .from('telegram_board_categories')
+            .insert({
+              telegram_group_id: groupId,
+              name: result.categoryName,
+              slug,
+              color: colorPresets[colorIndex],
+              sort_order: nextOrder,
+            })
+            .select('id')
+            .single()
+
+          if (!catError && newCat) {
+            categoryId = newCat.id
+          }
+        }
+      }
+    }
+
+    // 폴백: 미분류 카테고리
+    if (!categoryId) {
+      const { data: defaultCat } = await supabase
+        .from('telegram_board_categories')
+        .select('id')
+        .eq('telegram_group_id', groupId)
+        .eq('is_default', true)
+        .maybeSingle()
+
+      categoryId = defaultCat?.id || null
+    }
+
+    // 게시글 업데이트
+    if (categoryId) {
+      await supabase
+        .from('telegram_board_posts')
+        .update({ category_id: categoryId })
+        .eq('id', postId)
+    }
+
+    return { categoryId, categoryName: result?.categoryName || '미분류' }
+  } catch (error) {
+    console.error(`[classifyAndAssignCategory] Error for post ${postId}:`, error)
+    return { categoryId: null, categoryName: '미분류' }
+  }
+}

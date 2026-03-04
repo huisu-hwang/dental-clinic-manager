@@ -1,91 +1,126 @@
 'use client'
 
-import { Eye, FileText, Link2, Brain, Pin, PenLine, MessageCircle, Heart, Vote } from 'lucide-react'
+import { FileText, Link2, Brain, Pin, PenLine, Heart, MessageCircle, Vote, Check } from 'lucide-react'
 import type { TelegramBoardPost } from '@/types/telegram'
-import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
+import { TELEGRAM_POST_TYPE_COLORS, getCategoryColorClasses } from '@/types/telegram'
 
 interface TelegramBoardPostCardProps {
   post: TelegramBoardPost
   onClick: (post: TelegramBoardPost) => void
+  selectMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (postId: string) => void
+  selectable?: boolean
+  alwaysShowCheckbox?: boolean
 }
 
-export default function TelegramBoardPostCard({ post, onClick }: TelegramBoardPostCardProps) {
+export default function TelegramBoardPostCard({ post, onClick, selectMode = false, selected = false, onToggleSelect, selectable = true, alwaysShowCheckbox = false }: TelegramBoardPostCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
-
-    if (minutes < 1) return '방금 전'
-    if (minutes < 60) return `${minutes}분 전`
-    if (hours < 24) return `${hours}시간 전`
-    if (days < 7) return `${days}일 전`
-    return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    if (date.getFullYear() === now.getFullYear()) {
+      return `${month}.${day}`
+    }
+    const year = String(date.getFullYear()).slice(2)
+    return `${year}.${month}.${day}`
   }
 
-  const typeColor = TELEGRAM_POST_TYPE_COLORS[post.post_type] || { bg: 'bg-gray-100', text: 'text-gray-700' }
-  const typeLabel = TELEGRAM_POST_TYPE_LABELS[post.post_type] || post.post_type
+  // 카테고리 배지 (메인)
+  const categoryName = post.category?.name || '미분류'
+  const categoryColor = post.category?.color || 'gray'
+  const catColorClasses = getCategoryColorClasses(categoryColor)
 
+  // 유형 아이콘 (제목 옆 작은 아이콘으로만)
   const TypeIcon = post.post_type === 'summary' ? Brain
     : post.post_type === 'file' ? FileText
     : post.post_type === 'general' ? PenLine
     : post.post_type === 'vote' ? Vote
     : Link2
+  const typeColor = TELEGRAM_POST_TYPE_COLORS[post.post_type] || { text: 'text-gray-400' }
+
+  const showCheckbox = selectMode || alwaysShowCheckbox
+
+  const handleClick = () => {
+    if (selectMode && selectable && onToggleSelect) {
+      onToggleSelect(post.id)
+    } else if (!selectMode) {
+      onClick(post)
+    }
+  }
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (selectable && onToggleSelect) {
+      onToggleSelect(post.id)
+    }
+  }
 
   return (
     <div
-      onClick={() => onClick(post)}
-      className="p-4 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
+      onClick={alwaysShowCheckbox && !selectMode ? () => onClick(post) : handleClick}
+      className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 ${
+        showCheckbox && selected ? 'bg-sky-50' : ''
+      } ${selectMode && !selectable ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
-      <div className="flex items-start gap-3">
-        {post.is_pinned && (
-          <Pin className="w-4 h-4 text-red-500 flex-shrink-0 mt-1" />
+      {/* 고정 또는 체크박스 */}
+      <div className="w-5 flex-shrink-0 flex items-center justify-center">
+        {showCheckbox ? (
+          <div
+            onClick={handleCheckboxClick}
+            className={`w-4 h-4 rounded border flex items-center justify-center ${
+              !selectable
+                ? 'border-gray-200 bg-gray-100'
+                : selected
+                  ? 'border-sky-500 bg-sky-500'
+                  : 'border-gray-300 hover:border-sky-400'
+            }`}
+          >
+            {selected && <Check className="w-3 h-3 text-white" />}
+          </div>
+        ) : (
+          post.is_pinned && <Pin className="w-3.5 h-3.5 text-red-500" />
         )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${typeColor.bg} ${typeColor.text}`}>
-              <TypeIcon className="w-3 h-3" />
-              {typeLabel}
-            </span>
-            {post.summary_date && (
-              <span className="text-xs text-gray-400">
-                {post.summary_date}
-              </span>
-            )}
-          </div>
-          <h3 className="text-gray-900 font-medium truncate">{post.title}</h3>
-          <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-            {post.author?.name && (
-              <span className="text-gray-500 font-medium">{post.author.name}</span>
-            )}
-            <span>{formatDate(post.created_at)}</span>
-            <span className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />{post.view_count}
-            </span>
-            {(post.like_count ?? 0) > 0 && (
-              <span className="flex items-center gap-1 text-red-400">
-                <Heart className="w-3 h-3" />{post.like_count}
-              </span>
-            )}
-            {(post.comment_count ?? 0) > 0 && (
-              <span className="flex items-center gap-1">
-                <MessageCircle className="w-3 h-3" />{post.comment_count}
-              </span>
-            )}
-            {(post.file_urls?.length ?? 0) > 0 && (
-              <span className="flex items-center gap-1">
-                <FileText className="w-3 h-3" />{post.file_urls.length}개 파일
-              </span>
-            )}
-            {(post.link_urls?.length ?? 0) > 0 && (
-              <span className="flex items-center gap-1">
-                <Link2 className="w-3 h-3" />{post.link_urls.length}개 링크
-              </span>
-            )}
-          </div>
-        </div>
+      </div>
+      {/* 카테고리 배지 */}
+      <div className="hidden sm:block w-20 flex-shrink-0 text-center">
+        <span className={`text-xs px-1.5 py-0.5 rounded ${catColorClasses.bg} ${catColorClasses.text}`}>
+          {categoryName}
+        </span>
+      </div>
+      {/* 제목 */}
+      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+        {/* 모바일: 카테고리 배지 */}
+        <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${catColorClasses.bg} ${catColorClasses.text}`}>
+          {categoryName}
+        </span>
+        {alwaysShowCheckbox && post.is_pinned && <Pin className="w-3 h-3 text-red-500 flex-shrink-0" />}
+        {/* 유형 아이콘 (작은 아이콘) */}
+        <TypeIcon className={`w-3.5 h-3.5 flex-shrink-0 ${typeColor.text}`} />
+        <span className="text-sm text-gray-900 truncate">{post.title}</span>
+        {(post.comment_count ?? 0) > 0 && (
+          <span className="flex items-center gap-0.5 text-xs text-sky-500 flex-shrink-0">
+            <MessageCircle className="w-3 h-3" />{post.comment_count}
+          </span>
+        )}
+        {(post.like_count ?? 0) > 0 && (
+          <span className="flex items-center gap-0.5 text-xs text-red-400 flex-shrink-0">
+            <Heart className="w-3 h-3" />{post.like_count}
+          </span>
+        )}
+      </div>
+      {/* 작성자 */}
+      <div className="hidden sm:block w-20 text-center text-sm text-gray-500 flex-shrink-0 truncate">
+        {post.author?.name || ''}
+      </div>
+      {/* 작성일 */}
+      <div className="w-20 text-center text-sm text-gray-500 flex-shrink-0">
+        {formatDate(post.created_at)}
+      </div>
+      {/* 조회수 */}
+      <div className="hidden sm:block w-12 text-center text-sm text-gray-500 flex-shrink-0">
+        {post.view_count}
       </div>
     </div>
   )

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Send, Loader2, Inbox, ChevronLeft, Plus } from 'lucide-react'
+import { Send, Loader2, Inbox, Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
@@ -49,10 +49,7 @@ export default function TelegramBoardListPage() {
   }, [isMobileMenuOpen])
 
   const handleMainTabChange = (tab: string) => {
-    if (tab === 'community') {
-      router.push('/community')
-      return
-    }
+    if (tab === 'community-groups') return
     router.push(getTabRoute(tab))
   }
 
@@ -105,7 +102,7 @@ export default function TelegramBoardListPage() {
         `}
       >
         <TabNavigation
-          activeTab="community"
+          activeTab="community-groups"
           onTabChange={handleMainTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
           skipAutoRedirect={true}
@@ -116,34 +113,24 @@ export default function TelegramBoardListPage() {
         <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
           <div className="max-w-4xl">
             {/* 헤더 */}
-            <div className="bg-gradient-to-r from-sky-500 to-blue-600 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
                     <Send className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-bold text-white">텔레그램 모임 게시판</h2>
-                    <p className="text-sky-100 text-xs sm:text-sm hidden sm:block">Telegram Group Boards</p>
+                    <h2 className="text-base sm:text-lg font-bold text-white">소모임 게시판</h2>
+                    <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Community Groups</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => { setShowApplyForm(!showApplyForm); setApplyError(null) }}
-                    className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-xs"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />게시판 신청
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push('/community')}
-                    className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-1" />커뮤니티
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  onClick={() => { setShowApplyForm(!showApplyForm); setApplyError(null) }}
+                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-xs"
+                >
+                  <Plus className="w-4 h-4 mr-1" />게시판 신청
+                </Button>
               </div>
             </div>
 

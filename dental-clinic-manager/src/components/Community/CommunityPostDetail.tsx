@@ -13,6 +13,7 @@ import WatermarkOverlay from './WatermarkOverlay'
 import CommentList from './CommentList'
 import PollDisplay from './PollDisplay'
 import ReportModal from './ReportModal'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface CommunityPostDetailProps {
   postId: string
@@ -71,7 +72,7 @@ export default function CommunityPostDetail({
   }
 
   const handleDelete = async () => {
-    if (!post || !confirm('정말 삭제하시겠습니까?')) return
+    if (!post || !await appConfirm('정말 삭제하시겠습니까?')) return
     const { success } = await communityPostService.deletePost(post.id)
     if (success) onDeleted()
   }

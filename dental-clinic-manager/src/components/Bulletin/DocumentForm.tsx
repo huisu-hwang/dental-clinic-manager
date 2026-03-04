@@ -346,6 +346,7 @@ export default function DocumentForm({
             content={formData.content || ''}
             onChange={(content) => setFormData({ ...formData, content })}
             placeholder="문서 내용을 입력하세요 (선택사항)"
+            enableTable={false}
           />
         </div>
 

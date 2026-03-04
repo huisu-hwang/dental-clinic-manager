@@ -6,8 +6,6 @@ import {
   Plus,
   Search,
   Download,
-  Eye,
-  Calendar,
   AlertCircle,
   ChevronLeft,
   ChevronRight,
@@ -24,6 +22,7 @@ import type { Document, DocumentCategory } from '@/types/bulletin'
 import { DOCUMENT_CATEGORY_LABELS } from '@/types/bulletin'
 import DocumentDetail from './DocumentDetail'
 import DocumentForm from './DocumentForm'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface DocumentListProps {
   canCreate?: boolean
@@ -91,14 +90,14 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return
+    if (!await appConfirm('정말 삭제하시겠습니까?')) return
 
     const { success, error: deleteError } = await documentService.deleteDocument(id)
     if (success) {
       fetchDocuments()
       setSelectedDocument(null)
     } else {
-      alert(deleteError || '삭제에 실패했습니다.')
+      await appAlert(deleteError || '삭제에 실패했습니다.')
     }
   }
 
@@ -161,11 +160,15 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
+    const date = new Date(dateString)
+    const now = new Date()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    if (date.getFullYear() === now.getFullYear()) {
+      return `${month}.${day}`
+    }
+    const year = String(date.getFullYear()).slice(2)
+    return `${year}.${month}.${day}`
   }
 
   if (showForm) {
@@ -257,69 +260,70 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
       ) : (
         <>
           {/* 문서 목록 */}
-          <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-200">
-            {documents.map((document) => (
-              <div
-                key={document.id}
-                className="p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  {/* 파일 아이콘 */}
-                  <div className="flex-shrink-0 mt-1">
-                    {getFileIcon(document.file_name)}
+          <div className="bg-white rounded-lg border border-gray-200">
+            {/* 테이블 헤더 */}
+            <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
+              <div className="hidden sm:block w-16 flex-shrink-0 text-center">분류</div>
+              <div className="flex-1 min-w-0 text-center">제목</div>
+              <div className="hidden sm:block w-20 text-center flex-shrink-0">작성자</div>
+              <div className="w-20 text-center flex-shrink-0">작성일</div>
+              <div className="hidden sm:block w-12 text-center flex-shrink-0">조회</div>
+              <div className="hidden sm:block w-10 flex-shrink-0" />
+            </div>
+            {/* 목록 */}
+            <div className="divide-y divide-gray-200">
+              {documents.map((document) => (
+                <div
+                  key={document.id}
+                  onClick={() => handleDocumentClick(document)}
+                  className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  {/* 분류 */}
+                  <div className="hidden sm:block w-16 flex-shrink-0 text-center">
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${getCategoryBadgeColor(document.category)}`}>
+                      {DOCUMENT_CATEGORY_LABELS[document.category]}
+                    </span>
                   </div>
-
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleDocumentClick(document)}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${getCategoryBadgeColor(document.category)}`}>
-                        {DOCUMENT_CATEGORY_LABELS[document.category]}
-                      </span>
-                    </div>
-                    <h3 className="text-gray-900 font-medium truncate">{document.title}</h3>
-                    {document.description && (
-                      <p className="text-sm text-gray-500 truncate mt-1">{document.description}</p>
+                  {/* 제목 */}
+                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                    <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${getCategoryBadgeColor(document.category)}`}>
+                      {DOCUMENT_CATEGORY_LABELS[document.category]}
+                    </span>
+                    {document.file_name && (
+                      <span className="flex-shrink-0">{getFileIcon(document.file_name)}</span>
                     )}
-                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                      <span>{document.author_name}</span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatDate(document.created_at)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Eye className="w-3 h-3" />
-                        {document.view_count}
-                      </span>
-                      {document.file_name && (
-                        <span className="flex items-center gap-1">
-                          <Download className="w-3 h-3" />
-                          {document.download_count}
-                        </span>
-                      )}
-                      {document.file_size && (
-                        <span className="text-gray-400">
-                          {formatFileSize(document.file_size)}
-                        </span>
-                      )}
-                    </div>
+                    <span className="text-sm text-gray-900 truncate">{document.title}</span>
                   </div>
-
-                  {/* 다운로드 버튼 */}
-                  {document.file_url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDownload(document)
-                      }}
-                      className="flex-shrink-0"
-                    >
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  )}
+                  {/* 작성자 */}
+                  <div className="hidden sm:block w-20 text-center text-sm text-gray-500 flex-shrink-0">
+                    {document.author_name}
+                  </div>
+                  {/* 작성일 */}
+                  <div className="w-20 text-center text-sm text-gray-500 flex-shrink-0">
+                    {formatDate(document.created_at)}
+                  </div>
+                  {/* 조회수 */}
+                  <div className="hidden sm:block w-12 text-center text-sm text-gray-500 flex-shrink-0">
+                    {document.view_count}
+                  </div>
+                  {/* 다운로드 */}
+                  <div className="hidden sm:block w-10 flex-shrink-0 text-center">
+                    {document.file_url && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDownload(document)
+                        }}
+                        className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-400 hover:text-gray-600"
+                        title="다운로드"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* 페이지네이션 */}

@@ -38,6 +38,7 @@ import {
   ArrowUturnRightIcon,
   Bars3Icon
 } from '@heroicons/react/24/outline'
+import { appAlert, appPrompt } from '@/components/ui/AppDialog'
 
 // 커스텀 Video 노드 익스텐션
 const VideoNode = Node.create({
@@ -147,6 +148,7 @@ interface EnhancedTiptapEditorProps {
   onImageUpload?: (url: string) => void
   onMediaUpload?: (file: File) => Promise<{ url?: string; error?: string }>
   enableVideoUpload?: boolean
+  enableTable?: boolean
 }
 
 const isBrowser = typeof window !== 'undefined'
@@ -500,6 +502,7 @@ export default function EnhancedTiptapEditor({
   onImageUpload,
   onMediaUpload,
   enableVideoUpload = false,
+  enableTable = true,
 }: EnhancedTiptapEditorProps) {
   // 색상 팔레트 표시 상태
   const [showColorPicker, setShowColorPicker] = useState(false)
@@ -563,27 +566,29 @@ export default function EnhancedTiptapEditor({
           class: 'youtube-video rounded-lg'
         }
       }),
-      Table.configure({
-        resizable: true,
-        HTMLAttributes: {
-          class: 'protocol-table border-collapse border border-slate-300'
-        }
-      }),
-      TableRow.configure({
-        HTMLAttributes: {
-          class: 'border border-slate-300'
-        }
-      }),
-      TableHeader.configure({
-        HTMLAttributes: {
-          class: 'border border-slate-300 bg-slate-100 p-2 font-bold text-left'
-        }
-      }),
-      TableCell.configure({
-        HTMLAttributes: {
-          class: 'border border-slate-300 p-2'
-        }
-      }),
+      ...(enableTable ? [
+        Table.configure({
+          resizable: true,
+          HTMLAttributes: {
+            class: 'protocol-table border-collapse border border-slate-300'
+          }
+        }),
+        TableRow.configure({
+          HTMLAttributes: {
+            class: 'border border-slate-300'
+          }
+        }),
+        TableHeader.configure({
+          HTMLAttributes: {
+            class: 'border border-slate-300 bg-slate-100 p-2 font-bold text-left'
+          }
+        }),
+        TableCell.configure({
+          HTMLAttributes: {
+            class: 'border border-slate-300 p-2'
+          }
+        }),
+      ] : []),
       TaskList,
       TaskItem.configure({
         nested: true,
@@ -714,7 +719,7 @@ export default function EnhancedTiptapEditor({
       console.log('[Editor] Image uploaded successfully:', uploadedUrl)
     } else {
       // 업로드 실패 시 임시 이미지 제거
-      alert(result.error || '이미지 업로드에 실패했습니다.')
+      await appAlert(result.error || '이미지 업로드에 실패했습니다.')
       const { state } = editor
       const { doc } = state
       doc.descendants((node, pos) => {
@@ -740,7 +745,7 @@ export default function EnhancedTiptapEditor({
           attrs: { src: result.url },
         }).run()
       } else {
-        alert(result.error || '동영상 업로드에 실패했습니다.')
+        await appAlert(result.error || '동영상 업로드에 실패했습니다.')
       }
     } finally {
       setVideoUploading(false)
@@ -765,8 +770,8 @@ export default function EnhancedTiptapEditor({
   })
 
   // YouTube URL 추가
-  const addYoutubeVideo = useCallback(() => {
-    const url = prompt('YouTube 동영상 URL을 입력하세요:')
+  const addYoutubeVideo = useCallback(async () => {
+    const url = await appPrompt('YouTube 동영상 URL을 입력하세요:')
 
     if (url && editor) {
       editor.chain().focus().setYoutubeVideo({
@@ -1064,14 +1069,16 @@ export default function EnhancedTiptapEditor({
               />
             </label>
           )}
-          <button
-            type="button"
-            onClick={addTable}
-            className="p-2 rounded hover:bg-slate-200 transition-colors"
-            title="표 삽입"
-          >
-            <TableCellsIcon className="h-4 w-4" />
-          </button>
+          {enableTable && (
+            <button
+              type="button"
+              onClick={addTable}
+              className="p-2 rounded hover:bg-slate-200 transition-colors"
+              title="표 삽입"
+            >
+              <TableCellsIcon className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={addWarningBox}

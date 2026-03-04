@@ -13,6 +13,7 @@ import type { EmploymentContract, ContractStatus, ContractListFilters } from '@/
 import type { UserProfile } from '@/contexts/AuthContext'
 import { checkSecuritySession, setSecuritySession } from '@/lib/securitySession'
 import PasswordVerificationModal from '@/components/Security/PasswordVerificationModal'
+import { appAlert } from '@/components/ui/AppDialog'
 
 interface ContractListProps {
   currentUser: UserProfile
@@ -112,7 +113,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
           if (response.error === 'SESSION_EXPIRED' ||
               response.error.includes('인증 세션이 만료')) {
             console.error('[ContractList] Session expired, redirecting to login...')
-            alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+            await appAlert('세션이 만료되었습니다. 다시 로그인해주세요.')
 
             localStorage.removeItem('dental_auth')
             localStorage.removeItem('dental_user')
@@ -170,7 +171,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
         if (response.error === 'SESSION_EXPIRED' ||
             response.error.includes('인증 세션이 만료')) {
           console.error('[ContractList] Session expired, redirecting to login...')
-          alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+          await appAlert('세션이 만료되었습니다. 다시 로그인해주세요.')
 
           localStorage.removeItem('dental_auth')
           localStorage.removeItem('dental_user')
@@ -246,14 +247,14 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       const response = await contractService.deleteContract(contractToDelete.id, currentUser.id)
 
       if (response.error) {
-        alert(`삭제 실패: ${response.error}`)
+        await appAlert(`삭제 실패: ${response.error}`)
       } else {
-        alert('계약서가 삭제되었습니다.')
+        await appAlert('계약서가 삭제되었습니다.')
         await loadContracts()
       }
     } catch (err) {
       console.error('[ContractList] Delete error:', err)
-      alert('계약서 삭제 중 오류가 발생했습니다.')
+      await appAlert('계약서 삭제 중 오류가 발생했습니다.')
     } finally {
       setDeleting(false)
       setDeleteModalOpen(false)

@@ -10,6 +10,7 @@ import { dataService } from '@/lib/dataService'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Protocol, ProtocolVersion } from '@/types'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface ProtocolDetailProps {
   protocolId: string
@@ -95,7 +96,7 @@ export default function ProtocolDetail({
   }, [protocolId, canViewHistory])
 
   const handleDelete = async () => {
-    if (!confirm('이 프로토콜을 삭제하시겠습니까?')) {
+    if (!await appConfirm('이 프로토콜을 삭제하시겠습니까?')) {
       return
     }
 
@@ -108,7 +109,7 @@ export default function ProtocolDetail({
   }
 
   const handleRestoreVersion = async (versionId: string) => {
-    if (!confirm('이 버전으로 복원하시겠습니까?')) {
+    if (!await appConfirm('이 버전으로 복원하시겠습니까?')) {
       return
     }
 

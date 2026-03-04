@@ -10,6 +10,7 @@ import Header from '@/components/Layout/Header'
 
 import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
 import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
+import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
 
 type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community'
 type CommunitySubTab = 'categories' | 'telegram'
@@ -72,7 +73,7 @@ export default function MasterAdminPage() {
       console.log('[Master] User profile from DB:', userData)
 
       if (userData?.role !== 'master_admin') {
-        alert('마스터 관리자 권한이 필요합니다.')
+        await appAlert('마스터 관리자 권한이 필요합니다.')
         router.push('/dashboard')
         return
       }
@@ -182,7 +183,7 @@ export default function MasterAdminPage() {
     // 병원 정보 조회
     const clinic = clinics.find(c => c.id === clinicId)
     if (!clinic) {
-      alert('병원 정보를 찾을 수 없습니다.')
+      await appAlert('병원 정보를 찾을 수 없습니다.')
       return
     }
 
@@ -190,7 +191,7 @@ export default function MasterAdminPage() {
     const clinicUserCount = users.filter(u => u.clinic_id === clinicId).length
 
     // 1단계: 상세한 경고 메시지
-    const confirmed = confirm(
+    const confirmed = await appConfirm(
       `⚠️ 병원 삭제 경고 ⚠️\n\n` +
       `병원명: ${clinic.name}\n` +
       `소속 사용자 수: ${clinicUserCount}명\n\n` +
@@ -211,22 +212,22 @@ export default function MasterAdminPage() {
     }
 
     // 2단계: 병원명 타이핑 확인 (실수 방지)
-    const typedName = prompt(
+    const typedName = await appPrompt(
       `정말로 삭제하시려면 병원명을 정확히 입력하세요:\n\n"${clinic.name}"`
     )
 
     if (typedName !== clinic.name) {
-      alert('병원명이 일치하지 않습니다. 삭제가 취소되었습니다.')
+      await appAlert('병원명이 일치하지 않습니다. 삭제가 취소되었습니다.')
       return
     }
 
     try {
       await dataService.deleteClinic(clinicId)
-      alert('병원이 삭제되었습니다.')
+      await appAlert('병원이 삭제되었습니다.')
       loadData()
     } catch (error) {
       console.error('병원 삭제 실패:', error)
-      alert('병원 삭제에 실패했습니다.')
+      await appAlert('병원 삭제에 실패했습니다.')
     }
   }
 
@@ -234,12 +235,12 @@ export default function MasterAdminPage() {
     // 사용자 정보 조회 (users 또는 pendingUsers에서)
     const user = users.find(u => u.id === userId) || pendingUsers.find(u => u.id === userId)
     if (!user) {
-      alert('사용자 정보를 찾을 수 없습니다.')
+      await appAlert('사용자 정보를 찾을 수 없습니다.')
       return
     }
 
     // 1단계: 상세한 경고 메시지
-    const confirmed = confirm(
+    const confirmed = await appConfirm(
       `⚠️ 사용자 삭제 경고 ⚠️\n\n` +
       `이름: ${user.name}\n` +
       `이메일: ${user.email}\n` +
@@ -259,12 +260,12 @@ export default function MasterAdminPage() {
     }
 
     // 2단계: 이름 타이핑 확인 (실수 방지)
-    const typedName = prompt(
+    const typedName = await appPrompt(
       `정말로 삭제하시려면 사용자 이름을 정확히 입력하세요:\n\n"${user.name}"`
     )
 
     if (typedName !== user.name) {
-      alert('이름이 일치하지 않습니다. 삭제가 취소되었습니다.')
+      await appAlert('이름이 일치하지 않습니다. 삭제가 취소되었습니다.')
       return
     }
 
@@ -272,14 +273,14 @@ export default function MasterAdminPage() {
       const result = await dataService.deleteUser(userId)
       if (result.error) {
         console.error('사용자 삭제 실패:', result.error)
-        alert('사용자 삭제에 실패했습니다: ' + result.error)
+        await appAlert('사용자 삭제에 실패했습니다: ' + result.error)
         return
       }
-      alert('사용자가 삭제되었습니다.')
+      await appAlert('사용자가 삭제되었습니다.')
       loadData()
     } catch (error) {
       console.error('사용자 삭제 실패:', error)
-      alert('사용자 삭제에 실패했습니다.')
+      await appAlert('사용자 삭제에 실패했습니다.')
     }
   }
 
@@ -287,32 +288,32 @@ export default function MasterAdminPage() {
     try {
       const result = await dataService.approveUser(userId, clinicId)
       if (result.success) {
-        alert('사용자가 승인되었습니다.')
+        await appAlert('사용자가 승인되었습니다.')
         loadData()
       } else {
-        alert('승인 실패: ' + (result.error || '알 수 없는 오류'))
+        await appAlert('승인 실패: ' + (result.error || '알 수 없는 오류'))
       }
     } catch (error) {
       console.error('사용자 승인 실패:', error)
-      alert('사용자 승인에 실패했습니다.')
+      await appAlert('사용자 승인에 실패했습니다.')
     }
   }
 
   const handleRejectUser = async (userId: string, clinicId: string) => {
-    const reason = prompt('거절 사유를 입력하세요:')
+    const reason = await appPrompt('거절 사유를 입력하세요:')
     if (!reason) return
 
     try {
       const result = await dataService.rejectUser(userId, clinicId, reason)
       if (result.success) {
-        alert('사용자가 거절되었습니다.')
+        await appAlert('사용자가 거절되었습니다.')
         loadData()
       } else {
-        alert('거절 실패: ' + (result.error || '알 수 없는 오류'))
+        await appAlert('거절 실패: ' + (result.error || '알 수 없는 오류'))
       }
     } catch (error) {
       console.error('사용자 거절 실패:', error)
-      alert('사용자 거절에 실패했습니다.')
+      await appAlert('사용자 거절에 실패했습니다.')
     }
   }
 
@@ -320,21 +321,21 @@ export default function MasterAdminPage() {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active'
     const action = newStatus === 'suspended' ? '중지' : '활성화'
 
-    if (!confirm(`이 병원을 ${action}하시겠습니까?`)) {
+    if (!await appConfirm(`이 병원을 ${action}하시겠습니까?`)) {
       return
     }
 
     try {
       const result = await dataService.updateClinicStatus(clinicId, newStatus)
       if (result.success) {
-        alert(`병원이 ${action}되었습니다.`)
+        await appAlert(`병원이 ${action}되었습니다.`)
         loadData()
       } else {
-        alert(`${action} 실패: ` + (result.error || '알 수 없는 오류'))
+        await appAlert(`${action} 실패: ` + (result.error || '알 수 없는 오류'))
       }
     } catch (error) {
       console.error(`병원 상태 변경 실패:`, error)
-      alert(`병원 ${action}에 실패했습니다.`)
+      await appAlert(`병원 ${action}에 실패했습니다.`)
     }
   }
 
@@ -349,11 +350,11 @@ export default function MasterAdminPage() {
       if (result.data) {
         setClinicUsers(result.data)
       } else {
-        alert('사용자 목록 조회 실패: ' + (result.error || '알 수 없는 오류'))
+        await appAlert('사용자 목록 조회 실패: ' + (result.error || '알 수 없는 오류'))
       }
     } catch (error) {
       console.error('사용자 목록 조회 실패:', error)
-      alert('사용자 목록을 불러오는데 실패했습니다.')
+      await appAlert('사용자 목록을 불러오는데 실패했습니다.')
     } finally {
       setLoadingClinicUsers(false)
     }

@@ -36,8 +36,19 @@ export async function GET(
 
     const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
 
+    // 권한 확인: master_admin 또는 그룹 생성자
     const isAdmin = await checkMasterAdmin(userId)
-    if (!isAdmin) {
+    let isGroupCreator = false
+    if (!isAdmin && userId) {
+      const { data: group } = await supabase
+        .from('telegram_groups')
+        .select('created_by')
+        .eq('id', groupId)
+        .maybeSingle()
+      isGroupCreator = group?.created_by === userId
+    }
+
+    if (!isAdmin && !isGroupCreator) {
       return NextResponse.json({ data: null, error: '권한이 없습니다.' }, { status: 403 })
     }
 
@@ -77,10 +88,25 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { userId, targetUserId } = body
+    const { userId, targetUserId, joinedVia } = body
 
+    if (!userId) {
+      return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
+    }
+
+    // 권한 확인: master_admin 또는 그룹 생성자
     const isAdmin = await checkMasterAdmin(userId)
+    let isGroupCreator = false
     if (!isAdmin) {
+      const { data: group } = await supabase
+        .from('telegram_groups')
+        .select('created_by')
+        .eq('id', groupId)
+        .maybeSingle()
+      isGroupCreator = group?.created_by === userId
+    }
+
+    if (!isAdmin && !isGroupCreator) {
       return NextResponse.json({ data: null, error: '권한이 없습니다.' }, { status: 403 })
     }
 
@@ -93,7 +119,7 @@ export async function POST(
       .insert({
         telegram_group_id: groupId,
         user_id: targetUserId,
-        joined_via: 'admin',
+        joined_via: joinedVia || 'admin',
       })
       .select()
       .single()
@@ -131,8 +157,19 @@ export async function DELETE(
     const body = await request.json().catch(() => ({}))
     const adminUserId = body.userId || requestUserId
 
+    // 권한 확인: master_admin 또는 그룹 생성자
     const isAdmin = await checkMasterAdmin(adminUserId)
-    if (!isAdmin) {
+    let isGroupCreator = false
+    if (!isAdmin && adminUserId) {
+      const { data: group } = await supabase
+        .from('telegram_groups')
+        .select('created_by')
+        .eq('id', groupId)
+        .maybeSingle()
+      isGroupCreator = group?.created_by === adminUserId
+    }
+
+    if (!isAdmin && !isGroupCreator) {
       return NextResponse.json({ data: null, error: '권한이 없습니다.' }, { status: 403 })
     }
 

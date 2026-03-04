@@ -15,7 +15,8 @@ import {
   UserX,
   Heart,
   ShieldOff,
-  Undo2
+  Undo2,
+  Trash2
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
@@ -24,7 +25,8 @@ import type {
   RecallPatientFilters,
   RecallStats as RecallStatsType,
   PatientRecallStatus,
-  RecallExcludeReason
+  RecallExcludeReason,
+  UnmatchedPatientItem
 } from '@/types/recall'
 import { recallService } from '@/lib/recallService'
 import PatientFileUpload from './PatientFileUpload'
@@ -36,6 +38,7 @@ import StatusUpdateModal from './StatusUpdateModal'
 import ContactHistoryModal from './ContactHistoryModal'
 import RecallStats from './RecallStats'
 import RecallSettings from './RecallSettings'
+import UnmatchedPatientModal from './UnmatchedPatientModal'
 import Toast from '@/components/ui/Toast'
 
 type TabType = 'patients' | 'stats' | 'settings'
@@ -48,6 +51,12 @@ export default function RecallManagement() {
   const [showUpload, setShowUpload] = useState(false)
   const [showExcludeUpload, setShowExcludeUpload] = useState(false)
   const [excludeUploadReason, setExcludeUploadReason] = useState<RecallExcludeReason>('family')
+  const [showExcludeDropdown, setShowExcludeDropdown] = useState(false)
+
+  // 미매칭 모달 상태
+  const [unmatchedPatients, setUnmatchedPatients] = useState<UnmatchedPatientItem[]>([])
+  const [unmatchedModalOpen, setUnmatchedModalOpen] = useState(false)
+  const [unmatchedExcludeReason, setUnmatchedExcludeReason] = useState<RecallExcludeReason>('family')
 
   // 데이터 상태
   const [patients, setPatients] = useState<RecallPatient[]>([])
@@ -265,18 +274,30 @@ export default function RecallManagement() {
 
   // 리콜 제외/복원
   const handleExcludePatient = async (patient: RecallPatient, reason: RecallExcludeReason | null) => {
-    const result = await recallService.patients.updateExcludeReason(patient.id, reason)
-    if (result.success) {
-      if (reason) {
+    if (reason === null) {
+      // 복원 시 중복 체크 포함된 bulk 메서드 사용
+      const result = await recallService.patients.updateExcludeReasonBulk([patient.id], null)
+      if (result.success) {
+        if (result.duplicateCount && result.duplicateCount > 0) {
+          showToast(`${patient.patient_name}님은 이미 환자 목록에 있어 중복 제거되었습니다.`, 'info')
+        } else {
+          showToast(`${patient.patient_name}님이 리콜 대상으로 복원되었습니다.`, 'success')
+        }
+        loadPatients()
+        loadStats()
+      } else {
+        showToast(result.error || '처리에 실패했습니다.', 'error')
+      }
+    } else {
+      const result = await recallService.patients.updateExcludeReason(patient.id, reason)
+      if (result.success) {
         const label = reason === 'family' ? '지인' : '비우호적'
         showToast(`${patient.patient_name}님이 리콜 제외(${label})되었습니다.`, 'success')
+        loadPatients()
+        loadStats()
       } else {
-        showToast(`${patient.patient_name}님이 리콜 대상으로 복원되었습니다.`, 'success')
+        showToast(result.error || '처리에 실패했습니다.', 'error')
       }
-      loadPatients()
-      loadStats()
-    } else {
-      showToast(result.error || '처리에 실패했습니다.', 'error')
     }
   }
 
@@ -306,7 +327,10 @@ export default function RecallManagement() {
     }
     const result = await recallService.patients.updateExcludeReasonBulk(selectedPatients, null)
     if (result.success) {
-      showToast(`${selectedPatients.length}명이 리콜 대상으로 복원되었습니다.`, 'success')
+      const parts: string[] = []
+      if (result.restoredCount) parts.push(`${result.restoredCount}명 복원`)
+      if (result.duplicateCount) parts.push(`${result.duplicateCount}명 중복 제거`)
+      showToast(parts.length > 0 ? parts.join(', ') : `${selectedPatients.length}명이 리콜 대상으로 복원되었습니다.`, 'success')
       setSelectedPatients([])
       loadPatients()
       loadStats()
@@ -315,55 +339,57 @@ export default function RecallManagement() {
     }
   }
 
+  // 일괄 삭제
+  const handleBulkDelete = async () => {
+    if (selectedPatients.length === 0) {
+      showToast('환자를 선택해주세요.', 'warning')
+      return
+    }
+    const confirmed = window.confirm(`선택한 ${selectedPatients.length}명의 환자를 삭제하시겠습니까?\n삭제된 환자는 복구할 수 없습니다.`)
+    if (!confirmed) return
+
+    const result = await recallService.patients.deletePatientsBulk(selectedPatients)
+    if (result.success) {
+      showToast(`${selectedPatients.length}명의 환자가 삭제되었습니다.`, 'success')
+      setSelectedPatients([])
+      loadPatients()
+      loadStats()
+    } else {
+      showToast(result.error || '일괄 삭제에 실패했습니다.', 'error')
+    }
+  }
+
   // 제외 환자 파일 업로드
   const handleExcludeFileUpload = async (uploadedPatients: RecallPatientUploadData[], filename: string) => {
+    const hasAnyData = uploadedPatients.some(p => p.phone_number || p.patient_name || p.chart_number)
+
+    if (!hasAnyData) {
+      showToast('전화번호, 환자명, 차트번호 중 하나 이상의 데이터가 필요합니다.', 'error')
+      return
+    }
+
     setIsUploading(true)
 
     try {
-      // 항상 새 캠페인 생성
-      const campaignName = filename.replace(/\.[^/.]+$/, '') || `리콜 제외 ${new Date().toLocaleDateString('ko-KR')}`
-      const newCampaign = await handleCreateCampaign(campaignName)
-      if (!newCampaign) {
-        setIsUploading(false)
-        return
-      }
-      const campaignId = newCampaign.id
+      const result = await recallService.patients.excludeFromFile(uploadedPatients, excludeUploadReason)
 
-      // 환자 일괄 등록 (중복 제거)
-      const result = await recallService.patients.addPatientsBulk(
-        uploadedPatients,
-        campaignId,
-        filename
-      )
+      if (result.success) {
+        const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'
+        const parts: string[] = []
+        if (result.matchedCount > 0) parts.push(`기존 환자 ${result.matchedCount}명 제외`)
+        if (result.newCount > 0) parts.push(`미매칭 ${result.newCount}명 제외 환자로 추가`)
 
-      if (result.success && result.newCount > 0) {
-        // 등록된 환자들을 조회하여 ID 가져오기 (최근 등록된 환자들)
-        const patientsResult = await recallService.patients.getPatients({
-          campaign_id: campaignId,
-          page: 1,
-          pageSize: result.newCount,
-          showExcluded: false
-        })
-
-        if (patientsResult.success && patientsResult.data) {
-          // 방금 등록한 환자들 (pending 상태, exclude_reason이 null인)
-          const newPatientIds = patientsResult.data.data
-            .filter(p => !p.exclude_reason)
-            .slice(0, result.newCount)
-            .map(p => p.id)
-
-          if (newPatientIds.length > 0) {
-            await recallService.patients.updateExcludeReasonBulk(newPatientIds, excludeUploadReason)
-          }
+        if (parts.length > 0) {
+          showToast(`제외(${label}) 완료: ${parts.join(', ')}`, 'success')
+        } else {
+          showToast('매칭되는 환자가 없습니다. 데이터를 확인해주세요.', 'warning')
         }
 
-        const label = excludeUploadReason === 'family' ? '친인척/가족' : '비우호적'
-        showToast(`${result.newCount}명이 제외 환자(${label})로 등록되었습니다.`, 'success')
         setShowExcludeUpload(false)
         loadPatients()
         loadStats()
       } else {
-        showToast(result.error || '환자 등록에 실패했습니다.', 'error')
+        showToast(result.error || '제외 처리에 실패했습니다.', 'error')
       }
     } catch (error) {
       console.error('Exclude upload error:', error)
@@ -489,6 +515,15 @@ export default function RecallManagement() {
               </button>
 
               <button
+                onClick={() => setShowExcludeUpload(true)}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
+              >
+                <UserX className="w-4 h-4" />
+                <span className="hidden sm:inline">제외 환자 업로드</span>
+                <span className="sm:hidden">제외 업로드</span>
+              </button>
+
+              <button
                 onClick={() => setPatientAddModalOpen(true)}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
               >
@@ -520,9 +555,14 @@ export default function RecallManagement() {
                     )}
                   </div>
 
-                  {/* 일괄 제외 드롭다운 (항상 표시) */}
-                  <div className="relative group">
+                  {/* 일괄 제외 드롭다운 */}
+                  <div className="relative">
                     <button
+                      onClick={() => {
+                        if (selectedPatients.length > 0) {
+                          setShowExcludeDropdown(!showExcludeDropdown)
+                        }
+                      }}
                       className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
                         selectedPatients.length > 0
                           ? 'bg-rose-600 text-white hover:bg-rose-700 cursor-pointer'
@@ -533,29 +573,48 @@ export default function RecallManagement() {
                       제외 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
                       {selectedPatients.length > 0 && <ChevronDown className="w-3 h-3" />}
                     </button>
-                    {selectedPatients.length === 0 ? (
+                    {showExcludeDropdown && selectedPatients.length > 0 && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setShowExcludeDropdown(false)} />
+                        <div className="absolute left-0 top-full mt-1 z-30">
+                          <div className="w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                            <button
+                              onClick={() => { handleBulkExclude('family'); setShowExcludeDropdown(false) }}
+                              className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
+                            >
+                              <Heart className="w-4 h-4 text-amber-500" />
+                              지인
+                            </button>
+                            <button
+                              onClick={() => { handleBulkExclude('unfavorable'); setShowExcludeDropdown(false) }}
+                              className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
+                            >
+                              <ShieldOff className="w-4 h-4 text-rose-500" />
+                              비우호적
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* 일괄 삭제 */}
+                  <div className="relative group">
+                    <button
+                      onClick={selectedPatients.length > 0 ? handleBulkDelete : undefined}
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+                        selectedPatients.length > 0
+                          ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer'
+                          : 'bg-gray-200 text-gray-400 cursor-default'
+                      }`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      삭제 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
+                    </button>
+                    {selectedPatients.length === 0 && (
                       <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
                         환자를 선택한 후 클릭하세요
                         <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
-                      </div>
-                    ) : (
-                      <div className="absolute left-0 top-full pt-1 z-30 hidden group-hover:block">
-                        <div className="w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
-                          <button
-                            onClick={() => handleBulkExclude('family')}
-                            className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
-                          >
-                            <Heart className="w-4 h-4 text-amber-500" />
-                            지인
-                          </button>
-                          <button
-                            onClick={() => handleBulkExclude('unfavorable')}
-                            className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
-                          >
-                            <ShieldOff className="w-4 h-4 text-rose-500" />
-                            비우호적
-                          </button>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -604,19 +663,28 @@ export default function RecallManagement() {
                       </div>
                     )}
                   </div>
-                </>
-              )}
 
-              {/* 제외 환자 파일 업로드 버튼 */}
-              {filters.showExcluded && (
-                <button
-                  onClick={() => setShowExcludeUpload(true)}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span className="hidden sm:inline">제외 환자 업로드</span>
-                  <span className="sm:hidden">업로드</span>
-                </button>
+                  {/* 일괄 삭제 (제외 목록) */}
+                  <div className="relative group">
+                    <button
+                      onClick={selectedPatients.length > 0 ? handleBulkDelete : undefined}
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+                        selectedPatients.length > 0
+                          ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer'
+                          : 'bg-gray-200 text-gray-400 cursor-default'
+                      }`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      삭제 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
+                    </button>
+                    {selectedPatients.length === 0 && (
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                        환자를 선택한 후 클릭하세요
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
 
               <button
@@ -662,6 +730,7 @@ export default function RecallManagement() {
                   onUpload={handleExcludeFileUpload}
                   onCancel={() => setShowExcludeUpload(false)}
                   isLoading={isUploading}
+                  excludeMode
                 />
               </div>
             )}
@@ -742,6 +811,17 @@ export default function RecallManagement() {
         isOpen={!!historyModalPatient}
         onClose={() => setHistoryModalPatient(null)}
         patient={historyModalPatient}
+      />
+
+      <UnmatchedPatientModal
+        isOpen={unmatchedModalOpen}
+        onClose={() => setUnmatchedModalOpen(false)}
+        unmatchedPatients={unmatchedPatients}
+        excludeReason={unmatchedExcludeReason}
+        onComplete={() => {
+          loadPatients()
+          loadStats()
+        }}
       />
 
       {/* 토스트 */}

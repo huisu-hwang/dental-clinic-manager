@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import EnhancedTiptapEditor from '@/components/Protocol/EnhancedTiptapEditor'
 import { mediaService } from '@/lib/mediaService'
-import type { TelegramBoardPost } from '@/types/telegram'
+import type { TelegramBoardPost, TelegramBoardCategory } from '@/types/telegram'
+import { getCategoryColorClasses } from '@/types/telegram'
 
 interface FileAttachment {
   url: string
@@ -18,11 +19,13 @@ interface FileAttachment {
 interface TelegramBoardPostFormProps {
   mode: 'create' | 'edit'
   post?: TelegramBoardPost | null
+  categories?: TelegramBoardCategory[]
   onSubmit: (data: {
     title: string
     content: string
     notifyTelegram: boolean
     fileUrls: FileAttachment[]
+    categoryId?: string | null
   }) => Promise<void>
   onCancel: () => void
 }
@@ -67,12 +70,14 @@ const formatFileSize = (bytes?: number) => {
 export default function TelegramBoardPostForm({
   mode,
   post,
+  categories = [],
   onSubmit,
   onCancel,
 }: TelegramBoardPostFormProps) {
   const [title, setTitle] = useState(post?.title || '')
   const [content, setContent] = useState(post?.content || '')
   const [notifyTelegram, setNotifyTelegram] = useState(mode === 'create')
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(post?.category_id || '')
   const [submitting, setSubmitting] = useState(false)
   const [fileUrls, setFileUrls] = useState<FileAttachment[]>(
     post?.file_urls?.map(f => ({ url: f.url, name: f.name || '', type: f.type, size: f.size })) || []
@@ -135,7 +140,7 @@ export default function TelegramBoardPostForm({
 
     setSubmitting(true)
     try {
-      await onSubmit({ title: title.trim(), content, notifyTelegram, fileUrls })
+      await onSubmit({ title: title.trim(), content, notifyTelegram, fileUrls, categoryId: selectedCategoryId || null })
     } finally {
       setSubmitting(false)
     }
@@ -169,6 +174,32 @@ export default function TelegramBoardPostForm({
             required
           />
         </div>
+
+        {/* 카테고리 선택 */}
+        {categories.length > 0 && (
+          <div>
+            <label htmlFor="post-category" className="block text-sm font-medium text-gray-700 mb-1">
+              카테고리
+            </label>
+            <select
+              id="post-category"
+              value={selectedCategoryId}
+              onChange={e => setSelectedCategoryId(e.target.value)}
+              className="w-full h-9 px-3 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+            >
+              <option value="">자동 분류 (AI)</option>
+              {categories.filter(c => !c.is_default).map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+              {categories.filter(c => c.is_default).map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">
+              선택하지 않으면 AI가 자동으로 카테고리를 분류합니다.
+            </p>
+          </div>
+        )}
 
         {/* 본문 에디터 (EnhancedTiptapEditor) */}
         <div>

@@ -24,6 +24,7 @@ import type {
 } from '@/types/recall'
 import { recallService } from '@/lib/recallService'
 import PhoneDialSettingsInline from '@/components/Management/PhoneDialSettingsInline'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 // 서버 IP 확인 컴포넌트
 function ServerIpChecker() {
@@ -242,7 +243,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
 
   // 템플릿 삭제
   const handleDeleteTemplate = async (id: string) => {
-    if (!confirm('이 템플릿을 삭제하시겠습니까?')) return
+    if (!await appConfirm('이 템플릿을 삭제하시겠습니까?')) return
 
     const result = await recallService.smsTemplates.deleteTemplate(id)
     if (result.success) {

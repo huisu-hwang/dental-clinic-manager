@@ -486,6 +486,51 @@ export const userNotificationService = {
       reference_id: contractId,
     })
   },
+  // =====================================================
+  // 업무 관련 알림 헬퍼 함수
+  // =====================================================
+
+  /**
+   * 업무 할당 시 담당자에게 알림
+   */
+  async notifyTaskAssigned(
+    assigneeId: string,
+    assignerName: string,
+    taskTitle: string,
+    taskId: string
+  ): Promise<{ success: boolean; error: string | null }> {
+    const result = await this.createNotification({
+      user_id: assigneeId,
+      type: 'task_assigned',
+      title: '새 업무가 할당되었습니다',
+      content: `${assignerName}님이 "${taskTitle}" 업무를 할당했습니다`,
+      link: '/bulletin?tab=tasks',
+      reference_type: 'task',
+      reference_id: taskId,
+    })
+    return { success: !!result.data, error: result.error }
+  },
+
+  /**
+   * 업무 완료 시 할당자(원장)에게 알림
+   */
+  async notifyTaskCompleted(
+    assignerId: string,
+    assigneeName: string,
+    taskTitle: string,
+    taskId: string
+  ): Promise<{ success: boolean; error: string | null }> {
+    const result = await this.createNotification({
+      user_id: assignerId,
+      type: 'task_completed',
+      title: '업무가 완료되었습니다',
+      content: `${assigneeName}님이 "${taskTitle}" 업무를 완료했습니다`,
+      link: '/bulletin?tab=tasks',
+      reference_type: 'task',
+      reference_id: taskId,
+    })
+    return { success: !!result.data, error: result.error }
+  },
 }
 
 export default userNotificationService

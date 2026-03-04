@@ -45,6 +45,7 @@ export interface UserMenuSettings {
 // 기본 카테고리 목록
 export const DEFAULT_CATEGORIES: MenuCategorySetting[] = [
   { id: 'work', label: '업무 관리', icon: 'Briefcase', order: 0, visible: true },
+  { id: 'community', label: '커뮤니티', icon: 'MessageCircle', order: 1.5, visible: true },
   { id: 'documents', label: '문서 · 자료', icon: 'FolderOpen', order: 1, visible: true },
   { id: 'operations', label: '운영 관리', icon: 'Settings', order: 2, visible: true }
 ]

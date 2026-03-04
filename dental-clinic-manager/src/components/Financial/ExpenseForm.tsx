@@ -12,6 +12,7 @@ import {
 } from '@/types/financial'
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import { Loader2, Plus, Receipt, CreditCard, Building2 } from 'lucide-react'
+import { appAlert } from '@/components/ui/AppDialog'
 
 interface ExpenseFormProps {
   clinicId: string
@@ -113,7 +114,7 @@ export default function ExpenseForm({
   // 저장
   const handleSave = async () => {
     if (!formData.category_id || formData.amount <= 0) {
-      alert('카테고리와 금액을 입력해주세요.')
+      await appAlert('카테고리와 금액을 입력해주세요.')
       return
     }
 
@@ -134,11 +135,11 @@ export default function ExpenseForm({
       if (result.success) {
         onSave()
       } else {
-        alert(result.error || '저장에 실패했습니다.')
+        await appAlert(result.error || '저장에 실패했습니다.')
       }
     } catch (error) {
       console.error('Save error:', error)
-      alert('저장 중 오류가 발생했습니다.')
+      await appAlert('저장 중 오류가 발생했습니다.')
     } finally {
       setSaving(false)
     }

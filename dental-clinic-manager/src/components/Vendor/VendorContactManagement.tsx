@@ -24,25 +24,22 @@ import {
   FileSpreadsheet,
   CheckCircle2,
   AlertCircle,
-  Download
+  Download,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  FolderInput
 } from 'lucide-react'
 import type { VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData } from '@/types'
 import PhoneDialSettingsModal from './PhoneDialSettingsModal'
 import { dialPhone } from '@/utils/phoneDialer'
 import { usePhoneDialSettings } from '@/hooks/usePhoneDialSettings'
-
-// 섹션 헤더 컴포넌트 (일일보고서 스타일)
-const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
-  <div className="flex items-center space-x-2 sm:space-x-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
-    <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
-      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-    </div>
-    <h3 className="text-sm sm:text-base font-semibold text-slate-800">
-      <span className="text-blue-600 mr-1">{number}.</span>
-      {title}
-    </h3>
-  </div>
-)
+import {
+  DndContext, DragOverlay, closestCenter,
+  PointerSensor, useSensor, useSensors,
+  useDroppable, useDraggable,
+  type DragStartEvent, type DragEndEvent,
+} from '@dnd-kit/core'
 
 // 전화번호 패턴 감지 함수
 const isPhoneNumber = (value: string): boolean => {
@@ -93,6 +90,44 @@ const detectPhoneColumns = (data: string[][]): number[] => {
   return phoneColumnIndices
 }
 
+// 드래그 앤 드롭: 드롭 가능한 카테고리 컬럼
+function DroppableColumn({ id, categoryId, children }: { id: string; categoryId: string | null; children: React.ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id,
+    data: { type: 'category-column', categoryId }
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-w-[280px] max-w-[320px] flex-shrink-0 rounded-lg transition-all ${
+        isOver ? 'ring-2 ring-blue-400 bg-blue-50/50' : ''
+      }`}
+    >
+      {children}
+    </div>
+  )
+}
+
+// 드래그 앤 드롭: 드래그 가능한 명함 카드
+function DraggableContactCard({ id, contactId, isDragActive, children }: { id: string; contactId: string; isDragActive: boolean; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id,
+    data: { type: 'contact', contactId }
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ opacity: isDragActive ? 0.3 : 1 }}
+      {...listeners}
+      {...attributes}
+    >
+      {children}
+    </div>
+  )
+}
+
 export default function VendorContactManagement() {
   const { hasPermission } = usePermissions()
 
@@ -118,15 +153,28 @@ export default function VendorContactManagement() {
   const [showPhoneSettings, setShowPhoneSettings] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+  const [showBulkMoveModal, setShowBulkMoveModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [isBulkMoving, setIsBulkMoving] = useState(false)
+  const [bulkMoveTargetCategory, setBulkMoveTargetCategory] = useState<string>('')
 
   // 전화 다이얼 설정 (DB에서 자동 로드)
   const { settings: phoneDialSettings } = usePhoneDialSettings()
   const [dialingPhone, setDialingPhone] = useState<string | null>(null)
 
+  // 전화번호부 UI 상태
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const [expandedContactId, setExpandedContactId] = useState<string | null>(null)
+
   // 선택 상태
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set())
+
+  // 드래그 앤 드롭 상태
+  const [activeDragContactId, setActiveDragContactId] = useState<string | null>(null)
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
 
   // 폼 상태
   const [editingContact, setEditingContact] = useState<VendorContact | null>(null)
@@ -219,6 +267,49 @@ export default function VendorContactManagement() {
   const filteredContacts = useMemo(() => {
     return contacts
   }, [contacts])
+
+  // 카테고리별 그룹핑
+  const groupedContacts = useMemo(() => {
+    if (selectedCategory) return null
+
+    const groups: { category: VendorCategory | null; contacts: VendorContact[] }[] = []
+    const categoryMap = new Map<string, VendorContact[]>()
+    const uncategorized: VendorContact[] = []
+
+    filteredContacts.forEach(contact => {
+      if (contact.category_id && contact.category) {
+        const list = categoryMap.get(contact.category_id) || []
+        list.push(contact)
+        categoryMap.set(contact.category_id, list)
+      } else {
+        uncategorized.push(contact)
+      }
+    })
+
+    categories.forEach(cat => {
+      const list = categoryMap.get(cat.id)
+      if (list && list.length > 0) {
+        groups.push({ category: cat, contacts: list })
+      }
+    })
+    if (uncategorized.length > 0) {
+      groups.push({ category: null, contacts: uncategorized })
+    }
+    return groups
+  }, [filteredContacts, categories, selectedCategory])
+
+  // 그룹 접기/펼치기 토글
+  const toggleGroup = (groupId: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(groupId)) {
+        next.delete(groupId)
+      } else {
+        next.add(groupId)
+      }
+      return next
+    })
+  }
 
   // 연락처 저장
   const handleSaveContact = async () => {
@@ -331,16 +422,137 @@ export default function VendorContactManagement() {
     }
   }
 
+  // 선택 항목 일괄 카테고리 이동
+  const handleBulkMove = async () => {
+    if (selectedContacts.size === 0) return
+
+    setIsBulkMoving(true)
+    let successCount = 0
+    let failCount = 0
+
+    const categoryId = bulkMoveTargetCategory === '__uncategorized__' ? null : bulkMoveTargetCategory
+
+    for (const contactId of selectedContacts) {
+      try {
+        const result = await dataService.updateVendorContact(contactId, { category_id: categoryId || '' })
+        if (result.error) {
+          failCount++
+        } else {
+          successCount++
+        }
+      } catch {
+        failCount++
+      }
+    }
+
+    setIsBulkMoving(false)
+    setShowBulkMoveModal(false)
+    setBulkMoveTargetCategory('')
+    setSelectedContacts(new Set())
+
+    if (successCount > 0) {
+      const targetName = categoryId
+        ? categories.find(c => c.id === categoryId)?.name || '알 수 없음'
+        : '미분류'
+      showToast(`${successCount}개 업체가 "${targetName}"(으)로 이동되었습니다.${failCount > 0 ? ` (${failCount}개 실패)` : ''}`, 'success')
+      loadData()
+    } else {
+      showToast('카테고리 이동에 실패했습니다.', 'error')
+    }
+  }
+
+  // 드래그 앤 드롭 핸들러
+  const handleDndDragStart = (event: DragStartEvent) => {
+    const contactId = event.active.data.current?.contactId as string
+    if (contactId) {
+      setActiveDragContactId(contactId)
+    }
+  }
+
+  const handleDndDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveDragContactId(null)
+
+    if (!over) return
+
+    const draggedContactId = active.data.current?.contactId as string
+    const targetCategoryId = over.data.current?.categoryId as (string | null)
+
+    if (!draggedContactId || targetCategoryId === undefined) return
+
+    const draggedContact = contacts.find(c => c.id === draggedContactId)
+    if (!draggedContact) return
+
+    // 같은 카테고리로 드롭 시 무시
+    const currentCategoryId = draggedContact.category_id || null
+    if (currentCategoryId === targetCategoryId) return
+
+    // 선택된 카드 드래그 → 선택된 전체 이동, 미선택 → 1개만 이동
+    const contactsToMove = selectedContacts.has(draggedContactId)
+      ? Array.from(selectedContacts)
+      : [draggedContactId]
+
+    let successCount = 0
+    let failCount = 0
+
+    for (const contactId of contactsToMove) {
+      try {
+        const result = await dataService.updateVendorContact(contactId, { category_id: targetCategoryId || '' })
+        if (result.error) {
+          failCount++
+        } else {
+          successCount++
+        }
+      } catch {
+        failCount++
+      }
+    }
+
+    if (successCount > 0) {
+      const targetName = targetCategoryId
+        ? categories.find(c => c.id === targetCategoryId)?.name || '알 수 없음'
+        : '미분류'
+      showToast(`${successCount}개 업체가 "${targetName}"(으)로 이동되었습니다.${failCount > 0 ? ` (${failCount}개 실패)` : ''}`, 'success')
+      // 옵티미스틱 업데이트 - loadData() 대신 로컬 상태 즉시 반영 (깜빡임 방지)
+      const targetCategory = targetCategoryId
+        ? categories.find(c => c.id === targetCategoryId) || null
+        : null
+      setContacts(prev => prev.map(c =>
+        contactsToMove.includes(c.id)
+          ? { ...c, category_id: targetCategoryId ?? undefined, category: targetCategory ?? undefined }
+          : c
+      ))
+      setSelectedContacts(new Set())
+    } else if (failCount > 0) {
+      showToast('카테고리 이동에 실패했습니다.', 'error')
+    }
+  }
+
+  // 드래그 오버레이용 데이터
+  const activeDragContact = activeDragContactId ? contacts.find(c => c.id === activeDragContactId) : null
+  const dragItemCount = activeDragContactId && selectedContacts.has(activeDragContactId) ? selectedContacts.size : 1
+
   // 즐겨찾기 토글
   const handleToggleFavorite = async (contact: VendorContact) => {
+    const newFavorite = !contact.is_favorite
+    // 옵티미스틱 업데이트 - 즉시 UI 반영 (깜빡임 방지)
+    setContacts(prev => prev.map(c =>
+      c.id === contact.id ? { ...c, is_favorite: newFavorite } : c
+    ))
     try {
-      const result = await dataService.toggleVendorContactFavorite(contact.id, !contact.is_favorite)
+      const result = await dataService.toggleVendorContactFavorite(contact.id, newFavorite)
       if (result.error) {
+        // 실패 시 롤백
+        setContacts(prev => prev.map(c =>
+          c.id === contact.id ? { ...c, is_favorite: !newFavorite } : c
+        ))
         showToast(`즐겨찾기 변경 실패: ${result.error}`, 'error')
-        return
       }
-      loadData()
     } catch (error) {
+      // 실패 시 롤백
+      setContacts(prev => prev.map(c =>
+        c.id === contact.id ? { ...c, is_favorite: !newFavorite } : c
+      ))
       showToast('즐겨찾기 변경에 실패했습니다.', 'error')
     }
   }
@@ -855,6 +1067,200 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
     URL.revokeObjectURL(url)
   }
 
+  // 아코디언 명함 카드 렌더링
+  const renderContactCard = (contact: VendorContact, showCategoryBadge: boolean) => {
+    const isDialing = dialingPhone === contact.phone || dialingPhone === contact.phone2
+    const categoryColor = contact.category?.color || '#94a3b8'
+    const isExpanded = expandedContactId === contact.id
+
+    return (
+      <div
+        key={contact.id}
+        className={`relative bg-white rounded-lg border transition-all ${
+          isExpanded ? 'border-slate-300 shadow-md' : 'border-slate-200 hover:border-slate-300 shadow-sm'
+        } ${isDialing ? 'bg-blue-50/40' : ''} ${selectedContacts.has(contact.id) ? 'ring-2 ring-blue-200' : ''}`}
+      >
+        {/* 접힌 상태: 1줄 요약 */}
+        <div
+          className="flex items-center gap-2 cursor-pointer select-none"
+          onClick={() => setExpandedContactId(isExpanded ? null : contact.id)}
+        >
+          {/* 카테고리 색상 바 */}
+          <div
+            className="w-1 self-stretch rounded-l-lg flex-shrink-0"
+            style={{ backgroundColor: categoryColor }}
+          />
+
+          <div className="flex items-center gap-2 flex-1 min-w-0 py-2.5 pr-3">
+            {/* 체크박스 */}
+            {canDelete && (
+              <input
+                type="checkbox"
+                checked={selectedContacts.has(contact.id)}
+                onChange={() => toggleSelectContact(contact.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer flex-shrink-0"
+              />
+            )}
+
+            {/* 즐겨찾기 별 (바로 클릭 가능) */}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleToggleFavorite(contact) }}
+              className="flex-shrink-0 hover:scale-110 transition-transform"
+              title={contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기'}
+            >
+              <Star className={`w-4 h-4 ${contact.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200 hover:text-yellow-300'}`} />
+            </button>
+
+            {/* 업체명 */}
+            <span className="font-semibold text-sm text-slate-800 truncate">{contact.company_name}</span>
+
+            {/* 카테고리 뱃지 (필터뷰에서만) */}
+            {showCategoryBadge && contact.category && (
+              <span
+                className="px-1.5 py-0.5 text-[10px] rounded-full text-white leading-none flex-shrink-0"
+                style={{ backgroundColor: contact.category.color }}
+              >
+                {contact.category.name}
+              </span>
+            )}
+
+            {/* 오른쪽: 메모 미리보기 + 화살표 */}
+            <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+              {!isExpanded && contact.notes && (
+                <span className="text-xs text-slate-400 truncate max-w-[150px] hidden sm:inline">
+                  {contact.notes}
+                </span>
+              )}
+              {isExpanded ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 펼친 상태: 아코디언 */}
+        {isExpanded && (
+          <div className="border-t border-slate-100">
+            {/* 상세 정보 */}
+            <div className="px-4 py-3 space-y-2">
+              {/* 전화번호 1 */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
+                  <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{formatPhone(contact.phone)}</span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone) }}
+                  disabled={dialingPhone === contact.phone}
+                  className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1 flex-shrink-0"
+                >
+                  {dialingPhone === contact.phone ? (
+                    <div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                  ) : (
+                    <PhoneCall className="w-3 h-3" />
+                  )}
+                  전화걸기
+                </button>
+              </div>
+
+              {/* 전화번호 2 */}
+              {contact.phone2 && (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
+                    <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <span className="truncate">{formatPhone(contact.phone2)}</span>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone2!) }}
+                    disabled={dialingPhone === contact.phone2}
+                    className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1 flex-shrink-0"
+                  >
+                    {dialingPhone === contact.phone2 ? (
+                      <div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                    ) : (
+                      <PhoneCall className="w-3 h-3" />
+                    )}
+                    전화걸기
+                  </button>
+                </div>
+              )}
+
+              {/* 담당자 */}
+              {contact.contact_person && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span>{contact.contact_person}</span>
+                </div>
+              )}
+
+              {/* 이메일 */}
+              {contact.email && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{contact.email}</span>
+                </div>
+              )}
+
+              {/* 주소 */}
+              {contact.address && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{contact.address}</span>
+                </div>
+              )}
+
+              {/* 메모 */}
+              {contact.notes && (
+                <div className="flex items-start gap-2 text-sm text-slate-600">
+                  <FileText className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                  <span className="whitespace-pre-wrap break-words">{contact.notes}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 액션 버튼 */}
+            <div className="border-t border-slate-100 px-4 py-2.5 flex items-center gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleToggleFavorite(contact) }}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                  contact.is_favorite
+                    ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Star className={`w-3.5 h-3.5 ${contact.is_favorite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                {contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기'}
+              </button>
+
+              {canEdit && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); openEditContact(contact) }}
+                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-1.5"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  수정
+                </button>
+              )}
+
+              {canDelete && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(contact.id) }}
+                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-1.5 ml-auto"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  삭제
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   if (!canView) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center text-gray-500">
@@ -870,7 +1276,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      {/* 헤더 - 일일보고서 스타일 */}
+      {/* 헤더 */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-3">
@@ -878,64 +1284,86 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">업체 연락처 관리</h2>
+              <h2 className="text-base sm:text-lg font-bold text-white">업체 연락처</h2>
               <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Vendor Contacts</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
             {loading && (
               <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
                 로딩 중...
               </span>
             )}
             <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
-              {contacts.length}개 업체
+              {contacts.length}개
             </span>
+            {canCreate && (
+              <>
+                <button
+                  onClick={() => { resetContactForm(); setShowContactModal(true) }}
+                  className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                  title="새 업체 등록"
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                </button>
+                <button
+                  onClick={() => setShowCategoryModal(true)}
+                  className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                  title="카테고리 관리"
+                >
+                  <Settings className="w-4 h-4 text-white" />
+                </button>
+                {canImport && (
+                  <button
+                    onClick={() => { resetImportModal(); setShowImportModal(true) }}
+                    className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                    title="파일로 일괄 등록"
+                  >
+                    <Upload className="w-4 h-4 text-white" />
+                  </button>
+                )}
+              </>
+            )}
             <button
               onClick={() => setShowPhoneSettings(true)}
               className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
               title="전화 다이얼 설정"
             >
-              <Settings className="w-4 h-4 text-white" />
+              <PhoneCall className="w-4 h-4 text-white" />
             </button>
           </div>
         </div>
       </div>
 
       {/* 본문 */}
-      <div className="p-4 sm:p-6 space-y-6">
-        {/* 1. 검색 및 필터 섹션 */}
-        <div>
-          <SectionHeader number={1} title="검색 및 필터" icon={Search} />
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* 검색 */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="업체명, 담당자, 전화번호 검색..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
-            </div>
-
-            {/* 즐겨찾기 필터 */}
-            <button
-              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-              className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg border transition-colors text-sm ${
-                showFavoritesOnly
-                  ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
-                  : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-yellow-400' : ''}`} />
-              <span>즐겨찾기</span>
-            </button>
+      <div className="p-4 sm:p-6 space-y-4">
+        {/* 검색 바 + 즐겨찾기 토글 */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="업체명, 담당자, 전화번호 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            />
           </div>
+          <button
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg border transition-colors text-sm ${
+              showFavoritesOnly
+                ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
+                : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-yellow-400' : ''}`} />
+            <span>즐겨찾기</span>
+          </button>
+        </div>
 
-          {/* 카테고리 필터 버튼 */}
-          <div className="flex flex-wrap gap-2 mt-3">
+        {/* 카테고리 필터 칩 */}
+        <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedCategory('')}
               className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors border ${
@@ -967,51 +1395,9 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               </button>
             ))}
           </div>
-        </div>
 
-        {/* 2. 액션 버튼 섹션 */}
-        {canCreate && (
-          <div>
-            <SectionHeader number={2} title="업체 관리" icon={Settings} />
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  resetContactForm()
-                  setShowContactModal(true)
-                }}
-                className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>새 업체 등록</span>
-              </button>
-              <button
-                onClick={() => setShowCategoryModal(true)}
-                className="flex items-center space-x-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-                <span>카테고리 관리</span>
-              </button>
-              {canImport && (
-                <button
-                  onClick={() => {
-                    resetImportModal()
-                    setShowImportModal(true)
-                  }}
-                  className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  <span>파일로 일괄 등록</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* 3. 업체 목록 섹션 */}
-        <div>
-          <SectionHeader number={canCreate ? 3 : 2} title="업체 목록" icon={Building2} />
-
-          {/* 선택 툴바 */}
+        {/* 선택 툴바 */}
           {canDelete && filteredContacts.length > 0 && (
             <div className="flex items-center justify-between mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
               <div className="flex items-center gap-3">
@@ -1031,13 +1417,22 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 )}
               </div>
               {selectedContacts.size > 0 && (
-                <button
-                  onClick={() => setShowBulkDeleteConfirm(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  선택 삭제 ({selectedContacts.size})
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setBulkMoveTargetCategory(''); setShowBulkMoveModal(true) }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <FolderInput className="w-4 h-4" />
+                    카테고리 이동 ({selectedContacts.size})
+                  </button>
+                  <button
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    선택 삭제 ({selectedContacts.size})
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -1067,143 +1462,96 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 </button>
               )}
             </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredContacts.map(contact => (
-                <div
-                  key={contact.id}
-                  className={`p-4 rounded-lg border transition-colors ${
-                    selectedContacts.has(contact.id)
-                      ? 'bg-blue-50 border-blue-300'
-                      : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    {/* 체크박스 */}
-                    {canDelete && (
-                      <div className="flex-shrink-0 pt-1">
-                        <input
-                          type="checkbox"
-                          checked={selectedContacts.has(contact.id)}
-                          onChange={() => toggleSelectContact(contact.id)}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
-                        />
-                      </div>
-                    )}
-
-                    {/* 업체 정보 */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        {contact.is_favorite && (
-                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />
-                        )}
-                        <h4 className="font-semibold text-slate-800 truncate">
-                          {contact.company_name}
-                        </h4>
-                        {contact.category && (
+          ) : groupedContacts ? (
+            <DndContext
+              sensors={dndSensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDndDragStart}
+              onDragEnd={handleDndDragEnd}
+            >
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                {groupedContacts.map(group => {
+                  const groupId = group.category?.id || 'uncategorized'
+                  const isCollapsed = collapsedGroups.has(groupId)
+                  const categoryId = group.category?.id || null
+                  return (
+                    <DroppableColumn key={groupId} id={`drop-column-${groupId}`} categoryId={categoryId}>
+                      <div
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
+                        style={{ backgroundColor: `${group.category?.color || '#94a3b8'}15`, borderLeft: `3px solid ${group.category?.color || '#94a3b8'}` }}
+                      >
+                        <button
+                          onClick={() => toggleGroup(groupId)}
+                          className="flex items-center gap-2 flex-1 min-w-0"
+                        >
+                          {isCollapsed ? (
+                            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          )}
                           <span
-                            className="px-2 py-0.5 text-xs rounded-full text-white flex-shrink-0"
-                            style={{ backgroundColor: contact.category.color }}
+                            className="font-semibold text-sm truncate"
+                            style={{ color: group.category?.color || '#94a3b8' }}
                           >
-                            {contact.category.name}
+                            {group.category?.name || '미분류'}
                           </span>
+                          <span className="text-xs text-slate-400 flex-shrink-0">
+                            ({group.contacts.length})
+                          </span>
+                        </button>
+                        {canCreate && group.category && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              resetContactForm()
+                              setContactForm(prev => ({ ...prev, category_id: group.category!.id }))
+                              setShowContactModal(true)
+                            }}
+                            className="p-1 rounded hover:bg-white/60 transition-colors flex-shrink-0"
+                            title={`"${group.category.name}" 카테고리에 새 업체 등록`}
+                          >
+                            <Plus className="w-4 h-4" style={{ color: group.category.color }} />
+                          </button>
                         )}
                       </div>
-
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
-                        {contact.contact_person && (
-                          <span className="flex items-center gap-1">
-                            <User className="w-3.5 h-3.5 text-slate-400" />
-                            {contact.contact_person}
-                          </span>
-                        )}
-                        {contact.email && (
-                          <span className="flex items-center gap-1">
-                            <Mail className="w-3.5 h-3.5 text-slate-400" />
-                            {contact.email}
-                          </span>
-                        )}
-                        {contact.address && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                            {contact.address}
-                          </span>
-                        )}
-                      </div>
-
-                      {contact.notes && (
-                        <p className="mt-2 text-sm text-slate-500 flex items-start gap-1">
-                          <FileText className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-slate-400" />
-                          <span className="line-clamp-2">{contact.notes}</span>
-                        </p>
+                      {!isCollapsed && (
+                        <div className="flex flex-col gap-1.5 max-h-[calc(100vh-280px)] overflow-y-auto">
+                          {group.contacts.map(contact => (
+                            <DraggableContactCard
+                              key={contact.id}
+                              id={`contact-${contact.id}`}
+                              contactId={contact.id}
+                              isDragActive={activeDragContactId === contact.id || (!!activeDragContactId && selectedContacts.has(activeDragContactId) && selectedContacts.has(contact.id))}
+                            >
+                              {renderContactCard(contact, false)}
+                            </DraggableContactCard>
+                          ))}
+                        </div>
+                      )}
+                    </DroppableColumn>
+                  )
+                })}
+              </div>
+              <DragOverlay dropAnimation={null}>
+                {activeDragContact && (
+                  <div className="bg-white border-2 border-blue-400 rounded-lg shadow-xl p-3 w-[280px]">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-slate-800 truncate">{activeDragContact.company_name}</span>
+                      {dragItemCount > 1 && (
+                        <span className="px-2 py-0.5 bg-blue-500 text-white text-xs font-medium rounded-full flex-shrink-0">
+                          {dragItemCount}개 이동 중
+                        </span>
                       )}
                     </div>
-
-                    {/* 전화번호 및 액션 */}
-                    <div className="flex flex-col items-end gap-2">
-                      {/* 전화번호 */}
-                      <div className="flex flex-col items-end gap-1">
-                        <button
-                          onClick={() => makePhoneCall(contact.phone)}
-                          className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
-                        >
-                          <PhoneCall className="w-4 h-4" />
-                          <span>{formatPhone(contact.phone)}</span>
-                        </button>
-                        {contact.phone2 && (
-                          <button
-                            onClick={() => makePhoneCall(contact.phone2!)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm transition-colors"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                            <span>{formatPhone(contact.phone2)}</span>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* 액션 버튼 */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleToggleFavorite(contact)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            contact.is_favorite
-                              ? 'bg-yellow-50 hover:bg-yellow-100'
-                              : 'hover:bg-white'
-                          }`}
-                          title={contact.is_favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
-                        >
-                          <Star className={`w-4 h-4 ${
-                            contact.is_favorite
-                              ? 'text-yellow-400 fill-yellow-400'
-                              : 'text-slate-400'
-                          }`} />
-                        </button>
-                        {canEdit && (
-                          <button
-                            onClick={() => openEditContact(contact)}
-                            className="p-2 hover:bg-white rounded-lg transition-colors"
-                            title="수정"
-                          >
-                            <Edit2 className="w-4 h-4 text-slate-400" />
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            onClick={() => setShowDeleteConfirm(contact.id)}
-                            className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                            title="삭제"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-400" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
                   </div>
-                </div>
-              ))}
+                )}
+              </DragOverlay>
+            </DndContext>
+          ) : (
+            <div className="flex flex-col gap-1.5 max-w-[400px]">
+              {filteredContacts.map(contact => renderContactCard(contact, true))}
             </div>
           )}
-        </div>
       </div>
 
       {/* 연락처 추가/수정 모달 */}
@@ -2136,6 +2484,79 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   </>
                 ) : (
                   `${selectedContacts.size}개 삭제`
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 일괄 카테고리 이동 모달 */}
+      {showBulkMoveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <FolderInput className="w-5 h-5 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800">카테고리 이동</h3>
+            </div>
+            <p className="text-slate-600 mb-4">
+              선택한 <strong className="text-blue-600">{selectedContacts.size}개</strong> 업체를 이동할 카테고리를 선택하세요.
+            </p>
+            <div className="max-h-60 overflow-y-auto space-y-1 mb-6">
+              {/* 미분류 옵션 */}
+              <label className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                <input
+                  type="radio"
+                  name="bulkMoveCategory"
+                  value="__uncategorized__"
+                  checked={bulkMoveTargetCategory === '__uncategorized__'}
+                  onChange={(e) => setBulkMoveTargetCategory(e.target.value)}
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="w-3 h-3 rounded-full bg-slate-400 flex-shrink-0" />
+                <span className="text-sm text-slate-700">미분류</span>
+              </label>
+              {/* 카테고리 목록 */}
+              {categories.map(cat => (
+                <label key={cat.id} className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="bulkMoveCategory"
+                    value={cat.id}
+                    checked={bulkMoveTargetCategory === cat.id}
+                    onChange={(e) => setBulkMoveTargetCategory(e.target.value)}
+                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: cat.color }}
+                  />
+                  <span className="text-sm text-slate-700">{cat.name}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setShowBulkMoveModal(false); setBulkMoveTargetCategory('') }}
+                disabled={isBulkMoving}
+                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 disabled:opacity-50 rounded-lg transition-colors text-sm font-medium"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleBulkMove}
+                disabled={isBulkMoving || !bulkMoveTargetCategory}
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+              >
+                {isBulkMoving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    이동 중...
+                  </>
+                ) : (
+                  '이동'
                 )}
               </button>
             </div>

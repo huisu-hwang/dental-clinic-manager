@@ -26,6 +26,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { BuildingStorefrontIcon, PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { appAlert } from '@/components/ui/AppDialog'
 
 interface BranchManagementProps {
   currentUser: {
@@ -203,14 +204,14 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
     try {
       const result = await dataService.deleteBranch(deletingBranch.id)
       if (result.error) {
-        alert(`삭제 실패: ${result.error}`)
+        await appAlert(`삭제 실패: ${result.error}`)
       } else {
         setIsDeleteDialogOpen(false)
         setDeletingBranch(null)
         await loadBranches()
       }
     } catch (error) {
-      alert(`삭제 중 오류가 발생했습니다: ${error}`)
+      await appAlert(`삭제 중 오류가 발생했습니다: ${error}`)
     }
   }
 

@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Megaphone,
   Pin,
-  Calendar,
-  Eye,
   Plus,
   Search,
   AlertCircle,
@@ -20,6 +18,7 @@ import type { Announcement, AnnouncementCategory } from '@/types/bulletin'
 import { ANNOUNCEMENT_CATEGORY_LABELS } from '@/types/bulletin'
 import AnnouncementDetail from './AnnouncementDetail'
 import AnnouncementForm from './AnnouncementForm'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface AnnouncementListProps {
   canCreate?: boolean
@@ -87,14 +86,14 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return
+    if (!await appConfirm('정말 삭제하시겠습니까?')) return
 
     const { success, error: deleteError } = await announcementService.deleteAnnouncement(id)
     if (success) {
       fetchAnnouncements()
       setSelectedAnnouncement(null)
     } else {
-      alert(deleteError || '삭제에 실패했습니다.')
+      await appAlert(deleteError || '삭제에 실패했습니다.')
     }
   }
 
@@ -123,11 +122,15 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
+    const date = new Date(dateString)
+    const now = new Date()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    if (date.getFullYear() === now.getFullYear()) {
+      return `${month}.${day}`
+    }
+    const year = String(date.getFullYear()).slice(2)
+    return `${year}.${month}.${day}`
   }
 
   if (showForm) {
@@ -218,52 +221,73 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
       ) : (
         <>
           {/* 공지사항 목록 */}
-          <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-200">
-            {announcements.map((announcement) => (
-              <div
-                key={announcement.id}
-                onClick={() => handleAnnouncementClick(announcement)}
-                className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-              >
-                <div className="flex items-start gap-3">
+          <div className="bg-white rounded-lg border border-gray-200">
+            {/* 테이블 헤더 */}
+            <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
+              <div className="w-5 flex-shrink-0" />
+              <div className="hidden sm:block w-16 flex-shrink-0 text-center">분류</div>
+              <div className="hidden sm:block w-10 flex-shrink-0 text-center">중요</div>
+              <div className="flex-1 min-w-0 text-center">제목</div>
+              <div className="hidden sm:block w-20 text-center flex-shrink-0">작성자</div>
+              <div className="w-20 text-center flex-shrink-0">작성일</div>
+              <div className="hidden sm:block w-12 text-center flex-shrink-0">조회</div>
+            </div>
+            {/* 목록 */}
+            <div className="divide-y divide-gray-200">
+              {announcements.map((announcement) => (
+                <div
+                  key={announcement.id}
+                  onClick={() => handleAnnouncementClick(announcement)}
+                  className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
                   {/* 고정 아이콘 */}
-                  {announcement.is_pinned && (
-                    <Pin className="w-4 h-4 text-red-500 flex-shrink-0 mt-1" />
-                  )}
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${getCategoryBadgeColor(announcement.category)}`}>
-                        {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]}
+                  <div className="w-5 flex-shrink-0 flex items-center justify-center">
+                    {announcement.is_pinned && (
+                      <Pin className="w-3.5 h-3.5 text-red-500" />
+                    )}
+                  </div>
+                  {/* 분류 */}
+                  <div className="hidden sm:block w-16 flex-shrink-0 text-center">
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${getCategoryBadgeColor(announcement.category)}`}>
+                      {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]}
+                    </span>
+                  </div>
+                  {/* 중요 */}
+                  <div className="hidden sm:block w-10 flex-shrink-0 text-center">
+                    {announcement.is_important && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">
+                        중요
                       </span>
-                      {announcement.is_important && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                          중요
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-gray-900 font-medium truncate">{announcement.title}</h3>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                      <span>{announcement.author_name}</span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatDate(announcement.created_at)}
+                    )}
+                  </div>
+                  {/* 제목 */}
+                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                    {/* 모바일: 배지를 제목 앞에 인라인 표시 */}
+                    <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${getCategoryBadgeColor(announcement.category)}`}>
+                      {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]}
+                    </span>
+                    {announcement.is_important && (
+                      <span className="sm:hidden text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 flex-shrink-0">
+                        중요
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Eye className="w-3 h-3" />
-                        {announcement.view_count}
-                      </span>
-                      {announcement.start_date && (
-                        <span className="text-blue-600">
-                          일정: {announcement.start_date}
-                          {announcement.end_date && announcement.end_date !== announcement.start_date && ` ~ ${announcement.end_date}`}
-                        </span>
-                      )}
-                    </div>
+                    )}
+                    <span className="text-sm text-gray-900 truncate">{announcement.title}</span>
+                  </div>
+                  {/* 작성자 */}
+                  <div className="hidden sm:block w-20 text-center text-sm text-gray-500 flex-shrink-0">
+                    {announcement.author_name}
+                  </div>
+                  {/* 작성일 */}
+                  <div className="w-20 text-center text-sm text-gray-500 flex-shrink-0">
+                    {formatDate(announcement.created_at)}
+                  </div>
+                  {/* 조회수 */}
+                  <div className="hidden sm:block w-12 text-center text-sm text-gray-500 flex-shrink-0">
+                    {announcement.view_count}
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* 페이지네이션 */}

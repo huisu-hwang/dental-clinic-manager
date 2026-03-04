@@ -504,6 +504,65 @@ export const recallPatientService = {
     }
   },
 
+  // 제외 규칙 매칭 체크 (환자 추가 전 호출)
+  // recall_patients에서 이미 제외된 환자 + recall_exclude_rules 모두 확인
+  async checkExcludeRules(
+    patientName: string,
+    phoneNumber?: string,
+    chartNumber?: string
+  ): Promise<{ matched: boolean; rules: { id: string; exclude_reason: string; patient_name?: string; phone_number?: string; chart_number?: string }[] }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { matched: false, rules: [] }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { matched: false, rules: [] }
+
+    try {
+      const results: { id: string; exclude_reason: string; patient_name?: string; phone_number?: string; chart_number?: string }[] = []
+
+      // 1. recall_patients에서 이름이 일치하는 제외 환자 조회
+      const { data: excludedPatients } = await supabase
+        .from('recall_patients')
+        .select('id, patient_name, phone_number, chart_number, exclude_reason')
+        .eq('clinic_id', clinicId)
+        .not('exclude_reason', 'is', null)
+        .ilike('patient_name', patientName.trim())
+
+      if (excludedPatients && excludedPatients.length > 0) {
+        excludedPatients.forEach((p: { id: string; patient_name: string; phone_number: string; chart_number?: string; exclude_reason: string }) => {
+          results.push({
+            id: p.id,
+            exclude_reason: p.exclude_reason,
+            patient_name: p.patient_name,
+            phone_number: p.phone_number,
+            chart_number: p.chart_number
+          })
+        })
+      }
+
+      // 2. recall_exclude_rules에서 이름 기반 매칭 확인
+      const { data: rules } = await supabase
+        .from('recall_exclude_rules')
+        .select('id, patient_name, phone_number, chart_number, exclude_reason')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .ilike('patient_name', patientName.trim())
+
+      if (rules && rules.length > 0) {
+        rules.forEach((r: { id: string; exclude_reason: string; patient_name?: string; phone_number?: string; chart_number?: string }) => {
+          // 중복 방지 (같은 이름이 이미 recall_patients에서 찾아진 경우)
+          if (!results.some(existing => existing.patient_name === r.patient_name)) {
+            results.push(r)
+          }
+        })
+      }
+
+      return { matched: results.length > 0, rules: results }
+    } catch {
+      return { matched: false, rules: [] }
+    }
+  },
+
   // 환자 추가 (단일)
   async addPatient(formData: RecallPatientFormData, campaignId?: string): Promise<{ success: boolean; data?: RecallPatient; error?: string }> {
     const supabase = await ensureConnection()
@@ -515,6 +574,11 @@ export const recallPatientService = {
     try {
       // 전화번호 정규화 (숫자만)
       const normalizedPhone = normalizePhone(formData.phone_number)
+
+      // 빈 문자열을 null로 변환 (PostgreSQL date 컬럼에 '' 전달 방지)
+      const sanitized = Object.fromEntries(
+        Object.entries(formData).map(([k, v]) => [k, v === '' ? null : v])
+      )
 
       // 기존 환자 중복 확인 (정규화된 전화번호 + 대시 포함 형식 모두 검색)
       const phoneVariants = getPhoneVariants(normalizedPhone)
@@ -530,7 +594,7 @@ export const recallPatientService = {
         const { data: updatedData, error: updateError } = await supabase
           .from('recall_patients')
           .update({
-            ...formData,
+            ...sanitized,
             phone_number: normalizedPhone,
             campaign_id: campaignId || undefined
           })
@@ -550,7 +614,7 @@ export const recallPatientService = {
       const { data, error } = await supabase
         .from('recall_patients')
         .insert([{
-          ...formData,
+          ...sanitized,
           phone_number: normalizedPhone,
           clinic_id: clinicId,
           campaign_id: campaignId
@@ -624,11 +688,11 @@ export const recallPatientService = {
       }
       const phoneVariantsArray = Array.from(allPhoneVariants)
 
-      const existingPatients: { id: string; phone_number: string; exclude_reason: string | null }[] = []
+      const existingPatients: { id: string; phone_number: string; patient_name: string; exclude_reason: string | null }[] = []
       await runBatchesParallel(phoneVariantsArray, FETCH_BATCH_SIZE, async (batch) => {
         const { data, error: fetchError } = await supabase
           .from('recall_patients')
-          .select('id, phone_number, exclude_reason')
+          .select('id, phone_number, patient_name, exclude_reason')
           .eq('clinic_id', clinicId)
           .in('phone_number', batch)
 
@@ -637,36 +701,39 @@ export const recallPatientService = {
         return data
       })
 
-      // 3. 정규화된 phone_number → 기존 환자 Map 생성 (exclude_reason NULL인 레코드 우선)
+      // 3. (phone_number + patient_name) 복합키 기준 기존 환자 Map 생성
+      const compositeKey = (phone: string, name: string) => `${normalizePhone(phone)}::${name}`
       const existingMap = new Map<string, { id: string; exclude_reason: string | null }>()
       for (const ep of existingPatients) {
-        const normalized = normalizePhone(ep.phone_number)
-        const current = existingMap.get(normalized)
+        const key = compositeKey(ep.phone_number, ep.patient_name)
+        const current = existingMap.get(key)
         if (!current || (current.exclude_reason !== null && ep.exclude_reason === null)) {
-          existingMap.set(normalized, { id: ep.id, exclude_reason: ep.exclude_reason })
+          existingMap.set(key, { id: ep.id, exclude_reason: ep.exclude_reason })
         }
       }
 
-      // 4. 신규 vs 기존 분류 (동일 phone_number 중복 시 마지막 행 우선)
+      // 4. 신규 vs 기존 분류 (동일 phone_number+patient_name 중복 시 마지막 행 우선)
       const newPatientsMap = new Map<string, RecallPatientUploadData>()
       const updateTargetsMap = new Map<string, { id: string; data: RecallPatientUploadData }>()
 
       for (const p of validPatients) {
-        const existing = existingMap.get(p.phone_number)
+        const key = compositeKey(p.phone_number, p.patient_name)
+        const existing = existingMap.get(key)
         if (existing) {
           // 같은 id로 중복 upsert 시 "cannot affect row a second time" 방지
           updateTargetsMap.set(existing.id, { id: existing.id, data: p })
         } else {
-          // 신규 환자도 phone_number 기준 중복 제거 (마지막 행 우선)
-          newPatientsMap.set(p.phone_number, p)
+          // 신규 환자도 (phone_number + patient_name) 기준 중복 제거 (마지막 행 우선)
+          newPatientsMap.set(key, p)
         }
       }
 
       const newPatients = Array.from(newPatientsMap.values())
       const updateTargets = Array.from(updateTargetsMap.values())
 
-      // 5. 신규 환자 일괄 삽입 (병렬 배치, .select() 제거로 응답 크기 축소)
+      // 5. 신규 환자 일괄 삽입 (병렬 배치)
       let newCount = 0
+      const newPatientIds: string[] = []
       if (newPatients.length > 0) {
         const newRecords = newPatients.map(p => ({
           ...p,
@@ -676,14 +743,21 @@ export const recallPatientService = {
         }))
 
         const insertResults = await runBatchesParallel(newRecords, WRITE_BATCH_SIZE, async (batch) => {
-          const { error: insertError } = await supabase
+          const { data, error: insertError } = await supabase
             .from('recall_patients')
             .insert(batch)
+            .select('id')
 
           if (insertError) throw insertError
+          if (data) data.forEach((p: { id: string }) => newPatientIds.push(p.id))
           return batch.length
         })
         newCount = insertResults.reduce((sum, n) => sum + n, 0)
+      }
+
+      // 5-1. 신규 환자에 제외 규칙 자동 적용
+      if (newPatientIds.length > 0) {
+        await recallExcludeRulesService.applyRulesToPatients(newPatientIds)
       }
 
       // 6. 기존 환자 정보 배치 업데이트 (병렬)
@@ -739,9 +813,14 @@ export const recallPatientService = {
     if (!supabase) return { success: false, error: 'Database connection not available' }
 
     try {
+      // 빈 문자열을 null로 변환 (PostgreSQL date 컬럼에 '' 전달 방지)
+      const sanitized = Object.fromEntries(
+        Object.entries(updates).map(([k, v]) => [k, v === '' ? null : v])
+      )
+
       const { error } = await supabase
         .from('recall_patients')
-        .update(updates)
+        .update(sanitized)
         .eq('id', id)
 
       if (error) throw error
@@ -853,6 +932,357 @@ export const recallPatientService = {
   async updateExcludeReasonBulk(
     ids: string[],
     excludeReason: RecallExcludeReason | null
+  ): Promise<{ success: boolean; restoredCount?: number; duplicateCount?: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+
+    try {
+      // 복원(excludeReason === null)일 때 중복 체크
+      if (excludeReason === null && clinicId) {
+        // 복원 대상 환자 정보 조회
+        const { data: excludedPatients } = await supabase
+          .from('recall_patients')
+          .select('id, patient_name, phone_number, chart_number')
+          .in('id', ids)
+
+        if (excludedPatients && excludedPatients.length > 0) {
+          // 같은 클리닉의 제외되지 않은 환자 목록 조회
+          const { data: activePatients } = await supabase
+            .from('recall_patients')
+            .select('id, patient_name, phone_number, chart_number')
+            .eq('clinic_id', clinicId)
+            .is('exclude_reason', null)
+
+          const duplicateIds: string[] = []
+          const restoreIds: string[] = []
+
+          const normalize = (v: string | null | undefined) => (v || '').trim().toLowerCase()
+          const normalizePhone = (v: string | null | undefined) => (v || '').replace(/[^0-9]/g, '')
+
+          for (const ep of excludedPatients) {
+            let isDuplicate = false
+            if (activePatients) {
+              for (const ap of activePatients) {
+                let matchCount = 0
+                if (normalize(ep.patient_name) && normalize(ep.patient_name) === normalize(ap.patient_name)) matchCount++
+                if (normalizePhone(ep.phone_number) && normalizePhone(ep.phone_number) === normalizePhone(ap.phone_number)) matchCount++
+                if (normalize(ep.chart_number) && normalize(ep.chart_number) === normalize(ap.chart_number)) matchCount++
+                if (matchCount >= 2) {
+                  isDuplicate = true
+                  break
+                }
+              }
+            }
+            if (isDuplicate) {
+              duplicateIds.push(ep.id)
+            } else {
+              restoreIds.push(ep.id)
+            }
+          }
+
+          // 중복 환자는 삭제 (이미 활성 목록에 존재)
+          if (duplicateIds.length > 0) {
+            await supabase
+              .from('recall_patients')
+              .delete()
+              .in('id', duplicateIds)
+          }
+
+          // 나머지는 정상 복원
+          if (restoreIds.length > 0) {
+            const { error } = await supabase
+              .from('recall_patients')
+              .update({ exclude_reason: null })
+              .in('id', restoreIds)
+            if (error) throw error
+          }
+
+          return { success: true, restoredCount: restoreIds.length, duplicateCount: duplicateIds.length }
+        }
+      }
+
+      // 제외 처리 또는 일반 업데이트
+      const { error } = await supabase
+        .from('recall_patients')
+        .update({ exclude_reason: excludeReason })
+        .in('id', ids)
+
+      if (error) throw error
+      return { success: true, restoredCount: ids.length, duplicateCount: 0 }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 제외 환자 파일 업로드 전용 (기존 환자 제외 + 미등록 환자는 수동 매칭용 반환)
+  // 업로드 데이터의 전화번호, 환자명, 차트번호를 모두 활용하여 매칭
+  async excludeFromFile(
+    uploadData: RecallPatientUploadData[],
+    excludeReason: RecallExcludeReason
+  ): Promise<{ success: boolean; matchedCount: number; newCount: number; savedRulesCount?: number; unmatchedPatients?: RecallPatientUploadData[]; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, matchedCount: 0, newCount: 0, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, matchedCount: 0, newCount: 0, error: 'Clinic ID not found' }
+
+    const BATCH_SIZE = 500
+
+    // 전화번호 정규화 (숫자만 추출)
+    const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '')
+
+    // 전화번호의 다양한 형식 생성 (DB 형식 불일치 대비)
+    const phoneVariants = (phone: string): string[] => {
+      const digits = normalizePhone(phone)
+      if (!digits) return []
+      const variants = new Set<string>()
+      variants.add(digits) // 01012345678
+      variants.add(phone)  // 원본
+      // 하이픈 형식 생성
+      if (digits.length === 11) {
+        variants.add(`${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`)
+      } else if (digits.length === 10) {
+        variants.add(`${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`)
+      }
+      return Array.from(variants)
+    }
+
+    try {
+      // 0. 업로드 데이터 중복 제거 (전화번호+이름+차트번호 기준)
+      const deduplicateKey = (p: RecallPatientUploadData) => {
+        const phone = p.phone_number ? normalizePhone(p.phone_number) : ''
+        const name = p.patient_name ? String(p.patient_name).trim() : ''
+        const chart = p.chart_number ? String(p.chart_number).trim() : ''
+        return `${phone}|${name}|${chart}`
+      }
+      const seenKeys = new Set<string>()
+      const dedupedUploadData = uploadData.filter(p => {
+        const key = deduplicateKey(p)
+        if (key === '||') return false // 모든 필드 비어있으면 제외
+        if (seenKeys.has(key)) return false
+        seenKeys.add(key)
+        return true
+      })
+
+      // 1. 업로드 데이터에서 검색 키 수집
+      const rawPhones = [...new Set(dedupedUploadData.filter(p => p.phone_number).map(p => p.phone_number))]
+      // 전화번호의 모든 형식 변형을 포함하여 검색
+      const phoneSearchSet = new Set<string>()
+      rawPhones.forEach(p => phoneVariants(p).forEach(v => phoneSearchSet.add(v)))
+      const phoneSearchList = Array.from(phoneSearchSet)
+
+      const names = [...new Set(dedupedUploadData.filter(p => p.patient_name).map(p => p.patient_name))]
+      const chartNumbers = [...new Set(dedupedUploadData.filter(p => p.chart_number).map(p => p.chart_number!))]
+
+      // 2. 기존 환자 조회 (전화번호 OR 이름 OR 차트번호로 후보 조회)
+      const existingPatients: { id: string; phone_number: string; patient_name: string; chart_number?: string }[] = []
+
+      // 전화번호로 조회 (다양한 형식 포함)
+      for (let i = 0; i < phoneSearchList.length; i += BATCH_SIZE) {
+        const batch = phoneSearchList.slice(i, i + BATCH_SIZE)
+        const { data } = await supabase
+          .from('recall_patients')
+          .select('id, phone_number, patient_name, chart_number')
+          .eq('clinic_id', clinicId)
+          .in('phone_number', batch)
+        if (data) existingPatients.push(...data)
+      }
+
+      // 이름으로 조회 (전화번호로 이미 찾은 환자 제외)
+      const foundIds = new Set(existingPatients.map(p => p.id))
+      for (let i = 0; i < names.length; i += BATCH_SIZE) {
+        const batch = names.slice(i, i + BATCH_SIZE)
+        const { data } = await supabase
+          .from('recall_patients')
+          .select('id, phone_number, patient_name, chart_number')
+          .eq('clinic_id', clinicId)
+          .in('patient_name', batch)
+        if (data) {
+          for (const p of data) {
+            if (!foundIds.has(p.id)) {
+              existingPatients.push(p)
+              foundIds.add(p.id)
+            }
+          }
+        }
+      }
+
+      // 차트번호로 조회 (이미 찾은 환자 제외)
+      for (let i = 0; i < chartNumbers.length; i += BATCH_SIZE) {
+        const batch = chartNumbers.slice(i, i + BATCH_SIZE)
+        const { data } = await supabase
+          .from('recall_patients')
+          .select('id, phone_number, patient_name, chart_number')
+          .eq('clinic_id', clinicId)
+          .in('chart_number', batch)
+        if (data) {
+          for (const p of data) {
+            if (!foundIds.has(p.id)) {
+              existingPatients.push(p)
+              foundIds.add(p.id)
+            }
+          }
+        }
+      }
+
+      // 3. 업로드 데이터별 매칭 (업로드에 포함된 모든 필드가 일치해야 매칭)
+      const matchedIds = new Set<string>()
+      const unmatchedPatientsData: RecallPatientUploadData[] = []
+
+      for (const uploaded of dedupedUploadData) {
+        if (!uploaded.phone_number && !uploaded.patient_name && !uploaded.chart_number) continue
+
+        // 업로드 데이터에 포함된 모든 필드가 일치하는 기존 환자만 매칭
+        // 전화번호는 숫자만 추출, 이름은 trim, 차트번호는 String 변환하여 비교
+        const candidates = existingPatients.filter(p => {
+          if (uploaded.phone_number && normalizePhone(p.phone_number) !== normalizePhone(uploaded.phone_number)) return false
+          if (uploaded.patient_name && p.patient_name.trim() !== String(uploaded.patient_name).trim()) return false
+          if (uploaded.chart_number && String(p.chart_number || '').trim() !== String(uploaded.chart_number).trim()) return false
+          return true
+        })
+
+        if (candidates.length > 0) {
+          candidates.forEach(p => matchedIds.add(p.id))
+        } else {
+          unmatchedPatientsData.push(uploaded)
+        }
+      }
+
+      // 4. 매칭된 환자 일괄 제외 처리
+      let matchedCount = 0
+      const matchedIdArray = Array.from(matchedIds)
+      for (let i = 0; i < matchedIdArray.length; i += BATCH_SIZE) {
+        const batch = matchedIdArray.slice(i, i + BATCH_SIZE)
+        const { data, error } = await supabase
+          .from('recall_patients')
+          .update({ exclude_reason: excludeReason })
+          .eq('clinic_id', clinicId)
+          .in('id', batch)
+          .select('id')
+
+        if (error) throw error
+        matchedCount += data?.length || 0
+      }
+
+      // 5. 미매칭 환자도 recall_patients에 제외 환자로 추가 + 규칙 저장
+      let newCount = 0
+      let savedRulesCount = 0
+      if (unmatchedPatientsData.length > 0) {
+        // 5-1. recall_patients에 제외 환자로 삽입
+        const newPatients = unmatchedPatientsData.map(p => ({
+          patient_name: p.patient_name || '미확인',
+          phone_number: p.phone_number || '',
+          chart_number: p.chart_number || null,
+          birth_date: p.birth_date || null,
+          gender: p.gender || null,
+          last_visit_date: p.last_visit_date || null,
+          treatment_type: p.treatment_type || null,
+          notes: p.notes || null,
+          clinic_id: clinicId,
+          campaign_id: null,
+          exclude_reason: excludeReason,
+          status: 'pending' as const,
+        }))
+
+        for (let i = 0; i < newPatients.length; i += BATCH_SIZE) {
+          const batch = newPatients.slice(i, i + BATCH_SIZE)
+          const { data } = await supabase
+            .from('recall_patients')
+            .insert(batch)
+            .select('id')
+          newCount += data?.length || 0
+        }
+
+        // 5-2. 규칙으로도 저장 (추후 자동 매칭용)
+        const rulesResult = await recallExcludeRulesService.saveRules(unmatchedPatientsData, excludeReason)
+        if (rulesResult.success) {
+          savedRulesCount = rulesResult.savedCount
+        }
+      }
+
+      return {
+        success: true,
+        matchedCount,
+        newCount,
+        savedRulesCount,
+        unmatchedPatients: undefined
+      }
+    } catch (error) {
+      return { success: false, matchedCount: 0, newCount: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 환자 검색 (수동 매칭용 - 제외 환자 포함 전체 검색)
+  async searchPatientsForMatching(
+    searchQuery: string,
+    limit: number = 10
+  ): Promise<{ success: boolean; data?: RecallPatient[]; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, error: 'Clinic ID not found' }
+
+    try {
+      const query = searchQuery.trim()
+      if (!query) return { success: true, data: [] }
+
+      // 개별 필드별 검색 후 합치기 (or 필터 파싱 이슈 방지)
+      const results = new Map<string, RecallPatient>()
+
+      // 이름 검색
+      const { data: nameData } = await supabase
+        .from('recall_patients')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .ilike('patient_name', `%${query}%`)
+        .limit(limit)
+      if (nameData) nameData.forEach((p: RecallPatient) => results.set(p.id, p))
+
+      // 전화번호 검색 (다양한 포맷 대응: 숫자만, 하이픈 포함)
+      const digits = query.replace(/[^0-9]/g, '')
+      const phoneQueries = new Set<string>()
+      phoneQueries.add(query)
+      if (digits.length >= 3) {
+        phoneQueries.add(digits)
+        if (digits.length === 11) {
+          phoneQueries.add(`${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`)
+        } else if (digits.length === 10) {
+          phoneQueries.add(`${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`)
+        }
+      }
+      for (const pq of phoneQueries) {
+        const { data: phoneData } = await supabase
+          .from('recall_patients')
+          .select('*')
+          .eq('clinic_id', clinicId)
+          .ilike('phone_number', `%${pq}%`)
+          .limit(limit)
+        if (phoneData) phoneData.forEach((p: RecallPatient) => results.set(p.id, p))
+      }
+
+      // 차트번호 검색
+      const { data: chartData } = await supabase
+        .from('recall_patients')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .ilike('chart_number', `%${query}%`)
+        .limit(limit)
+      if (chartData) chartData.forEach((p: RecallPatient) => results.set(p.id, p))
+
+      return { success: true, data: Array.from(results.values()).slice(0, limit) }
+    } catch (error) {
+      console.error('searchPatientsForMatching error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 수동 매칭 제외 처리 (기존 환자의 exclude_reason 업데이트, null로 제외 해제 가능)
+  async manualMatchExclude(
+    existingPatientId: string,
+    excludeReason: RecallExcludeReason | null
   ): Promise<{ success: boolean; error?: string }> {
     const supabase = await ensureConnection()
     if (!supabase) return { success: false, error: 'Database connection not available' }
@@ -861,12 +1291,46 @@ export const recallPatientService = {
       const { error } = await supabase
         .from('recall_patients')
         .update({ exclude_reason: excludeReason })
-        .in('id', ids)
+        .eq('id', existingPatientId)
 
       if (error) throw error
       return { success: true }
     } catch (error) {
       return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 전화번호 기준 일괄 리콜 제외 설정 (엑셀 업로드용)
+  async excludeByPhoneNumbers(
+    phoneNumbers: string[],
+    excludeReason: RecallExcludeReason
+  ): Promise<{ success: boolean; count: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, count: 0, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, count: 0, error: 'Clinic ID not found' }
+
+    const BATCH_SIZE = 500
+    let totalCount = 0
+
+    try {
+      for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
+        const batch = phoneNumbers.slice(i, i + BATCH_SIZE)
+        const { data, error } = await supabase
+          .from('recall_patients')
+          .update({ exclude_reason: excludeReason })
+          .eq('clinic_id', clinicId)
+          .in('phone_number', batch)
+          .select('id')
+
+        if (error) throw error
+        totalCount += data?.length || 0
+      }
+
+      return { success: true, count: totalCount }
+    } catch (error) {
+      return { success: false, count: 0, error: extractErrorMessage(error) }
     }
   },
 
@@ -896,6 +1360,43 @@ export const recallPatientService = {
       }
 
       return { success: true }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 환자 일괄 삭제
+  async deletePatientsBulk(ids: string[]): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    try {
+      // 삭제 대상 환자들의 캠페인 ID 조회
+      const { data: patients } = await supabase
+        .from('recall_patients')
+        .select('campaign_id')
+        .in('id', ids)
+
+      const { error } = await supabase
+        .from('recall_patients')
+        .delete()
+        .in('id', ids)
+
+      if (error) throw error
+
+      // 관련 캠페인 통계 업데이트
+      if (patients) {
+        const seen = new Set<string>()
+        for (const p of patients) {
+          const cid = p.campaign_id as string | null
+          if (cid && !seen.has(cid)) {
+            seen.add(cid)
+            await recallCampaignService.updateCampaignStats(cid)
+          }
+        }
+      }
+
+      return { success: true, deletedCount: ids.length }
     } catch (error) {
       return { success: false, error: extractErrorMessage(error) }
     }
@@ -1381,12 +1882,154 @@ export const aligoSettingsService = {
 // Combined Export
 // ========================================
 
+// ========================================
+// Recall Exclude Rules Service
+// ========================================
+export const recallExcludeRulesService = {
+  // 미매칭 제외 환자를 규칙으로 저장
+  async saveRules(
+    unmatchedPatients: RecallPatientUploadData[],
+    excludeReason: RecallExcludeReason
+  ): Promise<{ success: boolean; savedCount: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, savedCount: 0, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, savedCount: 0, error: 'Clinic ID not found' }
+
+    try {
+      const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '')
+
+      // 입력 데이터 중복 제거
+      const seenKeys = new Set<string>()
+      const rules = unmatchedPatients
+        .filter(p => p.patient_name || p.phone_number || p.chart_number)
+        .filter(p => {
+          const key = `${p.phone_number ? normalizePhone(p.phone_number) : ''}|${(p.patient_name || '').trim()}|${(p.chart_number || '').trim()}`
+          if (seenKeys.has(key)) return false
+          seenKeys.add(key)
+          return true
+        })
+        .map(p => ({
+          clinic_id: clinicId,
+          patient_name: p.patient_name ? String(p.patient_name).trim() : null,
+          phone_number: p.phone_number ? normalizePhone(p.phone_number) : null,
+          chart_number: p.chart_number ? String(p.chart_number).trim() : null,
+          exclude_reason: excludeReason
+        }))
+
+      if (rules.length === 0) return { success: true, savedCount: 0 }
+
+      // 기존 활성 규칙 조회하여 중복 제거
+      const { data: existingRules } = await supabase
+        .from('recall_exclude_rules')
+        .select('patient_name, phone_number, chart_number')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+
+      const existingKeys = new Set(
+        (existingRules || []).map((r: { phone_number: string | null; patient_name: string | null; chart_number: string | null }) =>
+          `${(r.phone_number || '').replace(/[^0-9]/g, '')}|${(r.patient_name || '').trim()}|${(r.chart_number || '').trim()}`
+        )
+      )
+
+      const newRules = rules.filter(r => {
+        const key = `${(r.phone_number || '')}|${(r.patient_name || '')}|${(r.chart_number || '')}`
+        return !existingKeys.has(key)
+      })
+
+      if (newRules.length === 0) return { success: true, savedCount: 0 }
+
+      const { error } = await supabase
+        .from('recall_exclude_rules')
+        .insert(newRules)
+
+      if (error) throw error
+      return { success: true, savedCount: newRules.length }
+    } catch (error) {
+      return { success: false, savedCount: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 새로 등록된 환자들에 대해 제외 규칙 적용
+  async applyRulesToPatients(
+    patientIds: string[]
+  ): Promise<{ success: boolean; appliedCount: number; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, appliedCount: 0, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, appliedCount: 0, error: 'Clinic ID not found' }
+
+    try {
+      // 1. 활성 규칙 조회
+      const { data: rules, error: rulesError } = await supabase
+        .from('recall_exclude_rules')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+
+      if (rulesError) throw rulesError
+      if (!rules || rules.length === 0) return { success: true, appliedCount: 0 }
+
+      // 2. 새로 등록된 환자 정보 조회
+      const BATCH_SIZE = 500
+      const newPatients: { id: string; patient_name: string; phone_number: string; chart_number?: string }[] = []
+      for (let i = 0; i < patientIds.length; i += BATCH_SIZE) {
+        const batch = patientIds.slice(i, i + BATCH_SIZE)
+        const { data } = await supabase
+          .from('recall_patients')
+          .select('id, patient_name, phone_number, chart_number')
+          .in('id', batch)
+        if (data) newPatients.push(...data)
+      }
+
+      // 3. 규칙별 매칭 (규칙의 모든 필드가 환자와 일치해야 적용)
+      // 전화번호 정규화 (숫자만 추출하여 형식 차이 무시)
+      const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '')
+
+      let appliedCount = 0
+      for (const rule of rules) {
+        for (const patient of newPatients) {
+          let allMatch = true
+          if (rule.patient_name && patient.patient_name.trim() !== String(rule.patient_name).trim()) allMatch = false
+          if (rule.phone_number && normalizePhone(patient.phone_number) !== normalizePhone(rule.phone_number)) allMatch = false
+          if (rule.chart_number && String(patient.chart_number || '').trim() !== String(rule.chart_number).trim()) allMatch = false
+
+          if (allMatch) {
+            // 환자 제외 처리
+            const { error: updateError } = await supabase
+              .from('recall_patients')
+              .update({ exclude_reason: rule.exclude_reason })
+              .eq('id', patient.id)
+
+            if (!updateError) {
+              // 규칙 매칭 완료 처리
+              await supabase
+                .from('recall_exclude_rules')
+                .update({ is_active: false, matched_at: new Date().toISOString(), matched_patient_id: patient.id })
+                .eq('id', rule.id)
+
+              appliedCount++
+            }
+          }
+        }
+      }
+
+      return { success: true, appliedCount }
+    } catch (error) {
+      return { success: false, appliedCount: 0, error: extractErrorMessage(error) }
+    }
+  }
+}
+
 export const recallService = {
   campaigns: recallCampaignService,
   patients: recallPatientService,
   contactLogs: recallContactLogService,
   smsTemplates: recallSmsTemplateService,
-  aligoSettings: aligoSettingsService
+  aligoSettings: aligoSettingsService,
+  excludeRules: recallExcludeRulesService
 }
 
 export default recallService

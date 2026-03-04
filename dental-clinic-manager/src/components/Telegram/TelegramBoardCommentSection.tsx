@@ -5,6 +5,7 @@ import { MessageCircle, Loader2, Pencil, Trash2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { telegramBoardCommentService } from '@/lib/telegramService'
 import type { TelegramBoardComment } from '@/types/telegram'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface TelegramBoardCommentSectionProps {
   postId: string
@@ -61,7 +62,7 @@ export default function TelegramBoardCommentSection({
   }
 
   const handleDelete = async (commentId: string) => {
-    if (!confirm('댓글을 삭제하시겠습니까?')) return
+    if (!(await appConfirm('댓글을 삭제하시겠습니까?'))) return
     const { error } = await telegramBoardCommentService.deleteComment(postId, commentId)
     if (!error) {
       setComments(prev => prev.filter(c => c.id !== commentId))

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { Settings, Package, Plus, Edit3, Trash2, AlertTriangle, Tag, X } from 'lucide-react'
 import type { GiftInventory, GiftLog, GiftRowData, GiftCategory } from '@/types'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface InventoryManagementProps {
   giftInventory: GiftInventory[]
@@ -129,14 +130,14 @@ export default function InventoryManagement({
     return giftCategories.find(c => c.id === categoryId) || null
   }
 
-  const handleAddGift = () => {
+  const handleAddGift = async () => {
     if (!newGiftName.trim()) {
-      alert('선물 이름을 입력해주세요.')
+      await appAlert('선물 이름을 입력해주세요.')
       return
     }
 
     if (giftInventory.find(g => g.name === newGiftName.trim())) {
-      alert('이미 존재하는 선물 종류입니다.')
+      await appAlert('이미 존재하는 선물 종류입니다.')
       return
     }
 
@@ -146,10 +147,10 @@ export default function InventoryManagement({
     setNewGiftCategoryId(undefined)
   }
 
-  const handleStockUpdate = (id: number) => {
+  const handleStockUpdate = async (id: number) => {
     const quantity = stockUpdates[id]
     if (!quantity || quantity === 0) {
-      alert('변경할 재고 수량을 입력해주세요. (양수: 추가, 음수: 차감)')
+      await appAlert('변경할 재고 수량을 입력해주세요. (양수: 추가, 음수: 차감)')
       return
     }
 
@@ -157,14 +158,14 @@ export default function InventoryManagement({
     setStockUpdates(prev => ({ ...prev, [id]: 0 }))
   }
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
-      alert('카테고리 이름을 입력해주세요.')
+      await appAlert('카테고리 이름을 입력해주세요.')
       return
     }
 
     if (giftCategories.find(c => c.name === newCategoryName.trim())) {
-      alert('이미 존재하는 카테고리입니다.')
+      await appAlert('이미 존재하는 카테고리입니다.')
       return
     }
 
@@ -181,11 +182,11 @@ export default function InventoryManagement({
     setEditingCategoryColor(category.color)
   }
 
-  const handleSaveEditCategory = () => {
+  const handleSaveEditCategory = async () => {
     if (!editingCategoryId) return
 
     if (!editingCategoryName.trim()) {
-      alert('카테고리 이름을 입력해주세요.')
+      await appAlert('카테고리 이름을 입력해주세요.')
       return
     }
 
@@ -348,8 +349,8 @@ export default function InventoryManagement({
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm(`'${category.name}' 카테고리를 삭제하시겠습니까? 이 카테고리를 사용하는 선물들의 카테고리는 초기화됩니다.`)) {
+                          onClick={async () => {
+                            if (await appConfirm(`'${category.name}' 카테고리를 삭제하시겠습니까? 이 카테고리를 사용하는 선물들의 카테고리는 초기화됩니다.`)) {
                               onDeleteCategory(category.id)
                             }
                           }}
@@ -492,8 +493,8 @@ export default function InventoryManagement({
                       재고 수정
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm(`'${item.name}' 선물을 삭제하시겠습니까? 관련 재고 기록도 모두 사라집니다.`)) {
+                      onClick={async () => {
+                        if (await appConfirm(`'${item.name}' 선물을 삭제하시겠습니까? 관련 재고 기록도 모두 사라집니다.`)) {
                           onDeleteGiftItem(item.id, item.name)
                         }
                       }}
