@@ -433,30 +433,31 @@ export const telegramMemberService = {
   },
 
   /**
-   * 멤버 추가
+   * 멤버 추가 (API 경유 - RLS 우회)
    */
   async addMember(
     groupId: string,
-    userId: string,
+    targetUserId: string,
     joinedVia: 'invite_link' | 'admin' = 'admin'
   ): Promise<{ data: TelegramGroupMember | null; error: string | null }> {
     try {
-      const supabase = await ensureConnection()
-      if (!supabase) throw new Error('Database connection failed')
+      const currentUserId = getCurrentUserId()
+      if (!currentUserId) throw new Error('User not found')
 
-      const { data, error } = await (supabase as any)
-        .from('telegram_group_members')
-        .insert({
-          telegram_group_id: groupId,
-          user_id: userId,
-          joined_via: joinedVia,
-        })
-        .select()
-        .single()
+      const res = await fetch(`/api/telegram/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUserId,
+          targetUserId,
+          joinedVia,
+        }),
+      })
 
-      if (error) throw error
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '멤버 추가에 실패했습니다.')
 
-      return { data, error: null }
+      return { data: result.data, error: null }
     } catch (error) {
       console.error('[telegramMemberService.addMember] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
