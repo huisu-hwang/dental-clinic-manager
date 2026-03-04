@@ -307,6 +307,7 @@ export default function TelegramBoardPostList({
         title: data.title,
         content: data.content,
         file_urls: data.fileUrls,
+        category_id: data.categoryId,
       })
       if (error) {
         await appAlert(error)

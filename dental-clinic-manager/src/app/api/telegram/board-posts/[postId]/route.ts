@@ -29,7 +29,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { userId, title, content, fileUrls } = body
+    const { userId, title, content, fileUrls, categoryId } = body
 
     if (!userId) {
       return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
@@ -62,6 +62,7 @@ export async function PATCH(
     if (title !== undefined) updateData.title = title
     if (content !== undefined) updateData.content = content
     if (fileUrls !== undefined) updateData.file_urls = fileUrls
+    if (categoryId !== undefined) updateData.category_id = categoryId
 
     const { data: updated, error: updateError } = await supabase
       .from('telegram_board_posts')

@@ -930,6 +930,7 @@ export const telegramBoardPostService = {
           title: dto.title,
           content: dto.content,
           fileUrls: dto.file_urls,
+          categoryId: dto.category_id,
         }),
       })
 

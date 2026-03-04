@@ -227,6 +227,7 @@ export interface UpdateTelegramBoardPostDto {
   title?: string
   content?: string
   file_urls?: { url: string; name: string; type?: string; size?: number }[]
+  category_id?: string | null
 }
 
 // 댓글 작성 DTO
