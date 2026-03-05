@@ -44,7 +44,7 @@ function DroppableColumn({ id, categoryId, children }: { id: string; categoryId:
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[160px] max-w-[200px] flex-shrink-0 rounded-lg transition-all ${
+      className={`w-[180px] flex-shrink-0 rounded-lg transition-all ${
         isOver ? 'ring-2 ring-blue-400 bg-blue-50/50' : ''
       }`}
     >
