@@ -258,6 +258,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
       console.log('[LoginForm] Calling onLoginSuccess...')
       // localStorage 저장이 완료될 때까지 약간 대기
       await new Promise(resolve => setTimeout(resolve, 100))
+      setLoading(false)
       onLoginSuccess()
     } catch (error) {
       console.error('[LoginForm] Unexpected error during login:', error)
