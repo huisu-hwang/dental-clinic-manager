@@ -36,9 +36,10 @@ export async function GET(
 
     const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
 
-    // 권한 확인: master_admin 또는 그룹 생성자
+    // 권한 확인: master_admin, 그룹 생성자, 또는 그룹 멤버
     const isAdmin = await checkMasterAdmin(userId)
     let isGroupCreator = false
+    let isGroupMember = false
     if (!isAdmin && userId) {
       const { data: group } = await supabase
         .from('telegram_groups')
@@ -46,9 +47,19 @@ export async function GET(
         .eq('id', groupId)
         .maybeSingle()
       isGroupCreator = group?.created_by === userId
+
+      if (!isGroupCreator) {
+        const { data: membership } = await supabase
+          .from('telegram_group_members')
+          .select('id')
+          .eq('telegram_group_id', groupId)
+          .eq('user_id', userId)
+          .maybeSingle()
+        isGroupMember = !!membership
+      }
     }
 
-    if (!isAdmin && !isGroupCreator) {
+    if (!isAdmin && !isGroupCreator && !isGroupMember) {
       return NextResponse.json({ data: null, error: '권한이 없습니다.' }, { status: 403 })
     }
 
