@@ -458,6 +458,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated = !!user
 
+  // 로그인 시 pending 이메일 초대 자동 처리
+  useEffect(() => {
+    if (user?.id && typeof window !== 'undefined') {
+      fetch('/api/telegram/auto-join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      }).catch(() => {}) // 실패해도 무시
+    }
+  }, [user?.id])
+
   // iOS Safari 호환: 사용자 활동 시 세션 쿠키 갱신
   // 사용자가 사이트와 상호작용하면 쿠키 수명이 연장됨
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Send, Loader2, Inbox, Plus } from 'lucide-react'
+import { Send, Loader2, Inbox, Plus, Globe, Lock } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
@@ -12,12 +12,14 @@ import TelegramBoardApplicationForm from '@/components/Telegram/TelegramBoardApp
 import TelegramMyApplications from '@/components/Telegram/TelegramMyApplications'
 import { getTabRoute } from '@/utils/tabRouting'
 import type { TelegramGroup, ApplyTelegramGroupDto } from '@/types/telegram'
+import { TELEGRAM_VISIBILITY_LABELS } from '@/types/telegram'
 
 export default function TelegramBoardListPage() {
   const router = useRouter()
   const { user, logout, loading: authLoading } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [groups, setGroups] = useState<TelegramGroup[]>([])
+  const [publicGroups, setPublicGroups] = useState<TelegramGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [showApplyForm, setShowApplyForm] = useState(false)
   const [applying, setApplying] = useState(false)
@@ -31,8 +33,15 @@ export default function TelegramBoardListPage() {
     }
     if (user) {
       const fetchGroups = async () => {
-        const { data } = await telegramGroupService.getMyGroups()
-        setGroups(data || [])
+        const [myRes, publicRes] = await Promise.all([
+          telegramGroupService.getMyGroups(),
+          telegramGroupService.getPublicGroups(),
+        ])
+        const myGroups = myRes.data || []
+        setGroups(myGroups)
+        // 공개 그룹 중 내가 멤버가 아닌 것만 표시
+        const myGroupIds = new Set(myGroups.map(g => g.id))
+        setPublicGroups((publicRes.data || []).filter(g => !myGroupIds.has(g.id)))
         setLoading(false)
       }
       fetchGroups()
@@ -192,6 +201,42 @@ export default function TelegramBoardListPage() {
                       </div>
                     </button>
                   ))}
+                </div>
+              )}
+
+              {/* 공개 소모임 */}
+              {publicGroups.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5 mb-3">
+                    <Globe className="w-4 h-4 text-green-500" />
+                    공개 소모임
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {publicGroups.map(group => (
+                      <button
+                        key={group.id}
+                        onClick={() => router.push(`/community/telegram/${group.board_slug}`)}
+                        className="text-left p-4 rounded-xl border border-gray-200 hover:border-green-300 hover:shadow-sm transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${group.color_bg} group-hover:scale-105 transition-transform`}>
+                            <Send className={`w-5 h-5 ${group.color_text}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <h3 className="text-sm font-semibold text-gray-800 truncate">{group.board_title}</h3>
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 flex-shrink-0">
+                                {TELEGRAM_VISIBILITY_LABELS[group.visibility]}
+                              </span>
+                            </div>
+                            {group.board_description && (
+                              <p className="text-xs text-gray-400 truncate mt-0.5">{group.board_description}</p>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
