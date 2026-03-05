@@ -94,7 +94,12 @@ export async function POST(
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const body = await request.json()
+    let body: any = {}
+    try {
+      body = await request.json()
+    } catch {
+      // body가 없는 경우 무시
+    }
     const userId = body.userId || request.headers.get('x-user-id')
 
     if (!userId) {

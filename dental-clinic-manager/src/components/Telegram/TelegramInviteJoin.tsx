@@ -62,6 +62,8 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
     try {
       const res = await fetch(`/api/telegram/join/${inviteCode}`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id }),
       })
       const data = await res.json()
       if (!res.ok) {
