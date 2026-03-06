@@ -151,7 +151,9 @@ const SKIP_DIRS = new Set([
   '.Trash', 'Trash', '.Trashes',
   'Music', 'Photos', 'Movies', 'Pictures',
   'Applications', '.docker', '.vagrant',
-  'Library', // Mac Library 전체는 getNpkiPaths에서 NPKI 경로만 직접 지정
+  // 'Library' 전체를 스킵하지 않음: ~/Library/Preferences/NPKI가 Mac 표준 경로이므로
+  // 대신 Library 하위의 큰 디렉토리만 스킵
+  'Containers', 'Application Support', 'Developer',
 ])
 
 /**
@@ -377,6 +379,7 @@ export async function GET(request: NextRequest) {
       success: true,
       certs: uniqueResults,
       scannedPaths: scannedPaths.filter(p => fs.existsSync(p)),
+      attemptedPaths: scannedPaths,
       platform: os.platform(),
       extended,
     })

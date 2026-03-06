@@ -158,8 +158,8 @@ export default function CreditCardSalesPanel({
       const certs: ScannedCert[] = data.success ? (data.certs || []) : []
 
       if (certs.length === 0) {
-        // 기본 검색에서 못 찾으면 자동으로 확장 검색 시도
-        if (!options?.extended && !options?.path) {
+        // 기본 검색에서 못 찾으면 자동으로 확장 검색 시도 (명시적 매체 선택이나 경로 지정이 아닐 때만)
+        if (!options?.extended && !options?.path && !options?.media) {
           setScanMode('extended')
           const extRes = await fetch('/api/codef/scan-certs?certType=all&extended=true')
           const extData = await extRes.json()

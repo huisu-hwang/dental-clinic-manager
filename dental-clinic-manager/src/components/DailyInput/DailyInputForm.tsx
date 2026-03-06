@@ -11,6 +11,8 @@ import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
 import { saveDailyReport } from '@/app/actions/dailyReport'
 import { createClient } from '@/lib/supabase/client'
+import { RECALL_STATUS_LABELS, RECALL_STATUS_COLORS } from '@/types/recall'
+import type { RecallPatient } from '@/types/recall'
 import type { ConsultRowData, GiftRowData, HappyCallRowData, CashRegisterRowData, GiftInventory, GiftLog, GiftCategory } from '@/types'
 import type { UserProfile } from '@/contexts/AuthContext'
 import { appAlert } from '@/components/ui/AppDialog'
@@ -60,6 +62,10 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   const [recallCount, setRecallCount] = useState(0)
   const [recallBookingCount, setRecallBookingCount] = useState(0)
   const [recallBookingNames, setRecallBookingNames] = useState('')
+  const [recallSynced, setRecallSynced] = useState(false)
+  const [recallSyncing, setRecallSyncing] = useState(false)
+  const [recallPatients, setRecallPatients] = useState<RecallPatient[]>([])
+  const [showRecallLog, setShowRecallLog] = useState(false)
   const [specialNotes, setSpecialNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
@@ -81,7 +87,30 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     setRecallCount(0)
     setRecallBookingCount(0)
     setRecallBookingNames('')
+    setRecallSynced(false)
+    setRecallPatients([])
+    setShowRecallLog(false)
     setSpecialNotes('')
+  }, [])
+
+  // 리콜 데이터 자동 동기화
+  const syncRecallData = useCallback(async (date: string) => {
+    setRecallSyncing(true)
+    try {
+      const { recallService } = await import('@/lib/recallService')
+      const result = await recallService.patients.getDailyRecallActivity(date)
+      if (result.success && result.data) {
+        setRecallCount(result.data.recallCount)
+        setRecallBookingCount(result.data.recallBookingCount)
+        setRecallBookingNames(result.data.recallBookingNames)
+        setRecallPatients(result.data.patients)
+        setRecallSynced(true)
+      }
+    } catch (error) {
+      console.error('[DailyInputForm] Failed to sync recall data:', error)
+    } finally {
+      setRecallSyncing(false)
+    }
   }, [])
 
   // 날짜별 데이터 로드
@@ -118,26 +147,13 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         const { dailyReport, consultLogs, giftLogs, happyCallLogs } = result.data
 
         if (dailyReport) {
-          const normalizedRecallCount =
-            typeof dailyReport.recall_count === 'number'
-              ? dailyReport.recall_count
-              : Number(dailyReport.recall_count ?? 0)
-          const normalizedRecallBookingCount =
-            typeof dailyReport.recall_booking_count === 'number'
-              ? dailyReport.recall_booking_count
-              : Number(dailyReport.recall_booking_count ?? 0)
-
-          setRecallCount(Number.isNaN(normalizedRecallCount) ? 0 : normalizedRecallCount)
-          setRecallBookingCount(
-            Number.isNaN(normalizedRecallBookingCount) ? 0 : normalizedRecallBookingCount
-          )
-          setRecallBookingNames(
-            typeof dailyReport.recall_booking_names === 'string' ? dailyReport.recall_booking_names : ''
-          )
           setSpecialNotes(
             typeof dailyReport.special_notes === 'string' ? dailyReport.special_notes : ''
           )
         }
+
+        // 리콜 데이터는 recall_patients 테이블에서 자동 동기화
+        syncRecallData(date)
 
         if (consultLogs.length > 0) {
           setConsultRows(consultLogs.map(log => ({
@@ -213,6 +229,8 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
       } else {
         resetFormData()
         setHasExistingData(false)
+        // 보고서가 없어도 리콜 데이터는 자동 동기화
+        syncRecallData(date)
       }
     } catch (error) {
       console.error('[DailyInputForm] 데이터 로드 실패:', error)
@@ -223,7 +241,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
       console.log('[DailyInputForm] Setting loading to false')
       setLoading(false)
     }
-  }, [currentUser?.clinic_id, resetFormData])
+  }, [currentUser?.clinic_id, resetFormData, syncRecallData])
 
   const handleDateChange = (newDate: string) => {
     if (newDate !== reportDate) {
@@ -782,44 +800,124 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           />
         </div>
 
-        {/* 리콜 결과 */}
+        {/* 리콜 결과 (자동 동기화) */}
         <div>
-          <SectionHeader number={3} title="환자 리콜 결과" icon={Phone} />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">리콜 건수</label>
-              <input
-                type="number"
-                min="0"
-                value={recallCount}
-                onChange={(e) => setRecallCount(parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                readOnly={isReadOnly}
-              />
+          <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
+                <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </div>
+              <h3 className="text-sm sm:text-base font-semibold text-slate-800">
+                <span className="text-blue-600 mr-1">3.</span>
+                환자 리콜 결과
+              </h3>
+              {recallSynced && (
+                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+                  자동 연동
+                </span>
+              )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">예약 수</label>
-              <input
-                type="number"
-                min="0"
-                value={recallBookingCount}
-                onChange={(e) => setRecallBookingCount(parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                readOnly={isReadOnly}
-              />
+            <button
+              type="button"
+              onClick={() => syncRecallData(reportDate)}
+              disabled={recallSyncing}
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group disabled:opacity-50"
+              title="리콜 데이터 새로고침"
+            >
+              <RefreshCw className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${recallSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">새로고침</span>
+            </button>
+          </div>
+
+          {/* 요약 카드 */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="bg-slate-50 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-slate-800">{recallCount}</div>
+              <div className="text-xs text-slate-500 mt-0.5">리콜 처리 건수</div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">예약 성공 환자</label>
-              <input
-                type="text"
-                value={recallBookingNames}
-                onChange={(e) => setRecallBookingNames(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="예: 홍길동, 김철수"
-                readOnly={isReadOnly}
-              />
+            <div className="bg-green-50 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-green-600">{recallBookingCount}</div>
+              <div className="text-xs text-slate-500 mt-0.5">예약 성공</div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {recallCount > 0 ? Math.round((recallBookingCount / recallCount) * 100) : 0}%
+              </div>
+              <div className="text-xs text-slate-500 mt-0.5">예약 성공률</div>
             </div>
           </div>
+
+          {/* 예약 성공 환자 */}
+          {recallBookingNames && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="text-xs font-medium text-green-700 mb-1">예약 성공 환자</div>
+              <div className="text-sm text-green-800">{recallBookingNames}</div>
+            </div>
+          )}
+
+          {/* 일별 리콜 상세 기록 토글 */}
+          {recallPatients.length > 0 && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowRecallLog(!showRecallLog)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <span>리콜 상세 기록 ({recallPatients.length}건)</span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${showRecallLog ? 'rotate-180' : ''}`}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showRecallLog && (
+                <div className="mt-2 border border-slate-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">환자명</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">전화번호</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">상태</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 hidden sm:table-cell">처리시간</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {recallPatients.map((patient, idx) => (
+                        <tr key={patient.id || idx} className="hover:bg-slate-50">
+                          <td className="px-3 py-2 font-medium text-slate-800">{patient.patient_name}</td>
+                          <td className="px-3 py-2 text-slate-600">{patient.phone_number}</td>
+                          <td className="px-3 py-2">
+                            <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${RECALL_STATUS_COLORS[patient.status] || 'bg-gray-100 text-gray-700'}`}>
+                              {RECALL_STATUS_LABELS[patient.status] || patient.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-slate-500 text-xs hidden sm:table-cell">
+                            {patient.recall_datetime
+                              ? new Date(patient.recall_datetime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                              : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {recallPatients.length === 0 && !recallSyncing && (
+            <div className="text-center py-4 text-sm text-slate-400">
+              이 날짜에 처리된 리콜 기록이 없습니다.
+            </div>
+          )}
+
+          {recallSyncing && (
+            <div className="text-center py-4 text-sm text-slate-400">
+              리콜 데이터 불러오는 중...
+            </div>
+          )}
         </div>
 
         {/* 선물/리뷰 관리 */}
