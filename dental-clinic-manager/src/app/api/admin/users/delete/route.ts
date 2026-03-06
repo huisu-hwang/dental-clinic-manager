@@ -64,11 +64,19 @@ export async function DELETE(request: Request) {
       .single()
 
     if (userFetchError) {
-      console.error('[Admin API - Delete User] Error fetching user:', userFetchError)
-      return NextResponse.json(
-        { success: false, error: 'User not found: ' + userFetchError.message },
-        { status: 404 }
-      )
+      console.log('[Admin API - Delete User] User not found in public.users:', userFetchError.message)
+
+      // public.users에 없더라도 auth.users에 남아있을 수 있으므로 삭제 시도
+      // (병원 삭제 시 public.users는 삭제되었지만 auth.users가 남은 경우)
+      const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId)
+      if (authDeleteError) {
+        console.log('[Admin API - Delete User] Auth user also not found or already deleted:', authDeleteError.message)
+        // auth.users에도 없으면 이미 완전히 삭제된 상태 → 성공으로 처리
+      } else {
+        console.log('[Admin API - Delete User] Orphaned auth user deleted successfully')
+      }
+
+      return NextResponse.json({ success: true, alreadyDeleted: true })
     }
 
     console.log('[Admin API - Delete User] User info:', userToDelete)
@@ -77,67 +85,76 @@ export async function DELETE(request: Request) {
     if (userToDelete.role === 'owner' && userToDelete.clinic_id) {
       console.log('[Admin API - Delete User] User is owner, deleting clinic and all members')
 
-      // 2-1. 해당 clinic에 속한 모든 사용자 조회
-      const { data: clinicUsers, error: clinicUsersError } = await supabase
-        .from('users')
+      // 2-1. 해당 clinic 존재 여부 확인
+      const { data: clinicExists } = await supabase
+        .from('clinics')
         .select('id')
-        .eq('clinic_id', userToDelete.clinic_id)
+        .eq('id', userToDelete.clinic_id)
+        .single()
 
-      if (clinicUsersError) {
-        console.error('[Admin API - Delete User] Error fetching clinic users:', clinicUsersError)
-        return NextResponse.json(
-          { success: false, error: 'Failed to fetch clinic users: ' + clinicUsersError.message },
-          { status: 500 }
-        )
-      }
+      if (!clinicExists) {
+        console.log('[Admin API - Delete User] Clinic already deleted, proceeding with user-only deletion')
+        // 병원이 이미 삭제된 경우 → 사용자만 삭제하는 경로로 진행
+      } else {
+        // 2-2. 해당 clinic에 속한 모든 사용자 조회
+        const { data: clinicUsers, error: clinicUsersError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('clinic_id', userToDelete.clinic_id)
 
-      console.log('[Admin API - Delete User] Found', clinicUsers?.length || 0, 'users in clinic')
+        if (clinicUsersError) {
+          console.error('[Admin API - Delete User] Error fetching clinic users:', clinicUsersError)
+          return NextResponse.json(
+            { success: false, error: 'Failed to fetch clinic users: ' + clinicUsersError.message },
+            { status: 500 }
+          )
+        }
 
-      // 2-2. 모든 clinic 사용자의 auth.users 삭제
-      if (clinicUsers && clinicUsers.length > 0) {
-        for (const clinicUser of clinicUsers) {
-          console.log('[Admin API - Delete User] Deleting auth user:', clinicUser.id)
-          const { error: authDeleteError } = await supabase.auth.admin.deleteUser(clinicUser.id)
-          if (authDeleteError) {
-            console.error('[Admin API - Delete User] Error deleting auth user:', clinicUser.id, authDeleteError)
-            // 에러가 발생해도 계속 진행 (일부 auth user가 이미 삭제되었을 수 있음)
+        console.log('[Admin API - Delete User] Found', clinicUsers?.length || 0, 'users in clinic')
+
+        // 2-3. 모든 clinic 사용자의 auth.users 삭제
+        if (clinicUsers && clinicUsers.length > 0) {
+          for (const clinicUser of clinicUsers) {
+            console.log('[Admin API - Delete User] Deleting auth user:', clinicUser.id)
+            const { error: authDeleteError } = await supabase.auth.admin.deleteUser(clinicUser.id)
+            if (authDeleteError) {
+              console.error('[Admin API - Delete User] Error deleting auth user:', clinicUser.id, authDeleteError)
+              // 에러가 발생해도 계속 진행 (일부 auth user가 이미 삭제되었을 수 있음)
+            }
           }
         }
+
+        // 2-4. clinic 삭제 (CASCADE로 public.users도 자동 삭제됨)
+        const { error: clinicDeleteError } = await supabase
+          .from('clinics')
+          .delete()
+          .eq('id', userToDelete.clinic_id)
+
+        if (clinicDeleteError) {
+          console.error('[Admin API - Delete User] Error deleting clinic:', clinicDeleteError)
+          return NextResponse.json(
+            { success: false, error: 'Failed to delete clinic: ' + clinicDeleteError.message },
+            { status: 500 }
+          )
+        }
+
+        console.log('[Admin API - Delete User] Clinic and all members deleted successfully')
+        return NextResponse.json({ success: true, deletedClinic: true })
       }
-
-      // 2-3. clinic 삭제 (CASCADE로 public.users도 자동 삭제됨)
-      const { error: clinicDeleteError } = await supabase
-        .from('clinics')
-        .delete()
-        .eq('id', userToDelete.clinic_id)
-
-      if (clinicDeleteError) {
-        console.error('[Admin API - Delete User] Error deleting clinic:', clinicDeleteError)
-        return NextResponse.json(
-          { success: false, error: 'Failed to delete clinic: ' + clinicDeleteError.message },
-          { status: 500 }
-        )
-      }
-
-      console.log('[Admin API - Delete User] Clinic and all members deleted successfully')
-      return NextResponse.json({ success: true, deletedClinic: true })
     }
 
-    // 3. owner가 아닌 경우 사용자만 삭제
-    console.log('[Admin API - Delete User] User is not owner, deleting user only')
+    // 3. owner가 아닌 경우 또는 병원이 이미 삭제된 owner의 경우 사용자만 삭제
+    console.log('[Admin API - Delete User] Deleting user only')
 
-    // 3-1. auth.users 삭제
+    // 3-1. auth.users 삭제 (이미 삭제된 경우에도 에러로 중단하지 않음)
     const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId)
 
     if (authDeleteError) {
-      console.error('[Admin API - Delete User] Error deleting auth user:', authDeleteError)
-      return NextResponse.json(
-        { success: false, error: authDeleteError.message },
-        { status: 500 }
-      )
+      // auth.users가 이미 삭제된 경우 (병원 삭제 시 함께 삭제됨) → 경고만 남기고 계속 진행
+      console.warn('[Admin API - Delete User] Auth user deletion failed (may already be deleted):', authDeleteError.message)
+    } else {
+      console.log('[Admin API - Delete User] Auth user deleted')
     }
-
-    console.log('[Admin API - Delete User] Auth user deleted, deleting public user')
 
     // 3-2. public.users 삭제
     const { error } = await supabase

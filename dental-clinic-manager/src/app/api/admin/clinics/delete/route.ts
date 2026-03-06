@@ -95,14 +95,25 @@ export async function DELETE(request: Request) {
 
     // 3. 관련 데이터 삭제 (CASCADE로 처리되지 않는 것들)
     console.log('[Admin API - Delete Clinic] Deleting related data')
-    await supabase.from('appointments').delete().eq('clinic_id', clinicId)
-    await supabase.from('inventory').delete().eq('clinic_id', clinicId)
-    await supabase.from('inventory_categories').delete().eq('clinic_id', clinicId)
-    await supabase.from('patients').delete().eq('clinic_id', clinicId)
+    const relatedTables = ['appointments', 'inventory', 'inventory_categories', 'patients']
+    for (const table of relatedTables) {
+      const { error: relatedError } = await supabase.from(table).delete().eq('clinic_id', clinicId)
+      if (relatedError) {
+        console.warn(`[Admin API - Delete Clinic] Error deleting ${table}:`, relatedError.message)
+        // 관련 데이터 삭제 실패는 경고만 (테이블이 없거나 이미 삭제된 경우)
+      }
+    }
 
     // 4. users 삭제 (auth.users는 이미 삭제했으므로 public.users만 삭제)
     console.log('[Admin API - Delete Clinic] Deleting public users')
-    await supabase.from('users').delete().eq('clinic_id', clinicId)
+    const { error: usersDeleteError } = await supabase.from('users').delete().eq('clinic_id', clinicId)
+    if (usersDeleteError) {
+      console.error('[Admin API - Delete Clinic] Error deleting public users:', usersDeleteError.message)
+      return NextResponse.json(
+        { success: false, error: 'Failed to delete clinic users: ' + usersDeleteError.message },
+        { status: 500 }
+      )
+    }
 
     // 5. 병원 삭제
     console.log('[Admin API - Delete Clinic] Deleting clinic')
