@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 chcp 65001 >nul
 title 덴트웹 브릿지 에이전트 설치
 
@@ -28,7 +29,6 @@ if %errorLevel% neq 0 (
         pause
         exit /b 1
     )
-    :: PATH 새로고침
     set "PATH=%ProgramFiles%\nodejs;%PATH%"
 )
 
@@ -61,64 +61,153 @@ echo.
 :: .env 파일 확인
 if not exist "%~dp0.env" (
     echo ==========================================
-    echo  환경 설정이 필요합니다
+    echo  간편 설정 (대부분 자동 감지됩니다)
     echo ==========================================
     echo.
-    copy "%~dp0.env.example" "%~dp0.env" >nul
 
-    echo .env 파일이 생성되었습니다.
-    echo 아래 정보를 입력해주세요:
+    :: 기본값 설정
+    set "DB_SERVER=localhost"
+    set "DB_PORT=1433"
+    set "DB_DATABASE=DENTWEBDB"
+    set "DB_USER=sa"
+    set "DB_PASSWORD="
+    set "SUPABASE_URL_VALUE=https://beahjntkmkfhpcbhfnrr.supabase.co"
+
+    :: ======================================
+    :: 1단계: 덴트웹 DB 자동 감지
+    :: ======================================
+    echo [*] 덴트웹 DB 자동 감지 중...
+
+    :: 덴트웹 설치 경로 확인
+    if exist "C:\DENTWEB" (
+        echo     발견: C:\DENTWEB
+    )
+    if exist "C:\DENTWEBDB" (
+        echo     발견: C:\DENTWEBDB
+    )
+    if exist "D:\DENTWEB" (
+        echo     발견: D:\DENTWEB
+    )
+
+    :: SQL Server 인스턴스 자동 감지
+    sc query MSSQLSERVER >nul 2>&1
+    if !errorLevel! equ 0 (
+        echo     [OK] SQL Server 기본 인스턴스 감지
+        set "DB_SERVER=localhost"
+    ) else (
+        sc query "MSSQL$SQLEXPRESS" >nul 2>&1
+        if !errorLevel! equ 0 (
+            echo     [OK] SQL Server Express 감지
+            set "DB_SERVER=localhost\SQLEXPRESS"
+        ) else (
+            sc query "MSSQL$DENTWEB" >nul 2>&1
+            if !errorLevel! equ 0 (
+                echo     [OK] SQL Server DENTWEB 인스턴스 감지
+                set "DB_SERVER=localhost\DENTWEB"
+            ) else (
+                echo     [!] SQL Server 서비스를 찾지 못했습니다
+            )
+        )
+    )
     echo.
 
-    set /p DB_SERVER="덴트웹 DB 서버 주소 (기본: localhost): "
-    set /p DB_PORT="덴트웹 DB 포트 (기본: 1433): "
-    set /p DB_USER="덴트웹 DB 사용자명: "
-    set /p DB_PASSWORD="덴트웹 DB 비밀번호: "
-    set /p SUPABASE_URL_INPUT="Supabase URL: "
-    set /p CLINIC_ID_INPUT="Clinic ID: "
-    set /p API_KEY_INPUT="API Key: "
+    :: ======================================
+    :: 2단계: 사용자 입력 (최소한만)
+    :: ======================================
+    echo ------------------------------------------
+    echo  자동 감지된 DB 설정:
+    echo    서버: !DB_SERVER!
+    echo    포트: !DB_PORT!
+    echo    DB명: !DB_DATABASE!
+    echo    계정: sa
+    echo ------------------------------------------
+    echo.
+    echo  [1] DB 비밀번호를 입력해주세요
+    echo      (덴트웹 설치 시 설정한 SQL Server 비밀번호)
+    echo.
+    set /p "DB_PASSWORD=  비밀번호: "
+    echo.
 
-    if "%DB_SERVER%"=="" set DB_SERVER=localhost
-    if "%DB_PORT%"=="" set DB_PORT=1433
+    :: ======================================
+    :: 3단계: API 키 (웹 대시보드에서 복사)
+    :: ======================================
+    echo  [2] 웹 대시보드에서 API 키를 복사해주세요
+    echo      (리콜 설정 ^> 덴트웹 탭 ^> API 키 생성 ^> 복사)
+    echo.
+    set /p "API_KEY_INPUT=  API 키: "
+    echo.
+
+    echo  [3] 웹 대시보드에서 Clinic ID를 복사해주세요
+    echo      (리콜 설정 ^> 덴트웹 탭에서 확인)
+    echo.
+    set /p "CLINIC_ID_INPUT=  Clinic ID: "
+    echo.
+
+    :: ======================================
+    :: 4단계: 고급 설정 (선택)
+    :: ======================================
+    set /p "ADVANCED=  DB 설정을 변경하시겠습니까? (Y/N, 기본: N): "
+    if /i "!ADVANCED!"=="Y" (
+        echo.
+        set /p "DB_SERVER_IN=  DB 서버 (기본: !DB_SERVER!): "
+        set /p "DB_PORT_IN=  DB 포트 (기본: !DB_PORT!): "
+        set /p "DB_USER_IN=  DB 계정 (기본: sa): "
+        set /p "DB_DATABASE_IN=  DB 이름 (기본: DENTWEBDB): "
+        if not "!DB_SERVER_IN!"=="" set "DB_SERVER=!DB_SERVER_IN!"
+        if not "!DB_PORT_IN!"=="" set "DB_PORT=!DB_PORT_IN!"
+        if not "!DB_USER_IN!"=="" set "DB_USER=!DB_USER_IN!"
+        if not "!DB_DATABASE_IN!"=="" set "DB_DATABASE=!DB_DATABASE_IN!"
+    )
+    echo.
 
     :: .env 파일 작성
     (
-        echo # 덴트웹 DB 설정
-        echo DENTWEB_DB_SERVER=%DB_SERVER%
-        echo DENTWEB_DB_PORT=%DB_PORT%
-        echo DENTWEB_DB_DATABASE=DENTWEBDB
-        echo DENTWEB_DB_USER=%DB_USER%
-        echo DENTWEB_DB_PASSWORD=%DB_PASSWORD%
+        echo # 덴트웹 DB 설정 (자동 감지)
+        echo DENTWEB_DB_SERVER=!DB_SERVER!
+        echo DENTWEB_DB_PORT=!DB_PORT!
+        echo DENTWEB_DB_DATABASE=!DB_DATABASE!
+        echo DENTWEB_DB_USER=!DB_USER!
+        echo DENTWEB_DB_PASSWORD=!DB_PASSWORD!
         echo.
         echo # Supabase API 설정
-        echo SUPABASE_URL=%SUPABASE_URL_INPUT%
-        echo CLINIC_ID=%CLINIC_ID_INPUT%
-        echo API_KEY=%API_KEY_INPUT%
+        echo SUPABASE_URL=!SUPABASE_URL_VALUE!
+        echo CLINIC_ID=!CLINIC_ID_INPUT!
+        echo API_KEY=!API_KEY_INPUT!
         echo.
         echo # 동기화 설정
         echo SYNC_INTERVAL_SECONDS=300
         echo SYNC_TYPE=incremental
     ) > "%~dp0.env"
 
-    echo.
-    echo [OK] 환경 설정 저장 완료
+    echo [OK] 설정 저장 완료
 ) else (
-    echo [OK] .env 설정 파일 확인 완료
+    echo [OK] 기존 .env 설정 사용
 )
 echo.
 
 :: 연결 테스트
-echo [*] 연결 테스트 중...
+echo [*] 덴트웹 DB 연결 테스트 중...
 node dist/test-connection.js 2>nul
 if %errorLevel% neq 0 (
-    echo [!] 연결 테스트 실패. .env 파일의 설정을 확인해주세요.
-    echo     파일 위치: %~dp0.env
     echo.
-    set /p CONTINUE="그래도 서비스를 설치하시겠습니까? (Y/N): "
-    if /i not "%CONTINUE%"=="Y" (
+    echo [!] DB 연결에 실패했습니다.
+    echo.
+    echo  확인해주세요:
+    echo   - SQL Server 서비스가 실행 중인가요?
+    echo   - DB 비밀번호가 정확한가요?
+    echo   - 덴트웹이 이 PC에 설치되어 있나요?
+    echo.
+    echo  설정 수정: 메모장으로 %~dp0.env 파일을 열어 수정 가능
+    echo.
+    set /p "CONTINUE=  그래도 서비스를 설치할까요? (Y/N): "
+    if /i not "!CONTINUE!"=="Y" (
+        echo.
+        echo  .env 파일을 수정한 후 setup.bat을 다시 실행해주세요.
         pause
         exit /b 1
     )
+) else (
+    echo [OK] DB 연결 성공!
 )
 echo.
 
@@ -126,12 +215,12 @@ echo.
 echo [*] Windows 서비스로 등록 중...
 node scripts/install-service.js
 if %errorLevel% neq 0 (
-    echo [!] 서비스 등록 실패. 수동으로 실행할 수 있습니다:
+    echo [!] 서비스 등록 실패. 수동 실행 가능:
     echo     cd %~dp0
     echo     npm start
     echo.
 ) else (
-    echo [OK] Windows 서비스 등록 완료
+    echo [OK] 서비스 등록 완료!
     echo.
 )
 
@@ -139,12 +228,12 @@ echo ==========================================
 echo  설치가 완료되었습니다!
 echo ==========================================
 echo.
-echo  - 서비스 이름: DentWeb Bridge Agent
-echo  - PC 시작 시 자동 실행됩니다
-echo  - 로그 파일: %~dp0logs\bridge-agent.log
-echo  - 설정 변경: %~dp0.env
+echo  - 서비스: DentWeb Bridge Agent
+echo  - PC 부팅 시 자동 시작됩니다
+echo  - 로그: %~dp0logs\bridge-agent.log
+echo  - 설정: %~dp0.env (메모장으로 수정)
 echo.
-echo  수동 실행: npm start
-echo  서비스 제거: node scripts/install-service.js --uninstall
+echo  문제시: setup.bat을 다시 실행하세요
 echo.
 pause
+endlocal

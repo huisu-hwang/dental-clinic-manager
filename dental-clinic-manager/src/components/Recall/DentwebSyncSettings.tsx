@@ -381,16 +381,42 @@ export default function DentwebSyncSettings() {
         </button>
       </div>
 
-      {/* API 키 관리 */}
+      {/* 연동 정보 (Clinic ID + API 키) */}
       <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
         <h4 className="font-medium text-gray-900 flex items-center gap-2">
           <Key className="w-4 h-4" />
-          API 키 관리
+          연동 정보 (브릿지 에이전트 설치 시 필요)
         </h4>
         <p className="text-sm text-gray-500">
-          브릿지 에이전트가 데이터를 전송할 때 사용하는 인증 키입니다.
-          키를 생성한 후 브릿지 에이전트의 .env 파일에 설정하세요.
+          아래 정보를 브릿지 에이전트 설치 시 입력하세요.
         </p>
+
+        {/* Clinic ID 표시 */}
+        {config?.clinic_id && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Clinic ID</label>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-3 py-2 bg-gray-100 rounded-lg font-mono text-sm text-gray-800 break-all select-all">
+                {config.clinic_id}
+              </code>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(config.clinic_id)
+                  showMessage('success', 'Clinic ID가 복사되었습니다.')
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 flex-shrink-0"
+              >
+                <Copy className="w-4 h-4" />
+                복사
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* API 키 */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">API 키</label>
+        </div>
 
         {config?.api_key ? (
           <div className="flex items-center gap-3">
