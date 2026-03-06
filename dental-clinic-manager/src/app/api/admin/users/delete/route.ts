@@ -112,7 +112,17 @@ export async function DELETE(request: Request) {
 
         console.log('[Admin API - Delete User] Found', clinicUsers?.length || 0, 'users in clinic')
 
-        // 2-3. 모든 clinic 사용자의 auth.users 삭제
+        const userIds = clinicUsers?.map(u => u.id) || []
+
+        // 2-3. FK 참조 테이블 레코드 삭제 (telegram_board_posts, community 관련)
+        if (userIds.length > 0) {
+          console.log('[Admin API - Delete User] Deleting FK-referencing records for clinic users')
+          await supabase.from('telegram_board_posts').delete().in('created_by', userIds)
+          await supabase.from('community_reports').update({ reviewed_by: null }).in('reviewed_by', userIds)
+          await supabase.from('community_penalties').delete().in('issued_by', userIds)
+        }
+
+        // 2-4. 모든 clinic 사용자의 auth.users 삭제
         if (clinicUsers && clinicUsers.length > 0) {
           for (const clinicUser of clinicUsers) {
             console.log('[Admin API - Delete User] Deleting auth user:', clinicUser.id)
@@ -124,7 +134,13 @@ export async function DELETE(request: Request) {
           }
         }
 
-        // 2-4. clinic 삭제 (CASCADE로 public.users도 자동 삭제됨)
+        // 2-5. public.users 삭제 (clinic 삭제 전에 FK 해제)
+        if (userIds.length > 0) {
+          console.log('[Admin API - Delete User] Deleting public users')
+          await supabase.from('users').delete().in('id', userIds)
+        }
+
+        // 2-6. clinic 삭제
         const { error: clinicDeleteError } = await supabase
           .from('clinics')
           .delete()
@@ -146,7 +162,13 @@ export async function DELETE(request: Request) {
     // 3. owner가 아닌 경우 또는 병원이 이미 삭제된 owner의 경우 사용자만 삭제
     console.log('[Admin API - Delete User] Deleting user only')
 
-    // 3-1. auth.users 삭제 (이미 삭제된 경우에도 에러로 중단하지 않음)
+    // 3-1. FK 참조 테이블 레코드 삭제
+    console.log('[Admin API - Delete User] Deleting FK-referencing records')
+    await supabase.from('telegram_board_posts').delete().eq('created_by', userId)
+    await supabase.from('community_reports').update({ reviewed_by: null }).eq('reviewed_by', userId)
+    await supabase.from('community_penalties').delete().eq('issued_by', userId)
+
+    // 3-2. auth.users 삭제 (이미 삭제된 경우에도 에러로 중단하지 않음)
     const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId)
 
     if (authDeleteError) {
@@ -156,7 +178,7 @@ export async function DELETE(request: Request) {
       console.log('[Admin API - Delete User] Auth user deleted')
     }
 
-    // 3-2. public.users 삭제
+    // 3-3. public.users 삭제
     const { error } = await supabase
       .from('users')
       .delete()
