@@ -1733,6 +1733,65 @@ export const recallPatientService = {
     } catch (error) {
       return { success: false, error: extractErrorMessage(error) }
     }
+  },
+
+  // 특정 날짜의 리콜 활동 기록 조회 (일일보고서 자동연동용)
+  async getDailyRecallActivity(dateStr: string): Promise<{
+    success: boolean;
+    data?: {
+      recallCount: number;
+      recallBookingCount: number;
+      recallBookingNames: string;
+      patients: RecallPatient[];
+    };
+    error?: string;
+  }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, error: 'Clinic ID not found' }
+
+    try {
+      // KST 기준 날짜 범위 계산
+      const koreaOffset = 9 * 60
+      const date = new Date(dateStr)
+      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59)
+      const startStr = new Date(dayStart.getTime() - koreaOffset * 60000).toISOString()
+      const endStr = new Date(dayEnd.getTime() - koreaOffset * 60000).toISOString()
+
+      // 해당 날짜에 처리된 모든 환자 조회 (pending 제외 = 실제 처리된 건)
+      const { data: patients, error } = await supabase
+        .from('recall_patients')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .is('exclude_reason', null)
+        .neq('status', 'pending')
+        .gte('recall_datetime', startStr)
+        .lte('recall_datetime', endStr)
+        .order('recall_datetime', { ascending: false })
+
+      if (error) throw error
+
+      const patientList = (patients as RecallPatient[]) || []
+      const recallCount = patientList.length
+      const appointmentPatients = patientList.filter(p => p.status === 'appointment_made')
+      const recallBookingCount = appointmentPatients.length
+      const recallBookingNames = appointmentPatients.map(p => p.patient_name).join(', ')
+
+      return {
+        success: true,
+        data: {
+          recallCount,
+          recallBookingCount,
+          recallBookingNames,
+          patients: patientList
+        }
+      }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
+    }
   }
 }
 
