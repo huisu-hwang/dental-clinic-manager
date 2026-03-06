@@ -16,25 +16,47 @@ interface DentwebPatientRow {
 }
 
 // MS SQL Server 연결 설정
-const sqlConfig: sql.config = {
-  server: config.dentweb.server,
-  port: config.dentweb.port,
-  database: config.dentweb.database,
-  user: config.dentweb.user,
-  password: config.dentweb.password,
-  options: {
-    encrypt: false,           // 로컬 DB이므로 암호화 불필요
-    trustServerCertificate: true,
-    enableArithAbort: true,
-    connectTimeout: 10000,
-    requestTimeout: 30000,
-  },
-  pool: {
-    min: 0,
-    max: 5,
-    idleTimeoutMillis: 30000,
+function buildSqlConfig(): sql.config {
+  const baseConfig: sql.config = {
+    server: config.dentweb.server,
+    port: config.dentweb.port,
+    database: config.dentweb.database,
+    options: {
+      encrypt: false,
+      trustServerCertificate: true,
+      enableArithAbort: true,
+      connectTimeout: 10000,
+      requestTimeout: 30000,
+      trustedConnection: config.dentweb.useWindowsAuth,
+    },
+    pool: {
+      min: 0,
+      max: 5,
+      idleTimeoutMillis: 30000,
+    },
   }
+
+  if (config.dentweb.useWindowsAuth) {
+    logger.info('Windows 인증 모드로 연결합니다')
+    // Windows 인증: NTLM 사용 (현재 Windows 로그인 계정)
+    baseConfig.authentication = {
+      type: 'ntlm',
+      options: {
+        domain: '',
+        userName: '',
+        password: '',
+      },
+    }
+  } else {
+    logger.info(`SQL Server 인증 모드로 연결합니다 (계정: ${config.dentweb.user})`)
+    baseConfig.user = config.dentweb.user
+    baseConfig.password = config.dentweb.password
+  }
+
+  return baseConfig
 }
+
+const sqlConfig = buildSqlConfig()
 
 let pool: sql.ConnectionPool | null = null
 

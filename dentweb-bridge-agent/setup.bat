@@ -61,35 +61,28 @@ echo.
 :: .env 파일 확인
 if not exist "%~dp0.env" (
     echo ==========================================
-    echo  간편 설정 (대부분 자동 감지됩니다)
+    echo  간편 설정 (대부분 자동으로 처리됩니다)
     echo ==========================================
     echo.
 
-    :: 기본값 설정
+    :: 기본값
     set "DB_SERVER=localhost"
     set "DB_PORT=1433"
     set "DB_DATABASE=DENTWEBDB"
-    set "DB_USER=sa"
+    set "DB_AUTH=windows"
+    set "DB_USER="
     set "DB_PASSWORD="
     set "SUPABASE_URL_VALUE=https://beahjntkmkfhpcbhfnrr.supabase.co"
 
     :: ======================================
-    :: 1단계: 덴트웹 DB 자동 감지
+    :: 1단계: SQL Server 자동 감지
     :: ======================================
-    echo [*] 덴트웹 DB 자동 감지 중...
+    echo [*] 덴트웹 환경 자동 감지 중...
 
-    :: 덴트웹 설치 경로 확인
-    if exist "C:\DENTWEB" (
-        echo     발견: C:\DENTWEB
-    )
-    if exist "C:\DENTWEBDB" (
-        echo     발견: C:\DENTWEBDB
-    )
-    if exist "D:\DENTWEB" (
-        echo     발견: D:\DENTWEB
-    )
+    if exist "C:\DENTWEB" echo     덴트웹 경로 발견: C:\DENTWEB
+    if exist "C:\DENTWEBDB" echo     DB 경로 발견: C:\DENTWEBDB
+    if exist "D:\DENTWEB" echo     덴트웹 경로 발견: D:\DENTWEB
 
-    :: SQL Server 인스턴스 자동 감지
     sc query MSSQLSERVER >nul 2>&1
     if !errorLevel! equ 0 (
         echo     [OK] SQL Server 기본 인스턴스 감지
@@ -112,62 +105,35 @@ if not exist "%~dp0.env" (
     echo.
 
     :: ======================================
-    :: 2단계: 사용자 입력 (최소한만)
+    :: 2단계: 웹 대시보드 연동 정보 입력
     :: ======================================
-    echo ------------------------------------------
-    echo  자동 감지된 DB 설정:
-    echo    서버: !DB_SERVER!
-    echo    포트: !DB_PORT!
-    echo    DB명: !DB_DATABASE!
-    echo    계정: sa
-    echo ------------------------------------------
+    echo  웹 대시보드(리콜 설정 ^> 덴트웹 탭)에서
+    echo  아래 2개 정보를 복사해서 붙여넣으세요.
     echo.
-    echo  [1] DB 비밀번호를 입력해주세요
-    echo      (덴트웹 설치 시 설정한 SQL Server 비밀번호)
+    echo  [1] Clinic ID
+    set /p "CLINIC_ID_INPUT=      Clinic ID: "
     echo.
-    set /p "DB_PASSWORD=  비밀번호: "
+    echo  [2] API 키 (dw_로 시작)
+    set /p "API_KEY_INPUT=      API 키: "
     echo.
 
     :: ======================================
-    :: 3단계: API 키 (웹 대시보드에서 복사)
+    :: 3단계: Windows 인증으로 .env 생성 (비밀번호 불필요)
     :: ======================================
-    echo  [2] 웹 대시보드에서 API 키를 복사해주세요
-    echo      (리콜 설정 ^> 덴트웹 탭 ^> API 키 생성 ^> 복사)
-    echo.
-    set /p "API_KEY_INPUT=  API 키: "
+    echo [*] Windows 인증 모드로 설정합니다 (비밀번호 불필요)
     echo.
 
-    echo  [3] 웹 대시보드에서 Clinic ID를 복사해주세요
-    echo      (리콜 설정 ^> 덴트웹 탭에서 확인)
-    echo.
-    set /p "CLINIC_ID_INPUT=  Clinic ID: "
-    echo.
-
-    :: ======================================
-    :: 4단계: 고급 설정 (선택)
-    :: ======================================
-    set /p "ADVANCED=  DB 설정을 변경하시겠습니까? (Y/N, 기본: N): "
-    if /i "!ADVANCED!"=="Y" (
-        echo.
-        set /p "DB_SERVER_IN=  DB 서버 (기본: !DB_SERVER!): "
-        set /p "DB_PORT_IN=  DB 포트 (기본: !DB_PORT!): "
-        set /p "DB_USER_IN=  DB 계정 (기본: sa): "
-        set /p "DB_DATABASE_IN=  DB 이름 (기본: DENTWEBDB): "
-        if not "!DB_SERVER_IN!"=="" set "DB_SERVER=!DB_SERVER_IN!"
-        if not "!DB_PORT_IN!"=="" set "DB_PORT=!DB_PORT_IN!"
-        if not "!DB_USER_IN!"=="" set "DB_USER=!DB_USER_IN!"
-        if not "!DB_DATABASE_IN!"=="" set "DB_DATABASE=!DB_DATABASE_IN!"
-    )
-    echo.
-
-    :: .env 파일 작성
+    :: .env 파일 작성 (Windows 인증 = user/password 비움)
     (
-        echo # 덴트웹 DB 설정 (자동 감지)
+        echo # 덴트웹 DB 설정
         echo DENTWEB_DB_SERVER=!DB_SERVER!
         echo DENTWEB_DB_PORT=!DB_PORT!
         echo DENTWEB_DB_DATABASE=!DB_DATABASE!
-        echo DENTWEB_DB_USER=!DB_USER!
-        echo DENTWEB_DB_PASSWORD=!DB_PASSWORD!
+        echo # Windows 인증: user/password를 비워두면 자동으로 Windows 인증 사용
+        echo DENTWEB_DB_USER=
+        echo DENTWEB_DB_PASSWORD=
+        echo # 인증 방식 명시 (windows 또는 sql)
+        echo DENTWEB_DB_AUTH=windows
         echo.
         echo # Supabase API 설정
         echo SUPABASE_URL=!SUPABASE_URL_VALUE!
@@ -180,34 +146,80 @@ if not exist "%~dp0.env" (
     ) > "%~dp0.env"
 
     echo [OK] 설정 저장 완료
-) else (
-    echo [OK] 기존 .env 설정 사용
-)
-echo.
+    echo.
 
-:: 연결 테스트
-echo [*] 덴트웹 DB 연결 테스트 중...
-node dist/test-connection.js 2>nul
-if %errorLevel% neq 0 (
-    echo.
-    echo [!] DB 연결에 실패했습니다.
-    echo.
-    echo  확인해주세요:
-    echo   - SQL Server 서비스가 실행 중인가요?
-    echo   - DB 비밀번호가 정확한가요?
-    echo   - 덴트웹이 이 PC에 설치되어 있나요?
-    echo.
-    echo  설정 수정: 메모장으로 %~dp0.env 파일을 열어 수정 가능
-    echo.
-    set /p "CONTINUE=  그래도 서비스를 설치할까요? (Y/N): "
-    if /i not "!CONTINUE!"=="Y" (
+    :: ======================================
+    :: 4단계: 연결 테스트 (Windows 인증)
+    :: ======================================
+    echo [*] Windows 인증으로 DB 연결 테스트 중...
+    node dist/test-connection.js 2>nul
+    if !errorLevel! neq 0 (
         echo.
-        echo  .env 파일을 수정한 후 setup.bat을 다시 실행해주세요.
-        pause
-        exit /b 1
+        echo [!] Windows 인증 연결 실패.
+        echo     SQL Server 인증(비밀번호)으로 전환합니다.
+        echo.
+        set /p "DB_PASSWORD=  DB 비밀번호를 입력해주세요: "
+        echo.
+        set /p "DB_USER_IN=  DB 계정 (기본: sa, Enter로 건너뛰기): "
+        if "!DB_USER_IN!"=="" set "DB_USER_IN=sa"
+        echo.
+
+        :: SQL 인증으로 .env 재작성
+        (
+            echo # 덴트웹 DB 설정
+            echo DENTWEB_DB_SERVER=!DB_SERVER!
+            echo DENTWEB_DB_PORT=!DB_PORT!
+            echo DENTWEB_DB_DATABASE=!DB_DATABASE!
+            echo DENTWEB_DB_USER=!DB_USER_IN!
+            echo DENTWEB_DB_PASSWORD=!DB_PASSWORD!
+            echo DENTWEB_DB_AUTH=sql
+            echo.
+            echo # Supabase API 설정
+            echo SUPABASE_URL=!SUPABASE_URL_VALUE!
+            echo CLINIC_ID=!CLINIC_ID_INPUT!
+            echo API_KEY=!API_KEY_INPUT!
+            echo.
+            echo # 동기화 설정
+            echo SYNC_INTERVAL_SECONDS=300
+            echo SYNC_TYPE=incremental
+        ) > "%~dp0.env"
+
+        echo [*] SQL 인증으로 재시도 중...
+        node dist/test-connection.js 2>nul
+        if !errorLevel! neq 0 (
+            echo.
+            echo [!] DB 연결 실패.
+            echo  확인사항:
+            echo   - SQL Server가 실행 중인가요?
+            echo   - 비밀번호가 정확한가요?
+            echo   - 덴트웹이 이 PC에 설치되어 있나요?
+            echo.
+            echo  설정 파일: %~dp0.env (메모장으로 수정 가능)
+            echo.
+            set /p "CONTINUE=  그래도 서비스를 설치할까요? (Y/N): "
+            if /i not "!CONTINUE!"=="Y" (
+                echo  setup.bat을 다시 실행해주세요.
+                pause
+                exit /b 1
+            )
+        ) else (
+            echo [OK] SQL 인증으로 DB 연결 성공!
+        )
+    ) else (
+        echo [OK] Windows 인증으로 DB 연결 성공! (비밀번호 입력 불필요)
     )
 ) else (
-    echo [OK] DB 연결 성공!
+    echo [OK] 기존 .env 설정 사용
+    echo.
+
+    :: 기존 설정으로 연결 테스트
+    echo [*] DB 연결 테스트 중...
+    node dist/test-connection.js 2>nul
+    if !errorLevel! neq 0 (
+        echo [!] DB 연결 실패. .env 파일을 확인해주세요.
+    ) else (
+        echo [OK] DB 연결 성공!
+    )
 )
 echo.
 

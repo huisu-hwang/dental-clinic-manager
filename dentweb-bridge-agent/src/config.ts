@@ -12,6 +12,9 @@ export const config = {
     user: process.env.DENTWEB_DB_USER || '',
     password: process.env.DENTWEB_DB_PASSWORD || '',
     dbPath: process.env.DENTWEB_DB_PATH || 'c:\\DENTWEBDB',
+    // Windows 인증: true면 user/password 대신 Windows 로그인 계정으로 접속
+    useWindowsAuth: process.env.DENTWEB_DB_AUTH === 'windows' ||
+      (!process.env.DENTWEB_DB_USER && !process.env.DENTWEB_DB_PASSWORD),
   },
 
   // Supabase API 설정
@@ -34,8 +37,11 @@ export const config = {
 export function validateConfig(): string[] {
   const errors: string[] = []
 
-  if (!config.dentweb.user) errors.push('DENTWEB_DB_USER is required')
-  if (!config.dentweb.password) errors.push('DENTWEB_DB_PASSWORD is required')
+  // Windows 인증이 아닌 경우에만 user/password 필수
+  if (!config.dentweb.useWindowsAuth) {
+    if (!config.dentweb.user) errors.push('DENTWEB_DB_USER is required (or use Windows auth)')
+    if (!config.dentweb.password) errors.push('DENTWEB_DB_PASSWORD is required (or use Windows auth)')
+  }
   if (!config.supabase.url) errors.push('SUPABASE_URL is required')
   if (!config.supabase.clinicId) errors.push('CLINIC_ID is required')
   if (!config.supabase.apiKey) errors.push('API_KEY is required')
