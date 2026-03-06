@@ -10,6 +10,42 @@
 
 ---
 
+## 2026-03-06 [버그 수정] 소모임 게시판 - 가입한 소모임 미표시 오류
+
+**키워드:** #소모임 #RLS #무한재귀 #telegram_group_members #42P17
+
+### 📋 작업 내용
+- 소모임 게시판(`/community/telegram`)에서 가입한 소모임이 표시되지 않는 버그 수정
+
+### 🐛 문제
+- 소모임 페이지에서 "참여 중인 모임이 없습니다" 메시지만 표시됨
+- Chrome DevTools 확인 시 500 에러 (`42P17: infinite recursion detected in policy for relation "telegram_group_members"`)
+
+### 🔍 근본 원인 (5 Whys)
+1. `getMyGroups()` API 호출이 500 에러 반환
+2. Supabase에서 `42P17` 에러 (무한 재귀) 발생
+3. RLS 정책 `telegram_members_select_group_member`가 동일 테이블(`telegram_group_members`)을 내부에서 재귀 참조
+4. PostgreSQL이 RLS 평가 중 동일 정책을 반복 호출하여 무한 루프
+
+### ✅ 해결 방법
+- `SECURITY DEFINER` 함수 `get_my_telegram_group_ids()` 생성
+- 이 함수는 RLS를 우회하여 재귀 없이 내 소모임 ID 목록 반환
+- 기존 재귀 RLS 정책 삭제 후 SECURITY DEFINER 함수 기반 새 정책으로 교체
+- 마이그레이션: `20260306_fix_telegram_members_rls_infinite_recursion.sql`
+
+### 🧪 테스트 결과
+- Chrome DevTools로 whitedc0902@gmail.com 로그인 후 `/community/telegram` 접속
+- "소규모 치과 경영 스터디" 소모임 정상 표시 확인
+- 콘솔 에러 없음, API 200 응답 확인
+
+### 💡 배운 점
+- RLS 정책 내에서 동일 테이블을 참조하면 무한 재귀 발생 → `SECURITY DEFINER` 함수로 해결
+- `proxy-status: PostgREST; error=42P17` 헤더로 RLS 재귀 오류 식별 가능
+
+---
+
+---
+
 ## 2026-02-26
 
 ### [기능 개발] 저장매체 선택 시 서버사이드 NPKI 인증서 자동 검색
