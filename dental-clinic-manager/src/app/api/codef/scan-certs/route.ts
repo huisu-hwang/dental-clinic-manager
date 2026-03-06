@@ -268,26 +268,34 @@ function getNpkiPaths(mediaType: 'hard' | 'removable'): string[] {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const mediaType = (searchParams.get('mediaType') || 'hard') as 'hard' | 'removable'
-    const certType = (searchParams.get('certType') || 'der') as 'der' | 'pfx'
+    const mediaType = (searchParams.get('mediaType') || 'all') as 'hard' | 'removable' | 'all'
+    const certType = (searchParams.get('certType') || 'all') as 'der' | 'pfx' | 'all'
 
-    const npkiPaths = getNpkiPaths(mediaType)
+    // 'all'이면 하드+이동식 모두 검색
+    const npkiPaths: string[] = mediaType === 'all'
+      ? [...getNpkiPaths('hard'), ...getNpkiPaths('removable')]
+      : getNpkiPaths(mediaType)
+
+    // 'all'이면 DER+PFX 모두 검색
+    const typesToScan: ('der' | 'pfx')[] = certType === 'all' ? ['der', 'pfx'] : [certType]
+
     const results: ScannedCert[] = []
 
     for (const npkiPath of npkiPaths) {
-      scanDirectory(npkiPath, certType, results)
+      for (const t of typesToScan) {
+        scanDirectory(npkiPath, t, results)
+      }
     }
 
-    // DER 인증서: 만료되지 않은 것 우선, 만료일 늦은 것 우선
-    if (certType === 'der') {
-      results.sort((a, b) => {
-        if (a.isExpired !== b.isExpired) return a.isExpired ? 1 : -1
-        if (a.notAfter && b.notAfter) {
-          return new Date(b.notAfter).getTime() - new Date(a.notAfter).getTime()
-        }
-        return 0
-      })
-    }
+    // 정렬: 유효한 것 우선, DER 우선, 만료일 늦은 것 우선
+    results.sort((a, b) => {
+      if (a.isExpired !== b.isExpired) return a.isExpired ? 1 : -1
+      if (a.type !== b.type) return a.type === 'der' ? -1 : 1
+      if (a.notAfter && b.notAfter) {
+        return new Date(b.notAfter).getTime() - new Date(a.notAfter).getTime()
+      }
+      return 0
+    })
 
     return NextResponse.json({
       success: true,
