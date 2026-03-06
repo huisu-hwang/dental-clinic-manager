@@ -76,7 +76,6 @@ export default function LeavePolicySettings() {
   }
 
   const loadPolicy = async () => {
-    setLoading(true)
     try {
       const result = await leaveService.getDefaultPolicy()
       if (result.data) {

@@ -49,7 +49,6 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
   }, [contractId])
 
   const loadContract = async () => {
-    setLoading(true)
     setError(null)
 
     try {

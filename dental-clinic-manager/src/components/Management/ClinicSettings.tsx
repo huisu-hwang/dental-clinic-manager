@@ -93,7 +93,6 @@ const [formData, setFormData] = useState<ClinicFormData>({
   }, [currentUser.clinic_id])
 
   const fetchClinicInfo = async () => {
-    setLoading(true)
     const supabase = getSupabase()
     if (!supabase || !currentUser.clinic_id) {
       setLoading(false)

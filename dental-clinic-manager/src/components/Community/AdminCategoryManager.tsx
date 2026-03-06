@@ -44,7 +44,6 @@ export default function AdminCategoryManager() {
   }, [])
 
   const fetchCategories = async () => {
-    setLoading(true)
     const { data, error: fetchError } = await communityCategoryService.getCategories(true)
     if (fetchError) {
       setError(fetchError)

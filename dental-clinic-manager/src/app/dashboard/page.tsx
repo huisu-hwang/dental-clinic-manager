@@ -29,6 +29,7 @@ import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
 import { PayrollManagement } from '@/components/Payroll'
 import { RecallManagement } from '@/components/Recall'
 import AIChat from '@/components/AIAnalysis/AIChat'
+import TaskChecklistManagement from '@/components/TaskChecklist/TaskChecklistManagement'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
@@ -797,6 +798,11 @@ export default function DashboardPage() {
           {/* 환자 리콜 관리 */}
           {activeTab === 'recall' && (
             <RecallManagement />
+          )}
+
+          {/* 업무 체크리스트 */}
+          {activeTab === 'task-checklist' && (
+            <TaskChecklistManagement />
           )}
 
           {/* AI 데이터 분석 */}

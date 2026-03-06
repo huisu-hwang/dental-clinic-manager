@@ -75,7 +75,6 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   const ITEMS_PER_PAGE = 10
 
   const fetchTasks = useCallback(async () => {
-    setLoading(true)
     setError(null)
 
     const fetchFn = showMyTasksOnly ? taskService.getMyTasks : taskService.getTasks

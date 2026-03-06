@@ -186,7 +186,6 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
   }, [])
 
   const fetchProtocols = async () => {
-    setLoading(true)
     try {
       const filters: any = {}
       if (selectedStatus !== 'all') {

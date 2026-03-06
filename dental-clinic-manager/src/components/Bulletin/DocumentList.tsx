@@ -43,7 +43,6 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
   const ITEMS_PER_PAGE = 10
 
   const fetchDocuments = useCallback(async () => {
-    setLoading(true)
     setError(null)
 
     const { data, total: totalCount, error: fetchError } = await documentService.getDocuments({

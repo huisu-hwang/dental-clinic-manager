@@ -22,7 +22,6 @@ export default function SpecialNotesHistory() {
 
   // 초기 데이터 로드 (special_notes_history 테이블에서만 조회)
   const loadNotes = useCallback(async () => {
-    setLoading(true)
     try {
       console.log('[SpecialNotesHistory] Loading notes from special_notes_history...')
       const result = await dataService.getLatestSpecialNotesByDate({

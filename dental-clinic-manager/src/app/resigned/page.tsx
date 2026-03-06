@@ -68,13 +68,16 @@ export default function ResignedPage() {
       const fetchClinics = async () => {
         setIsSearchingClinics(true)
         try {
-          const { data, error } = await dataService.searchPublicClinics()
-          if (error) {
+          const result = await dataService.searchPublicClinics()
+          if ('error' in result) {
             setError('공개된 병원 목록을 불러오는 데 실패했습니다.')
             setPublicClinics([])
           } else {
-            setPublicClinics(data || [])
+            setPublicClinics(result.data || [])
           }
+        } catch {
+          setError('공개된 병원 목록을 불러오는 데 실패했습니다.')
+          setPublicClinics([])
         } finally {
           setIsSearchingClinics(false)
         }

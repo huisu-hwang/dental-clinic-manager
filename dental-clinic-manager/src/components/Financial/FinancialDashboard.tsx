@@ -56,7 +56,6 @@ export default function FinancialDashboard() {
   const loadData = async () => {
     if (!clinicId) return
 
-    setLoading(true)
     try {
       // 재무 요약 로드
       const summaryRes = await fetch(

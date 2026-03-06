@@ -100,8 +100,6 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
       return
     }
 
-    console.log('[DailyInputForm] Setting loading to true')
-    setLoading(true)
     setHasExistingData(false)
 
     const timeoutId = setTimeout(() => {
@@ -438,7 +436,6 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
       return
     }
 
-    setLoading(true)
     isSavingRef.current = true  // 자신의 저장 중에는 외부 변경 감지 무시
     setHasExternalUpdate(false)  // 저장 시 외부 변경 알림 초기화
     console.log(`[DailyInputForm] handleSave - Using ${USE_NEW_ARCHITECTURE ? 'NEW' : 'OLD'} architecture`)
@@ -570,7 +567,6 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
     if (hasAnyData && !isReadOnly) {
       // 데이터가 있으면 저장 먼저 수행
-      setLoading(true)
       isSavingRef.current = true
       setHasExternalUpdate(false)
 

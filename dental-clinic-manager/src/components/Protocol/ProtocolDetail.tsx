@@ -52,7 +52,6 @@ export default function ProtocolDetail({
 
   const fetchProtocol = useCallback(async () => {
     try {
-      setLoading(true)
       setError('')
       const result = await dataService.getProtocolById(protocolId)
       if (result.error) {

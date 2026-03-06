@@ -86,7 +86,6 @@ export default function ProtocolPermissionManager({
   }, [protocolId, clinicId])
 
   const fetchData = async () => {
-    setLoading(true)
     setError('')
 
     try {

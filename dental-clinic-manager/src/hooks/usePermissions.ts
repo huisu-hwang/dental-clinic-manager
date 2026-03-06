@@ -5,6 +5,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import type { Permission } from '@/types/permissions'
 import { DEFAULT_PERMISSIONS, PERMISSION_DESCRIPTIONS } from '@/types/permissions'
 
+// 신규 추가된 기능의 권한 prefix 목록
+// 커스텀 권한에 해당 prefix 권한이 하나도 없으면 역할 기본값에서 자동 보충
+const NEW_FEATURE_PREFIXES = ['payroll_', 'task_checklist_'] as const
+
 export function usePermissions() {
   const { user } = useAuth()
   const [permissions, setPermissions] = useState<Set<Permission>>(new Set())
@@ -26,7 +30,17 @@ export function usePermissions() {
       userPermissions = Object.keys(PERMISSION_DESCRIPTIONS) as Permission[]
     } else if (user.permissions && user.permissions.length > 0) {
       // 사용자에게 직접 할당된 권한이 있으면 사용
-      userPermissions = user.permissions
+      userPermissions = [...user.permissions]
+
+      // 커스텀 권한에 새로운 기능 권한이 누락된 경우 역할 기본값에서 보충
+      const roleDefaults = DEFAULT_PERMISSIONS[user.role || ''] || []
+      for (const prefix of NEW_FEATURE_PREFIXES) {
+        const hasFeaturePerms = userPermissions.some(p => p.startsWith(prefix))
+        if (!hasFeaturePerms) {
+          const featureDefaults = roleDefaults.filter(p => p.startsWith(prefix))
+          userPermissions.push(...featureDefaults)
+        }
+      }
     } else {
       // 없으면 역할 기반 기본 권한 사용
       userPermissions = DEFAULT_PERMISSIONS[user.role || ''] || []

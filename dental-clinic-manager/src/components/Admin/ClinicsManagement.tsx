@@ -46,7 +46,6 @@ export default function ClinicsManagement() {
   }, [])
 
   const fetchClinics = async () => {
-    setLoading(true)
     setError('')
     const supabase = getSupabase()
 

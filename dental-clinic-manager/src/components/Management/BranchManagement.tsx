@@ -63,7 +63,6 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
 
   // 지점 목록 로드
   const loadBranches = async () => {
-    setLoading(true)
     try {
       const result = await dataService.getBranches()
       if (result.error) {

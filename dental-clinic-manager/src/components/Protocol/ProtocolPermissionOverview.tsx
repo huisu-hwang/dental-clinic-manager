@@ -118,7 +118,6 @@ export default function ProtocolPermissionOverview({
   } | null>(null)
 
   const fetchAllData = useCallback(async () => {
-    setLoading(true)
     setError('')
     try {
       const [permResult, staffResult, protocolResult] = await Promise.all([

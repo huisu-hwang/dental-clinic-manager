@@ -39,7 +39,6 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
   }, [clinicId])
 
   const loadData = async () => {
-    setLoading(true)
     console.log('[ClinicHoursSettings] Loading data for clinic:', clinicId)
 
     try {

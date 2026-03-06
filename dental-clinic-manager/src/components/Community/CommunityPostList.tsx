@@ -32,7 +32,6 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
   const ITEMS_PER_PAGE = 20
 
   const fetchPosts = useCallback(async () => {
-    setLoading(true)
     setError(null)
 
     if (sort === 'my_likes') {

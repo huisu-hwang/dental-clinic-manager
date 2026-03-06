@@ -58,7 +58,6 @@ export default function TeamStatus() {
   const loadTeamStatus = async () => {
     if (!user?.clinic_id) return
 
-    setLoading(true)
     try {
       const result = await attendanceService.getTeamAttendanceStatus(
         user.clinic_id,

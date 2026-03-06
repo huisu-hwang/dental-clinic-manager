@@ -53,7 +53,6 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
   }, [selectedUser])
 
   const loadData = async () => {
-    setLoading(true)
     try {
       const [staffResult, balanceResult] = await Promise.all([
         leaveService.getStaffList(),
@@ -90,8 +89,6 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
       setError('사유를 입력해주세요.')
       return
     }
-
-    setLoading(true)
 
     try {
       const result = await leaveService.addAdjustment({
