@@ -58,13 +58,16 @@ export default function SignupForm({
       const fetchClinics = async () => {
         setIsSearchingClinics(true);
         try {
-          const { data, error } = await dataService.searchPublicClinics();
-          if (error) {
+          const result = await dataService.searchPublicClinics();
+          if ('error' in result) {
             setError('공개된 병원 목록을 불러오는 데 실패했습니다.');
             setPublicClinics([]);
           } else {
-            setPublicClinics(data || []);
+            setPublicClinics(result.data || []);
           }
+        } catch {
+          setError('공개된 병원 목록을 불러오는 데 실패했습니다.');
+          setPublicClinics([]);
         } finally {
           setIsSearchingClinics(false);
         }
@@ -134,7 +137,7 @@ export default function SignupForm({
 
   const validateForm = () => {
     const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
-    const phoneRegex = /^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/;
+    const phoneRegex = /^0[0-9]{1,2}[0-9]{3,4}[0-9]{4}$/;
 
     if (!emailRegex.test(formData.userId)) {
       setError('올바른 이메일 주소(아이디)를 입력해주세요.');
@@ -309,8 +312,22 @@ export default function SignupForm({
 
     } catch (error: unknown) {
       console.error('[Signup] Signup error:', error);
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-      console.error('[Signup] Error message:', errorMessage);
+      const rawMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+      console.error('[Signup] Error message:', rawMessage);
+
+      // Supabase Auth 에러 메시지를 사용자 친화적 메시지로 변환
+      let errorMessage = rawMessage;
+      if (rawMessage.includes('User already registered') || rawMessage.includes('already been registered')) {
+        errorMessage = '이미 등록된 이메일 주소입니다. 로그인 페이지에서 로그인하거나 다른 이메일을 사용해주세요.';
+      } else if (rawMessage.includes('Password should be at least')) {
+        errorMessage = '비밀번호는 6글자 이상이어야 합니다.';
+      } else if (rawMessage.includes('Unable to validate email address') || rawMessage.includes('invalid email')) {
+        errorMessage = '유효하지 않은 이메일 주소입니다. 올바른 이메일 주소를 입력해주세요.';
+      } else if (rawMessage.includes('Signups not allowed') || rawMessage.includes('signup_disabled')) {
+        errorMessage = '현재 회원가입이 비활성화되어 있습니다. 관리자에게 문의해주세요.';
+      } else if (rawMessage.includes('rate limit') || rawMessage.includes('too many requests')) {
+        errorMessage = '너무 많은 요청이 있었습니다. 잠시 후 다시 시도해주세요.';
+      }
       setError(errorMessage);
     } finally {
       console.log('[Signup] Finally block - setting loading to false');
