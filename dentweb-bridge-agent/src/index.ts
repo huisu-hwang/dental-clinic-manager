@@ -4,6 +4,27 @@ import { checkStatus } from './api-client'
 import { runSync } from './sync-service'
 import { logger } from './logger'
 
+const MAX_DB_RETRIES = 5
+const DB_RETRY_DELAY = 10000
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function connectWithRetry(): Promise<boolean> {
+  for (let attempt = 1; attempt <= MAX_DB_RETRIES; attempt++) {
+    logger.info(`덴트웹 DB 연결 시도 (${attempt}/${MAX_DB_RETRIES})...`)
+    const connected = await testConnection()
+    if (connected) return true
+
+    if (attempt < MAX_DB_RETRIES) {
+      logger.warn(`${DB_RETRY_DELAY / 1000}초 후 재시도...`)
+      await sleep(DB_RETRY_DELAY)
+    }
+  }
+  return false
+}
+
 async function main() {
   logger.info('========================================')
   logger.info('덴트웹 브릿지 에이전트 시작')
@@ -19,9 +40,8 @@ async function main() {
     process.exit(1)
   }
 
-  // 1. 덴트웹 DB 연결 테스트
-  logger.info('덴트웹 DB 연결 테스트 중...')
-  const dbConnected = await testConnection()
+  // 1. 덴트웹 DB 연결 (재시도 포함)
+  const dbConnected = await connectWithRetry()
   if (!dbConnected) {
     logger.error('덴트웹 DB 연결 실패. 설정을 확인해주세요.')
     process.exit(1)
@@ -31,16 +51,14 @@ async function main() {
   logger.info('Supabase API 연결 테스트 중...')
   const statusResult = await checkStatus()
   if (!statusResult.success) {
-    logger.error('Supabase API 연결 실패:', statusResult.error)
-    logger.error('SUPABASE_URL, CLINIC_ID, API_KEY를 확인해주세요.')
-    process.exit(1)
+    logger.warn('Supabase API 연결 실패, 동기화는 계속 시도합니다:', statusResult.error)
   }
 
-  if (!statusResult.data?.is_active) {
+  if (statusResult.success && !statusResult.data?.is_active) {
     logger.warn('동기화가 비활성화 상태입니다. 대시보드에서 활성화해주세요.')
   }
 
-  logger.info('모든 연결 테스트 성공!')
+  logger.info('연결 준비 완료!')
   logger.info(`동기화 주기: ${config.sync.intervalSeconds}초`)
   logger.info(`동기화 유형: ${config.sync.syncType}`)
 
@@ -54,14 +72,15 @@ async function main() {
 
   const intervalId = setInterval(async () => {
     try {
-      // 서버 상태 확인
       const status = await checkStatus()
       if (status.success && status.data?.is_active) {
         await runSync()
       } else if (status.success && !status.data?.is_active) {
         logger.info('동기화 비활성화 상태, 건너뜀')
       } else {
-        logger.warn('서버 상태 확인 실패, 동기화 건너뜀')
+        // 서버 상태 확인 실패해도 동기화 시도 (오프라인 내성)
+        logger.warn('서버 상태 확인 실패, 동기화를 시도합니다...')
+        await runSync()
       }
     } catch (error) {
       logger.error('스케줄된 동기화 실패:', error)
