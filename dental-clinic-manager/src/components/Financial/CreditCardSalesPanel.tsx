@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   CreditCard,
   Loader2,
@@ -90,6 +90,8 @@ export default function CreditCardSalesPanel({
   const [scanning, setScanning] = useState(false)
   const [scanned, setScanned] = useState(false)
   const [scanError, setScanError] = useState('')
+  const [scanMode, setScanMode] = useState<'standard' | 'extended' | 'custom'>('standard')
+  const [customPath, setCustomPath] = useState('')
 
   // 조회 조건
   const [queryYear, setQueryYear] = useState(year)
@@ -115,8 +117,21 @@ export default function CreditCardSalesPanel({
   // 인증서 준비 상태
   const certReady = !!(selectedCert && certPassword)
 
-  // 서버 API로 인증서 자동 검색
-  const scanCerts = useCallback(async (media: 'hard' | 'removable') => {
+  // 홈택스 호환 인증서 용도
+  const HOMETAX_COMPATIBLE_USAGES = ['범용(개인)', '범용(법인)', '전자세금계산서용']
+
+  const isHometaxCompatible = (cert: ScannedCert): boolean => {
+    if (cert.type === 'pfx') return true // PFX는 비밀번호 입력 후 확인 가능
+    if (!cert.usage || cert.usage === '일반') return true // 용도 미확인 → 호환 가능으로 표시
+    return HOMETAX_COMPATIBLE_USAGES.includes(cert.usage)
+  }
+
+  // 서버 API로 인증서 검색
+  const scanCerts = useCallback(async (options?: {
+    media?: 'hard' | 'removable'
+    extended?: boolean
+    path?: string
+  }) => {
     setScanning(true)
     setScanError('')
     setFoundCerts([])
@@ -124,45 +139,51 @@ export default function CreditCardSalesPanel({
     setScanned(false)
 
     try {
-      // 하드디스크는 DER, 이동식은 DER+PFX 모두 검색
-      const certTypeParam = 'der'
-      const res = await fetch(`/api/codef/scan-certs?mediaType=${media}&certType=${certTypeParam}`)
+      const params = new URLSearchParams({ certType: 'all' })
+
+      if (options?.path) {
+        params.set('customPath', options.path)
+        setScanMode('custom')
+      } else if (options?.extended) {
+        params.set('extended', 'true')
+        setScanMode('extended')
+      } else {
+        params.set('mediaType', options?.media || 'all')
+        setScanMode('standard')
+      }
+
+      const res = await fetch(`/api/codef/scan-certs?${params.toString()}`)
       const data = await res.json()
 
-      let certs: ScannedCert[] = data.success ? (data.certs || []) : []
-
-      // 이동식디스크인 경우 PFX도 추가 검색
-      if (media === 'removable') {
-        const pfxRes = await fetch(`/api/codef/scan-certs?mediaType=${media}&certType=pfx`)
-        const pfxData = await pfxRes.json()
-        if (pfxData.success && pfxData.certs) {
-          certs = [...certs, ...pfxData.certs]
-        }
-      }
-
-      // 하드디스크에서도 PFX 검색
-      if (media === 'hard') {
-        const pfxRes = await fetch(`/api/codef/scan-certs?mediaType=${media}&certType=pfx`)
-        const pfxData = await pfxRes.json()
-        if (pfxData.success && pfxData.certs) {
-          certs = [...certs, ...pfxData.certs]
-        }
-      }
+      const certs: ScannedCert[] = data.success ? (data.certs || []) : []
 
       if (certs.length === 0) {
+        // 기본 검색에서 못 찾으면 자동으로 확장 검색 시도
+        if (!options?.extended && !options?.path) {
+          setScanMode('extended')
+          const extRes = await fetch('/api/codef/scan-certs?certType=all&extended=true')
+          const extData = await extRes.json()
+          const extCerts: ScannedCert[] = extData.success ? (extData.certs || []) : []
+
+          if (extCerts.length > 0) {
+            setFoundCerts(extCerts)
+            const validCerts = extCerts.filter(c => !c.isExpired && isHometaxCompatible(c))
+            if (validCerts.length === 1) setSelectedCert(validCerts[0])
+            setScanned(true)
+            return
+          }
+        }
+
         setScanError(
-          'NPKI 기본 경로에서 인증서를 찾을 수 없습니다.\n인증서가 설치되어 있는지 확인해주세요.'
+          '컴퓨터에서 인증서를 찾을 수 없습니다.\n아래에서 인증서 경로를 직접 지정해주세요.'
         )
         setScanned(true)
         return
       }
 
       setFoundCerts(certs)
-      // 유효한 인증서가 하나뿐이면 자동 선택
-      const validCerts = certs.filter(c => !c.isExpired)
-      if (validCerts.length === 1) {
-        setSelectedCert(validCerts[0])
-      }
+      const validCerts = certs.filter(c => !c.isExpired && isHometaxCompatible(c))
+      if (validCerts.length === 1) setSelectedCert(validCerts[0])
     } catch (err) {
       console.error('인증서 검색 오류:', err)
       setScanError('인증서 검색 중 오류가 발생했습니다.')
@@ -172,12 +193,23 @@ export default function CreditCardSalesPanel({
     }
   }, [])
 
-  // 저장매체 선택 시 자동 검색 트리거
+  // 컴포넌트 마운트 시 자동으로 인증서 검색
+  useEffect(() => { scanCerts() }, [scanCerts])
+
+  // 저장매체 선택 시 해당 매체만 재검색
   const handleMediaSelect = (media: 'hard' | 'removable') => {
     setMediaType(media)
     setCertPassword('')
     setError(null)
-    scanCerts(media)
+    scanCerts({ media })
+  }
+
+  // 사용자 지정 경로로 검색
+  const handleCustomPathSearch = () => {
+    if (!customPath.trim()) return
+    setCertPassword('')
+    setError(null)
+    scanCerts({ path: customPath.trim() })
   }
 
   // 데이터 조회
@@ -314,6 +346,15 @@ export default function CreditCardSalesPanel({
               )}
             </div>
 
+            {/* 홈택스 인증서 안내 배너 */}
+            <div className="mx-5 mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-blue-700">
+                <strong>홈택스 신용카드 매출 조회</strong>에는 홈택스에 등록된 <strong>공동인증서</strong>가 필요합니다.
+                호환 인증서: 범용(개인/법인), 전자세금계산서용. 은행/보험용, 증권/카드용은 사용할 수 없습니다.
+              </p>
+            </div>
+
             <div className="p-5 flex flex-col md:flex-row gap-6">
               {/* Left: Storage Media */}
               <div className="w-full md:w-1/4">
@@ -352,9 +393,9 @@ export default function CreditCardSalesPanel({
                       ? `인증서 선택 (${foundCerts.filter(c => !c.isExpired).length}개 유효 / 총 ${foundCerts.length}개)`
                       : '인증서 목록'}
                   </p>
-                  {scanned && mediaType && (
+                  {scanned && (
                     <button
-                      onClick={() => scanCerts(mediaType)}
+                      onClick={() => scanCerts()}
                       className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
                     >
                       <Search className="w-3.5 h-3.5" />
@@ -375,7 +416,14 @@ export default function CreditCardSalesPanel({
                     {scanning && (
                       <div className="flex flex-col items-center justify-center py-8">
                         <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mb-2" />
-                        <p className="text-sm text-gray-500">인증서 검색 중...</p>
+                        <p className="text-sm text-gray-500">
+                          {scanMode === 'extended' ? '컴퓨터 전체에서 인증서 검색 중...' :
+                           scanMode === 'custom' ? '지정 경로에서 인증서 검색 중...' :
+                           '인증서 검색 중...'}
+                        </p>
+                        {scanMode === 'extended' && (
+                          <p className="text-[10px] text-gray-400 mt-1">기본 경로에서 찾지 못해 확장 검색을 진행합니다</p>
+                        )}
                       </div>
                     )}
 
@@ -383,23 +431,43 @@ export default function CreditCardSalesPanel({
                     {!scanning && !scanned && foundCerts.length === 0 && (
                       <div className="flex flex-col items-center justify-center py-8">
                         <Search className="w-8 h-8 text-gray-300 mb-2" />
-                        <p className="text-sm text-gray-500">좌측에서 저장매체를 선택하면<br/>자동으로 인증서를 검색합니다.</p>
+                        <p className="text-sm text-gray-500">인증서를 자동으로 검색합니다...</p>
                       </div>
                     )}
 
                     {/* 검색 결과 없음 */}
                     {!scanning && scanned && foundCerts.length === 0 && scanError && (
-                      <div className="flex flex-col items-center justify-center py-8 px-4">
+                      <div className="flex flex-col items-center justify-center py-6 px-4">
                         <AlertCircle className="w-6 h-6 text-amber-400 mb-2" />
                         <p className="text-xs text-gray-500 text-center whitespace-pre-line">{scanError}</p>
-                        {mediaType && (
-                          <button
-                            onClick={() => scanCerts(mediaType)}
-                            className="mt-3 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition-colors"
-                          >
-                            다시 검색
-                          </button>
-                        )}
+                        <div className="mt-3 w-full max-w-sm">
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={customPath}
+                              onChange={(e) => setCustomPath(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleCustomPathSearch() }}
+                              placeholder="인증서 폴더 경로 (예: /Users/사용자/NPKI)"
+                              className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                            <button
+                              onClick={handleCustomPathSearch}
+                              disabled={!customPath.trim()}
+                              className="px-3 py-1.5 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                            >
+                              경로 검색
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-gray-400 mt-1.5 text-center">
+                            인증서가 저장된 폴더 경로를 직접 입력하세요
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => scanCerts()}
+                          className="mt-2 px-3 py-1.5 bg-gray-100 text-gray-600 text-xs rounded hover:bg-gray-200 transition-colors"
+                        >
+                          전체 다시 검색
+                        </button>
                       </div>
                     )}
 
@@ -475,6 +543,11 @@ export default function CreditCardSalesPanel({
                                     <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
                                       {cert.usage}
                                     </span>
+                                  )}
+                                  {isHometaxCompatible(cert) ? (
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium">홈택스</span>
+                                  ) : (
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded font-medium">홈택스 불가</span>
                                   )}
                                 </div>
                                 <p className="text-xs text-gray-400">

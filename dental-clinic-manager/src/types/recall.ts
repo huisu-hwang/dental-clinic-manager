@@ -498,6 +498,38 @@ export interface RecallStats {
   success_rate: number  // 예약 성공률 (%)
 }
 
+// 기간별 통계 타입
+export type RecallStatsPeriod = 'daily' | 'weekly' | 'monthly'
+
+// 단일 기간 통계
+export interface RecallPeriodStats {
+  total_processed: number       // 기간 내 처리된 총 환자 수
+  appointment_count: number     // 예약 성공
+  sms_sent_count: number        // 문자 발송
+  no_answer_count: number       // 부재중
+  call_rejected_count: number   // 통화 거부
+  visit_refused_count: number   // 내원 거부
+  invalid_number_count: number  // 없는 번호
+  success_rate: number          // 예약 성공률 (%)
+}
+
+// 기간별 통계 응답 (현재 기간 + 이전 기간 비교)
+export interface RecallTimeRangeStats {
+  period: RecallStatsPeriod
+  current: RecallPeriodStats
+  previous: RecallPeriodStats
+  periodLabel: string           // "2026-03-06", "2026-03-01 ~ 03-07" 등
+  previousLabel: string
+}
+
+// 일별 추이 데이터 (차트용)
+export interface RecallDailyTrend {
+  date: string                  // YYYY-MM-DD
+  total_processed: number
+  appointment_count: number
+  success_rate: number
+}
+
 // ========================================
 // 디바이스 타입 (전화 걸기용)
 // ========================================

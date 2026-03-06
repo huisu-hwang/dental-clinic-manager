@@ -18,7 +18,11 @@ import type {
   RecallStats,
   ContactType,
   PaginatedResponse,
-  BulkUploadResult
+  BulkUploadResult,
+  RecallStatsPeriod,
+  RecallPeriodStats,
+  RecallTimeRangeStats,
+  RecallDailyTrend
 } from '@/types/recall'
 
 // ========================================
@@ -1552,6 +1556,180 @@ export const recallPatientService = {
       }
 
       return { success: true, data: stats }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 기간별 통계 조회 (일별/주별/월별)
+  async getTimeRangeStats(period: RecallStatsPeriod): Promise<{ success: boolean; data?: RecallTimeRangeStats; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, error: 'Clinic ID not found' }
+
+    try {
+      const now = new Date()
+      const koreaOffset = 9 * 60 // KST = UTC+9
+      const koreaTime = new Date(now.getTime() + (koreaOffset - now.getTimezoneOffset()) * 60000)
+
+      let currentStart: Date, currentEnd: Date, prevStart: Date, prevEnd: Date
+      let periodLabel: string, previousLabel: string
+
+      if (period === 'daily') {
+        // 오늘
+        currentStart = new Date(koreaTime.getFullYear(), koreaTime.getMonth(), koreaTime.getDate())
+        currentEnd = new Date(koreaTime.getFullYear(), koreaTime.getMonth(), koreaTime.getDate(), 23, 59, 59)
+        // 어제
+        prevStart = new Date(currentStart.getTime() - 86400000)
+        prevEnd = new Date(currentEnd.getTime() - 86400000)
+        periodLabel = `${koreaTime.getFullYear()}-${String(koreaTime.getMonth() + 1).padStart(2, '0')}-${String(koreaTime.getDate()).padStart(2, '0')}`
+        const pd = new Date(prevStart)
+        previousLabel = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}-${String(pd.getDate()).padStart(2, '0')}`
+      } else if (period === 'weekly') {
+        // 이번 주 (월요일 시작)
+        const dayOfWeek = koreaTime.getDay()
+        const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+        currentStart = new Date(koreaTime.getFullYear(), koreaTime.getMonth(), koreaTime.getDate() - mondayOffset)
+        currentEnd = new Date(currentStart.getTime() + 6 * 86400000 + 86399000)
+        // 저번 주
+        prevStart = new Date(currentStart.getTime() - 7 * 86400000)
+        prevEnd = new Date(currentEnd.getTime() - 7 * 86400000)
+        const cs = currentStart, ce = new Date(currentStart.getTime() + 6 * 86400000)
+        periodLabel = `${String(cs.getMonth() + 1).padStart(2, '0')}/${String(cs.getDate()).padStart(2, '0')} ~ ${String(ce.getMonth() + 1).padStart(2, '0')}/${String(ce.getDate()).padStart(2, '0')}`
+        const ps = prevStart, pe = new Date(prevStart.getTime() + 6 * 86400000)
+        previousLabel = `${String(ps.getMonth() + 1).padStart(2, '0')}/${String(ps.getDate()).padStart(2, '0')} ~ ${String(pe.getMonth() + 1).padStart(2, '0')}/${String(pe.getDate()).padStart(2, '0')}`
+      } else {
+        // 이번 달
+        currentStart = new Date(koreaTime.getFullYear(), koreaTime.getMonth(), 1)
+        currentEnd = new Date(koreaTime.getFullYear(), koreaTime.getMonth() + 1, 0, 23, 59, 59)
+        // 지난 달
+        prevStart = new Date(koreaTime.getFullYear(), koreaTime.getMonth() - 1, 1)
+        prevEnd = new Date(koreaTime.getFullYear(), koreaTime.getMonth(), 0, 23, 59, 59)
+        periodLabel = `${currentStart.getFullYear()}년 ${currentStart.getMonth() + 1}월`
+        previousLabel = `${prevStart.getFullYear()}년 ${prevStart.getMonth() + 1}월`
+      }
+
+      const toISOString = (d: Date) => {
+        // KST 날짜를 UTC ISO로 변환
+        const utcDate = new Date(d.getTime() - koreaOffset * 60000)
+        return utcDate.toISOString()
+      }
+
+      const fetchPeriodStats = async (start: Date, end: Date): Promise<RecallPeriodStats> => {
+        const startStr = toISOString(start)
+        const endStr = toISOString(end)
+
+        const buildQ = (status?: string) => {
+          let q = supabase
+            .from('recall_patients')
+            .select('*', { count: 'exact', head: true })
+            .eq('clinic_id', clinicId)
+            .is('exclude_reason', null)
+            .gte('recall_datetime', startStr)
+            .lte('recall_datetime', endStr)
+          if (status) q = q.eq('status', status)
+          return q
+        }
+
+        const [totalR, apptR, smsR, noAnsR, rejR, refR, invR] = await Promise.all([
+          buildQ(),
+          buildQ('appointment_made'),
+          buildQ('sms_sent'),
+          buildQ('no_answer'),
+          buildQ('call_rejected'),
+          buildQ('visit_refused'),
+          buildQ('invalid_number')
+        ])
+
+        const total = totalR.count || 0
+        const appointment = apptR.count || 0
+
+        return {
+          total_processed: total,
+          appointment_count: appointment,
+          sms_sent_count: smsR.count || 0,
+          no_answer_count: noAnsR.count || 0,
+          call_rejected_count: rejR.count || 0,
+          visit_refused_count: refR.count || 0,
+          invalid_number_count: invR.count || 0,
+          success_rate: total > 0 ? Math.round((appointment / total) * 100) : 0
+        }
+      }
+
+      const [current, previous] = await Promise.all([
+        fetchPeriodStats(currentStart, currentEnd),
+        fetchPeriodStats(prevStart, prevEnd)
+      ])
+
+      return {
+        success: true,
+        data: { period, current, previous, periodLabel, previousLabel }
+      }
+    } catch (error) {
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 일별 추이 데이터 (최근 N일)
+  async getDailyTrends(days: number = 14): Promise<{ success: boolean; data?: RecallDailyTrend[]; error?: string }> {
+    const supabase = await ensureConnection()
+    if (!supabase) return { success: false, error: 'Database connection not available' }
+
+    const clinicId = await getCurrentClinicId()
+    if (!clinicId) return { success: false, error: 'Clinic ID not found' }
+
+    try {
+      const now = new Date()
+      const koreaOffset = 9 * 60
+      const koreaTime = new Date(now.getTime() + (koreaOffset - now.getTimezoneOffset()) * 60000)
+
+      const trends: RecallDailyTrend[] = []
+
+      // 각 일자별 통계를 병렬로 조회
+      const dayPromises = Array.from({ length: days }, (_, i) => {
+        const date = new Date(koreaTime.getFullYear(), koreaTime.getMonth(), koreaTime.getDate() - (days - 1 - i))
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+        const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+        const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59)
+        const startStr = new Date(dayStart.getTime() - koreaOffset * 60000).toISOString()
+        const endStr = new Date(dayEnd.getTime() - koreaOffset * 60000).toISOString()
+
+        const totalQ = supabase
+          .from('recall_patients')
+          .select('*', { count: 'exact', head: true })
+          .eq('clinic_id', clinicId)
+          .is('exclude_reason', null)
+          .gte('recall_datetime', startStr)
+          .lte('recall_datetime', endStr)
+
+        const apptQ = supabase
+          .from('recall_patients')
+          .select('*', { count: 'exact', head: true })
+          .eq('clinic_id', clinicId)
+          .is('exclude_reason', null)
+          .eq('status', 'appointment_made')
+          .gte('recall_datetime', startStr)
+          .lte('recall_datetime', endStr)
+
+        return Promise.all([totalQ, apptQ]).then(([totalR, apptR]) => {
+          const total = totalR.count || 0
+          const appt = apptR.count || 0
+          return {
+            date: dateStr,
+            total_processed: total,
+            appointment_count: appt,
+            success_rate: total > 0 ? Math.round((appt / total) * 100) : 0
+          }
+        })
+      })
+
+      const results = await Promise.all(dayPromises)
+      trends.push(...results)
+
+      return { success: true, data: trends }
     } catch (error) {
       return { success: false, error: extractErrorMessage(error) }
     }

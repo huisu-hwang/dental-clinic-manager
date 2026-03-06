@@ -1,6 +1,6 @@
 /**
  * Telegram Group Members API
- * GET    /api/telegram/groups/[id]/members - 멤버 목록 조회 (master_admin 전용)
+ * GET    /api/telegram/groups/[id]/members - 멤버 목록 조회 (그룹 멤버 포함)
  * POST   /api/telegram/groups/[id]/members - 멤버 추가 (master_admin 전용)
  * DELETE /api/telegram/groups/[id]/members - 멤버 제거 (master_admin 전용)
  */
@@ -23,6 +23,20 @@ async function checkMasterAdmin(userId: string | null): Promise<boolean> {
   return data.role === 'master_admin'
 }
 
+async function checkGroupMember(userId: string, groupId: string): Promise<boolean> {
+  const supabase = getSupabaseAdmin()
+  if (!supabase) return false
+
+  const { data } = await supabase
+    .from('telegram_group_members')
+    .select('id')
+    .eq('telegram_group_id', groupId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  return !!data
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -36,19 +50,29 @@ export async function GET(
 
     const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
 
-    // 권한 확인: master_admin 또는 그룹 생성자
+    if (!userId) {
+      return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
+    }
+
+    // 권한 확인: master_admin, 그룹 생성자, 또는 그룹 멤버
     const isAdmin = await checkMasterAdmin(userId)
     let isGroupCreator = false
-    if (!isAdmin && userId) {
+    let isGroupMember = false
+
+    if (!isAdmin) {
       const { data: group } = await supabase
         .from('telegram_groups')
         .select('created_by')
         .eq('id', groupId)
         .maybeSingle()
       isGroupCreator = group?.created_by === userId
+
+      if (!isGroupCreator) {
+        isGroupMember = await checkGroupMember(userId, groupId)
+      }
     }
 
-    if (!isAdmin && !isGroupCreator) {
+    if (!isAdmin && !isGroupCreator && !isGroupMember) {
       return NextResponse.json({ data: null, error: '권한이 없습니다.' }, { status: 403 })
     }
 
