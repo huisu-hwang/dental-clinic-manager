@@ -90,6 +90,8 @@ export default function CreditCardSalesPanel({
   const [scanning, setScanning] = useState(false)
   const [scanned, setScanned] = useState(false)
   const [scanError, setScanError] = useState('')
+  const [scanMode, setScanMode] = useState<'standard' | 'extended' | 'custom'>('standard')
+  const [customPath, setCustomPath] = useState('')
 
   // 조회 조건
   const [queryYear, setQueryYear] = useState(year)
@@ -124,8 +126,12 @@ export default function CreditCardSalesPanel({
     return HOMETAX_COMPATIBLE_USAGES.includes(cert.usage)
   }
 
-  // 서버 API로 인증서 자동 검색 (all: 모든 매체+형식 한 번에 검색)
-  const scanCerts = useCallback(async (media?: 'hard' | 'removable') => {
+  // 서버 API로 인증서 검색
+  const scanCerts = useCallback(async (options?: {
+    media?: 'hard' | 'removable'
+    extended?: boolean
+    path?: string
+  }) => {
     setScanning(true)
     setScanError('')
     setFoundCerts([])
@@ -133,26 +139,51 @@ export default function CreditCardSalesPanel({
     setScanned(false)
 
     try {
-      const mediaParam = media || 'all'
-      const res = await fetch(`/api/codef/scan-certs?mediaType=${mediaParam}&certType=all`)
+      const params = new URLSearchParams({ certType: 'all' })
+
+      if (options?.path) {
+        params.set('customPath', options.path)
+        setScanMode('custom')
+      } else if (options?.extended) {
+        params.set('extended', 'true')
+        setScanMode('extended')
+      } else {
+        params.set('mediaType', options?.media || 'all')
+        setScanMode('standard')
+      }
+
+      const res = await fetch(`/api/codef/scan-certs?${params.toString()}`)
       const data = await res.json()
 
       const certs: ScannedCert[] = data.success ? (data.certs || []) : []
 
       if (certs.length === 0) {
+        // 기본 검색에서 못 찾으면 자동으로 확장 검색 시도
+        if (!options?.extended && !options?.path) {
+          setScanMode('extended')
+          const extRes = await fetch('/api/codef/scan-certs?certType=all&extended=true')
+          const extData = await extRes.json()
+          const extCerts: ScannedCert[] = extData.success ? (extData.certs || []) : []
+
+          if (extCerts.length > 0) {
+            setFoundCerts(extCerts)
+            const validCerts = extCerts.filter(c => !c.isExpired && isHometaxCompatible(c))
+            if (validCerts.length === 1) setSelectedCert(validCerts[0])
+            setScanned(true)
+            return
+          }
+        }
+
         setScanError(
-          'NPKI 기본 경로에서 인증서를 찾을 수 없습니다.\n인증서가 설치되어 있는지 확인해주세요.'
+          '컴퓨터에서 인증서를 찾을 수 없습니다.\n아래에서 인증서 경로를 직접 지정해주세요.'
         )
         setScanned(true)
         return
       }
 
       setFoundCerts(certs)
-      // 홈택스 호환 + 유효한 인증서가 하나뿐이면 자동 선택
       const validCerts = certs.filter(c => !c.isExpired && isHometaxCompatible(c))
-      if (validCerts.length === 1) {
-        setSelectedCert(validCerts[0])
-      }
+      if (validCerts.length === 1) setSelectedCert(validCerts[0])
     } catch (err) {
       console.error('인증서 검색 오류:', err)
       setScanError('인증서 검색 중 오류가 발생했습니다.')
@@ -170,7 +201,15 @@ export default function CreditCardSalesPanel({
     setMediaType(media)
     setCertPassword('')
     setError(null)
-    scanCerts(media)
+    scanCerts({ media })
+  }
+
+  // 사용자 지정 경로로 검색
+  const handleCustomPathSearch = () => {
+    if (!customPath.trim()) return
+    setCertPassword('')
+    setError(null)
+    scanCerts({ path: customPath.trim() })
   }
 
   // 데이터 조회
@@ -356,7 +395,7 @@ export default function CreditCardSalesPanel({
                   </p>
                   {scanned && (
                     <button
-                      onClick={() => scanCerts(mediaType || undefined)}
+                      onClick={() => scanCerts()}
                       className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
                     >
                       <Search className="w-3.5 h-3.5" />
@@ -377,7 +416,14 @@ export default function CreditCardSalesPanel({
                     {scanning && (
                       <div className="flex flex-col items-center justify-center py-8">
                         <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mb-2" />
-                        <p className="text-sm text-gray-500">인증서 검색 중...</p>
+                        <p className="text-sm text-gray-500">
+                          {scanMode === 'extended' ? '컴퓨터 전체에서 인증서 검색 중...' :
+                           scanMode === 'custom' ? '지정 경로에서 인증서 검색 중...' :
+                           '인증서 검색 중...'}
+                        </p>
+                        {scanMode === 'extended' && (
+                          <p className="text-[10px] text-gray-400 mt-1">기본 경로에서 찾지 못해 확장 검색을 진행합니다</p>
+                        )}
                       </div>
                     )}
 
@@ -391,14 +437,36 @@ export default function CreditCardSalesPanel({
 
                     {/* 검색 결과 없음 */}
                     {!scanning && scanned && foundCerts.length === 0 && scanError && (
-                      <div className="flex flex-col items-center justify-center py-8 px-4">
+                      <div className="flex flex-col items-center justify-center py-6 px-4">
                         <AlertCircle className="w-6 h-6 text-amber-400 mb-2" />
                         <p className="text-xs text-gray-500 text-center whitespace-pre-line">{scanError}</p>
+                        <div className="mt-3 w-full max-w-sm">
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={customPath}
+                              onChange={(e) => setCustomPath(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleCustomPathSearch() }}
+                              placeholder="인증서 폴더 경로 (예: /Users/사용자/NPKI)"
+                              className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                            <button
+                              onClick={handleCustomPathSearch}
+                              disabled={!customPath.trim()}
+                              className="px-3 py-1.5 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                            >
+                              경로 검색
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-gray-400 mt-1.5 text-center">
+                            인증서가 저장된 폴더 경로를 직접 입력하세요
+                          </p>
+                        </div>
                         <button
-                          onClick={() => scanCerts(mediaType || undefined)}
-                          className="mt-3 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition-colors"
+                          onClick={() => scanCerts()}
+                          className="mt-2 px-3 py-1.5 bg-gray-100 text-gray-600 text-xs rounded hover:bg-gray-200 transition-colors"
                         >
-                          다시 검색
+                          전체 다시 검색
                         </button>
                       </div>
                     )}

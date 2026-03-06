@@ -143,11 +143,23 @@ function scanPfxFile(filePath: string): ScannedCert | null {
   }
 }
 
+// 확장 검색 시 건너뛸 디렉토리 (성능 최적화)
+const SKIP_DIRS = new Set([
+  'node_modules', '.git', '.svn', '.hg',
+  'Caches', 'Cache', 'CacheStorage', 'GPUCache', 'ShaderCache',
+  '.npm', '.yarn', '.pnpm', '.bun',
+  '.Trash', 'Trash', '.Trashes',
+  'Music', 'Photos', 'Movies', 'Pictures',
+  'Applications', '.docker', '.vagrant',
+  'Library', // Mac Library 전체는 getNpkiPaths에서 NPKI 경로만 직접 지정
+])
+
 /**
  * 디렉토리를 재귀적으로 스캔하여 인증서 검색
+ * @param extended true이면 확장 검색 (숨김폴더 포함, 불필요 디렉토리 스킵)
  */
-function scanDirectory(dir: string, certType: 'der' | 'pfx', results: ScannedCert[], depth = 0): void {
-  if (depth > 5) return // 최대 5단계까지만 탐색
+function scanDirectory(dir: string, certType: 'der' | 'pfx', results: ScannedCert[], depth = 0, maxDepth = 5, extended = false): void {
+  if (depth > maxDepth) return
 
   try {
     if (!fs.existsSync(dir)) return
@@ -188,11 +200,20 @@ function scanDirectory(dir: string, certType: 'der' | 'pfx', results: ScannedCer
 
     // 하위 디렉토리 재귀 탐색
     for (const entry of entries) {
-      if (entry.isDirectory() && !entry.name.startsWith('.')) {
-        scanDirectory(path.join(dir, entry.name), certType, results, depth + 1)
+      if (!entry.isDirectory()) continue
+      const dirName = entry.name
+
+      if (extended) {
+        // 확장 검색: 불필요 디렉토리만 스킵, 숨김폴더도 탐색
+        if (SKIP_DIRS.has(dirName)) continue
+      } else {
+        // 기본 검색: 숨김폴더 스킵
+        if (dirName.startsWith('.')) continue
       }
+
+      scanDirectory(path.join(dir, entry.name), certType, results, depth + 1, maxDepth, extended)
     }
-  } catch (err) {
+  } catch {
     // 권한 없는 디렉토리 등 무시
   }
 }
@@ -207,26 +228,32 @@ function getNpkiPaths(mediaType: 'hard' | 'removable'): string[] {
 
   if (mediaType === 'hard') {
     if (platform === 'darwin') {
-      // Mac: ~/Library/Preferences/NPKI/
+      // Mac 표준 NPKI 경로
       paths.push(path.join(homeDir, 'Library', 'Preferences', 'NPKI'))
+      // 추가 검색: 사용자가 복사해둘 수 있는 일반적인 위치
+      paths.push(path.join(homeDir, 'NPKI'))
+      paths.push(path.join(homeDir, 'Documents', 'NPKI'))
+      paths.push(path.join(homeDir, 'Desktop', 'NPKI'))
+      paths.push(path.join(homeDir, 'Downloads', 'NPKI'))
     } else if (platform === 'win32') {
-      // Windows: C:\Users\{user}\AppData\LocalLow\NPKI\
       paths.push(path.join(homeDir, 'AppData', 'LocalLow', 'NPKI'))
-      // 추가 경로: C:\Program Files\NPKI
+      paths.push('C:\\NPKI')
       paths.push('C:\\Program Files\\NPKI')
       paths.push('C:\\Program Files (x86)\\NPKI')
-    } else {
-      // Linux: ~/NPKI/
       paths.push(path.join(homeDir, 'NPKI'))
+      paths.push(path.join(homeDir, 'Documents', 'NPKI'))
+      paths.push(path.join(homeDir, 'Desktop', 'NPKI'))
+      paths.push(path.join(homeDir, 'Downloads', 'NPKI'))
+    } else {
+      paths.push(path.join(homeDir, 'NPKI'))
+      paths.push(path.join(homeDir, 'Documents', 'NPKI'))
     }
   } else {
     // 이동식디스크
     if (platform === 'darwin') {
-      // Mac: /Volumes/*/NPKI/
       try {
         const volumes = fs.readdirSync('/Volumes')
         for (const vol of volumes) {
-          // 시스템 볼륨 제외
           if (vol === 'Macintosh HD' || vol === 'Recovery') continue
           paths.push(path.join('/Volumes', vol, 'NPKI'))
         }
@@ -234,13 +261,11 @@ function getNpkiPaths(mediaType: 'hard' | 'removable'): string[] {
         // /Volumes 접근 실패 무시
       }
     } else if (platform === 'win32') {
-      // Windows: D:\NPKI, E:\NPKI, ... Z:\NPKI
       for (let i = 68; i <= 90; i++) { // D ~ Z
         const drive = String.fromCharCode(i)
         paths.push(`${drive}:\\NPKI`)
       }
     } else {
-      // Linux: /media/*/NPKI, /mnt/*/NPKI
       for (const mountDir of ['/media', '/mnt']) {
         try {
           const mounts = fs.readdirSync(mountDir)
@@ -265,30 +290,81 @@ function getNpkiPaths(mediaType: 'hard' | 'removable'): string[] {
   return paths
 }
 
+/**
+ * 확장 검색: 사용자 홈 디렉토리 전체를 재귀 스캔
+ */
+function getExtendedSearchPaths(): string[] {
+  const homeDir = os.homedir()
+  const platform = os.platform()
+  const paths: string[] = [homeDir]
+
+  // 이동식 디스크도 포함
+  if (platform === 'darwin') {
+    try {
+      const volumes = fs.readdirSync('/Volumes')
+      for (const vol of volumes) {
+        if (vol === 'Macintosh HD' || vol === 'Recovery') continue
+        paths.push(path.join('/Volumes', vol))
+      }
+    } catch { /* ignore */ }
+  } else if (platform === 'win32') {
+    for (let i = 68; i <= 90; i++) {
+      const drive = `${String.fromCharCode(i)}:\\`
+      if (fs.existsSync(drive)) paths.push(drive)
+    }
+  }
+
+  return paths
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const mediaType = (searchParams.get('mediaType') || 'all') as 'hard' | 'removable' | 'all'
     const certType = (searchParams.get('certType') || 'all') as 'der' | 'pfx' | 'all'
+    const extended = searchParams.get('extended') === 'true'
+    const customPath = searchParams.get('customPath') || ''
 
-    // 'all'이면 하드+이동식 모두 검색
-    const npkiPaths: string[] = mediaType === 'all'
-      ? [...getNpkiPaths('hard'), ...getNpkiPaths('removable')]
-      : getNpkiPaths(mediaType)
-
-    // 'all'이면 DER+PFX 모두 검색
     const typesToScan: ('der' | 'pfx')[] = certType === 'all' ? ['der', 'pfx'] : [certType]
-
     const results: ScannedCert[] = []
+    let scannedPaths: string[] = []
 
-    for (const npkiPath of npkiPaths) {
+    if (customPath) {
+      // 사용자 지정 경로 검색
+      scannedPaths = [customPath]
       for (const t of typesToScan) {
-        scanDirectory(npkiPath, t, results)
+        scanDirectory(customPath, t, results, 0, 8, true)
+      }
+    } else if (extended) {
+      // 확장 검색: 홈 디렉토리 전체 + 이동식 디스크 재귀 스캔
+      const extPaths = getExtendedSearchPaths()
+      scannedPaths = extPaths
+      for (const extPath of extPaths) {
+        for (const t of typesToScan) {
+          scanDirectory(extPath, t, results, 0, 8, true)
+        }
+      }
+    } else {
+      // 기본 검색: NPKI 표준 경로
+      const npkiPaths: string[] = mediaType === 'all'
+        ? [...getNpkiPaths('hard'), ...getNpkiPaths('removable')]
+        : getNpkiPaths(mediaType)
+      scannedPaths = npkiPaths
+
+      for (const npkiPath of npkiPaths) {
+        for (const t of typesToScan) {
+          scanDirectory(npkiPath, t, results)
+        }
       }
     }
 
+    // 중복 제거 (같은 경로의 같은 파일)
+    const uniqueResults = results.filter((cert, index, self) =>
+      index === self.findIndex(c => c.certPath === cert.certPath && c.fileName === cert.fileName)
+    )
+
     // 정렬: 유효한 것 우선, DER 우선, 만료일 늦은 것 우선
-    results.sort((a, b) => {
+    uniqueResults.sort((a, b) => {
       if (a.isExpired !== b.isExpired) return a.isExpired ? 1 : -1
       if (a.type !== b.type) return a.type === 'der' ? -1 : 1
       if (a.notAfter && b.notAfter) {
@@ -299,9 +375,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      certs: results,
-      scannedPaths: npkiPaths.filter(p => fs.existsSync(p)),
+      certs: uniqueResults,
+      scannedPaths: scannedPaths.filter(p => fs.existsSync(p)),
       platform: os.platform(),
+      extended,
     })
   } catch (error) {
     console.error('인증서 스캔 오류:', error)
