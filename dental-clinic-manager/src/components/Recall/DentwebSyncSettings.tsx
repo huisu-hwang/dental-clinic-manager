@@ -35,6 +35,7 @@ export default function DentwebSyncSettings() {
   const [isGeneratingKey, setIsGeneratingKey] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
+  const [isDownloadingConfig, setIsDownloadingConfig] = useState(false)
 
   // 동기화 설정 값
   const [isActive, setIsActive] = useState(false)
@@ -117,6 +118,87 @@ export default function DentwebSyncSettings() {
     }
   }
 
+  // 설정 파일(.env) 다운로드 - API 키 자동 생성 포함
+  const handleDownloadConfig = async () => {
+    setIsDownloadingConfig(true)
+    try {
+      let clinicId = config?.clinic_id
+      let apiKey = config?.api_key
+
+      // API 키가 없으면 자동 생성
+      if (!apiKey) {
+        const result = await dentwebService.config.generateApiKey()
+        if (result.success && result.apiKey) {
+          apiKey = result.apiKey
+          await loadData()
+        } else {
+          showMessage('error', result.error || 'API 키 생성에 실패했습니다.')
+          setIsDownloadingConfig(false)
+          return
+        }
+      }
+
+      // 동기화가 비활성이면 자동 활성화
+      if (!isActive) {
+        const saveResult = await dentwebService.config.saveConfig({
+          is_active: true,
+          sync_interval_seconds: syncInterval,
+        })
+        if (saveResult.success) {
+          setIsActive(true)
+          setConfig(saveResult.data || null)
+          clinicId = saveResult.data?.clinic_id || clinicId
+        }
+      }
+
+      if (!clinicId || !apiKey) {
+        showMessage('error', '설정 정보를 가져올 수 없습니다. 페이지를 새로고침 해주세요.')
+        setIsDownloadingConfig(false)
+        return
+      }
+
+      // .env 파일 내용 생성
+      const envContent = [
+        '# 덴트웹 브릿지 에이전트 설정 (자동 생성됨)',
+        '# 이 파일을 dentweb-bridge-agent 폴더에 넣어주세요',
+        '',
+        '# 덴트웹 DB 설정 (setup.bat이 자동으로 감지합니다)',
+        'DENTWEB_DB_SERVER=localhost',
+        'DENTWEB_DB_PORT=1433',
+        'DENTWEB_DB_DATABASE=DENTWEBDB',
+        'DENTWEB_DB_USER=',
+        'DENTWEB_DB_PASSWORD=',
+        'DENTWEB_DB_AUTH=windows',
+        '',
+        '# Supabase API 설정 (자동 입력됨)',
+        `SUPABASE_URL=https://beahjntkmkfhpcbhfnrr.supabase.co`,
+        `CLINIC_ID=${clinicId}`,
+        `API_KEY=${apiKey}`,
+        '',
+        '# 동기화 설정',
+        `SYNC_INTERVAL_SECONDS=${syncInterval}`,
+        'SYNC_TYPE=incremental',
+        '',
+      ].join('\n')
+
+      // 파일 다운로드 트리거
+      const blob = new Blob([envContent], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = '.env'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      showMessage('success', '설정 파일이 다운로드되었습니다. dentweb-bridge-agent 폴더에 넣어주세요.')
+    } catch (error) {
+      showMessage('error', '설정 파일 다운로드에 실패했습니다.')
+    }
+    setIsDownloadingConfig(false)
+  }
+
   // 날짜 포맷팅
   const formatDateTime = (dateStr: string | null) => {
     if (!dateStr) return '-'
@@ -196,6 +278,23 @@ export default function DentwebSyncSettings() {
             설치 파일 다운로드
           </a>
           <button
+            onClick={handleDownloadConfig}
+            disabled={isDownloadingConfig}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 transition-colors text-sm font-medium shadow-sm"
+          >
+            {isDownloadingConfig ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                생성 중...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                설정 파일(.env) 다운로드
+              </>
+            )}
+          </button>
+          <button
             onClick={() => setShowInstallGuide(!showInstallGuide)}
             className="inline-flex items-center gap-2 px-4 py-2.5 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors text-sm"
           >
@@ -223,27 +322,28 @@ export default function DentwebSyncSettings() {
                 <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
                 <div>
                   <p className="text-sm font-medium text-gray-800">설치 파일 다운로드 및 압축 해제</p>
-                  <p className="text-xs text-gray-500 mt-0.5">위 버튼을 클릭하여 최신 버전을 다운로드합니다</p>
+                  <p className="text-xs text-gray-500 mt-0.5">&ldquo;설치 파일 다운로드&rdquo; 버튼으로 최신 버전을 다운로드합니다</p>
                 </div>
               </div>
 
               <div className="flex gap-3">
                 <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">
-                    <code className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">setup.bat</code> 관리자 권한으로 실행
+                  <p className="text-sm font-medium text-gray-800">설정 파일(.env) 다운로드</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    &ldquo;설정 파일(.env) 다운로드&rdquo; 버튼을 클릭하면 API 키가 자동 생성되고 설정 파일이 다운로드됩니다.
+                    다운로드된 <code className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono">.env</code> 파일을 압축 해제한 폴더에 넣어주세요.
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">Node.js 자동 설치, 빌드, 환경 설정이 한번에 진행됩니다</p>
                 </div>
               </div>
 
               <div className="flex gap-3">
                 <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">DB 정보 및 API 키 입력</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    덴트웹 DB 주소, 이 페이지에서 생성한 API 키를 입력합니다
+                  <p className="text-sm font-medium text-gray-800">
+                    <code className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">setup.bat</code> 관리자 권한으로 실행
                   </p>
+                  <p className="text-xs text-gray-500 mt-0.5">Node.js 자동 설치, 빌드, DB 자동 감지가 한번에 진행됩니다 (입력 불필요)</p>
                 </div>
               </div>
 
@@ -260,7 +360,6 @@ export default function DentwebSyncSettings() {
 
             <div className="bg-amber-50 rounded p-3 text-xs text-amber-700">
               <strong>필요 사항:</strong> 덴트웹이 설치된 원내 서버 PC에서 실행해야 합니다.
-              설치 전 반드시 아래에서 API 키를 먼저 생성하세요.
             </div>
           </div>
         )}
