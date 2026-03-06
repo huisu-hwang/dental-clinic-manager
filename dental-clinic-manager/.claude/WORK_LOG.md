@@ -10,6 +10,76 @@
 
 ---
 
+## 2026-03-07 [기능 개발] 일일보고서 리콜 데이터 자동 연동
+
+**키워드:** #일일보고서 #리콜 #자동연동 #DailyInputForm #recallService
+
+### 📋 작업 내용
+- 일일보고서의 리콜 섹션을 수동 입력에서 recall_patients 테이블 기반 자동 연동으로 변경
+- `recallService.patients.getDailyRecallActivity(dateStr)` 함수 추가
+- DailyInputForm 리콜 UI 전면 교체
+
+### ✅ 해결 방법
+1. **recallService.ts**: `getDailyRecallActivity()` 함수 추가
+   - KST 기반 날짜 변환 (UTC → KST offset 계산)
+   - recall_datetime 기준 당일 처리 환자 조회 (pending 제외)
+   - 리콜 처리 건수, 예약 성공 건수, 예약 성공 환자명 반환
+
+2. **DailyInputForm.tsx**: 리콜 섹션 자동 연동 UI
+   - 수동 입력 3개 필드 → 자동 연동 요약 카드 3개 (처리 건수, 예약 성공, 성공률)
+   - 예약 성공 환자명 자동 표시
+   - 펼침/접힘 가능한 리콜 활동 로그 테이블 (환자명, 전화번호, 상태, 처리시간)
+   - 새로고침 버튼으로 수동 갱신
+   - dynamic import로 SSR 이슈 방지
+
+### 🧪 테스트 결과
+- TypeScript 컴파일 통과 (`npx tsc --noEmit`)
+- Playwright 브라우저 테스트:
+  - 리콜 자동연동 UI 정상 렌더링 (요약 카드, 자동 연동 배지)
+  - 리콜 상세 기록 테이블 펼침/접힘 정상
+  - 저장 기능 정상 ("보고서가 성공적으로 저장되었습니다")
+  - 콘솔 에러 없음
+
+### 💡 배운 점
+- recallService는 dynamic import 필수 (SSR/prerendering 이슈)
+- Playwright에서 사이드바 버튼 클릭 시 pointer intercept 문제 → URL 직접 이동으로 우회
+
+---
+
+## 2026-03-06 [버그 수정] 소모임 투표 기능 - 일반 멤버 투표 불가 오류
+
+**키워드:** #소모임 #투표 #기여도투표 #멤버API #403 #권한
+
+### 📋 작업 내용
+- 소모임에서 투표글 작성자가 아닌 일반 멤버들이 투표를 할 수 없는 버그 수정
+
+### 🐛 문제
+- 기여도 투표 페이지에서 투표 후보 목록이 비어 있어 투표 불가
+
+### 🔍 근본 원인 (5 Whys)
+1. ContributionVoteDisplay가 `telegramMemberService.getMembers(groupId)` 호출
+2. `getMembers()`가 `/api/telegram/groups/[id]/members` GET 호출
+3. 해당 API가 **master_admin 또는 그룹 생성자만** 허용 → 일반 멤버 403 반환
+4. 403으로 인해 `candidates` 배열이 비어 있음
+5. 후보 없으니 투표 버튼 비활성화
+
+### ✅ 해결 방법
+- `src/app/api/telegram/groups/[id]/members/route.ts` GET 핸들러 수정
+  - `checkGroupMember()` 함수 추가 (admin client로 멤버십 직접 확인)
+  - 권한 조건: `master_admin OR 그룹 생성자 OR 그룹 멤버` → 모두 허용
+  - POST/DELETE는 기존 권한(master_admin/생성자) 유지
+
+### 🧪 테스트 결과
+- Chrome DevTools 확인: `GET /api/telegram/groups/.../members` → **200** 반환
+- 기여도 투표 페이지에서 후보 목록(실장테스트, 아스클, 테스트) 정상 표시
+- 투표 버튼 활성화 및 정상 동작 확인
+
+### 💡 배운 점
+- 멤버 목록 조회 API는 그룹 멤버 전체에게 읽기 권한 허용이 맞음
+- 쓰기(POST/DELETE)는 관리자/생성자만 허용하는 분리된 권한 구조 유지
+
+---
+
 ## 2026-03-06 [버그 수정] 소모임 게시판 - 가입한 소모임 미표시 오류
 
 **키워드:** #소모임 #RLS #무한재귀 #telegram_group_members #42P17
