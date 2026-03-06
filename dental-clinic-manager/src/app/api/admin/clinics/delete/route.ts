@@ -93,18 +93,27 @@ export async function DELETE(request: Request) {
       }
     }
 
-    // 3. 관련 데이터 삭제 (CASCADE로 처리되지 않는 것들)
+    // 3. FK 참조 테이블 레코드 삭제 (telegram_board_posts, community 관련)
+    const userIds = users?.map(u => u.id) || []
+    if (userIds.length > 0) {
+      console.log('[Admin API - Delete Clinic] Deleting FK-referencing records for users')
+      await supabase.from('telegram_board_posts').delete().in('created_by', userIds)
+      await supabase.from('community_reports').update({ reviewed_by: null }).in('reviewed_by', userIds)
+      await supabase.from('community_penalties').delete().in('issued_by', userIds)
+    }
+
+    // 4. 관련 데이터 삭제 (CASCADE로 처리되지 않는 것들)
     console.log('[Admin API - Delete Clinic] Deleting related data')
     await supabase.from('appointments').delete().eq('clinic_id', clinicId)
     await supabase.from('inventory').delete().eq('clinic_id', clinicId)
     await supabase.from('inventory_categories').delete().eq('clinic_id', clinicId)
     await supabase.from('patients').delete().eq('clinic_id', clinicId)
 
-    // 4. users 삭제 (auth.users는 이미 삭제했으므로 public.users만 삭제)
+    // 5. users 삭제 (auth.users는 이미 삭제했으므로 public.users만 삭제)
     console.log('[Admin API - Delete Clinic] Deleting public users')
     await supabase.from('users').delete().eq('clinic_id', clinicId)
 
-    // 5. 병원 삭제
+    // 6. 병원 삭제
     console.log('[Admin API - Delete Clinic] Deleting clinic')
     const { error } = await supabase
       .from('clinics')
