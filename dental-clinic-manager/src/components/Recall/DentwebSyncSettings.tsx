@@ -3,13 +3,8 @@
 import { useState, useEffect } from 'react'
 import {
   Database,
-  RefreshCw,
   CheckCircle,
   AlertCircle,
-  Key,
-  Copy,
-  Eye,
-  EyeOff,
   Clock,
   Users,
   Activity,
@@ -23,19 +18,15 @@ import {
 import { dentwebService } from '@/lib/dentwebSyncService'
 import type { DentwebSyncConfig, DentwebSyncStatus, DentwebSyncLog } from '@/types/dentweb'
 
-const GITHUB_RELEASE_URL = 'https://github.com/huisu-hwang/dental-clinic-manager/releases/latest'
-
 export default function DentwebSyncSettings() {
   const [config, setConfig] = useState<DentwebSyncConfig | null>(null)
   const [status, setStatus] = useState<DentwebSyncStatus | null>(null)
   const [recentLogs, setRecentLogs] = useState<DentwebSyncLog[]>([])
-  const [showApiKey, setShowApiKey] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [isGeneratingKey, setIsGeneratingKey] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
-  const [isDownloadingConfig, setIsDownloadingConfig] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   // 동기화 설정 값
   const [isActive, setIsActive] = useState(false)
@@ -94,109 +85,37 @@ export default function DentwebSyncSettings() {
     setIsSaving(false)
   }
 
-  // API 키 생성
-  const handleGenerateKey = async () => {
-    setIsGeneratingKey(true)
-    const result = await dentwebService.config.generateApiKey()
-
-    if (result.success && result.apiKey) {
-      showMessage('success', 'API 키가 생성되었습니다. 브릿지 에이전트 .env 파일에 복사하세요.')
-      // 설정 다시 로드
-      await loadData()
-      setShowApiKey(true)
-    } else {
-      showMessage('error', result.error || 'API 키 생성에 실패했습니다.')
-    }
-    setIsGeneratingKey(false)
-  }
-
-  // API 키 복사
-  const handleCopyApiKey = () => {
-    if (config?.api_key) {
-      navigator.clipboard.writeText(config.api_key)
-      showMessage('success', 'API 키가 클립보드에 복사되었습니다.')
-    }
-  }
-
-  // 설정 파일(.env) 다운로드 - API 키 자동 생성 포함
-  const handleDownloadConfig = async () => {
-    setIsDownloadingConfig(true)
+  // 통합 다운로드 (설치파일 + 설정파일 ZIP)
+  const handleDownload = async () => {
+    setIsDownloading(true)
     try {
-      let clinicId = config?.clinic_id
-      let apiKey = config?.api_key
+      const response = await fetch('/api/dentweb/download')
 
-      // API 키가 없으면 자동 생성
-      if (!apiKey) {
-        const result = await dentwebService.config.generateApiKey()
-        if (result.success && result.apiKey) {
-          apiKey = result.apiKey
-          await loadData()
-        } else {
-          showMessage('error', result.error || 'API 키 생성에 실패했습니다.')
-          setIsDownloadingConfig(false)
-          return
-        }
-      }
-
-      // 동기화가 비활성이면 자동 활성화
-      if (!isActive) {
-        const saveResult = await dentwebService.config.saveConfig({
-          is_active: true,
-          sync_interval_seconds: syncInterval,
-        })
-        if (saveResult.success) {
-          setIsActive(true)
-          setConfig(saveResult.data || null)
-          clinicId = saveResult.data?.clinic_id || clinicId
-        }
-      }
-
-      if (!clinicId || !apiKey) {
-        showMessage('error', '설정 정보를 가져올 수 없습니다. 페이지를 새로고침 해주세요.')
-        setIsDownloadingConfig(false)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+        showMessage('error', errorData?.error || '다운로드에 실패했습니다.')
+        setIsDownloading(false)
         return
       }
 
-      // .env 파일 내용 생성
-      const envContent = [
-        '# 덴트웹 브릿지 에이전트 설정 (자동 생성됨)',
-        '# 이 파일을 dentweb-bridge-agent 폴더에 넣어주세요',
-        '',
-        '# 덴트웹 DB 설정 (setup.bat이 자동으로 감지합니다)',
-        'DENTWEB_DB_SERVER=localhost',
-        'DENTWEB_DB_PORT=1433',
-        'DENTWEB_DB_DATABASE=DENTWEBDB',
-        'DENTWEB_DB_USER=',
-        'DENTWEB_DB_PASSWORD=',
-        'DENTWEB_DB_AUTH=windows',
-        '',
-        '# Supabase API 설정 (자동 입력됨)',
-        `SUPABASE_URL=https://beahjntkmkfhpcbhfnrr.supabase.co`,
-        `CLINIC_ID=${clinicId}`,
-        `API_KEY=${apiKey}`,
-        '',
-        '# 동기화 설정',
-        `SYNC_INTERVAL_SECONDS=${syncInterval}`,
-        'SYNC_TYPE=incremental',
-        '',
-      ].join('\n')
-
-      // 파일 다운로드 트리거
-      const blob = new Blob([envContent], { type: 'text/plain' })
+      const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = '.env'
+      a.download = 'dentweb-bridge-agent.zip'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      showMessage('success', '설정 파일이 다운로드되었습니다. dentweb-bridge-agent 폴더에 넣어주세요.')
+      showMessage('success', '설치 파일이 다운로드되었습니다. 압축을 풀고 setup.bat을 실행하세요.')
+
+      // 다운로드 후 데이터 갱신 (API 키 자동 생성/동기화 자동 활성화 반영)
+      await loadData()
     } catch (error) {
-      showMessage('error', '설정 파일 다운로드에 실패했습니다.')
+      showMessage('error', '다운로드 중 오류가 발생했습니다.')
     }
-    setIsDownloadingConfig(false)
+    setIsDownloading(false)
   }
 
   // 날짜 포맷팅
@@ -244,7 +163,6 @@ export default function DentwebSyncSettings() {
         </h4>
         <p className="text-sm text-teal-700">
           원내 PC에서 실행되는 브릿지 에이전트가 덴트웹 DB의 환자 데이터를 주기적으로 동기화합니다.
-          아래에서 API 키를 생성하고, 브릿지 에이전트를 설정하세요.
         </p>
       </div>
 
@@ -263,34 +181,25 @@ export default function DentwebSyncSettings() {
         </div>
 
         <p className="text-sm text-blue-700">
-          원내 덴트웹 서버 PC에 브릿지 에이전트를 설치하면 환자 데이터가 자동으로 동기화됩니다.
-          PC 부팅 시 자동 시작되며, 별도 관리가 필요 없습니다.
+          설치 파일과 설정 파일이 한번에 다운로드됩니다.
+          압축을 풀고 <code className="px-1 py-0.5 bg-blue-100 rounded text-xs font-mono">setup.bat</code>을 실행하면 자동으로 설치됩니다.
         </p>
 
         <div className="flex flex-wrap gap-3">
-          <a
-            href={GITHUB_RELEASE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
-          >
-            <Download className="w-4 h-4" />
-            설치 파일 다운로드
-          </a>
           <button
-            onClick={handleDownloadConfig}
-            disabled={isDownloadingConfig}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 transition-colors text-sm font-medium shadow-sm"
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors text-sm font-medium shadow-sm"
           >
-            {isDownloadingConfig ? (
+            {isDownloading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                생성 중...
+                다운로드 중...
               </>
             ) : (
               <>
-                <Save className="w-4 h-4" />
-                설정 파일(.env) 다운로드
+                <Download className="w-4 h-4" />
+                원클릭 설치 다운로드
               </>
             )}
           </button>
@@ -315,25 +224,22 @@ export default function DentwebSyncSettings() {
         {/* 설치 가이드 (토글) */}
         {showInstallGuide && (
           <div className="bg-white rounded-lg p-4 border border-blue-100 space-y-4">
-            <h5 className="font-medium text-gray-900 text-sm">설치 방법 (원내 PC에서 진행)</h5>
+            <h5 className="font-medium text-gray-900 text-sm">설치 방법 (원내 덴트웹 서버 PC에서 진행)</h5>
 
             <div className="space-y-3">
               <div className="flex gap-3">
                 <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">설치 파일 다운로드 및 압축 해제</p>
-                  <p className="text-xs text-gray-500 mt-0.5">&ldquo;설치 파일 다운로드&rdquo; 버튼으로 최신 버전을 다운로드합니다</p>
+                  <p className="text-sm font-medium text-gray-800">&ldquo;원클릭 설치 다운로드&rdquo; 클릭</p>
+                  <p className="text-xs text-gray-500 mt-0.5">설치 파일과 설정 파일(.env)이 포함된 ZIP이 다운로드됩니다. API 키가 자동으로 생성됩니다.</p>
                 </div>
               </div>
 
               <div className="flex gap-3">
                 <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">설정 파일(.env) 다운로드</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    &ldquo;설정 파일(.env) 다운로드&rdquo; 버튼을 클릭하면 API 키가 자동 생성되고 설정 파일이 다운로드됩니다.
-                    다운로드된 <code className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono">.env</code> 파일을 압축 해제한 폴더에 넣어주세요.
-                  </p>
+                  <p className="text-sm font-medium text-gray-800">원내 서버 PC에서 ZIP 압축 해제</p>
+                  <p className="text-xs text-gray-500 mt-0.5">다운로드된 파일을 원내 덴트웹 서버 PC로 옮기고 압축을 해제합니다.</p>
                 </div>
               </div>
 
@@ -343,7 +249,7 @@ export default function DentwebSyncSettings() {
                   <p className="text-sm font-medium text-gray-800">
                     <code className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">setup.bat</code> 관리자 권한으로 실행
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">Node.js 자동 설치, 빌드, DB 자동 감지가 한번에 진행됩니다 (입력 불필요)</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Node.js 자동 설치, 빌드, DB 자동 감지, 서비스 등록이 한번에 진행됩니다.</p>
                 </div>
               </div>
 
@@ -353,7 +259,7 @@ export default function DentwebSyncSettings() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-800">설치 완료! 자동 실행됩니다</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Windows 서비스로 등록되어 PC 부팅 시 자동으로 시작됩니다</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Windows 서비스로 등록되어 PC 부팅 시 자동으로 동기화가 시작됩니다.</p>
                 </div>
               </div>
             </div>
@@ -478,99 +384,6 @@ export default function DentwebSyncSettings() {
             </>
           )}
         </button>
-      </div>
-
-      {/* 연동 정보 (Clinic ID + API 키) */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
-        <h4 className="font-medium text-gray-900 flex items-center gap-2">
-          <Key className="w-4 h-4" />
-          연동 정보 (브릿지 에이전트 설치 시 필요)
-        </h4>
-        <p className="text-sm text-gray-500">
-          아래 정보를 브릿지 에이전트 설치 시 입력하세요.
-        </p>
-
-        {/* Clinic ID 표시 */}
-        {config?.clinic_id && (
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Clinic ID</label>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 bg-gray-100 rounded-lg font-mono text-sm text-gray-800 break-all select-all">
-                {config.clinic_id}
-              </code>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(config.clinic_id)
-                  showMessage('success', 'Clinic ID가 복사되었습니다.')
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 flex-shrink-0"
-              >
-                <Copy className="w-4 h-4" />
-                복사
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* API 키 */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">API 키</label>
-        </div>
-
-        {config?.api_key ? (
-          <div className="flex items-center gap-3">
-            <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg font-mono text-sm">
-              {showApiKey ? (
-                <span className="break-all">{config.api_key}</span>
-              ) : (
-                <span className="text-gray-400">{'•'.repeat(32)}</span>
-              )}
-              <button
-                onClick={() => setShowApiKey(!showApiKey)}
-                className="text-gray-400 hover:text-gray-600 flex-shrink-0"
-              >
-                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            <button
-              onClick={handleCopyApiKey}
-              className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <Copy className="w-4 h-4" />
-              복사
-            </button>
-            <button
-              onClick={handleGenerateKey}
-              disabled={isGeneratingKey}
-              className="flex items-center gap-1.5 px-3 py-2 border border-orange-300 text-orange-700 rounded-lg text-sm hover:bg-orange-50 disabled:bg-gray-100"
-            >
-              {isGeneratingKey ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-              재생성
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={handleGenerateKey}
-            disabled={isGeneratingKey}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-gray-300 text-sm"
-          >
-            {isGeneratingKey ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                생성 중...
-              </>
-            ) : (
-              <>
-                <Key className="w-4 h-4" />
-                API 키 생성
-              </>
-            )}
-          </button>
-        )}
       </div>
 
       {/* 최근 동기화 이력 */}
