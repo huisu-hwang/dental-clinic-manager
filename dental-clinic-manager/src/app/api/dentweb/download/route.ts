@@ -15,17 +15,17 @@ export async function GET(request: NextRequest) {
     }
 
     // 사용자의 clinic_id 조회
-    const { data: staffData } = await supabase
-      .from('staff')
+    const { data: userData } = await supabase
+      .from('users')
       .select('clinic_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
-    if (!staffData?.clinic_id) {
+    if (!userData?.clinic_id) {
       return NextResponse.json({ error: '클리닉 정보를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    const clinicId = staffData.clinic_id
+    const clinicId = userData.clinic_id
 
     // dentweb_sync_config에서 API 키 조회 (없으면 생성)
     let { data: configData } = await supabase
