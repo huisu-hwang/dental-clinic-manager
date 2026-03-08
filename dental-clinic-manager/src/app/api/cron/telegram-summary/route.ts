@@ -123,6 +123,7 @@ export async function GET(request: Request) {
             summary_date: kstDateStr,
             source_message_ids: sourceMessageIds,
             ai_model: 'gemini-2.0-flash',
+            telegram_sender_name: 'AI 요약',
           })
           .select('id')
           .single()

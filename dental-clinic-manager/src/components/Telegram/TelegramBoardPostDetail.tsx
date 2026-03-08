@@ -149,8 +149,8 @@ export default function TelegramBoardPostDetail({
           {/* 메타 정보 */}
           <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
             <div className="flex items-center gap-3 text-xs text-gray-400">
-              {post.author?.name && (
-                <span className="text-gray-600 font-medium">{post.author.name}</span>
+              {(post.author?.name || post.telegram_sender_name) && (
+                <span className="text-gray-600 font-medium">{post.author?.name || post.telegram_sender_name}</span>
               )}
               <span>{formatDate(post.created_at)}</span>
               <span className="flex items-center gap-1">
