@@ -145,15 +145,23 @@ function scanPfxFile(filePath: string): ScannedCert | null {
 
 // 확장 검색 시 건너뛸 디렉토리 (성능 최적화)
 const SKIP_DIRS = new Set([
+  // 공통
   'node_modules', '.git', '.svn', '.hg',
   'Caches', 'Cache', 'CacheStorage', 'GPUCache', 'ShaderCache',
   '.npm', '.yarn', '.pnpm', '.bun',
   '.Trash', 'Trash', '.Trashes',
-  'Music', 'Photos', 'Movies', 'Pictures',
-  'Applications', '.docker', '.vagrant',
-  // 'Library' 전체를 스킵하지 않음: ~/Library/Preferences/NPKI가 Mac 표준 경로이므로
-  // 대신 Library 하위의 큰 디렉토리만 스킵
+  'Music', 'Photos', 'Movies', 'Pictures', 'Videos',
+  '.docker', '.vagrant',
+  // Mac
+  'Applications',
   'Containers', 'Application Support', 'Developer',
+  // Windows
+  'Windows', '$Recycle.Bin', 'System Volume Information',
+  'ProgramData', 'Recovery',
+  'Intel', 'PerfLogs', 'MSOCache',
+  // Windows AppData 하위 대용량 디렉토리 (AppData 자체는 스킵 안 함 → LocalLow\NPKI 접근 필요)
+  'Temp', 'Microsoft', 'Google', 'Mozilla',
+  'Package Cache', 'Packages',
 ])
 
 /**
@@ -238,14 +246,21 @@ function getNpkiPaths(mediaType: 'hard' | 'removable'): string[] {
       paths.push(path.join(homeDir, 'Desktop', 'NPKI'))
       paths.push(path.join(homeDir, 'Downloads', 'NPKI'))
     } else if (platform === 'win32') {
+      // Windows 표준 NPKI 경로
       paths.push(path.join(homeDir, 'AppData', 'LocalLow', 'NPKI'))
+      paths.push(path.join(homeDir, 'AppData', 'Roaming', 'NPKI'))
       paths.push('C:\\NPKI')
       paths.push('C:\\Program Files\\NPKI')
       paths.push('C:\\Program Files (x86)\\NPKI')
+      // 사용자가 복사해둘 수 있는 위치
       paths.push(path.join(homeDir, 'NPKI'))
       paths.push(path.join(homeDir, 'Documents', 'NPKI'))
       paths.push(path.join(homeDir, 'Desktop', 'NPKI'))
       paths.push(path.join(homeDir, 'Downloads', 'NPKI'))
+      // 한글 경로 지원
+      paths.push(path.join(homeDir, '문서', 'NPKI'))
+      paths.push(path.join(homeDir, '바탕 화면', 'NPKI'))
+      paths.push(path.join(homeDir, '다운로드', 'NPKI'))
     } else {
       paths.push(path.join(homeDir, 'NPKI'))
       paths.push(path.join(homeDir, 'Documents', 'NPKI'))
@@ -294,13 +309,14 @@ function getNpkiPaths(mediaType: 'hard' | 'removable'): string[] {
 
 /**
  * 확장 검색: 사용자 홈 디렉토리 전체를 재귀 스캔
+ * Windows: 홈 디렉토리 재귀 + 다른 드라이브는 NPKI 경로만
+ * Mac: 홈 디렉토리 재귀 + 외장 볼륨
  */
 function getExtendedSearchPaths(): string[] {
   const homeDir = os.homedir()
   const platform = os.platform()
   const paths: string[] = [homeDir]
 
-  // 이동식 디스크도 포함
   if (platform === 'darwin') {
     try {
       const volumes = fs.readdirSync('/Volumes')
@@ -310,9 +326,26 @@ function getExtendedSearchPaths(): string[] {
       }
     } catch { /* ignore */ }
   } else if (platform === 'win32') {
+    // C: 드라이브 추가 경로 (홈 디렉토리 외)
+    paths.push('C:\\NPKI')
+    paths.push('C:\\Program Files\\NPKI')
+    paths.push('C:\\Program Files (x86)\\NPKI')
+    // 다른 드라이브(D~Z)는 NPKI 경로만 검색 (전체 드라이브 스캔은 너무 느림)
     for (let i = 68; i <= 90; i++) {
       const drive = `${String.fromCharCode(i)}:\\`
-      if (fs.existsSync(drive)) paths.push(drive)
+      if (fs.existsSync(drive)) {
+        paths.push(path.join(drive, 'NPKI'))
+      }
+    }
+  } else {
+    // Linux: /media, /mnt 하위 검색
+    for (const mountDir of ['/media', '/mnt']) {
+      try {
+        const mounts = fs.readdirSync(mountDir)
+        for (const m of mounts) {
+          paths.push(path.join(mountDir, m, 'NPKI'))
+        }
+      } catch { /* ignore */ }
     }
   }
 

@@ -39,17 +39,31 @@ export default function StatusUpdateModal({
   const statusOptions: { value: PatientRecallStatus; label: string; icon: React.ReactNode; color: string; description: string }[] = [
     {
       value: 'pending',
-      label: '대기중',
+      label: '리콜 전',
       icon: <Clock className="w-5 h-5" />,
       color: 'bg-gray-100 text-gray-700 border-gray-300',
       description: '아직 연락하지 않음'
     },
     {
       value: 'appointment_made',
-      label: '예약완료',
+      label: '예약 성공',
       icon: <Calendar className="w-5 h-5" />,
       color: 'bg-green-100 text-green-700 border-green-300',
       description: '내원 예약 확정'
+    },
+    {
+      value: 'appointment_pending',
+      label: '예약보류',
+      icon: <Clock className="w-5 h-5" />,
+      color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+      description: '예약 일정 미확정'
+    },
+    {
+      value: 'already_booked',
+      label: '이미예약',
+      icon: <CheckCircle className="w-5 h-5" />,
+      color: 'bg-cyan-100 text-cyan-700 border-cyan-300',
+      description: '이미 예약이 있는 환자'
     },
     {
       value: 'no_answer',

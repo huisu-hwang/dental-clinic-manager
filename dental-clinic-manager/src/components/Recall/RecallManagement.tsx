@@ -38,10 +38,11 @@ import StatusUpdateModal from './StatusUpdateModal'
 import ContactHistoryModal from './ContactHistoryModal'
 import RecallStats from './RecallStats'
 import RecallSettings from './RecallSettings'
+import RecallDailyLog from './RecallDailyLog'
 import UnmatchedPatientModal from './UnmatchedPatientModal'
 import Toast from '@/components/ui/Toast'
 
-type TabType = 'patients' | 'stats' | 'settings'
+type TabType = 'patients' | 'activity' | 'stats' | 'settings'
 
 export default function RecallManagement() {
   const { user } = useAuth()
@@ -474,6 +475,17 @@ export default function RecallManagement() {
             환자 목록
           </button>
           <button
+            onClick={() => setActiveTab('activity')}
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+              activeTab === 'activity'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+            }`}
+          >
+            <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            활동 기록
+          </button>
+          <button
             onClick={() => setActiveTab('stats')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'stats'
@@ -755,6 +767,11 @@ export default function RecallManagement() {
               onPageChange={handlePageChange}
             />
           </div>
+        )}
+
+        {/* 활동 기록 탭 */}
+        {activeTab === 'activity' && (
+          <RecallDailyLog />
         )}
 
         {/* 통계 탭 */}

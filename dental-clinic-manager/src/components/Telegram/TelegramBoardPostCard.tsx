@@ -112,7 +112,7 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
       </div>
       {/* 작성자 */}
       <div className="hidden sm:block w-20 text-center text-sm text-gray-500 flex-shrink-0 truncate">
-        {post.author?.name || ''}
+        {post.author?.name || post.telegram_sender_name || ''}
       </div>
       {/* 작성일 */}
       <div className="w-20 text-center text-sm text-gray-500 flex-shrink-0">

@@ -140,6 +140,7 @@ export interface TelegramBoardPost {
   is_pinned: boolean
   ai_model: string | null
   created_by: string | null
+  telegram_sender_name: string | null
   comment_count: number
   category_id: string | null
   created_at: string

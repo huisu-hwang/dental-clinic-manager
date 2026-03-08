@@ -73,6 +73,8 @@ const STATUS_ICONS: Record<PatientRecallStatus, React.ReactNode> = {
   pending: <Clock className="w-3.5 h-3.5" />,
   sms_sent: <MessageSquare className="w-3.5 h-3.5" />,
   appointment_made: <CheckCircle className="w-3.5 h-3.5" />,
+  appointment_pending: <Clock className="w-3.5 h-3.5" />,
+  already_booked: <Calendar className="w-3.5 h-3.5" />,
   call_rejected: <PhoneOff className="w-3.5 h-3.5" />,
   visit_refused: <Ban className="w-3.5 h-3.5" />,
   invalid_number: <XCircle className="w-3.5 h-3.5" />,
@@ -168,9 +170,11 @@ export default function PatientList({
   // 상태별 필터 옵션 (간소화된 상태)
   const statusOptions: { value: PatientRecallStatus | 'all'; label: string }[] = [
     { value: 'all', label: '전체' },
-    { value: 'pending', label: '대기중' },
+    { value: 'pending', label: '리콜 전' },
     { value: 'sms_sent', label: '문자발송' },
-    { value: 'appointment_made', label: '예약완료' },
+    { value: 'appointment_made', label: '예약 성공' },
+    { value: 'appointment_pending', label: '예약보류' },
+    { value: 'already_booked', label: '이미예약' },
     { value: 'no_answer', label: '부재중' },
     { value: 'call_rejected', label: '통화거부' },
     { value: 'visit_refused', label: '내원거부' },
