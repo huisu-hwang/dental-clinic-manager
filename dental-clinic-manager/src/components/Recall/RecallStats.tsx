@@ -229,7 +229,7 @@ export default function RecallStats() {
   const chartData = [
     { label: '예약 성공', value: stats.appointment_count, color: '#22c55e' },
     { label: '거부/실패', value: stats.rejected_count + stats.invalid_count, color: '#ef4444' },
-    { label: '대기 중', value: stats.pending_count, color: '#9ca3af' },
+    { label: '리콜 전', value: stats.pending_count, color: '#9ca3af' },
     { label: '연락 진행', value: stats.contacted_count - stats.appointment_count, color: '#3b82f6' }
   ].filter(d => d.value > 0)
 
@@ -442,7 +442,7 @@ export default function RecallStats() {
           <div className="space-y-3">
             <div>
               <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-gray-600">대기 중</span>
+                <span className="text-gray-600">리콜 전</span>
                 <span className="font-medium">{stats.pending_count}명</span>
               </div>
               <div className="w-full bg-gray-100 rounded-full h-2">

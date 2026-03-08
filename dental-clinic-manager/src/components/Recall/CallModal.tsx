@@ -133,7 +133,9 @@ export default function CallModal({
 
   // 결과 선택 옵션 (간소화된 상태)
   const resultOptions: { value: PatientRecallStatus; label: string; icon: React.ReactNode; color: string }[] = [
-    { value: 'appointment_made', label: '예약 완료', icon: <Calendar className="w-5 h-5" />, color: 'bg-green-100 text-green-700 border-green-300' },
+    { value: 'appointment_made', label: '예약 성공', icon: <Calendar className="w-5 h-5" />, color: 'bg-green-100 text-green-700 border-green-300' },
+    { value: 'appointment_pending', label: '예약보류', icon: <Clock className="w-5 h-5" />, color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+    { value: 'already_booked', label: '이미예약', icon: <CheckCircle className="w-5 h-5" />, color: 'bg-cyan-100 text-cyan-700 border-cyan-300' },
     { value: 'no_answer', label: '부재중', icon: <PhoneMissed className="w-5 h-5" />, color: 'bg-orange-100 text-orange-700 border-orange-300' },
     { value: 'call_rejected', label: '통화 거부', icon: <PhoneOff className="w-5 h-5" />, color: 'bg-red-100 text-red-700 border-red-300' },
     { value: 'visit_refused', label: '내원 거부', icon: <XCircle className="w-5 h-5" />, color: 'bg-red-100 text-red-700 border-red-300' },

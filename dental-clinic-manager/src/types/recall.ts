@@ -5,9 +5,11 @@
 
 // 환자 리콜 상태 (간소화)
 export type PatientRecallStatus =
-  | 'pending'              // 대기 중
+  | 'pending'              // 리콜 전
   | 'sms_sent'             // 문자 발송 (자동)
-  | 'appointment_made'     // 예약 완료
+  | 'appointment_made'     // 예약 성공
+  | 'appointment_pending'  // 예약보류
+  | 'already_booked'       // 이미예약
   | 'no_answer'            // 부재중
   | 'call_rejected'        // 통화 거부
   | 'visit_refused'        // 내원 거부
@@ -20,6 +22,8 @@ export type RecallExcludeReason = 'family' | 'unfavorable'
 export const MANUAL_STATUS_OPTIONS: PatientRecallStatus[] = [
   'pending',
   'appointment_made',
+  'appointment_pending',
+  'already_booked',
   'no_answer',
   'call_rejected',
   'visit_refused',
@@ -338,9 +342,11 @@ export const VOIP_PROVIDERS: VoipProviderInfo[] = [
 // 상태 레이블 및 색상
 // ========================================
 export const RECALL_STATUS_LABELS: Record<PatientRecallStatus, string> = {
-  pending: '대기중',
+  pending: '리콜 전',
   sms_sent: '문자발송',
-  appointment_made: '예약완료',
+  appointment_made: '예약 성공',
+  appointment_pending: '예약보류',
+  already_booked: '이미예약',
   no_answer: '부재중',
   call_rejected: '통화거부',
   visit_refused: '내원거부',
@@ -351,6 +357,8 @@ export const RECALL_STATUS_COLORS: Record<PatientRecallStatus, string> = {
   pending: 'bg-gray-100 text-gray-700',
   sms_sent: 'bg-blue-100 text-blue-700',
   appointment_made: 'bg-green-100 text-green-700',
+  appointment_pending: 'bg-yellow-100 text-yellow-700',
+  already_booked: 'bg-cyan-100 text-cyan-700',
   no_answer: 'bg-orange-100 text-orange-700',
   call_rejected: 'bg-red-100 text-red-700',
   visit_refused: 'bg-red-100 text-red-700',
