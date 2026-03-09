@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar, PenLine, Pencil, Trash2, Vote } from 'lucide-react'
+import { ArrowLeft, Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar, PenLine, Pencil, Trash2, Vote } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { TelegramBoardPost, TelegramGroupVisibility } from '@/types/telegram'
 import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
@@ -164,12 +164,12 @@ export default function TelegramBoardPostDetail({
             {(canModify || canDelete) && (
               <div className="flex items-center gap-1">
                 {canModify && onEdit && (
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600">
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
                     <Pencil className="w-3.5 h-3.5 mr-1" />수정
                   </Button>
                 )}
                 {canDelete && onDelete && (
-                  <Button variant="ghost" size="sm" onClick={() => onDelete(post)} className="text-gray-400 hover:text-red-500">
+                  <Button variant="ghost" size="sm" onClick={() => onDelete(post)} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
                     <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
                   </Button>
                 )}
@@ -284,6 +284,35 @@ export default function TelegramBoardPostDetail({
             groupVisibility={groupVisibility}
           />
         </div>
+      </div>
+
+      {/* 하단 액션 바 */}
+      <div className="flex items-center justify-center gap-2 mt-4">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          목록으로
+        </button>
+        {canModify && onEdit && (
+          <button
+            onClick={() => onEdit(post)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+            수정
+          </button>
+        )}
+        {canDelete && onDelete && (
+          <button
+            onClick={() => onDelete(post)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            삭제
+          </button>
+        )}
       </div>
     </div>
   )
