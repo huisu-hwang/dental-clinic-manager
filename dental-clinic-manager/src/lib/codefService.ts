@@ -740,6 +740,10 @@ export async function getCreditCardSalesData(
   const isSandboxFallback = !!(response as any)._fallback;
 
   if (response.result.code !== 'CF-00000') {
+    if (isSandboxFallback) {
+      console.warn('getCreditCardSalesData: SANDBOX 폴백 에러, 빈 데이터 반환:', response.result.code);
+      return { salesData: null, isSandboxFallback };
+    }
     console.error('Credit card sales data error:', response.result);
     throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
   }
@@ -812,6 +816,11 @@ export async function getTaxInvoiceDetailWithCert(
   const isSandboxFallback = !!(response as any)._fallback;
 
   if (response.result.code !== 'CF-00000') {
+    // SANDBOX 폴백 시 에러는 빈 데이터로 처리 (SANDBOX가 인증서 로그인 미지원)
+    if (isSandboxFallback) {
+      console.warn('Tax invoice detail: SANDBOX 폴백 에러, 빈 데이터 반환:', response.result.code);
+      return { data: [], isSandboxFallback };
+    }
     console.error('Tax invoice detail error:', response.result);
     throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
   }
@@ -862,6 +871,10 @@ export async function getTaxInvoiceStatisticsWithCert(
   const isSandboxFallback = !!(response as any)._fallback;
 
   if (response.result.code !== 'CF-00000') {
+    if (isSandboxFallback) {
+      console.warn('Tax invoice statistics: SANDBOX 폴백 에러, 빈 데이터 반환:', response.result.code);
+      return { data: [], isSandboxFallback };
+    }
     console.error('Tax invoice statistics (cert) error:', response.result);
     throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
   }
@@ -912,6 +925,10 @@ export async function getCashReceiptPurchaseWithCert(
   const isSandboxFallback = !!(response as any)._fallback;
 
   if (response.result.code !== 'CF-00000') {
+    if (isSandboxFallback) {
+      console.warn('Cash receipt purchase: SANDBOX 폴백 에러, 빈 데이터 반환:', response.result.code);
+      return { data: [], isSandboxFallback };
+    }
     console.error('Cash receipt purchase (cert) error:', response.result);
     throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
   }
@@ -966,6 +983,10 @@ export async function getBusinessCardDeductionWithCert(
   const isSandboxFallback = !!(response as any)._fallback;
 
   if (response.result.code !== 'CF-00000') {
+    if (isSandboxFallback) {
+      console.warn('Business card deduction: SANDBOX 폴백 에러, 빈 데이터 반환:', response.result.code);
+      return { data: [], isSandboxFallback };
+    }
     console.error('Business card deduction (cert) error:', response.result);
     throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
   }
