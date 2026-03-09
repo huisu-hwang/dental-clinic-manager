@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, Edit3, Trash2, MoreVertical } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { communityPostService, communityPollService } from '@/lib/communityService'
 import type { CommunityPost, CommunityPoll } from '@/types/community'
@@ -35,7 +35,6 @@ export default function CommunityPostDetail({
   const [poll, setPoll] = useState<CommunityPoll | null>(null)
   const [loading, setLoading] = useState(true)
   const [showReport, setShowReport] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
 
   const fetchPost = async () => {
     const { data } = await communityPostService.getPost(postId)
@@ -103,31 +102,18 @@ export default function CommunityPostDetail({
   return (
     <div className="space-y-4">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <Button variant="outline" size="sm" onClick={onBack}>
-          <ChevronLeft className="w-4 h-4 mr-1" />목록
-        </Button>
-        {isOwner && (
-          <div className="relative">
-            <Button variant="outline" size="sm" onClick={() => setShowMenu(!showMenu)}>
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-            {showMenu && (
-              <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-20 w-32">
-                <button onClick={() => { onEdit(post); setShowMenu(false) }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                  <Edit3 className="w-4 h-4" />수정
-                </button>
-                <button onClick={() => { handleDelete(); setShowMenu(false) }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                  <Trash2 className="w-4 h-4" />삭제
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+      <div className="flex items-center justify-between mb-4">
+        <nav className="flex items-center text-sm">
+          <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            자유게시판
+          </button>
+          <span className="mx-2 text-gray-400">›</span>
+          <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{post?.title}</span>
+        </nav>
       </div>
 
       {/* 게시글 본문 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="p-4 sm:p-6">
           {/* 카테고리 & 제목 */}
           <div className="mb-4">
@@ -137,10 +123,22 @@ export default function CommunityPostDetail({
             <h1 className="text-xl font-bold text-gray-900 mt-2">{post.title}</h1>
           </div>
 
-          {/* 작성자 정보 */}
+          {/* 메타 정보 */}
           <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
-            {post.profile && <ProfileCard profile={post.profile} compact />}
-            <span className="text-xs text-gray-400">{formatDate(post.created_at)}</span>
+            <div className="flex items-center gap-3">
+              {post.profile && <ProfileCard profile={post.profile} compact />}
+              <span className="text-xs text-gray-400">{formatDate(post.created_at)}</span>
+            </div>
+            {isOwner && (
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
+                  <Pencil className="w-3.5 h-3.5 mr-1" />수정
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleDelete} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* 본문 (보호 래퍼) */}
@@ -189,6 +187,35 @@ export default function CommunityPostDetail({
           onClose={() => setShowReport(false)}
         />
       )}
+
+      {/* 하단 액션 바 */}
+      <div className="flex items-center justify-center gap-2 mt-2">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          목록으로
+        </button>
+        {isOwner && (
+          <>
+            <button
+              onClick={() => onEdit(post)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Pencil className="w-4 h-4" />
+              수정
+            </button>
+            <button
+              onClick={handleDelete}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              삭제
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }

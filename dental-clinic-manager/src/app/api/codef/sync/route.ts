@@ -30,10 +30,6 @@ function getServiceClient() {
 // POST: 홈택스 데이터 동기화
 export async function POST(request: NextRequest) {
   try {
-    // CODEF 자격증명 설정 여부에 따라 실제 API 호출 또는 UI 데모 데이터 사용
-    // CODEF_SERVICE_TYPE=DEMO(development.codef.io)도 실제 데이터를 반환하는 진짜 API 환경
-    const useMockData = !isCodefConfigured();
-
     const body = await request.json();
     const { clinicId, year, month, syncType = 'all' } = body;
 
@@ -46,46 +42,41 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceClient();
 
+    // 실제 홈택스 연결 정보가 있는지 확인
+    let useMockData = !isCodefConfigured();
     let hometaxId = 'demo-user';
     let hometaxPassword = 'demo-password';
+    let hasRealConnection = false;
 
     if (!useMockData) {
-      // 연결 정보 + 암호화된 비밀번호 조회 (service_role로 RLS 우회)
-      const { data: connection, error: connError } = await supabase
+      // CODEF 설정은 되어있으니, DB에서 실제 홈택스 계정 정보 조회
+      const { data: connection } = await supabase
         .from('codef_connections')
         .select('connected_id, hometax_user_id, encrypted_password')
         .eq('clinic_id', clinicId)
         .eq('is_active', true)
         .single();
 
-      if (connError || !connection?.connected_id) {
-        return NextResponse.json(
-          { success: false, error: '홈택스 계정이 연결되지 않았습니다. 먼저 계정을 연결해주세요.' },
-          { status: 400 }
-        );
+      if (connection?.connected_id && connection.hometax_user_id && connection.encrypted_password
+          && connection.encrypted_password !== 'dummy-password') {
+        // 실제 연결 정보가 있으면 사용
+        try {
+          hometaxPassword = decryptPasswordFromStorage(connection.encrypted_password);
+          hometaxId = connection.hometax_user_id;
+          hasRealConnection = true;
+        } catch (decryptError) {
+          console.warn('Password decryption failed, falling back to mock data:', decryptError);
+          useMockData = true;
+        }
+      } else {
+        // 실제 홈택스 계정이 없으면 모의 데이터 사용 (SANDBOX 폴백 대신)
+        console.log('No real HomeTax connection found, using mock data for demo');
+        useMockData = true;
       }
+    }
 
-      if (!connection.encrypted_password || !connection.hometax_user_id) {
-        return NextResponse.json(
-          { success: false, error: '홈택스 계정 정보가 불완전합니다. 계정을 다시 연결해주세요.' },
-          { status: 400 }
-        );
-      }
-
-      // 비밀번호 복호화
-      try {
-        hometaxPassword = decryptPasswordFromStorage(connection.encrypted_password);
-      } catch (decryptError) {
-        console.error('Password decryption failed:', decryptError);
-        return NextResponse.json(
-          { success: false, error: '저장된 비밀번호 복호화에 실패했습니다. 계정을 다시 연결해주세요.' },
-          { status: 400 }
-        );
-      }
-
-      hometaxId = connection.hometax_user_id;
-    } else {
-      // UI 데모용 (CODEF 미설정 시): codef_connections에 더미 연결 정보 없으면 자동 생성
+    // 더미 연결 정보 자동 생성 (동기화 이력 저장용)
+    if (!hasRealConnection) {
       const { data: existingConn } = await supabase
         .from('codef_connections')
         .select('clinic_id')
@@ -100,7 +91,6 @@ export async function POST(request: NextRequest) {
           hometax_user_id: 'demo_user',
           encrypted_password: 'dummy-password',
           is_active: true,
-          service_type: 'DEMO',
           connected_at: new Date().toISOString(),
         }, { onConflict: 'clinic_id' });
       }
@@ -111,6 +101,8 @@ export async function POST(request: NextRequest) {
     const startDate = `${year}${String(month).padStart(2, '0')}01`;
     const lastDay = new Date(year, month, 0).getDate();
     const endDate = `${year}${String(month).padStart(2, '0')}${lastDay}`;
+
+    let anySandboxFallback = false;
 
     const results = {
       taxInvoiceSales: { synced: 0, errors: [] as string[] },
@@ -140,9 +132,9 @@ export async function POST(request: NextRequest) {
       categories = created || [];
     }
 
-    const getCategoryId = (type: string): string => {
+    const getCategoryId = (type: string): string | null => {
       const category = categories?.find(c => c.type === type);
-      return category?.id || categories?.[0]?.id || '';
+      return category?.id || categories?.[0]?.id || null;
     };
 
     // ============================================
@@ -182,7 +174,7 @@ export async function POST(request: NextRequest) {
               { resCompanyIdentityNo: "5678901234", resCompanyNm: "메가젠임플란트", resNumber: "6", resSupplyValue: "5600000", resTaxAmt: "560000" },
             ],
           },
-        ] as any[] : await getTaxInvoiceStatistics(hometaxId, hometaxPassword, yearMonth);
+        ] as any[] : await getTaxInvoiceStatistics(hometaxId, hometaxPassword, yearMonth).then(r => { anySandboxFallback = anySandboxFallback || r.isSandboxFallback; return r.data; });
 
         for (const item of taxStats) {
           if (item.resType === '0') {
@@ -210,20 +202,25 @@ export async function POST(request: NextRequest) {
                   .single();
 
                 if (!existing) {
-                  const { error: insertError } = await supabase
-                    .from('expense_records')
-                    .insert({
-                      clinic_id: clinicId,
-                      category_id: getCategoryId('material'),
-                      year,
-                      month,
-                      ...expenseData,
-                    });
+                  const catId = getCategoryId('material');
+                  if (!catId) {
+                    results.taxInvoicePurchase.errors.push(`세금계산서 매입 ${partner.resCompanyNm}: 카테고리 미설정으로 저장 생략`);
+                  } else {
+                    const { error: insertError } = await supabase
+                      .from('expense_records')
+                      .insert({
+                        clinic_id: clinicId,
+                        category_id: catId,
+                        year,
+                        month,
+                        ...expenseData,
+                      });
 
-                  if (insertError) {
-                    results.taxInvoicePurchase.errors.push(
-                      `세금계산서 매입 ${partner.resCompanyNm} 저장 실패: ${insertError.message}`
-                    );
+                    if (insertError) {
+                      results.taxInvoicePurchase.errors.push(
+                        `세금계산서 매입 ${partner.resCompanyNm} 저장 실패: ${insertError.message}`
+                      );
+                    }
                   }
                 }
               }
@@ -255,7 +252,7 @@ export async function POST(request: NextRequest) {
           { resApprovalNo: "10029390", resMemberStoreName: "(주)배달의민족", resUsedDate: startDate, resTotalAmount: "65000" },
           { resApprovalNo: "10029391", resMemberStoreName: "이마트트레이더스", resUsedDate: startDate, resTotalAmount: "210000" },
           { resApprovalNo: "10029392", resMemberStoreName: "CU편의점", resUsedDate: startDate, resTotalAmount: "15000" }
-        ] as any[] : await getCashReceiptPurchaseDetails(hometaxId, hometaxPassword, startDate, endDate);
+        ] as any[] : await getCashReceiptPurchaseDetails(hometaxId, hometaxPassword, startDate, endDate).then(r => { anySandboxFallback = anySandboxFallback || r.isSandboxFallback; return r.data; });
 
         for (const item of cashPurchase) {
           const expenseData = convertCashReceiptPurchaseToExpense(item);
@@ -270,22 +267,27 @@ export async function POST(request: NextRequest) {
             .single();
 
           if (!existing) {
-            const { error: insertError } = await supabase
-              .from('expense_records')
-              .insert({
-                clinic_id: clinicId,
-                category_id: getCategoryId('other'),
-                year,
-                month,
-                ...expenseData,
-              });
-
-            if (insertError) {
-              results.cashReceiptPurchase.errors.push(
-                `현금영수증 매입 ${item.resApprovalNo} 저장 실패: ${insertError.message}`
-              );
+            const catId = getCategoryId('other');
+            if (!catId) {
+              results.cashReceiptPurchase.errors.push(`현금영수증 매입 ${item.resApprovalNo}: 카테고리 미설정으로 저장 생략`);
             } else {
-              results.cashReceiptPurchase.synced++;
+              const { error: insertError } = await supabase
+                .from('expense_records')
+                .insert({
+                  clinic_id: clinicId,
+                  category_id: catId,
+                  year,
+                  month,
+                  ...expenseData,
+                });
+
+              if (insertError) {
+                results.cashReceiptPurchase.errors.push(
+                  `현금영수증 매입 ${item.resApprovalNo} 저장 실패: ${insertError.message}`
+                );
+              } else {
+                results.cashReceiptPurchase.synced++;
+              }
             }
           }
         }
@@ -304,7 +306,7 @@ export async function POST(request: NextRequest) {
 
         // UI 데모용 (CODEF 미설정 시): 현금영수증 매출 모의 데이터
         const cashSales = useMockData ? Array(245).fill({ resTotalAmount: "10000" }) as any[]
-          : await getCashReceiptSalesDetails(hometaxId, hometaxPassword, startDate, endDate);
+          : await getCashReceiptSalesDetails(hometaxId, hometaxPassword, startDate, endDate).then(r => { anySandboxFallback = anySandboxFallback || r.isSandboxFallback; return r.data; });
 
         // 매출 데이터는 건수만 카운트 (expense_records가 아닌 매출 집계)
         results.cashReceiptSales.synced = cashSales.length;
@@ -360,8 +362,12 @@ export async function POST(request: NextRequest) {
     let message = `${totalSynced}건의 데이터가 홈택스에서 동기화되었습니다.`;
     if (useMockData) {
       message = `UI 데모 모드: ${totalSynced}건의 모의 데이터가 동기화되었습니다. (실제 데이터 연동을 위해 CODEF 설정이 필요합니다.)`;
+    } else if (anySandboxFallback && totalSynced > 0) {
+      message = `샌드박스 테스트 모드: ${totalSynced}건의 테스트 데이터가 동기화되었습니다. (CODEF DEMO 인증 실패로 샌드박스로 폴백)`;
+    } else if (anySandboxFallback && totalSynced === 0) {
+      message = `샌드박스 테스트 모드: 해당 기간에 테스트 데이터가 없습니다. (CODEF DEMO 인증 실패로 샌드박스로 폴백)`;
     } else if (totalSynced === 0) {
-      message = `동기화된 데이터가 없습니다. 현재 ${serviceType} 환경(홈택스 실 데이터)에서 해당 기간에 조회된 데이터가 없습니다.`;
+      message = `동기화된 데이터가 없습니다. 현재 ${serviceType} 환경에서 해당 기간에 조회된 데이터가 없습니다.`;
     }
 
     return NextResponse.json({
@@ -372,6 +378,7 @@ export async function POST(request: NextRequest) {
         errors: allErrors,
         serviceType,
         message,
+        isSandboxFallback: anySandboxFallback || false,
       },
     });
   } catch (error) {

@@ -134,9 +134,10 @@ export default function PatientList({
 
   // 정렬 토글 (서버사이드 정렬도 함께 적용)
   const handleSort = (field: 'patient_name' | 'status' | 'last_contact_date' | 'last_visit_date') => {
+    const defaultDir = (field === 'last_visit_date' || field === 'last_contact_date') ? 'desc' : 'asc'
     const newDirection = sortField === field
       ? (sortDirection === 'asc' ? 'desc' : 'asc')
-      : 'asc'
+      : defaultDir
 
     setSortField(field)
     setSortDirection(newDirection)
@@ -267,18 +268,16 @@ export default function PatientList({
               <button
                 key={opt.value}
                 onClick={() => {
-                  const isActive = opt.value !== 'all' && opt.value !== 'no_date'
+                  const isSortable = opt.value !== 'no_date'
                   const newFilters = {
                     ...filters,
                     lastVisitPeriod: opt.value,
                     ...(opt.value !== 'custom' ? { lastVisitFrom: undefined, lastVisitTo: undefined } : {}),
-                    // 기간 선택 시 자동으로 최종 내원일 오름차순(빠른 순) 정렬
-                    ...(isActive ? { sortBy: 'last_visit_date' as const, sortDirection: filters.sortDirection || 'asc' as const } : {}),
-                    // '전체' 선택 시 정렬 초기화
-                    ...(opt.value === 'all' ? { sortBy: undefined, sortDirection: undefined } : {})
+                    // 기간 선택 시 자동으로 최종 내원일 최근 순 정렬 (전체 포함)
+                    ...(isSortable ? { sortBy: 'last_visit_date' as const, sortDirection: 'desc' as const } : {})
                   }
-                  setSortField(isActive ? 'last_visit_date' : 'patient_name')
-                  setSortDirection(isActive ? (filters.sortDirection || 'asc') : 'asc')
+                  setSortField(isSortable ? 'last_visit_date' : 'patient_name')
+                  setSortDirection(isSortable ? 'desc' : 'asc')
                   onFiltersChange(newFilters)
                 }}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
@@ -291,18 +290,18 @@ export default function PatientList({
               </button>
             ))}
 
-            {/* 기간 필터 활성 시 정렬 방향 토글 */}
-            {filters.lastVisitPeriod && filters.lastVisitPeriod !== 'all' && filters.lastVisitPeriod !== 'no_date' && (
+            {/* 최종 내원일 정렬 방향 토글 (no_date 제외 항상 표시) */}
+            {(!filters.lastVisitPeriod || filters.lastVisitPeriod !== 'no_date') && (
               <button
                 onClick={() => {
-                  const newDir = (filters.sortDirection || 'asc') === 'asc' ? 'desc' : 'asc'
+                  const newDir = (filters.sortDirection || 'desc') === 'asc' ? 'desc' : 'asc'
                   setSortDirection(newDir)
                   onFiltersChange({ ...filters, sortBy: 'last_visit_date', sortDirection: newDir })
                 }}
                 className="ml-1 px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-all flex items-center gap-1"
-                title={(filters.sortDirection || 'asc') === 'asc' ? '오래된 순 (빠른 순)' : '최근 순'}
+                title={(filters.sortDirection || 'desc') === 'asc' ? '오래된 순 (빠른 순)' : '최근 순'}
               >
-                {(filters.sortDirection || 'asc') === 'asc'
+                {(filters.sortDirection || 'desc') === 'asc'
                   ? <><ArrowUp className="w-3 h-3" /> 오래된 순</>
                   : <><ArrowDown className="w-3 h-3" /> 최근 순</>
                 }

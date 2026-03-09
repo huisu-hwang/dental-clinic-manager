@@ -68,7 +68,7 @@ export default function RecallManagement() {
   // 데이터 상태
   const [patients, setPatients] = useState<RecallPatient[]>([])
   const [stats, setStats] = useState<RecallStatsType | null>(null)
-  const [filters, setFilters] = useState<RecallPatientFilters>({})
+  const [filters, setFilters] = useState<RecallPatientFilters>({ sortBy: 'last_visit_date', sortDirection: 'desc' })
 
   // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1)

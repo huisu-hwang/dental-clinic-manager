@@ -113,10 +113,14 @@ export default function TelegramBoardPostDetail({
   return (
     <div>
       {/* 상단 네비게이션 */}
-      <div className="flex items-center gap-2 mb-4">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="w-4 h-4 mr-1" />뒤로
-        </Button>
+      <div className="flex items-center justify-between mb-4">
+        <nav className="flex items-center text-sm">
+          <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            게시판
+          </button>
+          <span className="mx-2 text-gray-400">›</span>
+          <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{post.title}</span>
+        </nav>
       </div>
 
       {/* 게시글 헤더 */}
@@ -160,12 +164,12 @@ export default function TelegramBoardPostDetail({
             {(canModify || canDelete) && (
               <div className="flex items-center gap-1">
                 {canModify && onEdit && (
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600">
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
                     <Pencil className="w-3.5 h-3.5 mr-1" />수정
                   </Button>
                 )}
                 {canDelete && onDelete && (
-                  <Button variant="ghost" size="sm" onClick={() => onDelete(post)} className="text-gray-400 hover:text-red-500">
+                  <Button variant="ghost" size="sm" onClick={() => onDelete(post)} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
                     <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
                   </Button>
                 )}
@@ -280,6 +284,35 @@ export default function TelegramBoardPostDetail({
             groupVisibility={groupVisibility}
           />
         </div>
+      </div>
+
+      {/* 하단 액션 바 */}
+      <div className="flex items-center justify-center gap-2 mt-4">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          목록으로
+        </button>
+        {canModify && onEdit && (
+          <button
+            onClick={() => onEdit(post)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+            수정
+          </button>
+        )}
+        {canDelete && onDelete && (
+          <button
+            onClick={() => onDelete(post)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            삭제
+          </button>
+        )}
       </div>
     </div>
   )

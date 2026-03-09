@@ -173,6 +173,9 @@ export default function CodefSyncPanel({
         setHometaxId('')
         setHometaxPassword('')
         setIdentity('')
+        if (result.data.warning) {
+          alert(result.data.warning)
+        }
       } else {
         setFormError(result.error || '연결에 실패했습니다.')
       }

@@ -29,6 +29,7 @@ export default function BulletinPage() {
   const searchParams = useSearchParams()
   const { user, logout, loading: authLoading } = useAuth()
   const [activeTab, setActiveTab] = useState<BulletinTab>('announcements')
+  const [tabClickCount, setTabClickCount] = useState(0)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // URL에서 탭 파라미터 읽기
@@ -39,8 +40,11 @@ export default function BulletinPage() {
     }
   }, [searchParams])
 
-  // 탭 변경 시 URL 업데이트
+  // 탭 변경 시 URL 업데이트 (같은 탭 클릭 시 목록으로 복귀)
   const handleTabChange = (tab: BulletinTab) => {
+    if (tab === activeTab) {
+      setTabClickCount(c => c + 1)
+    }
     setActiveTab(tab)
     router.push(`/bulletin?tab=${tab}`, { scroll: false })
   }
@@ -211,7 +215,7 @@ export default function BulletinPage() {
                   </p>
                 </div>
               ) : (
-                <div key={activeTab} className="tab-content">
+                <div key={`${activeTab}-${tabClickCount}`} className="tab-content">
                   {activeTab === 'announcements' && (
                     <AnnouncementList canCreate={isAdmin} />
                   )}

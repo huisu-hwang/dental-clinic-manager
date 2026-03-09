@@ -29,7 +29,9 @@ export default function CommunityPostCard({ post, onClick, labelMap, colorMap }:
   return (
     <div
       onClick={() => onClick(post)}
-      className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
+      className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 border-l-2 ${
+        post.is_pinned ? 'border-l-red-400 bg-red-50/30' : 'border-l-transparent'
+      }`}
     >
       {/* 고정 */}
       <div className="w-5 flex-shrink-0 flex items-center justify-center">
@@ -52,6 +54,12 @@ export default function CommunityPostCard({ post, onClick, labelMap, colorMap }:
           <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 flex-shrink-0">투표</span>
         )}
         <span className="text-sm text-gray-900 truncate">{post.title}</span>
+        {(() => {
+          const created = new Date(post.created_at)
+          const now = new Date()
+          const isToday = created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth() && created.getDate() === now.getDate()
+          return isToday ? <span className="flex-shrink-0 ml-1 px-1 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded">N</span> : null
+        })()}
         {(post.comment_count ?? 0) > 0 && (
           <span className="flex items-center gap-0.5 text-xs text-sky-500 flex-shrink-0">
             <MessageSquare className="w-3 h-3" />{post.comment_count}

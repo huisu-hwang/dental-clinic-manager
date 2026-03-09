@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Plus, ChevronLeft, ChevronRight, AlertCircle, MessageCircle, TrendingUp, Heart, Bookmark } from 'lucide-react'
+import { Search, Plus, AlertCircle, MessageCircle, TrendingUp, Heart, Bookmark } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { communityPostService } from '@/lib/communityService'
@@ -133,12 +133,17 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
             </>
           )}
         </div>
-        {profileId && !isBanned && (
-          <Button onClick={onNewPost} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            글쓰기
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {!loading && (
+            <span className="text-xs text-gray-400 font-normal">총 {total}건</span>
+          )}
+          {profileId && !isBanned && (
+            <Button onClick={onNewPost} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              글쓰기
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* 카테고리 필터 */}
@@ -169,16 +174,19 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
       {/* 목록 */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
         </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-          <p>게시글이 없습니다.</p>
+        <div className="text-center py-16 text-gray-500">
+          <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageCircle className="w-8 h-8 text-sky-300" />
+          </div>
+          <p className="font-medium text-gray-600 mb-1">게시글이 없습니다</p>
+          <p className="text-sm text-gray-400">새로운 글이 작성되면 여기에 표시됩니다.</p>
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-lg border border-gray-200">
+          <div className="bg-white rounded-xl border border-gray-200">
             {/* 테이블 헤더 */}
             <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
               <div className="w-5 flex-shrink-0" />
@@ -195,14 +203,47 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
 
           {/* 페이지네이션 */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm text-gray-600">{page} / {totalPages}</span>
-              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+            <div className="flex items-center justify-center gap-1 mt-4">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .reduce((acc: (number | string)[], p, i, arr) => {
+                  if (i > 0 && typeof arr[i - 1] === 'number' && (p as number) - (arr[i - 1] as number) > 1) {
+                    acc.push('...')
+                  }
+                  acc.push(p)
+                  return acc
+                }, [])
+                .map((p, i) =>
+                  typeof p === 'string' ? (
+                    <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p as number)}
+                      className={`min-w-[28px] px-2 py-1 text-xs rounded-lg border transition-colors ${
+                        page === p
+                          ? 'bg-sky-500 text-white border-sky-500'
+                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
             </div>
           )}
         </>

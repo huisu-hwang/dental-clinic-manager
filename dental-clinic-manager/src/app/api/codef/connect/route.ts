@@ -82,6 +82,15 @@ export async function POST(request: NextRequest) {
       .single();
 
     let connectedId: string | null = null;
+    let codefApiWarning: string | null = null;
+
+    // 더미 connectedId 판별 (데모 모드에서 자동 생성된 ID)
+    const DUMMY_CONNECTED_IDS = ['demo-hometax-id-1234'];
+    const isDummyConnectedId = (id: string | null | undefined): boolean =>
+      !id || DUMMY_CONNECTED_IDS.includes(id);
+
+    // CODEF API 실패 시 로컬에 자격증명을 저장하기 위한 connectedId 생성
+    const generateLocalConnectedId = () => `local-${clinicId}-${Date.now()}`;
 
     // 데모 모드일 때는 CODEF 연동 로직 생략하고 바로 성공 처리
     if (isDemoMode) {
@@ -89,7 +98,9 @@ export async function POST(request: NextRequest) {
       console.log('CODEF DEMO MODE: Successfully mocked connection');
     } else {
       // 기존 connectedId가 있으면 (활성이든 비활성이든) updateAccount로 갱신 시도
-      const existingConnectedId = activeConnection?.connected_id || anyConnection?.connected_id;
+      // 단, 더미 connectedId는 무시
+      const rawExistingId = activeConnection?.connected_id || anyConnection?.connected_id;
+      const existingConnectedId = isDummyConnectedId(rawExistingId) ? null : rawExistingId;
 
       // 인증 방식에 따른 CODEF 함수 래퍼
       const doCreateAccount = isCertAuth
@@ -106,6 +117,11 @@ export async function POST(request: NextRequest) {
 
         if (updateResult.result.code === 'CF-00000') {
           connectedId = existingConnectedId;
+        } else if (updateResult.result.code === 'CF-99999') {
+          // CODEF 서버 오류 (500) → 자격증명만 로컬 저장
+          console.warn('CODEF: updateAccount 서버 오류, 자격증명 로컬 저장');
+          connectedId = existingConnectedId;
+          codefApiWarning = 'CODEF 서버가 일시적으로 응답하지 않아 자격증명만 저장되었습니다. 데이터 동기화 시 자동 연결됩니다.';
         } else {
           // updateAccount 실패 → createAccount 시도
           console.log('CODEF: updateAccount 실패, createAccount 시도');
@@ -118,6 +134,11 @@ export async function POST(request: NextRequest) {
             // 이미 등록된 계정 → 기존 connectedId 그대로 재사용
             console.log('CODEF: CF-04000, 기존 connectedId 재사용:', existingConnectedId);
             connectedId = existingConnectedId;
+          } else if (createResult.result.code === 'CF-99999') {
+            // CODEF 서버 오류 → 자격증명만 로컬 저장
+            console.warn('CODEF: createAccount 서버 오류, 자격증명 로컬 저장');
+            connectedId = existingConnectedId;
+            codefApiWarning = 'CODEF 서버가 일시적으로 응답하지 않아 자격증명만 저장되었습니다. 데이터 동기화 시 자동 연결됩니다.';
           } else {
             const errorMsg = createResult.result.extraMessage
               ? `${createResult.result.message} (${createResult.result.extraMessage})`
@@ -129,7 +150,7 @@ export async function POST(request: NextRequest) {
           }
         }
       } else {
-        // DB에 연결 이력이 전혀 없으면 새로 생성
+        // DB에 연결 이력이 전혀 없거나 더미만 있으면 새로 생성
         const createResult = await doCreateAccount();
         console.log('CODEF createAccount result:', JSON.stringify(createResult.result));
 
@@ -165,6 +186,11 @@ export async function POST(request: NextRequest) {
               { status: 400 }
             );
           }
+        } else if (createResult.result.code === 'CF-99999') {
+          // CODEF 서버 오류 (500) → 자격증명만 로컬 저장하고 성공 처리
+          console.warn('CODEF: createAccount 서버 오류, 자격증명 로컬 저장');
+          connectedId = generateLocalConnectedId();
+          codefApiWarning = 'CODEF 서버가 일시적으로 응답하지 않아 자격증명만 저장되었습니다. 데이터 동기화 시 자동 연결됩니다.';
         } else {
           const errorMsg = createResult.result.extraMessage
             ? `${createResult.result.message} (${createResult.result.extraMessage})`
@@ -226,12 +252,20 @@ export async function POST(request: NextRequest) {
 
     const serviceType = isDemoMode ? '데모' : getCodefServiceType();
 
+    let message = isDemoMode
+      ? '홈택스 계정이 데모 모드로 연결되었습니다.'
+      : '홈택스 계정이 성공적으로 연결되었습니다.';
+    if (codefApiWarning) {
+      message = codefApiWarning;
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         connectedId,
         serviceType,
-        message: isDemoMode ? '홈택스 계정이 데모 모드로 연결되었습니다.' : '홈택스 계정이 성공적으로 연결되었습니다.',
+        message,
+        warning: codefApiWarning || undefined,
       },
     });
   } catch (error) {

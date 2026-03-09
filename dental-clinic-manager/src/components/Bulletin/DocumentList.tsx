@@ -7,8 +7,6 @@ import {
   Search,
   Download,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
   Filter,
   FolderOpen,
   File,
@@ -200,6 +198,9 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
         <div className="flex items-center gap-2">
           <FolderOpen className="w-5 h-5 text-green-600" />
           <h2 className="text-lg font-semibold text-gray-900">문서 모음</h2>
+          {!loading && (
+            <span className="text-xs text-gray-400 font-normal ml-1">총 {total}건</span>
+          )}
         </div>
         {canCreate && (
           <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
@@ -250,17 +251,20 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
       {/* 로딩 */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
         </div>
       ) : documents.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <FolderOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-          <p>등록된 문서가 없습니다.</p>
+        <div className="text-center py-16 text-gray-500">
+          <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FolderOpen className="w-8 h-8 text-sky-300" />
+          </div>
+          <p className="font-medium text-gray-600 mb-1">등록된 문서가 없습니다</p>
+          <p className="text-sm text-gray-400">새로운 문서가 등록되면 여기에 표시됩니다.</p>
         </div>
       ) : (
         <>
           {/* 문서 목록 */}
-          <div className="bg-white rounded-lg border border-gray-200">
+          <div className="bg-white rounded-xl border border-gray-200">
             {/* 테이블 헤더 */}
             <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
               <div className="hidden sm:block w-16 flex-shrink-0 text-center">분류</div>
@@ -276,7 +280,9 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
                 <div
                   key={document.id}
                   onClick={() => handleDocumentClick(document)}
-                  className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                  className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-l-2 ${
+                    'border-l-transparent'
+                  }`}
                 >
                   {/* 분류 */}
                   <div className="hidden sm:block w-16 flex-shrink-0 text-center">
@@ -293,6 +299,12 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
                       <span className="flex-shrink-0">{getFileIcon(document.file_name)}</span>
                     )}
                     <span className="text-sm text-gray-900 truncate">{document.title}</span>
+                    {(() => {
+                      const created = new Date(document.created_at)
+                      const now = new Date()
+                      const isToday = created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth() && created.getDate() === now.getDate()
+                      return isToday ? <span className="flex-shrink-0 ml-1 px-1 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded">N</span> : null
+                    })()}
                   </div>
                   {/* 작성자 */}
                   <div className="hidden sm:block w-20 text-center text-sm text-gray-500 flex-shrink-0">
@@ -328,26 +340,47 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
 
           {/* 페이지네이션 */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
+            <div className="flex items-center justify-center gap-1 mt-4">
+              <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
+                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
               >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm text-gray-600">
-                {page} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .reduce((acc: (number | string)[], p, i, arr) => {
+                  if (i > 0 && typeof arr[i - 1] === 'number' && (p as number) - (arr[i - 1] as number) > 1) {
+                    acc.push('...')
+                  }
+                  acc.push(p)
+                  return acc
+                }, [])
+                .map((p, i) =>
+                  typeof p === 'string' ? (
+                    <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p as number)}
+                      className={`min-w-[28px] px-2 py-1 text-xs rounded-lg border transition-colors ${
+                        page === p
+                          ? 'bg-sky-500 text-white border-sky-500'
+                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
+                disabled={page >= totalPages}
+                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
               >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
             </div>
           )}
         </>

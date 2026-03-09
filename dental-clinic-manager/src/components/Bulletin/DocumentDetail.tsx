@@ -5,9 +5,8 @@ import {
   Calendar,
   Eye,
   Download,
-  Edit2,
+  Pencil,
   Trash2,
-  User,
   FileText,
   Image,
   FileSpreadsheet,
@@ -104,41 +103,20 @@ export default function DocumentDetail({
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack} className="flex items-center gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          목록으로
-        </Button>
-        <div className="flex items-center gap-2">
-          {document.file_url && onDownload && (
-            <Button variant="outline" onClick={onDownload} className="flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              다운로드
-            </Button>
-          )}
-          {onEdit && (
-            <Button variant="outline" onClick={onEdit} className="flex items-center gap-2">
-              <Edit2 className="w-4 h-4" />
-              수정
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="outline"
-              onClick={onDelete}
-              className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4" />
-              삭제
-            </Button>
-          )}
-        </div>
+      <div className="flex items-center justify-between mb-4">
+        <nav className="flex items-center text-sm">
+          <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            문서 모음
+          </button>
+          <span className="mx-2 text-gray-400">›</span>
+          <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{document.title}</span>
+        </nav>
       </div>
 
       {/* 문서 내용 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* 제목 영역 */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center gap-2 mb-3">
             <span className={`text-xs px-2 py-0.5 rounded-full ${getCategoryBadgeColor(document.category)}`}>
               {DOCUMENT_CATEGORY_LABELS[document.category as keyof typeof DOCUMENT_CATEGORY_LABELS]}
@@ -148,25 +126,37 @@ export default function DocumentDetail({
           {document.description && (
             <p className="text-gray-600 mb-4">{document.description}</p>
           )}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-            <span className="flex items-center gap-1">
-              <User className="w-4 h-4" />
-              {document.author_name}
-            </span>
-            <span className="flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
-              {formatDate(document.created_at)}
-            </span>
-            <span className="flex items-center gap-1">
-              <Eye className="w-4 h-4" />
-              조회 {document.view_count}
-            </span>
-            {document.file_name && (
+          {/* 메타 정보 */}
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+            <div className="flex items-center gap-3 text-xs text-gray-400">
+              <span className="text-gray-600 font-medium">{document.author_name}</span>
+              <span>{formatDate(document.created_at)}</span>
               <span className="flex items-center gap-1">
-                <Download className="w-4 h-4" />
-                다운로드 {document.download_count}
+                <Eye className="w-3 h-3" />{document.view_count}
               </span>
-            )}
+              {document.file_name && (
+                <span className="flex items-center gap-1">
+                  <Download className="w-3 h-3" />{document.download_count}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              {document.file_url && onDownload && (
+                <Button variant="ghost" size="sm" onClick={onDownload} className="text-gray-400 hover:text-blue-500">
+                  <Download className="w-3.5 h-3.5 mr-1" />다운로드
+                </Button>
+              )}
+              {onEdit && (
+                <Button variant="ghost" size="sm" onClick={onEdit} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
+                  <Pencil className="w-3.5 h-3.5 mr-1" />수정
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="ghost" size="sm" onClick={onDelete} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* 첨부파일 정보 */}
@@ -243,7 +233,7 @@ export default function DocumentDetail({
 
         {/* 본문 영역 */}
         {document.content && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div
               className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap"
               dangerouslySetInnerHTML={{ __html: document.content }}
@@ -253,10 +243,39 @@ export default function DocumentDetail({
 
         {/* 본문도 파일도 없는 경우 */}
         {!document.content && !document.file_url && (
-          <div className="p-6 text-center text-gray-500">
+          <div className="p-4 sm:p-6 text-center text-gray-500">
             <FileText className="w-12 h-12 mx-auto text-gray-300 mb-2" />
             <p>등록된 내용이 없습니다.</p>
           </div>
+        )}
+      </div>
+
+      {/* 하단 액션 바 */}
+      <div className="flex items-center justify-center gap-2 mt-2">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          목록으로
+        </button>
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+            수정
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            삭제
+          </button>
         )}
       </div>
     </div>

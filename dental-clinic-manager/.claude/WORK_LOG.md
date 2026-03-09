@@ -10,6 +10,42 @@
 
 ---
 
+## 2026-03-09 [버그 수정] 리콜 관리 마지막 연락 기록 및 일일 활동 카운트 버그 수정
+
+**키워드:** #리콜관리 #마지막연락 #일일활동기록 #KST타임존 #낙관적업데이트 #recall_datetime
+
+### 📋 작업 내용
+- 리콜 상태 변경 시 마지막 연락 컬럼이 UI에 즉시 반영되지 않던 버그 수정
+- 일일 활동 기록 탭의 카운트가 부정확하던 버그 수정
+- pending 상태 복원 시 recall_datetime 덮어쓰기 방지
+
+### 🐛 문제
+- 상태 변경 후 마지막 연락 컬럼이 "-"로 표시 (새로고침해야 반영)
+- 오늘 리콜한 내역 카운트가 실제와 다름
+- pending으로 되돌릴 때 recall_datetime이 덮어써져 카운트 왜곡
+
+### 🔍 근본 원인 (5 Whys)
+1. **낙관적 업데이트 누락**: handleUpdateStatus가 status만 변경하고 last_contact_date, last_contact_type, contact_count를 포함하지 않음
+2. **KST 타임존 이중 차감**: getDailyRecallActivity에서 local midnight(이미 KST)에서 9시간을 또 빼서 쿼리 윈도우가 9시간 이동 (3PM 전일~3PM 당일)
+3. **recall_datetime 무조건 갱신**: 모든 상태 변경(pending 포함)에서 recall_datetime을 덮어써 활동 로그 부정확
+
+### ✅ 해결 방법
+- `RecallManagement.tsx`: 낙관적 업데이트에 contact 관련 필드 전부 포함, 실패 시 전체 환자 객체로 롤백
+- `recallService.ts`: recall_datetime을 non-pending 상태에서만 기록
+- `recallService.ts`: KST 범위를 `+09:00` ISO 오프셋으로 정확히 계산
+
+### 🧪 테스트 결과
+- 부재중 클릭 → 마지막 연락 컬럼에 "2026. 3. 9. 전화" 즉시 표시 확인
+- 활동 기록 탭 20건 → 리콜 전으로 복원 → 19건으로 정확히 감소 확인
+- 빌드 성공, PR #227 머지 완료
+
+### 💡 배운 점
+- 낙관적 업데이트 시 서버에서 변경되는 모든 필드를 로컬 상태에도 반영해야 함
+- KST 타임존 계산 시 `new Date(year, month, day)` 생성자가 이미 로컬 시간이므로 추가 오프셋 불필요
+- `+09:00` ISO 오프셋 문자열 방식이 가장 안전한 KST 변환 방법
+
+---
+
 ## 2026-03-09 [버그 수정] CODEF 신용카드 매출 데이터 연동 실패 문제 해결
 
 **키워드:** #CODEF #홈택스 #신용카드매출 #토큰검증 #샌드박스폴백 #RSA암호화
