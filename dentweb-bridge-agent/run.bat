@@ -1,25 +1,25 @@
 @echo off
-chcp 65001 >nul
-title 덴트웹 브릿지 에이전트
+chcp 65001 >nul 2>nul
+title DentWeb Bridge Agent
 cd /d "%~dp0"
 
-:: 빌드 확인
+:: Check build
 if not exist "dist\index.js" (
-    echo [!] 빌드가 필요합니다. 빌드를 실행합니다...
+    echo [!] Build required. Running build...
     call npm run build
     if %errorLevel% neq 0 (
-        echo [X] 빌드 실패. setup.bat을 먼저 실행해주세요.
+        echo [X] Build failed. Please run setup.bat first.
         pause
         exit /b 1
     )
 )
 
-:: 에이전트 실행 (오류 발생 시에도 창이 닫히지 않음)
-echo 덴트웹 브릿지 에이전트를 시작합니다...
+:: Run agent
+echo Starting DentWeb Bridge Agent...
 echo.
 node dist/index.js
 
-:: 프로세스가 종료되면 여기로 옴 (정상 종료 또는 오류)
+:: Process ended
 echo.
-echo 에이전트가 종료되었습니다.
+echo Agent has stopped.
 pause

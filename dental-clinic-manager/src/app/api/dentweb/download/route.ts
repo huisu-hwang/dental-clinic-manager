@@ -81,7 +81,11 @@ export async function GET(request: NextRequest) {
     // 브릿지 에이전트 소스 파일 추가
     const files = getBridgeAgentFiles()
     for (const file of files) {
-      zip.file(file.path, file.content)
+      // .bat files need CRLF line endings for Windows CMD compatibility
+      const content = file.path.endsWith('.bat')
+        ? file.content.replace(/\r?\n/g, '\r\n')
+        : file.content
+      zip.file(file.path, content)
     }
 
     // .env 설정 파일 추가 (클리닉별 자동 설정)
@@ -90,7 +94,8 @@ export async function GET(request: NextRequest) {
       apiKey: apiKey!,
       syncInterval,
     })
-    zip.file('dentweb-bridge-agent/.env', envContent)
+    // .env also needs CRLF for Windows compatibility
+    zip.file('dentweb-bridge-agent/.env', envContent.replace(/\r?\n/g, '\r\n'))
 
     // ZIP 생성
     const zipArrayBuffer = await zip.generateAsync({
