@@ -268,18 +268,16 @@ export default function PatientList({
               <button
                 key={opt.value}
                 onClick={() => {
-                  const isActive = opt.value !== 'all' && opt.value !== 'no_date'
+                  const isSortable = opt.value !== 'no_date'
                   const newFilters = {
                     ...filters,
                     lastVisitPeriod: opt.value,
                     ...(opt.value !== 'custom' ? { lastVisitFrom: undefined, lastVisitTo: undefined } : {}),
-                    // 기간 선택 시 자동으로 최종 내원일 최근 순 정렬
-                    ...(isActive ? { sortBy: 'last_visit_date' as const, sortDirection: 'desc' as const } : {}),
-                    // '전체' 선택 시 정렬 초기화
-                    ...(opt.value === 'all' ? { sortBy: undefined, sortDirection: undefined } : {})
+                    // 기간 선택 시 자동으로 최종 내원일 최근 순 정렬 (전체 포함)
+                    ...(isSortable ? { sortBy: 'last_visit_date' as const, sortDirection: 'desc' as const } : {})
                   }
-                  setSortField(isActive ? 'last_visit_date' : 'patient_name')
-                  setSortDirection(isActive ? 'desc' : 'asc')
+                  setSortField(isSortable ? 'last_visit_date' : 'patient_name')
+                  setSortDirection(isSortable ? 'desc' : 'asc')
                   onFiltersChange(newFilters)
                 }}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
@@ -292,8 +290,8 @@ export default function PatientList({
               </button>
             ))}
 
-            {/* 기간 필터 활성 시 정렬 방향 토글 */}
-            {filters.lastVisitPeriod && filters.lastVisitPeriod !== 'all' && filters.lastVisitPeriod !== 'no_date' && (
+            {/* 최종 내원일 정렬 방향 토글 (no_date 제외 항상 표시) */}
+            {(!filters.lastVisitPeriod || filters.lastVisitPeriod !== 'no_date') && (
               <button
                 onClick={() => {
                   const newDir = (filters.sortDirection || 'desc') === 'asc' ? 'desc' : 'asc'
