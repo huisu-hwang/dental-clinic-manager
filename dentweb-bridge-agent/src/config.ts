@@ -38,6 +38,9 @@ export const config = {
     patientCount: parseInt(process.env.DEMO_PATIENT_COUNT || '10', 10),
   },
 
+  // 상태 서버 포트 (브라우저에서 상태 확인용)
+  statusPort: parseInt(process.env.STATUS_PORT || '52800', 10),
+
   // 에이전트 버전
   agentVersion: '1.0.0',
 }

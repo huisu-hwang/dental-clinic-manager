@@ -223,6 +223,8 @@ echo ==========================================
 echo.
 echo  - 서비스: DentWeb Bridge Agent
 echo  - PC 부팅 시 자동 시작됩니다
+echo  - 상태 확인: http://localhost:52800
+echo    (브라우저에서 에이전트 상태를 확인할 수 있습니다)
 echo  - 로그: %~dp0logs\bridge-agent.log
 echo  - 설정: %~dp0.env (메모장으로 수정)
 echo.
