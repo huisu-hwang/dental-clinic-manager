@@ -829,6 +829,19 @@ export async function getTaxInvoiceDetailWithCert(
   if (!rawData) return { data: [], isSandboxFallback };
 
   const items = Array.isArray(rawData) ? rawData : [rawData];
+
+  // API는 startDate/endDate 입력을 지원하지 않으므로 (approvalNo 기반 조회)
+  // 반환된 데이터에서 commStartDate/resReportingDate 기준으로 날짜 필터링
+  if (startDate || endDate) {
+    const filtered = items.filter((item: TaxInvoiceDetailItem) => {
+      const itemDate = item.resReportingDate || item.commStartDate || '';
+      if (startDate && itemDate < startDate) return false;
+      if (endDate && itemDate > endDate) return false;
+      return true;
+    });
+    return { data: filtered, isSandboxFallback };
+  }
+
   return { data: items, isSandboxFallback };
 }
 
