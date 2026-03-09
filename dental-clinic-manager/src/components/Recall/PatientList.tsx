@@ -273,13 +273,13 @@ export default function PatientList({
                     ...filters,
                     lastVisitPeriod: opt.value,
                     ...(opt.value !== 'custom' ? { lastVisitFrom: undefined, lastVisitTo: undefined } : {}),
-                    // 기간 선택 시 자동으로 최종 내원일 오름차순(빠른 순) 정렬
-                    ...(isActive ? { sortBy: 'last_visit_date' as const, sortDirection: filters.sortDirection || 'asc' as const } : {}),
+                    // 기간 선택 시 자동으로 최종 내원일 최근 순 정렬
+                    ...(isActive ? { sortBy: 'last_visit_date' as const, sortDirection: 'desc' as const } : {}),
                     // '전체' 선택 시 정렬 초기화
                     ...(opt.value === 'all' ? { sortBy: undefined, sortDirection: undefined } : {})
                   }
                   setSortField(isActive ? 'last_visit_date' : 'patient_name')
-                  setSortDirection(isActive ? (filters.sortDirection || 'asc') : 'asc')
+                  setSortDirection(isActive ? 'desc' : 'asc')
                   onFiltersChange(newFilters)
                 }}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
@@ -296,14 +296,14 @@ export default function PatientList({
             {filters.lastVisitPeriod && filters.lastVisitPeriod !== 'all' && filters.lastVisitPeriod !== 'no_date' && (
               <button
                 onClick={() => {
-                  const newDir = (filters.sortDirection || 'asc') === 'asc' ? 'desc' : 'asc'
+                  const newDir = (filters.sortDirection || 'desc') === 'asc' ? 'desc' : 'asc'
                   setSortDirection(newDir)
                   onFiltersChange({ ...filters, sortBy: 'last_visit_date', sortDirection: newDir })
                 }}
                 className="ml-1 px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-all flex items-center gap-1"
-                title={(filters.sortDirection || 'asc') === 'asc' ? '오래된 순 (빠른 순)' : '최근 순'}
+                title={(filters.sortDirection || 'desc') === 'asc' ? '오래된 순 (빠른 순)' : '최근 순'}
               >
-                {(filters.sortDirection || 'asc') === 'asc'
+                {(filters.sortDirection || 'desc') === 'asc'
                   ? <><ArrowUp className="w-3 h-3" /> 오래된 순</>
                   : <><ArrowDown className="w-3 h-3" /> 최근 순</>
                 }
