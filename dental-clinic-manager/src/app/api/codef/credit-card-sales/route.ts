@@ -74,25 +74,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const serviceType = useMockData ? 'UI데모' : getActualCodefServiceType();
+    let serviceType = useMockData ? 'UI데모' : getActualCodefServiceType();
     console.log(`CODEF 신용카드 매출 조회: year=${year}, Q${startQuarter}~Q${endQuarter}, serviceType=${serviceType}, useMockData=${useMockData}`);
 
     // UI 데모용 (CODEF 미설정 시): PDF 스펙 기반 모의 데이터 (필드명 PDF 스펙 준수)
-    const salesData = useMockData ? {
-      resSalesHistoryList: [
-        { resYearMonth: `${year}01`, resCount: "134", resTotalAmount: "45000000", resPaymentAmt: "40000000", resPaymentAmt1: "5000000", resCashBack: "0" },
-        { resYearMonth: `${year}02`, resCount: "112", resTotalAmount: "38500000", resPaymentAmt: "34000000", resPaymentAmt1: "4500000", resCashBack: "0" },
-        { resYearMonth: `${year}03`, resCount: "156", resTotalAmount: "52000000", resPaymentAmt: "46000000", resPaymentAmt1: "6000000", resCashBack: "0" },
-      ],
-      resTotalList: [
-        { resQuarter: "1", resType: "0", resCount: "402", resTotalAmount: "135500000" },
-      ],
-      resSalesHistoryList1: [
-        { resYearMonth: `${year}01`, resCount: "28", resSalesAmount: "9500000", resCompanyNm: "PG사 결제" },
-        { resYearMonth: `${year}02`, resCount: "24", resSalesAmount: "8200000", resCompanyNm: "PG사 결제" },
-        { resYearMonth: `${year}03`, resCount: "33", resSalesAmount: "11000000", resCompanyNm: "PG사 결제" },
-      ],
-    } as any : await getCreditCardSalesData(
+    if (useMockData) {
+      const mockSalesData = {
+        resSalesHistoryList: [
+          { resYearMonth: `${year}01`, resCount: "134", resTotalAmount: "45000000", resPaymentAmt: "40000000", resPaymentAmt1: "5000000", resCashBack: "0" },
+          { resYearMonth: `${year}02`, resCount: "112", resTotalAmount: "38500000", resPaymentAmt: "34000000", resPaymentAmt1: "4500000", resCashBack: "0" },
+          { resYearMonth: `${year}03`, resCount: "156", resTotalAmount: "52000000", resPaymentAmt: "46000000", resPaymentAmt1: "6000000", resCashBack: "0" },
+        ],
+        resTotalList: [
+          { resQuarter: "1", resType: "0", resCount: "402", resTotalAmount: "135500000" },
+        ],
+        resSalesHistoryList1: [
+          { resYearMonth: `${year}01`, resCount: "28", resSalesAmount: "9500000", resCompanyNm: "PG사 결제" },
+          { resYearMonth: `${year}02`, resCount: "24", resSalesAmount: "8200000", resCompanyNm: "PG사 결제" },
+          { resYearMonth: `${year}03`, resCount: "33", resSalesAmount: "11000000", resCompanyNm: "PG사 결제" },
+        ],
+      };
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          salesHistory: mockSalesData.resSalesHistoryList,
+          totalList: mockSalesData.resTotalList,
+          pgSalesHistory: mockSalesData.resSalesHistoryList1,
+          serviceType,
+          message: `${mockSalesData.resSalesHistoryList.length}개월 매출 데이터가 조회되었습니다.`,
+        },
+      });
+    }
+
+    // 실제 CODEF API 호출
+    const { salesData, isSandboxFallback } = await getCreditCardSalesData(
       certFile,
       certPassword,
       keyFile || '',
@@ -102,6 +118,11 @@ export async function POST(request: NextRequest) {
       endQuarter
     );
 
+    // 샌드박스 폴백 시 서비스 타입 표시 변경
+    if (isSandboxFallback) {
+      serviceType = '샌드박스(인증 실패로 폴백)';
+    }
+
     if (!salesData) {
       return NextResponse.json({
         success: true,
@@ -110,6 +131,7 @@ export async function POST(request: NextRequest) {
           totalList: [],
           pgSalesHistory: [],
           serviceType,
+          isSandboxFallback,
           message: '조회된 데이터가 없습니다.',
         },
       });
@@ -124,7 +146,10 @@ export async function POST(request: NextRequest) {
         totalList: salesData.resTotalList || [],
         pgSalesHistory: salesData.resSalesHistoryList1 || [],
         serviceType,
-        message: `${salesCount}개월 매출 데이터가 조회되었습니다.`,
+        isSandboxFallback,
+        message: isSandboxFallback
+          ? `${salesCount}개월 샌드박스 테스트 데이터입니다. CODEF DEMO 인증 정보가 유효하지 않아 샌드박스로 폴백되었습니다.`
+          : `${salesCount}개월 매출 데이터가 조회되었습니다.`,
       },
     });
   } catch (error) {

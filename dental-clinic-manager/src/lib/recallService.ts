@@ -860,12 +860,12 @@ export const recallPatientService = {
 
       const updates: Partial<RecallPatient> = {
         status,
-        recall_datetime: now,
         ...appointmentInfo
       }
 
-      // pending이 아닌 경우에만 연락 기록 업데이트
+      // pending이 아닌 경우에만 연락 기록 및 recall_datetime 업데이트
       if (status !== 'pending') {
+        updates.recall_datetime = now
         updates.last_contact_date = now
         updates.last_contact_type = contactType
         updates.contact_count = (patient?.contact_count || 0) + 1
@@ -898,12 +898,12 @@ export const recallPatientService = {
       const contactType: ContactType = status === 'sms_sent' ? 'sms' : 'call'
 
       const updateData: Record<string, unknown> = {
-        status,
-        recall_datetime: now
+        status
       }
 
-      // pending이 아닌 경우에만 연락 기록 업데이트
+      // pending이 아닌 경우에만 연락 기록 및 recall_datetime 업데이트
       if (status !== 'pending') {
+        updateData.recall_datetime = now
         updateData.last_contact_date = now
         updateData.last_contact_type = contactType
       }
@@ -1774,13 +1774,9 @@ export const recallPatientService = {
     if (!clinicId) return { success: false, error: 'Clinic ID not found' }
 
     try {
-      // KST 기준 날짜 범위 계산
-      const koreaOffset = 9 * 60
-      const date = new Date(dateStr)
-      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-      const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59)
-      const startStr = new Date(dayStart.getTime() - koreaOffset * 60000).toISOString()
-      const endStr = new Date(dayEnd.getTime() - koreaOffset * 60000).toISOString()
+      // KST 기준 날짜 범위 계산 (UTC+9)
+      const startStr = new Date(`${dateStr}T00:00:00+09:00`).toISOString()
+      const endStr = new Date(`${dateStr}T23:59:59.999+09:00`).toISOString()
 
       // 해당 날짜에 처리된 모든 환자 조회 (pending 제외 = 실제 처리된 건)
       const { data: patients, error } = await supabase

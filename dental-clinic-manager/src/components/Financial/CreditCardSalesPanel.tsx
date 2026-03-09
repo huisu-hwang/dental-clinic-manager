@@ -258,6 +258,11 @@ export default function CreditCardSalesPanel({
         setMessage(result.data.message || '')
         setFetched(true)
         setShowCertForm(false)
+
+        // 샌드박스 폴백 경고
+        if (result.data.isSandboxFallback) {
+          setError('CODEF DEMO 인증 정보가 유효하지 않아 샌드박스 테스트 데이터로 표시됩니다. CODEF 홈페이지에서 인증 정보를 확인하세요.')
+        }
       } else {
         setError(result.error || '데이터 조회에 실패했습니다.')
       }

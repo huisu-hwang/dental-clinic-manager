@@ -27,7 +27,8 @@ import type {
   RecallStats as RecallStatsType,
   PatientRecallStatus,
   RecallExcludeReason,
-  UnmatchedPatientItem
+  UnmatchedPatientItem,
+  ContactType
 } from '@/types/recall'
 import { recallService } from '@/lib/recallService'
 import PatientFileUpload from './PatientFileUpload'
@@ -244,9 +245,22 @@ export default function RecallManagement() {
   const handleUpdateStatus = async (patient: RecallPatient, newStatus?: PatientRecallStatus) => {
     if (newStatus) {
       // 낙관적 업데이트: 먼저 UI를 즉시 업데이트
-      const previousStatus = patient.status
+      const previousPatient = { ...patient }
+      const now = new Date().toISOString()
+      const isContact = newStatus !== 'pending'
+      const contactType = newStatus === 'sms_sent' ? 'sms' : 'call'
+
       setPatients(prev => prev.map(p =>
-        p.id === patient.id ? { ...p, status: newStatus } : p
+        p.id === patient.id ? {
+          ...p,
+          status: newStatus,
+          ...(isContact ? {
+            recall_datetime: now,
+            last_contact_date: now,
+            last_contact_type: contactType as ContactType,
+            contact_count: (p.contact_count || 0) + 1
+          } : {})
+        } : p
       ))
 
       // 백그라운드에서 서버 업데이트
@@ -257,7 +271,7 @@ export default function RecallManagement() {
       } else {
         // 실패 시 이전 상태로 복원
         setPatients(prev => prev.map(p =>
-          p.id === patient.id ? { ...p, status: previousStatus } : p
+          p.id === patient.id ? previousPatient : p
         ))
         showToast(result.error || '상태 변경에 실패했습니다.', 'error')
       }
