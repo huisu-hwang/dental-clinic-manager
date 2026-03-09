@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  ArrowLeft,
   Calendar,
   Eye,
   Edit2,
@@ -52,10 +51,13 @@ export default function AnnouncementDetail({
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack} className="flex items-center gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          목록으로
-        </Button>
+        <nav className="flex items-center text-sm">
+          <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            공지사항
+          </button>
+          <span className="mx-2 text-gray-400">›</span>
+          <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{announcement.title}</span>
+        </nav>
         {(onEdit || onDelete) && (
           <div className="flex items-center gap-2">
             {onEdit && (
