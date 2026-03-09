@@ -30,10 +30,6 @@ function getServiceClient() {
 // POST: 홈택스 데이터 동기화
 export async function POST(request: NextRequest) {
   try {
-    // CODEF 자격증명 설정 여부에 따라 실제 API 호출 또는 UI 데모 데이터 사용
-    // CODEF_SERVICE_TYPE=DEMO(development.codef.io)도 실제 데이터를 반환하는 진짜 API 환경
-    const useMockData = !isCodefConfigured();
-
     const body = await request.json();
     const { clinicId, year, month, syncType = 'all' } = body;
 
@@ -46,37 +42,58 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceClient();
 
+    // 실제 홈택스 연결 정보가 있는지 확인
+    let useMockData = !isCodefConfigured();
     let hometaxId = 'demo-user';
     let hometaxPassword = 'demo-password';
+    let hasRealConnection = false;
 
-    // 연결 정보 조회 (있으면 사용, 없으면 더미 credentials로 진행 → SANDBOX 폴백)
-    const { data: connection } = await supabase
-      .from('codef_connections')
-      .select('connected_id, hometax_user_id, encrypted_password')
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true)
-      .single();
+    if (!useMockData) {
+      // CODEF 설정은 되어있으니, DB에서 실제 홈택스 계정 정보 조회
+      const { data: connection } = await supabase
+        .from('codef_connections')
+        .select('connected_id, hometax_user_id, encrypted_password')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .single();
 
-    if (connection?.connected_id && connection.hometax_user_id && connection.encrypted_password) {
-      // 실제 연결 정보가 있으면 사용
-      try {
-        hometaxPassword = !useMockData ? decryptPasswordFromStorage(connection.encrypted_password) : 'demo-password';
-        hometaxId = connection.hometax_user_id;
-      } catch (decryptError) {
-        console.warn('Password decryption failed, using dummy credentials:', decryptError);
-        // 복호화 실패 시 더미 credentials 사용 → SANDBOX 폴백으로 테스트 데이터 제공
+      if (connection?.connected_id && connection.hometax_user_id && connection.encrypted_password
+          && connection.encrypted_password !== 'dummy-password') {
+        // 실제 연결 정보가 있으면 사용
+        try {
+          hometaxPassword = decryptPasswordFromStorage(connection.encrypted_password);
+          hometaxId = connection.hometax_user_id;
+          hasRealConnection = true;
+        } catch (decryptError) {
+          console.warn('Password decryption failed, falling back to mock data:', decryptError);
+          useMockData = true;
+        }
+      } else {
+        // 실제 홈택스 계정이 없으면 모의 데이터 사용 (SANDBOX 폴백 대신)
+        console.log('No real HomeTax connection found, using mock data for demo');
+        useMockData = true;
       }
-    } else {
-      // 연결 정보 없으면 더미 연결 자동 생성 (SANDBOX 폴백으로 테스트 데이터 제공)
-      console.log('No active connection found, creating dummy connection for SANDBOX fallback');
-      await supabase.from('codef_connections').upsert({
-        clinic_id: clinicId,
-        connected_id: 'demo-hometax-id-1234',
-        hometax_user_id: 'demo_user',
-        encrypted_password: 'dummy-password',
-        is_active: true,
-        connected_at: new Date().toISOString(),
-      }, { onConflict: 'clinic_id' });
+    }
+
+    // 더미 연결 정보 자동 생성 (동기화 이력 저장용)
+    if (!hasRealConnection) {
+      const { data: existingConn } = await supabase
+        .from('codef_connections')
+        .select('clinic_id')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .single();
+
+      if (!existingConn) {
+        await supabase.from('codef_connections').upsert({
+          clinic_id: clinicId,
+          connected_id: 'demo-hometax-id-1234',
+          hometax_user_id: 'demo_user',
+          encrypted_password: 'dummy-password',
+          is_active: true,
+          connected_at: new Date().toISOString(),
+        }, { onConflict: 'clinic_id' });
+      }
     }
 
     // 조회 기간 설정
