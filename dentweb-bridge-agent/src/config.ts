@@ -4,6 +4,9 @@ import path from 'path'
 dotenv.config({ path: path.resolve(__dirname, '../.env') })
 
 export const config = {
+  // 데모 모드: MS SQL Server 없이 모의 데이터로 테스트
+  demoMode: process.env.DEMO_MODE === 'true',
+
   // 덴트웹 DB 설정
   dentweb: {
     server: process.env.DENTWEB_DB_SERVER || 'localhost',
@@ -30,6 +33,14 @@ export const config = {
     syncType: (process.env.SYNC_TYPE || 'incremental') as 'full' | 'incremental',
   },
 
+  // 데모 모드 설정
+  demo: {
+    patientCount: parseInt(process.env.DEMO_PATIENT_COUNT || '10', 10),
+  },
+
+  // 상태 서버 포트 (브라우저에서 상태 확인용)
+  statusPort: parseInt(process.env.STATUS_PORT || '52800', 10),
+
   // 에이전트 버전
   agentVersion: '1.0.0',
 }
@@ -37,10 +48,13 @@ export const config = {
 export function validateConfig(): string[] {
   const errors: string[] = []
 
-  // Windows 인증이 아닌 경우에만 user/password 필수
-  if (!config.dentweb.useWindowsAuth) {
-    if (!config.dentweb.user) errors.push('DENTWEB_DB_USER is required (or use Windows auth)')
-    if (!config.dentweb.password) errors.push('DENTWEB_DB_PASSWORD is required (or use Windows auth)')
+  // 데모 모드에서는 DB 설정 불필요
+  if (!config.demoMode) {
+    // Windows 인증이 아닌 경우에만 user/password 필수
+    if (!config.dentweb.useWindowsAuth) {
+      if (!config.dentweb.user) errors.push('DENTWEB_DB_USER is required (or use Windows auth)')
+      if (!config.dentweb.password) errors.push('DENTWEB_DB_PASSWORD is required (or use Windows auth)')
+    }
   }
   if (!config.supabase.url) errors.push('SUPABASE_URL is required')
   if (!config.supabase.clinicId) errors.push('CLINIC_ID is required')

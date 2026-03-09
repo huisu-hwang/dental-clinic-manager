@@ -53,6 +53,14 @@ export function getBridgeAgentFiles(): BridgeAgentFile[] {
       content: TEST_CONNECTION_TS,
     },
     {
+      path: 'dentweb-bridge-agent/src/status-server.ts',
+      content: STATUS_SERVER_TS,
+    },
+    {
+      path: 'dentweb-bridge-agent/run.bat',
+      content: RUN_BAT,
+    },
+    {
       path: 'dentweb-bridge-agent/scripts/install-service.js',
       content: INSTALL_SERVICE_JS,
     },
@@ -89,6 +97,10 @@ export function generateEnvContent(params: {
     '# 동기화 설정',
     `SYNC_INTERVAL_SECONDS=${params.syncInterval}`,
     'SYNC_TYPE=incremental',
+    '',
+    '# 데모 모드 (MS SQL Server 없이 모의 데이터로 테스트)',
+    'DEMO_MODE=false',
+    'DEMO_PATIENT_COUNT=10',
     '',
   ].join('\n')
 }
@@ -322,6 +334,8 @@ echo ==========================================
 echo.
 echo  - 서비스: DentWeb Bridge Agent
 echo  - PC 부팅 시 자동 시작됩니다
+echo  - 상태 확인: http://localhost:52800
+echo    (브라우저에서 에이전트 상태를 확인할 수 있습니다)
 echo  - 로그: %~dp0logs\\bridge-agent.log
 echo  - 설정: %~dp0.env (메모장으로 수정)
 echo.
@@ -386,6 +400,9 @@ import path from 'path'
 dotenv.config({ path: path.resolve(__dirname, '../.env') })
 
 export const config = {
+  // 데모 모드: MS SQL Server 없이 모의 데이터로 테스트
+  demoMode: process.env.DEMO_MODE === 'true',
+
   // 덴트웹 DB 설정
   dentweb: {
     server: process.env.DENTWEB_DB_SERVER || 'localhost',
@@ -412,6 +429,14 @@ export const config = {
     syncType: (process.env.SYNC_TYPE || 'incremental') as 'full' | 'incremental',
   },
 
+  // 데모 모드 설정
+  demo: {
+    patientCount: parseInt(process.env.DEMO_PATIENT_COUNT || '10', 10),
+  },
+
+  // 상태 서버 포트 (브라우저에서 상태 확인용)
+  statusPort: parseInt(process.env.STATUS_PORT || '52800', 10),
+
   // 에이전트 버전
   agentVersion: '1.0.0',
 }
@@ -419,10 +444,13 @@ export const config = {
 export function validateConfig(): string[] {
   const errors: string[] = []
 
-  // Windows 인증이 아닌 경우에만 user/password 필수
-  if (!config.dentweb.useWindowsAuth) {
-    if (!config.dentweb.user) errors.push('DENTWEB_DB_USER is required (or use Windows auth)')
-    if (!config.dentweb.password) errors.push('DENTWEB_DB_PASSWORD is required (or use Windows auth)')
+  // 데모 모드에서는 DB 설정 불필요
+  if (!config.demoMode) {
+    // Windows 인증이 아닌 경우에만 user/password 필수
+    if (!config.dentweb.useWindowsAuth) {
+      if (!config.dentweb.user) errors.push('DENTWEB_DB_USER is required (or use Windows auth)')
+      if (!config.dentweb.password) errors.push('DENTWEB_DB_PASSWORD is required (or use Windows auth)')
+    }
   }
   if (!config.supabase.url) errors.push('SUPABASE_URL is required')
   if (!config.supabase.clinicId) errors.push('CLINIC_ID is required')
@@ -432,11 +460,13 @@ export function validateConfig(): string[] {
 }
 `
 
-const INDEX_TS = `import { config, validateConfig } from './config'
-import { connectDB, disconnectDB, testConnection } from './dentweb-db'
-import { checkStatus } from './api-client'
+const INDEX_TS = `import readline from 'readline'
+import { config, validateConfig } from './config'
+import { connectDB, disconnectDB, testConnection, generateDemoPatients, patientToSyncData } from './dentweb-db'
+import { checkStatus, syncPatients } from './api-client'
 import { runSync } from './sync-service'
 import { logger } from './logger'
+import { startStatusServer, updateAgentStatus } from './status-server'
 
 const MAX_DB_RETRIES = 5
 const DB_RETRY_DELAY = 10000
@@ -445,100 +475,355 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+// Windows에서 창이 바로 닫히지 않도록 키 입력 대기
+function waitForKeypress(message?: string): Promise<void> {
+  return new Promise(resolve => {
+    console.log('')
+    console.log(message || '  아무 키나 누르면 종료합니다...')
+    console.log('')
+    if (!process.stdin.isTTY) { resolve(); return }
+    const rl = readline.createInterface({ input: process.stdin })
+    rl.on('line', () => { rl.close(); resolve() })
+    if (process.stdin.setRawMode) {
+      process.stdin.setRawMode(true)
+      process.stdin.resume()
+      process.stdin.once('data', () => { process.stdin.setRawMode!(false); rl.close(); resolve() })
+    }
+  })
+}
+
+// 오류 발생 시 메시지 표시 후 키 입력 대기하고 종료
+async function exitWithError(message: string, exitCode = 1): Promise<never> {
+  printError(message)
+  logger.error(message)
+  await waitForKeypress('  오류가 발생했습니다. 위 내용을 확인한 후 아무 키나 누르면 종료합니다...')
+  process.exit(exitCode)
+}
+
+function printBanner(): void {
+  console.log('')
+  console.log('  ╔══════════════════════════════════════════════════╗')
+  console.log('  ║                                                  ║')
+  console.log('  ║     덴트웹 브릿지 에이전트 v' + config.agentVersion.padEnd(22, ' ') + '║')
+  console.log('  ║     DentWeb Bridge Agent                        ║')
+  console.log('  ║                                                  ║')
+  if (config.demoMode) {
+    console.log('  ║     [데모 모드] 모의 데이터로 실행 중             ║')
+  }
+  console.log('  ╚══════════════════════════════════════════════════╝')
+  console.log('')
+}
+
+function printStatus(label: string, value: string, ok: boolean): void {
+  const icon = ok ? '[OK]' : '[!!]'
+  console.log(\`  \${icon} \${label}: \${value}\`)
+}
+
+function printSuccess(message: string): void {
+  console.log('')
+  console.log('  ┌──────────────────────────────────────────────────┐')
+  console.log(\`  │  \${message.padEnd(48, ' ')}│\`)
+  console.log('  └──────────────────────────────────────────────────┘')
+  console.log('')
+}
+
+function printError(message: string): void {
+  console.log('')
+  console.log('  ┌──────────────────────────────────────────────────┐')
+  console.log(\`  │  [실패] \${message.padEnd(42, ' ')}│\`)
+  console.log('  └──────────────────────────────────────────────────┘')
+  console.log('')
+}
+
 async function connectWithRetry(): Promise<boolean> {
   for (let attempt = 1; attempt <= MAX_DB_RETRIES; attempt++) {
     logger.info(\`덴트웹 DB 연결 시도 (\${attempt}/\${MAX_DB_RETRIES})...\`)
-    const connected = await testConnection()
-    if (connected) return true
+    console.log(\`  [..] 덴트웹 DB 연결 시도 (\${attempt}/\${MAX_DB_RETRIES})...\`)
+    try {
+      const connected = await testConnection()
+      if (connected) return true
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      logger.error(\`연결 실패: \${msg}\`)
+      updateAgentStatus({ dbError: msg })
+    }
 
     if (attempt < MAX_DB_RETRIES) {
       logger.warn(\`\${DB_RETRY_DELAY / 1000}초 후 재시도...\`)
+      console.log(\`  [!!] 연결 실패. \${DB_RETRY_DELAY / 1000}초 후 재시도...\`)
       await sleep(DB_RETRY_DELAY)
     }
   }
   return false
 }
 
+async function runDemoSync(): Promise<void> {
+  logger.info('[데모] 모의 환자 데이터 동기화 시작...')
+  const patients = generateDemoPatients(config.demo.patientCount)
+  const syncData = patients.map(patientToSyncData)
+
+  logger.info(\`[데모] \${syncData.length}명의 환자 데이터를 API로 전송합니다...\`)
+  const result = await syncPatients(syncData, 'full')
+
+  if (result.success) {
+    logger.info('[데모] 동기화 성공!', {
+      total: result.total_records,
+      new: result.new_records,
+      updated: result.updated_records,
+    })
+    updateAgentStatus({
+      lastSyncAt: new Date().toISOString(),
+      lastSyncStatus: 'success',
+      lastSyncPatientCount: result.total_records,
+    })
+    printSuccess(\`동기화 완료: \${result.total_records}건 전송 성공\`)
+  } else {
+    logger.error('[데모] 동기화 실패:', { error: result.error })
+    updateAgentStatus({ lastSyncStatus: 'error' })
+    printError(\`동기화 실패: \${result.error}\`)
+  }
+}
+
 async function main() {
+  const startedAt = new Date().toISOString()
+  updateAgentStatus({ startedAt, demoMode: config.demoMode })
+
+  printBanner()
+
   logger.info('========================================')
   logger.info('덴트웹 브릿지 에이전트 시작')
   logger.info(\`Version: \${config.agentVersion}\`)
+  if (config.demoMode) {
+    logger.info('[데모 모드] MS SQL Server 없이 모의 데이터로 실행')
+  }
   logger.info('========================================')
+
+  // 상태 확인 서버 시작 (가장 먼저)
+  console.log('  --- 상태 서버 ---')
+  startStatusServer()
+  console.log('')
 
   // 설정 검증
   const configErrors = validateConfig()
   if (configErrors.length > 0) {
     logger.error('설정 오류:')
-    configErrors.forEach(err => logger.error(\`  - \${err}\`))
+    configErrors.forEach(err => {
+      logger.error(\`  - \${err}\`)
+      console.log(\`  [!!] \${err}\`)
+    })
     logger.error('.env 파일을 확인해주세요.')
-    process.exit(1)
+    console.log('')
+    console.log('  .env 파일 위치: 브릿지 에이전트 폴더 내 .env')
+    console.log('  웹 대시보드에서 다시 다운로드하면 자동 설정됩니다.')
+    await exitWithError('설정 오류 - .env 파일을 확인하세요')
   }
 
-  // 1. 덴트웹 DB 연결 (재시도 포함)
-  const dbConnected = await connectWithRetry()
-  if (!dbConnected) {
-    logger.error('덴트웹 DB 연결 실패. 설정을 확인해주세요.')
-    process.exit(1)
+  console.log('  --- 설정 확인 ---')
+  printStatus('모드', config.demoMode ? '데모 (모의 데이터)' : '운영 (실제 DB)', true)
+  printStatus('Supabase URL', config.supabase.url ? config.supabase.url.substring(0, 40) + '...' : '(미설정)', !!config.supabase.url)
+  printStatus('Clinic ID', config.supabase.clinicId ? config.supabase.clinicId.substring(0, 20) + '...' : '(미설정)', !!config.supabase.clinicId)
+  printStatus('API Key', config.supabase.apiKey ? config.supabase.apiKey.substring(0, 10) + '...' : '(미설정)', !!config.supabase.apiKey)
+  printStatus('동기화 주기', \`\${config.sync.intervalSeconds}초\`, true)
+  printStatus('동기화 유형', config.sync.syncType, true)
+
+  if (!config.demoMode) {
+    printStatus('DB 서버', \`\${config.dentweb.server}:\${config.dentweb.port}\`, true)
+    printStatus('DB 이름', config.dentweb.database, true)
+    printStatus('인증 방식', config.dentweb.useWindowsAuth ? 'Windows (NTLM)' : 'SQL Server', true)
+  } else {
+    printStatus('데모 환자 수', \`\${config.demo.patientCount}명\`, true)
   }
+  console.log('')
 
-  // 2. Supabase API 연결 테스트
-  logger.info('Supabase API 연결 테스트 중...')
-  const statusResult = await checkStatus()
-  if (!statusResult.success) {
-    logger.warn('Supabase API 연결 실패, 동기화는 계속 시도합니다:', statusResult.error)
-  }
+  if (config.demoMode) {
+    // === 데모 모드 ===
+    logger.info('[데모] DB 연결 건너뜀 (데모 모드)')
+    printStatus('DB 연결', '건너뜀 (데모 모드)', true)
+    updateAgentStatus({ dbConnected: true })
 
-  if (statusResult.success && !statusResult.data?.is_active) {
-    logger.warn('동기화가 비활성화 상태입니다. 대시보드에서 활성화해주세요.')
-  }
-
-  logger.info('연결 준비 완료!')
-  logger.info(\`동기화 주기: \${config.sync.intervalSeconds}초\`)
-  logger.info(\`동기화 유형: \${config.sync.syncType}\`)
-
-  // 3. 최초 동기화 실행
-  logger.info('최초 동기화 실행...')
-  await runSync()
-
-  // 4. 주기적 동기화 스케줄러
-  const intervalMs = config.sync.intervalSeconds * 1000
-  logger.info(\`\${config.sync.intervalSeconds}초 간격으로 동기화 스케줄링...\`)
-
-  const intervalId = setInterval(async () => {
-    try {
-      const status = await checkStatus()
-      if (status.success && status.data?.is_active) {
-        await runSync()
-      } else if (status.success && !status.data?.is_active) {
-        logger.info('동기화 비활성화 상태, 건너뜀')
-      } else {
-        // 서버 상태 확인 실패해도 동기화 시도 (오프라인 내성)
-        logger.warn('서버 상태 확인 실패, 동기화를 시도합니다...')
-        await runSync()
+    // Supabase API 연결 테스트
+    console.log('')
+    console.log('  --- Supabase API 연결 테스트 ---')
+    logger.info('Supabase API 연결 테스트 중...')
+    const statusResult = await checkStatus()
+    if (statusResult.success) {
+      printStatus('Supabase API', '연결 성공', true)
+      updateAgentStatus({ supabaseConnected: true })
+      if (statusResult.data) {
+        printStatus('동기화 상태', statusResult.data.is_active ? '활성' : '비활성', statusResult.data.is_active)
+        printStatus('기존 환자 수', \`\${statusResult.data.total_patients}명\`, true)
       }
-    } catch (error) {
-      logger.error('스케줄된 동기화 실패:', error)
+    } else {
+      printStatus('Supabase API', \`연결 실패: \${statusResult.error}\`, false)
+      updateAgentStatus({ supabaseConnected: false, supabaseError: statusResult.error || '' })
+      logger.warn('Supabase API 연결 실패, 동기화는 계속 시도합니다:', statusResult.error)
     }
-  }, intervalMs)
 
-  // 종료 시그널 처리
-  const cleanup = async () => {
-    logger.info('종료 시그널 수신, 정리 중...')
-    clearInterval(intervalId)
-    await disconnectDB()
-    logger.info('브릿지 에이전트 종료')
-    process.exit(0)
+    updateAgentStatus({ running: true })
+    printSuccess('에이전트 시작 완료 (데모 모드)')
+
+    // 데모 동기화 실행
+    logger.info('[데모] 최초 동기화 실행...')
+    await runDemoSync()
+
+    // 주기적 데모 동기화
+    const intervalMs = config.sync.intervalSeconds * 1000
+    logger.info(\`[데모] \${config.sync.intervalSeconds}초 간격으로 동기화 스케줄링...\`)
+
+    const intervalId = setInterval(async () => {
+      try {
+        const status = await checkStatus()
+        if (status.success && status.data?.is_active) {
+          await runDemoSync()
+        } else if (status.success && !status.data?.is_active) {
+          logger.info('[데모] 동기화 비활성화 상태, 건너뜀')
+        } else {
+          logger.warn('[데모] 서버 상태 확인 실패, 동기화를 시도합니다...')
+          await runDemoSync()
+        }
+      } catch (error) {
+        logger.error('[데모] 스케줄된 동기화 실패:', error)
+      }
+    }, intervalMs)
+
+    // 종료 처리
+    const cleanup = async () => {
+      logger.info('종료 시그널 수신, 정리 중...')
+      clearInterval(intervalId)
+      updateAgentStatus({ running: false })
+      logger.info('브릿지 에이전트 종료')
+      process.exit(0)
+    }
+
+    process.on('SIGINT', cleanup)
+    process.on('SIGTERM', cleanup)
+
+    logger.info('[데모] 브릿지 에이전트 실행 중... (Ctrl+C로 종료)')
+    console.log('  브릿지 에이전트가 백그라운드에서 실행 중입니다.')
+    console.log('  이 창을 닫지 마세요. (Ctrl+C로 종료)')
+    console.log('')
+
+  } else {
+    // === 운영 모드 ===
+
+    // 1. 덴트웹 DB 연결 (재시도 포함)
+    console.log('  --- 덴트웹 DB 연결 ---')
+    const dbConnected = await connectWithRetry()
+    if (!dbConnected) {
+      logger.error('덴트웹 DB 연결 실패. 설정을 확인해주세요.')
+      updateAgentStatus({ dbConnected: false })
+      console.log('')
+      console.log('  확인사항:')
+      console.log('    1. SQL Server가 실행 중인가요?')
+      console.log('    2. 덴트웹이 이 PC에 설치되어 있나요?')
+      console.log('    3. .env 파일의 DB 서버 주소가 맞나요?')
+      console.log(\`       현재 설정: \${config.dentweb.server}:\${config.dentweb.port}\`)
+      console.log(\`       데이터베이스: \${config.dentweb.database}\`)
+      console.log(\`       인증: \${config.dentweb.useWindowsAuth ? 'Windows' : 'SQL Server (' + config.dentweb.user + ')'}\`)
+      console.log('')
+      console.log('  로그 파일: logs/bridge-agent.log')
+      await exitWithError('DB 연결 실패 - 위 확인사항을 점검하세요')
+    }
+    printStatus('DB 연결', '성공', true)
+    updateAgentStatus({ dbConnected: true })
+
+    // 2. Supabase API 연결 테스트
+    console.log('')
+    console.log('  --- Supabase API 연결 테스트 ---')
+    logger.info('Supabase API 연결 테스트 중...')
+    const statusResult = await checkStatus()
+    if (statusResult.success) {
+      printStatus('Supabase API', '연결 성공', true)
+      updateAgentStatus({ supabaseConnected: true })
+      if (statusResult.data) {
+        printStatus('동기화 상태', statusResult.data.is_active ? '활성' : '비활성', statusResult.data.is_active)
+        printStatus('기존 환자 수', \`\${statusResult.data.total_patients}명\`, true)
+      }
+    } else {
+      printStatus('Supabase API', \`연결 실패: \${statusResult.error}\`, false)
+      updateAgentStatus({ supabaseConnected: false, supabaseError: statusResult.error || '' })
+      logger.warn('Supabase API 연결 실패, 동기화는 계속 시도합니다:', statusResult.error)
+    }
+
+    if (statusResult.success && !statusResult.data?.is_active) {
+      logger.warn('동기화가 비활성화 상태입니다. 대시보드에서 활성화해주세요.')
+    }
+
+    updateAgentStatus({ running: true })
+    printSuccess('에이전트 시작 완료')
+
+    // 3. 최초 동기화 실행
+    logger.info('최초 동기화 실행...')
+    console.log('  [..] 최초 동기화 실행 중...')
+    await runSync()
+    console.log('  [OK] 최초 동기화 완료')
+
+    // 4. 주기적 동기화 스케줄러
+    const intervalMs = config.sync.intervalSeconds * 1000
+    logger.info(\`\${config.sync.intervalSeconds}초 간격으로 동기화 스케줄링...\`)
+
+    const intervalId = setInterval(async () => {
+      try {
+        const status = await checkStatus()
+        if (status.success && status.data?.is_active) {
+          await runSync()
+        } else if (status.success && !status.data?.is_active) {
+          logger.info('동기화 비활성화 상태, 건너뜀')
+        } else {
+          logger.warn('서버 상태 확인 실패, 동기화를 시도합니다...')
+          await runSync()
+        }
+      } catch (error) {
+        logger.error('스케줄된 동기화 실패:', error)
+      }
+    }, intervalMs)
+
+    // 종료 시그널 처리
+    const cleanup = async () => {
+      logger.info('종료 시그널 수신, 정리 중...')
+      clearInterval(intervalId)
+      updateAgentStatus({ running: false })
+      await disconnectDB()
+      logger.info('브릿지 에이전트 종료')
+      process.exit(0)
+    }
+
+    process.on('SIGINT', cleanup)
+    process.on('SIGTERM', cleanup)
+
+    logger.info('브릿지 에이전트 실행 중... (Ctrl+C로 종료)')
+    console.log('')
+    console.log('  ════════════════════════════════════════════════')
+    console.log('  브릿지 에이전트가 실행 중입니다.')
+    console.log(\`  동기화 주기: \${config.sync.intervalSeconds}초\`)
+    console.log('  이 창을 닫지 마세요. (Ctrl+C로 종료)')
+    console.log('  ════════════════════════════════════════════════')
+    console.log('')
   }
-
-  process.on('SIGINT', cleanup)
-  process.on('SIGTERM', cleanup)
-
-  logger.info('브릿지 에이전트 실행 중... (Ctrl+C로 종료)')
 }
 
-main().catch(error => {
+main().catch(async (error) => {
+  const message = error instanceof Error ? error.message : String(error)
   logger.error('Fatal error:', error)
+  printError(\`치명적 오류: \${message}\`)
+  console.log('')
+  console.log('  상세 로그: logs/bridge-agent.log')
+  await waitForKeypress('  오류가 발생했습니다. 아무 키나 누르면 종료합니다...')
   process.exit(1)
+})
+
+// 예상치 못한 오류도 창이 닫히지 않도록 처리
+process.on('uncaughtException', async (error) => {
+  logger.error('Uncaught exception:', error)
+  printError(\`예상치 못한 오류: \${error.message}\`)
+  console.log('')
+  console.log('  상세 로그: logs/bridge-agent.log')
+  await waitForKeypress('  오류가 발생했습니다. 아무 키나 누르면 종료합니다...')
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled rejection:', reason)
 })
 `
 
@@ -558,6 +843,63 @@ interface DentwebPatientRow {
   next_appointment_date: Date | null
   registration_date: Date | null
 }
+
+// ========================================
+// 데모 모드: 모의 환자 데이터 생성
+// ========================================
+
+const DEMO_LAST_NAMES = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임']
+const DEMO_FIRST_NAMES = ['민수', '서연', '지훈', '수빈', '현우', '하은', '준호', '다은', '성민', '예진', '동현', '소영', '태희', '유나', '재혁']
+const DEMO_TREATMENTS = ['스케일링', '레진충전', '크라운', '신경치료', '임플란트', '교정', '발치', '미백', '잇몸치료', '보철']
+
+function generateDemoPhone(): string {
+  const mid = String(Math.floor(1000 + Math.random() * 9000))
+  const last = String(Math.floor(1000 + Math.random() * 9000))
+  return \\\`010-\\\${mid}-\\\${last}\\\`
+}
+
+function generateDemoDate(yearsBack: number): Date {
+  const now = new Date()
+  const past = new Date(now.getTime() - Math.random() * yearsBack * 365 * 24 * 60 * 60 * 1000)
+  return past
+}
+
+function generateDemoBirthDate(): Date {
+  const year = 1950 + Math.floor(Math.random() * 60)
+  const month = Math.floor(Math.random() * 12)
+  const day = 1 + Math.floor(Math.random() * 28)
+  return new Date(year, month, day)
+}
+
+export function generateDemoPatients(count: number): DentwebPatientRow[] {
+  const patients: DentwebPatientRow[] = []
+
+  for (let i = 1; i <= count; i++) {
+    const lastName = DEMO_LAST_NAMES[Math.floor(Math.random() * DEMO_LAST_NAMES.length)]
+    const firstName = DEMO_FIRST_NAMES[Math.floor(Math.random() * DEMO_FIRST_NAMES.length)]
+    const treatment = DEMO_TREATMENTS[Math.floor(Math.random() * DEMO_TREATMENTS.length)]
+
+    patients.push({
+      dentweb_patient_id: String(10000 + i),
+      chart_number: \\\`C\\\${String(i).padStart(5, '0')}\\\`,
+      patient_name: \\\`\\\${lastName}\\\${firstName}\\\`,
+      phone_number: generateDemoPhone(),
+      birth_date: generateDemoBirthDate(),
+      gender: Math.random() > 0.5 ? 'M' : 'F',
+      last_visit_date: generateDemoDate(1),
+      last_treatment_type: treatment,
+      next_appointment_date: Math.random() > 0.3 ? new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000) : null,
+      registration_date: generateDemoDate(5),
+    })
+  }
+
+  logger.info(\\\`[데모] \\\${count}명의 모의 환자 데이터 생성 완료\\\`)
+  return patients
+}
+
+// ========================================
+// 실제 DB 쿼리
+// ========================================
 
 // MS SQL Server 연결 설정
 function buildSqlConfig(): sql.config {
@@ -1165,6 +1507,157 @@ main().catch(error => {
   logger.error('Error:', error)
   process.exit(1)
 })
+`
+
+const STATUS_SERVER_TS = `import http from 'http'
+import { config } from './config'
+import { logger } from './logger'
+import { loadState } from './state'
+
+const STATUS_PORT = parseInt(process.env.STATUS_PORT || '52800', 10)
+
+let agentStatus: Record<string, unknown> = {
+  running: false,
+  dbConnected: false,
+  dbError: '',
+  supabaseConnected: false,
+  supabaseError: '',
+  startedAt: '',
+  lastSyncAt: '',
+  lastSyncStatus: '',
+  lastSyncPatientCount: 0,
+  totalSyncs: 0,
+  consecutiveErrors: 0,
+  demoMode: false,
+}
+
+export function updateAgentStatus(updates: Record<string, unknown>): void {
+  agentStatus = { ...agentStatus, ...updates }
+}
+
+export function getAgentStatus() {
+  const state = loadState()
+  return {
+    ...agentStatus,
+    lastSyncAt: state.lastSyncDate || agentStatus.lastSyncAt,
+    lastSyncStatus: state.lastSyncStatus || agentStatus.lastSyncStatus,
+    lastSyncPatientCount: state.lastSyncPatientCount || agentStatus.lastSyncPatientCount,
+    totalSyncs: state.totalSyncs || agentStatus.totalSyncs,
+    consecutiveErrors: state.consecutiveErrors || agentStatus.consecutiveErrors,
+  }
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function formatKoreanTime(isoStr: string): string {
+  try { return new Date(isoStr).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) }
+  catch { return isoStr }
+}
+
+function getUptime(startedAt: string): string {
+  const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
+  if (diff < 60) return diff + '초'
+  if (diff < 3600) return Math.floor(diff / 60) + '분 ' + (diff % 60) + '초'
+  const hours = Math.floor(diff / 3600)
+  const mins = Math.floor((diff % 3600) / 60)
+  if (hours < 24) return hours + '시간 ' + mins + '분'
+  return Math.floor(hours / 24) + '일 ' + (hours % 24) + '시간'
+}
+
+function formatStatusHtml(): string {
+  const s = getAgentStatus() as Record<string, unknown>
+  const uptime = s.startedAt ? getUptime(String(s.startedAt)) : '-'
+  const dbOk = s.dbConnected as boolean
+  const supaOk = s.supabaseConnected as boolean
+  const syncStatus = String(s.lastSyncStatus || '')
+  const running = s.running as boolean
+  const demo = s.demoMode as boolean
+
+  const lines: string[] = []
+  lines.push('<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta http-equiv="refresh" content="10">')
+  lines.push('<title>덴트웹 브릿지 에이전트 상태</title>')
+  lines.push('<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;background:#f0f2f5;color:#333}.container{max-width:600px;margin:40px auto;padding:0 20px}.header{background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;padding:24px;border-radius:12px 12px 0 0}.header h1{font-size:20px;margin-bottom:4px}.header .ver{font-size:13px;opacity:.8}.card{background:#fff;border-radius:0 0 12px 12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:20px}.sr{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #eee}.sr:last-child{border-bottom:none}.label{font-size:14px;color:#666}.value{font-size:14px;font-weight:600}.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}.ok{background:#e6f4ea;color:#1e8e3e}.err{background:#fce8e6;color:#d93025}.wait{background:#fef7e0;color:#f9a825}.demo-b{background:#e8f0fe;color:#1a73e8}.sec{margin-top:16px;padding-top:12px;border-top:2px solid #eee}.sec-t{font-size:13px;color:#999;text-transform:uppercase;margin-bottom:8px;letter-spacing:1px}.footer{text-align:center;padding:16px;font-size:12px;color:#999}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;animation:pulse 2s infinite}.dot.on{background:#1e8e3e}.dot.off{background:#d93025;animation:none}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}</style></head><body><div class="container">')
+  lines.push('<div class="header"><h1>&#128737; 덴트웹 브릿지 에이전트</h1><div class="ver">v' + config.agentVersion + (demo ? ' (데모 모드)' : '') + '</div></div>')
+  lines.push('<div class="card">')
+  lines.push('<div class="sr"><span class="label">에이전트 상태</span><span class="value"><span class="dot ' + (running ? 'on' : 'off') + '"></span>' + (running ? '실행 중' : '중지됨') + '</span></div>')
+  lines.push('<div class="sr"><span class="label">실행 시간</span><span class="value">' + uptime + '</span></div>')
+  if (demo) lines.push('<div class="sr"><span class="label">모드</span><span class="badge demo-b">데모 모드</span></div>')
+  lines.push('<div class="sec"><div class="sec-t">연결 상태</div></div>')
+  lines.push('<div class="sr"><span class="label">덴트웹 DB</span><span class="value">' + (dbOk ? '&#9989; 연결됨' : (demo ? '&#9898; 건너뜀 (데모)' : '&#10060; 연결 실패' + (s.dbError ? ': ' + escapeHtml(String(s.dbError)) : ''))) + '</span></div>')
+  lines.push('<div class="sr"><span class="label">Supabase API</span><span class="value">' + (supaOk ? '&#9989; 연결됨' : '&#10060; 연결 실패' + (s.supabaseError ? ': ' + escapeHtml(String(s.supabaseError)) : '')) + '</span></div>')
+  lines.push('<div class="sec"><div class="sec-t">동기화</div></div>')
+  lines.push('<div class="sr"><span class="label">마지막 동기화</span><span class="value">' + (s.lastSyncAt ? formatKoreanTime(String(s.lastSyncAt)) : '아직 없음') + '</span></div>')
+  const syncBadge = syncStatus === 'success' ? 'ok' : (syncStatus === 'error' ? 'err' : 'wait')
+  const syncLabel = syncStatus === 'success' ? '&#9989; 성공' : (syncStatus === 'error' ? '&#10060; 실패' : '&#9898; 대기 중')
+  lines.push('<div class="sr"><span class="label">동기화 결과</span><span class="badge ' + syncBadge + '">' + syncLabel + '</span></div>')
+  lines.push('<div class="sr"><span class="label">동기화된 환자 수</span><span class="value">' + s.lastSyncPatientCount + '명</span></div>')
+  lines.push('<div class="sr"><span class="label">총 동기화 횟수</span><span class="value">' + s.totalSyncs + '회</span></div>')
+  lines.push('<div class="sr"><span class="label">연속 오류</span><span class="value">' + s.consecutiveErrors + '회</span></div>')
+  lines.push('<div class="sr"><span class="label">동기화 주기</span><span class="value">' + config.sync.intervalSeconds + '초</span></div>')
+  lines.push('<div class="sec"><div class="sec-t">설정</div></div>')
+  lines.push('<div class="sr"><span class="label">DB 서버</span><span class="value">' + escapeHtml(config.dentweb.server) + ':' + config.dentweb.port + '</span></div>')
+  lines.push('<div class="sr"><span class="label">DB 이름</span><span class="value">' + escapeHtml(config.dentweb.database) + '</span></div>')
+  lines.push('<div class="sr"><span class="label">인증 방식</span><span class="value">' + (config.dentweb.useWindowsAuth ? 'Windows (NTLM)' : 'SQL Server') + '</span></div>')
+  lines.push('</div>')
+  lines.push('<div class="footer">10초마다 자동 새로고침 | 시작: ' + (s.startedAt ? formatKoreanTime(String(s.startedAt)) : '-') + '</div>')
+  lines.push('</div></body></html>')
+  return lines.join('\\n')
+}
+
+export function startStatusServer(): void {
+  const server = http.createServer((req, res) => {
+    if (req.url === '/api/status' || req.url === '/status.json') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+      res.end(JSON.stringify(getAgentStatus(), null, 2))
+    } else {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      res.end(formatStatusHtml())
+    }
+  })
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.warn('상태 서버 포트 ' + STATUS_PORT + ' 이미 사용 중')
+    } else {
+      logger.warn('상태 서버 시작 실패:', err.message)
+    }
+  })
+
+  server.listen(STATUS_PORT, '127.0.0.1', () => {
+    logger.info('상태 페이지: http://localhost:' + STATUS_PORT)
+    console.log('  [OK] 상태 페이지: http://localhost:' + STATUS_PORT)
+    console.log('       (브라우저에서 에이전트 상태를 확인할 수 있습니다)')
+  })
+}
+`
+
+const RUN_BAT = `@echo off
+chcp 65001 >nul
+title 덴트웹 브릿지 에이전트
+cd /d "%~dp0"
+
+:: 빌드 확인
+if not exist "dist\\index.js" (
+    echo [!] 빌드가 필요합니다. 빌드를 실행합니다...
+    call npm run build
+    if %errorLevel% neq 0 (
+        echo [X] 빌드 실패. setup.bat을 먼저 실행해주세요.
+        pause
+        exit /b 1
+    )
+)
+
+:: 에이전트 실행
+echo 덴트웹 브릿지 에이전트를 시작합니다...
+echo.
+node dist/index.js
+
+:: 프로세스가 종료되면 여기로 옴
+echo.
+echo 에이전트가 종료되었습니다.
+pause
 `
 
 const INSTALL_SERVICE_JS = `// Windows 서비스로 등록하는 스크립트
