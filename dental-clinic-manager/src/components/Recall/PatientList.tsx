@@ -134,9 +134,10 @@ export default function PatientList({
 
   // 정렬 토글 (서버사이드 정렬도 함께 적용)
   const handleSort = (field: 'patient_name' | 'status' | 'last_contact_date' | 'last_visit_date') => {
+    const defaultDir = (field === 'last_visit_date' || field === 'last_contact_date') ? 'desc' : 'asc'
     const newDirection = sortField === field
       ? (sortDirection === 'asc' ? 'desc' : 'asc')
-      : 'asc'
+      : defaultDir
 
     setSortField(field)
     setSortDirection(newDirection)
