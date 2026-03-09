@@ -16,7 +16,8 @@ import {
   Heart,
   ShieldOff,
   Undo2,
-  Trash2
+  Trash2,
+  Database
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
@@ -40,6 +41,7 @@ import RecallStats from './RecallStats'
 import RecallSettings from './RecallSettings'
 import RecallDailyLog from './RecallDailyLog'
 import UnmatchedPatientModal from './UnmatchedPatientModal'
+import DentwebImportModal from './DentwebImportModal'
 import Toast from '@/components/ui/Toast'
 
 type TabType = 'patients' | 'activity' | 'stats' | 'settings'
@@ -58,6 +60,9 @@ export default function RecallManagement() {
   const [unmatchedPatients, setUnmatchedPatients] = useState<UnmatchedPatientItem[]>([])
   const [unmatchedModalOpen, setUnmatchedModalOpen] = useState(false)
   const [unmatchedExcludeReason, setUnmatchedExcludeReason] = useState<RecallExcludeReason>('family')
+
+  // 덴트웹 가져오기 모달
+  const [dentwebImportOpen, setDentwebImportOpen] = useState(false)
 
   // 데이터 상태
   const [patients, setPatients] = useState<RecallPatient[]>([])
@@ -544,6 +549,15 @@ export default function RecallManagement() {
                 <span className="sm:hidden">추가</span>
               </button>
 
+              <button
+                onClick={() => setDentwebImportOpen(true)}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
+              >
+                <Database className="w-4 h-4" />
+                <span className="hidden sm:inline">덴트웹에서 가져오기</span>
+                <span className="sm:hidden">덴트웹</span>
+              </button>
+
               {/* 일반 환자 목록: 문자 + 제외 버튼 (항상 표시) */}
               {!filters.showExcluded && (
                 <>
@@ -836,6 +850,20 @@ export default function RecallManagement() {
         unmatchedPatients={unmatchedPatients}
         excludeReason={unmatchedExcludeReason}
         onComplete={() => {
+          loadPatients()
+          loadStats()
+        }}
+      />
+
+      {/* 덴트웹 가져오기 모달 */}
+      <DentwebImportModal
+        isOpen={dentwebImportOpen}
+        onClose={() => setDentwebImportOpen(false)}
+        onImportComplete={(importedCount, skippedCount) => {
+          const parts: string[] = []
+          if (importedCount > 0) parts.push(`${importedCount}명 등록`)
+          if (skippedCount > 0) parts.push(`${skippedCount}명 건너뜀 (이미 등록)`)
+          showToast(`덴트웹 가져오기 완료: ${parts.join(', ')}`, 'success')
           loadPatients()
           loadStats()
         }}
