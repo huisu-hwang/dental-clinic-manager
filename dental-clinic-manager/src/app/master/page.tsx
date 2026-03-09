@@ -43,6 +43,14 @@ export default function MasterAdminPage() {
   const [loadingActivity, setLoadingActivity] = useState(false)
   const [activityTotal, setActivityTotal] = useState(0)
 
+  // 사용자 편집 관련 상태
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingUser, setEditingUser] = useState<any>(null)
+  const [editRole, setEditRole] = useState('')
+  const [editStatus, setEditStatus] = useState('')
+  const [editClinicId, setEditClinicId] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+
   // 권한 체크
   useEffect(() => {
     if (!loading) {
@@ -315,6 +323,73 @@ export default function MasterAdminPage() {
       console.error('사용자 거절 실패:', error)
       await appAlert('사용자 거절에 실패했습니다.')
     }
+  }
+
+  // 사용자 편집 모달 열기
+  const handleEditUser = (targetUser: any) => {
+    setEditingUser(targetUser)
+    setEditRole(targetUser.role || '')
+    setEditStatus(targetUser.status || '')
+    setEditClinicId(targetUser.clinic_id || '')
+    setShowEditModal(true)
+  }
+
+  // 사용자 정보 저장
+  const handleSaveEdit = async () => {
+    if (!editingUser) return
+
+    setSavingEdit(true)
+    try {
+      const response = await fetch('/api/admin/users/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: editingUser.id,
+          role: editRole,
+          status: editStatus,
+          clinicId: editClinicId || null,
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        await appAlert('수정 실패: ' + (result.error || '알 수 없는 오류'))
+        return
+      }
+
+      await appAlert('사용자 정보가 수정되었습니다.')
+      setShowEditModal(false)
+      setEditingUser(null)
+      loadData()
+    } catch (error) {
+      console.error('사용자 수정 실패:', error)
+      await appAlert('사용자 수정에 실패했습니다.')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  const getRoleLabel = (role: string) => {
+    const labels: Record<string, string> = {
+      master_admin: '마스터 관리자',
+      owner: '대표원장',
+      vice_director: '부원장',
+      manager: '실장',
+      team_leader: '팀장',
+      staff: '직원',
+    }
+    return labels[role] || role
+  }
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      active: '활성',
+      pending: '승인 대기',
+      suspended: '정지',
+      rejected: '거절됨',
+    }
+    return labels[status] || status
   }
 
   const handleToggleClinicStatus = async (clinicId: string, currentStatus: string) => {
@@ -777,24 +852,23 @@ export default function MasterAdminPage() {
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           user.role === 'master_admin' ? 'bg-purple-100 text-purple-800' :
                           user.role === 'owner' ? 'bg-blue-100 text-blue-800' :
+                          user.role === 'vice_director' ? 'bg-indigo-100 text-indigo-800' :
+                          user.role === 'manager' ? 'bg-teal-100 text-teal-800' :
+                          user.role === 'team_leader' ? 'bg-cyan-100 text-cyan-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {user.role === 'master_admin' ? '마스터' :
-                           user.role === 'owner' ? '대표원장' :
-                           user.role}
+                          {getRoleLabel(user.role)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           user.status === 'active' ? 'bg-green-100 text-green-800' :
                           user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          user.status === 'suspended' ? 'bg-orange-100 text-orange-800' :
                           user.status === 'rejected' ? 'bg-red-100 text-red-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {user.status === 'active' ? '활성' :
-                           user.status === 'pending' ? '승인 대기' :
-                           user.status === 'rejected' ? '거절됨' :
-                           user.status}
+                          {getStatusLabel(user.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">{user.clinic?.name || '-'}</td>
@@ -819,12 +893,20 @@ export default function MasterAdminPage() {
                             활동 기록
                           </button>
                           {user.role !== 'master_admin' && (
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="text-red-600 hover:text-red-900 text-sm font-medium"
-                            >
-                              삭제
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleEditUser(user)}
+                                className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                              >
+                                수정
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="text-red-600 hover:text-red-900 text-sm font-medium"
+                              >
+                                삭제
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -1009,6 +1091,106 @@ export default function MasterAdminPage() {
                 className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
               >
                 닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 사용자 편집 모달 */}
+      {showEditModal && editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
+            <div className="p-6 border-b flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold">사용자 정보 수정</h2>
+                <p className="text-sm text-gray-500 mt-1">{editingUser.name} ({editingUser.email})</p>
+              </div>
+              <button
+                onClick={() => { setShowEditModal(false); setEditingUser(null) }}
+                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              {/* 역할 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">역할</label>
+                <select
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="owner">대표원장</option>
+                  <option value="vice_director">부원장</option>
+                  <option value="manager">실장</option>
+                  <option value="team_leader">팀장</option>
+                  <option value="staff">직원</option>
+                </select>
+              </div>
+
+              {/* 상태 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="active">활성</option>
+                  <option value="pending">승인 대기</option>
+                  <option value="suspended">정지</option>
+                  <option value="rejected">거절됨</option>
+                </select>
+              </div>
+
+              {/* 소속 병원 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">소속 병원</label>
+                <select
+                  value={editClinicId}
+                  onChange={(e) => setEditClinicId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="">소속 없음</option>
+                  {clinics.map((clinic) => (
+                    <option key={clinic.id} value={clinic.id}>{clinic.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 변경 사항 미리보기 */}
+              {(editRole !== editingUser.role || editStatus !== editingUser.status || editClinicId !== (editingUser.clinic_id || '')) && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-sm font-medium text-amber-800 mb-2">변경 사항</p>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    {editRole !== editingUser.role && (
+                      <li>역할: {getRoleLabel(editingUser.role)} → <span className="font-medium">{getRoleLabel(editRole)}</span></li>
+                    )}
+                    {editStatus !== editingUser.status && (
+                      <li>상태: {getStatusLabel(editingUser.status)} → <span className="font-medium">{getStatusLabel(editStatus)}</span></li>
+                    )}
+                    {editClinicId !== (editingUser.clinic_id || '') && (
+                      <li>소속: {editingUser.clinic?.name || '없음'} → <span className="font-medium">{clinics.find(c => c.id === editClinicId)?.name || '없음'}</span></li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <div className="p-6 border-t flex justify-end space-x-3">
+              <button
+                onClick={() => { setShowEditModal(false); setEditingUser(null) }}
+                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={savingEdit || (editRole === editingUser.role && editStatus === editingUser.status && editClinicId === (editingUser.clinic_id || ''))}
+                className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingEdit ? '저장 중...' : '저장'}
               </button>
             </div>
           </div>

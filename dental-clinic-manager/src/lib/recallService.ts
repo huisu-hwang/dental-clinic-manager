@@ -848,10 +848,27 @@ export const recallPatientService = {
     if (!supabase) return { success: false, error: 'Database connection not available' }
 
     try {
+      // 현재 환자 정보 조회 (contact_count, campaign_id)
+      const { data: patient } = await supabase
+        .from('recall_patients')
+        .select('campaign_id, contact_count')
+        .eq('id', id)
+        .single()
+
+      const now = new Date().toISOString()
+      const contactType: ContactType = status === 'sms_sent' ? 'sms' : 'call'
+
       const updates: Partial<RecallPatient> = {
         status,
-        recall_datetime: new Date().toISOString(), // 상태 변경 시 리콜 일시 기록
+        recall_datetime: now,
         ...appointmentInfo
+      }
+
+      // pending이 아닌 경우에만 연락 기록 업데이트
+      if (status !== 'pending') {
+        updates.last_contact_date = now
+        updates.last_contact_type = contactType
+        updates.contact_count = (patient?.contact_count || 0) + 1
       }
 
       const { error } = await supabase
@@ -860,13 +877,6 @@ export const recallPatientService = {
         .eq('id', id)
 
       if (error) throw error
-
-      // 환자의 캠페인 ID 조회 및 통계 업데이트
-      const { data: patient } = await supabase
-        .from('recall_patients')
-        .select('campaign_id')
-        .eq('id', id)
-        .single()
 
       if (patient?.campaign_id) {
         await recallCampaignService.updateCampaignStats(patient.campaign_id)
@@ -884,12 +894,23 @@ export const recallPatientService = {
     if (!supabase) return { success: false, error: 'Database connection not available' }
 
     try {
+      const now = new Date().toISOString()
+      const contactType: ContactType = status === 'sms_sent' ? 'sms' : 'call'
+
+      const updateData: Record<string, unknown> = {
+        status,
+        recall_datetime: now
+      }
+
+      // pending이 아닌 경우에만 연락 기록 업데이트
+      if (status !== 'pending') {
+        updateData.last_contact_date = now
+        updateData.last_contact_type = contactType
+      }
+
       const { error } = await supabase
         .from('recall_patients')
-        .update({
-          status,
-          recall_datetime: new Date().toISOString() // 상태 변경 시 리콜 일시 기록
-        })
+        .update(updateData)
         .in('id', ids)
 
       if (error) throw error
