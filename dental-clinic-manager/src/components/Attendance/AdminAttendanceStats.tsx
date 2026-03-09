@@ -521,7 +521,7 @@ export default function AdminAttendanceStats() {
       ) : (
         <>
           {/* 요약 통계 카드 */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -576,6 +576,18 @@ export default function AdminAttendanceStats() {
                   )}
                 </div>
                 <TrendingUp className="w-8 h-8 text-purple-400" />
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-600 whitespace-nowrap">순 초과근무</p>
+                  <p className={`text-xl font-bold whitespace-nowrap ${summaryStats.totalOvertimeMinutes - summaryStats.totalEarlyLeaveMinutes >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>
+                    {summaryStats.totalOvertimeMinutes - summaryStats.totalEarlyLeaveMinutes >= 0 ? '+' : '-'}{formatMinutesToHours(Math.abs(summaryStats.totalOvertimeMinutes - summaryStats.totalEarlyLeaveMinutes))}
+                  </p>
+                  <p className="text-xs text-gray-400 whitespace-nowrap">초과-조퇴</p>
+                </div>
+                <Clock className="w-8 h-8 text-indigo-400" />
               </div>
             </div>
             <div className="bg-white rounded-lg shadow p-4">
