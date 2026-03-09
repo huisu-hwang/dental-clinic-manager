@@ -60,9 +60,9 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
   return (
     <div
       onClick={alwaysShowCheckbox && !selectMode ? () => onClick(post) : handleClick}
-      className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 ${
-        showCheckbox && selected ? 'bg-sky-50' : ''
-      } ${selectMode && !selectable ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 border-l-2 ${
+        post.is_pinned ? 'border-l-red-400 bg-red-50/30' : 'border-l-transparent'
+      } ${showCheckbox && selected ? 'bg-sky-50' : ''} ${selectMode && !selectable ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       {/* 고정 또는 체크박스 */}
       <div className="w-5 flex-shrink-0 flex items-center justify-center">
@@ -99,6 +99,12 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
         {/* 유형 아이콘 (작은 아이콘) */}
         <TypeIcon className={`w-3.5 h-3.5 flex-shrink-0 ${typeColor.text}`} />
         <span className="text-sm text-gray-900 truncate">{post.title}</span>
+        {(() => {
+          const created = new Date(post.created_at)
+          const now = new Date()
+          const isToday = created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth() && created.getDate() === now.getDate()
+          return isToday ? <span className="flex-shrink-0 ml-1 px-1 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded">N</span> : null
+        })()}
         {(post.comment_count ?? 0) > 0 && (
           <span className="flex items-center gap-0.5 text-xs text-sky-500 flex-shrink-0">
             <MessageCircle className="w-3 h-3" />{post.comment_count}

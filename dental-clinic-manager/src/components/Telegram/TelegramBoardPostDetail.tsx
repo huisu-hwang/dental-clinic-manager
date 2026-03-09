@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ArrowLeft, Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar, PenLine, Pencil, Trash2, Vote } from 'lucide-react'
+import { Eye, FileText, Link2, Brain, Download, ExternalLink, Calendar, PenLine, Pencil, Trash2, Vote } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { TelegramBoardPost, TelegramGroupVisibility } from '@/types/telegram'
 import { TELEGRAM_POST_TYPE_LABELS, TELEGRAM_POST_TYPE_COLORS } from '@/types/telegram'
@@ -113,10 +113,14 @@ export default function TelegramBoardPostDetail({
   return (
     <div>
       {/* 상단 네비게이션 */}
-      <div className="flex items-center gap-2 mb-4">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="w-4 h-4 mr-1" />뒤로
-        </Button>
+      <div className="flex items-center justify-between mb-4">
+        <nav className="flex items-center text-sm">
+          <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            게시판
+          </button>
+          <span className="mx-2 text-gray-400">›</span>
+          <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{post.title}</span>
+        </nav>
       </div>
 
       {/* 게시글 헤더 */}

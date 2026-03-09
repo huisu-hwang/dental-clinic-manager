@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, Edit3, Trash2, MoreVertical } from 'lucide-react'
+import { Edit3, Trash2, MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { communityPostService, communityPollService } from '@/lib/communityService'
 import type { CommunityPost, CommunityPoll } from '@/types/community'
@@ -104,9 +104,13 @@ export default function CommunityPostDetail({
     <div className="space-y-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <Button variant="outline" size="sm" onClick={onBack}>
-          <ChevronLeft className="w-4 h-4 mr-1" />목록
-        </Button>
+        <nav className="flex items-center text-sm">
+          <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            자유게시판
+          </button>
+          <span className="mx-2 text-gray-400">›</span>
+          <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{post?.title}</span>
+        </nav>
         {isOwner && (
           <div className="relative">
             <Button variant="outline" size="sm" onClick={() => setShowMenu(!showMenu)}>

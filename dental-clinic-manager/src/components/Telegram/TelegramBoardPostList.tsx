@@ -652,15 +652,23 @@ export default function TelegramBoardPostList({
       </div>
 
       {/* 게시글 목록 */}
+      {!loading && (
+        <div className="flex items-center justify-between mb-2 px-1">
+          <span className="text-xs text-gray-400">총 {total}건</span>
+        </div>
+      )}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-sky-500" />
           </div>
         ) : posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-            <Inbox className="w-10 h-10 mb-2" />
-            <p className="text-sm">게시글이 없습니다</p>
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mb-4">
+              <Inbox className="w-8 h-8 text-sky-300" />
+            </div>
+            <p className="font-medium text-gray-600 mb-1">게시글이 없습니다</p>
+            <p className="text-sm text-gray-400">새로운 글이 작성되면 여기에 표시됩니다.</p>
           </div>
         ) : (
           <>
@@ -691,23 +699,46 @@ export default function TelegramBoardPostList({
 
       {/* 페이지네이션 */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
+        <div className="flex items-center justify-center gap-1 mt-4">
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+            className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
           >
-            이전
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
-          <span className="text-xs text-gray-500">
-            {page + 1} / {totalPages}
-          </span>
+          {Array.from({ length: totalPages }, (_, i) => i)
+            .filter(p => p === 0 || p === totalPages - 1 || Math.abs(p - page) <= 1)
+            .reduce((acc: (number | string)[], p, i, arr) => {
+              if (i > 0 && typeof arr[i - 1] === 'number' && (p as number) - (arr[i - 1] as number) > 1) {
+                acc.push('...')
+              }
+              acc.push(p)
+              return acc
+            }, [])
+            .map((p, i) =>
+              typeof p === 'string' ? (
+                <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p as number)}
+                  className={`min-w-[28px] px-2 py-1 text-xs rounded-lg border transition-colors ${
+                    page === p
+                      ? 'bg-sky-500 text-white border-sky-500'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {(p as number) + 1}
+                </button>
+              )
+            )}
           <button
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
-            className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+            className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
           >
-            다음
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
           </button>
         </div>
       )}

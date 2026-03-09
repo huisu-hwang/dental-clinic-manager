@@ -133,12 +133,17 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
             </>
           )}
         </div>
-        {profileId && !isBanned && (
-          <Button onClick={onNewPost} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            글쓰기
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {!loading && (
+            <span className="text-xs text-gray-400 font-normal">총 {total}건</span>
+          )}
+          {profileId && !isBanned && (
+            <Button onClick={onNewPost} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              글쓰기
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* 카테고리 필터 */}
@@ -172,9 +177,12 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-          <p>게시글이 없습니다.</p>
+        <div className="text-center py-16 text-gray-500">
+          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageCircle className="w-8 h-8 text-gray-300" />
+          </div>
+          <p className="font-medium text-gray-600 mb-1">게시글이 없습니다</p>
+          <p className="text-sm text-gray-400">새로운 글이 작성되면 여기에 표시됩니다.</p>
         </div>
       ) : (
         <>
@@ -195,11 +203,34 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
 
           {/* 페이지네이션 */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-1">
               <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <span className="text-sm text-gray-600">{page} / {totalPages}</span>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .reduce((acc: (number | string)[], p, i, arr) => {
+                  if (i > 0 && typeof arr[i - 1] === 'number' && (p as number) - (arr[i - 1] as number) > 1) {
+                    acc.push('...')
+                  }
+                  acc.push(p)
+                  return acc
+                }, [])
+                .map((p, i) =>
+                  typeof p === 'string' ? (
+                    <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={page === p ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setPage(p)}
+                      className={`min-w-[32px] ${page === p ? '' : 'text-gray-600'}`}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
               <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
                 <ChevronRight className="w-4 h-4" />
               </Button>
