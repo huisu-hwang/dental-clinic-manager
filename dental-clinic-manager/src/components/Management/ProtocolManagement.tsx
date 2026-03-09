@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronRight,
-  ChevronUp
+  ChevronUp,
+  Lock
 } from 'lucide-react'
 import {
   DndContext, DragOverlay, closestCenter,
@@ -103,6 +104,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
   // 개별 권한 상태
   const [editableProtocolIds, setEditableProtocolIds] = useState<Set<string>>(new Set())
   const [deletableProtocolIds, setDeletableProtocolIds] = useState<Set<string>>(new Set())
+  const [accessibleProtocolIds, setAccessibleProtocolIds] = useState<Set<string>>(new Set())
 
   // 카드 확장 상태
   const [expandedProtocolId, setExpandedProtocolId] = useState<string | null>(null)
@@ -116,6 +118,15 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
   const canEdit = hasPermission('protocol_create') || hasPermission('protocol_edit')
   const isOwner = currentUser.role === 'owner'
+  const isViceDirector = currentUser.role === 'vice_director'
+
+  // 부원장: 특정 프로토콜에 대한 접근 권한 확인
+  const isProtocolAccessible = (protocol: Protocol): boolean => {
+    if (isOwner) return true
+    if (protocol.created_by === currentUser.id) return true
+    if (!isViceDirector) return true // 부원장 외 사용자는 이미 필터링됨
+    return accessibleProtocolIds.has(protocol.id)
+  }
 
   // 사용자의 개별 프로토콜 권한 로드
   const fetchUserPermissions = async () => {
@@ -217,14 +228,25 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
       } else {
         let loadedProtocols = (result.data as Protocol[] | undefined) ?? []
 
-        // 대표원장이 아닌 경우 개별 권한이 있는 프로토콜만 필터링
+        // 대표원장이 아닌 경우 권한 기반 처리
         if (!isOwner && currentUser.id) {
           const permResult = await dataService.getUserAccessibleProtocolIds(currentUser.id)
           if (!permResult.error && permResult.data) {
             const accessibleIds = new Set(permResult.data)
-            loadedProtocols = loadedProtocols.filter(
-              p => p.created_by === currentUser.id || accessibleIds.has(p.id)
-            )
+            // 자신이 만든 프로토콜도 접근 가능으로 추가
+            loadedProtocols.forEach(p => {
+              if (p.created_by === currentUser.id) accessibleIds.add(p.id)
+            })
+
+            if (isViceDirector) {
+              // 부원장: 모든 프로토콜 표시, 접근 가능한 ID만 저장 (회색 표시용)
+              setAccessibleProtocolIds(new Set(accessibleIds))
+            } else {
+              // 기타 역할: 접근 가능한 프로토콜만 필터링
+              loadedProtocols = loadedProtocols.filter(
+                p => accessibleIds.has(p.id)
+              )
+            }
           }
         }
 
@@ -518,13 +540,20 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
   // 프로토콜 카드 렌더링 (칸반/리스트 공용)
   const renderProtocolCard = (protocol: Protocol, showCategoryBadge: boolean) => {
     const isExpanded = expandedProtocolId === protocol.id
+    const accessible = isProtocolAccessible(protocol)
 
     return (
       <div
-        className={`border rounded-lg transition-all bg-white relative ${
-          isExpanded ? 'border-slate-300 shadow-md' : 'border-slate-200 hover:border-slate-300 shadow-sm'
+        className={`border rounded-lg transition-all relative ${
+          !accessible
+            ? 'bg-gray-50/80 border-gray-200'
+            : isExpanded ? 'bg-white border-slate-300 shadow-md' : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
         }`}
-        style={protocol.category ? { borderLeft: `3px solid ${protocol.category.color}` } : undefined}
+        style={
+          !accessible
+            ? { borderLeft: '3px solid #d1d5db' }
+            : protocol.category ? { borderLeft: `3px solid ${protocol.category.color}` } : undefined
+        }
       >
         {/* 접힌 상태: 1줄 요약 */}
         <div
@@ -532,19 +561,28 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
           onClick={() => setExpandedProtocolId(isExpanded ? null : protocol.id)}
         >
           <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
-            <h4 className="text-sm font-semibold text-slate-800 leading-tight truncate">
+            {!accessible && (
+              <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            )}
+            <h4 className={`text-sm font-semibold leading-tight truncate ${
+              !accessible ? 'text-gray-400' : 'text-slate-800'
+            }`}>
               {protocol.title}
             </h4>
-            <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${getStatusBadgeClass(protocol.status)}`}>
+            <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${
+              !accessible ? 'bg-gray-100 text-gray-400' : getStatusBadgeClass(protocol.status)
+            }`}>
               {getStatusLabel(protocol.status)}
             </span>
             {showCategoryBadge && protocol.category && (
               <span
-                className="inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0"
-                style={{
+                className={`inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${
+                  !accessible ? 'bg-gray-100 text-gray-400' : ''
+                }`}
+                style={accessible ? {
                   backgroundColor: `${protocol.category.color}20`,
                   color: protocol.category.color
-                }}
+                } : undefined}
               >
                 {protocol.category.name}
               </span>
@@ -552,23 +590,23 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
           </div>
           <div className="flex items-center gap-2 ml-auto flex-shrink-0">
             {!isExpanded && protocol.currentVersion && (
-              <span className="text-xs text-slate-400 hidden sm:inline">
+              <span className={`text-xs hidden sm:inline ${!accessible ? 'text-gray-300' : 'text-slate-400'}`}>
                 v{protocol.currentVersion.version_number}
               </span>
             )}
             {isExpanded ? (
-              <ChevronUp className="w-4 h-4 text-slate-400" />
+              <ChevronUp className={`w-4 h-4 ${!accessible ? 'text-gray-300' : 'text-slate-400'}`} />
             ) : (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <ChevronDown className={`w-4 h-4 ${!accessible ? 'text-gray-300' : 'text-slate-400'}`} />
             )}
           </div>
         </div>
 
         {/* 펼친 상태: 상세 정보 + 액션 버튼 */}
         {isExpanded && (
-          <div className="border-t border-slate-100">
+          <div className={`border-t ${!accessible ? 'border-gray-100' : 'border-slate-100'}`}>
             <div className="px-3 py-2.5 space-y-2">
-              <div className="flex items-center gap-3 text-xs text-slate-500">
+              <div className={`flex items-center gap-3 text-xs ${!accessible ? 'text-gray-400' : 'text-slate-500'}`}>
                 {protocol.currentVersion && (
                   <>
                     <span className="flex items-center">
@@ -585,11 +623,13 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
               {protocol.tags && protocol.tags.length > 0 && (
                 <div className="flex items-center flex-wrap gap-1">
-                  <Tag className="w-3 h-3 text-slate-400" />
+                  <Tag className={`w-3 h-3 ${!accessible ? 'text-gray-300' : 'text-slate-400'}`} />
                   {protocol.tags.map((tag, index) => (
                     <span
                       key={index}
-                      className="inline-flex px-1.5 py-0.5 text-[10px] rounded bg-slate-100 text-slate-600"
+                      className={`inline-flex px-1.5 py-0.5 text-[10px] rounded ${
+                        !accessible ? 'bg-gray-100 text-gray-400' : 'bg-slate-100 text-slate-600'
+                      }`}
                     >
                       {tag}
                     </span>
@@ -598,57 +638,67 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
               )}
             </div>
 
-            {/* 액션 버튼 */}
-            <div className="flex items-center gap-1 px-3 py-2 border-t border-slate-100 bg-slate-50/50 rounded-b-lg">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleViewProtocol(protocol)
-                }}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                title="보기"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                보기
-              </button>
-              {isOwner && (
+            {/* 권한 없음 안내 (부원장 전용) */}
+            {!accessible && (
+              <div className="flex items-center gap-2 px-3 py-2 border-t border-gray-100 bg-gray-50 rounded-b-lg">
+                <Lock className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs text-gray-400">접근 권한이 없습니다. 대표원장에게 권한을 요청하세요.</span>
+              </div>
+            )}
+
+            {/* 액션 버튼 (접근 가능한 경우만) */}
+            {accessible && (
+              <div className="flex items-center gap-1 px-3 py-2 border-t border-slate-100 bg-slate-50/50 rounded-b-lg">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    setPermissionProtocol(protocol)
-                    setShowPermissionManager(true)
+                    handleViewProtocol(protocol)
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded transition-colors"
-                  title="접근 권한 관리"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  title="보기"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  권한
+                  <Eye className="w-3.5 h-3.5" />
+                  보기
                 </button>
-              )}
-              {canEditProtocol(protocol) && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleEditProtocol(protocol)
-                  }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded transition-colors"
-                  title="수정"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  수정
-                </button>
-              )}
-              {canDeleteProtocol(protocol) && (
-                <button
-                  onClick={(e) => handleDeleteProtocolDirect(protocol, e)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors ml-auto"
-                  title="삭제"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  삭제
-                </button>
-              )}
-            </div>
+                {isOwner && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPermissionProtocol(protocol)
+                      setShowPermissionManager(true)
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded transition-colors"
+                    title="접근 권한 관리"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    권한
+                  </button>
+                )}
+                {canEditProtocol(protocol) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEditProtocol(protocol)
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                    title="수정"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    수정
+                  </button>
+                )}
+                {canDeleteProtocol(protocol) && (
+                  <button
+                    onClick={(e) => handleDeleteProtocolDirect(protocol, e)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors ml-auto"
+                    title="삭제"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    삭제
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
