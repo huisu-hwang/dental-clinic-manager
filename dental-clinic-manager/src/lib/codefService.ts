@@ -548,41 +548,153 @@ function getActualServiceType(): number {
   }
 }
 
-async function createCodefInstanceForCertApi() {
-  const { EasyCodef } = await loadEasyCodef();
-  const config = getCodefConfig();
-  const actualServiceType = getActualServiceType();
+// 토큰 발급 가능 여부를 사전 검증 (캐시)
+let _tokenValidationCache: { serviceType: number; valid: boolean; checkedAt: number } | null = null;
+const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5분
 
-  if (!config.clientId || !config.clientSecret || !config.publicKey) {
-    throw new Error('CODEF API 설정이 완료되지 않았습니다.');
+async function validateTokenForServiceType(codef: any, serviceType: number): Promise<boolean> {
+  // 캐시된 결과가 있으면 재사용
+  if (_tokenValidationCache &&
+      _tokenValidationCache.serviceType === serviceType &&
+      Date.now() - _tokenValidationCache.checkedAt < TOKEN_CACHE_TTL) {
+    return _tokenValidationCache.valid;
   }
 
-  const codef = new EasyCodef();
-  codef.setPublicKey(config.publicKey);
-
-  if (actualServiceType === 0) {
-    codef.setClientInfo(config.clientId, config.clientSecret);
-  } else {
-    codef.setClientInfoForDemo(config.clientId, config.clientSecret);
+  try {
+    const serviceTypeConstant = await getServiceTypeConstant(serviceType);
+    const tokenResult = await codef.requestToken(serviceTypeConstant);
+    const valid = !!(tokenResult && typeof tokenResult === 'string' && tokenResult.length > 0);
+    _tokenValidationCache = { serviceType, valid, checkedAt: Date.now() };
+    return valid;
+  } catch {
+    _tokenValidationCache = { serviceType, valid: false, checkedAt: Date.now() };
+    return false;
   }
-
-  return { codef, serviceType: actualServiceType };
 }
 
-async function requestProductForCertApi<T>(productUrl: string, params: object): Promise<CodefApiResponse<T>> {
+async function createCodefInstanceForCertApi(): Promise<{ codef: any; serviceType: number; fallback: boolean }> {
+  const { EasyCodef } = await loadEasyCodef();
+  const config = getCodefConfig();
+  const requestedServiceType = getActualServiceType();
+
+  if (!config.publicKey) {
+    throw new Error('CODEF API 설정이 완료되지 않았습니다. (PUBLIC_KEY 누락)');
+  }
+
+  // 정식(PRODUCT) 모드: 반드시 사용자 인증 정보 필요
+  if (requestedServiceType === 0) {
+    if (!config.clientId || !config.clientSecret) {
+      throw new Error('CODEF 정식 서비스 사용을 위한 CLIENT_ID/CLIENT_SECRET이 설정되지 않았습니다.');
+    }
+    const codef = new EasyCodef();
+    codef.setPublicKey(config.publicKey);
+    codef.setClientInfo(config.clientId, config.clientSecret);
+    return { codef, serviceType: 0, fallback: false };
+  }
+
+  // DEMO 또는 SANDBOX 모드: 사용자 인증 정보로 시도 후 실패 시 SANDBOX 폴백
+  if (config.clientId && config.clientSecret) {
+    const codef = new EasyCodef();
+    codef.setPublicKey(config.publicKey);
+    codef.setClientInfoForDemo(config.clientId, config.clientSecret);
+
+    // 토큰 발급 가능 여부 사전 검증
+    const tokenValid = await validateTokenForServiceType(codef, requestedServiceType);
+    if (tokenValid) {
+      console.log(`CODEF: ${requestedServiceType === 1 ? 'DEMO' : 'SANDBOX'} 인증 성공`);
+      return { codef, serviceType: requestedServiceType, fallback: false };
+    }
+
+    // DEMO 인증 실패 시 SANDBOX로 폴백
+    console.warn(`CODEF: ${requestedServiceType === 1 ? 'DEMO' : 'SANDBOX'} 인증 실패 (CLIENT_ID가 유효하지 않음). SANDBOX로 폴백합니다.`);
+    _tokenValidationCache = null; // 캐시 초기화
+  } else {
+    console.warn('CODEF: CLIENT_ID/CLIENT_SECRET이 설정되지 않았습니다. SANDBOX 모드로 동작합니다.');
+  }
+
+  // SANDBOX 폴백: 라이브러리 내장 샌드박스 인증 사용
+  const codef = new EasyCodef();
+  codef.setPublicKey(config.publicKey);
+  // EasyCodef는 SANDBOX용 내장 인증 정보를 가지고 있으므로 별도 설정 불필요
+  return { codef, serviceType: 2, fallback: requestedServiceType !== 2 };
+}
+
+async function requestProductForCertApi<T>(productUrl: string, params: object): Promise<CodefApiResponse<T> & { _fallback?: boolean }> {
   try {
-    const { codef, serviceType } = await createCodefInstanceForCertApi();
+    const { codef, serviceType, fallback } = await createCodefInstanceForCertApi();
     const serviceTypeConstant = await getServiceTypeConstant(serviceType);
-    console.log(`CODEF requestProduct (cert API, serviceType=${serviceType}): ${productUrl}`);
+    const serviceLabel = serviceType === 0 ? '정식' : serviceType === 1 ? '데모' : '샌드박스';
+    console.log(`CODEF requestProduct (cert API, serviceType=${serviceLabel}${fallback ? ' [폴백]' : ''}): ${productUrl}`);
     console.log(`CODEF params:`, JSON.stringify(params).substring(0, 300));
+
     const response = await codef.requestProduct(productUrl, serviceTypeConstant, params);
-    const result = typeof response === 'string' ? JSON.parse(response) : response;
+
+    // easycodef-node 라이브러리가 HTML 에러 페이지를 반환하는 경우 처리
+    if (typeof response === 'string') {
+      if (response.startsWith('<') || response.startsWith('<!')) {
+        // HTML 에러 응답 파싱
+        const msgMatch = response.match(/<b>Message<\/b>\s*(.*?)<\/p>/);
+        const errMsg = msgMatch ? msgMatch[1] : 'CODEF 서버 오류 (HTML 응답)';
+        console.error('CODEF HTML error response:', errMsg);
+        return {
+          result: { code: 'CF-99998', extraMessage: errMsg, message: `CODEF 서버 오류: ${errMsg}`, transactionId: '' },
+          data: null as any,
+          _fallback: fallback,
+        };
+      }
+
+      try {
+        const result = JSON.parse(response);
+        console.log(`CODEF response code: ${result?.result?.code}, message: ${result?.result?.message}`);
+        return { ...result, _fallback: fallback };
+      } catch {
+        console.error('CODEF response parse error. Raw:', response.substring(0, 200));
+        return {
+          result: { code: 'CF-99997', extraMessage: '', message: 'CODEF 응답 파싱 실패', transactionId: '' },
+          data: null as any,
+          _fallback: fallback,
+        };
+      }
+    }
+
+    const result = response;
     console.log(`CODEF response code: ${result?.result?.code}, message: ${result?.result?.message}`);
-    return result;
+    return { ...result, _fallback: fallback };
   } catch (error) {
+    // easycodef-node 라이브러리 내부에서 발생하는 에러 처리
+    const errMsg = error instanceof Error ? error.message : String(error);
+
+    // 토큰 발급 실패 (HTTP 500 HTML 응답을 JSON.parse하려다 실패)
+    if (errMsg.includes('Unexpected token') || errMsg.includes('is not valid JSON')) {
+      console.error('CODEF 토큰 발급 실패 (인증 정보 오류):', errMsg);
+      return {
+        result: {
+          code: 'CF-99996',
+          extraMessage: '',
+          message: 'CODEF 인증 실패: CLIENT_ID 또는 CLIENT_SECRET이 유효하지 않습니다. CODEF 홈페이지에서 인증 정보를 확인하세요.',
+          transactionId: '',
+        },
+        data: null as any,
+      };
+    }
+
+    // HTTP 상태 코드 에러
+    if (errMsg.includes('Response status code')) {
+      console.error('CODEF HTTP error:', errMsg);
+      return {
+        result: {
+          code: 'CF-99995',
+          extraMessage: errMsg,
+          message: `CODEF 서버 연결 오류: ${errMsg}`,
+          transactionId: '',
+        },
+        data: null as any,
+      };
+    }
+
     console.error('CODEF requestProduct (cert) error:', error);
     return {
-      result: { code: 'CF-99999', extraMessage: '', message: error instanceof Error ? error.message : '상품 조회 실패', transactionId: '' },
+      result: { code: 'CF-99999', extraMessage: '', message: errMsg || '상품 조회 실패', transactionId: '' },
       data: null as any,
     };
   }
@@ -603,7 +715,7 @@ export async function getCreditCardSalesData(
   year: string,            // YYYY 형식
   startQuarter: string,    // 조회시작 분기 "1", "2", "3", "4"
   endQuarter: string       // 조회종료 분기 "1", "2", "3", "4"
-): Promise<CreditCardSalesData | null> {
+): Promise<{ salesData: CreditCardSalesData | null; isSandboxFallback: boolean }> {
   const config = getCodefConfig();
   const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
 
@@ -618,17 +730,46 @@ export async function getCreditCardSalesData(
     endDate: endQuarter,        // 분기 번호 ("1"~"4")
   };
 
-  const response = await requestProductForCertApi<CreditCardSalesData>(
+  const response = await requestProductForCertApi<CreditCardSalesData | CreditCardSalesData[]>(
     CODEF_ENDPOINTS.CREDIT_CARD_SALES,
     params
   );
+
+  const isSandboxFallback = !!(response as any)._fallback;
 
   if (response.result.code !== 'CF-00000') {
     console.error('Credit card sales data error:', response.result);
     throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
   }
 
-  return response.data;
+  // SANDBOX는 data를 배열로 반환 (각 항목이 CreditCardSalesHistoryItem 형태)
+  // DEMO/정식은 data를 객체로 반환 (resSalesHistoryList, resTotalList, resSalesHistoryList1 포함)
+  const rawData = response.data;
+
+  if (!rawData) {
+    return { salesData: null, isSandboxFallback };
+  }
+
+  // 배열 응답인 경우 (SANDBOX): CreditCardSalesData 구조로 변환
+  if (Array.isArray(rawData)) {
+    console.log('CODEF: SANDBOX 배열 응답 -> CreditCardSalesData 구조로 변환');
+    const salesData: CreditCardSalesData = {
+      resSalesHistoryList: rawData.map((item: any) => ({
+        resYearMonth: item.resYearMonth || '',
+        resCount: item.resCount || '0',
+        resTotalAmount: item.resTotalAmount || '0',
+        resPaymentAmt: item.resPaymentAmt || '0',
+        resPaymentAmt1: item.resPaymentAmt1 || '0',
+        resCashBack: item.resCashBack || '0',
+      })),
+      resTotalList: [],
+      resSalesHistoryList1: [],
+    };
+    return { salesData, isSandboxFallback };
+  }
+
+  // 객체 응답인 경우 (DEMO/정식): 그대로 사용
+  return { salesData: rawData as CreditCardSalesData, isSandboxFallback };
 }
 
 export function getActualCodefServiceType(): string {
