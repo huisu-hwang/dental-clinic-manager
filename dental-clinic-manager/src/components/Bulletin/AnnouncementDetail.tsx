@@ -81,7 +81,7 @@ export default function AnnouncementDetail({
       </div>
 
       {/* 공지사항 내용 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* 제목 영역 */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-2 mb-3">

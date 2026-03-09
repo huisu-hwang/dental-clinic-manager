@@ -131,7 +131,7 @@ export default function CommunityPostDetail({
       </div>
 
       {/* 게시글 본문 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="p-4 sm:p-6">
           {/* 카테고리 & 제목 */}
           <div className="mb-4">
