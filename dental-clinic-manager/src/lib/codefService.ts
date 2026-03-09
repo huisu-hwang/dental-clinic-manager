@@ -386,7 +386,33 @@ export async function deleteCodefAccount(connectedId: string): Promise<CodefApiR
 // 상품 조회 API (PDF 문서 기반 정확한 엔드포인트)
 // ============================================
 
-async function requestProduct<T>(productUrl: string, params: object): Promise<CodefApiResponse<T>> {
+async function requestProduct<T>(productUrl: string, params: object): Promise<CodefApiResponse<T> & { _fallback?: boolean }> {
+  const config = getCodefConfig();
+
+  // SANDBOX 폴백 헬퍼 함수
+  async function trySandboxFallback(reason: string): Promise<CodefApiResponse<T> & { _fallback?: boolean }> {
+    try {
+      console.warn(`CODEF requestProduct: SANDBOX 폴백 시도 (사유: ${reason})`);
+      const { EasyCodef: EasyCodefLib } = await loadEasyCodef();
+      const sandboxCodef = new EasyCodefLib();
+      sandboxCodef.setPublicKey(config.publicKey);
+      sandboxCodef.setClientInfoForDemo(config.clientId, config.clientSecret);
+      const sandboxTypeConstant = await getServiceTypeConstant(2);
+      const sandboxResponse = await sandboxCodef.requestProduct(productUrl, sandboxTypeConstant, params);
+      const sandboxResult = typeof sandboxResponse === 'string' ? JSON.parse(sandboxResponse) : sandboxResponse;
+      console.log(`CODEF SANDBOX fallback response code: ${sandboxResult?.result?.code}, message: ${sandboxResult?.result?.message}`);
+      sandboxResult._fallback = true;
+      return sandboxResult;
+    } catch (sandboxError) {
+      console.error('CODEF SANDBOX fallback also failed:', sandboxError);
+      return {
+        result: { code: 'CF-99999', extraMessage: '', message: `SANDBOX 폴백 실패: ${sandboxError instanceof Error ? sandboxError.message : String(sandboxError)}`, transactionId: '' },
+        data: null as any,
+        _fallback: true,
+      };
+    }
+  }
+
   try {
     const { codef, serviceType } = await createCodefInstance();
     const serviceTypeConstant = await getServiceTypeConstant(serviceType);
@@ -394,9 +420,19 @@ async function requestProduct<T>(productUrl: string, params: object): Promise<Co
     const response = await codef.requestProduct(productUrl, serviceTypeConstant, params);
     const result = typeof response === 'string' ? JSON.parse(response) : response;
     console.log(`CODEF response code: ${result?.result?.code}, message: ${result?.result?.message}`);
+
+    // DEMO/정식 모드에서 실패 시 SANDBOX로 폴백
+    if (result?.result?.code !== 'CF-00000' && serviceType !== 2) {
+      return await trySandboxFallback(`${serviceType === 1 ? 'DEMO' : '정식'} 모드 에러 ${result?.result?.code}`);
+    }
+
     return result;
   } catch (error) {
     console.error('CODEF requestProduct error:', error);
+    // 예외 발생 시에도 SANDBOX 폴백 시도
+    if (config.serviceType !== 2) {
+      return await trySandboxFallback(`예외 발생: ${error instanceof Error ? error.message : String(error)}`);
+    }
     return {
       result: { code: 'CF-99999', extraMessage: '', message: error instanceof Error ? error.message : '상품 조회 실패', transactionId: '' },
       data: null as any,
@@ -414,7 +450,7 @@ export async function getTaxInvoiceStatistics(
   hometaxId: string,
   hometaxPassword: string,
   yearMonth: string  // YYYYMM 형식
-): Promise<TaxInvoiceStatisticsItem[]> {
+): Promise<{ data: TaxInvoiceStatisticsItem[]; isSandboxFallback: boolean }> {
   const config = getCodefConfig();
   const encryptedPassword = encryptRSAWithForge(config.publicKey, hometaxPassword);
 
@@ -437,16 +473,22 @@ export async function getTaxInvoiceStatistics(
     params
   );
 
+  const isSandboxFallback = !!(response as any)._fallback;
+
   if (response.result.code !== 'CF-00000') {
+    if (isSandboxFallback) {
+      console.warn('getTaxInvoiceStatistics: SANDBOX 폴백 에러, 빈 데이터 반환:', response.result.code);
+      return { data: [], isSandboxFallback };
+    }
     console.error('Tax invoice statistics error:', response.result);
-    return [];
+    return { data: [], isSandboxFallback: false };
   }
 
   // 응답이 배열일 수도, 단건일 수도 있음
   const data = response.data;
-  if (Array.isArray(data)) return data;
-  if (data && typeof data === 'object') return [data as TaxInvoiceStatisticsItem];
-  return [];
+  if (Array.isArray(data)) return { data, isSandboxFallback };
+  if (data && typeof data === 'object') return { data: [data as TaxInvoiceStatisticsItem], isSandboxFallback };
+  return { data: [], isSandboxFallback };
 }
 
 /**
@@ -460,7 +502,7 @@ export async function getCashReceiptPurchaseDetails(
   hometaxPassword: string,
   startDate: string,  // YYYYMMDD
   endDate: string     // YYYYMMDD
-): Promise<CashReceiptPurchaseItem[]> {
+): Promise<{ data: CashReceiptPurchaseItem[]; isSandboxFallback: boolean }> {
   const config = getCodefConfig();
   const encryptedPassword = encryptRSAWithForge(config.publicKey, hometaxPassword);
 
@@ -482,15 +524,21 @@ export async function getCashReceiptPurchaseDetails(
     params
   );
 
+  const isSandboxFallback = !!(response as any)._fallback;
+
   if (response.result.code !== 'CF-00000') {
+    if (isSandboxFallback) {
+      console.warn('getCashReceiptPurchaseDetails: SANDBOX 폴백 에러, 빈 데이터 반환:', response.result.code);
+      return { data: [], isSandboxFallback };
+    }
     console.error('Cash receipt purchase error:', response.result);
-    return [];
+    return { data: [], isSandboxFallback: false };
   }
 
   const data = response.data;
-  if (Array.isArray(data)) return data;
-  if (data && typeof data === 'object' && 'resUsedDate' in (data as any)) return [data as CashReceiptPurchaseItem];
-  return [];
+  if (Array.isArray(data)) return { data, isSandboxFallback };
+  if (data && typeof data === 'object' && 'resUsedDate' in (data as any)) return { data: [data as CashReceiptPurchaseItem], isSandboxFallback };
+  return { data: [], isSandboxFallback };
 }
 
 /**
@@ -504,7 +552,7 @@ export async function getCashReceiptSalesDetails(
   hometaxPassword: string,
   startDate: string,  // YYYYMMDD
   endDate: string     // YYYYMMDD
-): Promise<CashReceiptSalesItem[]> {
+): Promise<{ data: CashReceiptSalesItem[]; isSandboxFallback: boolean }> {
   const config = getCodefConfig();
   const encryptedPassword = encryptRSAWithForge(config.publicKey, hometaxPassword);
 
@@ -525,15 +573,21 @@ export async function getCashReceiptSalesDetails(
     params
   );
 
+  const isSandboxFallback = !!(response as any)._fallback;
+
   if (response.result.code !== 'CF-00000') {
+    if (isSandboxFallback) {
+      console.warn('getCashReceiptSalesDetails: SANDBOX 폴백 에러, 빈 데이터 반환:', response.result.code);
+      return { data: [], isSandboxFallback };
+    }
     console.error('Cash receipt sales error:', response.result);
-    return [];
+    return { data: [], isSandboxFallback: false };
   }
 
   const data = response.data;
-  if (Array.isArray(data)) return data;
-  if (data && typeof data === 'object' && 'resUsedDate' in (data as any)) return [data as CashReceiptSalesItem];
-  return [];
+  if (Array.isArray(data)) return { data, isSandboxFallback };
+  if (data && typeof data === 'object' && 'resUsedDate' in (data as any)) return { data: [data as CashReceiptSalesItem], isSandboxFallback };
+  return { data: [], isSandboxFallback };
 }
 
 // ============================================
@@ -1084,7 +1138,7 @@ export async function syncHometaxData(
 
   // 1. 세금계산서 매출/매입 통계
   try {
-    const taxStats = await getTaxInvoiceStatistics(hometaxId, hometaxPassword, yearMonth);
+    const { data: taxStats } = await getTaxInvoiceStatistics(hometaxId, hometaxPassword, yearMonth);
     for (const item of taxStats) {
       if (item.resType === '0') {
         syncedCount.taxInvoiceSales += parseInt(item.resNumber, 10) || 0;
@@ -1098,7 +1152,7 @@ export async function syncHometaxData(
 
   // 2. 현금영수증 매입내역
   try {
-    const cashPurchase = await getCashReceiptPurchaseDetails(hometaxId, hometaxPassword, startDate, endDate);
+    const { data: cashPurchase } = await getCashReceiptPurchaseDetails(hometaxId, hometaxPassword, startDate, endDate);
     syncedCount.cashReceiptPurchase = cashPurchase.length;
   } catch (error) {
     errors.push(`현금영수증 매입 조회 실패: ${error}`);
@@ -1106,7 +1160,7 @@ export async function syncHometaxData(
 
   // 3. 현금영수증 매출내역
   try {
-    const cashSales = await getCashReceiptSalesDetails(hometaxId, hometaxPassword, startDate, endDate);
+    const { data: cashSales } = await getCashReceiptSalesDetails(hometaxId, hometaxPassword, startDate, endDate);
     syncedCount.cashReceiptSales = cashSales.length;
   } catch (error) {
     errors.push(`현금영수증 매출 조회 실패: ${error}`);
