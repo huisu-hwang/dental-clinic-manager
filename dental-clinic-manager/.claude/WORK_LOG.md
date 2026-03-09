@@ -10,6 +10,76 @@
 
 ---
 
+## 2026-03-09 [버그 수정] CODEF 신용카드 매출 데이터 연동 실패 문제 해결
+
+**키워드:** #CODEF #홈택스 #신용카드매출 #토큰검증 #샌드박스폴백 #RSA암호화
+
+### 📋 작업 내용
+- CODEF API를 통한 홈택스 신용카드 매출 데이터 조회가 실패하는 문제 해결
+- 인증서 자동 검색 3단계 구현 (표준경로 → 확장검색 → 수동입력)
+- Windows 환경 인증서 검색 지원 추가
+
+### 🐛 문제
+- 신용카드 매출 조회 시 CODEF API 호출이 실패하여 데이터를 가져오지 못함
+- `NoSuchClientException` - CODEF_CLIENT_ID가 OAuth 서버에 등록되지 않음
+- HTML 에러 응답을 JSON.parse하려다 크래시 발생
+
+### 🔍 근본 원인 (5 Whys)
+1. Why: API 호출이 실패함 → OAuth 토큰 발급 실패
+2. Why: 토큰 발급 실패 → `NoSuchClientException` 에러
+3. Why: 클라이언트 미등록 → CODEF_CLIENT_ID가 CODEF OAuth 서버에 등록되지 않음
+4. Why: 등록되지 않음 → CODEF DEMO 자격증명이 유효하지 않거나 만료됨
+5. Why: 에러가 크래시로 이어짐 → HTML 에러 응답을 JSON으로 파싱 시도
+
+### ✅ 해결 방법
+
+**1. codefService.ts - 토큰 사전 검증 및 SANDBOX 자동 폴백**
+- `validateTokenForServiceType()` 함수 추가 (5분 캐싱)
+- DEMO 토큰 검증 실패 시 자동으로 SANDBOX로 폴백
+- HTML 에러 응답 감지 및 적절한 에러 코드 반환 (CF-99998~CF-99995)
+- SANDBOX 응답 형식을 `CreditCardSalesData` 구조로 정규화
+
+**2. credit-card-sales/route.ts - 응답 개선**
+- `isSandboxFallback` 플래그 추가
+- 서비스 타입별 맥락 메시지 제공
+
+**3. CreditCardSalesPanel.tsx - UI 개선**
+- 인증서 자동 검색 3단계 (표준 → 확장 → 수동)
+- 홈택스 호환성 배지 표시
+- 샌드박스 폴백 경고 배너
+- Windows/Mac/Linux 크로스플랫폼 인증서 경로 지원
+
+**4. scan-certs/route.ts - 인증서 검색 강화**
+- Mac: `~/Library/Preferences/NPKI/` 포함하도록 SKIP_DIRS 수정
+- Windows: `AppData\Roaming`, `AppData\LocalLow`, 한글 폴더명 지원
+- 확장 검색: 홈 디렉토리 재귀 탐색
+- 수동 경로 입력 지원 (`customPath` 파라미터)
+
+### 🧪 테스트 결과
+- TypeScript 컴파일 통과 (`npx tsc --noEmit`)
+- `npm run build` 성공
+- API 테스트: `/api/codef/credit-card-sales` → `success: true`, `isSandboxFallback: true`
+- 인증서 검색 API: 표준/확장/수동 경로 모두 정상 동작
+
+### 📊 결과 및 영향
+- CODEF 자격증명 미등록 시에도 SANDBOX 테스트 데이터로 graceful degradation
+- 인증서 검색 UX 대폭 개선 (자동 검색 → 폴백 → 수동 입력)
+- Windows 환경 지원으로 크로스플랫폼 호환성 확보
+
+### 💡 배운 점
+- CODEF OAuth 토큰 발급 실패 시 HTML 에러 페이지를 반환하므로 JSON 파싱 전 Content-Type 확인 필수
+- SANDBOX는 내장 테스트 자격증명을 사용하므로 별도 등록 불필요
+- Mac의 `~/Library/Preferences/NPKI/`가 표준 NPKI 인증서 경로 → SKIP_DIRS에서 제외해야 함
+
+### 📎 관련 커밋
+- `dbf93ef` - feat: 신용카드 매출 인증서 자동 검색 및 홈택스 호환성 표시
+- `82dcff6` - feat: 인증서 확장 검색 및 수동 경로 지정 기능 추가
+- `0c4d9e6` - fix: 인증서 확장 검색 시 Mac Library 디렉토리 스킵 문제 수정
+- `475aef5` - feat: Windows 환경 인증서 검색 지원 강화
+- `573bff5` - fix: CODEF 신용카드 매출 데이터 연동 실패 문제 해결
+
+---
+
 ## 2026-03-07 [기능 개발] 리콜 관리 활동 기록 탭 추가
 
 **키워드:** #리콜 #활동기록 #RecallDailyLog #RecallManagement

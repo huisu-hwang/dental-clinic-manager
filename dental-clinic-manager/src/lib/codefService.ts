@@ -9,9 +9,11 @@ import {
   CodefApiResponse,
   CodefAccountCreateResponse,
   TaxInvoiceStatisticsItem,
+  TaxInvoiceDetailItem,
   CashReceiptPurchaseItem,
   CashReceiptSalesItem,
   CreditCardSalesData,
+  BusinessCardDeductionItem,
   SyncResult,
   CODEF_ORGANIZATION,
   CODEF_ENDPOINTS,
@@ -770,6 +772,209 @@ export async function getCreditCardSalesData(
 
   // 객체 응답인 경우 (DEMO/정식): 그대로 사용
   return { salesData: rawData as CreditCardSalesData, isSandboxFallback };
+}
+
+// ============================================
+// 전자세금계산서 상세 (공동인증서 기반)
+// Endpoint: /v1/kr/public/nt/tax-invoice/info-detail
+// Organization: 0002
+// ============================================
+
+export async function getTaxInvoiceDetailWithCert(
+  certFile: string,
+  certPassword: string,
+  keyFile: string,
+  certType: string,
+  startDate: string,     // YYYYMMDD
+  endDate: string,       // YYYYMMDD
+  identity?: string
+): Promise<{ data: TaxInvoiceDetailItem[]; isSandboxFallback: boolean }> {
+  const config = getCodefConfig();
+  const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
+
+  const params: Record<string, string> = {
+    organization: CODEF_ORGANIZATION.HOMETAX,  // 0002
+    loginType: '0',          // 인증서 로그인
+    certFile,
+    keyFile: keyFile || '',
+    certPassword: encryptedPassword,
+    certType: certType || '1',
+    approvalNo: '',          // 승인번호 (빈값 = 전체)
+    identity: identity || '',
+    originDataYN: '0',       // 원문 DATA 미포함
+  };
+
+  const response = await requestProductForCertApi<TaxInvoiceDetailItem[] | TaxInvoiceDetailItem>(
+    CODEF_ENDPOINTS.TAX_INVOICE_DETAIL,
+    params
+  );
+
+  const isSandboxFallback = !!(response as any)._fallback;
+
+  if (response.result.code !== 'CF-00000') {
+    console.error('Tax invoice detail error:', response.result);
+    throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
+  }
+
+  const rawData = response.data;
+  if (!rawData) return { data: [], isSandboxFallback };
+
+  const items = Array.isArray(rawData) ? rawData : [rawData];
+  return { data: items, isSandboxFallback };
+}
+
+// ============================================
+// 전자세금계산서 통계 (공동인증서 기반)
+// ============================================
+
+export async function getTaxInvoiceStatisticsWithCert(
+  certFile: string,
+  certPassword: string,
+  keyFile: string,
+  certType: string,
+  yearMonth: string,     // YYYYMM
+  identity?: string
+): Promise<{ data: TaxInvoiceStatisticsItem[]; isSandboxFallback: boolean }> {
+  const config = getCodefConfig();
+  const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
+
+  const params: Record<string, string> = {
+    organization: CODEF_ORGANIZATION.HOMETAX,  // 0002
+    loginType: '0',          // 인증서 로그인
+    certFile,
+    keyFile: keyFile || '',
+    certPassword: encryptedPassword,
+    certType: certType || '1',
+    inquiryType: '01',       // 전자세금계산서
+    searchType: '01',        // 월별
+    startDate: yearMonth,
+    endDate: yearMonth,
+    type: '1',               // 상세 포함
+    identity: identity || '',
+    telecom: '',
+  };
+
+  const response = await requestProductForCertApi<TaxInvoiceStatisticsItem[] | TaxInvoiceStatisticsItem>(
+    CODEF_ENDPOINTS.TAX_INVOICE_STATISTICS,
+    params
+  );
+
+  const isSandboxFallback = !!(response as any)._fallback;
+
+  if (response.result.code !== 'CF-00000') {
+    console.error('Tax invoice statistics (cert) error:', response.result);
+    throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
+  }
+
+  const rawData = response.data;
+  if (!rawData) return { data: [], isSandboxFallback };
+
+  const items = Array.isArray(rawData) ? rawData : [rawData];
+  return { data: items, isSandboxFallback };
+}
+
+// ============================================
+// 현금영수증 매입내역 (공동인증서 기반)
+// ============================================
+
+export async function getCashReceiptPurchaseWithCert(
+  certFile: string,
+  certPassword: string,
+  keyFile: string,
+  certType: string,
+  startDate: string,     // YYYYMMDD
+  endDate: string,       // YYYYMMDD
+  identity?: string
+): Promise<{ data: CashReceiptPurchaseItem[]; isSandboxFallback: boolean }> {
+  const config = getCodefConfig();
+  const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
+
+  const params: Record<string, string> = {
+    organization: CODEF_ORGANIZATION.CASH_RECEIPT,  // 0003
+    loginType: '0',          // 인증서 로그인
+    certFile,
+    keyFile: keyFile || '',
+    certPassword: encryptedPassword,
+    certType: certType || '1',
+    startDate,
+    endDate,
+    orderBy: '0',            // 최신순
+    inquiryType: '0',        // 전체
+    identity: identity || '',
+    telecom: '',
+  };
+
+  const response = await requestProductForCertApi<CashReceiptPurchaseItem[] | CashReceiptPurchaseItem>(
+    CODEF_ENDPOINTS.CASH_RECEIPT_PURCHASE,
+    params
+  );
+
+  const isSandboxFallback = !!(response as any)._fallback;
+
+  if (response.result.code !== 'CF-00000') {
+    console.error('Cash receipt purchase (cert) error:', response.result);
+    throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
+  }
+
+  const rawData = response.data;
+  if (!rawData) return { data: [], isSandboxFallback };
+
+  const items = Array.isArray(rawData) ? rawData : [rawData];
+  return { data: items, isSandboxFallback };
+}
+
+// ============================================
+// 사업용 신용카드 매입세액 공제 확인/변경 조회 (공동인증서 기반)
+// Endpoint: /v1/kr/public/nt/cash-receipt/deduction-of-business-credit-card-purchase-amount
+// Organization: 0003
+// ============================================
+
+export async function getBusinessCardDeductionWithCert(
+  certFile: string,
+  certPassword: string,
+  keyFile: string,
+  certType: string,
+  searchType: string,    // "0": 일별, "1": 월별, "2": 분기별
+  startDate: string,     // searchType에 따라: "0"→YYYYMMDD, "1"→YYYYMM, "2"→YYYY+분기(ex.20191)
+  inquiryType?: string,  // "0": 전체, "1": 공제대상, "2": 불공제대상
+  detailYN?: string,     // "0": 미포함, "1": 카드정보 포함
+  identity?: string
+): Promise<{ data: BusinessCardDeductionItem[]; isSandboxFallback: boolean }> {
+  const config = getCodefConfig();
+  const encryptedPassword = encryptRSAWithForge(config.publicKey, certPassword);
+
+  const params: Record<string, string> = {
+    organization: CODEF_ORGANIZATION.CASH_RECEIPT,  // 0003
+    loginType: '0',          // 인증서 로그인
+    certFile,
+    keyFile: keyFile || '',
+    certPassword: encryptedPassword,
+    certType: certType || '1',
+    searchType,
+    startDate,
+    inquiryType: inquiryType || '0',
+    detailYN: detailYN || '0',
+    identity: identity || '',
+    telecom: '',
+  };
+
+  const response = await requestProductForCertApi<BusinessCardDeductionItem[] | BusinessCardDeductionItem>(
+    CODEF_ENDPOINTS.BUSINESS_CARD_DEDUCTION,
+    params
+  );
+
+  const isSandboxFallback = !!(response as any)._fallback;
+
+  if (response.result.code !== 'CF-00000') {
+    console.error('Business card deduction (cert) error:', response.result);
+    throw new Error(`CODEF 오류 [${response.result.code}]: ${response.result.message || '알 수 없는 오류'}`);
+  }
+
+  const rawData = response.data;
+  if (!rawData) return { data: [], isSandboxFallback };
+
+  const items = Array.isArray(rawData) ? rawData : [rawData];
+  return { data: items, isSandboxFallback };
 }
 
 export function getActualCodefServiceType(): string {

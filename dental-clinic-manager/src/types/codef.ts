@@ -23,11 +23,17 @@ export const CODEF_ENDPOINTS = {
   // 전자세금계산서 기간별 매출/매입 통계 (#아이디, #공동인증서, #금융인증서, #추가인증, #간편인증)
   TAX_INVOICE_STATISTICS: '/v1/kr/public/nt/tax-invoice/sales-purchase-statistics',
 
+  // 전자세금계산서 상세 (#아이디, #공동인증서, #추가인증)
+  TAX_INVOICE_DETAIL: '/v1/kr/public/nt/tax-invoice/info-detail',
+
   // 현금영수증 매입내역 (#아이디, #공동인증서, #추가인증, #간편인증)
   CASH_RECEIPT_PURCHASE: '/v1/kr/public/nt/cash-receipt/purchase-details',
 
   // 현금영수증 매출내역 (#아이디, #공동인증서, #금융인증서, #추가인증, #간편인증)
   CASH_RECEIPT_SALES: '/v1/kr/public/nt/cash-receipt/sales-details',
+
+  // 사업용 신용카드 매입세액 공제 확인/변경 조회 (#아이디, #공동인증서, #추가인증, #간편인증)
+  BUSINESS_CARD_DEDUCTION: '/v1/kr/public/nt/cash-receipt/deduction-of-business-credit-card-purchase-amount',
 
   // 신용카드 매출자료 조회 (#공동인증서 전용 - 인증서 필요)
   CREDIT_CARD_SALES: '/v1/kr/public/nt/tax-payment/credit-card-sales-data-list',
@@ -147,6 +153,75 @@ export interface CashReceiptSalesItem {
   commEndDate: string;          // 종료일자
   resUseType?: string;          // 용도구분 (ex. "소비자소득공제용")
   resNote?: string;             // 비고 (ex. "일반거래")
+}
+
+// ============================================
+// 전자세금계산서 상세
+// Endpoint: /v1/kr/public/nt/tax-invoice/info-detail
+// Organization: 0002
+// ============================================
+
+export interface TaxInvoiceDetailItem {
+  commStartDate: string;                // 시작일자
+  commEndDate: string;                  // 종료일자
+  resSupplierRegNumber: string;         // 공급자 등록번호
+  resSupplierEstablishNo: string;       // 공급자 종사업장번호
+  resSupplierCompanyName: string;       // 공급자 상호
+  resSupplierName: string;              // 공급자 대표자명
+  resContractorRegNumber: string;       // 공급받는자 등록번호
+  resContractorEstablishNo: string;     // 공급받는자 종사업장번호
+  resContractorCompanyName: string;     // 공급받는자 상호
+  resContractorName: string;            // 공급받는자 대표자명
+  resTotalAmount: string;               // 합계금액
+  resETaxInvoiceType: string;           // 전자세금계산서 종류
+  resNote?: string;                     // 비고
+  resReceiptOrCharge: string;           // 영수/청구
+  resReasonModification: string;        // 수정사유
+  resReportingDate: string;             // 작성일자
+  resSupplyValue: string;               // 공급가액
+  resTaxAmt?: string;                   // 세액
+  resTradeItemList: TaxInvoiceTradeItem[]; // 거래항목 리스트
+}
+
+export interface TaxInvoiceTradeItem {
+  resTaxAmt?: string;                   // 세액
+  resTaxItemName: string;               // 품목
+  resSupplyValue: string;               // 공급가액
+  resNote?: string;                     // 비고
+  resStandards: string;                 // 규격
+  resPurchaseExpiryDate: string;        // 구매만료일자
+  resQuantity: string;                  // 수량
+  resUnitPrice?: string;                // 단가
+}
+
+// ============================================
+// 사업용 신용카드 매입세액 공제 확인/변경 조회
+// Endpoint: /v1/kr/public/nt/cash-receipt/deduction-of-business-credit-card-purchase-amount
+// Organization: 0003
+// ============================================
+
+export interface BusinessCardDeductionItem {
+  resCompanyIdentityNo: string;         // 사업자등록번호
+  resCompanyNm: string;                 // 상호(사업장명)
+  resTotalUsedAmt: string;              // 총이용금액
+  resDetailList: BusinessCardDeductionDetail[]; // 상세내역 List
+}
+
+export interface BusinessCardDeductionDetail {
+  resMemberStoreCorpNo: string;         // 가맹점 사업자번호
+  resMemberStoreName?: string;          // 가맹점명
+  resSupplyValue: string;               // 공급가액
+  resTaxAmt: string;                    // 세액
+  resTip: string;                       // 봉사료
+  resTotalAmount: string;               // 합계금액
+  resType: string;                      // 구분 (가맹점유형)
+  resBusinessTypes?: string;            // 업태
+  resBusinessItems?: string;            // 종목
+  resDeductDescription: string;         // 공제여부 결정
+  resNote?: string;                     // 비고
+  resUsedDate: string;                  // 사용일자 (YYYYMMDD)
+  resCardCompany?: string;              // 카드사
+  resCardNo?: string;                   // 카드번호
 }
 
 // ============================================
