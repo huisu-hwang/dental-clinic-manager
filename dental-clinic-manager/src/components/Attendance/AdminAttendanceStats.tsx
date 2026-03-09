@@ -340,8 +340,11 @@ export default function AdminAttendanceStats() {
   const summaryStats = {
     totalEmployees: statistics.length,
     totalLateCount: statistics.reduce((sum, s) => sum + s.late_count, 0),
+    totalLateMinutes: statistics.reduce((sum, s) => sum + s.total_late_minutes, 0),
     totalEarlyLeaveCount: statistics.reduce((sum, s) => sum + s.early_leave_count, 0),
+    totalEarlyLeaveMinutes: statistics.reduce((sum, s) => sum + s.total_early_leave_minutes, 0),
     totalOvertimeCount: statistics.reduce((sum, s) => sum + s.overtime_count, 0),
+    totalOvertimeMinutes: statistics.reduce((sum, s) => sum + s.total_overtime_minutes, 0),
     totalAbsentDays: statistics.reduce((sum, s) => sum + s.absent_days, 0),
     avgAttendanceRate:
       statistics.length > 0
@@ -544,6 +547,9 @@ export default function AdminAttendanceStats() {
                 <div>
                   <p className="text-xs text-gray-600">총 지각</p>
                   <p className="text-xl font-bold text-yellow-600">{summaryStats.totalLateCount}회</p>
+                  {summaryStats.totalLateMinutes > 0 && (
+                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalLateMinutes)}</p>
+                  )}
                 </div>
                 <Clock className="w-8 h-8 text-yellow-400" />
               </div>
@@ -553,6 +559,9 @@ export default function AdminAttendanceStats() {
                 <div>
                   <p className="text-xs text-gray-600">총 조퇴</p>
                   <p className="text-xl font-bold text-red-600">{summaryStats.totalEarlyLeaveCount}회</p>
+                  {summaryStats.totalEarlyLeaveMinutes > 0 && (
+                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalEarlyLeaveMinutes)}</p>
+                  )}
                 </div>
                 <TrendingUp className="w-8 h-8 text-red-400 rotate-180" />
               </div>
@@ -562,6 +571,9 @@ export default function AdminAttendanceStats() {
                 <div>
                   <p className="text-xs text-gray-600">총 초과근무</p>
                   <p className="text-xl font-bold text-purple-600">{summaryStats.totalOvertimeCount}회</p>
+                  {summaryStats.totalOvertimeMinutes > 0 && (
+                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalOvertimeMinutes)}</p>
+                  )}
                 </div>
                 <TrendingUp className="w-8 h-8 text-purple-400" />
               </div>
