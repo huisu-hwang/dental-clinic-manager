@@ -39,8 +39,6 @@ export default function CallModal({
   const [callStatus, setCallStatus] = useState<'ready' | 'calling' | 'ended'>('ready')
   const [selectedResult, setSelectedResult] = useState<PatientRecallStatus | null>(null)
   const [notes, setNotes] = useState('')
-  const [appointmentDate, setAppointmentDate] = useState('')
-  const [appointmentTime, setAppointmentTime] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [deviceType, setDeviceType] = useState<'mobile' | 'desktop' | 'tablet'>('desktop')
   const [error, setError] = useState<string | null>(null)
@@ -56,8 +54,6 @@ export default function CallModal({
       setCallStatus('ready')
       setSelectedResult(null)
       setNotes('')
-      setAppointmentDate('')
-      setAppointmentTime('')
       setError(null)
     }
   }, [isOpen, patient?.id])
@@ -112,12 +108,7 @@ export default function CallModal({
       // 환자 상태 업데이트
       await recallPatientService.updatePatientStatus(
         patient.id,
-        selectedResult,
-        selectedResult === 'appointment_made' ? {
-          appointment_date: appointmentDate,
-          appointment_time: appointmentTime,
-          appointment_notes: notes
-        } : undefined
+        selectedResult
       )
 
       onCallComplete()
@@ -247,36 +238,6 @@ export default function CallModal({
                 </div>
               </div>
 
-              {/* 예약 정보 (예약 완료 선택 시) */}
-              {selectedResult === 'appointment_made' && (
-                <div className="space-y-3 p-4 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-700">
-                    <Calendar className="w-5 h-5" />
-                    <span className="font-medium">예약 정보 입력</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">예약 날짜</label>
-                      <input
-                        type="date"
-                        value={appointmentDate}
-                        onChange={(e) => setAppointmentDate(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">예약 시간</label>
-                      <input
-                        type="time"
-                        value={appointmentTime}
-                        onChange={(e) => setAppointmentTime(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* 메모 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -305,7 +266,7 @@ export default function CallModal({
           {callStatus === 'ended' && (
             <button
               onClick={handleSave}
-              disabled={isSaving || !selectedResult || (selectedResult === 'appointment_made' && !appointmentDate)}
+              disabled={isSaving || !selectedResult}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSaving ? (

@@ -570,13 +570,6 @@ export default function PatientList({
                         </span>
                       )}
                     </div>
-                    {patient.status === 'appointment_made' && patient.appointment_date && (
-                      <div className="mt-1 flex items-center gap-1 text-xs text-green-700 bg-green-50 rounded px-1.5 py-0.5 w-fit">
-                        <Calendar className="w-3 h-3" />
-                        <span>{patient.appointment_date}</span>
-                        {patient.appointment_time && <span>{patient.appointment_time}</span>}
-                      </div>
-                    )}
                     {patient.contact_count > 0 && (
                       <p className="text-xs text-gray-400 mt-0.5">
                         연락 {patient.contact_count}회

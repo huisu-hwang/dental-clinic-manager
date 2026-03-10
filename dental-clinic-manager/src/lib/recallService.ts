@@ -837,12 +837,7 @@ export const recallPatientService = {
   // 환자 상태 업데이트
   async updatePatientStatus(
     id: string,
-    status: PatientRecallStatus,
-    appointmentInfo?: {
-      appointment_date?: string
-      appointment_time?: string
-      appointment_notes?: string
-    }
+    status: PatientRecallStatus
   ): Promise<{ success: boolean; error?: string }> {
     const supabase = await ensureConnection()
     if (!supabase) return { success: false, error: 'Database connection not available' }
@@ -859,8 +854,7 @@ export const recallPatientService = {
       const contactType: ContactType = status === 'sms_sent' ? 'sms' : 'call'
 
       const updates: Partial<RecallPatient> = {
-        status,
-        ...appointmentInfo
+        status
       }
 
       // pending이 아닌 경우에만 연락 기록 및 recall_datetime 업데이트
