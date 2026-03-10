@@ -588,6 +588,17 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           specialNotes,
           cashRegisterData
         })
+
+        // 오버타임 식사 기록 저장
+        if (currentUser?.clinic_id && currentUser?.id) {
+          try {
+            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealRows, currentUser.id)
+            console.log('[DailyInputForm] Overtime meal logs saved (legacy)')
+          } catch (err) {
+            console.error('[DailyInputForm] Overtime meal save error:', err)
+          }
+        }
+
         // 레거시 아키텍처에서도 저장 성공 후 부모에게 알려서 데이터 새로고침
         onSaveSuccess?.()
       }
@@ -708,6 +719,15 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             cashRegisterData
           })
           onSaveSuccess?.()
+        }
+
+        // 오버타임 식사 기록 저장
+        if (currentUser?.clinic_id && currentUser?.id) {
+          try {
+            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealRows, currentUser.id)
+          } catch (err) {
+            console.error('[DailyInputForm] Overtime meal save error:', err)
+          }
         }
 
         setHasExistingData(true)

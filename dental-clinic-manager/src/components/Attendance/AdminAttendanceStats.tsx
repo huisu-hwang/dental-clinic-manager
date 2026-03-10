@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Calendar, BarChart3, Clock, TrendingUp, ChevronDown, ChevronUp, Users, X, Pencil, Save, CalendarRange } from 'lucide-react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
@@ -9,6 +9,8 @@ import type { AttendanceStatistics, AttendanceRecord, AttendanceStatus } from '@
 import { ATTENDANCE_STATUS_NAMES, ATTENDANCE_STATUS_COLORS } from '@/types/attendance'
 import BranchSelector from './BranchSelector'
 import { useBranches } from '@/hooks/useBranches'
+import { overtimeMealService } from '@/lib/overtimeMealService'
+import type { OvertimeMealLog } from '@/types'
 
 type StatisticsWithName = AttendanceStatistics & { user_name: string }
 type PeriodMode = 'monthly' | 'custom'
@@ -34,6 +36,7 @@ export default function AdminAttendanceStats() {
   const { hasPermission } = usePermissions()
   const [statistics, setStatistics] = useState<StatisticsWithName[]>([])
   const [loading, setLoading] = useState(true)
+  const [mealOvertimeLogs, setMealOvertimeLogs] = useState<OvertimeMealLog[]>([])
 
   // 기간 선택 모드
   const [periodMode, setPeriodMode] = useState<PeriodMode>('monthly')
@@ -126,6 +129,23 @@ export default function AdminAttendanceStats() {
         } else {
           setStatistics([])
         }
+      }
+      // 식사 오버타임 데이터 조회
+      try {
+        let mealResult
+        if (periodMode === 'monthly') {
+          mealResult = await overtimeMealService.getStatsByMonth(user.clinic_id, selectedYear, selectedMonth)
+        } else {
+          mealResult = await overtimeMealService.getStatsByDateRange(user.clinic_id, startDate, endDate)
+        }
+        if (mealResult.data) {
+          setMealOvertimeLogs(mealResult.data)
+        } else {
+          setMealOvertimeLogs([])
+        }
+      } catch (err) {
+        console.error('[AdminAttendanceStats] Meal overtime fetch error:', err)
+        setMealOvertimeLogs([])
       }
     } catch (error) {
       console.error('[AdminAttendanceStats] Error refreshing statistics on load:', error)
@@ -336,6 +356,21 @@ export default function AdminAttendanceStats() {
     }
   }
 
+  // 식사 오버타임 유저별 통계 계산
+  const mealStatsByUser: Record<string, { lunch: number; dinner: number; extra: number }> = {}
+  for (const log of mealOvertimeLogs) {
+    if (!mealStatsByUser[log.user_id]) {
+      mealStatsByUser[log.user_id] = { lunch: 0, dinner: 0, extra: 0 }
+    }
+    if (log.has_lunch_overtime) mealStatsByUser[log.user_id].lunch++
+    if (log.has_dinner_overtime) mealStatsByUser[log.user_id].dinner++
+    if (log.has_extra_overtime) mealStatsByUser[log.user_id].extra++
+  }
+
+  const totalMealLunch = mealOvertimeLogs.filter(l => l.has_lunch_overtime).length
+  const totalMealDinner = mealOvertimeLogs.filter(l => l.has_dinner_overtime).length
+  const totalMealExtra = mealOvertimeLogs.filter(l => l.has_extra_overtime).length
+
   // 요약 통계 계산
   const summaryStats = {
     totalEmployees: statistics.length,
@@ -350,6 +385,9 @@ export default function AdminAttendanceStats() {
       statistics.length > 0
         ? statistics.reduce((sum, s) => sum + s.attendance_rate, 0) / statistics.length
         : 0,
+    totalMealLunch,
+    totalMealDinner,
+    totalMealExtra,
   }
 
   return (
@@ -521,7 +559,7 @@ export default function AdminAttendanceStats() {
       ) : (
         <>
           {/* 요약 통계 카드 */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10 gap-4">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -599,6 +637,33 @@ export default function AdminAttendanceStats() {
                 <X className="w-8 h-8 text-gray-400" />
               </div>
             </div>
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-600">점심 OT</p>
+                  <p className="text-xl font-bold text-orange-600">{summaryStats.totalMealLunch}회</p>
+                </div>
+                <Clock className="w-8 h-8 text-orange-400" />
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-600">저녁 OT</p>
+                  <p className="text-xl font-bold text-violet-600">{summaryStats.totalMealDinner}회</p>
+                </div>
+                <Clock className="w-8 h-8 text-violet-400" />
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-600">오버타임</p>
+                  <p className="text-xl font-bold text-rose-600">{summaryStats.totalMealExtra}회</p>
+                </div>
+                <Clock className="w-8 h-8 text-rose-400" />
+              </div>
+            </div>
           </div>
 
           {/* 직원별 통계 테이블 */}
@@ -647,6 +712,15 @@ export default function AdminAttendanceStats() {
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                         총 근무시간
                       </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-orange-500 uppercase tracking-wider bg-gray-50">
+                        점심OT
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-violet-500 uppercase tracking-wider bg-gray-50">
+                        저녁OT
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-rose-500 uppercase tracking-wider bg-gray-50">
+                        오버타임
+                      </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                         상세
                       </th>
@@ -654,9 +728,8 @@ export default function AdminAttendanceStats() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {statistics.map((stat) => (
-                      <>
+                      <React.Fragment key={stat.user_id}>
                         <tr
-                          key={stat.user_id}
                           className={`hover:bg-gray-50 cursor-pointer ${
                             expandedUserId === stat.user_id ? 'bg-blue-50' : ''
                           }`}
@@ -729,6 +802,27 @@ export default function AdminAttendanceStats() {
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-center">
+                            {(mealStatsByUser[stat.user_id]?.lunch || 0) > 0 ? (
+                              <span className="text-sm font-medium text-orange-600">{mealStatsByUser[stat.user_id].lunch}회</span>
+                            ) : (
+                              <span className="text-sm text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-center">
+                            {(mealStatsByUser[stat.user_id]?.dinner || 0) > 0 ? (
+                              <span className="text-sm font-medium text-violet-600">{mealStatsByUser[stat.user_id].dinner}회</span>
+                            ) : (
+                              <span className="text-sm text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-center">
+                            {(mealStatsByUser[stat.user_id]?.extra || 0) > 0 ? (
+                              <span className="text-sm font-medium text-rose-600">{mealStatsByUser[stat.user_id].extra}회</span>
+                            ) : (
+                              <span className="text-sm text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-center">
                             {expandedUserId === stat.user_id ? (
                               <ChevronUp className="w-5 h-5 text-gray-400 mx-auto" />
                             ) : (
@@ -739,7 +833,7 @@ export default function AdminAttendanceStats() {
                         {/* 상세 기록 확장 패널 */}
                         {expandedUserId === stat.user_id && (
                           <tr>
-                            <td colSpan={10} className="px-4 py-0 bg-gray-50">
+                            <td colSpan={13} className="px-4 py-0 bg-gray-50">
                               <div className="py-4">
                                 <h4 className="text-sm font-semibold text-gray-700 mb-3">
                                   {stat.user_name}님의 {periodMode === 'monthly' ? `${selectedMonth}월` : `${startDate} ~ ${endDate}`} 상세 기록
@@ -860,7 +954,7 @@ export default function AdminAttendanceStats() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
