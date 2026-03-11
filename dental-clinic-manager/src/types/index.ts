@@ -128,6 +128,32 @@ export interface HappyCallRowData {
 }
 
 // ========================================
+// Overtime Meal (점심/저녁 초과근무) Types
+// ========================================
+
+export interface OvertimeMealLog {
+  id?: string;
+  clinic_id: string;
+  date: string;
+  has_lunch: boolean;
+  lunch_overtime_minutes: number;
+  has_dinner: boolean;
+  dinner_overtime_minutes: number;
+  notes: string;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OvertimeMealRowData {
+  has_lunch: boolean;
+  lunch_overtime_minutes: number;
+  has_dinner: boolean;
+  dinner_overtime_minutes: number;
+  notes: string;
+}
+
+// ========================================
 // Cash Register (현금 출납) Types
 // ========================================
 

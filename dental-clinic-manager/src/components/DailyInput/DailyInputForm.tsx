@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink, Banknote, Package } from 'lucide-react'
+import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink, Banknote, Package, Clock } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
 import HappyCallTable from './HappyCallTable'
 import CashRegisterTable from './CashRegisterTable'
+import OvertimeMealTable from './OvertimeMealTable'
 import { getTodayString } from '@/utils/dateUtils'
 import { dataService } from '@/lib/dataService'
 import { saveDailyReport } from '@/app/actions/dailyReport'
@@ -14,6 +15,8 @@ import { createClient } from '@/lib/supabase/client'
 import { RECALL_STATUS_LABELS, RECALL_STATUS_COLORS } from '@/types/recall'
 import type { RecallPatient } from '@/types/recall'
 import type { ConsultRowData, GiftRowData, HappyCallRowData, CashRegisterRowData, GiftInventory, GiftLog, GiftCategory } from '@/types'
+import type { OvertimeMealRowData } from '@/types'
+import { overtimeMealService } from '@/lib/overtimeMealService'
 import type { UserProfile } from '@/contexts/AuthContext'
 import { appAlert } from '@/components/ui/AppDialog'
 
@@ -59,6 +62,8 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     curr_bill_50000: 0, curr_bill_10000: 0, curr_bill_5000: 0, curr_bill_1000: 0, curr_coin_500: 0, curr_coin_100: 0,
     notes: ''
   })
+  const defaultOvertimeMealData: OvertimeMealRowData = { has_lunch: false, lunch_overtime_minutes: 0, has_dinner: false, dinner_overtime_minutes: 0, notes: '' }
+  const [overtimeMealData, setOvertimeMealData] = useState<OvertimeMealRowData>(defaultOvertimeMealData)
   const [recallCount, setRecallCount] = useState(0)
   const [recallBookingCount, setRecallBookingCount] = useState(0)
   const [recallBookingNames, setRecallBookingNames] = useState('')
@@ -232,6 +237,25 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         // 보고서가 없어도 리콜 데이터는 자동 동기화
         syncRecallData(date)
       }
+      // 오버타임 식사 기록 로드 (클리닉/날짜당 1건)
+      if (currentUser?.clinic_id) {
+        try {
+          const mealResult = await overtimeMealService.getByDate(currentUser.clinic_id, date)
+          if (mealResult.data) {
+            setOvertimeMealData({
+              has_lunch: mealResult.data.has_lunch || false,
+              lunch_overtime_minutes: mealResult.data.lunch_overtime_minutes || 0,
+              has_dinner: mealResult.data.has_dinner || false,
+              dinner_overtime_minutes: mealResult.data.dinner_overtime_minutes || 0,
+              notes: mealResult.data.notes || '',
+            })
+          } else {
+            setOvertimeMealData(defaultOvertimeMealData)
+          }
+        } catch (err) {
+          console.error('[DailyInputForm] 오버타임 식사 기록 로드 실패:', err)
+        }
+      }
     } catch (error) {
       console.error('[DailyInputForm] 데이터 로드 실패:', error)
       resetFormData()
@@ -265,15 +289,6 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
       onGiftRowsChange(reportDate, giftRows)
     }
   }, [giftRows, reportDate, onGiftRowsChange])
-
-  useEffect(() => {
-    if (!currentUser?.clinic_id) {
-      return
-    }
-
-    console.log('[DailyInputForm] Detected clinic change, reloading data for', reportDate)
-    loadDataForDate(reportDate)
-  }, [currentUser?.clinic_id, loadDataForDate, reportDate])
 
   // Realtime 구독: 다른 사용자의 변경사항 감지
   useEffect(() => {
@@ -449,11 +464,18 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
       e.stopPropagation()
     }
 
+    // 이미 저장 중이면 중복 실행 방지
+    if (loading || isSavingRef.current) {
+      console.log('[DailyInputForm] handleSave skipped - already saving')
+      return
+    }
+
     if (!reportDate) {
       await appAlert('보고 일자를 선택해주세요.')
       return
     }
 
+    setLoading(true)  // 저장 버튼 비활성화 (중복 클릭 방지)
     isSavingRef.current = true  // 자신의 저장 중에는 외부 변경 감지 무시
     setHasExternalUpdate(false)  // 저장 시 외부 변경 알림 초기화
     console.log(`[DailyInputForm] handleSave - Using ${USE_NEW_ARCHITECTURE ? 'NEW' : 'OLD'} architecture`)
@@ -531,6 +553,17 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         }
 
         console.log('[DailyInputForm] Server Action succeeded:', result)
+
+        // 오버타임 식사 기록 저장
+        if (currentUser?.clinic_id && currentUser?.id) {
+          try {
+            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealData, currentUser.id)
+            console.log('[DailyInputForm] Overtime meal logs saved')
+          } catch (err) {
+            console.error('[DailyInputForm] Overtime meal save error:', err)
+          }
+        }
+
         await appAlert('보고서가 성공적으로 저장되었습니다.')
         // 저장 성공 후 부모에게 알려서 데이터 새로고침
         onSaveSuccess?.()
@@ -549,6 +582,17 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           specialNotes,
           cashRegisterData
         })
+
+        // 오버타임 식사 기록 저장
+        if (currentUser?.clinic_id && currentUser?.id) {
+          try {
+            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealData, currentUser.id)
+            console.log('[DailyInputForm] Overtime meal logs saved (legacy)')
+          } catch (err) {
+            console.error('[DailyInputForm] Overtime meal save error:', err)
+          }
+        }
+
         // 레거시 아키텍처에서도 저장 성공 후 부모에게 알려서 데이터 새로고침
         onSaveSuccess?.()
       }
@@ -584,7 +628,14 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     const hasAnyData = hasConsultData || hasGiftData || hasHappyCallData || hasOtherData
 
     if (hasAnyData && !isReadOnly) {
+      // 이미 저장 중이면 중복 실행 방지
+      if (loading || isSavingRef.current) {
+        console.log('[DailyInputForm] handleSaveAndNavigateToLogs skipped - already saving')
+        return
+      }
+
       // 데이터가 있으면 저장 먼저 수행
+      setLoading(true)
       isSavingRef.current = true
       setHasExternalUpdate(false)
 
@@ -662,6 +713,15 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             cashRegisterData
           })
           onSaveSuccess?.()
+        }
+
+        // 오버타임 식사 기록 저장
+        if (currentUser?.clinic_id && currentUser?.id) {
+          try {
+            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealData, currentUser.id)
+          } catch (err) {
+            console.error('[DailyInputForm] Overtime meal save error:', err)
+          }
         }
 
         setHasExistingData(true)
@@ -976,9 +1036,23 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           />
         </div>
 
+        {/* 점심/저녁/오버타임 기록 */}
+        {currentUser?.clinic_id && (
+          <div>
+            <SectionHeader number={7} title="점심/저녁 초과근무" icon={Clock} />
+            <OvertimeMealTable
+              clinicId={currentUser.clinic_id}
+              date={reportDate}
+              isReadOnly={isReadOnly}
+              data={overtimeMealData}
+              onDataChange={setOvertimeMealData}
+            />
+          </div>
+        )}
+
         {/* 기타 특이사항 */}
         <div>
-          <SectionHeader number={7} title="기타 특이사항" icon={FileText} />
+          <SectionHeader number={8} title="기타 특이사항" icon={FileText} />
           <div>
             <textarea
               id="special-notes"

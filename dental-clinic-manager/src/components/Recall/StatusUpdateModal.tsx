@@ -29,9 +29,6 @@ export default function StatusUpdateModal({
   onUpdateComplete
 }: StatusUpdateModalProps) {
   const [selectedStatus, setSelectedStatus] = useState<PatientRecallStatus | null>(null)
-  const [appointmentDate, setAppointmentDate] = useState('')
-  const [appointmentTime, setAppointmentTime] = useState('')
-  const [appointmentNotes, setAppointmentNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -103,16 +100,9 @@ export default function StatusUpdateModal({
     setError(null)
 
     try {
-      const appointmentInfo = selectedStatus === 'appointment_made' ? {
-        appointment_date: appointmentDate,
-        appointment_time: appointmentTime,
-        appointment_notes: appointmentNotes
-      } : undefined
-
       const result = await recallPatientService.updatePatientStatus(
         patient.id,
-        selectedStatus,
-        appointmentInfo
+        selectedStatus
       )
 
       if (result.success) {
@@ -190,45 +180,6 @@ export default function StatusUpdateModal({
             </div>
           </div>
 
-          {/* 예약 정보 (예약 완료 선택 시) */}
-          {selectedStatus === 'appointment_made' && (
-            <div className="space-y-3 p-4 bg-green-50 rounded-lg">
-              <div className="flex items-center gap-2 text-green-700">
-                <Calendar className="w-5 h-5" />
-                <span className="font-medium">예약 정보 입력</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">예약 날짜 *</label>
-                  <input
-                    type="date"
-                    value={appointmentDate}
-                    onChange={(e) => setAppointmentDate(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">예약 시간</label>
-                  <input
-                    type="time"
-                    value={appointmentTime}
-                    onChange={(e) => setAppointmentTime(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">메모</label>
-                <textarea
-                  value={appointmentNotes}
-                  onChange={(e) => setAppointmentNotes(e.target.value)}
-                  rows={2}
-                  placeholder="예약 관련 메모..."
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm resize-none"
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 푸터 */}
@@ -241,7 +192,7 @@ export default function StatusUpdateModal({
           </button>
           <button
             onClick={handleSave}
-            disabled={isSaving || !selectedStatus || (selectedStatus === 'appointment_made' && !appointmentDate)}
+            disabled={isSaving || !selectedStatus}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (

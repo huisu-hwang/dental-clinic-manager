@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Calendar, BarChart3, Clock, TrendingUp, ChevronDown, ChevronUp, Users, X, Pencil, Save, CalendarRange } from 'lucide-react'
 import { attendanceService } from '@/lib/attendanceService'
 import { useAuth } from '@/contexts/AuthContext'
@@ -9,6 +9,8 @@ import type { AttendanceStatistics, AttendanceRecord, AttendanceStatus } from '@
 import { ATTENDANCE_STATUS_NAMES, ATTENDANCE_STATUS_COLORS } from '@/types/attendance'
 import BranchSelector from './BranchSelector'
 import { useBranches } from '@/hooks/useBranches'
+import { overtimeMealService } from '@/lib/overtimeMealService'
+import type { OvertimeMealLog } from '@/types'
 
 type StatisticsWithName = AttendanceStatistics & { user_name: string }
 type PeriodMode = 'monthly' | 'custom'
@@ -34,6 +36,7 @@ export default function AdminAttendanceStats() {
   const { hasPermission } = usePermissions()
   const [statistics, setStatistics] = useState<StatisticsWithName[]>([])
   const [loading, setLoading] = useState(true)
+  const [mealOvertimeLogs, setMealOvertimeLogs] = useState<OvertimeMealLog[]>([])
 
   // 기간 선택 모드
   const [periodMode, setPeriodMode] = useState<PeriodMode>('monthly')
@@ -126,6 +129,23 @@ export default function AdminAttendanceStats() {
         } else {
           setStatistics([])
         }
+      }
+      // 식사 오버타임 데이터 조회
+      try {
+        let mealResult
+        if (periodMode === 'monthly') {
+          mealResult = await overtimeMealService.getStatsByMonth(user.clinic_id, selectedYear, selectedMonth)
+        } else {
+          mealResult = await overtimeMealService.getStatsByDateRange(user.clinic_id, startDate, endDate)
+        }
+        if (mealResult.data) {
+          setMealOvertimeLogs(mealResult.data)
+        } else {
+          setMealOvertimeLogs([])
+        }
+      } catch (err) {
+        console.error('[AdminAttendanceStats] Meal overtime fetch error:', err)
+        setMealOvertimeLogs([])
       }
     } catch (error) {
       console.error('[AdminAttendanceStats] Error refreshing statistics on load:', error)
@@ -336,6 +356,13 @@ export default function AdminAttendanceStats() {
     }
   }
 
+  // 클리닉 공통 점심/저녁 초과근무 통계 (날짜당 1건)
+  const totalMealLunch = mealOvertimeLogs.filter(l => l.has_lunch).length
+  const totalMealDinner = mealOvertimeLogs.filter(l => l.has_dinner).length
+  const totalLunchOvertimeMinutes = mealOvertimeLogs.reduce((sum, l) => sum + (l.lunch_overtime_minutes || 0), 0)
+  const totalDinnerOvertimeMinutes = mealOvertimeLogs.reduce((sum, l) => sum + (l.dinner_overtime_minutes || 0), 0)
+  const totalMealOvertimeMinutes = totalLunchOvertimeMinutes + totalDinnerOvertimeMinutes
+
   // 요약 통계 계산
   const summaryStats = {
     totalEmployees: statistics.length,
@@ -350,6 +377,11 @@ export default function AdminAttendanceStats() {
       statistics.length > 0
         ? statistics.reduce((sum, s) => sum + s.attendance_rate, 0) / statistics.length
         : 0,
+    totalMealLunch,
+    totalLunchOvertimeMinutes,
+    totalMealDinner,
+    totalDinnerOvertimeMinutes,
+    totalMealOvertimeMinutes,
   }
 
   return (
@@ -521,7 +553,7 @@ export default function AdminAttendanceStats() {
       ) : (
         <>
           {/* 요약 통계 카드 */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-4">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -571,8 +603,8 @@ export default function AdminAttendanceStats() {
                 <div>
                   <p className="text-xs text-gray-600">총 초과근무</p>
                   <p className="text-xl font-bold text-purple-600">{summaryStats.totalOvertimeCount}회</p>
-                  {summaryStats.totalOvertimeMinutes > 0 && (
-                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalOvertimeMinutes)}</p>
+                  {(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) > 0 && (
+                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes)}</p>
                   )}
                 </div>
                 <TrendingUp className="w-8 h-8 text-purple-400" />
@@ -582,8 +614,8 @@ export default function AdminAttendanceStats() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-600 whitespace-nowrap">순 초과근무</p>
-                  <p className={`text-xl font-bold whitespace-nowrap ${summaryStats.totalOvertimeMinutes - summaryStats.totalEarlyLeaveMinutes >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>
-                    {summaryStats.totalOvertimeMinutes - summaryStats.totalEarlyLeaveMinutes >= 0 ? '+' : '-'}{formatMinutesToHours(Math.abs(summaryStats.totalOvertimeMinutes - summaryStats.totalEarlyLeaveMinutes))}
+                  <p className={`text-xl font-bold whitespace-nowrap ${(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) - summaryStats.totalEarlyLeaveMinutes >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>
+                    {(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) - summaryStats.totalEarlyLeaveMinutes >= 0 ? '+' : '-'}{formatMinutesToHours(Math.abs((summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) - summaryStats.totalEarlyLeaveMinutes))}
                   </p>
                   <p className="text-xs text-gray-400 whitespace-nowrap">초과-조퇴</p>
                 </div>
@@ -597,6 +629,30 @@ export default function AdminAttendanceStats() {
                   <p className="text-xl font-bold text-gray-600">{summaryStats.totalAbsentDays}일</p>
                 </div>
                 <X className="w-8 h-8 text-gray-400" />
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-600">점심 초과근무</p>
+                  <p className="text-xl font-bold text-orange-600">{summaryStats.totalMealLunch}일</p>
+                  {summaryStats.totalLunchOvertimeMinutes > 0 && (
+                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalLunchOvertimeMinutes)}</p>
+                  )}
+                </div>
+                <Clock className="w-8 h-8 text-orange-400" />
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-600">저녁 초과근무</p>
+                  <p className="text-xl font-bold text-violet-600">{summaryStats.totalMealDinner}일</p>
+                  {summaryStats.totalDinnerOvertimeMinutes > 0 && (
+                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalDinnerOvertimeMinutes)}</p>
+                  )}
+                </div>
+                <Clock className="w-8 h-8 text-violet-400" />
               </div>
             </div>
           </div>
@@ -654,9 +710,8 @@ export default function AdminAttendanceStats() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {statistics.map((stat) => (
-                      <>
+                      <React.Fragment key={stat.user_id}>
                         <tr
-                          key={stat.user_id}
                           className={`hover:bg-gray-50 cursor-pointer ${
                             expandedUserId === stat.user_id ? 'bg-blue-50' : ''
                           }`}
@@ -860,7 +915,7 @@ export default function AdminAttendanceStats() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
