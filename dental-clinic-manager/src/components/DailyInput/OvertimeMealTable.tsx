@@ -58,7 +58,7 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
 
       {/* 점심 초과근무 */}
       <div className={`rounded-lg border-2 transition-all ${data.has_lunch ? 'bg-orange-50 border-orange-300' : 'bg-slate-50 border-slate-200'}`}>
-        <div className="flex items-center justify-between p-3">
+        <div className="flex items-center flex-wrap gap-2 p-3">
           <button
             type="button"
             onClick={() => handleToggle('has_lunch')}
@@ -79,7 +79,7 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
             </span>
           </button>
           {data.has_lunch && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <input
                 type="number"
                 min="0"
@@ -88,7 +88,7 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
                 onChange={(e) => handleMinutesChange('lunch_overtime_minutes', e.target.value)}
                 readOnly={isReadOnly}
                 placeholder="0"
-                className="w-20 px-2 py-1.5 text-sm border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-center font-medium"
+                className="w-16 px-2 py-1 text-sm border border-orange-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-center font-medium"
               />
               <span className="text-xs text-orange-600">분</span>
               {data.lunch_overtime_minutes > 0 && (
@@ -101,7 +101,7 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
 
       {/* 저녁 초과근무 */}
       <div className={`rounded-lg border-2 transition-all ${data.has_dinner ? 'bg-violet-50 border-violet-300' : 'bg-slate-50 border-slate-200'}`}>
-        <div className="flex items-center justify-between p-3">
+        <div className="flex items-center flex-wrap gap-2 p-3">
           <button
             type="button"
             onClick={() => handleToggle('has_dinner')}
@@ -122,7 +122,7 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
             </span>
           </button>
           {data.has_dinner && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <input
                 type="number"
                 min="0"
@@ -131,7 +131,7 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
                 onChange={(e) => handleMinutesChange('dinner_overtime_minutes', e.target.value)}
                 readOnly={isReadOnly}
                 placeholder="0"
-                className="w-20 px-2 py-1.5 text-sm border border-violet-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-center font-medium"
+                className="w-16 px-2 py-1 text-sm border border-violet-300 rounded-md focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-center font-medium"
               />
               <span className="text-xs text-violet-600">분</span>
               {data.dinner_overtime_minutes > 0 && (
