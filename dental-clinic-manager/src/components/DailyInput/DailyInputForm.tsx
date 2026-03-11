@@ -62,7 +62,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     curr_bill_50000: 0, curr_bill_10000: 0, curr_bill_5000: 0, curr_bill_1000: 0, curr_coin_500: 0, curr_coin_100: 0,
     notes: ''
   })
-  const defaultOvertimeMealData: OvertimeMealRowData = { has_lunch: false, has_dinner: false, has_overtime: false, overtime_minutes: 0, notes: '' }
+  const defaultOvertimeMealData: OvertimeMealRowData = { has_lunch: false, lunch_overtime_minutes: 0, has_dinner: false, dinner_overtime_minutes: 0, notes: '' }
   const [overtimeMealData, setOvertimeMealData] = useState<OvertimeMealRowData>(defaultOvertimeMealData)
   const [recallCount, setRecallCount] = useState(0)
   const [recallBookingCount, setRecallBookingCount] = useState(0)
@@ -244,9 +244,9 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           if (mealResult.data) {
             setOvertimeMealData({
               has_lunch: mealResult.data.has_lunch || false,
+              lunch_overtime_minutes: mealResult.data.lunch_overtime_minutes || 0,
               has_dinner: mealResult.data.has_dinner || false,
-              has_overtime: mealResult.data.has_overtime || false,
-              overtime_minutes: mealResult.data.overtime_minutes || 0,
+              dinner_overtime_minutes: mealResult.data.dinner_overtime_minutes || 0,
               notes: mealResult.data.notes || '',
             })
           } else {
@@ -1039,7 +1039,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         {/* 점심/저녁/오버타임 기록 */}
         {currentUser?.clinic_id && (
           <div>
-            <SectionHeader number={7} title="점심/저녁/오버타임" icon={Clock} />
+            <SectionHeader number={7} title="점심/저녁 초과근무" icon={Clock} />
             <OvertimeMealTable
               clinicId={currentUser.clinic_id}
               date={reportDate}

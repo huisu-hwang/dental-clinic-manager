@@ -356,11 +356,12 @@ export default function AdminAttendanceStats() {
     }
   }
 
-  // 클리닉 공통 식사/오버타임 통계 (날짜당 1건)
+  // 클리닉 공통 점심/저녁 초과근무 통계 (날짜당 1건)
   const totalMealLunch = mealOvertimeLogs.filter(l => l.has_lunch).length
   const totalMealDinner = mealOvertimeLogs.filter(l => l.has_dinner).length
-  const totalMealExtra = mealOvertimeLogs.filter(l => l.has_overtime).length
-  const totalMealOvertimeMinutes = mealOvertimeLogs.reduce((sum, l) => sum + (l.overtime_minutes || 0), 0)
+  const totalLunchOvertimeMinutes = mealOvertimeLogs.reduce((sum, l) => sum + (l.lunch_overtime_minutes || 0), 0)
+  const totalDinnerOvertimeMinutes = mealOvertimeLogs.reduce((sum, l) => sum + (l.dinner_overtime_minutes || 0), 0)
+  const totalMealOvertimeMinutes = totalLunchOvertimeMinutes + totalDinnerOvertimeMinutes
 
   // 요약 통계 계산
   const summaryStats = {
@@ -377,8 +378,9 @@ export default function AdminAttendanceStats() {
         ? statistics.reduce((sum, s) => sum + s.attendance_rate, 0) / statistics.length
         : 0,
     totalMealLunch,
+    totalLunchOvertimeMinutes,
     totalMealDinner,
-    totalMealExtra,
+    totalDinnerOvertimeMinutes,
     totalMealOvertimeMinutes,
   }
 
@@ -551,7 +553,7 @@ export default function AdminAttendanceStats() {
       ) : (
         <>
           {/* 요약 통계 카드 */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-4">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -601,8 +603,8 @@ export default function AdminAttendanceStats() {
                 <div>
                   <p className="text-xs text-gray-600">총 초과근무</p>
                   <p className="text-xl font-bold text-purple-600">{summaryStats.totalOvertimeCount}회</p>
-                  {summaryStats.totalOvertimeMinutes > 0 && (
-                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalOvertimeMinutes)}</p>
+                  {(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) > 0 && (
+                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes)}</p>
                   )}
                 </div>
                 <TrendingUp className="w-8 h-8 text-purple-400" />
@@ -612,8 +614,8 @@ export default function AdminAttendanceStats() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-600 whitespace-nowrap">순 초과근무</p>
-                  <p className={`text-xl font-bold whitespace-nowrap ${summaryStats.totalOvertimeMinutes - summaryStats.totalEarlyLeaveMinutes >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>
-                    {summaryStats.totalOvertimeMinutes - summaryStats.totalEarlyLeaveMinutes >= 0 ? '+' : '-'}{formatMinutesToHours(Math.abs(summaryStats.totalOvertimeMinutes - summaryStats.totalEarlyLeaveMinutes))}
+                  <p className={`text-xl font-bold whitespace-nowrap ${(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) - summaryStats.totalEarlyLeaveMinutes >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>
+                    {(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) - summaryStats.totalEarlyLeaveMinutes >= 0 ? '+' : '-'}{formatMinutesToHours(Math.abs((summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) - summaryStats.totalEarlyLeaveMinutes))}
                   </p>
                   <p className="text-xs text-gray-400 whitespace-nowrap">초과-조퇴</p>
                 </div>
@@ -632,8 +634,11 @@ export default function AdminAttendanceStats() {
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600">점심 OT</p>
+                  <p className="text-xs text-gray-600">점심 초과근무</p>
                   <p className="text-xl font-bold text-orange-600">{summaryStats.totalMealLunch}일</p>
+                  {summaryStats.totalLunchOvertimeMinutes > 0 && (
+                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalLunchOvertimeMinutes)}</p>
+                  )}
                 </div>
                 <Clock className="w-8 h-8 text-orange-400" />
               </div>
@@ -641,22 +646,13 @@ export default function AdminAttendanceStats() {
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600">저녁 OT</p>
+                  <p className="text-xs text-gray-600">저녁 초과근무</p>
                   <p className="text-xl font-bold text-violet-600">{summaryStats.totalMealDinner}일</p>
-                </div>
-                <Clock className="w-8 h-8 text-violet-400" />
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-600">오버타임</p>
-                  <p className="text-xl font-bold text-rose-600">{summaryStats.totalMealExtra}일</p>
-                  {summaryStats.totalMealOvertimeMinutes > 0 && (
-                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalMealOvertimeMinutes)}</p>
+                  {summaryStats.totalDinnerOvertimeMinutes > 0 && (
+                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalDinnerOvertimeMinutes)}</p>
                   )}
                 </div>
-                <Clock className="w-8 h-8 text-rose-400" />
+                <Clock className="w-8 h-8 text-violet-400" />
               </div>
             </div>
           </div>

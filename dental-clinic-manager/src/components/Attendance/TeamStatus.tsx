@@ -7,10 +7,13 @@ import type { TeamAttendanceStatus } from '@/types/attendance'
 import { ATTENDANCE_STATUS_NAMES, ATTENDANCE_STATUS_COLORS } from '@/types/attendance'
 import BranchSelector from './BranchSelector'
 import { useBranches } from '@/hooks/useBranches'
+import { overtimeMealService } from '@/lib/overtimeMealService'
+import type { OvertimeMealLog } from '@/types'
 
 export default function TeamStatus() {
   const { user } = useAuth()
   const [teamStatus, setTeamStatus] = useState<TeamAttendanceStatus | null>(null)
+  const [mealOvertime, setMealOvertime] = useState<OvertimeMealLog | null>(null)
   const [loading, setLoading] = useState(false)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -59,14 +62,18 @@ export default function TeamStatus() {
     if (!user?.clinic_id) return
 
     try {
-      const result = await attendanceService.getTeamAttendanceStatus(
-        user.clinic_id,
-        selectedDate,
-        selectedBranchId || undefined
-      )
+      const [result, mealResult] = await Promise.all([
+        attendanceService.getTeamAttendanceStatus(
+          user.clinic_id,
+          selectedDate,
+          selectedBranchId || undefined
+        ),
+        overtimeMealService.getByDate(user.clinic_id, selectedDate),
+      ])
       if (result.success && result.status) {
         setTeamStatus(result.status)
       }
+      setMealOvertime(mealResult.data || null)
     } catch (error) {
       console.error('[TeamStatus] Error loading team status:', error)
     } finally {
@@ -292,6 +299,11 @@ export default function TeamStatus() {
                 <div>
                   <p className="text-xs text-gray-600">초과근무</p>
                   <p className="text-2xl font-bold text-purple-600">{teamStatus.overtime_count || 0}명</p>
+                  {mealOvertime && (mealOvertime.lunch_overtime_minutes > 0 || mealOvertime.dinner_overtime_minutes > 0) && (
+                    <p className="text-xs text-purple-500 mt-0.5">
+                      +{mealOvertime.lunch_overtime_minutes + mealOvertime.dinner_overtime_minutes}분 (일일보고)
+                    </p>
+                  )}
                 </div>
                 <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                   <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -400,13 +412,22 @@ export default function TeamStatus() {
                         )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        {employee.overtime_minutes > 0 ? (
-                          <span className="text-purple-600 font-medium">
-                            {employee.overtime_minutes}분
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
+                        {(() => {
+                          const mealMinutes = (employee.check_in_time && mealOvertime)
+                            ? (mealOvertime.lunch_overtime_minutes || 0) + (mealOvertime.dinner_overtime_minutes || 0)
+                            : 0
+                          const totalOT = employee.overtime_minutes + mealMinutes
+                          return totalOT > 0 ? (
+                            <div>
+                              <span className="text-purple-600 font-medium">{totalOT}분</span>
+                              {mealMinutes > 0 && employee.overtime_minutes > 0 && (
+                                <div className="text-xs text-gray-400">{employee.overtime_minutes}+{mealMinutes}</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )
+                        })()}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
                         {employee.total_work_minutes && employee.total_work_minutes > 0 ? (

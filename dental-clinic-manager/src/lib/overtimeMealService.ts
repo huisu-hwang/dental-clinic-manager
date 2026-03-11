@@ -3,7 +3,7 @@ import type { OvertimeMealLog, OvertimeMealRowData } from '@/types'
 
 export const overtimeMealService = {
   /**
-   * 특정 날짜의 오버타임 식사 기록 조회 (클리닉당 1건)
+   * 특정 날짜의 초과근무 식사 기록 조회 (클리닉당 1건)
    */
   async getByDate(clinicId: string, date: string) {
     const supabase = createClient()
@@ -18,12 +18,12 @@ export const overtimeMealService = {
   },
 
   /**
-   * 오버타임 식사 기록 저장 (upsert - 클리닉/날짜당 1건)
+   * 초과근무 식사 기록 저장 (upsert - 클리닉/날짜당 1건)
    */
   async save(clinicId: string, date: string, rowData: OvertimeMealRowData, createdBy: string) {
     const supabase = createClient()
 
-    const hasAnyData = rowData.has_lunch || rowData.has_dinner || rowData.has_overtime || rowData.notes.trim()
+    const hasAnyData = rowData.has_lunch || rowData.has_dinner || rowData.notes.trim()
 
     if (!hasAnyData) {
       // 데이터가 없으면 기존 레코드 삭제
@@ -43,9 +43,9 @@ export const overtimeMealService = {
         clinic_id: clinicId,
         date,
         has_lunch: rowData.has_lunch,
+        lunch_overtime_minutes: rowData.lunch_overtime_minutes,
         has_dinner: rowData.has_dinner,
-        has_overtime: rowData.has_overtime,
-        overtime_minutes: rowData.overtime_minutes,
+        dinner_overtime_minutes: rowData.dinner_overtime_minutes,
         notes: rowData.notes,
         created_by: createdBy,
         updated_at: new Date().toISOString(),
@@ -57,7 +57,7 @@ export const overtimeMealService = {
   },
 
   /**
-   * 월별 오버타임 식사 통계 조회 (근태관리용)
+   * 월별 초과근무 식사 통계 조회 (근태관리용)
    */
   async getStatsByMonth(clinicId: string, year: number, month: number) {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
@@ -76,7 +76,7 @@ export const overtimeMealService = {
   },
 
   /**
-   * 기간별 오버타임 식사 통계 조회
+   * 기간별 초과근무 식사 통계 조회
    */
   async getStatsByDateRange(clinicId: string, startDate: string, endDate: string) {
     const supabase = createClient()

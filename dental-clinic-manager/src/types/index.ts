@@ -128,7 +128,7 @@ export interface HappyCallRowData {
 }
 
 // ========================================
-// Overtime Meal (점심/저녁/오버타임) Types
+// Overtime Meal (점심/저녁 초과근무) Types
 // ========================================
 
 export interface OvertimeMealLog {
@@ -136,9 +136,9 @@ export interface OvertimeMealLog {
   clinic_id: string;
   date: string;
   has_lunch: boolean;
+  lunch_overtime_minutes: number;
   has_dinner: boolean;
-  has_overtime: boolean;
-  overtime_minutes: number;
+  dinner_overtime_minutes: number;
   notes: string;
   created_by?: string;
   created_at?: string;
@@ -147,9 +147,9 @@ export interface OvertimeMealLog {
 
 export interface OvertimeMealRowData {
   has_lunch: boolean;
+  lunch_overtime_minutes: number;
   has_dinner: boolean;
-  has_overtime: boolean;
-  overtime_minutes: number;
+  dinner_overtime_minutes: number;
   notes: string;
 }
 
