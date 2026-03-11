@@ -356,20 +356,11 @@ export default function AdminAttendanceStats() {
     }
   }
 
-  // 식사 오버타임 유저별 통계 계산
-  const mealStatsByUser: Record<string, { lunch: number; dinner: number; extra: number }> = {}
-  for (const log of mealOvertimeLogs) {
-    if (!mealStatsByUser[log.user_id]) {
-      mealStatsByUser[log.user_id] = { lunch: 0, dinner: 0, extra: 0 }
-    }
-    if (log.has_lunch_overtime) mealStatsByUser[log.user_id].lunch++
-    if (log.has_dinner_overtime) mealStatsByUser[log.user_id].dinner++
-    if (log.has_extra_overtime) mealStatsByUser[log.user_id].extra++
-  }
-
-  const totalMealLunch = mealOvertimeLogs.filter(l => l.has_lunch_overtime).length
-  const totalMealDinner = mealOvertimeLogs.filter(l => l.has_dinner_overtime).length
-  const totalMealExtra = mealOvertimeLogs.filter(l => l.has_extra_overtime).length
+  // 클리닉 공통 식사/오버타임 통계 (날짜당 1건)
+  const totalMealLunch = mealOvertimeLogs.filter(l => l.has_lunch).length
+  const totalMealDinner = mealOvertimeLogs.filter(l => l.has_dinner).length
+  const totalMealExtra = mealOvertimeLogs.filter(l => l.has_overtime).length
+  const totalMealOvertimeMinutes = mealOvertimeLogs.reduce((sum, l) => sum + (l.overtime_minutes || 0), 0)
 
   // 요약 통계 계산
   const summaryStats = {
@@ -388,6 +379,7 @@ export default function AdminAttendanceStats() {
     totalMealLunch,
     totalMealDinner,
     totalMealExtra,
+    totalMealOvertimeMinutes,
   }
 
   return (
@@ -641,7 +633,7 @@ export default function AdminAttendanceStats() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-600">점심 OT</p>
-                  <p className="text-xl font-bold text-orange-600">{summaryStats.totalMealLunch}회</p>
+                  <p className="text-xl font-bold text-orange-600">{summaryStats.totalMealLunch}일</p>
                 </div>
                 <Clock className="w-8 h-8 text-orange-400" />
               </div>
@@ -650,7 +642,7 @@ export default function AdminAttendanceStats() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-600">저녁 OT</p>
-                  <p className="text-xl font-bold text-violet-600">{summaryStats.totalMealDinner}회</p>
+                  <p className="text-xl font-bold text-violet-600">{summaryStats.totalMealDinner}일</p>
                 </div>
                 <Clock className="w-8 h-8 text-violet-400" />
               </div>
@@ -659,7 +651,10 @@ export default function AdminAttendanceStats() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-600">오버타임</p>
-                  <p className="text-xl font-bold text-rose-600">{summaryStats.totalMealExtra}회</p>
+                  <p className="text-xl font-bold text-rose-600">{summaryStats.totalMealExtra}일</p>
+                  {summaryStats.totalMealOvertimeMinutes > 0 && (
+                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalMealOvertimeMinutes)}</p>
+                  )}
                 </div>
                 <Clock className="w-8 h-8 text-rose-400" />
               </div>
@@ -711,15 +706,6 @@ export default function AdminAttendanceStats() {
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                         총 근무시간
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-orange-500 uppercase tracking-wider bg-gray-50">
-                        점심OT
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-violet-500 uppercase tracking-wider bg-gray-50">
-                        저녁OT
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-rose-500 uppercase tracking-wider bg-gray-50">
-                        오버타임
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                         상세
@@ -802,27 +788,6 @@ export default function AdminAttendanceStats() {
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-center">
-                            {(mealStatsByUser[stat.user_id]?.lunch || 0) > 0 ? (
-                              <span className="text-sm font-medium text-orange-600">{mealStatsByUser[stat.user_id].lunch}회</span>
-                            ) : (
-                              <span className="text-sm text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-center">
-                            {(mealStatsByUser[stat.user_id]?.dinner || 0) > 0 ? (
-                              <span className="text-sm font-medium text-violet-600">{mealStatsByUser[stat.user_id].dinner}회</span>
-                            ) : (
-                              <span className="text-sm text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-center">
-                            {(mealStatsByUser[stat.user_id]?.extra || 0) > 0 ? (
-                              <span className="text-sm font-medium text-rose-600">{mealStatsByUser[stat.user_id].extra}회</span>
-                            ) : (
-                              <span className="text-sm text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-center">
                             {expandedUserId === stat.user_id ? (
                               <ChevronUp className="w-5 h-5 text-gray-400 mx-auto" />
                             ) : (
@@ -833,7 +798,7 @@ export default function AdminAttendanceStats() {
                         {/* 상세 기록 확장 패널 */}
                         {expandedUserId === stat.user_id && (
                           <tr>
-                            <td colSpan={13} className="px-4 py-0 bg-gray-50">
+                            <td colSpan={10} className="px-4 py-0 bg-gray-50">
                               <div className="py-4">
                                 <h4 className="text-sm font-semibold text-gray-700 mb-3">
                                   {stat.user_name}님의 {periodMode === 'monthly' ? `${selectedMonth}월` : `${startDate} ~ ${endDate}`} 상세 기록

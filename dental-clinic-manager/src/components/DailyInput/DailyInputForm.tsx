@@ -14,7 +14,8 @@ import { saveDailyReport } from '@/app/actions/dailyReport'
 import { createClient } from '@/lib/supabase/client'
 import { RECALL_STATUS_LABELS, RECALL_STATUS_COLORS } from '@/types/recall'
 import type { RecallPatient } from '@/types/recall'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, CashRegisterRowData, GiftInventory, GiftLog, GiftCategory, OvertimeMealRowData } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, CashRegisterRowData, GiftInventory, GiftLog, GiftCategory } from '@/types'
+import type { OvertimeMealRowData } from '@/types'
 import { overtimeMealService } from '@/lib/overtimeMealService'
 import type { UserProfile } from '@/contexts/AuthContext'
 import { appAlert } from '@/components/ui/AppDialog'
@@ -61,7 +62,8 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     curr_bill_50000: 0, curr_bill_10000: 0, curr_bill_5000: 0, curr_bill_1000: 0, curr_coin_500: 0, curr_coin_100: 0,
     notes: ''
   })
-  const [overtimeMealRows, setOvertimeMealRows] = useState<OvertimeMealRowData[]>([])
+  const defaultOvertimeMealData: OvertimeMealRowData = { has_lunch: false, has_dinner: false, has_overtime: false, overtime_minutes: 0, notes: '' }
+  const [overtimeMealData, setOvertimeMealData] = useState<OvertimeMealRowData>(defaultOvertimeMealData)
   const [recallCount, setRecallCount] = useState(0)
   const [recallBookingCount, setRecallBookingCount] = useState(0)
   const [recallBookingNames, setRecallBookingNames] = useState('')
@@ -235,28 +237,20 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         // 보고서가 없어도 리콜 데이터는 자동 동기화
         syncRecallData(date)
       }
-      // 오버타임 식사 기록 로드
+      // 오버타임 식사 기록 로드 (클리닉/날짜당 1건)
       if (currentUser?.clinic_id) {
         try {
-          const [usersResult, mealResult] = await Promise.all([
-            overtimeMealService.getClinicUsers(currentUser.clinic_id),
-            overtimeMealService.getByDate(currentUser.clinic_id, date),
-          ])
-
-          if (usersResult.data) {
-            const existingLogs = mealResult.data || []
-            const rows: OvertimeMealRowData[] = usersResult.data.map((u: any) => {
-              const existing = existingLogs.find(l => l.user_id === u.id)
-              return {
-                user_id: u.id,
-                user_name: u.name,
-                has_lunch_overtime: existing?.has_lunch_overtime || false,
-                has_dinner_overtime: existing?.has_dinner_overtime || false,
-                has_extra_overtime: existing?.has_extra_overtime || false,
-                notes: existing?.notes || '',
-              }
+          const mealResult = await overtimeMealService.getByDate(currentUser.clinic_id, date)
+          if (mealResult.data) {
+            setOvertimeMealData({
+              has_lunch: mealResult.data.has_lunch || false,
+              has_dinner: mealResult.data.has_dinner || false,
+              has_overtime: mealResult.data.has_overtime || false,
+              overtime_minutes: mealResult.data.overtime_minutes || 0,
+              notes: mealResult.data.notes || '',
             })
-            setOvertimeMealRows(rows)
+          } else {
+            setOvertimeMealData(defaultOvertimeMealData)
           }
         } catch (err) {
           console.error('[DailyInputForm] 오버타임 식사 기록 로드 실패:', err)
@@ -563,7 +557,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         // 오버타임 식사 기록 저장
         if (currentUser?.clinic_id && currentUser?.id) {
           try {
-            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealRows, currentUser.id)
+            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealData, currentUser.id)
             console.log('[DailyInputForm] Overtime meal logs saved')
           } catch (err) {
             console.error('[DailyInputForm] Overtime meal save error:', err)
@@ -592,7 +586,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         // 오버타임 식사 기록 저장
         if (currentUser?.clinic_id && currentUser?.id) {
           try {
-            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealRows, currentUser.id)
+            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealData, currentUser.id)
             console.log('[DailyInputForm] Overtime meal logs saved (legacy)')
           } catch (err) {
             console.error('[DailyInputForm] Overtime meal save error:', err)
@@ -724,7 +718,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         // 오버타임 식사 기록 저장
         if (currentUser?.clinic_id && currentUser?.id) {
           try {
-            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealRows, currentUser.id)
+            await overtimeMealService.save(currentUser.clinic_id, reportDate, overtimeMealData, currentUser.id)
           } catch (err) {
             console.error('[DailyInputForm] Overtime meal save error:', err)
           }
@@ -1050,8 +1044,8 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               clinicId={currentUser.clinic_id}
               date={reportDate}
               isReadOnly={isReadOnly}
-              rows={overtimeMealRows}
-              onRowsChange={setOvertimeMealRows}
+              data={overtimeMealData}
+              onDataChange={setOvertimeMealData}
             />
           </div>
         )}

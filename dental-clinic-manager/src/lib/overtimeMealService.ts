@@ -3,7 +3,7 @@ import type { OvertimeMealLog, OvertimeMealRowData } from '@/types'
 
 export const overtimeMealService = {
   /**
-   * 특정 날짜의 오버타임 식사 기록 조회
+   * 특정 날짜의 오버타임 식사 기록 조회 (클리닉당 1건)
    */
   async getByDate(clinicId: string, date: string) {
     const supabase = createClient()
@@ -12,63 +12,48 @@ export const overtimeMealService = {
       .select('*')
       .eq('clinic_id', clinicId)
       .eq('date', date)
-      .order('user_name')
+      .maybeSingle()
 
-    return { data: data as OvertimeMealLog[] | null, error }
+    return { data: data as OvertimeMealLog | null, error }
   },
 
   /**
-   * 오버타임 식사 기록 저장 (upsert)
+   * 오버타임 식사 기록 저장 (upsert - 클리닉/날짜당 1건)
    */
-  async save(clinicId: string, date: string, logs: OvertimeMealRowData[], createdBy: string) {
+  async save(clinicId: string, date: string, rowData: OvertimeMealRowData, createdBy: string) {
     const supabase = createClient()
 
-    // 기존 레코드 삭제
-    await supabase
-      .from('overtime_meal_logs')
-      .delete()
-      .eq('clinic_id', clinicId)
-      .eq('date', date)
+    const hasAnyData = rowData.has_lunch || rowData.has_dinner || rowData.has_overtime || rowData.notes.trim()
 
-    // 체크된 항목만 저장
-    const toInsert = logs
-      .filter(log => log.has_lunch_overtime || log.has_dinner_overtime || log.has_extra_overtime || log.notes.trim())
-      .map(log => ({
-        clinic_id: clinicId,
-        date,
-        user_id: log.user_id,
-        user_name: log.user_name,
-        has_lunch_overtime: log.has_lunch_overtime,
-        has_dinner_overtime: log.has_dinner_overtime,
-        has_extra_overtime: log.has_extra_overtime,
-        notes: log.notes,
-        created_by: createdBy,
-      }))
-
-    if (toInsert.length > 0) {
-      const { error } = await supabase
+    if (!hasAnyData) {
+      // 데이터가 없으면 기존 레코드 삭제
+      await supabase
         .from('overtime_meal_logs')
-        .insert(toInsert)
+        .delete()
+        .eq('clinic_id', clinicId)
+        .eq('date', date)
 
-      return { success: !error, error }
+      return { success: true, error: null }
     }
 
-    return { success: true, error: null }
-  },
+    // upsert (clinic_id + date unique)
+    const { error } = await supabase
+      .from('overtime_meal_logs')
+      .upsert({
+        clinic_id: clinicId,
+        date,
+        has_lunch: rowData.has_lunch,
+        has_dinner: rowData.has_dinner,
+        has_overtime: rowData.has_overtime,
+        overtime_minutes: rowData.overtime_minutes,
+        notes: rowData.notes,
+        created_by: createdBy,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'clinic_id,date',
+      })
 
-  /**
-   * 클리닉의 활성 직원 목록 조회
-   */
-  async getClinicUsers(clinicId: string) {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, name, role')
-      .eq('clinic_id', clinicId)
-      .eq('status', 'active')
-      .order('name')
-
-    return { data, error }
+    return { success: !error, error }
   },
 
   /**

@@ -135,11 +135,10 @@ export interface OvertimeMealLog {
   id?: string;
   clinic_id: string;
   date: string;
-  user_id: string;
-  user_name: string;
-  has_lunch_overtime: boolean;
-  has_dinner_overtime: boolean;
-  has_extra_overtime: boolean;
+  has_lunch: boolean;
+  has_dinner: boolean;
+  has_overtime: boolean;
+  overtime_minutes: number;
   notes: string;
   created_by?: string;
   created_at?: string;
@@ -147,11 +146,10 @@ export interface OvertimeMealLog {
 }
 
 export interface OvertimeMealRowData {
-  user_id: string;
-  user_name: string;
-  has_lunch_overtime: boolean;
-  has_dinner_overtime: boolean;
-  has_extra_overtime: boolean;
+  has_lunch: boolean;
+  has_dinner: boolean;
+  has_overtime: boolean;
+  overtime_minutes: number;
   notes: string;
 }
 
