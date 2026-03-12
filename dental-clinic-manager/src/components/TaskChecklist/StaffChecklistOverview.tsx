@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { taskChecklistService } from '@/lib/taskChecklistService'
-import type { TaskTemplate, DailyTaskCheck, TaskPeriod } from '@/types/taskChecklist'
+import type { TaskTemplate, DailyTaskCheck } from '@/types/taskChecklist'
 import { loadPeriodConfig } from '@/types/taskChecklist'
-import { ChevronLeft, ChevronRight, Users, CheckCircle2, Circle, BarChart3 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Users, CheckCircle2, Circle, BarChart3, Clock, FileText } from 'lucide-react'
 
 interface Staff {
   id: string
@@ -20,6 +20,9 @@ export default function StaffChecklistOverview() {
     return new Date().toISOString().split('T')[0]
   })
   const [loading, setLoading] = useState(true)
+  const [expandedStaffId, setExpandedStaffId] = useState<string | null>(null)
+
+  const periodCfg = useMemo(() => loadPeriodConfig(), [])
 
   const fetchData = useCallback(async () => {
     try {
@@ -60,14 +63,13 @@ export default function StaffChecklistOverview() {
   }
 
   // 직원별 업무 데이터 계산
-  const staffData = staff.map(s => {
+  const staffData = useMemo(() => staff.map(s => {
     const userTemplates = templates.filter(t => t.assigned_user_id === s.id)
     const userChecks = dailyChecks.filter(c => c.user_id === s.id && c.status === 'completed')
     const total = userTemplates.length
     const completed = userChecks.length
     const rate = total > 0 ? Math.round((completed / total) * 100) : 0
 
-    const periodCfg = loadPeriodConfig()
     const byPeriod = periodCfg.keys.map(period => {
       const periodTemplates = userTemplates.filter(t => t.period === period)
       const periodCompleted = periodTemplates.filter(t =>
@@ -80,8 +82,23 @@ export default function StaffChecklistOverview() {
       }
     })
 
-    return { ...s, total, completed, rate, byPeriod }
-  }).filter(s => s.total > 0) // 업무가 할당된 직원만 표시
+    // 개별 작업 상세 정보
+    const tasks = userTemplates.map(t => {
+      const check = dailyChecks.find(c => c.template_id === t.id && c.user_id === s.id)
+      return {
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        period: t.period,
+        sortOrder: t.sort_order,
+        isCompleted: check?.status === 'completed',
+        checkedAt: check?.checked_at,
+        notes: check?.notes,
+      }
+    })
+
+    return { ...s, total, completed, rate, byPeriod, tasks }
+  }).filter(s => s.total > 0), [staff, templates, dailyChecks, periodCfg]) // 업무가 할당된 직원만 표시
 
   if (loading) {
     return (
@@ -148,8 +165,20 @@ export default function StaffChecklistOverview() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {staffData.map(s => (
             <div key={s.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              {/* 직원 헤더 */}
-              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              {/* 직원 헤더 - 클릭하여 상세 보기 */}
+              <div
+                role="button"
+                tabIndex={0}
+                aria-expanded={expandedStaffId === s.id}
+                className="px-4 py-3 border-b border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => setExpandedStaffId(prev => prev === s.id ? null : s.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setExpandedStaffId(prev => prev === s.id ? null : s.id)
+                  }
+                }}
+              >
                 <div className="flex items-center space-x-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                     s.rate === 100 ? 'bg-green-100' : s.rate >= 50 ? 'bg-blue-100' : 'bg-slate-100'
@@ -165,13 +194,18 @@ export default function StaffChecklistOverview() {
                     <p className="text-xs text-slate-500">{getRoleName(s.role)}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-lg font-bold ${
-                    s.rate === 100 ? 'text-green-600' : s.rate >= 50 ? 'text-blue-600' : 'text-slate-500'
-                  }`}>
-                    {s.rate}%
-                  </p>
-                  <p className="text-xs text-slate-400">{s.completed}/{s.total}</p>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <p className={`text-lg font-bold ${
+                      s.rate === 100 ? 'text-green-600' : s.rate >= 50 ? 'text-blue-600' : 'text-slate-500'
+                    }`}>
+                      {s.rate}%
+                    </p>
+                    <p className="text-xs text-slate-400">{s.completed}/{s.total}</p>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                    expandedStaffId === s.id ? 'rotate-180' : ''
+                  }`} />
                 </div>
               </div>
 
@@ -191,7 +225,7 @@ export default function StaffChecklistOverview() {
               <div className="px-4 py-2 pb-3 flex space-x-3">
                 {s.byPeriod.filter(p => p.total > 0).map(p => (
                   <div key={p.period} className="flex-1 text-center">
-                    <p className="text-xs text-slate-400 mb-1">{loadPeriodConfig().labels[p.period] || p.period}</p>
+                    <p className="text-xs text-slate-400 mb-1">{periodCfg.labels[p.period] || p.period}</p>
                     <div className="flex items-center justify-center space-x-1">
                       {p.completed === p.total ? (
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
@@ -207,6 +241,69 @@ export default function StaffChecklistOverview() {
                   </div>
                 ))}
               </div>
+
+              {/* 개별 작업 상세 목록 (확장 시) */}
+              {expandedStaffId === s.id && (
+                <div className="border-t border-slate-200 px-4 py-3 bg-slate-50/50">
+                  {periodCfg.keys.filter(period =>
+                    s.tasks.some(t => t.period === period)
+                  ).map(period => (
+                    <div key={period} className="mb-3 last:mb-0">
+                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                        {periodCfg.labels[period] || period}
+                      </h4>
+                      <div className="space-y-1">
+                        {s.tasks
+                          .filter(t => t.period === period)
+                          .sort((a, b) => a.sortOrder - b.sortOrder)
+                          .map(task => (
+                            <div
+                              key={task.id}
+                              className={`flex items-start gap-2.5 px-3 py-2 rounded-lg ${
+                                task.isCompleted ? 'bg-green-50/80' : 'bg-white'
+                              }`}
+                            >
+                              {task.isCompleted ? (
+                                <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                              ) : (
+                                <Circle className="w-4 h-4 text-slate-300 mt-0.5 flex-shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm ${
+                                  task.isCompleted ? 'text-green-700' : 'text-slate-600'
+                                }`}>
+                                  {task.title}
+                                </p>
+                                {task.description && (
+                                  <p className="text-xs text-slate-400 mt-0.5">{task.description}</p>
+                                )}
+                                {(task.checkedAt || task.notes) && (
+                                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                    {task.checkedAt && (
+                                      <span className="text-xs text-green-500 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {new Date(task.checkedAt).toLocaleTimeString('ko-KR', {
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })} 완료
+                                      </span>
+                                    )}
+                                    {task.notes && (
+                                      <span className="text-xs text-slate-400 flex items-center gap-1">
+                                        <FileText className="w-3 h-3" />
+                                        {task.notes}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
