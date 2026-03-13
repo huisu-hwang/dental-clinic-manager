@@ -1,10 +1,11 @@
 import { completeJob, failJob } from '../queue/jobConsumer.js';
 import { loginToHometax, logoutFromHometax } from './loginService.js';
-import { runScraper } from './scrapers/index.js';
+import { runScraper, getScrapingMode } from './scrapers/index.js';
 import { getSupabaseClient } from '../db/supabaseClient.js';
 import { createChildLogger } from '../utils/logger.js';
 import { notifySyncComplete, notifySyncFailed, notifySettlementComplete } from '../scheduler/notifier.js';
 import { aggregateSettlement } from '../scheduler/monthlySettlement.js';
+import { loginViaProtocol, logoutViaProtocol } from '../protocol/loginProtocol.js';
 const log = createChildLogger('jobProcessor');
 /** 스크래핑 결과를 hometax_raw_data에 저장 */
 async function saveRawData(clinicId, result) {
@@ -43,15 +44,45 @@ async function logSync(clinicId, jobId, dataType, status, recordCount, errorMess
         synced_at: new Date().toISOString(),
     });
 }
+/** 모드별 로그인 수행 */
+async function login(clinicId, mode) {
+    if (mode === 'protocol') {
+        const result = await loginViaProtocol(clinicId);
+        return {
+            success: result.success,
+            session: result.session ? result.session : null,
+            errorMessage: result.errorMessage,
+            errorCode: result.errorCode,
+        };
+    }
+    // Playwright 모드
+    const result = await loginToHometax(clinicId);
+    return {
+        success: result.success,
+        session: result.context ? { type: 'playwright', context: result.context } : null,
+        errorMessage: result.errorMessage,
+        errorCode: result.errorCode,
+    };
+}
+/** 모드별 로그아웃 수행 */
+async function logout(session) {
+    if (session.type === 'protocol') {
+        await logoutViaProtocol(session);
+    }
+    else if (session.type === 'playwright') {
+        await logoutFromHometax(session.context);
+    }
+}
 /** Job 처리 메인 로직 */
 export async function processScrapingJob(job) {
     const { id: jobId, clinic_id: clinicId, data_types: dataTypes, target_year: year, target_month: month } = job;
-    log.info({ jobId, clinicId, dataTypes, year, month }, 'Job 처리 시작');
+    const mode = getScrapingMode();
+    log.info({ jobId, clinicId, dataTypes, year, month, mode }, 'Job 처리 시작');
     // 1. 홈택스 로그인
-    const loginResult = await loginToHometax(clinicId);
-    if (!loginResult.success || !loginResult.context) {
+    const loginResult = await login(clinicId, mode);
+    if (!loginResult.success || !loginResult.session) {
         const errorMsg = `홈택스 로그인 실패: ${loginResult.errorMessage}`;
-        log.error({ jobId, clinicId, errorCode: loginResult.errorCode }, errorMsg);
+        log.error({ jobId, clinicId, errorCode: loginResult.errorCode, mode }, errorMsg);
         for (const dt of dataTypes) {
             await logSync(clinicId, jobId, dt, 'failed', 0, errorMsg);
         }
@@ -59,14 +90,14 @@ export async function processScrapingJob(job) {
         await notifySyncFailed(clinicId, errorMsg, jobId);
         return;
     }
-    const context = loginResult.context;
+    const session = loginResult.session;
     // 2. 각 데이터 타입별 스크래핑
     const results = {};
     try {
         for (const dataType of dataTypes) {
             try {
-                log.info({ jobId, dataType, year, month }, '스크래핑 실행');
-                const result = await runScraper(context, dataType, year, month);
+                log.info({ jobId, dataType, year, month, mode }, '스크래핑 실행');
+                const result = await runScraper(session, dataType, year, month);
                 // 결과 저장
                 await saveRawData(clinicId, result);
                 await logSync(clinicId, jobId, dataType, 'success', result.totalCount);
@@ -82,8 +113,8 @@ export async function processScrapingJob(job) {
         }
     }
     finally {
-        // 3. 로그아웃 및 브라우저 정리
-        await logoutFromHometax(context);
+        // 3. 로그아웃 및 세션 정리
+        await logout(session);
     }
     // 4. 전체 결과 집계
     const allSuccess = Object.values(results).every(r => r.success);
@@ -92,6 +123,7 @@ export async function processScrapingJob(job) {
         await completeJob(jobId, {
             results,
             totalRecords,
+            scrapingMode: mode,
             completedAt: new Date().toISOString(),
         });
     }
@@ -107,6 +139,7 @@ export async function processScrapingJob(job) {
                 totalRecords,
                 partialFailure: true,
                 failedTypes,
+                scrapingMode: mode,
                 completedAt: new Date().toISOString(),
             });
         }
@@ -127,6 +160,6 @@ export async function processScrapingJob(job) {
             log.error({ err, jobId, clinicId }, '월말 결산 집계 실패');
         }
     }
-    log.info({ jobId, results, totalRecords }, 'Job 처리 완료');
+    log.info({ jobId, results, totalRecords, mode }, 'Job 처리 완료');
 }
 //# sourceMappingURL=jobProcessor.js.map

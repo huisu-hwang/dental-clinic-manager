@@ -26,10 +26,17 @@ export const config = {
         heartbeatIntervalMs: parseInt(process.env.WORKER_HEARTBEAT_INTERVAL_MS || '30000', 10),
         maxConcurrent: parseInt(process.env.WORKER_MAX_CONCURRENT || '3', 10),
     },
-    // Playwright
+    // 스크래핑 모드: 'playwright' (기본, 브라우저) | 'protocol' (HTTP 직접 호출)
+    scrapingMode: (process.env.SCRAPING_MODE || 'playwright'),
+    // Playwright (scrapingMode=playwright일 때만 사용)
     playwright: {
         headless: process.env.PLAYWRIGHT_HEADLESS !== 'false',
         timeoutMs: parseInt(process.env.PLAYWRIGHT_TIMEOUT_MS || '30000', 10),
+    },
+    // Protocol (scrapingMode=protocol일 때만 사용)
+    protocol: {
+        timeoutMs: parseInt(process.env.PROTOCOL_TIMEOUT_MS || '30000', 10),
+        userAgent: process.env.PROTOCOL_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     },
     // 배치 스케줄
     schedule: {
