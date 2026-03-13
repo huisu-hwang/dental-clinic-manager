@@ -1,7 +1,10 @@
+import path from "path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // 여러 lockfile로 인한 workspace root 감지 오류 방지
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   eslint: {
     // 빌드 시 ESLint 경고를 에러로 처리하지 않음
     ignoreDuringBuilds: true,

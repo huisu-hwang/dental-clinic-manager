@@ -43,23 +43,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: '재무 요약 조회에 실패했습니다.' }, { status: 500 });
       }
 
-      // 2. 홈택스 연동 건수(Codef Sync Logs) 최근 1건 조회
-      const { data: syncLog } = await supabase
-        .from('codef_sync_logs')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .eq('year', parseInt(year))
-        .eq('month', parseInt(month))
-        .order('synced_at', { ascending: false })
-        .limit(1)
-        .single();
-
       return NextResponse.json({
         success: true,
-        data: {
-          ...data,
-          codef_sync: syncLog || null
-        }
+        data: data || {}
       });
     }
 

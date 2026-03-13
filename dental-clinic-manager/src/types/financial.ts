@@ -213,8 +213,8 @@ export interface FinancialSummary {
   post_tax_profit: number;
   profit_margin_percent: number;
 
-  // CODEF 연동 데이터
-  codef_sync?: {
+  // 홈택스 연동 데이터 (스크래핑 워커에서 수집)
+  hometax_sync?: {
     tax_invoice_sales_count: number;
     tax_invoice_purchase_count: number;
     cash_receipt_sales_count: number;

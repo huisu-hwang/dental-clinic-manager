@@ -1,0 +1,32 @@
+{
+  "name": "hometax-scraping-worker",
+  "version": "1.0.0",
+  "description": "홈택스 스크래핑 워커 - 자체 스크래핑 서버",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "playwright": "^1.51.0",
+    "node-cron": "^3.0.3",
+    "pino": "^9.6.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

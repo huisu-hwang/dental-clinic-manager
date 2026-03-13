@@ -1,0 +1,1 @@
+{"version":3,"file":"businessCardScraper.d.ts","sourceRoot":"","sources":["../../../src/hometax/scrapers/businessCardScraper.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,cAAc,EAAE,MAAM,YAAY,CAAC;AAC5C,OAAO,EAA2E,YAAY,EAAE,MAAM,kBAAkB,CAAC;AAgCzH,uBAAuB;AACvB,wBAAsB,0BAA0B,CAC9C,OAAO,EAAE,cAAc,EACvB,IAAI,EAAE,MAAM,EACZ,KAAK,EAAE,MAAM,GACZ,OAAO,CAAC,YAAY,CAAC,CAqBvB"}
