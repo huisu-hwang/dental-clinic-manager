@@ -3,8 +3,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  // 여러 lockfile로 인한 workspace root 감지 오류 방지
-  outputFileTracingRoot: path.join(__dirname, "../../"),
+  // workspace root: 레포 루트를 가리킴 (scraping-worker 등 하위 패키지 포함)
+  outputFileTracingRoot: path.join(__dirname, "../"),
   eslint: {
     // 빌드 시 ESLint 경고를 에러로 처리하지 않음
     ignoreDuringBuilds: true,
