@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   ListTodo,
   Plus,
@@ -9,6 +9,7 @@ import {
   Filter,
   CheckCircle2,
   ClipboardList,
+  LayoutGrid,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -30,13 +31,26 @@ interface TaskListProps {
   showMyTasksOnly?: boolean
 }
 
+// 현재 사용자 ID 가져오기
+const getCurrentUserId = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
+  if (!userStr) return null
+  try {
+    const user = JSON.parse(userStr)
+    return user.id
+  } catch {
+    return null
+  }
+}
+
 export default function TaskList({ canCreate = false, showMyTasksOnly = false }: TaskListProps) {
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [allTasks, setAllTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const currentUserId = getCurrentUserId()
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority | ''>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [total, setTotal] = useState(0)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
@@ -53,22 +67,20 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
 
   const fetchTasks = useCallback(async () => {
     setError(null)
-
-    const { data, total: totalCount, error: fetchError } = await taskService.getTasks({
+    const { data, error: fetchError } = await taskService.getTasks({
       priority: selectedPriority || undefined,
       search: searchQuery || undefined,
-      limit: 100,
+      assignee_id: showMyTasksOnly ? (currentUserId || undefined) : undefined,
+      limit: 500,
       offset: 0,
     })
-
     if (fetchError) {
       setError(fetchError)
     } else {
-      setTasks(data || [])
-      setTotal(totalCount)
+      setAllTasks(data || [])
     }
     setLoading(false)
-  }, [selectedPriority, searchQuery, showMyTasksOnly])
+  }, [selectedPriority, searchQuery, showMyTasksOnly, currentUserId])
 
   const fetchStats = useCallback(async () => {
     const { data } = await taskService.getTaskStats()
@@ -87,15 +99,9 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     fetchTasks()
   }
 
-  const handlePriorityChange = (priority: TaskPriority | '') => {
-    setSelectedPriority(priority)
-  }
-
   const handleTaskClick = async (task: Task) => {
     const { data } = await taskService.getTask(task.id)
-    if (data) {
-      setSelectedTask(data)
-    }
+    if (data) setSelectedTask(data)
   }
 
   const handleEdit = (task: Task) => {
@@ -106,7 +112,6 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
 
   const handleDelete = async (id: string) => {
     if (!await appConfirm('정말 삭제하시겠습니까?')) return
-
     const { success, error: deleteError } = await taskService.deleteTask(id)
     if (success) {
       fetchTasks()
@@ -167,21 +172,29 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   }
 
   // 탭에 따라 필터링
-  const activeTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled')
-  const completedTasks = tasks.filter(t => t.status === 'completed')
+  const activeTasks = useMemo(() =>
+    allTasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled'),
+    [allTasks]
+  )
+  const completedTasks = useMemo(() =>
+    allTasks.filter(t => t.status === 'completed'),
+    [allTasks]
+  )
 
   // 상태 필터 적용
-  let displayedTasks: Task[]
-  if (statusFilter === 'overdue') {
-    displayedTasks = tasks.filter(t => isOverdue(t))
-  } else if (statusFilter === 'completed') {
-    displayedTasks = completedTasks
-  } else if (statusFilter) {
-    displayedTasks = tasks.filter(t => t.status === statusFilter)
-  } else {
-    displayedTasks = activeTab === 'active' ? activeTasks : completedTasks
-  }
+  const displayedTasks = useMemo(() => {
+    if (statusFilter === 'overdue') {
+      return allTasks.filter(t => isOverdue(t))
+    } else if (statusFilter === 'completed') {
+      return completedTasks
+    } else if (statusFilter) {
+      return allTasks.filter(t => t.status === statusFilter)
+    } else {
+      return activeTab === 'active' ? activeTasks : completedTasks
+    }
+  }, [allTasks, activeTasks, completedTasks, statusFilter, activeTab])
 
+  // TaskForm 표시
   if (showForm) {
     return (
       <TaskForm
@@ -192,6 +205,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     )
   }
 
+  // TaskDetail 표시
   if (selectedTask) {
     return (
       <TaskDetail
@@ -211,12 +225,12 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   return (
     <div className="space-y-4">
       {/* 헤더 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
-          <ListTodo className="w-5 h-5 text-purple-600" />
+          <LayoutGrid className="w-5 h-5 text-purple-600" />
           <h2 className="text-lg font-semibold text-gray-900">업무 관리</h2>
           {!loading && (
-            <span className="text-xs text-gray-400 font-normal ml-1">총 {total}건</span>
+            <span className="text-xs text-gray-400 font-normal ml-1">총 {allTasks.length}건</span>
           )}
         </div>
         {canCreate && (
@@ -311,13 +325,13 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </button>
       </div>
 
-      {/* 필터 및 검색 */}
+      {/* 검색 및 우선순위 필터 */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-gray-500" />
           <select
             value={selectedPriority}
-            onChange={(e) => handlePriorityChange(e.target.value as TaskPriority | '')}
+            onChange={(e) => setSelectedPriority(e.target.value as TaskPriority | '')}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">전체 우선순위</option>
@@ -349,10 +363,10 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </div>
       )}
 
-      {/* 로딩 */}
+      {/* 업무 보드 */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500" />
         </div>
       ) : displayedTasks.length === 0 ? (
         <div className="text-center py-16 text-gray-500">

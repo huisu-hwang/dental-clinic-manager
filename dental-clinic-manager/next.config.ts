@@ -1,7 +1,10 @@
+import path from "path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // workspace root: 레포 루트를 가리킴 (scraping-worker 등 하위 패키지 포함)
+  outputFileTracingRoot: path.join(__dirname, "../"),
   eslint: {
     // 빌드 시 ESLint 경고를 에러로 처리하지 않음
     ignoreDuringBuilds: true,
