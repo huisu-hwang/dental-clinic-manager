@@ -1,0 +1,26 @@
+{
+  "name": "dentweb-bridge-agent",
+  "version": "1.0.0",
+  "description": "덴트웹 DB → Supabase 동기화 브릿지 에이전트",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test-connection": "ts-node src/test-connection.ts",
+    "install-service": "node scripts/install-service.js"
+  },
+  "dependencies": {
+    "mssql": "^11.0.1",
+    "node-cron": "^3.0.3",
+    "node-windows": "^1.0.0-beta.8",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/mssql": "^9.1.5",
+    "@types/node": "^20.11.0",
+    "@types/node-cron": "^3.0.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

@@ -24,6 +24,7 @@ import type {
 } from '@/types/recall'
 import { recallService } from '@/lib/recallService'
 import PhoneDialSettingsInline from '@/components/Management/PhoneDialSettingsInline'
+import DentwebSyncSettings from './DentwebSyncSettings'
 import { appConfirm } from '@/components/ui/AppDialog'
 
 // 서버 IP 확인 컴포넌트
@@ -112,7 +113,7 @@ interface RecallSettingsProps {
   clinicPhone: string
 }
 
-type SettingsTab = 'sms' | 'templates' | 'voip'
+type SettingsTab = 'sms' | 'templates' | 'voip' | 'dentweb'
 
 export default function RecallSettings({ clinicId, clinicName, clinicPhone }: RecallSettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('sms')
@@ -314,6 +315,17 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
         >
           <Phone className="w-4 h-4" />
           전화 설정
+        </button>
+        <button
+          onClick={() => setActiveTab('dentweb')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'dentweb'
+              ? 'border-teal-600 text-teal-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Settings className="w-4 h-4" />
+          덴트웹 연동
         </button>
       </div>
 
@@ -567,6 +579,11 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
       {/* 전화 설정 */}
       {activeTab === 'voip' && (
         <PhoneDialSettingsInline />
+      )}
+
+      {/* 덴트웹 연동 설정 */}
+      {activeTab === 'dentweb' && (
+        <DentwebSyncSettings />
       )}
     </div>
   )
