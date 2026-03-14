@@ -5,16 +5,10 @@ import {
   ListTodo,
   Plus,
   Search,
-  Calendar,
   AlertCircle,
   Filter,
-  User,
   CheckCircle2,
-  Circle,
-  Loader2,
-  Pause,
-  XCircle,
-  MessageCircle,
+  ClipboardList,
   LayoutGrid,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -24,45 +18,17 @@ import type { Task, TaskStatus, TaskPriority } from '@/types/bulletin'
 import {
   TASK_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
-  TASK_PRIORITY_COLORS
 } from '@/types/bulletin'
 import TaskDetail from './TaskDetail'
 import TaskForm from './TaskForm'
+import TaskCardView from './TaskCardView'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
+
+type ViewTab = 'active' | 'completed'
 
 interface TaskListProps {
   canCreate?: boolean
   showMyTasksOnly?: boolean
-}
-
-// 상태 컬럼 순서 (ClickUp 스타일 워크플로우)
-const STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled']
-
-// 상태별 컬럼 상단 테두리 색상
-const STATUS_BORDER_COLORS: Record<TaskStatus, string> = {
-  pending: '#9ca3af',
-  in_progress: '#3b82f6',
-  completed: '#22c55e',
-  on_hold: '#f59e0b',
-  cancelled: '#ef4444',
-}
-
-// 상태별 dot 색상
-const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
-  pending: 'bg-gray-400',
-  in_progress: 'bg-blue-500',
-  completed: 'bg-green-500',
-  on_hold: 'bg-amber-400',
-  cancelled: 'bg-red-400',
-}
-
-// 상태별 카운트 배지 색상
-const STATUS_COUNT_COLORS: Record<TaskStatus, string> = {
-  pending: 'bg-gray-200 text-gray-600',
-  in_progress: 'bg-blue-100 text-blue-600',
-  completed: 'bg-green-100 text-green-600',
-  on_hold: 'bg-amber-100 text-amber-600',
-  cancelled: 'bg-red-100 text-red-600',
 }
 
 // 현재 사용자 ID 가져오기
@@ -88,6 +54,16 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [activeTab, setActiveTab] = useState<ViewTab>('active')
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'overdue' | ''>('')
+  const [stats, setStats] = useState<{
+    total: number
+    pending: number
+    in_progress: number
+    review: number
+    completed: number
+    overdue: number
+  } | null>(null)
 
   const fetchTasks = useCallback(async () => {
     setError(null)
@@ -106,38 +82,17 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     setLoading(false)
   }, [selectedPriority, searchQuery, showMyTasksOnly, currentUserId])
 
+  const fetchStats = useCallback(async () => {
+    const { data } = await taskService.getTaskStats()
+    if (data) {
+      setStats(data)
+    }
+  }, [])
+
   useEffect(() => {
     fetchTasks()
-  }, [fetchTasks])
-
-  // 상태별 그룹화 + 우선순위/마감일 정렬
-  const tasksByStatus = useMemo(() => {
-    const grouped: Record<TaskStatus, Task[]> = {
-      pending: [],
-      in_progress: [],
-      completed: [],
-      on_hold: [],
-      cancelled: [],
-    }
-    allTasks.forEach(task => {
-      if (grouped[task.status]) {
-        grouped[task.status].push(task)
-      }
-    })
-    const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 }
-    for (const status of Object.keys(grouped) as TaskStatus[]) {
-      grouped[status].sort((a, b) => {
-        const pa = priorityOrder[a.priority] ?? 2
-        const pb = priorityOrder[b.priority] ?? 2
-        if (pa !== pb) return pa - pb
-        if (a.due_date && b.due_date) return new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
-        if (a.due_date) return -1
-        if (b.due_date) return 1
-        return 0
-      })
-    }
-    return grouped
-  }, [allTasks])
+    fetchStats()
+  }, [fetchTasks, fetchStats])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -160,6 +115,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     const { success, error: deleteError } = await taskService.deleteTask(id)
     if (success) {
       fetchTasks()
+      fetchStats()
       setSelectedTask(null)
     } else {
       await appAlert(deleteError || '삭제에 실패했습니다.')
@@ -170,6 +126,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     const { error: updateError } = await taskService.updateTaskStatus(id, status)
     if (!updateError) {
       fetchTasks()
+      fetchStats()
       if (selectedTask?.id === id) {
         const { data } = await taskService.getTask(id)
         if (data) setSelectedTask(data)
@@ -181,6 +138,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     setShowForm(false)
     setEditingTask(null)
     fetchTasks()
+    fetchStats()
   }
 
   const handleFormCancel = () => {
@@ -188,16 +146,23 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     setEditingTask(null)
   }
 
-  const stripHtml = (html: string) => {
-    if (!html) return ''
-    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim()
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      month: 'short',
-      day: 'numeric',
-    })
+  const handleStatClick = (filter: TaskStatus | 'overdue' | 'all') => {
+    if (filter === 'all') {
+      setStatusFilter('')
+      return
+    }
+    // 같은 필터 다시 클릭하면 해제
+    if (statusFilter === filter) {
+      setStatusFilter('')
+      return
+    }
+    setStatusFilter(filter)
+    // 완료 필터 클릭 시 완료 탭으로 자동 전환
+    if (filter === 'completed') {
+      setActiveTab('completed')
+    } else {
+      setActiveTab('active')
+    }
   }
 
   const isOverdue = (task: Task) => {
@@ -205,6 +170,29 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     if (task.status === 'completed' || task.status === 'cancelled') return false
     return new Date(task.due_date) < new Date()
   }
+
+  // 탭에 따라 필터링
+  const activeTasks = useMemo(() =>
+    allTasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled'),
+    [allTasks]
+  )
+  const completedTasks = useMemo(() =>
+    allTasks.filter(t => t.status === 'completed'),
+    [allTasks]
+  )
+
+  // 상태 필터 적용
+  const displayedTasks = useMemo(() => {
+    if (statusFilter === 'overdue') {
+      return allTasks.filter(t => isOverdue(t))
+    } else if (statusFilter === 'completed') {
+      return completedTasks
+    } else if (statusFilter) {
+      return allTasks.filter(t => t.status === statusFilter)
+    } else {
+      return activeTab === 'active' ? activeTasks : completedTasks
+    }
+  }, [allTasks, activeTasks, completedTasks, statusFilter, activeTab])
 
   // TaskForm 표시
   if (showForm) {
@@ -253,6 +241,90 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         )}
       </div>
 
+      {/* 통계 (클릭하면 해당 상태 필터링) */}
+      {stats && (
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          <button
+            onClick={() => handleStatClick('all')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === '' ? 'bg-gray-100 ring-2 ring-gray-400' : 'bg-gray-50 hover:bg-gray-100'}`}
+          >
+            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+            <p className="text-xs text-gray-500">전체</p>
+          </button>
+          <button
+            onClick={() => handleStatClick('pending')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'pending' ? 'bg-gray-200 ring-2 ring-gray-500' : 'bg-gray-50 hover:bg-gray-100'}`}
+          >
+            <p className="text-2xl font-bold text-gray-600">{stats.pending}</p>
+            <p className="text-xs text-gray-500">대기</p>
+          </button>
+          <button
+            onClick={() => handleStatClick('in_progress')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'in_progress' ? 'bg-blue-100 ring-2 ring-blue-500' : 'bg-blue-50 hover:bg-blue-100'}`}
+          >
+            <p className="text-2xl font-bold text-blue-600">{stats.in_progress}</p>
+            <p className="text-xs text-gray-500">진행 중</p>
+          </button>
+          <button
+            onClick={() => handleStatClick('review')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'review' ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-purple-50 hover:bg-purple-100'}`}
+          >
+            <p className="text-2xl font-bold text-purple-600">{stats.review}</p>
+            <p className="text-xs text-gray-500">검토 요청</p>
+          </button>
+          <button
+            onClick={() => handleStatClick('completed')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'completed' ? 'bg-green-100 ring-2 ring-green-500' : 'bg-green-50 hover:bg-green-100'}`}
+          >
+            <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+            <p className="text-xs text-gray-500">완료</p>
+          </button>
+          <button
+            onClick={() => handleStatClick('overdue')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'overdue' ? 'bg-red-100 ring-2 ring-red-500' : 'bg-red-50 hover:bg-red-100'}`}
+          >
+            <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
+            <p className="text-xs text-gray-500">기한 초과</p>
+          </button>
+        </div>
+      )}
+
+      {/* 진행 중 / 완료 탭 */}
+      <div className="flex items-center gap-1 border-b border-gray-200">
+        <button
+          onClick={() => { setActiveTab('active'); setStatusFilter('') }}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'active'
+              ? 'border-purple-600 text-purple-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ClipboardList className="w-4 h-4" />
+          진행 업무
+          <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+            activeTab === 'active' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            {activeTasks.length}
+          </span>
+        </button>
+        <button
+          onClick={() => { setActiveTab('completed'); setStatusFilter('') }}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'completed'
+              ? 'border-green-600 text-green-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          완료된 업무
+          <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+            activeTab === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            {completedTasks.length}
+          </span>
+        </button>
+      </div>
+
       {/* 검색 및 우선순위 필터 */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2">
@@ -291,160 +363,29 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </div>
       )}
 
-      {/* 칸반 보드 */}
+      {/* 업무 보드 */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500" />
         </div>
-      ) : allTasks.length === 0 ? (
+      ) : displayedTasks.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
           <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ListTodo className="w-8 h-8 text-sky-300" />
+            {activeTab === 'active' ? (
+              <ListTodo className="w-8 h-8 text-sky-300" />
+            ) : (
+              <CheckCircle2 className="w-8 h-8 text-green-300" />
+            )}
           </div>
-          <p className="font-medium text-gray-600 mb-1">등록된 업무가 없습니다</p>
-          <p className="text-sm text-gray-400">새로운 업무가 할당되면 여기에 표시됩니다.</p>
+          <p className="font-medium text-gray-600 mb-1">
+            {activeTab === 'active' ? '진행 중인 업무가 없습니다' : '완료된 업무가 없습니다'}
+          </p>
+          <p className="text-sm text-gray-400">
+            {activeTab === 'active' ? '새로운 업무가 할당되면 여기에 표시됩니다.' : '업무가 완료되면 여기에 표시됩니다.'}
+          </p>
         </div>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory">
-          {STATUS_ORDER.map(status => {
-            const columnTasks = tasksByStatus[status]
-            return (
-              <div
-                key={status}
-                className="flex-shrink-0 w-64 sm:w-72 rounded-xl bg-slate-50 snap-start"
-                style={{ borderTop: `3px solid ${STATUS_BORDER_COLORS[status]}` }}
-              >
-                {/* 컬럼 헤더 */}
-                <div className="px-3 py-2.5 flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${STATUS_DOT_COLORS[status]}`} />
-                  <span className="text-sm font-semibold text-gray-700">
-                    {TASK_STATUS_LABELS[status]}
-                  </span>
-                  <span className={`text-[11px] rounded-full px-1.5 py-0.5 font-medium ${STATUS_COUNT_COLORS[status]}`}>
-                    {columnTasks.length}
-                  </span>
-                </div>
-
-                {/* 태스크 카드 목록 */}
-                <div role="list" aria-label={`${TASK_STATUS_LABELS[status]} 업무 목록`} className="px-2 pb-2 space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
-                  {columnTasks.length === 0 ? (
-                    <div className="text-center py-10 text-gray-300 text-xs">
-                      업무 없음
-                    </div>
-                  ) : (
-                    columnTasks.map(task => (
-                      <div
-                        key={task.id}
-                        role="listitem"
-                        tabIndex={0}
-                        onClick={() => handleTaskClick(task)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            handleTaskClick(task)
-                          }
-                        }}
-                        className={`bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          isOverdue(task) ? 'ring-1 ring-red-200 border-red-200' : ''
-                        }`}
-                      >
-                        {/* 우선순위 + 기한초과 배지 */}
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${TASK_PRIORITY_COLORS[task.priority]}`}>
-                            {TASK_PRIORITY_LABELS[task.priority]}
-                          </span>
-                          {isOverdue(task) && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium">
-                              기한초과
-                            </span>
-                          )}
-                        </div>
-
-                        {/* 제목 */}
-                        <h4 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2 leading-snug">
-                          {task.title}
-                        </h4>
-
-                        {/* 설명 미리보기 */}
-                        {task.description && (
-                          <p className="text-xs text-gray-400 line-clamp-1 mb-2">
-                            {stripHtml(task.description)}
-                          </p>
-                        )}
-
-                        {/* 진행률 바 */}
-                        {task.status !== 'cancelled' && task.progress > 0 && (
-                          <div className="mb-2">
-                            <div className="flex items-center justify-between text-[10px] text-gray-400 mb-0.5">
-                              <span>진행률</span>
-                              <span>{task.progress}%</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-1">
-                              <div
-                                className={`h-1 rounded-full transition-all ${
-                                  task.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'
-                                }`}
-                                style={{ width: `${task.progress}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 하단: 담당자, 마감일, 댓글 */}
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
-                          <div className="flex items-center gap-2 text-[11px] text-gray-500 min-w-0">
-                            <span className="flex items-center gap-0.5 truncate">
-                              <User className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate">{task.assignee_name}</span>
-                            </span>
-                            {task.due_date && (
-                              <span className={`flex items-center gap-0.5 flex-shrink-0 ${
-                                isOverdue(task) ? 'text-red-500 font-medium' : ''
-                              }`}>
-                                <Calendar className="w-3 h-3" />
-                                {formatDate(task.due_date)}
-                              </span>
-                            )}
-                          </div>
-                          {task.comments_count > 0 && (
-                            <span className="flex items-center gap-0.5 text-[11px] text-gray-400 flex-shrink-0">
-                              <MessageCircle className="w-3 h-3" />
-                              {task.comments_count}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* 빠른 상태 변경 버튼 (담당자만) */}
-                        {task.status === 'pending' && currentUserId === task.assignee_id && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleStatusUpdate(task.id, 'in_progress')
-                            }}
-                            className="mt-2 w-full text-xs py-1.5 rounded-md border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors font-medium"
-                          >
-                            업무 시작
-                          </button>
-                        )}
-                        {task.status === 'in_progress' && currentUserId === task.assignee_id && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleStatusUpdate(task.id, 'completed')
-                            }}
-                            className="mt-2 w-full text-xs py-1.5 rounded-md border border-green-200 text-green-600 hover:bg-green-50 transition-colors font-medium"
-                          >
-                            완료 보고
-                          </button>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <TaskCardView tasks={displayedTasks} onTaskClick={handleTaskClick} />
       )}
     </div>
   )

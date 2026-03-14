@@ -75,6 +75,7 @@ export interface CreateDocumentDto {
 export type TaskStatus =
   | 'pending'       // 대기
   | 'in_progress'   // 진행 중
+  | 'review'        // 검토 요청
   | 'completed'     // 완료
   | 'on_hold'       // 보류
   | 'cancelled'     // 취소
@@ -165,6 +166,7 @@ export const DOCUMENT_CATEGORY_LABELS: Record<DocumentCategory, string> = {
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   pending: '대기',
   in_progress: '진행 중',
+  review: '검토 요청',
   completed: '완료',
   on_hold: '보류',
   cancelled: '취소'
@@ -182,6 +184,7 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
   pending: 'bg-gray-100 text-gray-700',
   in_progress: 'bg-blue-100 text-blue-700',
+  review: 'bg-purple-100 text-purple-700',
   completed: 'bg-green-100 text-green-700',
   on_hold: 'bg-yellow-100 text-yellow-700',
   cancelled: 'bg-red-100 text-red-700'
