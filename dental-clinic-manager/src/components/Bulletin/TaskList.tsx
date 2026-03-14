@@ -7,6 +7,8 @@ import {
   Search,
   AlertCircle,
   Filter,
+  CheckCircle2,
+  ClipboardList,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -21,6 +23,8 @@ import TaskForm from './TaskForm'
 import TaskCardView from './TaskCardView'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
+type ViewTab = 'active' | 'completed'
+
 interface TaskListProps {
   canCreate?: boolean
   showMyTasksOnly?: boolean
@@ -30,17 +34,18 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedStatus, setSelectedStatus] = useState<TaskStatus | ''>('')
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority | ''>('')
   const [searchQuery, setSearchQuery] = useState('')
   const [total, setTotal] = useState(0)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [activeTab, setActiveTab] = useState<ViewTab>('active')
   const [stats, setStats] = useState<{
     total: number
     pending: number
     in_progress: number
+    review: number
     completed: number
     overdue: number
   } | null>(null)
@@ -49,7 +54,6 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     setError(null)
 
     const { data, total: totalCount, error: fetchError } = await taskService.getTasks({
-      status: selectedStatus || undefined,
       priority: selectedPriority || undefined,
       search: searchQuery || undefined,
       limit: 100,
@@ -63,7 +67,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
       setTotal(totalCount)
     }
     setLoading(false)
-  }, [selectedStatus, selectedPriority, searchQuery, showMyTasksOnly])
+  }, [selectedPriority, searchQuery, showMyTasksOnly])
 
   const fetchStats = useCallback(async () => {
     const { data } = await taskService.getTaskStats()
@@ -80,10 +84,6 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     fetchTasks()
-  }
-
-  const handleStatusChange = (status: TaskStatus | '') => {
-    setSelectedStatus(status)
   }
 
   const handlePriorityChange = (priority: TaskPriority | '') => {
@@ -140,6 +140,11 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     setEditingTask(null)
   }
 
+  // 탭에 따라 필터링
+  const activeTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled')
+  const completedTasks = tasks.filter(t => t.status === 'completed')
+  const displayedTasks = activeTab === 'active' ? activeTasks : completedTasks
+
   if (showForm) {
     return (
       <TaskForm
@@ -187,7 +192,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
 
       {/* 통계 */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
           <div className="bg-gray-50 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
             <p className="text-xs text-gray-500">전체</p>
@@ -200,6 +205,10 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
             <p className="text-2xl font-bold text-blue-600">{stats.in_progress}</p>
             <p className="text-xs text-gray-500">진행 중</p>
           </div>
+          <div className="bg-purple-50 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-purple-600">{stats.review}</p>
+            <p className="text-xs text-gray-500">검토 요청</p>
+          </div>
           <div className="bg-green-50 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
             <p className="text-xs text-gray-500">완료</p>
@@ -211,20 +220,46 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </div>
       )}
 
+      {/* 진행 중 / 완료 탭 */}
+      <div className="flex items-center gap-1 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('active')}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'active'
+              ? 'border-purple-600 text-purple-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ClipboardList className="w-4 h-4" />
+          진행 업무
+          <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+            activeTab === 'active' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            {activeTasks.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'completed'
+              ? 'border-green-600 text-green-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          완료된 업무
+          <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+            activeTab === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            {completedTasks.length}
+          </span>
+        </button>
+      </div>
+
       {/* 필터 및 검색 */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-gray-500" />
-          <select
-            value={selectedStatus}
-            onChange={(e) => handleStatusChange(e.target.value as TaskStatus | '')}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">전체 상태</option>
-            {Object.entries(TASK_STATUS_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
           <select
             value={selectedPriority}
             onChange={(e) => handlePriorityChange(e.target.value as TaskPriority | '')}
@@ -264,16 +299,24 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
         </div>
-      ) : tasks.length === 0 ? (
+      ) : displayedTasks.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
           <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ListTodo className="w-8 h-8 text-sky-300" />
+            {activeTab === 'active' ? (
+              <ListTodo className="w-8 h-8 text-sky-300" />
+            ) : (
+              <CheckCircle2 className="w-8 h-8 text-green-300" />
+            )}
           </div>
-          <p className="font-medium text-gray-600 mb-1">등록된 업무가 없습니다</p>
-          <p className="text-sm text-gray-400">새로운 업무가 할당되면 여기에 표시됩니다.</p>
+          <p className="font-medium text-gray-600 mb-1">
+            {activeTab === 'active' ? '진행 중인 업무가 없습니다' : '완료된 업무가 없습니다'}
+          </p>
+          <p className="text-sm text-gray-400">
+            {activeTab === 'active' ? '새로운 업무가 할당되면 여기에 표시됩니다.' : '업무가 완료되면 여기에 표시됩니다.'}
+          </p>
         </div>
       ) : (
-        <TaskCardView tasks={tasks} onTaskClick={handleTaskClick} />
+        <TaskCardView tasks={displayedTasks} onTaskClick={handleTaskClick} />
       )}
     </div>
   )

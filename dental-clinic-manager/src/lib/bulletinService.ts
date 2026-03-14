@@ -739,9 +739,9 @@ export const taskService = {
       if (input.due_date !== undefined) updateData.due_date = input.due_date || null
       if (input.progress !== undefined) updateData.progress = input.progress
 
-      // 완료 알림을 위해 현재 업무 정보를 먼저 조회
+      // 검토 요청 또는 완료 시 알림을 위해 현재 업무 정보를 먼저 조회
       let existingTask: any = null
-      if (input.status === 'completed') {
+      if (input.status === 'review' || input.status === 'completed') {
         const { data: taskData } = await (supabase as any)
           .from('tasks')
           .select('assignee_id, assigner_id, title')
@@ -759,15 +759,26 @@ export const taskService = {
 
       if (error) throw error
 
-      // 업무 완료 시 할당자(원장)에게 알림 전송
-      if (input.status === 'completed' && existingTask?.assigner_id) {
+      // 검토 요청 시 할당자(결재자)에게 알림 전송
+      if (input.status === 'review' && existingTask?.assigner_id) {
         const userName = getCurrentUserName()
         userNotificationService.notifyTaskCompleted(
           existingTask.assigner_id,
           userName || '담당자',
-          existingTask.title,
+          `[검토 요청] ${existingTask.title}`,
           id
-        ).catch(err => console.error('[taskService.updateTask] Notification error:', err))
+        ).catch(err => console.error('[taskService.updateTask] Review notification error:', err))
+      }
+
+      // 업무 완료 승인 시 담당자에게 알림 전송
+      if (input.status === 'completed' && existingTask?.assignee_id) {
+        const userName = getCurrentUserName()
+        userNotificationService.notifyTaskCompleted(
+          existingTask.assignee_id,
+          userName || '결재자',
+          `[완료 승인] ${existingTask.title}`,
+          id
+        ).catch(err => console.error('[taskService.updateTask] Completion notification error:', err))
       }
 
       return { data, error: null }
@@ -821,6 +832,7 @@ export const taskService = {
       total: number
       pending: number
       in_progress: number
+      review: number
       completed: number
       overdue: number
     } | null
@@ -855,6 +867,13 @@ export const taskService = {
         .eq('clinic_id', clinicId)
         .eq('status', 'in_progress')
 
+      // 검토 요청
+      const { count: review } = await (supabase as any)
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId)
+        .eq('status', 'review')
+
       // 완료
       const { count: completed } = await (supabase as any)
         .from('tasks')
@@ -867,7 +886,7 @@ export const taskService = {
         .from('tasks')
         .select('*', { count: 'exact', head: true })
         .eq('clinic_id', clinicId)
-        .in('status', ['pending', 'in_progress'])
+        .in('status', ['pending', 'in_progress', 'review'])
         .lt('due_date', today)
 
       return {
@@ -875,6 +894,7 @@ export const taskService = {
           total: total || 0,
           pending: pending || 0,
           in_progress: in_progress || 0,
+          review: review || 0,
           completed: completed || 0,
           overdue: overdue || 0,
         },

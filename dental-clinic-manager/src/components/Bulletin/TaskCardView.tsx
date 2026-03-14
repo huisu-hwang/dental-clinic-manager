@@ -10,6 +10,7 @@ import {
   Pause,
   XCircle,
   Flag,
+  Eye,
 } from 'lucide-react'
 import type { Task, TaskStatus, TaskPriority } from '@/types/bulletin'
 import {
@@ -22,11 +23,12 @@ interface TaskCardViewProps {
   onTaskClick: (task: Task) => void
 }
 
-const STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'completed', 'on_hold', 'cancelled']
+const STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'review', 'on_hold', 'cancelled']
 
 const STATUS_BADGE_STYLES: Record<TaskStatus, { bg: string; text: string; dot: string; border: string }> = {
   pending: { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-400', border: 'border-gray-200' },
   in_progress: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500', border: 'border-blue-200' },
+  review: { bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-500', border: 'border-purple-200' },
   completed: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500', border: 'border-green-200' },
   on_hold: { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500', border: 'border-yellow-200' },
   cancelled: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-400', border: 'border-red-200' },
@@ -43,6 +45,7 @@ const getStatusIcon = (status: TaskStatus) => {
   switch (status) {
     case 'pending': return <Circle className="w-3.5 h-3.5" />
     case 'in_progress': return <Loader2 className="w-3.5 h-3.5" />
+    case 'review': return <Eye className="w-3.5 h-3.5" />
     case 'completed': return <CheckCircle2 className="w-3.5 h-3.5" />
     case 'on_hold': return <Pause className="w-3.5 h-3.5" />
     case 'cancelled': return <XCircle className="w-3.5 h-3.5" />
