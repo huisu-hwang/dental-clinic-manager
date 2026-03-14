@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  scraping-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hometax-scraping-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PLAYWRIGHT_HEADLESS=true
+    volumes:
+      - playwright-data:/app/playwright-data
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  playwright-data:

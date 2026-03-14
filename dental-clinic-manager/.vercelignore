@@ -1,6 +1,9 @@
 # Supabase Edge Functions (별도 배포)
 /supabase/
 
+# 스크래핑 워커 (별도 Docker 배포)
+/scraping-worker/
+
 # SQL 파일
 *.sql
 

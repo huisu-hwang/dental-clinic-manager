@@ -11,8 +11,8 @@ import {
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import RevenueForm from './RevenueForm'
 import ExpenseForm from './ExpenseForm'
-import CodefSyncPanel from './CodefSyncPanel'
-import CreditCardSalesPanel from './CreditCardSalesPanel'
+import HometaxSyncPanel from './HometaxSyncPanel'
+import HometaxDataView from './HometaxDataView'
 import {
   TrendingUp,
   TrendingDown,
@@ -28,9 +28,7 @@ import {
   Calculator,
   Building2,
   BarChart3,
-  CreditCard,
   Building,
-  ArrowRight
 } from 'lucide-react'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
@@ -241,122 +239,37 @@ export default function FinancialDashboard() {
             </div>
           </div>
 
-          {/* Hometax Integration Tri-Pillar Dashboard */}
+          {/* Hometax Integration - Placeholder */}
           <div className="pt-6">
             <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
               <Building className="w-6 h-6 text-indigo-500" />
               홈택스 매입·매출 통합 현황
-              <span className="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-1 rounded-full ml-2">자동 연동</span>
+              <span className="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full ml-2">연동 준비 중</span>
             </h2>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Pillar 1: Tax Invoices */}
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:border-indigo-300 transition-colors">
-                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <h3 className="font-bold text-slate-800">세금계산서</h3>
-                  </div>
-                </div>
-                <div className="p-6 flex-1 flex flex-col justify-center space-y-6">
-                  {summary?.codef_sync ? (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-slate-500">매출 (발행건)</p>
-                          <p className="text-2xl font-bold text-blue-600 mt-1">{summary.codef_sync.tax_invoice_sales_count}건</p>
-                        </div>
-                        <TrendingUp className="w-8 h-8 text-blue-100" />
-                      </div>
-                      <div className="h-px bg-slate-100 w-full"></div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-slate-500">매입 (수취건)</p>
-                          <p className="text-2xl font-bold text-rose-500 mt-1">{summary.codef_sync.tax_invoice_purchase_count}건</p>
-                        </div>
-                        <TrendingDown className="w-8 h-8 text-rose-100" />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center text-slate-400 py-4">
-                      연동된 데이터가 없습니다
-                    </div>
-                  )}
+              {/* Pillar 1-2: Hometax Data Summary (6종 데이터 카드) */}
+              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="p-5">
+                  <HometaxDataView
+                    clinicId={clinicId}
+                    year={selectedYear}
+                    month={selectedMonth}
+                  />
                 </div>
               </div>
 
-              {/* Pillar 2: Cash Receipts */}
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:border-emerald-300 transition-colors">
-                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600">
-                      <Receipt className="w-5 h-5" />
-                    </div>
-                    <h3 className="font-bold text-slate-800">현금영수증</h3>
-                  </div>
-                </div>
-                <div className="p-6 flex-1 flex flex-col justify-center space-y-6">
-                  {summary?.codef_sync ? (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-slate-500">매출 (발행건)</p>
-                          <p className="text-2xl font-bold text-emerald-600 mt-1">{summary.codef_sync.cash_receipt_sales_count}건</p>
-                        </div>
-                        <TrendingUp className="w-8 h-8 text-emerald-100" />
-                      </div>
-                      <div className="h-px bg-slate-100 w-full"></div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-slate-500">매입 (수취건)</p>
-                          <p className="text-2xl font-bold text-rose-500 mt-1">{summary.codef_sync.cash_receipt_purchase_count}건</p>
-                        </div>
-                        <TrendingDown className="w-8 h-8 text-rose-100" />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center text-slate-400 py-4">
-                      연동된 데이터가 없습니다
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Pillar 3: Codef Connection Manager / Quick Actions */}
+              {/* Pillar 3: Hometax Sync Manager */}
               <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600">
-                      <Building2 className="w-5 h-5" />
-                    </div>
-                    <h3 className="font-bold text-slate-800">연동 관리</h3>
-                  </div>
-                </div>
-                <div className="p-5 flex-1 flex flex-col justify-between">
-                  <CodefSyncPanel
+                <div className="p-4 flex-1">
+                  <HometaxSyncPanel
                     clinicId={clinicId}
                     year={selectedYear}
                     month={selectedMonth}
                     onSyncComplete={loadData}
                   />
-                  {summary?.codef_sync?.synced_at && (
-                    <p className="text-xs text-center text-slate-400 mt-4">
-                      마지막 동기화: {new Date(summary.codef_sync.synced_at).toLocaleString('ko-KR')}
-                    </p>
-                  )}
                 </div>
               </div>
-            </div>
-
-            {/* 신용카드 매출 조회 패널 - Beautiful integration */}
-            <div className="mt-6">
-              <CreditCardSalesPanel
-                clinicId={clinicId}
-                year={selectedYear}
-                month={selectedMonth}
-              />
             </div>
           </div>
 
