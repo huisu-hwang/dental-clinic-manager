@@ -15,7 +15,9 @@ import {
   Loader2,
   Pause,
   XCircle,
-  MessageCircle
+  MessageCircle,
+  LayoutList,
+  LayoutGrid
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -29,6 +31,7 @@ import {
 } from '@/types/bulletin'
 import TaskDetail from './TaskDetail'
 import TaskForm from './TaskForm'
+import TaskCardView from './TaskCardView'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface TaskListProps {
@@ -62,6 +65,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list')
   const [stats, setStats] = useState<{
     total: number
     pending: number
@@ -81,8 +85,8 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
       status: selectedStatus || undefined,
       priority: selectedPriority || undefined,
       search: searchQuery || undefined,
-      limit: ITEMS_PER_PAGE,
-      offset: (page - 1) * ITEMS_PER_PAGE,
+      limit: viewMode === 'card' ? 100 : ITEMS_PER_PAGE,
+      offset: viewMode === 'card' ? 0 : (page - 1) * ITEMS_PER_PAGE,
     })
 
     if (fetchError) {
@@ -92,7 +96,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
       setTotal(totalCount)
     }
     setLoading(false)
-  }, [selectedStatus, selectedPriority, searchQuery, page, showMyTasksOnly])
+  }, [selectedStatus, selectedPriority, searchQuery, page, showMyTasksOnly, viewMode])
 
   const fetchStats = useCallback(async () => {
     const { data } = await taskService.getTaskStats()
@@ -245,12 +249,31 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
             <span className="text-xs text-gray-400 font-normal ml-1">총 {total}건</span>
           )}
         </div>
-        {canCreate && (
-          <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            새 업무 할당
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* 보기 모드 전환 */}
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 transition-colors ${viewMode === 'list' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+              title="리스트 보기"
+            >
+              <LayoutList className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('card')}
+              className={`p-2 transition-colors ${viewMode === 'card' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+              title="카드 보기"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
+          {canCreate && (
+            <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              새 업무 할당
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* 통계 */}
@@ -342,155 +365,161 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </div>
       ) : (
         <>
-          {/* 업무 목록 */}
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                onClick={() => handleTaskClick(task)}
-                className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors border-l-2 ${
-                  isOverdue(task) ? 'border-l-red-500 bg-red-50 hover:bg-red-50' : task.priority === 'urgent' ? 'border-l-red-400' : task.priority === 'high' ? 'border-l-orange-400' : task.priority === 'medium' ? 'border-l-blue-400' : 'border-l-transparent'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* 상태 아이콘 */}
-                  <div className={`flex-shrink-0 mt-1 p-1 rounded ${TASK_STATUS_COLORS[task.status]}`}>
-                    {getStatusIcon(task.status)}
-                  </div>
+          {viewMode === 'card' ? (
+            <TaskCardView tasks={tasks} onTaskClick={handleTaskClick} />
+          ) : (
+            <>
+              {/* 업무 목록 */}
+              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
+                {tasks.map((task) => (
+                  <div
+                    key={task.id}
+                    onClick={() => handleTaskClick(task)}
+                    className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors border-l-2 ${
+                      isOverdue(task) ? 'border-l-red-500 bg-red-50 hover:bg-red-50' : task.priority === 'urgent' ? 'border-l-red-400' : task.priority === 'high' ? 'border-l-orange-400' : task.priority === 'medium' ? 'border-l-blue-400' : 'border-l-transparent'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* 상태 아이콘 */}
+                      <div className={`flex-shrink-0 mt-1 p-1 rounded ${TASK_STATUS_COLORS[task.status]}`}>
+                        {getStatusIcon(task.status)}
+                      </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
-                        {TASK_PRIORITY_LABELS[task.priority]}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
-                        {TASK_STATUS_LABELS[task.status]}
-                      </span>
-                      {isOverdue(task) && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                          기한 초과
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-gray-900 font-medium">{task.title}</h3>
-                    {task.description && (
-                      <p className="text-sm text-gray-500 truncate mt-1">{stripHtml(task.description)}</p>
-                    )}
-
-                    {/* 진행률 바 */}
-                    {task.status !== 'cancelled' && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                          <span>진행률</span>
-                          <span>{task.progress}%</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
+                            {TASK_PRIORITY_LABELS[task.priority]}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
+                            {TASK_STATUS_LABELS[task.status]}
+                          </span>
+                          {isOverdue(task) && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                              기한 초과
+                            </span>
+                          )}
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                          <div
-                            className={`h-1.5 rounded-full ${task.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}`}
-                            style={{ width: `${task.progress}%` }}
-                          ></div>
+                        <h3 className="text-gray-900 font-medium">{task.title}</h3>
+                        {task.description && (
+                          <p className="text-sm text-gray-500 truncate mt-1">{stripHtml(task.description)}</p>
+                        )}
+
+                        {/* 진행률 바 */}
+                        {task.status !== 'cancelled' && (
+                          <div className="mt-2">
+                            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                              <span>진행률</span>
+                              <span>{task.progress}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full ${task.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}`}
+                                style={{ width: `${task.progress}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            {task.assignee_name}
+                          </span>
+                          {task.due_date && (
+                            <span className={`flex items-center gap-1 ${isOverdue(task) ? 'text-red-600' : ''}`}>
+                              <Calendar className="w-3 h-3" />
+                              {formatDate(task.due_date)}
+                            </span>
+                          )}
+                          {task.comments_count > 0 && (
+                            <span className="flex items-center gap-1">
+                              <MessageCircle className="w-3 h-3" />
+                              {task.comments_count}
+                            </span>
+                          )}
                         </div>
                       </div>
-                    )}
 
-                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        {task.assignee_name}
-                      </span>
-                      {task.due_date && (
-                        <span className={`flex items-center gap-1 ${isOverdue(task) ? 'text-red-600' : ''}`}>
-                          <Calendar className="w-3 h-3" />
-                          {formatDate(task.due_date)}
-                        </span>
-                      )}
-                      {task.comments_count > 0 && (
-                        <span className="flex items-center gap-1">
-                          <MessageCircle className="w-3 h-3" />
-                          {task.comments_count}
-                        </span>
-                      )}
+                      {/* 빠른 상태 변경 버튼 - 담당자만 표시 */}
+                      <div className="flex-shrink-0 flex gap-1">
+                        {task.status === 'pending' && currentUserId === task.assignee_id && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleStatusUpdate(task.id, 'in_progress')
+                            }}
+                            className="text-blue-600"
+                          >
+                            업무 시작
+                          </Button>
+                        )}
+                        {task.status === 'in_progress' && currentUserId === task.assignee_id && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleStatusUpdate(task.id, 'completed')
+                            }}
+                            className="text-green-600"
+                          >
+                            완료 보고
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  {/* 빠른 상태 변경 버튼 - 담당자만 표시 */}
-                  <div className="flex-shrink-0 flex gap-1">
-                    {task.status === 'pending' && currentUserId === task.assignee_id && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStatusUpdate(task.id, 'in_progress')
-                        }}
-                        className="text-blue-600"
-                      >
-                        업무 시작
-                      </Button>
-                    )}
-                    {task.status === 'in_progress' && currentUserId === task.assignee_id && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStatusUpdate(task.id, 'completed')
-                        }}
-                        className="text-green-600"
-                      >
-                        완료 보고
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {/* 페이지네이션 */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-1 mt-4">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                .reduce((acc: (number | string)[], p, i, arr) => {
-                  if (i > 0 && typeof arr[i - 1] === 'number' && (p as number) - (arr[i - 1] as number) > 1) {
-                    acc.push('...')
-                  }
-                  acc.push(p)
-                  return acc
-                }, [])
-                .map((p, i) =>
-                  typeof p === 'string' ? (
-                    <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
-                  ) : (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p as number)}
-                      className={`min-w-[28px] px-2 py-1 text-xs rounded-lg border transition-colors ${
-                        page === p
-                          ? 'bg-sky-500 text-white border-sky-500'
-                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  )
-                )}
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              </button>
-            </div>
+              {/* 페이지네이션 */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-1 mt-4">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                    .reduce((acc: (number | string)[], p, i, arr) => {
+                      if (i > 0 && typeof arr[i - 1] === 'number' && (p as number) - (arr[i - 1] as number) > 1) {
+                        acc.push('...')
+                      }
+                      acc.push(p)
+                      return acc
+                    }, [])
+                    .map((p, i) =>
+                      typeof p === 'string' ? (
+                        <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p as number)}
+                          className={`min-w-[28px] px-2 py-1 text-xs rounded-lg border transition-colors ${
+                            page === p
+                              ? 'bg-sky-500 text-white border-sky-500'
+                              : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      )
+                    )}
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
