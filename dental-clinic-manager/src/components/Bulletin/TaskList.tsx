@@ -41,6 +41,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [activeTab, setActiveTab] = useState<ViewTab>('active')
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'overdue' | ''>('')
   const [stats, setStats] = useState<{
     total: number
     pending: number
@@ -140,10 +141,46 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     setEditingTask(null)
   }
 
+  const handleStatClick = (filter: TaskStatus | 'overdue' | 'all') => {
+    if (filter === 'all') {
+      setStatusFilter('')
+      return
+    }
+    // 같은 필터 다시 클릭하면 해제
+    if (statusFilter === filter) {
+      setStatusFilter('')
+      return
+    }
+    setStatusFilter(filter)
+    // 완료 필터 클릭 시 완료 탭으로 자동 전환
+    if (filter === 'completed') {
+      setActiveTab('completed')
+    } else {
+      setActiveTab('active')
+    }
+  }
+
+  const isOverdue = (task: Task) => {
+    if (!task.due_date) return false
+    if (task.status === 'completed' || task.status === 'cancelled') return false
+    return new Date(task.due_date) < new Date()
+  }
+
   // 탭에 따라 필터링
   const activeTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled')
   const completedTasks = tasks.filter(t => t.status === 'completed')
-  const displayedTasks = activeTab === 'active' ? activeTasks : completedTasks
+
+  // 상태 필터 적용
+  let displayedTasks: Task[]
+  if (statusFilter === 'overdue') {
+    displayedTasks = tasks.filter(t => isOverdue(t))
+  } else if (statusFilter === 'completed') {
+    displayedTasks = completedTasks
+  } else if (statusFilter) {
+    displayedTasks = tasks.filter(t => t.status === statusFilter)
+  } else {
+    displayedTasks = activeTab === 'active' ? activeTasks : completedTasks
+  }
 
   if (showForm) {
     return (
@@ -190,40 +227,58 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         )}
       </div>
 
-      {/* 통계 */}
+      {/* 통계 (클릭하면 해당 상태 필터링) */}
       {stats && (
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <button
+            onClick={() => handleStatClick('all')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === '' ? 'bg-gray-100 ring-2 ring-gray-400' : 'bg-gray-50 hover:bg-gray-100'}`}
+          >
             <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
             <p className="text-xs text-gray-500">전체</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
+          </button>
+          <button
+            onClick={() => handleStatClick('pending')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'pending' ? 'bg-gray-200 ring-2 ring-gray-500' : 'bg-gray-50 hover:bg-gray-100'}`}
+          >
             <p className="text-2xl font-bold text-gray-600">{stats.pending}</p>
             <p className="text-xs text-gray-500">대기</p>
-          </div>
-          <div className="bg-blue-50 rounded-lg p-3 text-center">
+          </button>
+          <button
+            onClick={() => handleStatClick('in_progress')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'in_progress' ? 'bg-blue-100 ring-2 ring-blue-500' : 'bg-blue-50 hover:bg-blue-100'}`}
+          >
             <p className="text-2xl font-bold text-blue-600">{stats.in_progress}</p>
             <p className="text-xs text-gray-500">진행 중</p>
-          </div>
-          <div className="bg-purple-50 rounded-lg p-3 text-center">
+          </button>
+          <button
+            onClick={() => handleStatClick('review')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'review' ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-purple-50 hover:bg-purple-100'}`}
+          >
             <p className="text-2xl font-bold text-purple-600">{stats.review}</p>
             <p className="text-xs text-gray-500">검토 요청</p>
-          </div>
-          <div className="bg-green-50 rounded-lg p-3 text-center">
+          </button>
+          <button
+            onClick={() => handleStatClick('completed')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'completed' ? 'bg-green-100 ring-2 ring-green-500' : 'bg-green-50 hover:bg-green-100'}`}
+          >
             <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
             <p className="text-xs text-gray-500">완료</p>
-          </div>
-          <div className="bg-red-50 rounded-lg p-3 text-center">
+          </button>
+          <button
+            onClick={() => handleStatClick('overdue')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'overdue' ? 'bg-red-100 ring-2 ring-red-500' : 'bg-red-50 hover:bg-red-100'}`}
+          >
             <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
             <p className="text-xs text-gray-500">기한 초과</p>
-          </div>
+          </button>
         </div>
       )}
 
       {/* 진행 중 / 완료 탭 */}
       <div className="flex items-center gap-1 border-b border-gray-200">
         <button
-          onClick={() => setActiveTab('active')}
+          onClick={() => { setActiveTab('active'); setStatusFilter('') }}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'active'
               ? 'border-purple-600 text-purple-600'
@@ -239,7 +294,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           </span>
         </button>
         <button
-          onClick={() => setActiveTab('completed')}
+          onClick={() => { setActiveTab('completed'); setStatusFilter('') }}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'completed'
               ? 'border-green-600 text-green-600'
