@@ -23,7 +23,7 @@ interface TaskCardViewProps {
   onTaskClick: (task: Task) => void
 }
 
-const STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'review', 'on_hold', 'cancelled']
+const STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'review', 'completed', 'on_hold', 'cancelled']
 
 const STATUS_BADGE_STYLES: Record<TaskStatus, { bg: string; text: string; dot: string; border: string }> = {
   pending: { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-400', border: 'border-gray-200' },
