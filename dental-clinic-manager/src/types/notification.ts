@@ -306,6 +306,7 @@ export type UserNotificationType =
   | 'telegram_board_approved'     // 텔레그램 게시판 승인 (신청자에게)
   | 'telegram_board_rejected'     // 텔레그램 게시판 반려 (신청자에게)
   | 'telegram_board_pending'      // 텔레그램 게시판 신청 접수 (관리자에게)
+  | 'signup_approval_pending'     // 회원가입 승인 대기 (마스터/원장에게)
   | 'task_assigned'               // 새 업무 할당됨 (담당자에게)
   | 'task_completed'              // 업무 완료됨 (할당자에게)
   | 'important'                   // 중요 알림
@@ -328,6 +329,7 @@ export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string>
   telegram_board_approved: '게시판 승인',
   telegram_board_rejected: '게시판 반려',
   telegram_board_pending: '게시판 신청',
+  signup_approval_pending: '가입 승인 요청',
   task_assigned: '업무 할당',
   task_completed: '업무 완료',
   important: '중요 알림',
@@ -351,6 +353,7 @@ export const USER_NOTIFICATION_TYPE_ICONS: Record<UserNotificationType, string> 
   telegram_board_approved: 'check-circle',
   telegram_board_rejected: 'x-circle',
   telegram_board_pending: 'clock',
+  signup_approval_pending: 'user-plus',
   task_assigned: 'clipboard-list',
   task_completed: 'check-circle',
   important: 'exclamation-circle',
@@ -374,6 +377,7 @@ export const USER_NOTIFICATION_TYPE_COLORS: Record<UserNotificationType, { icon:
   telegram_board_approved: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
   telegram_board_rejected: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
   telegram_board_pending: { icon: 'text-amber-500', bg: 'bg-amber-50', text: 'text-amber-700' },
+  signup_approval_pending: { icon: 'text-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-700' },
   task_assigned: { icon: 'text-purple-500', bg: 'bg-purple-50', text: 'text-purple-700' },
   task_completed: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
   important: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },

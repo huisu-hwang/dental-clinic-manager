@@ -154,6 +154,25 @@ export default function ClinicSelectionForm({
         setError(data?.error || '가입 신청 중 오류가 발생했습니다.')
       } else {
         setSuccess('가입 신청이 성공적으로 접수되었습니다. 병원 관리자의 승인을 기다려주세요.')
+
+        // 마스터(대표원장) 계정에 가입 승인 요청 알림 발송
+        try {
+          await fetch('/api/admin/signup-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clinicId: selectedClinicId,
+              applicantName: joinRequestData.name,
+              applicantEmail: joinRequestData.email,
+              applicantPhone: joinRequestData.phone,
+              applicantRole: joinRequestData.role,
+            }),
+          });
+          console.log('[ClinicSelection] Signup notification sent to clinic owner');
+        } catch (notifyError) {
+          console.error('[ClinicSelection] Failed to send signup notification:', notifyError);
+        }
+
         setTimeout(() => {
           onSelectClinic(selectedClinicId)
         }, 3000)

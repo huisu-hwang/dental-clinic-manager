@@ -303,6 +303,25 @@ export default function SignupForm({
           console.error('[Signup] User profile creation error:', userProfileError);
           throw new Error('가입 신청 실패: ' + userProfileError.message);
         }
+
+        // 마스터(대표원장) 계정에 가입 승인 요청 알림 발송 (이메일 + SMS + 인앱)
+        try {
+          await fetch('/api/admin/signup-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clinicId: selectedClinicId,
+              applicantName: formData.name,
+              applicantEmail: formData.userId,
+              applicantPhone: formData.phone,
+              applicantRole: formData.role,
+            }),
+          });
+          console.log('[Signup] Signup notification sent to clinic owner');
+        } catch (notifyError) {
+          // 알림 발송 실패해도 가입 신청은 성공으로 처리
+          console.error('[Signup] Failed to send signup notification:', notifyError);
+        }
       }
 
       console.log('[Signup] Signup completed successfully!');
