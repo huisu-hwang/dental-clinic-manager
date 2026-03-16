@@ -28,7 +28,9 @@ export default function QRAttendancePage() {
   const [actionType, setActionType] = useState<'check-in' | 'check-out' | 'error'>('check-in')
   const [checkInTime, setCheckInTime] = useState<string | null>(null)
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [canRetry, setCanRetry] = useState(false)
   const hasProcessed = useRef(false)
+  const isProcessing = useRef(false)
 
   useEffect(() => {
     // 인증 상태 확인 중이면 대기
@@ -47,12 +49,18 @@ export default function QRAttendancePage() {
   }, [params.code, user, authLoading])
 
   const processAttendance = async () => {
+    // 동시 실행 방지 (재시도 버튼 연타 등)
+    if (isProcessing.current) return
+    isProcessing.current = true
+    setCanRetry(false)
+
     const code = params.code as string
 
     // 1. AuthContext 인증 확인
     if (!user) {
       console.log('[QRAttendancePage] No user in AuthContext, showing login form')
       setStatus('needs-login')
+      isProcessing.current = false
       return
     }
 
@@ -64,11 +72,13 @@ export default function QRAttendancePage() {
       if (!session) {
         console.warn('[QRAttendancePage] AuthContext has user but Supabase session is invalid')
         setStatus('needs-login')
+        isProcessing.current = false
         return
       }
     } catch (e) {
       console.error('[QRAttendancePage] Failed to verify Supabase session:', e)
       setStatus('needs-login')
+      isProcessing.current = false
       return
     }
 
@@ -80,9 +90,16 @@ export default function QRAttendancePage() {
     try {
       const todayResult = await attendanceService.getTodayAttendance(user.id)
 
+      // DB 조회 실패 시 에러 표시 (진행하지 않음)
+      // 기존: 실패해도 checkIn 시도 → 이미 출근한 경우 잘못된 "이미 출근" 메시지 표시
       if (!todayResult.success) {
         console.error('[QRAttendancePage] getTodayAttendance failed:', todayResult.error)
-        // DB 조회 실패 시에도 출근 시도 (checkIn 내부에서 중복 체크함)
+        setStatus('error')
+        setMessage('출퇴근 정보를 확인할 수 없습니다. 다시 시도해주세요.')
+        setActionType('error')
+        setCanRetry(true)
+        isProcessing.current = false
+        return
       }
 
       const todayRecord = todayResult.record
@@ -92,6 +109,7 @@ export default function QRAttendancePage() {
         setStatus('error')
         setMessage('오늘 이미 퇴근하셨습니다.')
         setActionType('error')
+        isProcessing.current = false
         return
       }
 
@@ -99,6 +117,7 @@ export default function QRAttendancePage() {
       if (todayRecord?.check_in_time && !todayRecord?.check_out_time) {
         setCheckInTime(todayRecord.check_in_time)
         setStatus('confirm-checkout')
+        isProcessing.current = false
         return
       }
 
@@ -119,9 +138,23 @@ export default function QRAttendancePage() {
         setMessage(result.message || '출근 처리되었습니다.')
         setActionType('check-in')
       } else {
-        setStatus('error')
-        setMessage(result.message || '출근 처리 실패')
-        setActionType('error')
+        // checkIn 실패 시 반환된 레코드 상태에 따라 적절한 화면 표시
+        // (동시 QR 스캔, 다른 탭에서의 처리 등으로 상태가 변경된 경우 대응)
+        if (result.record?.check_out_time) {
+          // 동시 요청 등으로 이미 퇴근 처리된 경우
+          setStatus('error')
+          setMessage('오늘 이미 퇴근하셨습니다.')
+          setActionType('error')
+        } else if (result.record?.check_in_time) {
+          // 동시 요청 등으로 이미 출근 처리된 경우 → 퇴근 확인 화면
+          setCheckInTime(result.record.check_in_time)
+          setStatus('confirm-checkout')
+        } else {
+          setStatus('error')
+          setMessage(result.message || '출근 처리 실패')
+          setActionType('error')
+          setCanRetry(true)
+        }
       }
     } catch (error: any) {
       console.error('[QRAttendancePage] Error:', error)
@@ -138,6 +171,7 @@ export default function QRAttendancePage() {
       ) {
         console.warn('[QRAttendancePage] Auth-related error detected, showing login form')
         setStatus('needs-login')
+        isProcessing.current = false
         return
       }
 
@@ -157,7 +191,18 @@ export default function QRAttendancePage() {
 
       setMessage(errorMessage)
       setActionType('error')
+      setCanRetry(true)
+    } finally {
+      isProcessing.current = false
     }
+  }
+
+  // 재시도 핸들러
+  const handleRetry = () => {
+    setStatus('loading')
+    setMessage('')
+    setCanRetry(false)
+    processAttendance()
   }
 
   // 퇴근 확인 후 처리
@@ -183,10 +228,16 @@ export default function QRAttendancePage() {
         setStatus('success')
         setMessage(result.message || '퇴근 처리되었습니다.')
         setActionType('check-out')
+      } else if (result.record?.check_out_time) {
+        // 동시 요청 등으로 이미 퇴근 처리됨 → 성공으로 처리 (멱등성)
+        setStatus('success')
+        setMessage('퇴근 처리되었습니다.')
+        setActionType('check-out')
       } else {
         setStatus('error')
         setMessage(result.message || '퇴근 처리 실패')
         setActionType('error')
+        setCanRetry(true)
       }
     } catch (error: any) {
       console.error('[QRAttendancePage] Checkout error:', error)
@@ -204,6 +255,7 @@ export default function QRAttendancePage() {
 
       setMessage(errorMessage)
       setActionType('error')
+      setCanRetry(true)
     }
   }
 
@@ -267,7 +319,7 @@ export default function QRAttendancePage() {
           />
         )}
         {status === 'success' && <SuccessScreen message={message} actionType={actionType} />}
-        {status === 'error' && <ErrorScreen message={message} />}
+        {status === 'error' && <ErrorScreen message={message} canRetry={canRetry} onRetry={handleRetry} />}
       </div>
     </div>
   )
@@ -695,8 +747,8 @@ function SuccessScreen({ message, actionType }: { message: string; actionType: s
 }
 
 // 오류 화면
-function ErrorScreen({ message }: { message: string }) {
-  const [countdown, setCountdown] = useState(10)
+function ErrorScreen({ message, canRetry, onRetry }: { message: string; canRetry?: boolean; onRetry?: () => void }) {
+  const [countdown, setCountdown] = useState(canRetry ? 30 : 10)
   const router = useRouter()
 
   useEffect(() => {
@@ -743,6 +795,16 @@ function ErrorScreen({ message }: { message: string }) {
       {/* 메시지 */}
       <h2 className="text-3xl font-bold text-gray-800 mb-4">처리 실패</h2>
       <p className="text-lg text-gray-600 mb-6">{message}</p>
+
+      {/* 재시도 버튼 */}
+      {canRetry && onRetry && (
+        <button
+          onClick={onRetry}
+          className="w-full py-4 mb-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors text-lg"
+        >
+          다시 시도
+        </button>
+      )}
 
       {/* 안내 */}
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-left">
