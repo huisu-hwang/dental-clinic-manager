@@ -21,7 +21,7 @@ import { getTabRoute } from '@/utils/tabRouting'
 const subTabs = [
   { id: 'announcements', label: '공지사항', icon: Megaphone },
   { id: 'documents', label: '문서 모음', icon: FolderOpen },
-  { id: 'tasks', label: '업무 관리', icon: ListTodo },
+  { id: 'tasks', label: '업무 지시', icon: ListTodo },
 ] as const
 
 export default function BulletinPage() {

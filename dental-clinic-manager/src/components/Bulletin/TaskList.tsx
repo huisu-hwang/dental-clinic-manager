@@ -228,7 +228,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <LayoutGrid className="w-5 h-5 text-purple-600" />
-          <h2 className="text-lg font-semibold text-gray-900">업무 관리</h2>
+          <h2 className="text-lg font-semibold text-gray-900">업무 지시</h2>
           {!loading && (
             <span className="text-xs text-gray-400 font-normal ml-1">총 {allTasks.length}건</span>
           )}

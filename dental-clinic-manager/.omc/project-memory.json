@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1772426463457,
-  "projectRoot": "/Users/hhs/project/dental-clinic-manager/dental-clinic-manager",
+  "lastScanned": 1773720113458,
+  "projectRoot": "/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager",
   "techStack": {
     "languages": [
       {
@@ -48,7 +48,7 @@
     "devCommand": "npm run dev",
     "scripts": {
       "dev": "next dev",
-      "build": "next build",
+      "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
       "start": "next start",
       "lint": "eslint"
     }
@@ -75,11 +75,11 @@
   },
   "customNotes": [],
   "directoryMap": {
-    "codef참고문서": {
-      "path": "codef참고문서",
+    "codef참고문서": {
+      "path": "codef참고문서",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1772426463398,
+      "lastAccessed": 1773720113421,
       "keyFiles": [
         "신용카드 매출자료 조회_20260225.pdf",
         "전자세금계산서 상세_20260225.pdf",
@@ -92,14 +92,14 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 0,
-      "lastAccessed": 1772426463399,
+      "lastAccessed": 1773720113421,
       "keyFiles": []
     },
     "public": {
       "path": "public",
       "purpose": "Public files",
       "fileCount": 5,
-      "lastAccessed": 1772426463405,
+      "lastAccessed": 1773720113428,
       "keyFiles": [
         "file.svg",
         "globe.svg",
@@ -108,11 +108,24 @@
         "window.svg"
       ]
     },
+    "scraping-worker": {
+      "path": "scraping-worker",
+      "purpose": null,
+      "fileCount": 8,
+      "lastAccessed": 1773720113429,
+      "keyFiles": [
+        "Dockerfile",
+        "docker-compose.yml",
+        "package-lock.json",
+        "package.json",
+        "tsconfig.json"
+      ]
+    },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 56,
-      "lastAccessed": 1772426463406,
+      "lastAccessed": 1773720113429,
       "keyFiles": [
         "LOGIN_SYSTEM_TEST_REPORT.md",
         "apply-clinic-branches-rls.js",
@@ -125,14 +138,14 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1772426463407,
+      "lastAccessed": 1773720113430,
       "keyFiles": []
     },
     "supabase": {
       "path": "supabase",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1772426463408,
+      "lastAccessed": 1773720113430,
       "keyFiles": [
         "DEPLOYMENT_GUIDE.md",
         "SETUP_CONTRACT_TABLES.sql",
@@ -140,11 +153,29 @@
         "patient-recall-schema.sql"
       ]
     },
+    "scraping-worker/dist": {
+      "path": "scraping-worker/dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 8,
+      "lastAccessed": 1773720113431,
+      "keyFiles": [
+        "config.d.ts",
+        "config.d.ts.map",
+        "config.js"
+      ]
+    },
+    "scraping-worker/node_modules": {
+      "path": "scraping-worker/node_modules",
+      "purpose": "Dependencies",
+      "fileCount": 1,
+      "lastAccessed": 1773720113432,
+      "keyFiles": []
+    },
     "src/app": {
       "path": "src/app",
       "purpose": "Application code",
       "fileCount": 5,
-      "lastAccessed": 1772426463409,
+      "lastAccessed": 1773720113433,
       "keyFiles": [
         "AuthApp.tsx",
         "favicon.ico",
@@ -155,7 +186,7 @@
       "path": "src/components",
       "purpose": "UI components",
       "fileCount": 1,
-      "lastAccessed": 1772426463410,
+      "lastAccessed": 1773720113433,
       "keyFiles": [
         "PasswordResetHandler.tsx"
       ]
@@ -164,7 +195,7 @@
       "path": "src/config",
       "purpose": "Configuration files",
       "fileCount": 1,
-      "lastAccessed": 1772426463410,
+      "lastAccessed": 1773720113433,
       "keyFiles": [
         "menuConfig.ts"
       ]
@@ -172,8 +203,8 @@
     "src/lib": {
       "path": "src/lib",
       "purpose": "Library code",
-      "fileCount": 35,
-      "lastAccessed": 1772426463411,
+      "fileCount": 40,
+      "lastAccessed": 1773720113434,
       "keyFiles": [
         "aiAnalysisService.ts",
         "aiAnalysisServiceV2.ts",
@@ -183,8 +214,8 @@
     "src/types": {
       "path": "src/types",
       "purpose": "Type definitions",
-      "fileCount": 23,
-      "lastAccessed": 1772426463411,
+      "fileCount": 24,
+      "lastAccessed": 1773720113434,
       "keyFiles": [
         "aiAnalysis.ts",
         "attendance.ts",
@@ -195,7 +226,7 @@
       "path": "src/utils",
       "purpose": "Utility functions",
       "fileCount": 13,
-      "lastAccessed": 1772426463412,
+      "lastAccessed": 1773720113435,
       "keyFiles": [
         "dataValidator.ts",
         "dateUtils.ts",
@@ -205,8 +236,8 @@
     "supabase/migrations": {
       "path": "supabase/migrations",
       "purpose": "Database migrations",
-      "fileCount": 75,
-      "lastAccessed": 1772426463413,
+      "fileCount": 96,
+      "lastAccessed": 1773720113437,
       "keyFiles": [
         "001_multi_tenant_schema.sql",
         "002_clinic_join_requests.sql",
@@ -216,207 +247,201 @@
   },
   "hotPaths": [
     {
-      "path": "",
+      "path": "src/components/Bulletin/TaskList.tsx",
+      "accessCount": 22,
+      "lastAccessed": 1773747584268,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/dataService.ts",
+      "accessCount": 13,
+      "lastAccessed": 1773721065133,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Bulletin/TaskDetail.tsx",
+      "accessCount": 11,
+      "lastAccessed": 1773747617011,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Management/ProtocolManagement.tsx",
+      "accessCount": 9,
+      "lastAccessed": 1773721204231,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Protocol/ProtocolDetail.tsx",
       "accessCount": 7,
-      "lastAccessed": 1772426701998,
-      "type": "directory"
+      "lastAccessed": 1773721203414,
+      "type": "file"
     },
     {
-      "path": "src/components/Telegram/AdminTelegramManager.tsx",
+      "path": "src/components/Protocol/ProtocolPermissionManager.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1773743050845,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Protocol/ProtocolSplitModal.tsx",
       "accessCount": 6,
-      "lastAccessed": 1772426884040,
+      "lastAccessed": 1773734262980,
       "type": "file"
     },
     {
-      "path": "src/app/api/telegram/join/[code]/route.ts",
+      "path": "src/types/index.ts",
       "accessCount": 4,
-      "lastAccessed": 1772426934406,
+      "lastAccessed": 1773720943235,
       "type": "file"
     },
     {
-      "path": "src/app/api/telegram/groups/[id]/trigger-summary/route.ts",
-      "accessCount": 4,
-      "lastAccessed": 1772426956959,
-      "type": "file"
-    },
-    {
-      "path": "middleware.ts",
+      "path": "",
       "accessCount": 3,
-      "lastAccessed": 1772426840413,
+      "lastAccessed": 1773720875640,
       "type": "directory"
     },
     {
-      "path": "vercel.json",
-      "accessCount": 2,
-      "lastAccessed": 1772426699937,
-      "type": "directory"
-    },
-    {
-      "path": "src/components/Telegram/TelegramInviteJoin.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1772426819995,
+      "path": "src/app/bulletin/page.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1773721328702,
       "type": "file"
     },
     {
-      "path": "src/app/api/cron/telegram-summary/route.ts",
-      "accessCount": 2,
-      "lastAccessed": 1772426821365,
+      "path": "src/lib/bulletinService.ts",
+      "accessCount": 3,
+      "lastAccessed": 1773721409929,
       "type": "file"
     },
     {
-      "path": "CLAUDE.md",
+      "path": "src/components/Bulletin/TaskForm.tsx",
       "accessCount": 2,
-      "lastAccessed": 1772428891874,
+      "lastAccessed": 1773721295801,
       "type": "file"
     },
     {
-      "path": "src/types/telegram.ts",
+      "path": "supabase/migrations/20250123_create_protocol_tables.sql",
       "accessCount": 1,
-      "lastAccessed": 1772426651929,
+      "lastAccessed": 1773720855038,
       "type": "file"
     },
     {
-      "path": "src/types/community.ts",
+      "path": "supabase/migrations/20251231_create_protocol_permissions.sql",
       "accessCount": 1,
-      "lastAccessed": 1772426652347,
+      "lastAccessed": 1773720855260,
+      "type": "file"
+    },
+    {
+      "path": "src/utils/protocolStepUtils.ts",
+      "accessCount": 1,
+      "lastAccessed": 1773720855472,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Protocol/ProtocolForm.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1773720857970,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Protocol/ProtocolCategoryManager.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1773720858598,
+      "type": "file"
+    },
+    {
+      "path": "src/app/management/page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1773720862082,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20250121_protocol_enhancements.sql",
+      "accessCount": 1,
+      "lastAccessed": 1773720862602,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20250121_protocol_storage_setup.sql",
+      "accessCount": 1,
+      "lastAccessed": 1773720865671,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/add_protocol_enhancements.sql",
+      "accessCount": 1,
+      "lastAccessed": 1773720865873,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Protocol/ProtocolStepsEditor.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1773720879698,
+      "type": "file"
+    },
+    {
+      "path": "PROTOCOL_SETUP_GUIDE.md",
+      "accessCount": 1,
+      "lastAccessed": 1773720879878,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Protocol/ProtocolVersionHistory.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1773720881977,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Protocol/ProtocolPermissionOverview.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1773720882293,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Protocol/ProtocolStepViewer.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1773720962007,
       "type": "file"
     },
     {
       "path": "src/types/bulletin.ts",
       "accessCount": 1,
-      "lastAccessed": 1772426652797,
+      "lastAccessed": 1773721256879,
       "type": "file"
     },
     {
-      "path": "supabase/migrations/20260228_create_telegram_integration.sql",
+      "path": "src/components/Layout/TabNavigation.tsx",
       "accessCount": 1,
-      "lastAccessed": 1772426653266,
+      "lastAccessed": 1773721262619,
       "type": "file"
     },
     {
-      "path": "supabase/functions/telegram-webhook/index.ts",
+      "path": "src/config/menuConfig.ts",
       "accessCount": 1,
-      "lastAccessed": 1772426653738,
+      "lastAccessed": 1773721268256,
       "type": "file"
     },
     {
-      "path": "src/lib/telegramService.ts",
+      "path": "src/types/menuSettings.ts",
       "accessCount": 1,
-      "lastAccessed": 1772426657936,
+      "lastAccessed": 1773721268423,
       "type": "file"
     },
     {
-      "path": "src/lib/telegramSummaryService.ts",
+      "path": "src/lib/menuSettingsService.ts",
       "accessCount": 1,
-      "lastAccessed": 1772426658718,
+      "lastAccessed": 1773721268659,
       "type": "file"
     },
     {
-      "path": "src/app/api/telegram/setup-webhook/route.ts",
+      "path": "src/contexts/AuthContext.tsx",
       "accessCount": 1,
-      "lastAccessed": 1772426659635,
-      "type": "file"
-    },
-    {
-      "path": "src/app/api/telegram/groups/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1772426660285,
-      "type": "file"
-    },
-    {
-      "path": "src/app/api/telegram/groups/[id]/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1772426664680,
-      "type": "file"
-    },
-    {
-      "path": "src/app/api/telegram/groups/[id]/members/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1772426665152,
-      "type": "file"
-    },
-    {
-      "path": "src/app/api/telegram/groups/[id]/invite-links/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1772426666641,
-      "type": "file"
-    },
-    {
-      "path": "src/components/Telegram/AdminTelegramGroupForm.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1772426673151,
-      "type": "file"
-    },
-    {
-      "path": "src/components/Telegram/AdminTelegramMembers.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1772426673994,
-      "type": "file"
-    },
-    {
-      "path": "src/components/Telegram/AdminTelegramSyncStatus.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1772426674068,
-      "type": "file"
-    },
-    {
-      "path": "src/components/Telegram/TelegramBoardPostList.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1772426674786,
-      "type": "file"
-    },
-    {
-      "path": "src/components/Telegram/TelegramBoardPostCard.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1772426679777,
-      "type": "file"
-    },
-    {
-      "path": "src/components/Telegram/TelegramBoardPostDetail.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1772426680233,
-      "type": "file"
-    },
-    {
-      "path": "src/app/community/telegram/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1772426681779,
-      "type": "file"
-    },
-    {
-      "path": "src/app/community/telegram/[slug]/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1772426682212,
-      "type": "file"
-    },
-    {
-      "path": "src/app/community/telegram/join/[code]/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1772426689021,
-      "type": "file"
-    },
-    {
-      "path": "src/app/community/admin/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1772426689790,
-      "type": "file"
-    },
-    {
-      "path": "supabase/functions/telegram-webhook/deno.json",
-      "accessCount": 1,
-      "lastAccessed": 1772426691614,
-      "type": "file"
+      "lastAccessed": 1773721297176,
+      "type": "directory"
     },
     {
       "path": "src",
       "accessCount": 1,
-      "lastAccessed": 1772426827608,
-      "type": "directory"
-    },
-    {
-      "path": "src/components/Telegram",
-      "accessCount": 1,
-      "lastAccessed": 1772426841935,
+      "lastAccessed": 1773721390759,
       "type": "directory"
     }
   ],

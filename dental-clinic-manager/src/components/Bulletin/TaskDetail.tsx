@@ -143,20 +143,22 @@ export default function TaskDetail({
     return new Date(task.due_date) < new Date()
   }
 
-  const getCurrentUserId = () => {
+  const getCurrentUser = () => {
     if (typeof window === 'undefined') return null
     const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
     if (!userStr) return null
     try {
       const user = JSON.parse(userStr)
-      return user.id
+      return { id: user.id, role: user.role }
     } catch {
       return null
     }
   }
 
-  const currentUserId = getCurrentUserId()
+  const currentUser = getCurrentUser()
+  const currentUserId = currentUser?.id || null
   const isAssignee = currentUserId === task.assignee_id
+  const isOwner = currentUser?.role === 'owner'
 
   return (
     <div className="space-y-6">
@@ -164,7 +166,7 @@ export default function TaskDetail({
       <div className="flex items-center justify-between">
         <nav className="flex items-center text-sm">
           <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
-            업무 관리
+            업무 지시
           </button>
           <span className="mx-2 text-gray-400">&rsaquo;</span>
           <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{task.title}</span>
@@ -242,14 +244,14 @@ export default function TaskDetail({
             </div>
           </div>
 
-          {/* 상태 변경 버튼 */}
-          {(isAssignee || onEdit) && task.status !== 'cancelled' && task.status !== 'completed' && (
+          {/* 상태 변경 버튼 (담당자, 원장, 관리자) */}
+          {(isAssignee || isOwner || onEdit) && task.status !== 'cancelled' && task.status !== 'completed' && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-500 mb-2">상태 변경</p>
               <div className="flex flex-wrap gap-2">
-                {/* === 담당자 워크플로우 === */}
-                {/* 담당자: 업무 시작 (대기 → 진행 중) */}
-                {isAssignee && task.status === 'pending' && (
+                {/* === 담당자/원장 워크플로우 === */}
+                {/* 담당자 또는 원장: 업무 시작 (대기 → 진행 중) */}
+                {(isAssignee || isOwner) && task.status === 'pending' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -260,8 +262,8 @@ export default function TaskDetail({
                     업무 시작
                   </Button>
                 )}
-                {/* 담당자: 검토 요청 (진행 중 → 검토 요청) */}
-                {isAssignee && task.status === 'in_progress' && (
+                {/* 담당자 또는 원장: 검토 요청 (진행 중 → 검토 요청) */}
+                {(isAssignee || isOwner) && task.status === 'in_progress' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -273,9 +275,9 @@ export default function TaskDetail({
                   </Button>
                 )}
 
-                {/* === 결재자(관리자) 워크플로우 === */}
+                {/* === 결재자(관리자/원장) 워크플로우 === */}
                 {/* 결재자: 검토 완료 승인 (검토 요청 → 완료) */}
-                {onEdit && task.status === 'review' && (
+                {(onEdit || isOwner) && task.status === 'review' && (
                   <>
                     <Button
                       variant="outline"

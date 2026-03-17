@@ -1,0 +1,4 @@
+[     467ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth:0
+[    9443ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth?_rsc=1i477:0
+[    9571ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth:0
+[    9751ms] Invalid or unexpected token
