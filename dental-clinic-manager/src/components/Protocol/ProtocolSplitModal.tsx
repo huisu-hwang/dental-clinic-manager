@@ -250,6 +250,30 @@ export default function ProtocolSplitModal({
           </div>
         </div>
 
+        {/* 안내문 */}
+        <div className="px-5 pt-3 flex-shrink-0">
+          {mode === 'section' ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm font-semibold text-blue-800 mb-1">섹션별 분할 안내</p>
+              <ol className="text-xs text-blue-700 space-y-0.5 list-decimal list-inside">
+                <li><strong>&quot;새 그룹 추가&quot;</strong> 버튼으로 분할할 프로토콜 그룹을 만드세요.</li>
+                <li>각 그룹에 원하는 단계들을 <strong>추가</strong>하여 묶으세요.</li>
+                <li>그룹 제목을 수정하면 새 프로토콜의 제목이 됩니다.</li>
+                <li>최소 <strong>2개 이상의 그룹</strong>으로 나누어야 분할할 수 있습니다.</li>
+              </ol>
+            </div>
+          ) : (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm font-semibold text-blue-800 mb-1">개별 분할 안내</p>
+              <ol className="text-xs text-blue-700 space-y-0.5 list-decimal list-inside">
+                <li>각 단계가 <strong>독립된 프로토콜</strong>로 자동 분할됩니다.</li>
+                <li>각 프로토콜의 <strong>제목을 자유롭게 수정</strong>할 수 있습니다.</li>
+                <li>분할된 프로토콜은 <strong>초안(draft)</strong> 상태로 생성되며, 원본의 카테고리와 태그가 유지됩니다.</li>
+              </ol>
+            </div>
+          )}
+        </div>
+
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {mode === 'section' ? (
@@ -378,9 +402,6 @@ export default function ProtocolSplitModal({
           ) : (
             /* 개별 분할 모드 */
             <div className="space-y-3">
-              <p className="text-sm text-slate-500">
-                각 단계가 개별 프로토콜로 분할됩니다. 제목을 수정할 수 있습니다.
-              </p>
               {steps.map((step, i) => (
                 <div key={i} className="border border-slate-200 rounded-lg p-3">
                   <div className="flex items-start gap-3">
