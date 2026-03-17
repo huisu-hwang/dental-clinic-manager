@@ -1,12 +1,50 @@
 'use client'
 
-import { Download, X, Share } from 'lucide-react'
+import { useState } from 'react'
+import { Download, X, Share, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useInstallPrompt } from '@/hooks/useInstallPrompt'
 
 export default function InstallBanner() {
   const { isInstallable, isInstalled, isDismissed, isIOS, installApp, dismissBanner } =
     useInstallPrompt()
+  const [showGuide, setShowGuide] = useState(false)
+
+  const handleInstall = async () => {
+    const accepted = await installApp()
+    if (accepted) {
+      setShowGuide(true)
+      // Auto-hide guide after 6 seconds
+      setTimeout(() => setShowGuide(false), 6000)
+    }
+  }
+
+  // Show post-install guide
+  if (showGuide) {
+    return (
+      <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-lg">
+        <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-white p-3 shadow-lg sm:p-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-green-600">
+            <CheckCircle className="h-5 w-5 text-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-900">설치 완료!</p>
+            <p className="text-xs text-slate-500">
+              홈 화면에 아이콘이 없으면 앱 서랍에서 &quot;클리닉 매니저&quot;를 길게 눌러 홈 화면에
+              추가하세요
+            </p>
+          </div>
+          <button
+            onClick={() => setShowGuide(false)}
+            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            aria-label="닫기"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // Don't show if already installed or dismissed
   if (isInstalled || isDismissed) return null
@@ -40,7 +78,7 @@ export default function InstallBanner() {
           {isInstallable && (
             <Button
               size="sm"
-              onClick={() => installApp()}
+              onClick={handleInstall}
               className="bg-blue-500 text-white hover:bg-blue-600"
             >
               설치
