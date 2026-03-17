@@ -307,11 +307,6 @@ export default function ProtocolPermissionManager({
       if (onSave) {
         onSave()
       }
-
-      // 성공 메시지를 잠시 보여준 후 자동으로 창 닫기
-      setTimeout(() => {
-        onClose()
-      }, 1500)
     } catch (err) {
       console.error('Failed to save permissions:', err)
       setError(err instanceof Error ? err.message : '권한 저장 중 오류가 발생했습니다.')
@@ -577,33 +572,45 @@ export default function ProtocolPermissionManager({
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 bg-slate-50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
-          >
-            취소
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !hasChanges()}
-            className={`px-4 py-2 text-white rounded-lg flex items-center ${
-              saving || !hasChanges()
-                ? 'bg-slate-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
-            {saving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                저장 중...
-              </>
-            ) : (
-              <>
-                <CheckCircleIcon className="h-5 w-5 mr-2" />
-                저장
-              </>
-            )}
-          </button>
+          {success ? (
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center"
+            >
+              <CheckCircleIcon className="h-5 w-5 mr-2" />
+              닫기
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || !hasChanges()}
+                className={`px-4 py-2 text-white rounded-lg flex items-center ${
+                  saving || !hasChanges()
+                    ? 'bg-slate-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    저장 중...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="h-5 w-5 mr-2" />
+                    저장
+                  </>
+                )}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
