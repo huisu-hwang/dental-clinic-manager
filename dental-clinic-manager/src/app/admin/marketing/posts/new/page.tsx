@@ -1,0 +1,277 @@
+'use client'
+
+import { useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
+import {
+  ArrowLeftIcon,
+  SparklesIcon,
+  DocumentCheckIcon,
+} from '@heroicons/react/24/outline'
+import {
+  TONE_LABELS,
+  POST_TYPE_LABELS,
+  DEFAULT_PLATFORM_PRESETS,
+  type PostType,
+  type ToneType,
+  type PlatformOptions,
+} from '@/types/marketing'
+
+export default function NewMarketingPostPage() {
+  const { user } = useAuth()
+  const router = useRouter()
+
+  const [topic, setTopic] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const [postType, setPostType] = useState<PostType>('informational')
+  const [tone, setTone] = useState<ToneType>('friendly')
+  const [useResearch, setUseResearch] = useState(false)
+  const [factCheck, setFactCheck] = useState(false)
+  const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
+
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatedResult, setGeneratedResult] = useState<{
+    title: string
+    body: string
+    wordCount: number
+    keywordCount: number
+  } | null>(null)
+  const [error, setError] = useState('')
+
+  // 글 유형 변경 시 기본 플랫폼 프리셋 적용
+  const handlePostTypeChange = (type: PostType) => {
+    setPostType(type)
+    setPlatforms(DEFAULT_PLATFORM_PRESETS[type])
+  }
+
+  // AI 글 생성
+  const handleGenerate = async () => {
+    if (!topic || !keyword) {
+      setError('주제와 키워드를 입력해주세요.')
+      return
+    }
+
+    setIsGenerating(true)
+    setError('')
+    setGeneratedResult(null)
+
+    try {
+      const res = await fetch('/api/marketing/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic,
+          keyword,
+          postType,
+          tone,
+          useResearch,
+          factCheck,
+          platforms,
+        }),
+      })
+
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || '글 생성 실패')
+
+      setGeneratedResult(json.data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '글 생성 중 오류가 발생했습니다.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  if (!user) return null
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* 헤더 */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center h-16 gap-4">
+            <button
+              onClick={() => router.push('/admin/marketing')}
+              className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+            </button>
+            <h1 className="text-xl font-bold text-slate-800">새 글 작성</h1>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* 기본 정보 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-slate-800">기본 정보</h2>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">주제 *</label>
+            <input
+              type="text"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="예: 스케일링 후 주의사항"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">타겟 키워드 *</label>
+            <input
+              type="text"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="예: 스케일링 주의사항"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">글 유형</label>
+              <select
+                value={postType}
+                onChange={(e) => handlePostTypeChange(e.target.value as PostType)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              >
+                {Object.entries(POST_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">어투</label>
+              <select
+                value={tone}
+                onChange={(e) => setTone(e.target.value as ToneType)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              >
+                {Object.entries(TONE_LABELS).map(([value, { label, description }]) => (
+                  <option key={value} value={value}>{label} - {description}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* 품질 옵션 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+          <h2 className="text-lg font-semibold text-slate-800">품질 옵션</h2>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={useResearch}
+              onChange={(e) => setUseResearch(e.target.checked)}
+              className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+            />
+            <div>
+              <span className="text-sm font-medium text-slate-700">논문 인용</span>
+              <span className="text-xs text-slate-400 ml-2">관련 학술 논문을 검색하여 인용</span>
+            </div>
+          </label>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={factCheck}
+              onChange={(e) => setFactCheck(e.target.checked)}
+              className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+            />
+            <div>
+              <span className="text-sm font-medium text-slate-700">팩트체크</span>
+              <span className="text-xs text-slate-400 ml-2">생성된 글의 사실 여부를 검증</span>
+            </div>
+          </label>
+        </div>
+
+        {/* 배포 플랫폼 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+          <h2 className="text-lg font-semibold text-slate-800">배포 플랫폼</h2>
+          {(['naverBlog', 'instagram', 'facebook', 'threads'] as const).map((key) => (
+            <label key={key} className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={platforms[key]}
+                onChange={(e) => setPlatforms({ ...platforms, [key]: e.target.checked })}
+                className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+              />
+              <span className="text-sm text-slate-700">
+                {key === 'naverBlog' ? '네이버 블로그' :
+                 key === 'instagram' ? '인스타그램' :
+                 key === 'facebook' ? '페이스북' : '쓰레드'}
+              </span>
+            </label>
+          ))}
+        </div>
+
+        {/* 에러 */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        {/* 생성 버튼 */}
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerating || !topic || !keyword}
+          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        >
+          {isGenerating ? (
+            <>
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              AI가 글을 생성하고 있습니다...
+            </>
+          ) : (
+            <>
+              <SparklesIcon className="h-5 w-5" />
+              AI 글 생성
+            </>
+          )}
+        </button>
+
+        {/* 생성 결과 미리보기 */}
+        {generatedResult && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-800">생성 결과</h2>
+              <div className="flex gap-3 text-xs text-slate-400">
+                <span>글자수: {generatedResult.wordCount}자</span>
+                <span>키워드: {generatedResult.keywordCount}회</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-slate-500 mb-1">제목</div>
+              <div className="text-lg font-bold text-slate-800">{generatedResult.title}</div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-slate-500 mb-1">본문</div>
+              <div className="prose prose-sm max-w-none text-slate-700 whitespace-pre-wrap border border-slate-100 rounded-lg p-4 max-h-96 overflow-y-auto">
+                {generatedResult.body}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleGenerate}
+                className="flex-1 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+              >
+                다시 생성
+              </button>
+              <button className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+                <DocumentCheckIcon className="h-4 w-4" />
+                발행 예약
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
