@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { XMarkIcon, PencilIcon, TrashIcon, ClockIcon, TagIcon, FolderIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PencilIcon, TrashIcon, ClockIcon, TagIcon, FolderIcon, ShieldCheckIcon, ScissorsIcon } from '@heroicons/react/24/outline'
 import EnhancedTiptapEditor from './EnhancedTiptapEditor'
 import ProtocolVersionHistory from './ProtocolVersionHistory'
 import ProtocolStepViewer from './ProtocolStepViewer'
@@ -17,13 +17,15 @@ interface ProtocolDetailProps {
   onClose: () => void
   onEdit: (protocol: Protocol) => void
   onDelete: (protocolId: string) => void
+  onSplit?: (protocol: Protocol) => void
 }
 
 export default function ProtocolDetail({
   protocolId,
   onClose,
   onEdit,
-  onDelete
+  onDelete,
+  onSplit
 }: ProtocolDetailProps) {
   const { hasPermission } = usePermissions()
   const { user } = useAuth()
@@ -244,6 +246,15 @@ export default function ProtocolDetail({
                 title="접근 권한 관리"
               >
                 <ShieldCheckIcon className="h-5 w-5" />
+              </button>
+            )}
+            {canEdit && onSplit && protocol.currentVersion?.steps && protocol.currentVersion.steps.length >= 2 && (
+              <button
+                onClick={() => onSplit(protocol)}
+                className="p-2 text-orange-600 hover:bg-orange-50 rounded-md"
+                title="분할"
+              >
+                <ScissorsIcon className="h-5 w-5" />
               </button>
             )}
             {canEdit && (

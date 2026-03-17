@@ -2282,6 +2282,50 @@ export const dataService = {
     }
   },
 
+  // 프로토콜 분할 (여러 개의 새 프로토콜 생성)
+  async splitProtocol(splitItems: ProtocolFormData[], archiveOriginalId?: string) {
+    console.log('[splitProtocol] Starting split into', splitItems.length, 'protocols')
+
+    try {
+      const results = []
+      for (const formData of splitItems) {
+        const result = await this.createProtocol(formData)
+        if (result.error) {
+          throw new Error(`프로토콜 "${formData.title}" 생성 실패: ${result.error}`)
+        }
+        results.push(result.data)
+        console.log('[splitProtocol] Created:', formData.title)
+      }
+
+      // 원본 프로토콜 보관처리
+      if (archiveOriginalId) {
+        const supabase = await ensureConnection()
+        if (supabase) {
+          const clinicId = await getCurrentClinicId()
+          if (clinicId) {
+            const { error: archiveError } = await (supabase
+              .from('protocols') as any)
+              .update({ status: 'archived', updated_at: new Date().toISOString() })
+              .eq('id', archiveOriginalId)
+              .eq('clinic_id', clinicId)
+
+            if (archiveError) {
+              console.error('[splitProtocol] Archive error:', archiveError)
+            } else {
+              console.log('[splitProtocol] Original protocol archived')
+            }
+          }
+        }
+      }
+
+      console.log('[splitProtocol] ✅ Split completed successfully')
+      return { success: true, data: results }
+    } catch (error: unknown) {
+      console.error('[splitProtocol] ❌ Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
   // 프로토콜 수정 (새 버전 생성)
   async updateProtocol(protocolId: string, formData: ProtocolFormData) {
     const supabase = await ensureConnection()

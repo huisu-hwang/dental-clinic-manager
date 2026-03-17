@@ -16,7 +16,8 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
-  Lock
+  Lock,
+  Scissors
 } from 'lucide-react'
 import {
   DndContext, DragOverlay, closestCenter,
@@ -31,6 +32,7 @@ import ProtocolDetail from '../Protocol/ProtocolDetail'
 import ProtocolCategoryManager from '../Protocol/ProtocolCategoryManager'
 import ProtocolPermissionManager from '../Protocol/ProtocolPermissionManager'
 import ProtocolPermissionOverview from '../Protocol/ProtocolPermissionOverview'
+import ProtocolSplitModal from '../Protocol/ProtocolSplitModal'
 import type { UserProfile } from '@/contexts/AuthContext'
 import type { Protocol, ProtocolCategory, ProtocolFormData } from '@/types'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
@@ -97,6 +99,8 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
   const [showEditForm, setShowEditForm] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
   const [showPermissionManager, setShowPermissionManager] = useState(false)
+  const [showSplitModal, setShowSplitModal] = useState(false)
+  const [splitProtocol, setSplitProtocol] = useState<Protocol | null>(null)
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null)
   const [editingProtocol, setEditingProtocol] = useState<Protocol | null>(null)
   const [permissionProtocol, setPermissionProtocol] = useState<Protocol | null>(null)
@@ -455,6 +459,45 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
     setTimeout(() => setSuccess(''), 3000)
   }
 
+  const handleSplitProtocol = async (protocol: Protocol) => {
+    // 상세 정보 모달 닫기
+    setShowDetail(false)
+    setSelectedProtocol(null)
+
+    // 스텝 정보가 없으면 로드
+    if (!protocol.currentVersion?.steps || protocol.currentVersion.steps.length === 0) {
+      try {
+        const result = await dataService.getProtocolById(protocol.id)
+        if (result.error) {
+          setError(result.error)
+          return
+        }
+        setSplitProtocol((result.data as Protocol | null) ?? null)
+      } catch (err) {
+        setError('프로토콜 정보를 불러오지 못했습니다.')
+        return
+      }
+    } else {
+      setSplitProtocol(protocol)
+    }
+    setShowSplitModal(true)
+  }
+
+  const handleSplitSubmit = async (splitItems: ProtocolFormData[], archiveOriginal: boolean) => {
+    const result = await dataService.splitProtocol(
+      splitItems,
+      archiveOriginal && splitProtocol ? splitProtocol.id : undefined
+    )
+    if (result.error) {
+      throw new Error(result.error)
+    }
+    setSuccess(`프로토콜이 ${splitItems.length}개로 분할되었습니다.`)
+    setShowSplitModal(false)
+    setSplitProtocol(null)
+    fetchProtocols()
+    setTimeout(() => setSuccess(''), 3000)
+  }
+
   const handleDeleteProtocolDirect = async (protocol: Protocol, e: React.MouseEvent) => {
     e.stopPropagation()
 
@@ -672,6 +715,19 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
                     권한
+                  </button>
+                )}
+                {canEditProtocol(protocol) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSplitProtocol(protocol)
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                    title="분할"
+                  >
+                    <Scissors className="w-3.5 h-3.5" />
+                    분할
                   </button>
                 )}
                 {canEditProtocol(protocol) && (
@@ -1042,6 +1098,19 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 }}
                 onEdit={handleEditProtocol}
                 onDelete={handleDeleteProtocol}
+                onSplit={canEdit ? handleSplitProtocol : undefined}
+              />
+            )}
+
+            {/* Split Protocol Modal */}
+            {showSplitModal && splitProtocol && (
+              <ProtocolSplitModal
+                protocol={splitProtocol}
+                onSplit={handleSplitSubmit}
+                onClose={() => {
+                  setShowSplitModal(false)
+                  setSplitProtocol(null)
+                }}
               />
             )}
 
