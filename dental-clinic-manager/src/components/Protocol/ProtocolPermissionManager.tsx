@@ -308,9 +308,10 @@ export default function ProtocolPermissionManager({
         onSave()
       }
 
+      // 성공 메시지를 잠시 보여준 후 자동으로 창 닫기
       setTimeout(() => {
-        setSuccess('')
-      }, 3000)
+        onClose()
+      }, 1500)
     } catch (err) {
       console.error('Failed to save permissions:', err)
       setError(err instanceof Error ? err.message : '권한 저장 중 오류가 발생했습니다.')
