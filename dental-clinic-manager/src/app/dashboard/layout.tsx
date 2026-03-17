@@ -7,6 +7,7 @@ import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/ui/Toast'
+import InstallBanner from '@/components/PWA/InstallBanner'
 import { useClinicNotifications } from '@/hooks/useClinicNotifications'
 import { getTabRoute } from '@/utils/tabRouting'
 
@@ -182,6 +183,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         show={toast.show}
         onClose={() => setToast(prev => ({ ...prev, show: false }))}
       />
+
+      <InstallBanner />
     </div>
   )
 }
