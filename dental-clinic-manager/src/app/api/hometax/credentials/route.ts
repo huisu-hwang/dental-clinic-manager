@@ -33,8 +33,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceClient();
 
-    // 암호화
-    const encryptedId = hometaxEncryptToJson(loginId);
+    // 비밀번호 암호화 (로그인 ID는 평문 저장)
     const encryptedPw = hometaxEncryptToJson(loginPw);
 
     const { data, error } = await supabase
@@ -42,13 +41,13 @@ export async function POST(request: NextRequest) {
       .upsert({
         clinic_id: clinicId,
         business_number: bizNoClean,
-        encrypted_login_id: encryptedId,
-        encrypted_login_pw: encryptedPw,
+        hometax_user_id: loginId,
+        encrypted_password: encryptedPw,
         login_method: 'id_pw',
         is_active: true,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'clinic_id' })
-      .select('id, clinic_id, business_number, login_method, is_active, last_login_success, last_login_attempt, created_at, updated_at')
+      .select('id, clinic_id, business_number, login_method, is_active, last_login_success, created_at, updated_at')
       .single();
 
     if (error) {
@@ -77,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('hometax_credentials')
-      .select('id, clinic_id, business_number, login_method, is_active, last_login_success, last_login_attempt, last_login_error, created_at, updated_at')
+      .select('id, clinic_id, business_number, login_method, is_active, last_login_success, last_login_error, created_at, updated_at')
       .eq('clinic_id', clinicId)
       .single();
 
