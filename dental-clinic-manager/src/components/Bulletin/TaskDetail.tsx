@@ -140,20 +140,22 @@ export default function TaskDetail({
     return new Date(task.due_date) < new Date()
   }
 
-  const getCurrentUserId = () => {
+  const getCurrentUser = () => {
     if (typeof window === 'undefined') return null
     const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
     if (!userStr) return null
     try {
       const user = JSON.parse(userStr)
-      return user.id
+      return { id: user.id, role: user.role }
     } catch {
       return null
     }
   }
 
-  const currentUserId = getCurrentUserId()
+  const currentUser = getCurrentUser()
+  const currentUserId = currentUser?.id || null
   const isAssignee = currentUserId === task.assignee_id
+  const isOwner = currentUser?.role === 'owner'
 
   return (
     <div className="space-y-6">
@@ -161,7 +163,7 @@ export default function TaskDetail({
       <div className="flex items-center justify-between">
         <nav className="flex items-center text-sm">
           <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
-            업무 관리
+            업무 지시
           </button>
           <span className="mx-2 text-gray-400">&rsaquo;</span>
           <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{task.title}</span>
@@ -239,13 +241,23 @@ export default function TaskDetail({
             </div>
           </div>
 
-          {/* 상태 변경 버튼 */}
-          {(isAssignee || onEdit) && task.status !== 'cancelled' && (
+          {/* 상태 변경 버튼 (담당자 또는 원장) */}
+          {(isAssignee || isOwner || onEdit) && task.status !== 'cancelled' && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-500 mb-2">상태 변경</p>
               <div className="flex flex-wrap gap-2">
-                {/* 담당자: 업무 시작 버튼 (대기 → 진행 중) */}
-                {isAssignee && task.status === 'pending' && (
+                {task.status !== 'pending' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onStatusUpdate('pending')}
+                    className="text-gray-600"
+                  >
+                    <Circle className="w-4 h-4 mr-1" />
+                    대기
+                  </Button>
+                )}
+                {task.status !== 'in_progress' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -253,11 +265,21 @@ export default function TaskDetail({
                     className="text-blue-600"
                   >
                     <Loader2 className="w-4 h-4 mr-1" />
-                    업무 시작
+                    진행 중
                   </Button>
                 )}
-                {/* 담당자: 완료 보고 버튼 (진행 중 → 완료) */}
-                {isAssignee && task.status === 'in_progress' && (
+                {task.status !== 'on_hold' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onStatusUpdate('on_hold')}
+                    className="text-yellow-600"
+                  >
+                    <Pause className="w-4 h-4 mr-1" />
+                    보류
+                  </Button>
+                )}
+                {task.status !== 'completed' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -265,57 +287,8 @@ export default function TaskDetail({
                     className="text-green-600"
                   >
                     <CheckCircle2 className="w-4 h-4 mr-1" />
-                    완료 보고
+                    완료
                   </Button>
-                )}
-                {/* 관리자(할당자): 모든 상태 변경 가능 */}
-                {onEdit && !isAssignee && (
-                  <>
-                    {task.status !== 'pending' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onStatusUpdate('pending')}
-                        className="text-gray-600"
-                      >
-                        <Circle className="w-4 h-4 mr-1" />
-                        대기
-                      </Button>
-                    )}
-                    {task.status !== 'in_progress' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onStatusUpdate('in_progress')}
-                        className="text-blue-600"
-                      >
-                        <Loader2 className="w-4 h-4 mr-1" />
-                        진행 중
-                      </Button>
-                    )}
-                    {task.status !== 'on_hold' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onStatusUpdate('on_hold')}
-                        className="text-yellow-600"
-                      >
-                        <Pause className="w-4 h-4 mr-1" />
-                        보류
-                      </Button>
-                    )}
-                    {task.status !== 'completed' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onStatusUpdate('completed')}
-                        className="text-green-600"
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-1" />
-                        완료
-                      </Button>
-                    )}
-                  </>
                 )}
               </div>
             </div>

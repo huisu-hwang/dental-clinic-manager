@@ -1,6 +1,6 @@
 /**
  * 병원 게시판 서비스
- * Bulletin Service - 공지사항, 문서, 업무 관리
+ * Bulletin Service - 공지사항, 문서, 업무 지시
  */
 
 import { ensureConnection } from './supabase/connectionCheck'

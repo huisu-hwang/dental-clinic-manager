@@ -65,14 +65,14 @@ const STATUS_COUNT_COLORS: Record<TaskStatus, string> = {
   cancelled: 'bg-red-100 text-red-600',
 }
 
-// 현재 사용자 ID 가져오기
-const getCurrentUserId = (): string | null => {
+// 현재 사용자 정보 가져오기
+const getCurrentUser = (): { id: string; role: string } | null => {
   if (typeof window === 'undefined') return null
   const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
   if (!userStr) return null
   try {
     const user = JSON.parse(userStr)
-    return user.id
+    return { id: user.id, role: user.role }
   } catch {
     return null
   }
@@ -82,7 +82,9 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   const [allTasks, setAllTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const currentUserId = getCurrentUserId()
+  const currentUser = getCurrentUser()
+  const currentUserId = currentUser?.id || null
+  const isOwner = currentUser?.role === 'owner'
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority | ''>('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -240,7 +242,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <LayoutGrid className="w-5 h-5 text-purple-600" />
-          <h2 className="text-lg font-semibold text-gray-900">업무 관리</h2>
+          <h2 className="text-lg font-semibold text-gray-900">업무 지시</h2>
           {!loading && (
             <span className="text-xs text-gray-400 font-normal ml-1">총 {allTasks.length}건</span>
           )}
@@ -414,8 +416,8 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
                           )}
                         </div>
 
-                        {/* 빠른 상태 변경 버튼 (담당자만) */}
-                        {task.status === 'pending' && currentUserId === task.assignee_id && (
+                        {/* 빠른 상태 변경 버튼 (담당자 또는 원장) */}
+                        {task.status === 'pending' && (currentUserId === task.assignee_id || isOwner) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
@@ -426,7 +428,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
                             업무 시작
                           </button>
                         )}
-                        {task.status === 'in_progress' && currentUserId === task.assignee_id && (
+                        {task.status === 'in_progress' && (currentUserId === task.assignee_id || isOwner) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
