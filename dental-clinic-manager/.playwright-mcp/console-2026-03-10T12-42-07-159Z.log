@@ -1,0 +1,632 @@
+[     619ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[   19623ms] [ERROR] Each child in a list should have a unique "key" prop.%s%s See https://react.dev/link/warning-keys for more information. 
+
+Check the render method of `AdminAttendanceStats`.  @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   51431ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   51615ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   59614ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   59723ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   59803ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   61360ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   61749ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   61950ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   61950ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   62062ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   62146ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   62445ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[   62452ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   62518ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   62648ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   62802ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   62919ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/dashboard?tab=attendance&_rsc=1joz2:0
+[   63000ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   63029ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   63110ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   63218ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/dashboard?tab=attendance&_rsc=1joz2:0
+[   63343ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/dashboard?tab=attendance:0
+[   63756ms] ModuleBuildError: Module build failed (from ./node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+
+Caused by:
+    Syntax Error
+    at processResult (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/compiled/webpack/bundle5.js:29:407086)
+    at <unknown> (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/compiled/webpack/bundle5.js:29:408881)
+    at <unknown> (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:8645)
+    at <unknown> (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:5019)
+    at r.callback (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:4039)
+[   63757ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[   75575ms] [ERROR] ./src/components/Attendance/AdminAttendanceStats.tsx
+Error:   x Expression expected
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:957:1]
+ 954 |                             </td>
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+     :                         ^
+ 958 |                     ))}
+ 959 |                   </tbody>
+ 960 |                 </table>
+     `----
+  x Expected '</', got ')'
+     ,-[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/Attendance/AdminAttendanceStats.tsx:958:1]
+ 955 |                           </tr>
+ 956 |                         )}
+ 957 |                       </>
+ 958 |                     ))}
+     :                     ^
+ 959 |                   </tbody>
+ 960 |                 </table>
+ 961 |               </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Attendance/AdminAttendanceStats.tsx
+./src/components/Attendance/AttendanceStats.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[   75849ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/webpack/781eb2376c1ffc0c.webpack.hot-update.json:0
+[   75850ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[   76629ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/webpack/781eb2376c1ffc0c.webpack.hot-update.json:0
+[   76630ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[   76830ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/webpack/781eb2376c1ffc0c.webpack.hot-update.json:0
+[   76830ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[   77720ms] Invalid or unexpected token

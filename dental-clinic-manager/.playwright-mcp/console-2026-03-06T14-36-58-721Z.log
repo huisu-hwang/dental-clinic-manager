@@ -1,0 +1,34 @@
+[     424ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772805407692 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard?tab=recall:0
+[     424ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772805357497 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard?tab=recall:0
+[    1609ms] Invalid or unexpected token
+[  122165ms] ChunkLoadError: Loading chunk app/layout failed.
+(timeout: http://localhost:3000/_next/static/chunks/app/layout.js)
+    at __webpack_require__.f.j (http://localhost:3000/_next/static/chunks/webpack.js?v=1772807820125:850:29)
+    at http://localhost:3000/_next/static/chunks/webpack.js?v=1772807820125:145:40
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1772807820125:144:67)
+    at fn.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1772807820125:381:50)
+    at loadChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:113:34)
+    at preloadModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:82:31)
+    at resolveModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2078:20)
+    at processFullStringRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2769:11)
+    at processFullBinaryRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2764:7)
+    at processBinaryChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2967:15)
+    at progress (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:3231:13)
+[  122315ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/45e2495c61cf60ad.webpack.hot-update.json:0
+[  122315ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  122922ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/45e2495c61cf60ad.webpack.hot-update.json:0
+[  122922ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  123167ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/45e2495c61cf60ad.webpack.hot-update.json:0
+[  123167ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  123366ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/45e2495c61cf60ad.webpack.hot-update.json:0
+[  123366ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  123604ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/45e2495c61cf60ad.webpack.hot-update.json:0
+[  123604ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  124276ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/45e2495c61cf60ad.webpack.hot-update.json:0
+[  124276ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  125000ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/45e2495c61cf60ad.webpack.hot-update.json:0
+[  125001ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  125331ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/45e2495c61cf60ad.webpack.hot-update.json:0
+[  125331ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  125479ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/:0

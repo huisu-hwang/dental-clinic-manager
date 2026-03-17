@@ -1,0 +1,68 @@
+[    1158ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[    2125ms] [WARNING] Geolocation permission has been blocked as the user has ignored the permission prompt several times. This can be reset in Page Info which can be accessed by clicking the tune icon next to the URL. See https://www.chromestatus.com/feature/6443143280984064 for more information. @ http://localhost:3000/dashboard:0
+[   61663ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[   61666ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   68849ms] [ERROR] ./src/components/TaskChecklist/StaffChecklistOverview.tsx
+Error:   × Expected ',', got 'if'
+     ╭─[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/TaskChecklist/StaffChecklistOverview.tsx:103:1]
+ 100 │     return { ...s, total, completed, rate, byPeriod, tasks }
+ 101 │   }).filter(s => s.total > 0) // 업무가 할당된 직원만 표시
+ 102 │ 
+ 103 │   if (loading) {
+     ·   ──
+ 104 │     return (
+ 105 │       <div className="flex justify-center items-center h-48">
+ 106 │         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+     ╰────
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/TaskChecklist/StaffChecklistOverview.tsx
+./src/components/TaskChecklist/TaskChecklistManagement.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   69028ms] [ERROR] ./src/components/TaskChecklist/StaffChecklistOverview.tsx
+Error:   × Expected ',', got 'if'
+     ╭─[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/TaskChecklist/StaffChecklistOverview.tsx:103:1]
+ 100 │     return { ...s, total, completed, rate, byPeriod, tasks }
+ 101 │   }).filter(s => s.total > 0) // 업무가 할당된 직원만 표시
+ 102 │ 
+ 103 │   if (loading) {
+     ·   ──
+ 104 │     return (
+ 105 │       <div className="flex justify-center items-center h-48">
+ 106 │         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+     ╰────
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/TaskChecklist/StaffChecklistOverview.tsx
+./src/components/TaskChecklist/TaskChecklistManagement.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   74943ms] [ERROR] ./src/components/TaskChecklist/StaffChecklistOverview.tsx
+Error:   × Expected ',', got 'if'
+     ╭─[/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/src/components/TaskChecklist/StaffChecklistOverview.tsx:103:1]
+ 100 │     return { ...s, total, completed, rate, byPeriod, tasks }
+ 101 │   }).filter(s => s.total > 0) // 업무가 할당된 직원만 표시
+ 102 │ 
+ 103 │   if (loading) {
+     ·   ──
+ 104 │     return (
+ 105 │       <div className="flex justify-center items-center h-48">
+ 106 │         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+     ╰────
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/TaskChecklist/StaffChecklistOverview.tsx
+./src/components/TaskChecklist/TaskChecklistManagement.tsx
+./src/app/dashboard/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   92435ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[   92435ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  122850ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[  122851ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56

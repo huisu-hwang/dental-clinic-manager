@@ -1,0 +1,26 @@
+[    1223ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[   21563ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://beahjntkmkfhpcbhfnrr.supabase.co/auth/v1/token?grant_type=refresh_token:0
+[   21568ms] [WARNING] [ensureConnection] Refresh attempt 1 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[   22570ms] [WARNING] [ensureConnection] Refresh attempt 2 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[   22571ms] [ERROR] [ensureConnection] All refresh attempts failed @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   22577ms] [ERROR] [ensureConnection] Error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.saveReport (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:545:26)
+    at async handleSaveReport (webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:202:28)
+    at async handleSave (webpack-internal:///(app-pages-browser)/./src/components/DailyInput/DailyInputForm.tsx:621:17) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   22577ms] [ERROR] Save report error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.saveReport (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:545:26)
+    at async handleSaveReport (webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:202:28)
+    at async handleSave (webpack-internal:///(app-pages-browser)/./src/components/DailyInput/DailyInputForm.tsx:621:17) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   22621ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:116
+[   22623ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   22990ms] Invalid or unexpected token

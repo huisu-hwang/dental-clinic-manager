@@ -1,0 +1,1309 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - banner [ref=e15]:
+      - link "클리닉 매니저 하얀치과" [ref=e17] [cursor=pointer]:
+        - /url: /dashboard
+        - generic [ref=e18]:
+          - img [ref=e20]
+          - generic [ref=e22]:
+            - heading "클리닉 매니저" [level=1] [ref=e23]
+            - paragraph [ref=e24]: 하얀치과
+      - generic [ref=e25]:
+        - generic [ref=e28]: 연결됨
+        - generic [ref=e29]:
+          - link "관리" [ref=e30] [cursor=pointer]:
+            - /url: /management
+            - img [ref=e31]
+            - generic [ref=e42]: 관리
+          - button "알림" [ref=e44]:
+            - img [ref=e45]
+          - button "황희수" [ref=e47]:
+            - img [ref=e48]
+            - generic [ref=e51]: 황희수
+          - button "자동로그인" [ref=e52]:
+            - generic [ref=e53]: 자동로그인
+          - button "로그아웃" [ref=e57]:
+            - img [ref=e58]
+            - generic [ref=e61]: 로그아웃
+    - complementary [ref=e62]:
+      - navigation [ref=e63]:
+        - generic [ref=e64]:
+          - button "대시보드" [ref=e65]:
+            - img [ref=e66]
+            - generic [ref=e69]: 대시보드
+          - button "병원 게시판" [ref=e70]:
+            - img [ref=e71]
+            - generic [ref=e74]: 병원 게시판
+          - generic [ref=e77]:
+            - button "업무 관리" [ref=e78]:
+              - generic [ref=e79]:
+                - img [ref=e80]
+                - generic [ref=e83]: 업무 관리
+              - img [ref=e84]
+            - generic [ref=e86]:
+              - button "일일보고서" [ref=e87]:
+                - img [ref=e88]
+                - generic [ref=e91]: 일일보고서
+              - button "근태관리" [ref=e92]:
+                - img [ref=e93]
+                - generic [ref=e96]: 근태관리
+              - button "연차 관리" [ref=e97]:
+                - img [ref=e98]
+                - generic [ref=e100]: 연차 관리
+              - button "통계" [ref=e101]:
+                - img [ref=e102]
+                - generic [ref=e104]: 통계
+              - button "상세 기록" [ref=e105]:
+                - img [ref=e106]
+                - generic [ref=e110]: 상세 기록
+              - button "AI 데이터 분석" [ref=e111]:
+                - img [ref=e112]
+                - generic [ref=e115]: AI 데이터 분석
+              - button "업무 체크리스트" [ref=e116]:
+                - img [ref=e117]
+                - generic [ref=e121]: 업무 체크리스트
+          - generic [ref=e122]:
+            - button "문서 · 자료" [ref=e123]:
+              - generic [ref=e124]:
+                - img [ref=e125]
+                - generic [ref=e127]: 문서 · 자료
+              - img [ref=e128]
+            - generic [ref=e130]:
+              - button "진료 프로토콜" [ref=e131]:
+                - img [ref=e132]
+                - generic [ref=e134]: 진료 프로토콜
+              - button "근로계약서" [ref=e135]:
+                - img [ref=e136]
+                - generic [ref=e139]: 근로계약서
+              - button "급여 명세서" [ref=e140]:
+                - img [ref=e141]
+                - generic [ref=e144]: 급여 명세서
+              - button "문서 양식" [ref=e145]:
+                - img [ref=e146]
+                - generic [ref=e149]: 문서 양식
+          - generic [ref=e150]:
+            - button "커뮤니티" [ref=e151]:
+              - generic [ref=e152]:
+                - img [ref=e153]
+                - generic [ref=e156]: 커뮤니티
+              - img [ref=e157]
+            - generic [ref=e159]:
+              - button "자유게시판" [ref=e160]:
+                - img [ref=e161]
+                - generic [ref=e164]: 자유게시판
+              - button "소모임" [ref=e165]:
+                - img [ref=e166]
+                - generic [ref=e169]: 소모임
+          - generic [ref=e170]:
+            - button "운영 관리" [ref=e171]:
+              - generic [ref=e172]:
+                - img [ref=e173]
+                - generic [ref=e176]: 운영 관리
+              - img [ref=e177]
+            - generic [ref=e180]:
+              - button "업체 연락처" [ref=e181]:
+                - img [ref=e182]
+                - generic [ref=e186]: 업체 연락처
+              - button "재고 관리" [ref=e187]:
+                - img [ref=e188]
+                - generic [ref=e192]: 재고 관리
+              - button "리콜 관리" [ref=e193]:
+                - img [ref=e194]
+                - generic [ref=e198]: 리콜 관리
+              - button "경영 현황" [ref=e199]:
+                - img [ref=e200]
+                - generic [ref=e202]: 경영 현황
+        - button "사용 안내" [ref=e204]:
+          - img [ref=e205]
+          - generic [ref=e208]: 사용 안내
+    - main [ref=e210]:
+      - generic [ref=e216]:
+        - generic [ref=e217]:
+          - generic [ref=e219]:
+            - img [ref=e221]
+            - generic [ref=e225]:
+              - heading "환자 리콜 관리" [level=2] [ref=e226]
+              - paragraph [ref=e227]: Patient Recall Management
+          - generic [ref=e228]:
+            - generic [ref=e229]:
+              - paragraph [ref=e230]: "7736"
+              - paragraph [ref=e231]: 전체
+            - generic [ref=e232]:
+              - paragraph [ref=e233]: "7695"
+              - paragraph [ref=e234]: 대기
+            - generic [ref=e235]:
+              - paragraph [ref=e236]: "18"
+              - paragraph [ref=e237]: 연락
+            - generic [ref=e238]:
+              - paragraph [ref=e239]: "6"
+              - paragraph [ref=e240]: 예약
+            - generic [ref=e241]:
+              - paragraph [ref=e242]: 15%
+              - paragraph [ref=e243]: 성공률
+        - navigation "Tabs" [ref=e245]:
+          - button "환자 목록" [ref=e246]:
+            - img [ref=e247]
+            - text: 환자 목록
+          - button "활동 기록" [ref=e252]:
+            - img [ref=e253]
+            - text: 활동 기록
+          - button "통계" [ref=e255]:
+            - img [ref=e256]
+            - text: 통계
+          - button "설정" [ref=e258]:
+            - img [ref=e259]
+            - text: 설정
+        - generic [ref=e263]:
+          - generic [ref=e264]:
+            - button "환자 업로드" [ref=e265]:
+              - img [ref=e266]
+              - generic [ref=e269]: 환자 업로드
+            - button "제외 환자 업로드" [ref=e270]:
+              - img [ref=e271]
+              - generic [ref=e276]: 제외 환자 업로드
+            - button "환자 추가" [ref=e277]:
+              - img [ref=e278]
+              - generic [ref=e279]: 환자 추가
+            - generic [ref=e280]:
+              - button "문자" [ref=e281]:
+                - img [ref=e282]
+                - text: 문자
+              - generic: 환자를 선택한 후 클릭하세요
+            - button "제외" [ref=e285]:
+              - img [ref=e286]
+              - text: 제외
+            - generic [ref=e291]:
+              - button "삭제" [ref=e292]:
+                - img [ref=e293]
+                - text: 삭제
+              - generic: 환자를 선택한 후 클릭하세요
+            - button "새로고침" [ref=e296]:
+              - img [ref=e297]
+              - generic [ref=e302]: 새로고침
+          - generic [ref=e303]:
+            - generic [ref=e304]:
+              - generic [ref=e305]:
+                - generic [ref=e306]:
+                  - img [ref=e307]
+                  - textbox "환자명, 전화번호, 차트번호 검색..." [ref=e310]
+                - combobox [ref=e311]:
+                  - option "전체" [selected]
+                  - option "리콜 전"
+                  - option "문자발송"
+                  - option "예약 성공"
+                  - option "예약보류"
+                  - option "이미예약"
+                  - option "부재중"
+                  - option "통화거부"
+                  - option "내원거부"
+                  - option "없는번호"
+                - button "제외 목록" [ref=e312]:
+                  - img [ref=e313]
+                  - text: 제외 목록
+                - button "필터" [ref=e318]:
+                  - img [ref=e319]
+                  - text: 필터
+                  - img [ref=e321]
+              - generic [ref=e324]:
+                - generic [ref=e325]: "최종 내원일:"
+                - button "전체" [ref=e326]
+                - button "6개월↑" [ref=e327]
+                - button "6개월~1년" [ref=e328]
+                - button "1~2년" [ref=e329]
+                - button "2년↑" [ref=e330]
+                - button "없음" [ref=e331]
+                - button "직접설정" [ref=e332]
+            - table [ref=e334]:
+              - rowgroup [ref=e335]:
+                - row "환자 정보 최종 내원일 상태 마지막 연락 액션" [ref=e336]:
+                  - columnheader [ref=e337]:
+                    - checkbox [ref=e338]
+                  - columnheader "환자 정보" [ref=e339]:
+                    - button "환자 정보" [ref=e340]:
+                      - text: 환자 정보
+                      - img [ref=e341]
+                  - columnheader "최종 내원일" [ref=e343]:
+                    - button "최종 내원일" [ref=e344]
+                  - columnheader "상태" [ref=e345]:
+                    - button "상태" [ref=e346]
+                  - columnheader "마지막 연락" [ref=e347]:
+                    - button "마지막 연락" [ref=e348]
+                  - columnheader "액션" [ref=e349]
+              - rowgroup [ref=e350]:
+                - 'row "강서현B 9세 010-4186-3197 차트: 8363 2021-06-15 4년 9개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e351]':
+                  - cell [ref=e352]:
+                    - checkbox [ref=e353]
+                  - 'cell "강서현B 9세 010-4186-3197 차트: 8363" [ref=e354]':
+                    - generic [ref=e355]:
+                      - img [ref=e357]
+                      - generic [ref=e360]:
+                        - generic [ref=e361]:
+                          - paragraph [ref=e362]: 강서현B
+                          - generic [ref=e363]: 9세
+                        - paragraph [ref=e364]: 010-4186-3197
+                        - paragraph [ref=e365]: "차트: 8363"
+                  - cell "2021-06-15 4년 9개월 전" [ref=e366]:
+                    - generic [ref=e367]:
+                      - paragraph [ref=e368]: 2021-06-15
+                      - paragraph [ref=e369]: 4년 9개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e370]:
+                    - generic [ref=e371]:
+                      - button "리콜 전" [ref=e372]:
+                        - img [ref=e373]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e376]:
+                        - img [ref=e377]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e380]:
+                        - img [ref=e381]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e384]:
+                        - img [ref=e385]
+                        - text: 이미예약
+                      - button "부재중" [ref=e387]:
+                        - img [ref=e388]
+                        - text: 부재중
+                      - button "통화거부" [ref=e392]:
+                        - img [ref=e393]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e397]:
+                        - img [ref=e398]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e401]:
+                        - img [ref=e402]
+                        - text: 없는번호
+                  - cell "-" [ref=e406]
+                  - cell [ref=e407]:
+                    - generic [ref=e408]:
+                      - button "전화 걸기" [ref=e409]:
+                        - img [ref=e410]
+                      - button "문자 보내기" [ref=e412]:
+                        - img [ref=e413]
+                      - button "연락 이력" [ref=e415]:
+                        - img [ref=e416]
+                      - button "리콜 제외" [ref=e421]:
+                        - img [ref=e422]
+                - 'row "강수연 27세 010-9128-2207 차트: 9061 2025-12-23 3개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e427]':
+                  - cell [ref=e428]:
+                    - checkbox [ref=e429]
+                  - 'cell "강수연 27세 010-9128-2207 차트: 9061" [ref=e430]':
+                    - generic [ref=e431]:
+                      - img [ref=e433]
+                      - generic [ref=e436]:
+                        - generic [ref=e437]:
+                          - paragraph [ref=e438]: 강수연
+                          - generic [ref=e439]: 27세
+                        - paragraph [ref=e440]: 010-9128-2207
+                        - paragraph [ref=e441]: "차트: 9061"
+                  - cell "2025-12-23 3개월 전" [ref=e442]:
+                    - generic [ref=e443]:
+                      - paragraph [ref=e444]: 2025-12-23
+                      - paragraph [ref=e445]: 3개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e446]:
+                    - generic [ref=e447]:
+                      - button "리콜 전" [ref=e448]:
+                        - img [ref=e449]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e452]:
+                        - img [ref=e453]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e456]:
+                        - img [ref=e457]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e460]:
+                        - img [ref=e461]
+                        - text: 이미예약
+                      - button "부재중" [ref=e463]:
+                        - img [ref=e464]
+                        - text: 부재중
+                      - button "통화거부" [ref=e468]:
+                        - img [ref=e469]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e473]:
+                        - img [ref=e474]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e477]:
+                        - img [ref=e478]
+                        - text: 없는번호
+                  - cell "-" [ref=e482]
+                  - cell [ref=e483]:
+                    - generic [ref=e484]:
+                      - button "전화 걸기" [ref=e485]:
+                        - img [ref=e486]
+                      - button "문자 보내기" [ref=e488]:
+                        - img [ref=e489]
+                      - button "연락 이력" [ref=e491]:
+                        - img [ref=e492]
+                      - button "리콜 제외" [ref=e497]:
+                        - img [ref=e498]
+                - 'row "김상진B 76세 010-5302-3537 차트: 9058 2025-12-02 3개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e503]':
+                  - cell [ref=e504]:
+                    - checkbox [ref=e505]
+                  - 'cell "김상진B 76세 010-5302-3537 차트: 9058" [ref=e506]':
+                    - generic [ref=e507]:
+                      - img [ref=e509]
+                      - generic [ref=e512]:
+                        - generic [ref=e513]:
+                          - paragraph [ref=e514]: 김상진B
+                          - generic [ref=e515]: 76세
+                        - paragraph [ref=e516]: 010-5302-3537
+                        - paragraph [ref=e517]: "차트: 9058"
+                  - cell "2025-12-02 3개월 전" [ref=e518]:
+                    - generic [ref=e519]:
+                      - paragraph [ref=e520]: 2025-12-02
+                      - paragraph [ref=e521]: 3개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e522]:
+                    - generic [ref=e523]:
+                      - button "리콜 전" [ref=e524]:
+                        - img [ref=e525]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e528]:
+                        - img [ref=e529]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e532]:
+                        - img [ref=e533]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e536]:
+                        - img [ref=e537]
+                        - text: 이미예약
+                      - button "부재중" [ref=e539]:
+                        - img [ref=e540]
+                        - text: 부재중
+                      - button "통화거부" [ref=e544]:
+                        - img [ref=e545]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e549]:
+                        - img [ref=e550]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e553]:
+                        - img [ref=e554]
+                        - text: 없는번호
+                  - cell "-" [ref=e558]
+                  - cell [ref=e559]:
+                    - generic [ref=e560]:
+                      - button "전화 걸기" [ref=e561]:
+                        - img [ref=e562]
+                      - button "문자 보내기" [ref=e564]:
+                        - img [ref=e565]
+                      - button "연락 이력" [ref=e567]:
+                        - img [ref=e568]
+                      - button "리콜 제외" [ref=e573]:
+                        - img [ref=e574]
+                - 'row "김선규 34세 010-9094-3444 차트: 9053 2025-12-29 3개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e579]':
+                  - cell [ref=e580]:
+                    - checkbox [ref=e581]
+                  - 'cell "김선규 34세 010-9094-3444 차트: 9053" [ref=e582]':
+                    - generic [ref=e583]:
+                      - img [ref=e585]
+                      - generic [ref=e588]:
+                        - generic [ref=e589]:
+                          - paragraph [ref=e590]: 김선규
+                          - generic [ref=e591]: 34세
+                        - paragraph [ref=e592]: 010-9094-3444
+                        - paragraph [ref=e593]: "차트: 9053"
+                  - cell "2025-12-29 3개월 전" [ref=e594]:
+                    - generic [ref=e595]:
+                      - paragraph [ref=e596]: 2025-12-29
+                      - paragraph [ref=e597]: 3개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e598]:
+                    - generic [ref=e599]:
+                      - button "리콜 전" [ref=e600]:
+                        - img [ref=e601]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e604]:
+                        - img [ref=e605]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e608]:
+                        - img [ref=e609]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e612]:
+                        - img [ref=e613]
+                        - text: 이미예약
+                      - button "부재중" [ref=e615]:
+                        - img [ref=e616]
+                        - text: 부재중
+                      - button "통화거부" [ref=e620]:
+                        - img [ref=e621]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e625]:
+                        - img [ref=e626]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e629]:
+                        - img [ref=e630]
+                        - text: 없는번호
+                  - cell "-" [ref=e634]
+                  - cell [ref=e635]:
+                    - generic [ref=e636]:
+                      - button "전화 걸기" [ref=e637]:
+                        - img [ref=e638]
+                      - button "문자 보내기" [ref=e640]:
+                        - img [ref=e641]
+                      - button "연락 이력" [ref=e643]:
+                        - img [ref=e644]
+                      - button "리콜 제외" [ref=e649]:
+                        - img [ref=e650]
+                - 'row "남윤재 12세 010-6850-6420 차트: 8077 2020-02-11 6년 1개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e655]':
+                  - cell [ref=e656]:
+                    - checkbox [ref=e657]
+                  - 'cell "남윤재 12세 010-6850-6420 차트: 8077" [ref=e658]':
+                    - generic [ref=e659]:
+                      - img [ref=e661]
+                      - generic [ref=e664]:
+                        - generic [ref=e665]:
+                          - paragraph [ref=e666]: 남윤재
+                          - generic [ref=e667]: 12세
+                        - paragraph [ref=e668]: 010-6850-6420
+                        - paragraph [ref=e669]: "차트: 8077"
+                  - cell "2020-02-11 6년 1개월 전" [ref=e670]:
+                    - generic [ref=e671]:
+                      - paragraph [ref=e672]: 2020-02-11
+                      - paragraph [ref=e673]: 6년 1개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e674]:
+                    - generic [ref=e675]:
+                      - button "리콜 전" [ref=e676]:
+                        - img [ref=e677]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e680]:
+                        - img [ref=e681]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e684]:
+                        - img [ref=e685]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e688]:
+                        - img [ref=e689]
+                        - text: 이미예약
+                      - button "부재중" [ref=e691]:
+                        - img [ref=e692]
+                        - text: 부재중
+                      - button "통화거부" [ref=e696]:
+                        - img [ref=e697]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e701]:
+                        - img [ref=e702]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e705]:
+                        - img [ref=e706]
+                        - text: 없는번호
+                  - cell "-" [ref=e710]
+                  - cell [ref=e711]:
+                    - generic [ref=e712]:
+                      - button "전화 걸기" [ref=e713]:
+                        - img [ref=e714]
+                      - button "문자 보내기" [ref=e716]:
+                        - img [ref=e717]
+                      - button "연락 이력" [ref=e719]:
+                        - img [ref=e720]
+                      - button "리콜 제외" [ref=e725]:
+                        - img [ref=e726]
+                - 'row "노국균 19세 010-5278-7661 차트: 8328 2021-05-10 4년 10개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e731]':
+                  - cell [ref=e732]:
+                    - checkbox [ref=e733]
+                  - 'cell "노국균 19세 010-5278-7661 차트: 8328" [ref=e734]':
+                    - generic [ref=e735]:
+                      - img [ref=e737]
+                      - generic [ref=e740]:
+                        - generic [ref=e741]:
+                          - paragraph [ref=e742]: 노국균
+                          - generic [ref=e743]: 19세
+                        - paragraph [ref=e744]: 010-5278-7661
+                        - paragraph [ref=e745]: "차트: 8328"
+                  - cell "2021-05-10 4년 10개월 전" [ref=e746]:
+                    - generic [ref=e747]:
+                      - paragraph [ref=e748]: 2021-05-10
+                      - paragraph [ref=e749]: 4년 10개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e750]:
+                    - generic [ref=e751]:
+                      - button "리콜 전" [ref=e752]:
+                        - img [ref=e753]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e756]:
+                        - img [ref=e757]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e760]:
+                        - img [ref=e761]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e764]:
+                        - img [ref=e765]
+                        - text: 이미예약
+                      - button "부재중" [ref=e767]:
+                        - img [ref=e768]
+                        - text: 부재중
+                      - button "통화거부" [ref=e772]:
+                        - img [ref=e773]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e777]:
+                        - img [ref=e778]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e781]:
+                        - img [ref=e782]
+                        - text: 없는번호
+                  - cell "-" [ref=e786]
+                  - cell [ref=e787]:
+                    - generic [ref=e788]:
+                      - button "전화 걸기" [ref=e789]:
+                        - img [ref=e790]
+                      - button "문자 보내기" [ref=e792]:
+                        - img [ref=e793]
+                      - button "연락 이력" [ref=e795]:
+                        - img [ref=e796]
+                      - button "리콜 제외" [ref=e801]:
+                        - img [ref=e802]
+                - 'row "박해수 68세 010-9756-7251 차트: 9066 2025-12-27 3개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e807]':
+                  - cell [ref=e808]:
+                    - checkbox [ref=e809]
+                  - 'cell "박해수 68세 010-9756-7251 차트: 9066" [ref=e810]':
+                    - generic [ref=e811]:
+                      - img [ref=e813]
+                      - generic [ref=e816]:
+                        - generic [ref=e817]:
+                          - paragraph [ref=e818]: 박해수
+                          - generic [ref=e819]: 68세
+                        - paragraph [ref=e820]: 010-9756-7251
+                        - paragraph [ref=e821]: "차트: 9066"
+                  - cell "2025-12-27 3개월 전" [ref=e822]:
+                    - generic [ref=e823]:
+                      - paragraph [ref=e824]: 2025-12-27
+                      - paragraph [ref=e825]: 3개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e826]:
+                    - generic [ref=e827]:
+                      - button "리콜 전" [ref=e828]:
+                        - img [ref=e829]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e832]:
+                        - img [ref=e833]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e836]:
+                        - img [ref=e837]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e840]:
+                        - img [ref=e841]
+                        - text: 이미예약
+                      - button "부재중" [ref=e843]:
+                        - img [ref=e844]
+                        - text: 부재중
+                      - button "통화거부" [ref=e848]:
+                        - img [ref=e849]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e853]:
+                        - img [ref=e854]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e857]:
+                        - img [ref=e858]
+                        - text: 없는번호
+                  - cell "-" [ref=e862]
+                  - cell [ref=e863]:
+                    - generic [ref=e864]:
+                      - button "전화 걸기" [ref=e865]:
+                        - img [ref=e866]
+                      - button "문자 보내기" [ref=e868]:
+                        - img [ref=e869]
+                      - button "연락 이력" [ref=e871]:
+                        - img [ref=e872]
+                      - button "리콜 제외" [ref=e877]:
+                        - img [ref=e878]
+                - 'row "박효진 16세 010-9990-2604 차트: 7800 2019-01-30 7년 2개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e883]':
+                  - cell [ref=e884]:
+                    - checkbox [ref=e885]
+                  - 'cell "박효진 16세 010-9990-2604 차트: 7800" [ref=e886]':
+                    - generic [ref=e887]:
+                      - img [ref=e889]
+                      - generic [ref=e892]:
+                        - generic [ref=e893]:
+                          - paragraph [ref=e894]: 박효진
+                          - generic [ref=e895]: 16세
+                        - paragraph [ref=e896]: 010-9990-2604
+                        - paragraph [ref=e897]: "차트: 7800"
+                  - cell "2019-01-30 7년 2개월 전" [ref=e898]:
+                    - generic [ref=e899]:
+                      - paragraph [ref=e900]: 2019-01-30
+                      - paragraph [ref=e901]: 7년 2개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e902]:
+                    - generic [ref=e903]:
+                      - button "리콜 전" [ref=e904]:
+                        - img [ref=e905]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e908]:
+                        - img [ref=e909]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e912]:
+                        - img [ref=e913]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e916]:
+                        - img [ref=e917]
+                        - text: 이미예약
+                      - button "부재중" [ref=e919]:
+                        - img [ref=e920]
+                        - text: 부재중
+                      - button "통화거부" [ref=e924]:
+                        - img [ref=e925]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e929]:
+                        - img [ref=e930]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e933]:
+                        - img [ref=e934]
+                        - text: 없는번호
+                  - cell "-" [ref=e938]
+                  - cell [ref=e939]:
+                    - generic [ref=e940]:
+                      - button "전화 걸기" [ref=e941]:
+                        - img [ref=e942]
+                      - button "문자 보내기" [ref=e944]:
+                        - img [ref=e945]
+                      - button "연락 이력" [ref=e947]:
+                        - img [ref=e948]
+                      - button "리콜 제외" [ref=e953]:
+                        - img [ref=e954]
+                - 'row "백만일 68세 010-8950-6664 차트: 9060 2026-01-02 2개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e959]':
+                  - cell [ref=e960]:
+                    - checkbox [ref=e961]
+                  - 'cell "백만일 68세 010-8950-6664 차트: 9060" [ref=e962]':
+                    - generic [ref=e963]:
+                      - img [ref=e965]
+                      - generic [ref=e968]:
+                        - generic [ref=e969]:
+                          - paragraph [ref=e970]: 백만일
+                          - generic [ref=e971]: 68세
+                        - paragraph [ref=e972]: 010-8950-6664
+                        - paragraph [ref=e973]: "차트: 9060"
+                  - cell "2026-01-02 2개월 전" [ref=e974]:
+                    - generic [ref=e975]:
+                      - paragraph [ref=e976]: 2026-01-02
+                      - paragraph [ref=e977]: 2개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e978]:
+                    - generic [ref=e979]:
+                      - button "리콜 전" [ref=e980]:
+                        - img [ref=e981]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e984]:
+                        - img [ref=e985]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e988]:
+                        - img [ref=e989]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e992]:
+                        - img [ref=e993]
+                        - text: 이미예약
+                      - button "부재중" [ref=e995]:
+                        - img [ref=e996]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1000]:
+                        - img [ref=e1001]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1005]:
+                        - img [ref=e1006]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1009]:
+                        - img [ref=e1010]
+                        - text: 없는번호
+                  - cell "-" [ref=e1014]
+                  - cell [ref=e1015]:
+                    - generic [ref=e1016]:
+                      - button "전화 걸기" [ref=e1017]:
+                        - img [ref=e1018]
+                      - button "문자 보내기" [ref=e1020]:
+                        - img [ref=e1021]
+                      - button "연락 이력" [ref=e1023]:
+                        - img [ref=e1024]
+                      - button "리콜 제외" [ref=e1029]:
+                        - img [ref=e1030]
+                - 'row "선하람 13세 010-9396-6844 차트: 8295 2021-02-01 5년 1개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1035]':
+                  - cell [ref=e1036]:
+                    - checkbox [ref=e1037]
+                  - 'cell "선하람 13세 010-9396-6844 차트: 8295" [ref=e1038]':
+                    - generic [ref=e1039]:
+                      - img [ref=e1041]
+                      - generic [ref=e1044]:
+                        - generic [ref=e1045]:
+                          - paragraph [ref=e1046]: 선하람
+                          - generic [ref=e1047]: 13세
+                        - paragraph [ref=e1048]: 010-9396-6844
+                        - paragraph [ref=e1049]: "차트: 8295"
+                  - cell "2021-02-01 5년 1개월 전" [ref=e1050]:
+                    - generic [ref=e1051]:
+                      - paragraph [ref=e1052]: 2021-02-01
+                      - paragraph [ref=e1053]: 5년 1개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1054]:
+                    - generic [ref=e1055]:
+                      - button "리콜 전" [ref=e1056]:
+                        - img [ref=e1057]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1060]:
+                        - img [ref=e1061]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1064]:
+                        - img [ref=e1065]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1068]:
+                        - img [ref=e1069]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1071]:
+                        - img [ref=e1072]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1076]:
+                        - img [ref=e1077]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1081]:
+                        - img [ref=e1082]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1085]:
+                        - img [ref=e1086]
+                        - text: 없는번호
+                  - cell "-" [ref=e1090]
+                  - cell [ref=e1091]:
+                    - generic [ref=e1092]:
+                      - button "전화 걸기" [ref=e1093]:
+                        - img [ref=e1094]
+                      - button "문자 보내기" [ref=e1096]:
+                        - img [ref=e1097]
+                      - button "연락 이력" [ref=e1099]:
+                        - img [ref=e1100]
+                      - button "리콜 제외" [ref=e1105]:
+                        - img [ref=e1106]
+                - 'row "성충숙 44세 010-9345-8645 차트: 9065 2025-12-11 3개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1111]':
+                  - cell [ref=e1112]:
+                    - checkbox [ref=e1113]
+                  - 'cell "성충숙 44세 010-9345-8645 차트: 9065" [ref=e1114]':
+                    - generic [ref=e1115]:
+                      - img [ref=e1117]
+                      - generic [ref=e1120]:
+                        - generic [ref=e1121]:
+                          - paragraph [ref=e1122]: 성충숙
+                          - generic [ref=e1123]: 44세
+                        - paragraph [ref=e1124]: 010-9345-8645
+                        - paragraph [ref=e1125]: "차트: 9065"
+                  - cell "2025-12-11 3개월 전" [ref=e1126]:
+                    - generic [ref=e1127]:
+                      - paragraph [ref=e1128]: 2025-12-11
+                      - paragraph [ref=e1129]: 3개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1130]:
+                    - generic [ref=e1131]:
+                      - button "리콜 전" [ref=e1132]:
+                        - img [ref=e1133]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1136]:
+                        - img [ref=e1137]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1140]:
+                        - img [ref=e1141]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1144]:
+                        - img [ref=e1145]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1147]:
+                        - img [ref=e1148]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1152]:
+                        - img [ref=e1153]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1157]:
+                        - img [ref=e1158]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1161]:
+                        - img [ref=e1162]
+                        - text: 없는번호
+                  - cell "-" [ref=e1166]
+                  - cell [ref=e1167]:
+                    - generic [ref=e1168]:
+                      - button "전화 걸기" [ref=e1169]:
+                        - img [ref=e1170]
+                      - button "문자 보내기" [ref=e1172]:
+                        - img [ref=e1173]
+                      - button "연락 이력" [ref=e1175]:
+                        - img [ref=e1176]
+                      - button "리콜 제외" [ref=e1181]:
+                        - img [ref=e1182]
+                - 'row "스코트니코바키라 29세 010-9832-0347 차트: 9064 2026-02-07 1개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1187]':
+                  - cell [ref=e1188]:
+                    - checkbox [ref=e1189]
+                  - 'cell "스코트니코바키라 29세 010-9832-0347 차트: 9064" [ref=e1190]':
+                    - generic [ref=e1191]:
+                      - img [ref=e1193]
+                      - generic [ref=e1196]:
+                        - generic [ref=e1197]:
+                          - paragraph [ref=e1198]: 스코트니코바키라
+                          - generic [ref=e1199]: 29세
+                        - paragraph [ref=e1200]: 010-9832-0347
+                        - paragraph [ref=e1201]: "차트: 9064"
+                  - cell "2026-02-07 1개월 전" [ref=e1202]:
+                    - generic [ref=e1203]:
+                      - paragraph [ref=e1204]: 2026-02-07
+                      - paragraph [ref=e1205]: 1개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1206]:
+                    - generic [ref=e1207]:
+                      - button "리콜 전" [ref=e1208]:
+                        - img [ref=e1209]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1212]:
+                        - img [ref=e1213]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1216]:
+                        - img [ref=e1217]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1220]:
+                        - img [ref=e1221]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1223]:
+                        - img [ref=e1224]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1228]:
+                        - img [ref=e1229]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1233]:
+                        - img [ref=e1234]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1237]:
+                        - img [ref=e1238]
+                        - text: 없는번호
+                  - cell "-" [ref=e1242]
+                  - cell [ref=e1243]:
+                    - generic [ref=e1244]:
+                      - button "전화 걸기" [ref=e1245]:
+                        - img [ref=e1246]
+                      - button "문자 보내기" [ref=e1248]:
+                        - img [ref=e1249]
+                      - button "연락 이력" [ref=e1251]:
+                        - img [ref=e1252]
+                      - button "리콜 제외" [ref=e1257]:
+                        - img [ref=e1258]
+                - 'row "오진순 84세 010-7273-4514 차트: 9089 2026-02-12 1개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1263]':
+                  - cell [ref=e1264]:
+                    - checkbox [ref=e1265]
+                  - 'cell "오진순 84세 010-7273-4514 차트: 9089" [ref=e1266]':
+                    - generic [ref=e1267]:
+                      - img [ref=e1269]
+                      - generic [ref=e1272]:
+                        - generic [ref=e1273]:
+                          - paragraph [ref=e1274]: 오진순
+                          - generic [ref=e1275]: 84세
+                        - paragraph [ref=e1276]: 010-7273-4514
+                        - paragraph [ref=e1277]: "차트: 9089"
+                  - cell "2026-02-12 1개월 전" [ref=e1278]:
+                    - generic [ref=e1279]:
+                      - paragraph [ref=e1280]: 2026-02-12
+                      - paragraph [ref=e1281]: 1개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1282]:
+                    - generic [ref=e1283]:
+                      - button "리콜 전" [ref=e1284]:
+                        - img [ref=e1285]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1288]:
+                        - img [ref=e1289]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1292]:
+                        - img [ref=e1293]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1296]:
+                        - img [ref=e1297]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1299]:
+                        - img [ref=e1300]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1304]:
+                        - img [ref=e1305]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1309]:
+                        - img [ref=e1310]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1313]:
+                        - img [ref=e1314]
+                        - text: 없는번호
+                  - cell "-" [ref=e1318]
+                  - cell [ref=e1319]:
+                    - generic [ref=e1320]:
+                      - button "전화 걸기" [ref=e1321]:
+                        - img [ref=e1322]
+                      - button "문자 보내기" [ref=e1324]:
+                        - img [ref=e1325]
+                      - button "연락 이력" [ref=e1327]:
+                        - img [ref=e1328]
+                      - button "리콜 제외" [ref=e1333]:
+                        - img [ref=e1334]
+                - 'row "원진희 64세 010-8783-6172 차트: 9054 2026-02-13 1개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1339]':
+                  - cell [ref=e1340]:
+                    - checkbox [ref=e1341]
+                  - 'cell "원진희 64세 010-8783-6172 차트: 9054" [ref=e1342]':
+                    - generic [ref=e1343]:
+                      - img [ref=e1345]
+                      - generic [ref=e1348]:
+                        - generic [ref=e1349]:
+                          - paragraph [ref=e1350]: 원진희
+                          - generic [ref=e1351]: 64세
+                        - paragraph [ref=e1352]: 010-8783-6172
+                        - paragraph [ref=e1353]: "차트: 9054"
+                  - cell "2026-02-13 1개월 전" [ref=e1354]:
+                    - generic [ref=e1355]:
+                      - paragraph [ref=e1356]: 2026-02-13
+                      - paragraph [ref=e1357]: 1개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1358]:
+                    - generic [ref=e1359]:
+                      - button "리콜 전" [ref=e1360]:
+                        - img [ref=e1361]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1364]:
+                        - img [ref=e1365]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1368]:
+                        - img [ref=e1369]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1372]:
+                        - img [ref=e1373]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1375]:
+                        - img [ref=e1376]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1380]:
+                        - img [ref=e1381]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1385]:
+                        - img [ref=e1386]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1389]:
+                        - img [ref=e1390]
+                        - text: 없는번호
+                  - cell "-" [ref=e1394]
+                  - cell [ref=e1395]:
+                    - generic [ref=e1396]:
+                      - button "전화 걸기" [ref=e1397]:
+                        - img [ref=e1398]
+                      - button "문자 보내기" [ref=e1400]:
+                        - img [ref=e1401]
+                      - button "연락 이력" [ref=e1403]:
+                        - img [ref=e1404]
+                      - button "리콜 제외" [ref=e1409]:
+                        - img [ref=e1410]
+                - 'row "이도선 66세 010-2867-0178 차트: 9091 2026-02-13 1개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1415]':
+                  - cell [ref=e1416]:
+                    - checkbox [ref=e1417]
+                  - 'cell "이도선 66세 010-2867-0178 차트: 9091" [ref=e1418]':
+                    - generic [ref=e1419]:
+                      - img [ref=e1421]
+                      - generic [ref=e1424]:
+                        - generic [ref=e1425]:
+                          - paragraph [ref=e1426]: 이도선
+                          - generic [ref=e1427]: 66세
+                        - paragraph [ref=e1428]: 010-2867-0178
+                        - paragraph [ref=e1429]: "차트: 9091"
+                  - cell "2026-02-13 1개월 전" [ref=e1430]:
+                    - generic [ref=e1431]:
+                      - paragraph [ref=e1432]: 2026-02-13
+                      - paragraph [ref=e1433]: 1개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1434]:
+                    - generic [ref=e1435]:
+                      - button "리콜 전" [ref=e1436]:
+                        - img [ref=e1437]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1440]:
+                        - img [ref=e1441]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1444]:
+                        - img [ref=e1445]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1448]:
+                        - img [ref=e1449]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1451]:
+                        - img [ref=e1452]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1456]:
+                        - img [ref=e1457]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1461]:
+                        - img [ref=e1462]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1465]:
+                        - img [ref=e1466]
+                        - text: 없는번호
+                  - cell "-" [ref=e1470]
+                  - cell [ref=e1471]:
+                    - generic [ref=e1472]:
+                      - button "전화 걸기" [ref=e1473]:
+                        - img [ref=e1474]
+                      - button "문자 보내기" [ref=e1476]:
+                        - img [ref=e1477]
+                      - button "연락 이력" [ref=e1479]:
+                        - img [ref=e1480]
+                      - button "리콜 제외" [ref=e1485]:
+                        - img [ref=e1486]
+                - 'row "장대경 64세 010-3757-9111 차트: 8737 2026-02-19 1개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1491]':
+                  - cell [ref=e1492]:
+                    - checkbox [ref=e1493]
+                  - 'cell "장대경 64세 010-3757-9111 차트: 8737" [ref=e1494]':
+                    - generic [ref=e1495]:
+                      - img [ref=e1497]
+                      - generic [ref=e1500]:
+                        - generic [ref=e1501]:
+                          - paragraph [ref=e1502]: 장대경
+                          - generic [ref=e1503]: 64세
+                        - paragraph [ref=e1504]: 010-3757-9111
+                        - paragraph [ref=e1505]: "차트: 8737"
+                  - cell "2026-02-19 1개월 전" [ref=e1506]:
+                    - generic [ref=e1507]:
+                      - paragraph [ref=e1508]: 2026-02-19
+                      - paragraph [ref=e1509]: 1개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1510]:
+                    - generic [ref=e1511]:
+                      - button "리콜 전" [ref=e1512]:
+                        - img [ref=e1513]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1516]:
+                        - img [ref=e1517]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1520]:
+                        - img [ref=e1521]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1524]:
+                        - img [ref=e1525]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1527]:
+                        - img [ref=e1528]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1532]:
+                        - img [ref=e1533]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1537]:
+                        - img [ref=e1538]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1541]:
+                        - img [ref=e1542]
+                        - text: 없는번호
+                  - cell "-" [ref=e1546]
+                  - cell [ref=e1547]:
+                    - generic [ref=e1548]:
+                      - button "전화 걸기" [ref=e1549]:
+                        - img [ref=e1550]
+                      - button "문자 보내기" [ref=e1552]:
+                        - img [ref=e1553]
+                      - button "연락 이력" [ref=e1555]:
+                        - img [ref=e1556]
+                      - button "리콜 제외" [ref=e1561]:
+                        - img [ref=e1562]
+                - 'row "장유진B 20세 010-5461-9920 차트: 8329 2021-04-24 4년 11개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1567]':
+                  - cell [ref=e1568]:
+                    - checkbox [ref=e1569]
+                  - 'cell "장유진B 20세 010-5461-9920 차트: 8329" [ref=e1570]':
+                    - generic [ref=e1571]:
+                      - img [ref=e1573]
+                      - generic [ref=e1576]:
+                        - generic [ref=e1577]:
+                          - paragraph [ref=e1578]: 장유진B
+                          - generic [ref=e1579]: 20세
+                        - paragraph [ref=e1580]: 010-5461-9920
+                        - paragraph [ref=e1581]: "차트: 8329"
+                  - cell "2021-04-24 4년 11개월 전" [ref=e1582]:
+                    - generic [ref=e1583]:
+                      - paragraph [ref=e1584]: 2021-04-24
+                      - paragraph [ref=e1585]: 4년 11개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1586]:
+                    - generic [ref=e1587]:
+                      - button "리콜 전" [ref=e1588]:
+                        - img [ref=e1589]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1592]:
+                        - img [ref=e1593]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1596]:
+                        - img [ref=e1597]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1600]:
+                        - img [ref=e1601]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1603]:
+                        - img [ref=e1604]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1608]:
+                        - img [ref=e1609]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1613]:
+                        - img [ref=e1614]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1617]:
+                        - img [ref=e1618]
+                        - text: 없는번호
+                  - cell "-" [ref=e1622]
+                  - cell [ref=e1623]:
+                    - generic [ref=e1624]:
+                      - button "전화 걸기" [ref=e1625]:
+                        - img [ref=e1626]
+                      - button "문자 보내기" [ref=e1628]:
+                        - img [ref=e1629]
+                      - button "연락 이력" [ref=e1631]:
+                        - img [ref=e1632]
+                      - button "리콜 제외" [ref=e1637]:
+                        - img [ref=e1638]
+                - 'row "최용순 59세 010-8711-1246 차트: 9094 2026-02-10 1개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1643]':
+                  - cell [ref=e1644]:
+                    - checkbox [ref=e1645]
+                  - 'cell "최용순 59세 010-8711-1246 차트: 9094" [ref=e1646]':
+                    - generic [ref=e1647]:
+                      - img [ref=e1649]
+                      - generic [ref=e1652]:
+                        - generic [ref=e1653]:
+                          - paragraph [ref=e1654]: 최용순
+                          - generic [ref=e1655]: 59세
+                        - paragraph [ref=e1656]: 010-8711-1246
+                        - paragraph [ref=e1657]: "차트: 9094"
+                  - cell "2026-02-10 1개월 전" [ref=e1658]:
+                    - generic [ref=e1659]:
+                      - paragraph [ref=e1660]: 2026-02-10
+                      - paragraph [ref=e1661]: 1개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1662]:
+                    - generic [ref=e1663]:
+                      - button "리콜 전" [ref=e1664]:
+                        - img [ref=e1665]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1668]:
+                        - img [ref=e1669]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1672]:
+                        - img [ref=e1673]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1676]:
+                        - img [ref=e1677]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1679]:
+                        - img [ref=e1680]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1684]:
+                        - img [ref=e1685]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1689]:
+                        - img [ref=e1690]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1693]:
+                        - img [ref=e1694]
+                        - text: 없는번호
+                  - cell "-" [ref=e1698]
+                  - cell [ref=e1699]:
+                    - generic [ref=e1700]:
+                      - button "전화 걸기" [ref=e1701]:
+                        - img [ref=e1702]
+                      - button "문자 보내기" [ref=e1704]:
+                        - img [ref=e1705]
+                      - button "연락 이력" [ref=e1707]:
+                        - img [ref=e1708]
+                      - button "리콜 제외" [ref=e1713]:
+                        - img [ref=e1714]
+                - 'row "최이자B 78세 010-3366-8636 차트: 9090 2026-02-05 1개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1719]':
+                  - cell [ref=e1720]:
+                    - checkbox [ref=e1721]
+                  - 'cell "최이자B 78세 010-3366-8636 차트: 9090" [ref=e1722]':
+                    - generic [ref=e1723]:
+                      - img [ref=e1725]
+                      - generic [ref=e1728]:
+                        - generic [ref=e1729]:
+                          - paragraph [ref=e1730]: 최이자B
+                          - generic [ref=e1731]: 78세
+                        - paragraph [ref=e1732]: 010-3366-8636
+                        - paragraph [ref=e1733]: "차트: 9090"
+                  - cell "2026-02-05 1개월 전" [ref=e1734]:
+                    - generic [ref=e1735]:
+                      - paragraph [ref=e1736]: 2026-02-05
+                      - paragraph [ref=e1737]: 1개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1738]:
+                    - generic [ref=e1739]:
+                      - button "리콜 전" [ref=e1740]:
+                        - img [ref=e1741]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1744]:
+                        - img [ref=e1745]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1748]:
+                        - img [ref=e1749]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1752]:
+                        - img [ref=e1753]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1755]:
+                        - img [ref=e1756]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1760]:
+                        - img [ref=e1761]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1765]:
+                        - img [ref=e1766]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1769]:
+                        - img [ref=e1770]
+                        - text: 없는번호
+                  - cell "-" [ref=e1774]
+                  - cell [ref=e1775]:
+                    - generic [ref=e1776]:
+                      - button "전화 걸기" [ref=e1777]:
+                        - img [ref=e1778]
+                      - button "문자 보내기" [ref=e1780]:
+                        - img [ref=e1781]
+                      - button "연락 이력" [ref=e1783]:
+                        - img [ref=e1784]
+                      - button "리콜 제외" [ref=e1789]:
+                        - img [ref=e1790]
+                - 'row "한지원 11세 010-3394-6542 차트: 8079 2020-02-15 6년 1개월 전 리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호 -" [ref=e1795]':
+                  - cell [ref=e1796]:
+                    - checkbox [ref=e1797]
+                  - 'cell "한지원 11세 010-3394-6542 차트: 8079" [ref=e1798]':
+                    - generic [ref=e1799]:
+                      - img [ref=e1801]
+                      - generic [ref=e1804]:
+                        - generic [ref=e1805]:
+                          - paragraph [ref=e1806]: 한지원
+                          - generic [ref=e1807]: 11세
+                        - paragraph [ref=e1808]: 010-3394-6542
+                        - paragraph [ref=e1809]: "차트: 8079"
+                  - cell "2020-02-15 6년 1개월 전" [ref=e1810]:
+                    - generic [ref=e1811]:
+                      - paragraph [ref=e1812]: 2020-02-15
+                      - paragraph [ref=e1813]: 6년 1개월 전
+                  - cell "리콜 전 예약 성공 예약보류 이미예약 부재중 통화거부 내원거부 없는번호" [ref=e1814]:
+                    - generic [ref=e1815]:
+                      - button "리콜 전" [ref=e1816]:
+                        - img [ref=e1817]
+                        - text: 리콜 전
+                      - button "예약 성공" [ref=e1820]:
+                        - img [ref=e1821]
+                        - text: 예약 성공
+                      - button "예약보류" [ref=e1824]:
+                        - img [ref=e1825]
+                        - text: 예약보류
+                      - button "이미예약" [ref=e1828]:
+                        - img [ref=e1829]
+                        - text: 이미예약
+                      - button "부재중" [ref=e1831]:
+                        - img [ref=e1832]
+                        - text: 부재중
+                      - button "통화거부" [ref=e1836]:
+                        - img [ref=e1837]
+                        - text: 통화거부
+                      - button "내원거부" [ref=e1841]:
+                        - img [ref=e1842]
+                        - text: 내원거부
+                      - button "없는번호" [ref=e1845]:
+                        - img [ref=e1846]
+                        - text: 없는번호
+                  - cell "-" [ref=e1850]
+                  - cell [ref=e1851]:
+                    - generic [ref=e1852]:
+                      - button "전화 걸기" [ref=e1853]:
+                        - img [ref=e1854]
+                      - button "문자 보내기" [ref=e1856]:
+                        - img [ref=e1857]
+                      - button "연락 이력" [ref=e1859]:
+                        - img [ref=e1860]
+                      - button "리콜 제외" [ref=e1865]:
+                        - img [ref=e1866]
+            - generic [ref=e1871]:
+              - generic [ref=e1872]: 총 7736명 중 20명 표시
+              - generic [ref=e1873]:
+                - button [disabled] [ref=e1874]:
+                  - img [ref=e1875]
+                - generic [ref=e1877]:
+                  - button "1" [ref=e1879]
+                  - button "2" [ref=e1881]
+                  - button "3" [ref=e1883]
+                  - generic [ref=e1884]:
+                    - generic [ref=e1885]: ...
+                    - button "387" [ref=e1886]
+                - button [ref=e1887]:
+                  - img [ref=e1888]

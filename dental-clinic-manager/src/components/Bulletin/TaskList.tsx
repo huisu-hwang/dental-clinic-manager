@@ -1,23 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   ListTodo,
   Plus,
   Search,
-  Calendar,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
   Filter,
-  User,
-  Clock,
   CheckCircle2,
-  Circle,
-  Loader2,
-  Pause,
-  XCircle,
-  MessageCircle
+  ClipboardList,
+  LayoutGrid,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -25,79 +17,70 @@ import { taskService } from '@/lib/bulletinService'
 import type { Task, TaskStatus, TaskPriority } from '@/types/bulletin'
 import {
   TASK_STATUS_LABELS,
-  TASK_STATUS_COLORS,
   TASK_PRIORITY_LABELS,
-  TASK_PRIORITY_COLORS
 } from '@/types/bulletin'
 import TaskDetail from './TaskDetail'
 import TaskForm from './TaskForm'
+import TaskCardView from './TaskCardView'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
+
+type ViewTab = 'active' | 'completed'
 
 interface TaskListProps {
   canCreate?: boolean
   showMyTasksOnly?: boolean
 }
 
-// 현재 사용자 정보 가져오기
-const getCurrentUser = (): { id: string; role: string } | null => {
+// 현재 사용자 ID 가져오기
+const getCurrentUserId = (): string | null => {
   if (typeof window === 'undefined') return null
   const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
   if (!userStr) return null
   try {
     const user = JSON.parse(userStr)
-    return { id: user.id, role: user.role }
+    return user.id
   } catch {
     return null
   }
 }
 
 export default function TaskList({ canCreate = false, showMyTasksOnly = false }: TaskListProps) {
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [allTasks, setAllTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const currentUser = getCurrentUser()
-  const currentUserId = currentUser?.id || null
-  const isOwner = currentUser?.role === 'owner'
-  const [selectedStatus, setSelectedStatus] = useState<TaskStatus | ''>('')
+  const currentUserId = getCurrentUserId()
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority | ''>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [page, setPage] = useState(1)
-  const [total, setTotal] = useState(0)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [activeTab, setActiveTab] = useState<ViewTab>('active')
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'overdue' | ''>('')
   const [stats, setStats] = useState<{
     total: number
     pending: number
     in_progress: number
+    review: number
     completed: number
     overdue: number
   } | null>(null)
 
-  const ITEMS_PER_PAGE = 10
-
   const fetchTasks = useCallback(async () => {
-    setLoading(true)
     setError(null)
-
-    const fetchFn = showMyTasksOnly ? taskService.getMyTasks : taskService.getTasks
-
-    const { data, total: totalCount, error: fetchError } = await taskService.getTasks({
-      status: selectedStatus || undefined,
+    const { data, error: fetchError } = await taskService.getTasks({
       priority: selectedPriority || undefined,
       search: searchQuery || undefined,
-      limit: ITEMS_PER_PAGE,
-      offset: (page - 1) * ITEMS_PER_PAGE,
+      assignee_id: showMyTasksOnly ? (currentUserId || undefined) : undefined,
+      limit: 500,
+      offset: 0,
     })
-
     if (fetchError) {
       setError(fetchError)
     } else {
-      setTasks(data || [])
-      setTotal(totalCount)
+      setAllTasks(data || [])
     }
     setLoading(false)
-  }, [selectedStatus, selectedPriority, searchQuery, page, showMyTasksOnly])
+  }, [selectedPriority, searchQuery, showMyTasksOnly, currentUserId])
 
   const fetchStats = useCallback(async () => {
     const { data } = await taskService.getTaskStats()
@@ -113,25 +96,12 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    setPage(1)
     fetchTasks()
-  }
-
-  const handleStatusChange = (status: TaskStatus | '') => {
-    setSelectedStatus(status)
-    setPage(1)
-  }
-
-  const handlePriorityChange = (priority: TaskPriority | '') => {
-    setSelectedPriority(priority)
-    setPage(1)
   }
 
   const handleTaskClick = async (task: Task) => {
     const { data } = await taskService.getTask(task.id)
-    if (data) {
-      setSelectedTask(data)
-    }
+    if (data) setSelectedTask(data)
   }
 
   const handleEdit = (task: Task) => {
@@ -142,7 +112,6 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
 
   const handleDelete = async (id: string) => {
     if (!await appConfirm('정말 삭제하시겠습니까?')) return
-
     const { success, error: deleteError } = await taskService.deleteTask(id)
     if (success) {
       fetchTasks()
@@ -177,28 +146,23 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     setEditingTask(null)
   }
 
-  const totalPages = Math.ceil(total / ITEMS_PER_PAGE)
-
-  const getStatusIcon = (status: TaskStatus) => {
-    switch (status) {
-      case 'pending':
-        return <Circle className="w-4 h-4" />
-      case 'in_progress':
-        return <Loader2 className="w-4 h-4" />
-      case 'completed':
-        return <CheckCircle2 className="w-4 h-4" />
-      case 'on_hold':
-        return <Pause className="w-4 h-4" />
-      case 'cancelled':
-        return <XCircle className="w-4 h-4" />
+  const handleStatClick = (filter: TaskStatus | 'overdue' | 'all') => {
+    if (filter === 'all') {
+      setStatusFilter('')
+      return
     }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      month: 'long',
-      day: 'numeric',
-    })
+    // 같은 필터 다시 클릭하면 해제
+    if (statusFilter === filter) {
+      setStatusFilter('')
+      return
+    }
+    setStatusFilter(filter)
+    // 완료 필터 클릭 시 완료 탭으로 자동 전환
+    if (filter === 'completed') {
+      setActiveTab('completed')
+    } else {
+      setActiveTab('active')
+    }
   }
 
   const isOverdue = (task: Task) => {
@@ -207,6 +171,30 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     return new Date(task.due_date) < new Date()
   }
 
+  // 탭에 따라 필터링
+  const activeTasks = useMemo(() =>
+    allTasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled'),
+    [allTasks]
+  )
+  const completedTasks = useMemo(() =>
+    allTasks.filter(t => t.status === 'completed'),
+    [allTasks]
+  )
+
+  // 상태 필터 적용
+  const displayedTasks = useMemo(() => {
+    if (statusFilter === 'overdue') {
+      return allTasks.filter(t => isOverdue(t))
+    } else if (statusFilter === 'completed') {
+      return completedTasks
+    } else if (statusFilter) {
+      return allTasks.filter(t => t.status === statusFilter)
+    } else {
+      return activeTab === 'active' ? activeTasks : completedTasks
+    }
+  }, [allTasks, activeTasks, completedTasks, statusFilter, activeTab])
+
+  // TaskForm 표시
   if (showForm) {
     return (
       <TaskForm
@@ -217,6 +205,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     )
   }
 
+  // TaskDetail 표시
   if (selectedTask) {
     return (
       <TaskDetail
@@ -236,10 +225,13 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   return (
     <div className="space-y-4">
       {/* 헤더 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
-          <ListTodo className="w-5 h-5 text-purple-600" />
+          <LayoutGrid className="w-5 h-5 text-purple-600" />
           <h2 className="text-lg font-semibold text-gray-900">업무 지시</h2>
+          {!loading && (
+            <span className="text-xs text-gray-400 font-normal ml-1">총 {allTasks.length}건</span>
+          )}
         </div>
         {canCreate && (
           <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
@@ -249,49 +241,97 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         )}
       </div>
 
-      {/* 통계 */}
+      {/* 통계 (클릭하면 해당 상태 필터링) */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          <button
+            onClick={() => handleStatClick('all')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === '' ? 'bg-gray-100 ring-2 ring-gray-400' : 'bg-gray-50 hover:bg-gray-100'}`}
+          >
             <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
             <p className="text-xs text-gray-500">전체</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
+          </button>
+          <button
+            onClick={() => handleStatClick('pending')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'pending' ? 'bg-gray-200 ring-2 ring-gray-500' : 'bg-gray-50 hover:bg-gray-100'}`}
+          >
             <p className="text-2xl font-bold text-gray-600">{stats.pending}</p>
             <p className="text-xs text-gray-500">대기</p>
-          </div>
-          <div className="bg-blue-50 rounded-lg p-3 text-center">
+          </button>
+          <button
+            onClick={() => handleStatClick('in_progress')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'in_progress' ? 'bg-blue-100 ring-2 ring-blue-500' : 'bg-blue-50 hover:bg-blue-100'}`}
+          >
             <p className="text-2xl font-bold text-blue-600">{stats.in_progress}</p>
             <p className="text-xs text-gray-500">진행 중</p>
-          </div>
-          <div className="bg-green-50 rounded-lg p-3 text-center">
+          </button>
+          <button
+            onClick={() => handleStatClick('review')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'review' ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-purple-50 hover:bg-purple-100'}`}
+          >
+            <p className="text-2xl font-bold text-purple-600">{stats.review}</p>
+            <p className="text-xs text-gray-500">검토 요청</p>
+          </button>
+          <button
+            onClick={() => handleStatClick('completed')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'completed' ? 'bg-green-100 ring-2 ring-green-500' : 'bg-green-50 hover:bg-green-100'}`}
+          >
             <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
             <p className="text-xs text-gray-500">완료</p>
-          </div>
-          <div className="bg-red-50 rounded-lg p-3 text-center">
+          </button>
+          <button
+            onClick={() => handleStatClick('overdue')}
+            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'overdue' ? 'bg-red-100 ring-2 ring-red-500' : 'bg-red-50 hover:bg-red-100'}`}
+          >
             <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
             <p className="text-xs text-gray-500">기한 초과</p>
-          </div>
+          </button>
         </div>
       )}
 
-      {/* 필터 및 검색 */}
+      {/* 진행 중 / 완료 탭 */}
+      <div className="flex items-center gap-1 border-b border-gray-200">
+        <button
+          onClick={() => { setActiveTab('active'); setStatusFilter('') }}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'active'
+              ? 'border-purple-600 text-purple-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ClipboardList className="w-4 h-4" />
+          진행 업무
+          <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+            activeTab === 'active' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            {activeTasks.length}
+          </span>
+        </button>
+        <button
+          onClick={() => { setActiveTab('completed'); setStatusFilter('') }}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'completed'
+              ? 'border-green-600 text-green-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          완료된 업무
+          <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+            activeTab === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            {completedTasks.length}
+          </span>
+        </button>
+      </div>
+
+      {/* 검색 및 우선순위 필터 */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-gray-500" />
           <select
-            value={selectedStatus}
-            onChange={(e) => handleStatusChange(e.target.value as TaskStatus | '')}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">전체 상태</option>
-            {Object.entries(TASK_STATUS_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
-          <select
             value={selectedPriority}
-            onChange={(e) => handlePriorityChange(e.target.value as TaskPriority | '')}
+            onChange={(e) => setSelectedPriority(e.target.value as TaskPriority | '')}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">전체 우선순위</option>
@@ -323,146 +363,29 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </div>
       )}
 
-      {/* 로딩 */}
+      {/* 업무 보드 */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500" />
         </div>
-      ) : tasks.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <ListTodo className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-          <p>등록된 업무가 없습니다.</p>
+      ) : displayedTasks.length === 0 ? (
+        <div className="text-center py-16 text-gray-500">
+          <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            {activeTab === 'active' ? (
+              <ListTodo className="w-8 h-8 text-sky-300" />
+            ) : (
+              <CheckCircle2 className="w-8 h-8 text-green-300" />
+            )}
+          </div>
+          <p className="font-medium text-gray-600 mb-1">
+            {activeTab === 'active' ? '진행 중인 업무가 없습니다' : '완료된 업무가 없습니다'}
+          </p>
+          <p className="text-sm text-gray-400">
+            {activeTab === 'active' ? '새로운 업무가 할당되면 여기에 표시됩니다.' : '업무가 완료되면 여기에 표시됩니다.'}
+          </p>
         </div>
       ) : (
-        <>
-          {/* 업무 목록 */}
-          <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-200">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                onClick={() => handleTaskClick(task)}
-                className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${isOverdue(task) ? 'bg-red-50 hover:bg-red-100' : ''}`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* 상태 아이콘 */}
-                  <div className={`flex-shrink-0 mt-1 p-1 rounded ${TASK_STATUS_COLORS[task.status]}`}>
-                    {getStatusIcon(task.status)}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
-                        {TASK_PRIORITY_LABELS[task.priority]}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
-                        {TASK_STATUS_LABELS[task.status]}
-                      </span>
-                      {isOverdue(task) && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                          기한 초과
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-gray-900 font-medium">{task.title}</h3>
-                    {task.description && (
-                      <p className="text-sm text-gray-500 truncate mt-1">{task.description}</p>
-                    )}
-
-                    {/* 진행률 바 */}
-                    {task.status !== 'cancelled' && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                          <span>진행률</span>
-                          <span>{task.progress}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                          <div
-                            className={`h-1.5 rounded-full ${task.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}`}
-                            style={{ width: `${task.progress}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        {task.assignee_name}
-                      </span>
-                      {task.due_date && (
-                        <span className={`flex items-center gap-1 ${isOverdue(task) ? 'text-red-600' : ''}`}>
-                          <Calendar className="w-3 h-3" />
-                          {formatDate(task.due_date)}
-                        </span>
-                      )}
-                      {task.comments_count > 0 && (
-                        <span className="flex items-center gap-1">
-                          <MessageCircle className="w-3 h-3" />
-                          {task.comments_count}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 빠른 상태 변경 버튼 (담당자 또는 원장) */}
-                  <div className="flex-shrink-0 flex gap-1">
-                    {task.status === 'pending' && (currentUserId === task.assignee_id || isOwner) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStatusUpdate(task.id, 'in_progress')
-                        }}
-                        className="text-blue-600"
-                      >
-                        시작
-                      </Button>
-                    )}
-                    {task.status === 'in_progress' && (currentUserId === task.assignee_id || isOwner) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStatusUpdate(task.id, 'completed')
-                        }}
-                        className="text-green-600"
-                      >
-                        완료
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* 페이지네이션 */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm text-gray-600">
-                {page} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-        </>
+        <TaskCardView tasks={displayedTasks} onTaskClick={handleTaskClick} />
       )}
     </div>
   )

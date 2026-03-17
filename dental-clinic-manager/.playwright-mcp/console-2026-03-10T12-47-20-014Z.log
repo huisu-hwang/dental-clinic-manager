@@ -1,0 +1,5 @@
+[    1177ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[   75424ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[   75425ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   75889ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/attendance?_rsc=13v71:0
+[   76537ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/attendance:0

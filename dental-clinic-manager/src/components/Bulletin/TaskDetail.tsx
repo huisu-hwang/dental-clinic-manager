@@ -13,7 +13,8 @@ import {
   Circle,
   Loader2,
   Pause,
-  XCircle
+  XCircle,
+  Eye
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { taskService, taskCommentService } from '@/lib/bulletinService'
@@ -125,6 +126,8 @@ export default function TaskDetail({
         return <Circle className="w-5 h-5" />
       case 'in_progress':
         return <Loader2 className="w-5 h-5" />
+      case 'review':
+        return <Eye className="w-5 h-5" />
       case 'completed':
         return <CheckCircle2 className="w-5 h-5" />
       case 'on_hold':
@@ -241,23 +244,14 @@ export default function TaskDetail({
             </div>
           </div>
 
-          {/* 상태 변경 버튼 (담당자 또는 원장) */}
-          {(isAssignee || isOwner || onEdit) && task.status !== 'cancelled' && (
+          {/* 상태 변경 버튼 (담당자, 원장, 관리자) */}
+          {(isAssignee || isOwner || onEdit) && task.status !== 'cancelled' && task.status !== 'completed' && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-500 mb-2">상태 변경</p>
               <div className="flex flex-wrap gap-2">
-                {task.status !== 'pending' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onStatusUpdate('pending')}
-                    className="text-gray-600"
-                  >
-                    <Circle className="w-4 h-4 mr-1" />
-                    대기
-                  </Button>
-                )}
-                {task.status !== 'in_progress' && (
+                {/* === 담당자/원장 워크플로우 === */}
+                {/* 담당자 또는 원장: 업무 시작 (대기 → 진행 중) */}
+                {(isAssignee || isOwner) && task.status === 'pending' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -265,30 +259,73 @@ export default function TaskDetail({
                     className="text-blue-600"
                   >
                     <Loader2 className="w-4 h-4 mr-1" />
-                    진행 중
+                    업무 시작
                   </Button>
                 )}
-                {task.status !== 'on_hold' && (
+                {/* 담당자 또는 원장: 검토 요청 (진행 중 → 검토 요청) */}
+                {(isAssignee || isOwner) && task.status === 'in_progress' && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onStatusUpdate('on_hold')}
-                    className="text-yellow-600"
+                    onClick={() => onStatusUpdate('review')}
+                    className="text-purple-600"
                   >
-                    <Pause className="w-4 h-4 mr-1" />
-                    보류
+                    <Eye className="w-4 h-4 mr-1" />
+                    검토 요청
                   </Button>
                 )}
-                {task.status !== 'completed' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onStatusUpdate('completed')}
-                    className="text-green-600"
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-1" />
-                    완료
-                  </Button>
+
+                {/* === 결재자(관리자/원장) 워크플로우 === */}
+                {/* 결재자: 검토 완료 승인 (검토 요청 → 완료) */}
+                {(onEdit || isOwner) && task.status === 'review' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onStatusUpdate('completed')}
+                      className="text-green-600"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      완료 승인
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onStatusUpdate('in_progress')}
+                      className="text-blue-600"
+                    >
+                      <Loader2 className="w-4 h-4 mr-1" />
+                      반려 (재작업)
+                    </Button>
+                  </>
+                )}
+
+                {/* === 관리자 추가 옵션 === */}
+                {onEdit && (
+                  <>
+                    {task.status !== 'pending' && task.status !== 'review' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onStatusUpdate('pending')}
+                        className="text-gray-600"
+                      >
+                        <Circle className="w-4 h-4 mr-1" />
+                        대기로 변경
+                      </Button>
+                    )}
+                    {task.status !== 'on_hold' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onStatusUpdate('on_hold')}
+                        className="text-yellow-600"
+                      >
+                        <Pause className="w-4 h-4 mr-1" />
+                        보류
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>

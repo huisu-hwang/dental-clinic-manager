@@ -1,0 +1,2 @@
+[    5400ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[108725920ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://beahjntkmkfhpcbhfnrr.supabase.co/auth/v1/token?grant_type=refresh_token:0
