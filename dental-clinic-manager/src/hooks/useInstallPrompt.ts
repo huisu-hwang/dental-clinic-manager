@@ -46,9 +46,20 @@ if (typeof window !== 'undefined') {
   }
 
   // Capture beforeinstallprompt event globally (before any component mounts)
+  // This event only fires when the app is NOT installed.
+  // If it fires but we have an installed record → user uninstalled the app.
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault()
     _deferredPrompt = e as BeforeInstallPromptEvent
+
+    // Detect uninstall: previously installed but event fired again
+    if (localStorage.getItem(INSTALLED_KEY) === 'true') {
+      _isInstalled = false
+      _isDismissed = false
+      localStorage.removeItem(INSTALLED_KEY)
+      localStorage.removeItem(DISMISS_KEY)
+    }
+
     notifyListeners()
   })
 
