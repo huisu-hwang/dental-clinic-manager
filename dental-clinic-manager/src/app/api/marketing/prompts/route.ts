@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { seedDefaultPromptsIfNeeded } from '@/lib/marketing/seed-prompts';
 
 // 프롬프트 목록 조회
 export async function GET(request: NextRequest) {
@@ -19,6 +20,9 @@ export async function GET(request: NextRequest) {
     if (!userData?.clinic_id || userData.role !== 'owner') {
       return NextResponse.json({ error: '마스터 권한이 필요합니다.' }, { status: 403 });
     }
+
+    // 프롬프트가 없으면 기본 프롬프트 자동 생성
+    await seedDefaultPromptsIfNeeded(userData.clinic_id, user.id);
 
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');

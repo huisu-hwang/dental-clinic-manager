@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { TONE_INSTRUCTIONS } from './default-prompts';
+import { seedDefaultPromptsIfNeeded } from './seed-prompts';
 import {
   ContentGenerateOptions,
   GeneratedContent,
@@ -25,10 +26,16 @@ export async function generateContent(
   options: ContentGenerateOptions,
   clinicId: string
 ): Promise<GeneratedContent> {
-  // 1. 프롬프트 로딩
-  const prompt = await loadActivePrompt(clinicId, `content.${options.postType}`);
+  // 1. 프롬프트 로딩 (없으면 기본 프롬프트 자동 생성 후 재시도)
+  let prompt = await loadActivePrompt(clinicId, `content.${options.postType}`);
   if (!prompt) {
-    throw new Error(`프롬프트를 찾을 수 없습니다: content.${options.postType}`);
+    const seeded = await seedDefaultPromptsIfNeeded(clinicId);
+    if (seeded) {
+      prompt = await loadActivePrompt(clinicId, `content.${options.postType}`);
+    }
+    if (!prompt) {
+      throw new Error(`프롬프트를 찾을 수 없습니다: content.${options.postType}`);
+    }
   }
 
   // 2. 변수 치환
