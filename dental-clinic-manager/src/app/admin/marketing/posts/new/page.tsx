@@ -7,6 +7,7 @@ import {
   ArrowLeftIcon,
   SparklesIcon,
   DocumentCheckIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/outline'
 import {
   TONE_LABELS,
@@ -15,6 +16,8 @@ import {
   type PostType,
   type ToneType,
   type PlatformOptions,
+  type GeneratedContent,
+  type ImageMarker,
 } from '@/types/marketing'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
@@ -34,12 +37,7 @@ export default function NewMarketingPostPage() {
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
 
   const [isGenerating, setIsGenerating] = useState(false)
-  const [generatedResult, setGeneratedResult] = useState<{
-    title: string
-    body: string
-    wordCount: number
-    keywordCount: number
-  } | null>(null)
+  const [generatedResult, setGeneratedResult] = useState<GeneratedContent | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -317,15 +315,31 @@ export default function NewMarketingPostPage() {
 
                 <div>
                   <div className="text-sm font-medium text-slate-500 mb-1">제목</div>
-                  <div className="text-lg font-bold text-slate-800">{generatedResult.title}</div>
+                  <div className="text-xl font-bold text-slate-800 border-b border-slate-200 pb-3">
+                    {generatedResult.title}
+                  </div>
                 </div>
 
                 <div>
-                  <div className="text-sm font-medium text-slate-500 mb-1">본문</div>
-                  <div className="prose prose-sm max-w-none text-slate-700 whitespace-pre-wrap border border-slate-100 rounded-lg p-4 max-h-96 overflow-y-auto">
-                    {generatedResult.body}
+                  <div className="text-sm font-medium text-slate-500 mb-2">본문</div>
+                  <div className="border border-slate-100 rounded-lg p-5 max-h-[600px] overflow-y-auto bg-slate-50/30">
+                    <RenderedBody body={generatedResult.body} />
                   </div>
                 </div>
+
+                {/* 해시태그 */}
+                {generatedResult.hashtags && generatedResult.hashtags.length > 0 && (
+                  <div>
+                    <div className="text-sm font-medium text-slate-500 mb-2">해시태그</div>
+                    <div className="flex flex-wrap gap-2">
+                      {generatedResult.hashtags.map((tag, i) => (
+                        <span key={i} className="px-2.5 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-3">
                   <button
@@ -346,4 +360,131 @@ export default function NewMarketingPostPage() {
       </div>
     </div>
   )
+}
+
+// ─── 본문 렌더러: 마크다운 구조 + 이미지 마커 표시 ───
+
+function RenderedBody({ body }: { body: string }) {
+  const lines = body.split('\n')
+  const elements: React.ReactNode[] = []
+  let paragraphBuffer: string[] = []
+  let key = 0
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length > 0) {
+      const text = paragraphBuffer.join('\n').trim()
+      if (text) {
+        elements.push(
+          <p key={key++} className="text-sm leading-7 text-slate-700 mb-3">
+            {renderInlineFormatting(text)}
+          </p>
+        )
+      }
+      paragraphBuffer = []
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const trimmed = line.trim()
+
+    // [IMAGE: ...] 마커 → 이미지 플레이스홀더
+    if (/\[IMAGE:\s*.+?\]/.test(trimmed)) {
+      flushParagraph()
+      const match = trimmed.match(/\[IMAGE:\s*(.+?)\]/)
+      const prompt = match ? match[1] : ''
+      elements.push(
+        <div key={key++} className="my-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 flex flex-col items-center justify-center gap-2">
+          <PhotoIcon className="h-10 w-10 text-slate-400" />
+          <span className="text-xs text-slate-500 text-center">{prompt}</span>
+          <span className="text-[10px] text-slate-400">발행 시 AI 이미지가 자동 생성됩니다</span>
+        </div>
+      )
+      continue
+    }
+
+    // ### 소소제목
+    if (trimmed.startsWith('### ')) {
+      flushParagraph()
+      elements.push(
+        <h4 key={key++} className="text-base font-semibold text-slate-800 mt-5 mb-2">
+          {trimmed.replace(/^###\s+/, '')}
+        </h4>
+      )
+      continue
+    }
+
+    // ## 소제목
+    if (trimmed.startsWith('## ')) {
+      flushParagraph()
+      elements.push(
+        <h3 key={key++} className="text-lg font-bold text-slate-800 mt-6 mb-3 pb-2 border-b border-slate-200">
+          {trimmed.replace(/^##\s+/, '')}
+        </h3>
+      )
+      continue
+    }
+
+    // 구분선
+    if (/^[-─━]{3,}$/.test(trimmed)) {
+      flushParagraph()
+      elements.push(<hr key={key++} className="my-4 border-slate-200" />)
+      continue
+    }
+
+    // 리스트 항목 (- 또는 *)
+    if (/^[-*]\s+/.test(trimmed)) {
+      flushParagraph()
+      elements.push(
+        <div key={key++} className="flex gap-2 mb-1.5 ml-1">
+          <span className="text-indigo-400 mt-1 text-xs">●</span>
+          <span className="text-sm leading-6 text-slate-700 flex-1">
+            {renderInlineFormatting(trimmed.replace(/^[-*]\s+/, ''))}
+          </span>
+        </div>
+      )
+      continue
+    }
+
+    // 숫자 리스트 (1. 2. 등)
+    if (/^\d+\.\s+/.test(trimmed)) {
+      flushParagraph()
+      const num = trimmed.match(/^(\d+)\./)?.[1]
+      elements.push(
+        <div key={key++} className="flex gap-2 mb-1.5 ml-1">
+          <span className="text-indigo-500 font-semibold text-sm min-w-[1.2rem]">{num}.</span>
+          <span className="text-sm leading-6 text-slate-700 flex-1">
+            {renderInlineFormatting(trimmed.replace(/^\d+\.\s+/, ''))}
+          </span>
+        </div>
+      )
+      continue
+    }
+
+    // 빈 줄 → 단락 구분
+    if (!trimmed) {
+      flushParagraph()
+      continue
+    }
+
+    // 일반 텍스트 → 단락 버퍼에 추가
+    paragraphBuffer.push(line)
+  }
+
+  flushParagraph()
+
+  return <div>{elements}</div>
+}
+
+// ─── 인라인 서식 (볼드, 이탤릭) ───
+
+function renderInlineFormatting(text: string): React.ReactNode {
+  // **볼드** 처리
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-semibold text-slate-800">{part.slice(2, -2)}</strong>
+    }
+    return part
+  })
 }
