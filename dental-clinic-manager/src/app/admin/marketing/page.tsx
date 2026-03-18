@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import {
@@ -10,6 +10,9 @@ import {
   ChartBarIcon,
   DocumentTextIcon,
   SparklesIcon,
+  XMarkIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
@@ -108,7 +111,7 @@ export default function MarketingPage() {
         <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
           <div className="max-w-6xl">
             {/* 페이지 헤더 */}
-            <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
+            <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -135,7 +138,7 @@ export default function MarketingPage() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === tab.id
-                        ? 'border-indigo-600 text-indigo-600'
+                        ? 'border-blue-600 text-blue-600'
                         : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                     }`}
                   >
@@ -214,29 +217,243 @@ function CalendarContent() {
   )
 }
 
+// ─── 플랫폼 설정 필드 정의 ───
+type PlatformId = 'naverBlog' | 'instagram' | 'facebook' | 'threads'
+
+interface PlatformDef {
+  id: PlatformId
+  name: string
+  fields: { key: string; label: string; type: 'text' | 'password' | 'textarea'; placeholder: string }[]
+}
+
+const PLATFORM_DEFS: PlatformDef[] = [
+  {
+    id: 'naverBlog',
+    name: '네이버 블로그',
+    fields: [
+      { key: 'blogId', label: '블로그 ID', type: 'text', placeholder: 'your-blog-id' },
+      { key: 'clientId', label: 'Client ID', type: 'text', placeholder: '네이버 개발자 센터에서 발급' },
+      { key: 'clientSecret', label: 'Client Secret', type: 'password', placeholder: '네이버 개발자 센터에서 발급' },
+    ],
+  },
+  {
+    id: 'instagram',
+    name: '인스타그램',
+    fields: [
+      { key: 'accountId', label: '계정 ID', type: 'text', placeholder: '@your_account' },
+      { key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'Meta Business Suite에서 발급' },
+    ],
+  },
+  {
+    id: 'facebook',
+    name: '페이스북',
+    fields: [
+      { key: 'pageId', label: '페이지 ID', type: 'text', placeholder: '페이지 ID' },
+      { key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'Meta Business Suite에서 발급' },
+    ],
+  },
+  {
+    id: 'threads',
+    name: '쓰레드',
+    fields: [
+      { key: 'accountId', label: '계정 ID', type: 'text', placeholder: '@your_account' },
+      { key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'Meta에서 발급' },
+    ],
+  },
+]
+
+interface PlatformSetting {
+  platform: string
+  enabled: boolean
+  config: Record<string, string>
+}
+
 // ─── 설정 ───
 function SettingsContent() {
-  const platforms = [
-    { id: 'naverBlog', name: '네이버 블로그', status: '미연동', color: 'text-slate-400' },
-    { id: 'instagram', name: '인스타그램', status: '미연동', color: 'text-slate-400' },
-    { id: 'facebook', name: '페이스북', status: '미연동', color: 'text-slate-400' },
-    { id: 'threads', name: '쓰레드', status: '미연동', color: 'text-slate-400' },
-  ]
+  const [settings, setSettings] = useState<PlatformSetting[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [editingPlatform, setEditingPlatform] = useState<PlatformId | null>(null)
+  const [editConfig, setEditConfig] = useState<Record<string, string>>({})
+  const [editEnabled, setEditEnabled] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const loadSettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/marketing/settings')
+      const json = await res.json()
+      if (res.ok) {
+        setSettings(json.data || [])
+      }
+    } catch {
+      console.error('설정 로딩 실패')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSettings()
+  }, [loadSettings])
+
+  const getSettingFor = (platformId: string): PlatformSetting | undefined => {
+    return settings.find((s) => s.platform === platformId)
+  }
+
+  const handleOpenEdit = (platform: PlatformDef) => {
+    const existing = getSettingFor(platform.id)
+    setEditingPlatform(platform.id)
+    setEditEnabled(existing?.enabled ?? false)
+    setEditConfig(existing?.config ?? {})
+    setMessage(null)
+  }
+
+  const handleSave = async () => {
+    if (!editingPlatform) return
+    setSaving(true)
+    setMessage(null)
+
+    try {
+      const res = await fetch('/api/marketing/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: editingPlatform,
+          enabled: editEnabled,
+          config: editConfig,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+
+      setMessage({ type: 'success', text: '저장되었습니다.' })
+      await loadSettings()
+      setTimeout(() => setEditingPlatform(null), 800)
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : '저장 실패' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const editingDef = PLATFORM_DEFS.find((p) => p.id === editingPlatform)
 
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-slate-800">플랫폼 연동 설정</h2>
-      {platforms.map((p) => (
-        <div key={p.id} className="bg-slate-50 rounded-xl border border-slate-200 p-5 flex items-center justify-between">
-          <div>
-            <div className="font-medium text-slate-800">{p.name}</div>
-            <div className={`text-sm ${p.color}`}>{p.status}</div>
+
+      {isLoading ? (
+        <div className="text-center py-8 text-slate-400 text-sm">로딩 중...</div>
+      ) : (
+        PLATFORM_DEFS.map((platform) => {
+          const setting = getSettingFor(platform.id)
+          const isConnected = setting?.enabled
+          const hasConfig = setting && Object.keys(setting.config || {}).length > 0
+
+          return (
+            <div key={platform.id} className="bg-slate-50 rounded-xl border border-slate-200 p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-green-500' : 'bg-slate-300'}`} />
+                <div>
+                  <div className="font-medium text-slate-800">{platform.name}</div>
+                  <div className={`text-sm ${isConnected ? 'text-green-600' : hasConfig ? 'text-amber-500' : 'text-slate-400'}`}>
+                    {isConnected ? '연동됨' : hasConfig ? '비활성' : '미연동'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => handleOpenEdit(platform)}
+                className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-white transition-colors"
+              >
+                설정
+              </button>
+            </div>
+          )
+        })
+      )}
+
+      {/* 설정 모달 */}
+      {editingPlatform && editingDef && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setEditingPlatform(null)}>
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-800">{editingDef.name} 설정</h3>
+              <button onClick={() => setEditingPlatform(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* 모달 본문 */}
+            <div className="px-6 py-5 space-y-4">
+              {/* 활성화 토글 */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-700">플랫폼 활성화</span>
+                <button
+                  onClick={() => setEditEnabled(!editEnabled)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${editEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${editEnabled ? 'translate-x-5' : ''}`} />
+                </button>
+              </div>
+
+              {/* 플랫폼별 설정 필드 */}
+              {editingDef.fields.map((field) => (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">{field.label}</label>
+                  {field.type === 'textarea' ? (
+                    <textarea
+                      value={editConfig[field.key] || ''}
+                      onChange={(e) => setEditConfig({ ...editConfig, [field.key]: e.target.value })}
+                      placeholder={field.placeholder}
+                      rows={3}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                    />
+                  ) : (
+                    <input
+                      type={field.type}
+                      value={editConfig[field.key] || ''}
+                      onChange={(e) => setEditConfig({ ...editConfig, [field.key]: e.target.value })}
+                      placeholder={field.placeholder}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  )}
+                </div>
+              ))}
+
+              {/* 메시지 */}
+              {message && (
+                <div className={`flex items-center gap-2 text-sm p-3 rounded-lg ${
+                  message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                }`}>
+                  {message.type === 'success' ? <CheckCircleIcon className="h-4 w-4" /> : <ExclamationTriangleIcon className="h-4 w-4" />}
+                  {message.text}
+                </div>
+              )}
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200">
+              <button
+                onClick={() => setEditingPlatform(null)}
+                className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+              >
+                {saving ? '저장 중...' : '저장'}
+              </button>
+            </div>
           </div>
-          <button className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
-            설정
-          </button>
         </div>
-      ))}
+      )}
     </div>
   )
 }
