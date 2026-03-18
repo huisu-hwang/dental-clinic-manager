@@ -150,17 +150,18 @@ echo.
 :: Install dependencies
 echo [*] Installing packages...
 cd /d "%~dp0"
-call npm install --production 2>nul
+call npm install
 if %errorLevel% neq 0 (
-    echo [!] npm install failed. Trying full install...
-    call npm install
+    echo [X] npm install failed. Please check your network connection.
+    pause
+    exit /b 1
 )
 echo [OK] Packages installed
 echo.
 
 :: TypeScript build
 echo [*] Building...
-call npm run build
+call npx tsc
 if %errorLevel% neq 0 (
     echo [X] Build failed. Please check errors above.
     pause
@@ -371,7 +372,7 @@ const PACKAGE_JSON = `{
   "description": "덴트웹 DB → Supabase 동기화 브릿지 에이전트",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npx tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "test-connection": "ts-node src/test-connection.ts",
