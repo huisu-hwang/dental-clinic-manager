@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!userData?.clinic_id || userData.role !== 'owner') {
+    if (!userData?.clinic_id || !['owner', 'master_admin'].includes(userData.role)) {
       return NextResponse.json({ error: '마스터 권한이 필요합니다.' }, { status: 403 });
     }
 
@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!userData?.clinic_id || userData.role !== 'owner') {
+    if (!userData?.clinic_id || !['owner', 'master_admin'].includes(userData.role)) {
       return NextResponse.json({ error: '마스터 권한이 필요합니다.' }, { status: 403 });
     }
 
