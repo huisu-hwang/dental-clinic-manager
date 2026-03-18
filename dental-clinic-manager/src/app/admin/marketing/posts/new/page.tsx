@@ -37,7 +37,7 @@ export default function NewMarketingPostPage() {
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
 
   const [isGenerating, setIsGenerating] = useState(false)
-  const [generatedResult, setGeneratedResult] = useState<GeneratedContent | null>(null)
+  const [generatedResult, setGeneratedResult] = useState<GeneratedContent & { generatedImages?: { fileName: string; prompt: string; path?: string }[] } | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -292,7 +292,7 @@ export default function NewMarketingPostPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  AI가 글을 생성하고 있습니다...
+                  AI가 글과 이미지를 생성하고 있습니다...
                 </>
               ) : (
                 <>
@@ -323,7 +323,7 @@ export default function NewMarketingPostPage() {
                 <div>
                   <div className="text-sm font-medium text-slate-500 mb-2">본문</div>
                   <div className="border border-slate-100 rounded-lg p-5 max-h-[600px] overflow-y-auto bg-slate-50/30">
-                    <RenderedBody body={generatedResult.body} />
+                    <RenderedBody body={generatedResult.body} images={generatedResult.generatedImages} />
                   </div>
                 </div>
 
@@ -364,11 +364,12 @@ export default function NewMarketingPostPage() {
 
 // ─── 본문 렌더러: 마크다운 구조 + 이미지 마커 표시 ───
 
-function RenderedBody({ body }: { body: string }) {
+function RenderedBody({ body, images }: { body: string; images?: { fileName: string; prompt: string; path?: string }[] }) {
   const lines = body.split('\n')
   const elements: React.ReactNode[] = []
   let paragraphBuffer: string[] = []
   let key = 0
+  let imageIndex = 0
 
   const flushParagraph = () => {
     if (paragraphBuffer.length > 0) {
@@ -388,18 +389,34 @@ function RenderedBody({ body }: { body: string }) {
     const line = lines[i]
     const trimmed = line.trim()
 
-    // [IMAGE: ...] 마커 → 이미지 플레이스홀더
+    // [IMAGE: ...] 마커 → 실제 이미지 또는 플레이스홀더
     if (/\[IMAGE:\s*.+?\]/.test(trimmed)) {
       flushParagraph()
       const match = trimmed.match(/\[IMAGE:\s*(.+?)\]/)
       const prompt = match ? match[1] : ''
-      elements.push(
-        <div key={key++} className="my-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 flex flex-col items-center justify-center gap-2">
-          <PhotoIcon className="h-10 w-10 text-slate-400" />
-          <span className="text-xs text-slate-500 text-center">{prompt}</span>
-          <span className="text-[10px] text-slate-400">발행 시 AI 이미지가 자동 생성됩니다</span>
-        </div>
-      )
+      const currentImage = images && images[imageIndex]
+      imageIndex++
+
+      if (currentImage?.path) {
+        elements.push(
+          <div key={key++} className="my-4">
+            <img
+              src={currentImage.path}
+              alt={currentImage.prompt || prompt}
+              className="w-full rounded-xl border border-slate-200 shadow-sm"
+            />
+            <p className="text-xs text-slate-400 mt-1.5 text-center">{currentImage.fileName || prompt}</p>
+          </div>
+        )
+      } else {
+        elements.push(
+          <div key={key++} className="my-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 flex flex-col items-center justify-center gap-2">
+            <PhotoIcon className="h-10 w-10 text-slate-400" />
+            <span className="text-xs text-slate-500 text-center">{prompt}</span>
+            <span className="text-[10px] text-slate-400">이미지 생성에 실패했습니다</span>
+          </div>
+        )
+      }
       continue
     }
 

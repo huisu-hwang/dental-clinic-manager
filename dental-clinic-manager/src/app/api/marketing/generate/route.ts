@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateContent } from '@/lib/marketing/content-generator';
+import { generateImagesFromMarkers } from '@/lib/marketing/image-generator';
 import type { ContentGenerateOptions } from '@/types/marketing';
 
 // AI 글 생성
@@ -41,6 +42,18 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await generateContent(options, userData.clinic_id);
+
+    // 이미지 마커가 있으면 이미지 생성
+    if (result.imageMarkers && result.imageMarkers.length > 0) {
+      try {
+        const images = await generateImagesFromMarkers(result.imageMarkers);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (result as any).generatedImages = images;
+      } catch (imgError) {
+        console.error('[API] 이미지 생성 실패 (글 생성은 성공):', imgError);
+        // 이미지 실패해도 글은 반환
+      }
+    }
 
     // 캘린더 항목 ID가 있으면 generated_content 업데이트
     if (body.itemId) {
