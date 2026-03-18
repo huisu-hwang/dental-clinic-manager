@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { getSupabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import { TONE_INSTRUCTIONS } from './default-prompts';
 import {
   ContentGenerateOptions,
@@ -112,8 +112,7 @@ async function loadActivePrompt(
   clinicId: string,
   promptKey: string
 ): Promise<MarketingPrompt | null> {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error('Supabase 클라이언트를 초기화할 수 없습니다');
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('marketing_prompts')
