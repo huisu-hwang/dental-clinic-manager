@@ -133,7 +133,7 @@ if %errorLevel% neq 0 (
     echo [!] Node.js is not installed.
     echo [*] Installing Node.js automatically...
     echo.
-    powershell -ExecutionPolicy Bypass -File "%~dp0scripts\\install-node.ps1"
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\\install-node.ps1"
     if %errorLevel% neq 0 (
         echo [X] Node.js installation failed.
         echo     Please install manually from https://nodejs.org
@@ -1785,13 +1785,17 @@ try {
 
 const INSTALL_NODE_PS1 = `# Node.js LTS Auto-Install Script
 # Tries multiple methods: winget -> direct MSI download -> chocolatey
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 Write-Host ""
 Write-Host "  ==========================================" -ForegroundColor Cyan
 Write-Host "  Node.js LTS Auto-Install" -ForegroundColor Cyan
 Write-Host "  ==========================================" -ForegroundColor Cyan
 Write-Host ""
+
+# Set TLS 1.2 first (required for nodejs.org downloads)
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls13 } catch {}
 
 # Check if already installed (refresh PATH first)
 $nodePaths = @(
@@ -1858,7 +1862,6 @@ if (-not $installed) {
 
     $nodeVersion = $null
     try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
         $response = Invoke-WebRequest -Uri "https://nodejs.org/dist/latest-v22.x/" -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
         if ($response.Content -match 'node-(v[\\d\\.]+)-x64\\.msi') {
             $nodeVersion = $Matches[1]
