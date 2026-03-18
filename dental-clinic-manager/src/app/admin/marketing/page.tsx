@@ -231,9 +231,9 @@ const PLATFORM_DEFS: PlatformDef[] = [
     id: 'naverBlog',
     name: '네이버 블로그',
     fields: [
-      { key: 'blogId', label: '블로그 ID', type: 'text', placeholder: 'your-blog-id' },
-      { key: 'clientId', label: 'Client ID (선택)', type: 'text', placeholder: '네이버 개발자 센터에서 발급' },
-      { key: 'clientSecret', label: '로그인 비밀번호', type: 'password', placeholder: '네이버 계정 비밀번호' },
+      { key: 'naverId', label: '네이버 아이디', type: 'text', placeholder: '네이버 로그인 아이디' },
+      { key: 'naverPassword', label: '네이버 비밀번호', type: 'password', placeholder: '네이버 로그인 비밀번호' },
+      { key: 'blogId', label: '블로그 ID (선택)', type: 'text', placeholder: '미입력 시 아이디와 동일' },
     ],
   },
   {
