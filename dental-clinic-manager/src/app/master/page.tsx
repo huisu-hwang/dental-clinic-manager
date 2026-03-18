@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { dataService } from '@/lib/dataService'
-import { UserIcon, BuildingOffice2Icon, ChartBarIcon, UsersIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { UserIcon, BuildingOffice2Icon, ChartBarIcon, UsersIcon, ClockIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import type { UserActivityLog } from '@/types/auth'
 import Header from '@/components/Layout/Header'
 
@@ -616,6 +616,13 @@ export default function MasterAdminPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
               </svg>
               커뮤니티 관리
+            </button>
+            <button
+              onClick={() => router.push('/master/marketing/prompts')}
+              className="py-4 px-2 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700"
+            >
+              <SparklesIcon className="w-5 h-5 inline-block mr-2" />
+              프롬프트 관리
             </button>
           </div>
         </div>
