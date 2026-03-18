@@ -232,8 +232,8 @@ const PLATFORM_DEFS: PlatformDef[] = [
     name: '네이버 블로그',
     fields: [
       { key: 'blogId', label: '블로그 ID', type: 'text', placeholder: 'your-blog-id' },
-      { key: 'clientId', label: 'Client ID', type: 'text', placeholder: '네이버 개발자 센터에서 발급' },
-      { key: 'clientSecret', label: 'Client Secret', type: 'password', placeholder: '네이버 개발자 센터에서 발급' },
+      { key: 'clientId', label: 'Client ID (선택)', type: 'text', placeholder: '네이버 개발자 센터에서 발급' },
+      { key: 'clientSecret', label: '로그인 비밀번호', type: 'password', placeholder: '네이버 계정 비밀번호' },
     ],
   },
   {
