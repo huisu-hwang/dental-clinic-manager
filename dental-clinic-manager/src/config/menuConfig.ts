@@ -234,6 +234,17 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     visible: true,
     ownerOnly: true,  // 대표 원장 전용
   },
+  {
+    id: 'marketing',
+    label: '마케팅 자동화',
+    icon: 'Sparkles',
+    route: '/admin/marketing',
+    permissions: [],
+    categoryId: 'operations',
+    order: 16,
+    visible: true,
+    ownerOnly: true,  // 대표 원장 전용
+  },
 
   // === 하단 고정 메뉴 ===
   {
@@ -242,7 +253,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     icon: 'HelpCircle',
     route: '/dashboard?tab=guide',
     permissions: ['guide_view'],
-    order: 16,
+    order: 17,
     visible: true,
   },
   {
@@ -251,9 +262,27 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     icon: 'SlidersHorizontal',
     route: '/dashboard?tab=menu-settings',
     permissions: [],
-    order: 17,
+    order: 18,
     visible: false,  // 기본적으로 숨김
   },
+]
+
+// ============================================
+// 메뉴 등록이 불필요한 라우트 목록
+// 새 페이지 추가 시, MENU_CONFIG 또는 이 목록에 반드시 등록해야 합니다.
+// 검증: npm run check:menu
+// ============================================
+export const KNOWN_NON_MENU_ROUTES: string[] = [
+  '/admin',              // 관리자 패널 (진입점)
+  '/master',             // 마스터 관리 패널 (진입점)
+  '/management',         // 관리 페이지
+  '/update-password',    // 비밀번호 변경
+  '/pending-approval',   // 승인 대기
+  '/resigned',           // 퇴사 처리
+  '/test',               // 테스트 페이지
+  '/test-protocol',      // 테스트 프로토콜
+  '/guide',              // 가이드 (별도 라우트, 메뉴는 /dashboard?tab=guide)
+  '/dashboard/ai-analysis', // AI 분석 (별도 라우트, 메뉴는 /dashboard?tab=ai-analysis)
 ]
 
 // ============================================

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:menu": "node scripts/validate-menu-routes.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.79.0",
