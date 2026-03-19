@@ -124,8 +124,16 @@ export default function NewMarketingPostPage() {
       })
 
       if (!res.ok || !res.body) {
-        const json = await res.json()
-        throw new Error(json.error || '글 생성 실패')
+        // Vercel 인프라 오류 시 plain text 응답일 수 있으므로 text()로 읽기
+        const text = await res.text()
+        let errorMessage = '글 생성 실패'
+        try {
+          const json = JSON.parse(text)
+          errorMessage = json.error || errorMessage
+        } catch {
+          errorMessage = text.length > 100 ? text.slice(0, 100) + '...' : text || errorMessage
+        }
+        throw new Error(errorMessage)
       }
 
       // SSE 스트림 읽기
@@ -235,24 +243,44 @@ export default function NewMarketingPostPage() {
 
   // ── 발행 예약 ──
   const handleSchedule = async () => {
-    if (!savedItemId) return
+    if (!generatedResult) return
     setIsScheduling(true)
     try {
-      // 변경사항이 있으면 먼저 저장
-      if (hasUnsavedChanges) {
-        const updatedContent: GeneratedResultType = {
-          ...generatedResult!,
-          title: editedTitle,
-          body: editedBody,
-          hashtags: editedHashtags,
-        }
+      const updatedContent: GeneratedResultType = {
+        ...generatedResult,
+        title: editedTitle,
+        body: editedBody,
+        hashtags: editedHashtags,
+      }
+
+      if (savedItemId) {
+        // 기존 항목 업데이트 후 예약
         await fetch(`/api/marketing/posts/${savedItemId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: editedTitle, generatedContent: updatedContent, status: 'scheduled' }),
         })
       } else {
-        await fetch(`/api/marketing/posts/${savedItemId}`, {
+        // savedItemId 없으면 새로 생성하면서 예약
+        const saveRes = await fetch('/api/marketing/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: editedTitle,
+            topic,
+            keyword,
+            postType,
+            tone,
+            useResearch,
+            factCheck,
+            platforms,
+            generatedContent: updatedContent,
+          }),
+        })
+        if (!saveRes.ok) throw new Error('저장 실패')
+        const saveJson = await saveRes.json()
+        // 생성 후 즉시 scheduled로 업데이트
+        await fetch(`/api/marketing/posts/${saveJson.data.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'scheduled' }),
@@ -681,7 +709,7 @@ export default function NewMarketingPostPage() {
                   )}
                   <button
                     onClick={handleSchedule}
-                    disabled={isScheduling || !savedItemId}
+                    disabled={isScheduling || !generatedResult}
                     className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
                   >
                     {isScheduling ? (

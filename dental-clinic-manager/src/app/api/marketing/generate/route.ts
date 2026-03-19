@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { generateContent } from '@/lib/marketing/content-generator';
 import { generateBlogImage } from '@/lib/marketing/image-generator';
 import type { ContentGenerateOptions } from '@/types/marketing';
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
         // 2단계: 이미지 생성 (Gemini) - 마커별 진행상황 전송
         const imageMarkers = result.imageMarkers || [];
         if (imageMarkers.length > 0) {
+          const admin = getSupabaseAdmin();
           const generatedImages: {
             fileName: string;
             prompt: string;
@@ -96,7 +98,8 @@ export async function POST(request: NextRequest) {
           }[] = [];
 
           for (let i = 0; i < imageMarkers.length; i++) {
-            const progress = 55 + Math.round(((i) / imageMarkers.length) * 35);
+            const progress =
+              55 + Math.round((i / imageMarkers.length) * 35);
             sendEvent(controller, {
               progress,
               step: `이미지를 생성하고 있습니다... (${i + 1}/${imageMarkers.length})`,
@@ -106,11 +109,42 @@ export async function POST(request: NextRequest) {
               const { imageBase64, fileName } = await generateBlogImage(
                 imageMarkers[i].prompt
               );
-              generatedImages.push({
-                fileName,
-                prompt: imageMarkers[i].prompt,
-                path: `data:image/png;base64,${imageBase64}`,
-              });
+
+              // Supabase Storage에 업로드하여 URL 획득
+              let imagePath = '';
+              if (admin) {
+                const buffer = Buffer.from(imageBase64, 'base64');
+                const storagePath = `generated/${Date.now()}_${fileName}`;
+                const { error: uploadError } = await admin.storage
+                  .from('marketing-images')
+                  .upload(storagePath, buffer, {
+                    contentType: 'image/png',
+                    upsert: true,
+                  });
+
+                if (!uploadError) {
+                  const { data: urlData } = admin.storage
+                    .from('marketing-images')
+                    .getPublicUrl(storagePath);
+                  imagePath = urlData.publicUrl;
+                }
+              }
+
+              // Storage 업로드 실패 시 base64 폴백 (단, 크기 제한)
+              if (!imagePath) {
+                // base64가 500KB 이하인 경우에만 인라인 포함
+                if (imageBase64.length < 500000) {
+                  imagePath = `data:image/png;base64,${imageBase64}`;
+                }
+              }
+
+              if (imagePath) {
+                generatedImages.push({
+                  fileName,
+                  prompt: imageMarkers[i].prompt,
+                  path: imagePath,
+                });
+              }
             } catch (imgError) {
               console.error(
                 `[API] 이미지 생성 실패: "${imageMarkers[i].prompt}"`,
@@ -146,7 +180,8 @@ export async function POST(request: NextRequest) {
         controller.close();
       } catch (error) {
         console.error('[API] marketing/generate POST:', error);
-        const message = error instanceof Error ? error.message : '글 생성 실패';
+        const message =
+          error instanceof Error ? error.message : '글 생성 실패';
         sendEvent(controller, { error: message });
         controller.close();
       }
@@ -157,7 +192,7 @@ export async function POST(request: NextRequest) {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
     },
   });
 }
