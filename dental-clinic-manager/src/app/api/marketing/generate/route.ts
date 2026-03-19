@@ -105,11 +105,11 @@ export async function POST(request: NextRequest) {
             } catch { /* stream closed */ }
           }, 5000);
 
-          // 병렬 생성 (개별 20초 타임아웃)
+          // 병렬 생성 (개별 55초 타임아웃)
           const imagePromises = imageMarkers.map(async (marker) => {
             try {
               const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 35000)
+                setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 55000)
               );
               const { imageBase64, fileName } = await Promise.race([
                 generateBlogImage(marker.prompt),
@@ -121,7 +121,8 @@ export async function POST(request: NextRequest) {
               if (admin) {
                 try {
                   const buffer = Buffer.from(imageBase64, 'base64');
-                  const storagePath = `generated/${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${fileName}`;
+                  const safeFileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
+                  const storagePath = `generated/${safeFileName}`;
                   const { error: uploadError } = await admin.storage
                     .from('marketing-images')
                     .upload(storagePath, buffer, {
