@@ -4,6 +4,9 @@ import { generateContent } from '@/lib/marketing/content-generator';
 import { generateImagesFromMarkers } from '@/lib/marketing/image-generator';
 import type { ContentGenerateOptions } from '@/types/marketing';
 
+// Vercel 서버리스 함수 타임아웃 확장 (Claude + Gemini API 호출 소요 시간 대응)
+export const maxDuration = 60;
+
 // AI 글 생성
 export async function POST(request: NextRequest) {
   try {
