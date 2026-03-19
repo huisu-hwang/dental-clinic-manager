@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, topic, keyword, postType, tone, useResearch, factCheck, platforms, publishDate, publishTime } = body;
+    const { title, topic, keyword, postType, tone, useResearch, factCheck, platforms, publishDate, publishTime, generatedContent } = body;
 
     if (!title || !postType) {
       return NextResponse.json({ error: '제목과 글 유형은 필수입니다.' }, { status: 400 });
@@ -108,7 +108,9 @@ export async function POST(request: NextRequest) {
         use_research: useResearch || false,
         fact_check: factCheck || false,
         platforms: platforms || { naverBlog: true, instagram: false, facebook: false, threads: false },
-        status: 'approved',
+        status: generatedContent ? 'review' : 'approved',
+        generated_content: generatedContent ? JSON.stringify(generatedContent) : null,
+        generated_images: generatedContent?.generatedImages || null,
       })
       .select()
       .single();
