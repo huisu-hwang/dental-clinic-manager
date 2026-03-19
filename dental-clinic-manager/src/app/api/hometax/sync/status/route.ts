@@ -21,8 +21,9 @@ export async function GET(request: NextRequest) {
 
     const supabase = getServiceClient();
 
+    let job;
+
     if (jobId) {
-      // 특정 Job 상태 조회
       const { data, error } = await supabase
         .from('scraping_jobs')
         .select('*')
@@ -32,24 +33,49 @@ export async function GET(request: NextRequest) {
       if (error) {
         return NextResponse.json({ error: 'Job 조회에 실패했습니다.' }, { status: 500 });
       }
+      job = data;
+    } else {
+      // 클리닉의 활성 Job 또는 최근 Job 조회
+      const { data: activeJob } = await supabase
+        .from('scraping_jobs')
+        .select('*')
+        .eq('clinic_id', clinicId!)
+        .in('status', ['pending', 'running'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-      return NextResponse.json({ success: true, data });
+      if (activeJob) {
+        job = activeJob;
+      } else {
+        const { data: recentJob, error } = await supabase
+          .from('scraping_jobs')
+          .select('*')
+          .eq('clinic_id', clinicId!)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          return NextResponse.json({ error: 'Job 조회에 실패했습니다.' }, { status: 500 });
+        }
+        job = recentJob || null;
+      }
     }
 
-    // 클리닉의 최근 Job 상태 조회
-    const { data, error } = await supabase
-      .from('scraping_jobs')
-      .select('*')
-      .eq('clinic_id', clinicId!)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      return NextResponse.json({ error: 'Job 조회에 실패했습니다.' }, { status: 500 });
+    if (!job) {
+      return NextResponse.json({ success: true, data: null });
     }
 
-    return NextResponse.json({ success: true, data: data || null });
+    // 완료된 데이터 타입 수 조회 (hometax_raw_data에서)
+    const { data: completedData } = await supabase
+      .from('hometax_raw_data')
+      .select('data_type')
+      .eq('job_id', job.id);
+
+    const completedTypes = [...new Set(completedData?.map((d: { data_type: string }) => d.data_type) || [])];
+
+    return NextResponse.json({ success: true, data: { ...job, completedTypes } });
   } catch (error) {
     console.error('GET /api/hometax/sync/status error:', error);
     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
