@@ -24,22 +24,29 @@ const anthropic = new Anthropic({
 
 export async function generateContent(
   options: ContentGenerateOptions,
-  clinicId: string
+  clinicId: string,
+  customSystemPrompt?: string
 ): Promise<GeneratedContent> {
-  // 1. 프롬프트 로딩 (없으면 기본 프롬프트 자동 생성 후 재시도)
-  let prompt = await loadActivePrompt(clinicId, `content.${options.postType}`);
-  if (!prompt) {
-    const seeded = await seedDefaultPromptsIfNeeded(clinicId);
-    if (seeded) {
-      prompt = await loadActivePrompt(clinicId, `content.${options.postType}`);
-    }
+  // 1. 프롬프트 로딩 (customSystemPrompt 제공 시 DB 조회 생략)
+  let promptTemplate: string;
+  if (customSystemPrompt !== undefined) {
+    promptTemplate = customSystemPrompt;
+  } else {
+    let prompt = await loadActivePrompt(clinicId, `content.${options.postType}`);
     if (!prompt) {
-      throw new Error(`프롬프트를 찾을 수 없습니다: content.${options.postType}`);
+      const seeded = await seedDefaultPromptsIfNeeded(clinicId);
+      if (seeded) {
+        prompt = await loadActivePrompt(clinicId, `content.${options.postType}`);
+      }
+      if (!prompt) {
+        throw new Error(`프롬프트를 찾을 수 없습니다: content.${options.postType}`);
+      }
     }
+    promptTemplate = prompt.system_prompt;
   }
 
   // 2. 변수 치환
-  const systemPrompt = substituteVariables(prompt.system_prompt, {
+  const systemPrompt = substituteVariables(promptTemplate, {
     keyword: options.keyword,
     topic: options.topic,
     tone_instruction: TONE_INSTRUCTIONS[options.tone] || TONE_INSTRUCTIONS.friendly,
@@ -182,7 +189,15 @@ function parseGeneratedContent(
   }
 
   const bodyLines = lines.slice(bodyStartIndex);
-  const body = bodyLines.join('\n').trim();
+  let body = bodyLines.join('\n').trim();
+
+  // 후처리: [IMAGE:] 마커와 ## 소제목을 별도 줄로 분리
+  // Claude가 텍스트와 같은 줄에 붙여 쓸 수 있으므로 강제 분리
+  body = body.replace(/([^\n])\s*(\[IMAGE:\s*.+?\])/g, '$1\n\n$2');
+  body = body.replace(/(\[IMAGE:\s*.+?\])\s*([^\n])/g, '$1\n\n$2');
+  body = body.replace(/([^\n])\s*(## )/g, '$1\n\n$2');
+  // 연속 빈 줄 정리 (3줄 이상 → 2줄로)
+  body = body.replace(/\n{3,}/g, '\n\n');
 
   // [IMAGE: ...] 마커 추출
   const imageMarkers: ImageMarker[] = [];
