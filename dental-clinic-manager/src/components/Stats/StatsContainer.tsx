@@ -207,9 +207,9 @@ const CategoryGiftCard = ({
         </div>
         <span className="text-xs font-medium" style={{ color: data.color }}>상세 →</span>
       </div>
-      <div className="text-2xl font-bold mt-1" style={{ color: data.color }}>{data.total}</div>
+      <div className="text-2xl font-bold mt-1" style={{ color: data.color }}>{data.total}<span className="text-sm font-medium ml-0.5" style={{ color: data.color }}>개</span></div>
       <div className="flex items-center justify-between mt-1">
-        <div className="text-xs text-slate-500">개</div>
+        <div />
         {hasMultipleGifts && (
           <button
             onClick={e => { e.stopPropagation(); onToggle() }}
@@ -393,8 +393,7 @@ export default function StatsContainer({
           {/* 총 선물 카드 */}
           <div className="bg-teal-50 rounded-lg p-4 border border-teal-200">
             <div className="text-xs font-medium text-teal-600 uppercase tracking-wider">총 선물</div>
-            <div className="text-2xl font-bold text-teal-700 mt-1">{totalGiftCount}</div>
-            <div className="text-xs text-slate-500 mt-1">개</div>
+            <div className="text-2xl font-bold text-teal-700 mt-1">{totalGiftCount}<span className="text-sm font-medium ml-0.5">개</span></div>
           </div>
         </div>
       </div>
@@ -412,8 +411,7 @@ export default function StatsContainer({
               <div className="text-xs font-medium text-green-600 uppercase tracking-wider">네이버 리뷰</div>
               <span className="text-xs text-green-400 font-medium">상세 →</span>
             </div>
-            <div className="text-2xl font-bold text-green-700 mt-1">{stats.naver_review_count || 0}</div>
-            <div className="text-xs text-slate-500 mt-1">건</div>
+            <div className="text-2xl font-bold text-green-700 mt-1">{stats.naver_review_count || 0}<span className="text-sm font-medium ml-0.5">건</span></div>
           </div>
           {/* 구환 선물 카드 */}
           <div
@@ -424,8 +422,7 @@ export default function StatsContainer({
               <div className="text-xs font-medium text-indigo-600 uppercase tracking-wider">구환 선물</div>
               <span className="text-xs text-indigo-400 font-medium">상세 →</span>
             </div>
-            <div className="text-2xl font-bold text-indigo-700 mt-1">{stats.returningPatientGiftCount || 0}</div>
-            <div className="text-xs text-slate-500 mt-1">개</div>
+            <div className="text-2xl font-bold text-indigo-700 mt-1">{stats.returningPatientGiftCount || 0}<span className="text-sm font-medium ml-0.5">개</span></div>
           </div>
           <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
             <div className="text-xs font-medium text-amber-600 uppercase tracking-wider">리뷰/구환선물 비율</div>
