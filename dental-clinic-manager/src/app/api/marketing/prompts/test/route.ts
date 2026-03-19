@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { generateContent } from '@/lib/marketing/content-generator';
+import { generateBlogImage } from '@/lib/marketing/image-generator';
+import type { PromptCategory } from '@/types/marketing';
 
-// 프롬프트 테스트 (샌드박스)
+export const maxDuration = 90;
+
+// 프롬프트 테스트 (샌드박스) - 편집 중인 미저장 프롬프트 포함
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -17,13 +22,72 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!userData?.clinic_id || userData.role !== 'owner') {
+    if (!userData?.clinic_id || !['owner', 'master_admin'].includes(userData.role)) {
       return NextResponse.json({ error: '마스터 권한이 필요합니다.' }, { status: 403 });
     }
 
     const body = await request.json();
-    const { topic, keyword, tone, postType } = body;
+    const {
+      topic,
+      keyword,
+      tone,
+      postType,
+      customSystemPrompt,
+      category,
+      imagePrompt,
+    }: {
+      topic?: string;
+      keyword?: string;
+      tone?: string;
+      postType?: string;
+      customSystemPrompt?: string;
+      category?: PromptCategory;
+      imagePrompt?: string;
+    } = body;
 
+    // ─── 이미지 카테고리 테스트 ───
+    if (category === 'image') {
+      const prompt = imagePrompt || '치과 치아 건강 관리 이미지';
+      try {
+        const { imageBase64, fileName } = await generateBlogImage(prompt);
+        const admin = getSupabaseAdmin();
+
+        let imagePath = '';
+        if (admin && imageBase64) {
+          try {
+            const buffer = Buffer.from(imageBase64, 'base64');
+            const safeFileName = `test_${Date.now()}.png`;
+            const storagePath = `generated/${safeFileName}`;
+            const { error: uploadError } = await admin.storage
+              .from('marketing-images')
+              .upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
+            if (!uploadError) {
+              const { data: urlData } = admin.storage
+                .from('marketing-images')
+                .getPublicUrl(storagePath);
+              imagePath = urlData.publicUrl;
+            }
+          } catch {
+            // Storage 실패 시 base64로 폴백
+          }
+        }
+        if (!imagePath && imageBase64) {
+          imagePath = `data:image/png;base64,${imageBase64}`;
+        }
+
+        return NextResponse.json({
+          data: {
+            category: 'image',
+            images: imagePath ? [{ fileName, prompt, path: imagePath }] : [],
+          },
+        });
+      } catch (imgError) {
+        const msg = imgError instanceof Error ? imgError.message : '이미지 생성 실패';
+        return NextResponse.json({ error: msg }, { status: 500 });
+      }
+    }
+
+    // ─── 컨텐츠/변환/품질 카테고리 테스트 ───
     if (!topic || !keyword) {
       return NextResponse.json({ error: '주제와 키워드는 필수입니다.' }, { status: 400 });
     }
@@ -32,23 +96,70 @@ export async function POST(request: NextRequest) {
       {
         topic,
         keyword,
-        postType: postType || 'informational',
-        tone: tone || 'friendly',
+        postType: (postType as 'informational' | 'promotional' | 'clinical' | 'notice') || 'informational',
+        tone: (tone as 'friendly' | 'polite' | 'casual' | 'expert' | 'warm') || 'friendly',
         useResearch: false,
         factCheck: false,
         platforms: { naverBlog: true, instagram: false, facebook: false, threads: false },
         schedule: { snsDelayMinutes: 30 },
       },
-      userData.clinic_id
+      userData.clinic_id,
+      customSystemPrompt || undefined,
+    );
+
+    // 이미지 생성 (최대 2개)
+    const generatedImages: { fileName: string; prompt: string; path: string }[] = [];
+    const admin = getSupabaseAdmin();
+    const markersToGenerate = result.imageMarkers.slice(0, 2);
+
+    await Promise.allSettled(
+      markersToGenerate.map(async (marker) => {
+        try {
+          const { imageBase64, fileName } = await generateBlogImage(marker.prompt);
+          let imagePath = '';
+
+          if (admin && imageBase64) {
+            try {
+              const buffer = Buffer.from(imageBase64, 'base64');
+              const safeFileName = `test_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
+              const storagePath = `generated/${safeFileName}`;
+              const { error: uploadError } = await admin.storage
+                .from('marketing-images')
+                .upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
+              if (!uploadError) {
+                const { data: urlData } = admin.storage
+                  .from('marketing-images')
+                  .getPublicUrl(storagePath);
+                imagePath = urlData.publicUrl;
+              }
+            } catch {
+              // Storage 실패 시 base64로 폴백
+            }
+          }
+
+          if (!imagePath && imageBase64) {
+            imagePath = `data:image/png;base64,${imageBase64}`;
+          }
+
+          if (imagePath) {
+            generatedImages.push({ fileName, prompt: marker.prompt, path: imagePath });
+          }
+        } catch (imgErr) {
+          console.error('[API] 테스트 이미지 생성 실패:', marker.prompt, imgErr);
+        }
+      })
     );
 
     return NextResponse.json({
-      data: result,
-      analysis: {
+      data: {
+        category: category || 'content',
+        title: result.title,
+        body: result.body,
         wordCount: result.wordCount,
         keywordCount: result.keywordCount,
-        imageCount: result.imageMarkers.length,
-        hashtagCount: result.hashtags.length,
+        imageMarkers: result.imageMarkers,
+        hashtags: result.hashtags,
+        images: generatedImages,
       },
     });
   } catch (error) {
