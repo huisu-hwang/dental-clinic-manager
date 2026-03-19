@@ -45,15 +45,20 @@ if (typeof window !== 'undefined') {
     }
   }
 
+  // Android Chrome: does NOT fire beforeinstallprompt when app is installed.
+  // Desktop Chrome: DOES fire it even when app is installed (different behavior).
+  // → Uninstall detection only works reliably on Android.
+  const _isAndroid = /Android/i.test(navigator.userAgent)
+
   // Capture beforeinstallprompt event globally (before any component mounts)
-  // This event only fires when the app is NOT installed.
-  // If it fires but we have an installed record → user uninstalled the app.
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault()
     _deferredPrompt = e as BeforeInstallPromptEvent
 
-    // Detect uninstall: previously installed but event fired again
-    if (localStorage.getItem(INSTALLED_KEY) === 'true') {
+    // Detect uninstall on Android only:
+    // If event fires on Android AND we have an install record → user uninstalled.
+    // On desktop, this event fires even when installed, so skip detection.
+    if (_isAndroid && localStorage.getItem(INSTALLED_KEY) === 'true') {
       _isInstalled = false
       _isDismissed = false
       localStorage.removeItem(INSTALLED_KEY)
