@@ -35,7 +35,7 @@ import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
 import { getStatsForDateRange } from '@/utils/statsUtils'
 import { inspectDatabase } from '@/utils/dbInspector'
-import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog, CashRegisterRowData } from '@/types'
+import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog, CashRegisterRowData, ConsultLog, GiftInventory, GiftCategory } from '@/types'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
@@ -83,6 +83,26 @@ export default function DashboardPage() {
   }
   const [customStartDate, setCustomStartDate] = useState(() => getDefaultDateRange().start)
   const [customEndDate, setCustomEndDate] = useState(() => getDefaultDateRange().end)
+
+  const emptyStats = {
+    naver_review_count: 0,
+    consult_proceed: 0,
+    consult_hold: 0,
+    recall_count: 0,
+    recall_booking_count: 0,
+    totalConsults: 0,
+    totalGifts: 0,
+    totalRevenue: 0,
+    consultsByManager: {},
+    giftsByManager: {},
+    revenueByManager: {},
+    consultProceedRate: 0,
+    recallSuccessRate: 0,
+    giftCounts: {},
+    giftCountsByCategory: {},
+    returningPatientGiftCount: 0,
+    reviewToReturningGiftRate: 0
+  }
 
   // 일일보고서에서 현재 입력 중인 선물 데이터 (재고 관리 실시간 반영용)
   const [currentGiftRows, setCurrentGiftRows] = useState<GiftRowData[]>([])
@@ -587,25 +607,20 @@ export default function DashboardPage() {
                         />
                       </div>
                     </div>
-                    <StatsContainer stats={loading ? {
-                      naver_review_count: 0,
-                      consult_proceed: 0,
-                      consult_hold: 0,
-                      recall_count: 0,
-                      recall_booking_count: 0,
-                      totalConsults: 0,
-                      totalGifts: 0,
-                      totalRevenue: 0,
-                      consultsByManager: {},
-                      giftsByManager: {},
-                      revenueByManager: {},
-                      consultProceedRate: 0,
-                      recallSuccessRate: 0,
-                      giftCounts: {},
-                      giftCountsByCategory: {},
-                      returningPatientGiftCount: 0,
-                      reviewToReturningGiftRate: 0
-                    } : getStats('weekly', weekSelector)} />
+                    {(() => {
+                      const periodData = loading ? null : getDatesForPeriod('weekly', weekSelector)
+                      return (
+                        <StatsContainer
+                          stats={loading ? emptyStats : getStats('weekly', weekSelector)}
+                          consultLogs={consultLogs}
+                          giftLogs={giftLogs}
+                          giftInventory={giftInventory}
+                          giftCategories={giftCategories}
+                          startDate={periodData?.startDate}
+                          endDate={periodData?.endDate}
+                        />
+                      )
+                    })()}
                   </>
                 )}
 
@@ -623,25 +638,20 @@ export default function DashboardPage() {
                         />
                       </div>
                     </div>
-                    <StatsContainer stats={loading ? {
-                      naver_review_count: 0,
-                      consult_proceed: 0,
-                      consult_hold: 0,
-                      recall_count: 0,
-                      recall_booking_count: 0,
-                      totalConsults: 0,
-                      totalGifts: 0,
-                      totalRevenue: 0,
-                      consultsByManager: {},
-                      giftsByManager: {},
-                      revenueByManager: {},
-                      consultProceedRate: 0,
-                      recallSuccessRate: 0,
-                      giftCounts: {},
-                      giftCountsByCategory: {},
-                      returningPatientGiftCount: 0,
-                      reviewToReturningGiftRate: 0
-                    } : getStats('monthly', monthSelector)} />
+                    {(() => {
+                      const periodData = loading ? null : getDatesForPeriod('monthly', monthSelector)
+                      return (
+                        <StatsContainer
+                          stats={loading ? emptyStats : getStats('monthly', monthSelector)}
+                          consultLogs={consultLogs}
+                          giftLogs={giftLogs}
+                          giftInventory={giftInventory}
+                          giftCategories={giftCategories}
+                          startDate={periodData?.startDate}
+                          endDate={periodData?.endDate}
+                        />
+                      )
+                    })()}
                   </>
                 )}
 
@@ -662,25 +672,20 @@ export default function DashboardPage() {
                         </select>
                       </div>
                     </div>
-                    <StatsContainer stats={loading ? {
-                      naver_review_count: 0,
-                      consult_proceed: 0,
-                      consult_hold: 0,
-                      recall_count: 0,
-                      recall_booking_count: 0,
-                      totalConsults: 0,
-                      totalGifts: 0,
-                      totalRevenue: 0,
-                      consultsByManager: {},
-                      giftsByManager: {},
-                      revenueByManager: {},
-                      consultProceedRate: 0,
-                      recallSuccessRate: 0,
-                      giftCounts: {},
-                      giftCountsByCategory: {},
-                      returningPatientGiftCount: 0,
-                      reviewToReturningGiftRate: 0
-                    } : getStats('annual', yearSelector)} />
+                    {(() => {
+                      const periodData = loading ? null : getDatesForPeriod('annual', yearSelector)
+                      return (
+                        <StatsContainer
+                          stats={loading ? emptyStats : getStats('annual', yearSelector)}
+                          consultLogs={consultLogs}
+                          giftLogs={giftLogs}
+                          giftInventory={giftInventory}
+                          giftCategories={giftCategories}
+                          startDate={periodData?.startDate}
+                          endDate={periodData?.endDate}
+                        />
+                      )
+                    })()}
                   </>
                 )}
 
@@ -722,32 +727,22 @@ export default function DashboardPage() {
                         })()}
                       </div>
                     </div>
-                    <StatsContainer stats={loading ? {
-                      naver_review_count: 0,
-                      consult_proceed: 0,
-                      consult_hold: 0,
-                      recall_count: 0,
-                      recall_booking_count: 0,
-                      totalConsults: 0,
-                      totalGifts: 0,
-                      totalRevenue: 0,
-                      consultsByManager: {},
-                      giftsByManager: {},
-                      revenueByManager: {},
-                      consultProceedRate: 0,
-                      recallSuccessRate: 0,
-                      giftCounts: {},
-                      giftCountsByCategory: {},
-                      returningPatientGiftCount: 0,
-                      reviewToReturningGiftRate: 0
-                    } : getStatsForDateRange(
-                      dailyReports,
-                      giftLogs,
-                      new Date(customStartDate + 'T00:00:00'),
-                      new Date(customEndDate + 'T23:59:59'),
-                      giftInventory,
-                      giftCategories
-                    )} />
+                    <StatsContainer
+                      stats={loading ? emptyStats : getStatsForDateRange(
+                        dailyReports,
+                        giftLogs,
+                        new Date(customStartDate + 'T00:00:00'),
+                        new Date(customEndDate + 'T23:59:59'),
+                        giftInventory,
+                        giftCategories
+                      )}
+                      consultLogs={consultLogs}
+                      giftLogs={giftLogs}
+                      giftInventory={giftInventory}
+                      giftCategories={giftCategories}
+                      startDate={new Date(customStartDate + 'T00:00:00')}
+                      endDate={new Date(customEndDate + 'T23:59:59')}
+                    />
                   </>
                 )}
               </div>
