@@ -62,7 +62,7 @@ async function generateImageWithGemini(prompt: string): Promise<string> {
 
   try {
     const response = await genai.models.generateContent({
-      model: 'gemini-3.0-flash',
+      model: 'gemini-3.1-flash-image-preview',
       contents: dentalPrompt,
       config: {
         responseModalities: ['image', 'text'],
