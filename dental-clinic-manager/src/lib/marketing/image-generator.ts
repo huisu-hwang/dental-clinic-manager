@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { GeneratedImageMeta, ImageMarker } from '@/types/marketing';
 
 // ============================================
-// AI 이미지 생성 (Gemini 2.5 Flash Image)
+// AI 이미지 생성 (Gemini 3.0 Flash)
 // - 블로그 본문의 [IMAGE: 설명] 마커에서 이미지 생성
 // - 한글 파일명 자동 생성
 // ============================================
@@ -55,14 +55,14 @@ export async function generateImagesFromMarkers(
   return results;
 }
 
-// ─── Gemini 2.5 Flash Image API 호출 ───
+// ─── Gemini 3.0 Flash API 호출 ───
 
 async function generateImageWithGemini(prompt: string): Promise<string> {
   const dentalPrompt = `치과 블로그용 고품질 이미지. 깔끔하고 전문적인 느낌, 밝고 친근한 색감. 홍보 문구나 텍스트 없이 순수 이미지만: ${prompt}`;
 
   try {
     const response = await genai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-3.0-flash',
       contents: dentalPrompt,
       config: {
         responseModalities: ['image', 'text'],
