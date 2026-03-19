@@ -14,6 +14,7 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  Square,
 } from 'lucide-react'
 
 interface HometaxSyncPanelProps {
@@ -40,7 +41,9 @@ interface SyncJob {
   result_summary: Record<string, unknown> | null
   error_message: string | null
   created_at: string
+  started_at: string | null
   completed_at: string | null
+  completedTypes?: string[]
 }
 
 interface SyncLog {
@@ -78,6 +81,7 @@ export default function HometaxSyncPanel({
 
   // 동기화 상태
   const [syncing, setSyncing] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const [currentJob, setCurrentJob] = useState<SyncJob | null>(null)
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
   const [showLogs, setShowLogs] = useState(false)
@@ -113,14 +117,29 @@ export default function HometaxSyncPanel({
     }
   }, [clinicId])
 
+  // 진행 중인 Job 확인 및 로드
+  const loadActiveJob = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/hometax/sync/status?clinicId=${clinicId}`)
+      const data = await res.json()
+      if (data.success && data.data && ['pending', 'running'].includes(data.data.status)) {
+        setCurrentJob(data.data)
+        setSyncing(true)
+      }
+    } catch {
+      // 조회 실패 무시
+    }
+  }, [clinicId])
+
   useEffect(() => {
     loadCredentials()
     loadSyncLogs()
-  }, [loadCredentials, loadSyncLogs])
+    loadActiveJob()
+  }, [loadCredentials, loadSyncLogs, loadActiveJob])
 
   // Job 상태 폴링
   useEffect(() => {
-    if (!currentJob || currentJob.status === 'completed' || currentJob.status === 'failed') return
+    if (!currentJob || currentJob.status === 'completed' || currentJob.status === 'failed' || currentJob.status === 'cancelled') return
 
     const interval = setInterval(async () => {
       try {
@@ -128,13 +147,15 @@ export default function HometaxSyncPanel({
         const data = await res.json()
         if (data.success && data.data) {
           setCurrentJob(data.data)
-          if (data.data.status === 'completed' || data.data.status === 'failed') {
+          if (data.data.status === 'completed' || data.data.status === 'failed' || data.data.status === 'cancelled') {
             setSyncing(false)
             loadSyncLogs()
             loadCredentials()
             if (data.data.status === 'completed') {
               setSuccess('동기화가 완료되었습니다.')
               onSyncComplete?.()
+            } else if (data.data.status === 'cancelled') {
+              setError('동기화가 취소되었습니다.')
             } else {
               setError(`동기화 실패: ${data.data.error_message || '알 수 없는 오류'}`)
             }
@@ -230,7 +251,18 @@ export default function HometaxSyncPanel({
       })
       const data = await res.json()
 
-      if (data.success) {
+      if (res.status === 409 && data.jobId) {
+        // 이미 진행 중인 Job → 해당 Job 로드하여 표시
+        const statusRes = await fetch(`/api/hometax/sync/status?jobId=${data.jobId}`)
+        const statusData = await statusRes.json()
+        if (statusData.success && statusData.data) {
+          setCurrentJob(statusData.data)
+          setSuccess('진행 중인 동기화 작업을 불러왔습니다.')
+        } else {
+          setError('진행 중인 동기화 작업이 있습니다.')
+          setSyncing(false)
+        }
+      } else if (data.success) {
         setCurrentJob(data.data)
         setSuccess('동기화 작업이 시작되었습니다.')
       } else {
@@ -240,6 +272,32 @@ export default function HometaxSyncPanel({
     } catch {
       setError('서버 연결 중 오류가 발생했습니다.')
       setSyncing(false)
+    }
+  }
+
+  // 동기화 취소
+  const handleCancelSync = async () => {
+    if (!currentJob) return
+
+    setCancelling(true)
+    try {
+      const res = await fetch('/api/hometax/sync/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: currentJob.id, clinicId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCurrentJob(prev => prev ? { ...prev, status: 'cancelled' } : null)
+        setSyncing(false)
+        setSuccess('동기화가 취소되었습니다.')
+      } else {
+        setError(data.error || '취소에 실패했습니다.')
+      }
+    } catch {
+      setError('취소 중 오류가 발생했습니다.')
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -258,6 +316,18 @@ export default function HometaxSyncPanel({
       setSelectedDataTypes(Object.keys(DATA_TYPE_LABELS))
     }
   }
+
+  // 진행률 계산
+  const getProgress = () => {
+    if (!currentJob) return { percent: 0, completed: 0, total: 0 }
+    const total = currentJob.data_types?.length || 0
+    const completed = currentJob.completedTypes?.length || 0
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0
+    return { percent, completed, total }
+  }
+
+  const isActiveJob = currentJob && ['pending', 'running'].includes(currentJob.status)
+  const progress = getProgress()
 
   return (
     <div className="space-y-4">
@@ -410,66 +480,109 @@ export default function HometaxSyncPanel({
           </div>
 
           <div className="p-4 space-y-3">
-            {/* 데이터 유형 선택 */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-slate-600">수집 데이터</span>
-                <button onClick={toggleAll} className="text-xs text-indigo-600 hover:text-indigo-800">
-                  {selectedDataTypes.length === Object.keys(DATA_TYPE_LABELS).length ? '전체 해제' : '전체 선택'}
+            {/* 진행 중인 경우: 진행 상황 표시 */}
+            {isActiveJob ? (
+              <div className="space-y-3">
+                {/* 진행 상태 카드 */}
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-blue-700">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="font-medium">
+                        {currentJob?.status === 'pending' ? '워커 대기 중...' : '스크래핑 진행 중...'}
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-blue-700">
+                      {progress.completed}/{progress.total} 완료
+                    </span>
+                  </div>
+
+                  {/* 진행률 바 */}
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    {progress.total > 0 ? (
+                      <div
+                        className="h-2 bg-blue-600 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.max(5, progress.percent)}%` }}
+                      />
+                    ) : (
+                      <div className="h-2 bg-blue-400 rounded-full animate-pulse w-full" />
+                    )}
+                  </div>
+
+                  {/* 데이터 타입 진행 상황 */}
+                  <div className="grid grid-cols-2 gap-1 mt-1">
+                    {(currentJob?.data_types || []).map(dt => {
+                      const isDone = currentJob?.completedTypes?.includes(dt)
+                      return (
+                        <div
+                          key={dt}
+                          className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg ${
+                            isDone
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-blue-100 text-blue-600'
+                          }`}
+                        >
+                          {isDone
+                            ? <CheckCircle2 className="w-3 h-3 shrink-0" />
+                            : <Loader2 className="w-3 h-3 shrink-0 animate-spin" />
+                          }
+                          <span className="truncate">{DATA_TYPE_LABELS[dt] || dt}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* 취소 버튼 */}
+                <button
+                  onClick={handleCancelSync}
+                  disabled={cancelling}
+                  className="w-full py-2.5 text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  {cancelling
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Square className="w-4 h-4" />
+                  }
+                  동기화 취소
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => toggleDataType(key)}
-                    disabled={syncing}
-                    className={`py-1.5 px-2.5 text-xs rounded-lg border transition-colors ${
-                      selectedDataTypes.includes(key)
-                        ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-medium'
-                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                    } disabled:opacity-50`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            ) : (
+              <>
+                {/* 데이터 유형 선택 */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-slate-600">수집 데이터</span>
+                    <button onClick={toggleAll} className="text-xs text-indigo-600 hover:text-indigo-800">
+                      {selectedDataTypes.length === Object.keys(DATA_TYPE_LABELS).length ? '전체 해제' : '전체 선택'}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => toggleDataType(key)}
+                        className={`py-1.5 px-2.5 text-xs rounded-lg border transition-colors ${
+                          selectedDataTypes.includes(key)
+                            ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-medium'
+                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* 동기화 버튼 */}
-            <button
-              onClick={handleSync}
-              disabled={syncing || selectedDataTypes.length === 0}
-              className="w-full py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-2"
-            >
-              {syncing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  동기화 중...
-                </>
-              ) : (
-                <>
+                {/* 동기화 버튼 */}
+                <button
+                  onClick={handleSync}
+                  disabled={selectedDataTypes.length === 0}
+                  className="w-full py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-2"
+                >
                   <RefreshCw className="w-4 h-4" />
                   수동 동기화
-                </>
-              )}
-            </button>
-
-            {/* 진행 상태 */}
-            {currentJob && (currentJob.status === 'pending' || currentJob.status === 'running') && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                <div className="flex items-center gap-2 text-sm text-blue-700">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="font-medium">
-                    {currentJob.status === 'pending' ? '대기 중...' : '스크래핑 진행 중...'}
-                  </span>
-                </div>
-                <div className="mt-2 w-full bg-blue-200 rounded-full h-1.5">
-                  <div className={`h-1.5 rounded-full transition-all duration-500 ${
-                    currentJob.status === 'pending' ? 'w-1/4 bg-blue-400' : 'w-3/4 bg-blue-600 animate-pulse'
-                  }`} />
-                </div>
-              </div>
+                </button>
+              </>
             )}
           </div>
         </div>
