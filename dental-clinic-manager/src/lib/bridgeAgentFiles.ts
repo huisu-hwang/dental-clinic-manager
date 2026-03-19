@@ -133,7 +133,7 @@ if %errorLevel% neq 0 (
     echo [!] Node.js is not installed.
     echo [*] Installing Node.js automatically...
     echo.
-    powershell -ExecutionPolicy Bypass -File "%~dp0scripts\\install-node.ps1"
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\\install-node.ps1"
     if %errorLevel% neq 0 (
         echo [X] Node.js installation failed.
         echo     Please install manually from https://nodejs.org
@@ -150,17 +150,18 @@ echo.
 :: Install dependencies
 echo [*] Installing packages...
 cd /d "%~dp0"
-call npm install --production 2>nul
+call npm install
 if %errorLevel% neq 0 (
-    echo [!] npm install failed. Trying full install...
-    call npm install
+    echo [X] npm install failed. Please check your network connection.
+    pause
+    exit /b 1
 )
 echo [OK] Packages installed
 echo.
 
 :: TypeScript build
 echo [*] Building...
-call npm run build
+call npx tsc
 if %errorLevel% neq 0 (
     echo [X] Build failed. Please check errors above.
     pause
@@ -371,7 +372,7 @@ const PACKAGE_JSON = `{
   "description": "덴트웹 DB → Supabase 동기화 브릿지 에이전트",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npx tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "test-connection": "ts-node src/test-connection.ts",
@@ -1784,13 +1785,17 @@ try {
 
 const INSTALL_NODE_PS1 = `# Node.js LTS Auto-Install Script
 # Tries multiple methods: winget -> direct MSI download -> chocolatey
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 Write-Host ""
 Write-Host "  ==========================================" -ForegroundColor Cyan
 Write-Host "  Node.js LTS Auto-Install" -ForegroundColor Cyan
 Write-Host "  ==========================================" -ForegroundColor Cyan
 Write-Host ""
+
+# Set TLS 1.2 first (required for nodejs.org downloads)
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls13 } catch {}
 
 # Check if already installed (refresh PATH first)
 $nodePaths = @(
@@ -1857,7 +1862,6 @@ if (-not $installed) {
 
     $nodeVersion = $null
     try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
         $response = Invoke-WebRequest -Uri "https://nodejs.org/dist/latest-v22.x/" -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
         if ($response.Content -match 'node-(v[\\d\\.]+)-x64\\.msi') {
             $nodeVersion = $Matches[1]

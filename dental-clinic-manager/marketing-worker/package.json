@@ -1,0 +1,26 @@
+{
+  "name": "marketing-worker",
+  "version": "1.0.0",
+  "description": "하얀치과 마케팅 자동화 워커 (블로그/SNS 자동 발행)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch index.ts",
+    "start": "tsx index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "dotenv": "^16.4.7",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.50.0",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

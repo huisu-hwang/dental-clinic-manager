@@ -6,13 +6,15 @@
     "dev": "next dev",
     "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:menu": "node scripts/validate-menu-routes.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.79.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@google/genai": "^1.39.0",
+    "@google/genai": "^1.45.0",
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-dialog": "^1.1.15",
