@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      let keepalive: ReturnType<typeof setInterval> | null = null;
       try {
         // 인증 확인
         const supabase = await createClient();
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
           });
 
           // Keepalive: 이미지 생성 중 5초마다 heartbeat 전송
-          const keepalive = setInterval(() => {
+          keepalive = setInterval(() => {
             try {
               sendEvent(controller, { heartbeat: true });
             } catch { /* stream closed */ }
@@ -188,11 +189,16 @@ export async function POST(request: NextRequest) {
         });
         controller.close();
       } catch (error) {
+        if (keepalive) clearInterval(keepalive);
         console.error('[API] marketing/generate POST:', error);
         const message =
           error instanceof Error ? error.message : '글 생성 실패';
-        sendEvent(controller, { error: message });
-        controller.close();
+        try {
+          sendEvent(controller, { error: message });
+          controller.close();
+        } catch {
+          // controller가 이미 닫힌 경우 무시
+        }
       }
     },
   });
