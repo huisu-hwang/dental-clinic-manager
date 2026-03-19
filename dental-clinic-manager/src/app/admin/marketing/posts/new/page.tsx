@@ -48,6 +48,8 @@ export default function NewMarketingPostPage() {
 
   // ── 생성 / 저장 상태 ──
   const [isGenerating, setIsGenerating] = useState(false)
+  const [generationProgress, setGenerationProgress] = useState(0)
+  const [generationStep, setGenerationStep] = useState('')
   const [generatedResult, setGeneratedResult] = useState<GeneratedResultType | null>(null)
   const [savedItemId, setSavedItemId] = useState<string | null>(null)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
@@ -100,7 +102,7 @@ export default function NewMarketingPostPage() {
     setPlatforms(DEFAULT_PLATFORM_PRESETS[type])
   }
 
-  // ── AI 글 생성 + 자동 저장 ──
+  // ── AI 글 생성 + 자동 저장 (SSE 스트리밍) ──
   const handleGenerate = async () => {
     if (!topic || !keyword) {
       setError('주제와 키워드를 입력해주세요.')
@@ -108,6 +110,8 @@ export default function NewMarketingPostPage() {
     }
 
     setIsGenerating(true)
+    setGenerationProgress(0)
+    setGenerationStep('준비 중...')
     setError('')
     setIsEditingBody(false)
     setHasUnsavedChanges(false)
@@ -119,51 +123,82 @@ export default function NewMarketingPostPage() {
         body: JSON.stringify({ topic, keyword, postType, tone, useResearch, factCheck, platforms }),
       })
 
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || '글 생성 실패')
+      if (!res.ok || !res.body) {
+        const json = await res.json()
+        throw new Error(json.error || '글 생성 실패')
+      }
 
-      const result: GeneratedResultType = json.data
-      setGeneratedResult(result)
-      setEditedTitle(result.title)
-      setEditedBody(result.body)
-      setEditedHashtags(result.hashtags || [])
+      // SSE 스트림 읽기
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
 
-      // 자동 DB 저장 (비차단)
-      try {
-        if (savedItemId) {
-          // 재생성 → 기존 항목 업데이트
-          await fetch(`/api/marketing/posts/${savedItemId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ generatedContent: result }),
-          })
-          setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
-        } else {
-          // 최초 생성 → 새 항목 생성
-          const saveRes = await fetch('/api/marketing/posts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: result.title,
-              topic,
-              keyword,
-              postType,
-              tone,
-              useResearch,
-              factCheck,
-              platforms,
-              generatedContent: result,
-            }),
-          })
-          if (saveRes.ok) {
-            const saveJson = await saveRes.json()
-            setSavedItemId(saveJson.data.id)
-            setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const data = JSON.parse(line.slice(6))
+
+            if (data.error) throw new Error(data.error)
+
+            if (data.progress !== undefined) setGenerationProgress(data.progress)
+            if (data.step) setGenerationStep(data.step)
+
+            if (data.result) {
+              const result: GeneratedResultType = data.result
+              setGeneratedResult(result)
+              setEditedTitle(result.title)
+              setEditedBody(result.body)
+              setEditedHashtags(result.hashtags || [])
+
+              // 자동 DB 저장 (비차단)
+              try {
+                if (savedItemId) {
+                  await fetch(`/api/marketing/posts/${savedItemId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ generatedContent: result }),
+                  })
+                  setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
+                } else {
+                  const saveRes = await fetch('/api/marketing/posts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      title: result.title,
+                      topic,
+                      keyword,
+                      postType,
+                      tone,
+                      useResearch,
+                      factCheck,
+                      platforms,
+                      generatedContent: result,
+                    }),
+                  })
+                  if (saveRes.ok) {
+                    const saveJson = await saveRes.json()
+                    setSavedItemId(saveJson.data.id)
+                    setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
+                  }
+                }
+              } catch (saveErr) {
+                console.error('자동 저장 실패:', saveErr)
+              }
+            }
+          } catch (parseErr) {
+            if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {
+              throw parseErr
+            }
           }
         }
-      } catch (saveErr) {
-        console.error('자동 저장 실패:', saveErr)
-        // 자동 저장 실패는 사용자에게 에러로 노출하지 않음
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '글 생성 중 오류가 발생했습니다.')
@@ -436,6 +471,43 @@ export default function NewMarketingPostPage() {
                 </>
               )}
             </button>
+
+            {/* 진행 상태 바 */}
+            {isGenerating && (
+              <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-700">{generationStep}</span>
+                  <span className="text-sm font-bold text-indigo-600">{generationProgress}%</span>
+                </div>
+                <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${generationProgress}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs">
+                  {[
+                    { label: '글 작성', threshold: 5 },
+                    { label: '이미지 생성', threshold: 55 },
+                    { label: '저장', threshold: 95 },
+                    { label: '완료', threshold: 100 },
+                  ].map(({ label, threshold }) => (
+                    <span
+                      key={label}
+                      className={`transition-colors duration-300 ${
+                        generationProgress >= threshold
+                          ? threshold === 100
+                            ? 'text-green-500 font-semibold'
+                            : 'text-indigo-500 font-semibold'
+                          : 'text-slate-400'
+                      }`}
+                    >
+                      {generationProgress >= threshold ? '✓ ' : ''}{label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 생성 결과 */}
             {generatedResult && (
