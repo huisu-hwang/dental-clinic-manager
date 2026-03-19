@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import {
@@ -10,15 +11,26 @@ import {
   ClockIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/outline'
 import type { MarketingPrompt, PromptCategory } from '@/types/marketing'
 
+type GeneratedImage = {
+  fileName: string
+  prompt: string
+  path: string
+}
+
 type TestResult = {
-  title: string
-  body: string
-  wordCount: number
-  keywordCount: number
-  imageCount: number
+  category: PromptCategory
+  // content/transform/quality
+  title?: string
+  body?: string
+  wordCount?: number
+  keywordCount?: number
+  hashtags?: string[]
+  // images (content + image category)
+  images?: GeneratedImage[]
 }
 
 const CATEGORY_LABELS: Record<PromptCategory, string> = {
@@ -26,6 +38,30 @@ const CATEGORY_LABELS: Record<PromptCategory, string> = {
   image: '이미지 생성',
   transform: '플랫폼 변환',
   quality: '품질 검증',
+}
+
+// body 텍스트를 [IMAGE: ...] 마커 기준으로 분리
+function parseBodySegments(body: string, images: GeneratedImage[]) {
+  const parts: Array<{ type: 'text' | 'image'; text?: string; image?: GeneratedImage; prompt?: string }> = []
+  const imageRegex = /\[IMAGE:\s*(.+?)\]/g
+  let lastIndex = 0
+  let match
+  let imageIdx = 0
+
+  while ((match = imageRegex.exec(body)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', text: body.slice(lastIndex, match.index) })
+    }
+    const prompt = match[1].trim()
+    const img = images[imageIdx] || null
+    parts.push({ type: 'image', image: img || undefined, prompt })
+    imageIdx++
+    lastIndex = match.index + match[0].length
+  }
+  if (lastIndex < body.length) {
+    parts.push({ type: 'text', text: body.slice(lastIndex) })
+  }
+  return parts
 }
 
 export default function PromptManagementPage() {
@@ -45,8 +81,10 @@ export default function PromptManagementPage() {
   const [testTopic, setTestTopic] = useState('')
   const [testKeyword, setTestKeyword] = useState('')
   const [testTone, setTestTone] = useState('friendly')
+  const [testImagePrompt, setTestImagePrompt] = useState('')
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<TestResult | null>(null)
+  const [testError, setTestError] = useState<string | null>(null)
 
   // 권한 체크
   useEffect(() => {
@@ -82,6 +120,7 @@ export default function PromptManagementPage() {
     setSaveMessage(null)
     setShowTest(false)
     setTestResult(null)
+    setTestError(null)
   }
 
   // 프롬프트 저장
@@ -117,12 +156,19 @@ export default function PromptManagementPage() {
 
   // 프롬프트 테스트
   const handleTest = async () => {
-    if (!testTopic || !testKeyword) return
+    if (!selectedPrompt) return
+    if (activeCategory === 'image' && !testImagePrompt) return
+    if (activeCategory !== 'image' && (!testTopic || !testKeyword)) return
 
     setIsTesting(true)
     setTestResult(null)
+    setTestError(null)
 
     try {
+      const postType = selectedPrompt.prompt_key.includes('clinical') ? 'clinical'
+        : selectedPrompt.prompt_key.includes('promotional') ? 'promotional'
+        : 'informational'
+
       const res = await fetch('/api/marketing/prompts/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,8 +176,10 @@ export default function PromptManagementPage() {
           topic: testTopic,
           keyword: testKeyword,
           tone: testTone,
-          postType: selectedPrompt?.prompt_key.includes('clinical') ? 'clinical' :
-                    selectedPrompt?.prompt_key.includes('promotional') ? 'promotional' : 'informational',
+          postType,
+          customSystemPrompt: editedContent,
+          category: activeCategory,
+          imagePrompt: testImagePrompt,
         }),
       })
 
@@ -139,14 +187,16 @@ export default function PromptManagementPage() {
       if (!res.ok) throw new Error(json.error)
 
       setTestResult({
+        category: json.data.category,
         title: json.data.title,
         body: json.data.body,
         wordCount: json.data.wordCount,
         keywordCount: json.data.keywordCount,
-        imageCount: json.data.imageMarkers?.length || 0,
+        hashtags: json.data.hashtags,
+        images: json.data.images || [],
       })
     } catch (err) {
-      console.error('테스트 실패:', err)
+      setTestError(err instanceof Error ? err.message : '테스트 실패')
     } finally {
       setIsTesting(false)
     }
@@ -234,7 +284,7 @@ export default function PromptManagementPage() {
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setShowTest(!showTest)}
+                        onClick={() => { setShowTest(!showTest); setTestResult(null); setTestError(null) }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
                       >
                         <BeakerIcon className="h-3.5 w-3.5" />
@@ -283,65 +333,83 @@ export default function PromptManagementPage() {
 
                 {/* 테스트 샌드박스 */}
                 {showTest && (
-                  <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                       <BeakerIcon className="h-4 w-4 text-amber-500" />
                       프롬프트 테스트
+                      <span className="text-xs font-normal text-slate-400 ml-1">
+                        {editedContent !== selectedPrompt.system_prompt
+                          ? '(편집 중인 미저장 버전으로 테스트)'
+                          : '(저장된 버전으로 테스트)'}
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    {/* 카테고리별 입력 */}
+                    {activeCategory === 'image' ? (
                       <input
                         type="text"
-                        value={testTopic}
-                        onChange={(e) => setTestTopic(e.target.value)}
-                        placeholder="주제"
-                        className="px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                        value={testImagePrompt}
+                        onChange={(e) => setTestImagePrompt(e.target.value)}
+                        placeholder="이미지 설명 (예: 임플란트 시술 과정을 보여주는 3D 일러스트)"
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
                       />
-                      <input
-                        type="text"
-                        value={testKeyword}
-                        onChange={(e) => setTestKeyword(e.target.value)}
-                        placeholder="키워드"
-                        className="px-3 py-2 text-sm border border-slate-200 rounded-lg"
-                      />
-                      <select
-                        value={testTone}
-                        onChange={(e) => setTestTone(e.target.value)}
-                        className="px-3 py-2 text-sm border border-slate-200 rounded-lg"
-                      >
-                        <option value="friendly">친근체</option>
-                        <option value="polite">정중체</option>
-                        <option value="casual">구어체</option>
-                        <option value="expert">전문가</option>
-                        <option value="warm">공감체</option>
-                      </select>
-                    </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-3">
+                        <input
+                          type="text"
+                          value={testTopic}
+                          onChange={(e) => setTestTopic(e.target.value)}
+                          placeholder="주제 (예: 임플란트 관리법)"
+                          className="px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                        />
+                        <input
+                          type="text"
+                          value={testKeyword}
+                          onChange={(e) => setTestKeyword(e.target.value)}
+                          placeholder="키워드 (예: 임플란트)"
+                          className="px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                        />
+                        <select
+                          value={testTone}
+                          onChange={(e) => setTestTone(e.target.value)}
+                          className="px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                        >
+                          <option value="friendly">친근체</option>
+                          <option value="polite">정중체</option>
+                          <option value="casual">구어체</option>
+                          <option value="expert">전문가</option>
+                          <option value="warm">공감체</option>
+                        </select>
+                      </div>
+                    )}
 
                     <button
                       onClick={handleTest}
-                      disabled={isTesting || !testTopic || !testKeyword}
+                      disabled={
+                        isTesting ||
+                        (activeCategory === 'image' ? !testImagePrompt : (!testTopic || !testKeyword))
+                      }
                       className="w-full py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isTesting ? (
                         <>
                           <ClockIcon className="h-4 w-4 animate-spin" />
-                          생성중...
+                          {activeCategory === 'image' ? '이미지 생성 중... (30~60초 소요)' : '글 생성 중... (이미지 포함 시 1~2분 소요)'}
                         </>
                       ) : '테스트 실행'}
                     </button>
 
-                    {testResult && (
-                      <div className="border border-slate-200 rounded-lg p-4 space-y-2">
-                        <div className="flex gap-3 text-xs text-slate-400">
-                          <span>글자수: {testResult.wordCount}자</span>
-                          <span>키워드: {testResult.keywordCount}회</span>
-                          <span>이미지: {testResult.imageCount}장</span>
-                        </div>
-                        <div className="text-sm font-bold text-slate-800">{testResult.title}</div>
-                        <div className="text-xs text-slate-600 whitespace-pre-wrap max-h-60 overflow-y-auto">
-                          {testResult.body}
-                        </div>
+                    {/* 에러 */}
+                    {testError && (
+                      <div className="flex items-center gap-2 text-xs p-3 rounded-lg bg-red-50 text-red-600">
+                        <ExclamationTriangleIcon className="h-4 w-4 flex-shrink-0" />
+                        {testError}
                       </div>
+                    )}
+
+                    {/* 결과 */}
+                    {testResult && (
+                      <TestResultView result={testResult} />
                     )}
                   </div>
                 )}
@@ -354,6 +422,116 @@ export default function PromptManagementPage() {
             )}
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── 테스트 결과 컴포넌트 ───
+
+function TestResultView({ result }: { result: TestResult }) {
+  const images = result.images || []
+
+  if (result.category === 'image') {
+    return (
+      <div className="border border-slate-200 rounded-lg p-4 space-y-3">
+        <div className="text-xs font-medium text-slate-500">이미지 생성 결과</div>
+        {images.length === 0 ? (
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <PhotoIcon className="h-4 w-4" />
+            이미지 생성에 실패했습니다.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {images.map((img, i) => (
+              <ImageCard key={i} img={img} />
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // content / transform / quality
+  const bodySegments = result.body
+    ? parseBodySegments(result.body, images)
+    : []
+
+  return (
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
+      {/* 통계 바 */}
+      <div className="flex gap-4 px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs text-slate-500">
+        <span>글자수: <strong className="text-slate-700">{result.wordCount?.toLocaleString()}자</strong></span>
+        <span>키워드: <strong className="text-slate-700">{result.keywordCount}회</strong></span>
+        <span>이미지: <strong className="text-slate-700">{images.length}/{(result.body?.match(/\[IMAGE:/g) || []).length}장</strong></span>
+        {(result.hashtags?.length ?? 0) > 0 && (
+          <span>해시태그: <strong className="text-slate-700">{result.hashtags!.length}개</strong></span>
+        )}
+      </div>
+
+      {/* 제목 */}
+      {result.title && (
+        <div className="px-4 py-3 border-b border-slate-200">
+          <div className="text-xs text-slate-400 mb-1">제목</div>
+          <div className="text-sm font-bold text-slate-800">{result.title}</div>
+        </div>
+      )}
+
+      {/* 본문 (이미지 인라인 렌더링) */}
+      <div className="px-4 py-3 max-h-[600px] overflow-y-auto space-y-3">
+        {bodySegments.map((seg, i) => {
+          if (seg.type === 'text') {
+            return (
+              <div key={i} className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+                {seg.text}
+              </div>
+            )
+          }
+          // image segment
+          return (
+            <div key={i} className="my-2">
+              {seg.image ? (
+                <ImageCard img={seg.image} compact />
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg text-xs text-slate-400">
+                  <PhotoIcon className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">[이미지 생성 실패] {seg.prompt}</span>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 해시태그 */}
+      {(result.hashtags?.length ?? 0) > 0 && (
+        <div className="px-4 py-3 border-t border-slate-200 flex flex-wrap gap-1.5">
+          {result.hashtags!.map((tag, i) => (
+            <span key={i} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+              #{tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ImageCard({ img, compact }: { img: GeneratedImage; compact?: boolean }) {
+  return (
+    <div className={`rounded-lg overflow-hidden border border-slate-200 ${compact ? '' : ''}`}>
+      <div className="relative bg-slate-100" style={{ paddingBottom: compact ? '56.25%' : '66.67%' }}>
+        <Image
+          src={img.path}
+          alt={img.prompt}
+          fill
+          className="object-cover"
+          unoptimized={img.path.startsWith('data:')}
+        />
+      </div>
+      <div className="px-2 py-1.5 bg-white">
+        <div className="text-xs text-slate-400 truncate">{img.fileName}</div>
+        <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">{img.prompt}</div>
       </div>
     </div>
   )
