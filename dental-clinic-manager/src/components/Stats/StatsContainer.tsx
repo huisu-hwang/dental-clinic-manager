@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { BarChart3, Gift, Star, ChevronDown, ChevronUp, X } from 'lucide-react'
-import type { Stats, ConsultLog, GiftLog, GiftInventory, GiftCategory } from '@/types'
+import type { Stats, ConsultLog, GiftLog, GiftInventory, GiftCategory, DailyReport } from '@/types'
 
 interface StatsContainerProps {
   stats: Stats
@@ -10,6 +10,7 @@ interface StatsContainerProps {
   giftLogs?: GiftLog[]
   giftInventory?: GiftInventory[]
   giftCategories?: GiftCategory[]
+  dailyReports?: DailyReport[]
   startDate?: Date
   endDate?: Date
 }
@@ -17,6 +18,7 @@ interface StatsContainerProps {
 type ModalItem =
   | { kind: 'consult'; data: ConsultLog[] }
   | { kind: 'gift'; data: GiftLog[] }
+  | { kind: 'recall'; data: Array<{ date: string; names: string }> }
 
 interface ModalState {
   title: string
@@ -110,6 +112,31 @@ const GiftList = ({ logs }: { logs: GiftLog[] }) => {
   )
 }
 
+// 리콜 예약 목록 컴포넌트
+const RecallList = ({ data }: { data: Array<{ date: string; names: string }> }) => {
+  if (data.length === 0) {
+    return <p className="text-center text-slate-500 py-8">리콜 예약 기록이 없습니다.</p>
+  }
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="bg-slate-50 text-left">
+          <th className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">날짜</th>
+          <th className="px-3 py-2 font-medium text-slate-600">예약 환자</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((row, idx) => (
+          <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+            <td className="px-3 py-2 whitespace-nowrap text-slate-600">{row.date}</td>
+            <td className="px-3 py-2 text-slate-800">{row.names}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 // 상세 모달 컴포넌트
 const DetailModal = ({ modal, onClose }: { modal: ModalState; onClose: () => void }) => {
   const count = modal.item.data.length
@@ -135,6 +162,8 @@ const DetailModal = ({ modal, onClose }: { modal: ModalState; onClose: () => voi
         <div className="flex-1 overflow-auto px-2 py-2">
           {modal.item.kind === 'consult' ? (
             <ConsultList logs={modal.item.data} />
+          ) : modal.item.kind === 'recall' ? (
+            <RecallList data={modal.item.data} />
           ) : (
             <GiftList logs={modal.item.data} />
           )}
@@ -149,7 +178,7 @@ const DetailModal = ({ modal, onClose }: { modal: ModalState; onClose: () => voi
   )
 }
 
-// 카테고리별 선물 카드 컴포넌트
+// 카테고리별 선물 카드 컴포넌트 (리뷰 통계 카드와 동일한 UI)
 const CategoryGiftCard = ({
   categoryName,
   data,
@@ -168,64 +197,49 @@ const CategoryGiftCard = ({
 
   return (
     <div
-      className="rounded-lg p-4 border-2 transition-all"
-      style={{
-        borderColor: data.color,
-        backgroundColor: `${data.color}10`
-      }}
+      className="rounded-lg p-4 border cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all"
+      style={{ backgroundColor: `${data.color}15`, borderColor: `${data.color}60` }}
+      onClick={onShowList}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span
-            className="w-3 h-3 rounded-full"
-            style={{ backgroundColor: data.color }}
-          />
-          <span className="text-sm font-medium text-slate-700">{categoryName}</span>
+      <div className="flex items-start justify-between">
+        <div className="text-xs font-medium uppercase tracking-wider" style={{ color: data.color }}>
+          {categoryName}
         </div>
-        <div className="flex items-center gap-2">
-          {/* 목록 버튼 */}
-          <button
-            onClick={onShowList}
-            className="text-xs px-2 py-0.5 rounded font-medium text-white transition-opacity hover:opacity-80"
-            style={{ backgroundColor: data.color }}
-          >
-            목록 →
-          </button>
-          <span className="text-xl font-bold" style={{ color: data.color }}>
-            {data.total}
-          </span>
-          <span className="text-xs text-slate-500">개</span>
-          {hasMultipleGifts && (
-            <button
-              onClick={onToggle}
-              className="p-0.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-              aria-label={isExpanded ? '접기' : '펼치기'}
-            >
-              {isExpanded ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </button>
-          )}
-        </div>
+        <span className="text-xs font-medium" style={{ color: data.color }}>상세 →</span>
       </div>
+      <div className="text-2xl font-bold mt-1" style={{ color: data.color }}>{data.total}</div>
+      <div className="flex items-center justify-between mt-1">
+        <div className="text-xs text-slate-500">개</div>
+        {hasMultipleGifts && (
+          <button
+            onClick={e => { e.stopPropagation(); onToggle() }}
+            className="p-0.5 rounded hover:bg-slate-100 transition-colors"
+            aria-label={isExpanded ? '접기' : '펼치기'}
+          >
+            {isExpanded ? (
+              <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* 단일 선물인 경우 선물명 표시 */}
+      {!hasMultipleGifts && giftEntries.length === 1 && (
+        <div className="mt-1 text-xs text-slate-500">{giftEntries[0][0]}</div>
+      )}
 
       {/* 확장된 선물 상세 목록 */}
       {isExpanded && hasMultipleGifts && (
-        <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
+        <div className="mt-3 pt-3 border-t border-slate-200 space-y-1.5">
           {giftEntries.map(([giftName, count]) => (
-            <div key={giftName} className="flex justify-between items-center text-sm">
+            <div key={giftName} className="flex justify-between items-center text-xs">
               <span className="text-slate-600">{giftName}</span>
               <span className="font-medium text-slate-700">{count}개</span>
             </div>
           ))}
         </div>
-      )}
-
-      {/* 단일 선물인 경우 선물명 표시 */}
-      {!hasMultipleGifts && giftEntries.length === 1 && (
-        <div className="mt-1 text-xs text-slate-500">{giftEntries[0][0]}</div>
       )}
     </div>
   )
@@ -237,22 +251,17 @@ export default function StatsContainer({
   giftLogs,
   giftInventory,
   giftCategories,
+  dailyReports,
   startDate,
   endDate
 }: StatsContainerProps) {
-  console.log('Stats received:', stats)
-
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [modal, setModal] = useState<ModalState | null>(null)
 
   const toggleCategory = (categoryName: string) => {
     setExpandedCategories(prev => {
       const next = new Set(prev)
-      if (next.has(categoryName)) {
-        next.delete(categoryName)
-      } else {
-        next.add(categoryName)
-      }
+      if (next.has(categoryName)) { next.delete(categoryName) } else { next.add(categoryName) }
       return next
     })
   }
@@ -302,9 +311,28 @@ export default function StatsContainer({
     })
   }, [giftLogs, startDate, endDate])
 
+  // 날짜 범위로 필터링된 일일보고서
+  const filteredDailyReports = useMemo(() => {
+    if (!dailyReports) return []
+    if (!startDate || !endDate) return dailyReports
+    return dailyReports.filter(r => {
+      const d = new Date(r.date + 'T00:00:00')
+      return d >= startDate && d <= endDate
+    })
+  }, [dailyReports, startDate, endDate])
+
   // 모달 열기 핸들러
-  const openConsultModal = () => {
-    setModal({ title: `총 상담 목록 (${filteredConsultLogs.length}건)`, item: { kind: 'consult', data: filteredConsultLogs } })
+  const openConsultProceedModal = () => {
+    const data = filteredConsultLogs.filter(log => log.consult_status === 'O')
+    setModal({ title: `상담 진행 목록 (${data.length}건)`, item: { kind: 'consult', data } })
+  }
+
+  const openRecallModal = () => {
+    const data = filteredDailyReports
+      .filter(r => r.recall_booking_count > 0 && r.recall_booking_names)
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .map(r => ({ date: r.date, names: r.recall_booking_names! }))
+    setModal({ title: `리콜 예약 목록 (총 ${stats.recall_booking_count}건)`, item: { kind: 'recall', data } })
   }
 
   const openNaverReviewModal = () => {
@@ -337,29 +365,32 @@ export default function StatsContainer({
       {/* 주요 업무 통계 */}
       <div>
         <SectionHeader number={1} title="주요 업무 통계" icon={BarChart3} />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* 총 상담 카드 */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* 상담 진행률 카드 (클릭 → 진행된 상담 목록) */}
           <div
-            className="bg-blue-50 rounded-lg p-4 border border-blue-200 cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all relative"
-            onClick={openConsultModal}
+            className="bg-blue-50 rounded-lg p-4 border border-blue-200 cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all"
+            onClick={openConsultProceedModal}
           >
             <div className="flex items-start justify-between">
-              <div className="text-xs font-medium text-blue-600 uppercase tracking-wider">총 상담</div>
+              <div className="text-xs font-medium text-blue-600 uppercase tracking-wider">상담 진행률</div>
               <span className="text-xs text-blue-400 font-medium">상세 →</span>
             </div>
-            <div className="text-2xl font-bold text-blue-700 mt-1">{stats.totalConsults || 0}</div>
-            <div className="text-xs text-slate-500 mt-1">건</div>
+            <div className="text-2xl font-bold text-blue-700 mt-1">{stats.consultProceedRate || 0}%</div>
+            <div className="text-xs text-slate-500 mt-1">({stats.consult_proceed} / {stats.totalConsults})</div>
           </div>
-          <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-            <div className="text-xs font-medium text-yellow-600 uppercase tracking-wider">상담 진행률</div>
-            <div className="text-2xl font-bold text-yellow-700 mt-1">{stats.consultProceedRate || 0}%</div>
-            <div className="text-xs text-slate-500 mt-1">진행/전체</div>
-          </div>
-          <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-            <div className="text-xs font-medium text-purple-600 uppercase tracking-wider">리콜 예약률</div>
+          {/* 리콜 예약률 카드 (클릭 → 리콜 예약 환자 목록) */}
+          <div
+            className="bg-purple-50 rounded-lg p-4 border border-purple-200 cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all"
+            onClick={openRecallModal}
+          >
+            <div className="flex items-start justify-between">
+              <div className="text-xs font-medium text-purple-600 uppercase tracking-wider">리콜 예약률</div>
+              <span className="text-xs text-purple-400 font-medium">상세 →</span>
+            </div>
             <div className="text-2xl font-bold text-purple-700 mt-1">{stats.recallSuccessRate || 0}%</div>
-            <div className="text-xs text-slate-500 mt-1">예약/리콜</div>
+            <div className="text-xs text-slate-500 mt-1">({stats.recall_booking_count} / {stats.recall_count})</div>
           </div>
+          {/* 총 선물 카드 */}
           <div className="bg-teal-50 rounded-lg p-4 border border-teal-200">
             <div className="text-xs font-medium text-teal-600 uppercase tracking-wider">총 선물</div>
             <div className="text-2xl font-bold text-teal-700 mt-1">{totalGiftCount}</div>

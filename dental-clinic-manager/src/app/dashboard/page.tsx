@@ -616,6 +616,7 @@ export default function DashboardPage() {
                           giftLogs={giftLogs}
                           giftInventory={giftInventory}
                           giftCategories={giftCategories}
+                          dailyReports={dailyReports}
                           startDate={periodData?.startDate}
                           endDate={periodData?.endDate}
                         />
@@ -647,6 +648,7 @@ export default function DashboardPage() {
                           giftLogs={giftLogs}
                           giftInventory={giftInventory}
                           giftCategories={giftCategories}
+                          dailyReports={dailyReports}
                           startDate={periodData?.startDate}
                           endDate={periodData?.endDate}
                         />
@@ -681,6 +683,7 @@ export default function DashboardPage() {
                           giftLogs={giftLogs}
                           giftInventory={giftInventory}
                           giftCategories={giftCategories}
+                          dailyReports={dailyReports}
                           startDate={periodData?.startDate}
                           endDate={periodData?.endDate}
                         />
@@ -740,6 +743,7 @@ export default function DashboardPage() {
                       giftLogs={giftLogs}
                       giftInventory={giftInventory}
                       giftCategories={giftCategories}
+                      dailyReports={dailyReports}
                       startDate={new Date(customStartDate + 'T00:00:00')}
                       endDate={new Date(customEndDate + 'T23:59:59')}
                     />
