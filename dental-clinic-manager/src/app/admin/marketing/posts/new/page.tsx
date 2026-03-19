@@ -733,7 +733,23 @@ function RenderedBody({
   const elements: React.ReactNode[] = []
   let paragraphBuffer: string[] = []
   let key = 0
-  let imageIndex = 0
+  // 프롬프트 텍스트로 이미지 매칭 (순차 인덱스 폴백)
+  const usedImageIndices = new Set<number>()
+  let fallbackIndex = 0
+
+  const findImage = (prompt: string) => {
+    if (!images || images.length === 0) return undefined
+    // 1차: 프롬프트 텍스트로 정확 매칭
+    const exactIdx = images.findIndex((img, i) => !usedImageIndices.has(i) && img.prompt === prompt)
+    if (exactIdx >= 0) { usedImageIndices.add(exactIdx); return images[exactIdx] }
+    // 2차: 부분 매칭
+    const partialIdx = images.findIndex((img, i) => !usedImageIndices.has(i) && (img.prompt.includes(prompt.slice(0, 10)) || prompt.includes(img.prompt.slice(0, 10))))
+    if (partialIdx >= 0) { usedImageIndices.add(partialIdx); return images[partialIdx] }
+    // 3차: 순차 폴백
+    while (fallbackIndex < images.length && usedImageIndices.has(fallbackIndex)) fallbackIndex++
+    if (fallbackIndex < images.length) { usedImageIndices.add(fallbackIndex); return images[fallbackIndex++] }
+    return undefined
+  }
 
   const flushParagraph = () => {
     if (paragraphBuffer.length > 0) {
@@ -757,8 +773,7 @@ function RenderedBody({
       flushParagraph()
       const match = trimmed.match(/\[IMAGE:\s*(.+?)\]/)
       const prompt = match ? match[1] : ''
-      const currentImage = images && images[imageIndex]
-      imageIndex++
+      const currentImage = findImage(prompt)
 
       if (currentImage?.path) {
         elements.push(
