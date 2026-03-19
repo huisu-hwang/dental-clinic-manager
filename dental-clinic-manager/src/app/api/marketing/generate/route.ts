@@ -6,7 +6,7 @@ import { generateBlogImage } from '@/lib/marketing/image-generator';
 import type { ContentGenerateOptions } from '@/types/marketing';
 
 // Vercel 서버리스 함수 타임아웃 확장 (Claude + Gemini API 호출 소요 시간 대응)
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // AI 글 생성 (SSE 스트리밍으로 진행 상태 전송)
 export async function POST(request: NextRequest) {
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
           const imagePromises = imageMarkers.map(async (marker) => {
             try {
               const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 20000)
+                setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 35000)
               );
               const { imageBase64, fileName } = await Promise.race([
                 generateBlogImage(marker.prompt),
