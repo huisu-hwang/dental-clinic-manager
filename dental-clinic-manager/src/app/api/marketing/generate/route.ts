@@ -87,72 +87,81 @@ export async function POST(request: NextRequest) {
           step: '글 작성이 완료되었습니다.',
         });
 
-        // 2단계: 이미지 생성 (Gemini) - 마커별 진행상황 전송
-        const imageMarkers = result.imageMarkers || [];
+        // 2단계: 이미지 병렬 생성 (Gemini) + Storage 업로드
+        const imageMarkers = (result.imageMarkers || []).slice(0, 3); // 최대 3개
         if (imageMarkers.length > 0) {
           const admin = getSupabaseAdmin();
-          const generatedImages: {
-            fileName: string;
-            prompt: string;
-            path: string;
-          }[] = [];
 
-          for (let i = 0; i < imageMarkers.length; i++) {
-            const progress =
-              55 + Math.round((i / imageMarkers.length) * 35);
-            sendEvent(controller, {
-              progress,
-              step: `이미지를 생성하고 있습니다... (${i + 1}/${imageMarkers.length})`,
-            });
+          sendEvent(controller, {
+            progress: 60,
+            step: `이미지 ${imageMarkers.length}개를 생성하고 있습니다...`,
+          });
 
+          // Keepalive: 이미지 생성 중 5초마다 heartbeat 전송
+          const keepalive = setInterval(() => {
             try {
-              const { imageBase64, fileName } = await generateBlogImage(
-                imageMarkers[i].prompt
-              );
+              sendEvent(controller, { heartbeat: true });
+            } catch { /* stream closed */ }
+          }, 5000);
 
-              // Supabase Storage에 업로드하여 URL 획득
+          // 병렬 생성 (개별 20초 타임아웃)
+          const imagePromises = imageMarkers.map(async (marker) => {
+            try {
+              const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 20000)
+              );
+              const { imageBase64, fileName } = await Promise.race([
+                generateBlogImage(marker.prompt),
+                timeoutPromise,
+              ]);
+
+              // Supabase Storage에 업로드
               let imagePath = '';
               if (admin) {
-                const buffer = Buffer.from(imageBase64, 'base64');
-                const storagePath = `generated/${Date.now()}_${fileName}`;
-                const { error: uploadError } = await admin.storage
-                  .from('marketing-images')
-                  .upload(storagePath, buffer, {
-                    contentType: 'image/png',
-                    upsert: true,
-                  });
-
-                if (!uploadError) {
-                  const { data: urlData } = admin.storage
+                try {
+                  const buffer = Buffer.from(imageBase64, 'base64');
+                  const storagePath = `generated/${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${fileName}`;
+                  const { error: uploadError } = await admin.storage
                     .from('marketing-images')
-                    .getPublicUrl(storagePath);
-                  imagePath = urlData.publicUrl;
+                    .upload(storagePath, buffer, {
+                      contentType: 'image/png',
+                      upsert: true,
+                    });
+                  if (!uploadError) {
+                    const { data: urlData } = admin.storage
+                      .from('marketing-images')
+                      .getPublicUrl(storagePath);
+                    imagePath = urlData.publicUrl;
+                  }
+                } catch (uploadErr) {
+                  console.error('[API] Storage 업로드 실패:', uploadErr);
                 }
               }
 
-              // Storage 업로드 실패 시 base64 폴백 (단, 크기 제한)
-              if (!imagePath) {
-                // base64가 500KB 이하인 경우에만 인라인 포함
-                if (imageBase64.length < 500000) {
-                  imagePath = `data:image/png;base64,${imageBase64}`;
-                }
+              if (!imagePath && imageBase64.length < 500000) {
+                imagePath = `data:image/png;base64,${imageBase64}`;
               }
 
-              if (imagePath) {
-                generatedImages.push({
-                  fileName,
-                  prompt: imageMarkers[i].prompt,
-                  path: imagePath,
-                });
-              }
+              return imagePath ? { fileName, prompt: marker.prompt, path: imagePath } : null;
             } catch (imgError) {
-              console.error(
-                `[API] 이미지 생성 실패: "${imageMarkers[i].prompt}"`,
-                imgError
-              );
-              // 실패 시 건너뛰고 계속 진행
+              console.error(`[API] 이미지 생성 실패: "${marker.prompt}"`, imgError);
+              return null;
             }
-          }
+          });
+
+          const imageResults = await Promise.allSettled(imagePromises);
+          clearInterval(keepalive);
+
+          const generatedImages = imageResults
+            .filter((r): r is PromiseFulfilledResult<{ fileName: string; prompt: string; path: string } | null> =>
+              r.status === 'fulfilled' && r.value !== null
+            )
+            .map(r => r.value!);
+
+          sendEvent(controller, {
+            progress: 90,
+            step: `이미지 ${generatedImages.length}/${imageMarkers.length}개 생성 완료`,
+          });
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (result as any).generatedImages = generatedImages;

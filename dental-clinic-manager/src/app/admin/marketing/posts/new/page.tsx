@@ -154,6 +154,7 @@ export default function NewMarketingPostPage() {
           try {
             const data = JSON.parse(line.slice(6))
 
+            if (data.heartbeat) continue // keepalive 무시
             if (data.error) throw new Error(data.error)
 
             if (data.progress !== undefined) setGenerationProgress(data.progress)
