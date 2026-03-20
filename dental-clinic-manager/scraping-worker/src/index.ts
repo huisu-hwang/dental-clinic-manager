@@ -15,7 +15,11 @@ let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 function startHeartbeat(): void {
   heartbeatTimer = setInterval(async () => {
     try {
-      await updateHeartbeat('idle');
+      const stopRequested = await updateHeartbeat('idle');
+      if (stopRequested) {
+        log.info('DB에서 중지 요청 수신 (stop_requested=true), graceful shutdown 시작');
+        shutdown('stop_requested');
+      }
     } catch (err) {
       log.warn({ err }, 'Heartbeat 전송 실패');
     }
