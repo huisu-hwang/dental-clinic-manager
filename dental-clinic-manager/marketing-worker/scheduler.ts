@@ -56,7 +56,7 @@ async function processScheduledItems(): Promise<void> {
       *,
       content_calendars!inner(clinic_id, status)
     `)
-    .eq('status', 'approved')
+    .in('status', ['approved', 'scheduled'])
     .eq('content_calendars.status', 'approved')
     .lte('publish_date', currentDate)
     .lte('publish_time', currentTime)
@@ -185,6 +185,17 @@ async function updateItemStatus(
     .from('content_calendar_items')
     .update(update)
     .eq('id', itemId);
+}
+
+/**
+ * 즉시 발행 처리 (HTTP 트리거에서 호출)
+ */
+export async function processScheduledItemsOnce(): Promise<void> {
+  try {
+    await processScheduledItems();
+  } catch (error) {
+    console.error('[Scheduler] 즉시 처리 오류:', error);
+  }
 }
 
 /**

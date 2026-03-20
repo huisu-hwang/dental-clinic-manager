@@ -254,13 +254,23 @@ export default function NewMarketingPostPage() {
         hashtags: editedHashtags,
       }
 
+      const today = new Date().toISOString().split('T')[0]
+      const now = new Date().toTimeString().slice(0, 5) // HH:MM
+
       if (savedItemId) {
-        // 기존 항목 업데이트 후 예약
-        await fetch(`/api/marketing/posts/${savedItemId}`, {
+        // 기존 항목 업데이트 + 즉시 발행 가능하도록 시간 설정
+        const res = await fetch(`/api/marketing/posts/${savedItemId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: editedTitle, generatedContent: updatedContent, status: 'scheduled' }),
+          body: JSON.stringify({
+            title: editedTitle,
+            generatedContent: updatedContent,
+            status: 'scheduled',
+            publishDate: today,
+            publishTime: now,
+          }),
         })
+        if (!res.ok) throw new Error('저장 실패')
       } else {
         // savedItemId 없으면 새로 생성하면서 예약
         const saveRes = await fetch('/api/marketing/posts', {
@@ -275,21 +285,32 @@ export default function NewMarketingPostPage() {
             useResearch,
             factCheck,
             platforms,
+            publishDate: today,
+            publishTime: now,
             generatedContent: updatedContent,
           }),
         })
         if (!saveRes.ok) throw new Error('저장 실패')
         const saveJson = await saveRes.json()
-        // 생성 후 즉시 scheduled로 업데이트
-        await fetch(`/api/marketing/posts/${saveJson.data.id}`, {
+        const patchRes = await fetch(`/api/marketing/posts/${saveJson.data.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'scheduled' }),
         })
+        if (!patchRes.ok) throw new Error('예약 실패')
       }
-      router.push('/admin/marketing')
-    } catch {
-      setSaveMessage({ type: 'error', text: '발행 예약에 실패했습니다.' })
+
+      // 마케팅 워커에 즉시 발행 트리거 (실패해도 진행)
+      try {
+        await fetch('/api/marketing/publish/trigger', { method: 'POST' })
+      } catch {
+        // 워커 미실행 시 5분 내 자동 처리
+      }
+
+      setSaveMessage({ type: 'success', text: '발행 예약이 완료되었습니다! 마케팅 워커가 곧 발행합니다.' })
+      setTimeout(() => router.push('/admin/marketing'), 1500)
+    } catch (err) {
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : '발행 예약에 실패했습니다.' })
       setIsScheduling(false)
     }
   }
