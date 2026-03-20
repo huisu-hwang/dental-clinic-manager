@@ -1,0 +1,5 @@
+{"t":0,"agent":"a3b549f","agent_type":"explore","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a3b549f","agent_type":"explore","event":"agent_stop","success":true,"duration_ms":28637}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"oh-my-claudecode:ralph"}
+{"t":0,"agent":"a7da758","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"a324239","agent_type":"unknown","event":"agent_stop","success":true}

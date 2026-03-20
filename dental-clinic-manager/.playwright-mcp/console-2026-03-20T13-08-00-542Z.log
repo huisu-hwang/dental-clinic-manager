@@ -1,0 +1,4 @@
+[  414225ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed:  @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/use-websocket.js:41
+[  758244ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/marketing/prompts?category=image:0
+[  758245ms] [ERROR] 프롬프트 로딩 실패: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[ 1801739ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://beahjntkmkfhpcbhfnrr.supabase.co/auth/v1/token?grant_type=refresh_token:0

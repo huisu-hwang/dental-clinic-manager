@@ -410,7 +410,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
   )
 }
 
-export default function Page() {
+export default function PromptManagementPage() {
   return <PromptManagementContent />
 }
 

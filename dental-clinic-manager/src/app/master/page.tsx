@@ -9,10 +9,7 @@ import type { UserActivityLog } from '@/types/auth'
 import Header from '@/components/Layout/Header'
 
 import dynamic from 'next/dynamic'
-const PromptsPage = dynamic(
-  () => import('@/app/master/marketing/prompts/PromptManagementContent').then(m => m.PromptManagementContent),
-  { ssr: false }
-)
+const PromptsPage = dynamic(() => import('@/app/master/marketing/prompts/page'), { ssr: false })
 import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
 import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
@@ -995,7 +992,7 @@ export default function MasterAdminPage() {
 
         {activeTab === 'scraping' && <ScrapingWorkerPanel />}
 
-        {activeTab === 'prompts' && <PromptsPage embedded />}
+        {activeTab === 'prompts' && <PromptsPage />}
 
         {activeTab === 'community' && (
           <div className="bg-white rounded-lg shadow">

@@ -289,6 +289,12 @@
       "type": "file"
     },
     {
+      "path": "src/app/master/page.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1774015587185,
+      "type": "file"
+    },
+    {
       "path": "src/types/index.ts",
       "accessCount": 4,
       "lastAccessed": 1773720943235,
@@ -316,6 +322,12 @@
       "path": "src/components/Bulletin/TaskForm.tsx",
       "accessCount": 2,
       "lastAccessed": 1773721295801,
+      "type": "file"
+    },
+    {
+      "path": "src/app/master/marketing/prompts/page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1774015551488,
       "type": "file"
     },
     {
