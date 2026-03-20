@@ -28,6 +28,9 @@ import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { getTabRoute } from '@/utils/tabRouting'
 import NewPostForm from '@/components/marketing/NewPostForm'
+import dynamic from 'next/dynamic'
+
+const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 
 type MarketingTab = 'dashboard' | 'posts' | 'calendar' | 'settings'
 
@@ -403,29 +406,69 @@ function PostsContent() {
         })}
       </div>
 
-      {/* 상세보기 모달 */}
+      {/* 상세보기/편집 모달 */}
       {selectedPost && (
-        <PostDetailModal
+        <PostEditModal
           post={selectedPost}
           content={parseContent(selectedPost)}
           onClose={() => setSelectedPost(null)}
+          onSaved={(updatedPost) => {
+            setPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p))
+            setSelectedPost(null)
+          }}
         />
       )}
     </div>
   )
 }
 
-// ─── 글 상세보기 모달 ───
-function PostDetailModal({
+// ─── 글 편집 모달 ───
+function PostEditModal({
   post,
   content,
   onClose,
+  onSaved,
 }: {
   post: ContentCalendarItem
   content: (GeneratedContent & { generatedImages?: { fileName: string; prompt: string; path?: string }[] }) | null
   onClose: () => void
+  onSaved: (updatedPost: ContentCalendarItem) => void
 }) {
+  const [editedTitle, setEditedTitle] = useState(post.title || content?.title || '')
+  const [editedBody, setEditedBody] = useState(content?.body || '')
+  const [editedHashtags, setEditedHashtags] = useState<string[]>(content?.hashtags || [])
+  const [saving, setSaving] = useState(false)
+  const [saveMsg, setSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [hasChanges, setHasChanges] = useState(false)
   const statusInfo = STATUS_LABELS[post.status] || STATUS_LABELS.review
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaveMsg(null)
+    try {
+      const updatedContent = {
+        ...content,
+        title: editedTitle,
+        body: editedBody,
+        hashtags: editedHashtags,
+        wordCount: editedBody.length,
+      }
+      const res = await fetch(`/api/marketing/posts/${post.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editedTitle, generatedContent: updatedContent }),
+      })
+      if (!res.ok) throw new Error('저장 실패')
+      const { data } = await res.json()
+      setSaveMsg({ type: 'success', text: '저장되었습니다.' })
+      setHasChanges(false)
+      setTimeout(() => onSaved(data), 500)
+    } catch (err) {
+      setSaveMsg({ type: 'error', text: err instanceof Error ? err.message : '저장 실패' })
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -436,15 +479,39 @@ function PostDetailModal({
         {/* 모달 헤더 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <h3 className="text-lg font-semibold text-slate-800 truncate">{post.title || '(제목 없음)'}</h3>
+            <h3 className="text-lg font-semibold text-slate-800">글 편집</h3>
             <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full flex-shrink-0 ${statusInfo.color}`}>
               {statusInfo.label}
             </span>
+            {hasChanges && (
+              <span className="inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-50 text-amber-600">
+                미저장
+              </span>
+            )}
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 flex-shrink-0 ml-2">
-            <XMarkIcon className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            <button
+              onClick={handleSave}
+              disabled={saving || !hasChanges}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving ? '저장 중...' : '저장'}
+            </button>
+            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
+
+        {/* 저장 메시지 */}
+        {saveMsg && (
+          <div className={`mx-6 mt-3 flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+            saveMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          }`}>
+            {saveMsg.type === 'success' ? <CheckCircleIcon className="h-4 w-4" /> : <ExclamationTriangleIcon className="h-4 w-4" />}
+            {saveMsg.text}
+          </div>
+        )}
 
         {/* 모달 본문 */}
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
@@ -454,7 +521,7 @@ function PostDetailModal({
               { label: '키워드', value: post.keyword || '-' },
               { label: '유형', value: POST_TYPE_BADGE[post.post_type]?.label || post.post_type },
               { label: '생성일', value: new Date(post.created_at).toLocaleDateString('ko-KR') },
-              { label: '글자수', value: content ? `${content.wordCount}자` : '-' },
+              { label: '글자수', value: `${editedBody.length}자` },
             ].map((item) => (
               <div key={item.label} className="bg-slate-50 rounded-lg px-3 py-2">
                 <div className="text-[11px] text-slate-400 mb-0.5">{item.label}</div>
@@ -463,55 +530,54 @@ function PostDetailModal({
             ))}
           </div>
 
+          {/* 제목 */}
+          <div>
+            <label className="block text-sm font-medium text-slate-500 mb-1.5">제목</label>
+            <input
+              type="text"
+              value={editedTitle}
+              onChange={(e) => { setEditedTitle(e.target.value); setHasChanges(true) }}
+              className="w-full text-lg font-bold text-slate-800 border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50"
+            />
+          </div>
+
+          {/* 본문 - WYSIWYG 에디터 */}
           {content?.body ? (
-            <>
-              {/* 본문 */}
-              <div>
-                <label className="block text-sm font-medium text-slate-500 mb-2">본문</label>
-                <div className="border border-slate-100 rounded-lg p-5 max-h-[400px] overflow-y-auto bg-slate-50/30">
-                  <PostBodyRenderer body={content.body} images={content.generatedImages} />
-                </div>
-              </div>
-
-              {/* 해시태그 */}
-              {content.hashtags && content.hashtags.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-500 mb-2">해시태그</label>
-                  <div className="flex flex-wrap gap-2">
-                    {content.hashtags.map((tag, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 이미지 갤러리 */}
-              {content.generatedImages && content.generatedImages.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-500 mb-2">생성된 이미지 ({content.generatedImages.length})</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {content.generatedImages.map((img, i) => (
-                      <div key={i} className="rounded-lg border border-slate-200 overflow-hidden">
-                        {img.path ? (
-                          <img src={img.path} alt={img.prompt} className="w-full aspect-square object-cover" />
-                        ) : (
-                          <div className="w-full aspect-square bg-slate-100 flex items-center justify-center">
-                            <PhotoIcon className="h-8 w-8 text-slate-300" />
-                          </div>
-                        )}
-                        <div className="px-2 py-1.5 text-[11px] text-slate-500 truncate">{img.fileName || img.prompt}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
+            <div>
+              <label className="block text-sm font-medium text-slate-500 mb-2">본문</label>
+              <ContentEditor
+                body={editedBody}
+                images={content.generatedImages}
+                onChange={(newBody) => { setEditedBody(newBody); setHasChanges(true) }}
+              />
+            </div>
           ) : (
             <div className="text-center py-8 text-slate-400">
               <DocumentTextIcon className="h-10 w-10 mx-auto mb-2" />
               <p className="text-sm">생성된 콘텐츠가 없습니다</p>
+            </div>
+          )}
+
+          {/* 해시태그 */}
+          {editedHashtags.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-500 mb-2">해시태그</label>
+              <div className="flex flex-wrap gap-2 items-center">
+                {editedHashtags.map((tag, i) => (
+                  <span key={i} className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium">
+                    #{tag}
+                    <button
+                      onClick={() => {
+                        setEditedHashtags(prev => prev.filter((_, idx) => idx !== i))
+                        setHasChanges(true)
+                      }}
+                      className="text-indigo-400 hover:text-indigo-600"
+                    >
+                      <XMarkIcon className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
