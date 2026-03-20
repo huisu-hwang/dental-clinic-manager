@@ -131,14 +131,38 @@ export default function MarketingPage() {
                   </div>
                   <h1 className="text-lg sm:text-xl font-bold text-white">마케팅 자동화</h1>
                 </div>
-                <button
-                  onClick={() => setShowNewPost(true)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-sm font-medium"
-                >
-                  <PencilSquareIcon className="h-4 w-4" />
-                  <span className="hidden sm:inline">새 글 작성</span>
-                </button>
               </div>
+            </div>
+
+            {/* 서브 탭 + 새 글 작성 버튼 */}
+            <div className="bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between">
+              <nav className="flex gap-1 -mb-px">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setShowNewPost(false) }}
+                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      !showNewPost && activeTab === tab.id
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <tab.icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+              <button
+                onClick={() => setShowNewPost(true)}
+                className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors text-sm font-medium ${
+                  showNewPost
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                }`}
+              >
+                <PencilSquareIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">새 글 작성</span>
+              </button>
             </div>
 
             {showNewPost ? (
@@ -154,25 +178,6 @@ export default function MarketingPage() {
               </div>
             ) : (
               <>
-                {/* 서브 탭 */}
-                <div className="bg-white border-b border-slate-200 px-4 sm:px-6">
-                  <nav className="flex gap-1 -mb-px">
-                    {tabs.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                          activeTab === tab.id
-                            ? 'border-blue-600 text-blue-600'
-                            : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                        }`}
-                      >
-                        <tab.icon className="h-4 w-4" />
-                        {tab.label}
-                      </button>
-                    ))}
-                  </nav>
-                </div>
 
                 {/* 콘텐츠 */}
                 <div className="bg-white rounded-b-xl border border-t-0 border-slate-200 p-4 sm:p-6">
