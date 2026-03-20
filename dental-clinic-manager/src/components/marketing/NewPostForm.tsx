@@ -22,6 +22,9 @@ import {
   type PlatformOptions,
   type GeneratedContent,
 } from '@/types/marketing'
+import dynamic from 'next/dynamic'
+
+const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 
 type GeneratedResultType = GeneratedContent & {
   generatedImages?: { fileName: string; prompt: string; path?: string }[]
@@ -532,51 +535,17 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             />
           </div>
 
-          {/* 본문 (미리보기 / 편집 탭) */}
+          {/* 본문 (WYSIWYG 에디터) */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-500">본문</label>
-              <div className="flex gap-1 bg-slate-100 rounded-lg p-0.5">
-                <button
-                  onClick={() => setIsEditingBody(false)}
-                  className={`flex items-center gap-1 px-3 py-1 text-xs rounded-md transition-colors ${
-                    !isEditingBody
-                      ? 'bg-white text-indigo-600 shadow-sm font-medium'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  <EyeIcon className="h-3.5 w-3.5" />
-                  미리보기
-                </button>
-                <button
-                  onClick={() => setIsEditingBody(true)}
-                  className={`flex items-center gap-1 px-3 py-1 text-xs rounded-md transition-colors ${
-                    isEditingBody
-                      ? 'bg-white text-indigo-600 shadow-sm font-medium'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  <PencilIcon className="h-3.5 w-3.5" />
-                  편집
-                </button>
-              </div>
-            </div>
-
-            {isEditingBody ? (
-              <textarea
-                value={editedBody}
-                onChange={(e) => {
-                  setEditedBody(e.target.value)
-                  setHasUnsavedChanges(true)
-                }}
-                className="w-full h-[600px] px-4 py-3 border border-slate-300 rounded-lg text-sm font-mono text-slate-700 resize-y focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 leading-6"
-                placeholder="마크다운 형식으로 편집하세요..."
-              />
-            ) : (
-              <div className="border border-slate-100 rounded-lg p-5 max-h-[600px] overflow-y-auto bg-slate-50/30">
-                <RenderedBody body={editedBody} images={generatedResult.generatedImages} />
-              </div>
-            )}
+            <label className="block text-sm font-medium text-slate-500 mb-2">본문</label>
+            <ContentEditor
+              body={editedBody}
+              images={generatedResult.generatedImages}
+              onChange={(newBody) => {
+                setEditedBody(newBody)
+                setHasUnsavedChanges(true)
+              }}
+            />
           </div>
 
           {/* 해시태그 (편집 가능) */}

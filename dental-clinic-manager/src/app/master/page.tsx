@@ -8,11 +8,13 @@ import { UserIcon, BuildingOffice2Icon, ChartBarIcon, UsersIcon, ClockIcon, Spar
 import type { UserActivityLog } from '@/types/auth'
 import Header from '@/components/Layout/Header'
 
+import dynamic from 'next/dynamic'
+const PromptsPage = dynamic(() => import('@/app/master/marketing/prompts/page'), { ssr: false })
 import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
 import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
 
-type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping'
+type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping' | 'prompts'
 type CommunitySubTab = 'categories' | 'telegram'
 
 export default function MasterAdminPage() {
@@ -642,8 +644,12 @@ export default function MasterAdminPage() {
               스크래핑 워커
             </button>
             <button
-              onClick={() => router.push('/master/marketing/prompts')}
-              className="py-4 px-2 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700"
+              onClick={() => setActiveTab('prompts')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'prompts'
+                  ? 'border-purple-600 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
             >
               <SparklesIcon className="w-5 h-5 inline-block mr-2" />
               프롬프트 관리
@@ -985,6 +991,8 @@ export default function MasterAdminPage() {
         {activeTab === 'worker' && <WorkerPanel />}
 
         {activeTab === 'scraping' && <ScrapingWorkerPanel />}
+
+        {activeTab === 'prompts' && <PromptsPage embedded />}
 
         {activeTab === 'community' && (
           <div className="bg-white rounded-lg shadow">
@@ -1366,17 +1374,24 @@ type ScrapingJob = {
   error_message: string | null
 }
 
+type WatchdogInfo = {
+  online: boolean
+  workerRunning: boolean
+  lastUpdated: string | null
+}
+
 function ScrapingWorkerPanel() {
   const [data, setData] = useState<{
     workers: ScrapingWorker[]
     onlineCount: number
     pendingJobsCount: number
     recentJobs: ScrapingJob[]
+    watchdog: WatchdogInfo
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isStopping, setIsStopping] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
-  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string; cmd?: string } | null>(null)
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string; cmd?: string; pm2?: string } | null>(null)
 
   const fetchStatus = async () => {
     setIsLoading(true)
@@ -1393,7 +1408,7 @@ function ScrapingWorkerPanel() {
 
   useEffect(() => {
     fetchStatus()
-    const interval = setInterval(fetchStatus, 15000)
+    const interval = setInterval(fetchStatus, 10000) // 10초마다 자동 갱신
     return () => clearInterval(interval)
   }, [])
 
@@ -1411,8 +1426,9 @@ function ScrapingWorkerPanel() {
         type: json.ok ? 'success' : 'error',
         text: json.message,
         cmd: json.manualCommand,
+        pm2: json.pm2Command,
       })
-      if (json.ok) setTimeout(fetchStatus, 6000)
+      if (json.ok) setTimeout(fetchStatus, 12000) // watchdog 폴링 후 상태 갱신 대기
     } catch {
       setMsg({ type: 'error', text: '요청 실패' })
     } finally {
@@ -1440,7 +1456,8 @@ function ScrapingWorkerPanel() {
     }
   }
 
-  const isOnline = (data?.onlineCount ?? 0) > 0
+  const isWorkerOnline = (data?.onlineCount ?? 0) > 0
+  const watchdog = data?.watchdog
 
   const formatDate = (iso: string) => {
     const d = new Date(iso)
@@ -1485,21 +1502,62 @@ function ScrapingWorkerPanel() {
           <div className="text-center py-8 text-gray-400 text-sm">로딩 중...</div>
         ) : data ? (
           <>
-            {/* 온라인 상태 */}
-            <div className="flex items-center gap-4 mb-6">
+            {/* Watchdog + Worker 상태 인디케이터 */}
+            <div className="flex items-center gap-3 mb-6 flex-wrap">
+              {/* Watchdog 상태 */}
               <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${
-                isOnline
+                watchdog?.online
+                  ? 'bg-blue-50 border-blue-200 text-blue-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-500'
+              }`}>
+                <div className={`w-2.5 h-2.5 rounded-full ${
+                  watchdog?.online ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'
+                }`} />
+                <span className="font-medium text-sm">
+                  {watchdog?.online ? 'Watchdog 실행 중' : 'Watchdog 중지됨'}
+                </span>
+              </div>
+
+              {/* Worker 상태 */}
+              <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${
+                isWorkerOnline
                   ? 'bg-green-50 border-green-200 text-green-700'
                   : 'bg-red-50 border-red-200 text-red-700'
               }`}>
                 <div className={`w-2.5 h-2.5 rounded-full ${
-                  isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-400'
+                  isWorkerOnline ? 'bg-green-500 animate-pulse' : 'bg-red-400'
                 }`} />
                 <span className="font-medium text-sm">
-                  {isOnline ? `워커 실행 중 (${data.onlineCount}개)` : '워커 중지됨'}
+                  {isWorkerOnline ? `스크래핑 워커 실행 중` : '스크래핑 워커 중지됨'}
                 </span>
               </div>
             </div>
+
+            {/* Watchdog 미실행 안내 */}
+            {!watchdog?.online && (
+              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                <p className="font-medium text-amber-800 mb-3">
+                  Watchdog을 먼저 Mac mini에서 시작해야 워커를 원격으로 제어할 수 있습니다.
+                </p>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-amber-700 text-xs mb-1">일회성 실행:</p>
+                    <code className="block bg-amber-100 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-mono">
+                      cd scraping-worker && npm run watchdog
+                    </code>
+                  </div>
+                  <div>
+                    <p className="text-amber-700 text-xs mb-1">pm2로 상시 실행 (권장):</p>
+                    <code className="block bg-amber-100 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-mono">
+                      pm2 start --name scraping-watchdog -- npm run watchdog
+                    </code>
+                    <code className="block bg-amber-100 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-mono mt-1">
+                      pm2 save && pm2 startup
+                    </code>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 통계 */}
             <div className="grid grid-cols-2 gap-4 mb-6">
@@ -1550,30 +1608,14 @@ function ScrapingWorkerPanel() {
 
             {/* 버튼 영역 */}
             <div className="space-y-3">
-              {isOnline ? (
-                <button
-                  onClick={handleStop}
-                  disabled={isStopping}
-                  className="px-5 py-3 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                >
-                  {isStopping ? (
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <rect x="6" y="6" width="12" height="12" rx="1" />
-                    </svg>
-                  )}
-                  워커 중지
-                </button>
-              ) : (
-                <div className="space-y-3">
+              <div className="flex gap-3">
+                {/* 워커 시작 버튼 */}
+                {!isWorkerOnline && (
                   <button
                     onClick={handleStart}
-                    disabled={isStarting}
-                    className="w-full py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    disabled={isStarting || !watchdog?.online}
+                    className="flex-1 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    title={!watchdog?.online ? 'Watchdog이 실행 중이어야 합니다' : ''}
                   >
                     {isStarting ? (
                       <>
@@ -1581,7 +1623,7 @@ function ScrapingWorkerPanel() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        워커 시작 중...
+                        시작 요청 중...
                       </>
                     ) : (
                       <>
@@ -1592,24 +1634,48 @@ function ScrapingWorkerPanel() {
                       </>
                     )}
                   </button>
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
-                    <p className="font-medium text-amber-800 mb-2">수동 시작 방법 (버튼이 작동하지 않을 경우)</p>
-                    <code className="block bg-amber-100 text-amber-900 px-3 py-2 rounded-lg text-xs font-mono">
-                      cd scraping-worker && npm start
-                    </code>
-                  </div>
-                </div>
-              )}
+                )}
+
+                {/* 워커 중지 버튼 */}
+                {isWorkerOnline && (
+                  <button
+                    onClick={handleStop}
+                    disabled={isStopping}
+                    className="px-5 py-3 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  >
+                    {isStopping ? (
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <rect x="6" y="6" width="12" height="12" rx="1" />
+                      </svg>
+                    )}
+                    워커 중지
+                  </button>
+                )}
+              </div>
 
               {msg && (
-                <div className={`text-sm px-4 py-2.5 rounded-lg ${
+                <div className={`text-sm px-4 py-3 rounded-lg ${
                   msg.type === 'success'
                     ? 'bg-green-50 text-green-700 border border-green-200'
                     : 'bg-red-50 text-red-700 border border-red-200'
                 }`}>
                   <p>{msg.text}</p>
                   {msg.cmd && (
-                    <code className="block mt-2 bg-white/60 px-2 py-1 rounded text-xs font-mono">{msg.cmd}</code>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs opacity-75">수동 실행:</p>
+                      <code className="block bg-white/60 px-2 py-1 rounded text-xs font-mono">{msg.cmd}</code>
+                    </div>
+                  )}
+                  {msg.pm2 && (
+                    <div className="mt-1">
+                      <p className="text-xs opacity-75">pm2 실행:</p>
+                      <code className="block bg-white/60 px-2 py-1 rounded text-xs font-mono">{msg.pm2}</code>
+                    </div>
                   )}
                 </div>
               )}
