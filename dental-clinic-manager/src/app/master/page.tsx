@@ -12,7 +12,7 @@ import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
 import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
 
-type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker'
+type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping'
 type CommunitySubTab = 'categories' | 'telegram'
 
 export default function MasterAdminPage() {
@@ -629,6 +629,19 @@ export default function MasterAdminPage() {
               마케팅 워커
             </button>
             <button
+              onClick={() => setActiveTab('scraping')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'scraping'
+                  ? 'border-purple-600 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 6 0m-6 0H3m16.5 0a3 3 0 0 0 3-3m-3 3a3 3 0 1 1-6 0m6 0h1.5m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.065M17.032 15.32l1.15-.065M6.938 4.503l.351.208m9.925 5.729.351.208M3.988 8.087l1.41.513m14.095 5.13 1.41.513M5.106 6.215l1.15.065M17.032 8.68l1.15.065" />
+              </svg>
+              스크래핑 워커
+            </button>
+            <button
               onClick={() => router.push('/master/marketing/prompts')}
               className="py-4 px-2 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700"
             >
@@ -970,6 +983,8 @@ export default function MasterAdminPage() {
         )}
 
         {activeTab === 'worker' && <WorkerPanel />}
+
+        {activeTab === 'scraping' && <ScrapingWorkerPanel />}
 
         {activeTab === 'community' && (
           <div className="bg-white rounded-lg shadow">
@@ -1329,6 +1344,309 @@ export default function MasterAdminPage() {
   )
 }
 
+// ─── 스크래핑 워커 제어 패널 ───
+type ScrapingWorker = {
+  id: string
+  hostname: string
+  status: 'idle' | 'busy' | 'offline'
+  stop_requested: boolean
+  last_heartbeat: string
+  started_at: string
+  current_job_id: string | null
+  metadata: { node_version?: string; platform?: string; arch?: string } | null
+}
+
+type ScrapingJob = {
+  id: string
+  clinic_id: string
+  status: string
+  data_types: string[] | null
+  created_at: string
+  completed_at: string | null
+  error_message: string | null
+}
+
+function ScrapingWorkerPanel() {
+  const [data, setData] = useState<{
+    workers: ScrapingWorker[]
+    onlineCount: number
+    pendingJobsCount: number
+    recentJobs: ScrapingJob[]
+  } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isStopping, setIsStopping] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string; cmd?: string } | null>(null)
+
+  const fetchStatus = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/master/scraping-worker')
+      const json = await res.json()
+      if (res.ok) setData(json)
+    } catch {
+      console.error('스크래핑 워커 상태 조회 실패')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchStatus()
+    const interval = setInterval(fetchStatus, 15000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleStart = async () => {
+    setIsStarting(true)
+    setMsg(null)
+    try {
+      const res = await fetch('/api/master/scraping-worker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start' }),
+      })
+      const json = await res.json()
+      setMsg({
+        type: json.ok ? 'success' : 'error',
+        text: json.message,
+        cmd: json.manualCommand,
+      })
+      if (json.ok) setTimeout(fetchStatus, 6000)
+    } catch {
+      setMsg({ type: 'error', text: '요청 실패' })
+    } finally {
+      setIsStarting(false)
+    }
+  }
+
+  const handleStop = async () => {
+    if (!confirm('스크래핑 워커를 중지하시겠습니까?\n다음 heartbeat(최대 30초) 후 중지됩니다.')) return
+    setIsStopping(true)
+    setMsg(null)
+    try {
+      const res = await fetch('/api/master/scraping-worker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'stop' }),
+      })
+      const json = await res.json()
+      setMsg({ type: json.ok ? 'success' : 'error', text: json.message })
+      if (json.ok) setTimeout(fetchStatus, 5000)
+    } catch {
+      setMsg({ type: 'error', text: '요청 실패' })
+    } finally {
+      setIsStopping(false)
+    }
+  }
+
+  const isOnline = (data?.onlineCount ?? 0) > 0
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso)
+    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-700'
+      case 'failed': return 'bg-red-100 text-red-700'
+      case 'running': return 'bg-blue-100 text-blue-700'
+      case 'pending': return 'bg-yellow-100 text-yellow-700'
+      case 'cancelled': return 'bg-gray-100 text-gray-700'
+      default: return 'bg-gray-100 text-gray-600'
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      completed: '완료', failed: '실패', running: '실행중', pending: '대기', cancelled: '취소',
+    }
+    return map[status] || status
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* 상태 카드 */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-semibold">홈택스 스크래핑 워커</h2>
+          <button
+            onClick={fetchStatus}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+          >
+            <ClockIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            새로고침
+          </button>
+        </div>
+
+        {isLoading && !data ? (
+          <div className="text-center py-8 text-gray-400 text-sm">로딩 중...</div>
+        ) : data ? (
+          <>
+            {/* 온라인 상태 */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${
+                isOnline
+                  ? 'bg-green-50 border-green-200 text-green-700'
+                  : 'bg-red-50 border-red-200 text-red-700'
+              }`}>
+                <div className={`w-2.5 h-2.5 rounded-full ${
+                  isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-400'
+                }`} />
+                <span className="font-medium text-sm">
+                  {isOnline ? `워커 실행 중 (${data.onlineCount}개)` : '워커 중지됨'}
+                </span>
+              </div>
+            </div>
+
+            {/* 통계 */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="text-xs text-amber-600 mb-1">대기/실행 중인 동기화</div>
+                <div className="text-2xl font-bold text-amber-700">{data.pendingJobsCount}건</div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="text-xs text-blue-600 mb-1">등록된 워커</div>
+                <div className="text-2xl font-bold text-blue-700">{data.workers.length}개</div>
+              </div>
+            </div>
+
+            {/* 워커 목록 */}
+            {data.workers.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-600 mb-3">워커 상세</h3>
+                <div className="space-y-2">
+                  {data.workers.map((w) => {
+                    const online = w.status !== 'offline' &&
+                      Date.now() - new Date(w.last_heartbeat).getTime() < 2 * 60 * 1000
+                    return (
+                      <div key={w.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg text-sm">
+                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                          online ? 'bg-green-500 animate-pulse' : 'bg-gray-300'
+                        }`} />
+                        <span className="font-mono text-xs text-gray-500 w-40 truncate">{w.id}</span>
+                        <span className="text-gray-700 font-medium">{w.hostname}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${
+                          w.status === 'busy' ? 'bg-blue-100 text-blue-700' :
+                          w.status === 'idle' ? 'bg-green-100 text-green-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {w.status === 'busy' ? '처리중' : w.status === 'idle' ? '대기중' : '오프라인'}
+                        </span>
+                        {w.metadata?.platform && (
+                          <span className="text-gray-400 text-xs">{w.metadata.platform}/{w.metadata.arch}</span>
+                        )}
+                        <span className="text-gray-400 text-xs ml-auto">
+                          heartbeat: {formatDate(w.last_heartbeat)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 버튼 영역 */}
+            <div className="space-y-3">
+              {isOnline ? (
+                <button
+                  onClick={handleStop}
+                  disabled={isStopping}
+                  className="px-5 py-3 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {isStopping ? (
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <rect x="6" y="6" width="12" height="12" rx="1" />
+                    </svg>
+                  )}
+                  워커 중지
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <button
+                    onClick={handleStart}
+                    disabled={isStarting}
+                    className="w-full py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isStarting ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        워커 시작 중...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                        </svg>
+                        워커 시작
+                      </>
+                    )}
+                  </button>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                    <p className="font-medium text-amber-800 mb-2">수동 시작 방법 (버튼이 작동하지 않을 경우)</p>
+                    <code className="block bg-amber-100 text-amber-900 px-3 py-2 rounded-lg text-xs font-mono">
+                      cd scraping-worker && npm start
+                    </code>
+                  </div>
+                </div>
+              )}
+
+              {msg && (
+                <div className={`text-sm px-4 py-2.5 rounded-lg ${
+                  msg.type === 'success'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  <p>{msg.text}</p>
+                  {msg.cmd && (
+                    <code className="block mt-2 bg-white/60 px-2 py-1 rounded text-xs font-mono">{msg.cmd}</code>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      {/* 최근 동기화 작업 */}
+      {data && data.recentJobs.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">최근 동기화 작업</h3>
+          <div className="space-y-2">
+            {data.recentJobs.map((job) => (
+              <div key={job.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg text-sm">
+                <span className={`px-2 py-0.5 rounded-full text-xs flex-shrink-0 ${getStatusColor(job.status)}`}>
+                  {getStatusLabel(job.status)}
+                </span>
+                <span className="text-gray-400 text-xs w-28 flex-shrink-0">{formatDate(job.created_at)}</span>
+                <span className="text-gray-500 text-xs font-mono truncate w-32 flex-shrink-0">{job.clinic_id.slice(0, 8)}...</span>
+                {job.data_types && (
+                  <span className="text-gray-600 text-xs truncate flex-1">
+                    {job.data_types.join(', ')}
+                  </span>
+                )}
+                {job.error_message && (
+                  <span className="text-red-500 text-xs truncate flex-1">{job.error_message}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── 마케팅 워커 제어 패널 ───
 function WorkerPanel() {
   const [status, setStatus] = useState<{
@@ -1350,6 +1668,7 @@ function WorkerPanel() {
   const [isLoading, setIsLoading] = useState(true)
   const [isTriggering, setIsTriggering] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
   const [triggerMsg, setTriggerMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const fetchStatus = async () => {
@@ -1411,6 +1730,25 @@ function WorkerPanel() {
       setTriggerMsg({ type: 'error', text: '요청 실패' })
     } finally {
       setIsStopping(false)
+    }
+  }
+
+  const handleStart = async () => {
+    setIsStarting(true)
+    setTriggerMsg(null)
+    try {
+      const res = await fetch('/api/master/worker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start' }),
+      })
+      const json = await res.json()
+      setTriggerMsg({ type: json.ok ? 'success' : 'error', text: json.message })
+      if (json.ok) setTimeout(fetchStatus, 6000)
+    } catch {
+      setTriggerMsg({ type: 'error', text: '요청 실패' })
+    } finally {
+      setIsStarting(false)
     }
   }
 
@@ -1529,11 +1867,35 @@ function WorkerPanel() {
               )}
 
               {!status.workerOnline && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
-                  <p className="font-medium text-amber-800 mb-2">워커 시작 방법</p>
-                  <code className="block bg-amber-100 text-amber-900 px-3 py-2 rounded-lg text-xs font-mono">
-                    cd marketing-worker && npm run dev
-                  </code>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleStart}
+                    disabled={isStarting}
+                    className="w-full py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isStarting ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        워커 시작 중... (약 5초 소요)
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                        </svg>
+                        워커 시작
+                      </>
+                    )}
+                  </button>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                    <p className="font-medium text-amber-800 mb-2">수동 시작 방법 (버튼이 작동하지 않을 경우)</p>
+                    <code className="block bg-amber-100 text-amber-900 px-3 py-2 rounded-lg text-xs font-mono">
+                      cd marketing-worker && npm run dev
+                    </code>
+                  </div>
                 </div>
               )}
             </div>
