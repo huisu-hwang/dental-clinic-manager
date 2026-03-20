@@ -992,7 +992,7 @@ export default function MasterAdminPage() {
 
         {activeTab === 'scraping' && <ScrapingWorkerPanel />}
 
-        {activeTab === 'prompts' && <PromptsPage embedded />}
+        {activeTab === 'prompts' && <PromptsPage />}
 
         {activeTab === 'community' && (
           <div className="bg-white rounded-lg shadow">

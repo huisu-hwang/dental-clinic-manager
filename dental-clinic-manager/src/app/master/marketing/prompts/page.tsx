@@ -410,8 +410,8 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
   )
 }
 
-export default function PromptManagementPage({ embedded }: { embedded?: boolean } = {}) {
-  return <PromptManagementContent embedded={embedded} />
+export default function PromptManagementPage() {
+  return <PromptManagementContent />
 }
 
 // ─── 테스트 결과 컴포넌트 ───
