@@ -17,6 +17,7 @@ import {
   TrashIcon,
   ArrowPathIcon,
   PhotoIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline'
 import type {
   ContentCalendarItem,
@@ -440,7 +441,12 @@ function PostEditModal({
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [hasChanges, setHasChanges] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [showSchedulePicker, setShowSchedulePicker] = useState(false)
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [scheduleTime, setScheduleTime] = useState('09:00')
   const statusInfo = STATUS_LABELS[post.status] || STATUS_LABELS.review
+  const canPublish = content?.body && !['published', 'publishing'].includes(post.status)
 
   const handleSave = async () => {
     setSaving(true)
@@ -468,6 +474,62 @@ function PostEditModal({
     } finally {
       setSaving(false)
     }
+  }
+
+  const handlePublish = async (targetDate: string, targetTime: string, isImmediate: boolean) => {
+    setIsPublishing(true)
+    setSaveMsg(null)
+    try {
+      const updatedContent = {
+        ...content,
+        title: editedTitle,
+        body: editedBody,
+        hashtags: editedHashtags,
+        wordCount: editedBody.length,
+      }
+      const res = await fetch(`/api/marketing/posts/${post.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editedTitle,
+          generatedContent: updatedContent,
+          status: 'scheduled',
+          publishDate: targetDate,
+          publishTime: targetTime,
+        }),
+      })
+      if (!res.ok) throw new Error('저장 실패')
+      const { data } = await res.json()
+
+      try {
+        await fetch('/api/marketing/publish/trigger', { method: 'POST' })
+      } catch { /* 워커 미실행 시 5분 내 자동 처리 */ }
+
+      const msg = isImmediate
+        ? '바로 발행이 시작됩니다!'
+        : `${targetDate} ${targetTime}에 발행이 예약되었습니다.`
+      setSaveMsg({ type: 'success', text: msg })
+      setHasChanges(false)
+      setTimeout(() => onSaved(data), 1000)
+    } catch (err) {
+      setSaveMsg({ type: 'error', text: err instanceof Error ? err.message : '발행 실패' })
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  const handlePublishNow = () => {
+    const today = new Date().toISOString().split('T')[0]
+    const now = new Date().toTimeString().slice(0, 5)
+    handlePublish(today, now, true)
+  }
+
+  const handleScheduleConfirm = () => {
+    if (!scheduleDate || !scheduleTime) {
+      setSaveMsg({ type: 'error', text: '날짜와 시간을 선택해주세요.' })
+      return
+    }
+    handlePublish(scheduleDate, scheduleTime, false)
   }
 
   return (
@@ -578,6 +640,91 @@ function PostEditModal({
                   </span>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* 발행 액션 */}
+          {canPublish && (
+            <div className="space-y-3 pt-2 border-t border-slate-200">
+              <div className="flex gap-3">
+                <button
+                  onClick={handlePublishNow}
+                  disabled={isPublishing || saving}
+                  className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  {isPublishing && !showSchedulePicker ? (
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <CheckCircleIcon className="h-4 w-4" />
+                  )}
+                  바로 발행
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSchedulePicker(!showSchedulePicker)
+                    if (!scheduleDate) {
+                      const tomorrow = new Date()
+                      tomorrow.setDate(tomorrow.getDate() + 1)
+                      setScheduleDate(tomorrow.toISOString().split('T')[0])
+                    }
+                  }}
+                  disabled={isPublishing || saving}
+                  className={`flex-1 py-2.5 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 ${
+                    showSchedulePicker ? 'bg-blue-700 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+                  } disabled:bg-slate-300 disabled:cursor-not-allowed`}
+                >
+                  <CalendarDaysIcon className="h-4 w-4" />
+                  예약 발행
+                </button>
+              </div>
+
+              {showSchedulePicker && (
+                <div className="bg-blue-50 rounded-xl border border-blue-200 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-blue-800">
+                    <ClockIcon className="h-4 w-4" />
+                    발행 일시 설정
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">날짜</label>
+                      <input
+                        type="date"
+                        value={scheduleDate}
+                        min={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setScheduleDate(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">시간</label>
+                      <input
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(e) => setScheduleTime(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleScheduleConfirm}
+                    disabled={isPublishing || !scheduleDate || !scheduleTime}
+                    className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    {isPublishing ? (
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <CalendarDaysIcon className="h-4 w-4" />
+                    )}
+                    {scheduleDate} {scheduleTime} 예약 확인
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
