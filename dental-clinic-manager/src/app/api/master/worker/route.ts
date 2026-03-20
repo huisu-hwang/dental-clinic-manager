@@ -116,6 +116,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (action === 'stop') {
+      try {
+        const res = await fetch(`${WORKER_URL}/stop`, {
+          method: 'POST',
+          signal: AbortSignal.timeout(5000),
+        });
+        if (res.ok) {
+          return NextResponse.json({ ok: true, message: '워커를 중지했습니다.' });
+        }
+      } catch {
+        // 워커 미실행 또는 이미 중지됨
+      }
+      return NextResponse.json({ ok: false, message: '워커가 이미 중지되어 있습니다.' });
+    }
+
     return NextResponse.json({ error: '알 수 없는 액션' }, { status: 400 });
   } catch (error) {
     console.error('[API] master/worker POST:', error);
