@@ -12,7 +12,7 @@ import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
 import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
 
-type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community'
+type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker'
 type CommunitySubTab = 'categories' | 'telegram'
 
 export default function MasterAdminPage() {
@@ -618,6 +618,17 @@ export default function MasterAdminPage() {
               커뮤니티 관리
             </button>
             <button
+              onClick={() => setActiveTab('worker')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'worker'
+                  ? 'border-purple-600 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <SparklesIcon className="w-5 h-5 inline-block mr-2" />
+              마케팅 워커
+            </button>
+            <button
               onClick={() => router.push('/master/marketing/prompts')}
               className="py-4 px-2 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700"
             >
@@ -957,6 +968,8 @@ export default function MasterAdminPage() {
             </div>
           </div>
         )}
+
+        {activeTab === 'worker' && <WorkerPanel />}
 
         {activeTab === 'community' && (
           <div className="bg-white rounded-lg shadow">
@@ -1309,6 +1322,220 @@ export default function MasterAdminPage() {
                 닫기
               </button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── 마케팅 워커 제어 패널 ───
+function WorkerPanel() {
+  const [status, setStatus] = useState<{
+    workerOnline: boolean
+    workerUrl: string
+    pendingCount: number
+    publishedTodayCount: number
+    recentLogs: {
+      id: string
+      platform: string
+      status: string
+      published_url: string | null
+      error_message: string | null
+      duration_seconds: number | null
+      published_at: string
+      item_id: string
+    }[]
+  } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isTriggering, setIsTriggering] = useState(false)
+  const [triggerMsg, setTriggerMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const fetchStatus = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/master/worker')
+      const json = await res.json()
+      if (res.ok) setStatus(json)
+    } catch {
+      console.error('워커 상태 조회 실패')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchStatus()
+    const interval = setInterval(fetchStatus, 15000) // 15초마다 자동 갱신
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleTrigger = async () => {
+    setIsTriggering(true)
+    setTriggerMsg(null)
+    try {
+      const res = await fetch('/api/master/worker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'trigger' }),
+      })
+      const json = await res.json()
+      if (json.workerOnline) {
+        setTriggerMsg({ type: 'success', text: json.message })
+        setTimeout(fetchStatus, 3000) // 3초 후 상태 갱신
+      } else {
+        setTriggerMsg({ type: 'error', text: json.message })
+      }
+    } catch {
+      setTriggerMsg({ type: 'error', text: '요청 실패' })
+    } finally {
+      setIsTriggering(false)
+    }
+  }
+
+  const formatDuration = (sec: number | null) => {
+    if (!sec) return '-'
+    if (sec < 60) return `${sec}초`
+    return `${Math.floor(sec / 60)}분 ${sec % 60}초`
+  }
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso)
+    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* 상태 카드 */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-semibold">마케팅 워커 상태</h2>
+          <button
+            onClick={fetchStatus}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+          >
+            <ClockIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            새로고침
+          </button>
+        </div>
+
+        {isLoading && !status ? (
+          <div className="text-center py-8 text-gray-400 text-sm">로딩 중...</div>
+        ) : status ? (
+          <>
+            {/* 상태 인디케이터 */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${
+                status.workerOnline
+                  ? 'bg-green-50 border-green-200 text-green-700'
+                  : 'bg-red-50 border-red-200 text-red-700'
+              }`}>
+                <div className={`w-2.5 h-2.5 rounded-full ${
+                  status.workerOnline ? 'bg-green-500 animate-pulse' : 'bg-red-400'
+                }`} />
+                <span className="font-medium text-sm">
+                  {status.workerOnline ? '워커 실행 중' : '워커 중지됨'}
+                </span>
+              </div>
+              <span className="text-xs text-gray-400">{status.workerUrl}</span>
+            </div>
+
+            {/* 통계 */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="text-xs text-amber-600 mb-1">발행 대기 중</div>
+                <div className="text-2xl font-bold text-amber-700">{status.pendingCount}건</div>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                <div className="text-xs text-green-600 mb-1">오늘 발행 완료</div>
+                <div className="text-2xl font-bold text-green-700">{status.publishedTodayCount}건</div>
+              </div>
+            </div>
+
+            {/* 즉시 실행 버튼 */}
+            <div className="space-y-3">
+              <button
+                onClick={handleTrigger}
+                disabled={isTriggering || !status.workerOnline}
+                className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                {isTriggering ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    처리 중...
+                  </>
+                ) : (
+                  <>
+                    <SparklesIcon className="w-4 h-4" />
+                    즉시 발행 처리 실행
+                  </>
+                )}
+              </button>
+
+              {triggerMsg && (
+                <div className={`text-sm px-4 py-2.5 rounded-lg ${
+                  triggerMsg.type === 'success'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  {triggerMsg.text}
+                </div>
+              )}
+
+              {!status.workerOnline && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                  <p className="font-medium text-amber-800 mb-2">워커 시작 방법</p>
+                  <code className="block bg-amber-100 text-amber-900 px-3 py-2 rounded-lg text-xs font-mono">
+                    cd marketing-worker && npm run dev
+                  </code>
+                </div>
+              )}
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      {/* 최근 발행 로그 */}
+      {status && status.recentLogs.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">최근 발행 로그</h3>
+          <div className="space-y-2">
+            {status.recentLogs.map((log) => (
+              <div key={log.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg text-sm">
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  log.status === 'success' ? 'bg-green-500' : 'bg-red-400'
+                }`} />
+                <span className="text-gray-500 text-xs w-24 flex-shrink-0">{formatDate(log.published_at)}</span>
+                <span className="text-gray-600 font-medium w-20 flex-shrink-0">
+                  {log.platform === 'naver_blog' ? '네이버 블로그' : log.platform}
+                </span>
+                <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${
+                  log.status === 'success'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {log.status === 'success' ? '성공' : '실패'}
+                </span>
+                <span className="text-gray-400 text-xs">{formatDuration(log.duration_seconds)}</span>
+                {log.published_url && (
+                  <a
+                    href={log.published_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline text-xs truncate flex-1"
+                  >
+                    {log.published_url}
+                  </a>
+                )}
+                {log.error_message && (
+                  <span className="text-red-500 text-xs truncate flex-1">{log.error_message}</span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
