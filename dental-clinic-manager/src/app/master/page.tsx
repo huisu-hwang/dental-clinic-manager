@@ -1349,6 +1349,7 @@ function WorkerPanel() {
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isTriggering, setIsTriggering] = useState(false)
+  const [isStopping, setIsStopping] = useState(false)
   const [triggerMsg, setTriggerMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const fetchStatus = async () => {
@@ -1382,7 +1383,7 @@ function WorkerPanel() {
       const json = await res.json()
       if (json.workerOnline) {
         setTriggerMsg({ type: 'success', text: json.message })
-        setTimeout(fetchStatus, 3000) // 3초 후 상태 갱신
+        setTimeout(fetchStatus, 3000)
       } else {
         setTriggerMsg({ type: 'error', text: json.message })
       }
@@ -1390,6 +1391,26 @@ function WorkerPanel() {
       setTriggerMsg({ type: 'error', text: '요청 실패' })
     } finally {
       setIsTriggering(false)
+    }
+  }
+
+  const handleStop = async () => {
+    if (!confirm('마케팅 워커를 중지하시겠습니까?\n현재 발행 중인 작업이 있다면 완료 후 종료됩니다.')) return
+    setIsStopping(true)
+    setTriggerMsg(null)
+    try {
+      const res = await fetch('/api/master/worker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'stop' }),
+      })
+      const json = await res.json()
+      setTriggerMsg({ type: json.ok ? 'success' : 'error', text: json.message })
+      if (json.ok) setTimeout(fetchStatus, 1500)
+    } catch {
+      setTriggerMsg({ type: 'error', text: '요청 실패' })
+    } finally {
+      setIsStopping(false)
     }
   }
 
@@ -1453,28 +1474,49 @@ function WorkerPanel() {
               </div>
             </div>
 
-            {/* 즉시 실행 버튼 */}
+            {/* 버튼 영역 */}
             <div className="space-y-3">
-              <button
-                onClick={handleTrigger}
-                disabled={isTriggering || !status.workerOnline}
-                className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {isTriggering ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    처리 중...
-                  </>
-                ) : (
-                  <>
-                    <SparklesIcon className="w-4 h-4" />
-                    즉시 발행 처리 실행
-                  </>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleTrigger}
+                  disabled={isTriggering || isStopping || !status.workerOnline}
+                  className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {isTriggering ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      처리 중...
+                    </>
+                  ) : (
+                    <>
+                      <SparklesIcon className="w-4 h-4" />
+                      즉시 발행 처리
+                    </>
+                  )}
+                </button>
+                {status.workerOnline && (
+                  <button
+                    onClick={handleStop}
+                    disabled={isStopping || isTriggering}
+                    className="px-5 py-3 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  >
+                    {isStopping ? (
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <rect x="6" y="6" width="12" height="12" rx="1" />
+                      </svg>
+                    )}
+                    중지
+                  </button>
                 )}
-              </button>
+              </div>
 
               {triggerMsg && (
                 <div className={`text-sm px-4 py-2.5 rounded-lg ${

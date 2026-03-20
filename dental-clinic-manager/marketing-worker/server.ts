@@ -1,5 +1,5 @@
 import http from 'http';
-import { processScheduledItemsOnce } from './scheduler.js';
+import { processScheduledItemsOnce, stopScheduler } from './scheduler.js';
 
 // ============================================
 // 마케팅 워커 HTTP 서버
@@ -23,6 +23,19 @@ export function startHttpServer(port: number): void {
     if (req.method === 'GET' && req.url === '/health') {
       res.writeHead(200);
       res.end(JSON.stringify({ ok: true, running: true }));
+      return;
+    }
+
+    // POST /stop → 워커 종료
+    if (req.method === 'POST' && req.url === '/stop') {
+      console.log('[Worker] 중지 요청 수신');
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true }));
+      // 응답 전송 후 정리 후 종료
+      setTimeout(async () => {
+        await stopScheduler();
+        process.exit(0);
+      }, 300);
       return;
     }
 
