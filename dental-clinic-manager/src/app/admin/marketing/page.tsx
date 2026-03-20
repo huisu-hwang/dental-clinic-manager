@@ -13,10 +13,21 @@ import {
   XMarkIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  EyeIcon,
+  TrashIcon,
+  ArrowPathIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/outline'
+import type {
+  ContentCalendarItem,
+  CalendarItemStatus,
+  PostType,
+  GeneratedContent,
+} from '@/types/marketing'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { getTabRoute } from '@/utils/tabRouting'
+import NewPostForm from '@/components/marketing/NewPostForm'
 
 type MarketingTab = 'dashboard' | 'posts' | 'calendar' | 'settings'
 
@@ -25,6 +36,7 @@ export default function MarketingPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<MarketingTab>('dashboard')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showNewPost, setShowNewPost] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -120,7 +132,7 @@ export default function MarketingPage() {
                   <h1 className="text-lg sm:text-xl font-bold text-white">마케팅 자동화</h1>
                 </div>
                 <button
-                  onClick={() => router.push('/admin/marketing/posts/new')}
+                  onClick={() => setShowNewPost(true)}
                   className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-sm font-medium"
                 >
                   <PencilSquareIcon className="h-4 w-4" />
@@ -129,33 +141,48 @@ export default function MarketingPage() {
               </div>
             </div>
 
-            {/* 서브 탭 */}
-            <div className="bg-white border-b border-slate-200 px-4 sm:px-6">
-              <nav className="flex gap-1 -mb-px">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-blue-600 text-blue-600'
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <tab.icon className="h-4 w-4" />
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
-            </div>
+            {showNewPost ? (
+              /* 새 글 작성 폼 (인라인) */
+              <div className="bg-white rounded-b-xl border border-t-0 border-slate-200 p-4 sm:p-6">
+                <NewPostForm
+                  onClose={() => setShowNewPost(false)}
+                  onComplete={() => {
+                    setShowNewPost(false)
+                    setActiveTab('posts')
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                {/* 서브 탭 */}
+                <div className="bg-white border-b border-slate-200 px-4 sm:px-6">
+                  <nav className="flex gap-1 -mb-px">
+                    {tabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                          activeTab === tab.id
+                            ? 'border-blue-600 text-blue-600'
+                            : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <tab.icon className="h-4 w-4" />
+                        {tab.label}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
 
-            {/* 콘텐츠 */}
-            <div className="bg-white rounded-b-xl border border-t-0 border-slate-200 p-4 sm:p-6">
-              {activeTab === 'dashboard' && <DashboardContent />}
-              {activeTab === 'posts' && <PostsContent />}
-              {activeTab === 'calendar' && <CalendarContent />}
-              {activeTab === 'settings' && <SettingsContent />}
-            </div>
+                {/* 콘텐츠 */}
+                <div className="bg-white rounded-b-xl border border-t-0 border-slate-200 p-4 sm:p-6">
+                  {activeTab === 'dashboard' && <DashboardContent />}
+                  {activeTab === 'posts' && <PostsContent />}
+                  {activeTab === 'calendar' && <CalendarContent />}
+                  {activeTab === 'settings' && <SettingsContent />}
+                </div>
+              </>
+            )}
           </div>
         </main>
       </div>
@@ -196,14 +223,379 @@ function DashboardContent() {
 }
 
 // ─── 글 관리 ───
+
+const STATUS_LABELS: Record<CalendarItemStatus, { label: string; color: string }> = {
+  proposed: { label: '제안됨', color: 'bg-slate-100 text-slate-600' },
+  approved: { label: '승인됨', color: 'bg-blue-50 text-blue-600' },
+  rejected: { label: '반려', color: 'bg-red-50 text-red-600' },
+  modified: { label: '수정됨', color: 'bg-amber-50 text-amber-600' },
+  generating: { label: '생성 중', color: 'bg-purple-50 text-purple-600' },
+  review: { label: '검토 대기', color: 'bg-indigo-50 text-indigo-600' },
+  scheduled: { label: '예약됨', color: 'bg-cyan-50 text-cyan-600' },
+  publishing: { label: '발행 중', color: 'bg-yellow-50 text-yellow-700' },
+  published: { label: '발행 완료', color: 'bg-green-50 text-green-600' },
+  failed: { label: '실패', color: 'bg-red-50 text-red-600' },
+}
+
+const POST_TYPE_BADGE: Record<PostType, { label: string; color: string }> = {
+  informational: { label: '정보', color: 'bg-blue-50 text-blue-600' },
+  promotional: { label: '홍보', color: 'bg-orange-50 text-orange-600' },
+  notice: { label: '공지', color: 'bg-slate-100 text-slate-600' },
+  clinical: { label: '임상', color: 'bg-emerald-50 text-emerald-600' },
+}
+
 function PostsContent() {
+  const [posts, setPosts] = useState<ContentCalendarItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedPost, setSelectedPost] = useState<ContentCalendarItem | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const loadPosts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/marketing/posts?limit=50')
+      const json = await res.json()
+      if (res.ok) {
+        setPosts(json.data || [])
+      }
+    } catch {
+      console.error('글 목록 로딩 실패')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadPosts()
+  }, [loadPosts])
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('이 글을 삭제하시겠습니까?')) return
+    setDeletingId(id)
+    try {
+      const res = await fetch(`/api/marketing/posts/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setPosts((prev) => prev.filter((p) => p.id !== id))
+        if (selectedPost?.id === id) setSelectedPost(null)
+      }
+    } catch {
+      console.error('삭제 실패')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const parseContent = (item: ContentCalendarItem): (GeneratedContent & { generatedImages?: { fileName: string; prompt: string; path?: string }[] }) | null => {
+    if (!item.generated_content) return null
+    try {
+      return typeof item.generated_content === 'string'
+        ? JSON.parse(item.generated_content)
+        : item.generated_content as unknown as GeneratedContent
+    } catch {
+      return null
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <ArrowPathIcon className="h-6 w-6 text-slate-400 animate-spin" />
+      </div>
+    )
+  }
+
+  if (posts.length === 0) {
+    return (
+      <div className="text-center py-12 text-slate-400">
+        <DocumentTextIcon className="h-12 w-12 mx-auto mb-3" />
+        <p className="text-lg font-medium">아직 작성된 글이 없습니다</p>
+        <p className="text-sm mt-1">&apos;새 글 작성&apos; 버튼을 눌러 첫 글을 만들어보세요</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="text-center py-12 text-slate-400">
-      <DocumentTextIcon className="h-12 w-12 mx-auto mb-3" />
-      <p className="text-lg font-medium">아직 작성된 글이 없습니다</p>
-      <p className="text-sm mt-1">&apos;새 글 작성&apos; 버튼을 눌러 첫 글을 만들어보세요</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-800">생성된 글 ({posts.length})</h2>
+        <button
+          onClick={() => { setIsLoading(true); loadPosts() }}
+          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+        >
+          <ArrowPathIcon className="h-4 w-4" />
+          새로고침
+        </button>
+      </div>
+
+      {/* 글 목록 */}
+      <div className="space-y-3">
+        {posts.map((post) => {
+          const content = parseContent(post)
+          const statusInfo = STATUS_LABELS[post.status] || STATUS_LABELS.review
+          const typeInfo = POST_TYPE_BADGE[post.post_type] || POST_TYPE_BADGE.informational
+
+          return (
+            <div
+              key={post.id}
+              className="bg-slate-50 rounded-xl border border-slate-200 p-4 hover:border-slate-300 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  {/* 제목 */}
+                  <h3 className="font-medium text-slate-800 truncate">{post.title || '(제목 없음)'}</h3>
+
+                  {/* 메타 정보 */}
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full ${typeInfo.color}`}>
+                      {typeInfo.label}
+                    </span>
+                    <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full ${statusInfo.color}`}>
+                      {statusInfo.label}
+                    </span>
+                    {post.keyword && (
+                      <span className="text-xs text-slate-400">#{post.keyword}</span>
+                    )}
+                    <span className="text-xs text-slate-400">
+                      {new Date(post.created_at).toLocaleDateString('ko-KR', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                    {content && (
+                      <span className="text-xs text-slate-400">{content.wordCount}자</span>
+                    )}
+                  </div>
+
+                  {/* 본문 미리보기 */}
+                  {content?.body && (
+                    <p className="text-sm text-slate-500 mt-2 line-clamp-2 leading-relaxed">
+                      {content.body.replace(/\[IMAGE:[^\]]*\]/g, '').replace(/#{1,3}\s/g, '').replace(/\*\*/g, '').slice(0, 150)}
+                    </p>
+                  )}
+                </div>
+
+                {/* 액션 버튼 */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => setSelectedPost(post)}
+                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    title="상세보기"
+                  >
+                    <EyeIcon className="h-4.5 w-4.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(post.id)}
+                    disabled={deletingId === post.id}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                    title="삭제"
+                  >
+                    <TrashIcon className="h-4.5 w-4.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 상세보기 모달 */}
+      {selectedPost && (
+        <PostDetailModal
+          post={selectedPost}
+          content={parseContent(selectedPost)}
+          onClose={() => setSelectedPost(null)}
+        />
+      )}
     </div>
   )
+}
+
+// ─── 글 상세보기 모달 ───
+function PostDetailModal({
+  post,
+  content,
+  onClose,
+}: {
+  post: ContentCalendarItem
+  content: (GeneratedContent & { generatedImages?: { fileName: string; prompt: string; path?: string }[] }) | null
+  onClose: () => void
+}) {
+  const statusInfo = STATUS_LABELS[post.status] || STATUS_LABELS.review
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 모달 헤더 */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <h3 className="text-lg font-semibold text-slate-800 truncate">{post.title || '(제목 없음)'}</h3>
+            <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full flex-shrink-0 ${statusInfo.color}`}>
+              {statusInfo.label}
+            </span>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 flex-shrink-0 ml-2">
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* 모달 본문 */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+          {/* 메타 정보 */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: '키워드', value: post.keyword || '-' },
+              { label: '유형', value: POST_TYPE_BADGE[post.post_type]?.label || post.post_type },
+              { label: '생성일', value: new Date(post.created_at).toLocaleDateString('ko-KR') },
+              { label: '글자수', value: content ? `${content.wordCount}자` : '-' },
+            ].map((item) => (
+              <div key={item.label} className="bg-slate-50 rounded-lg px-3 py-2">
+                <div className="text-[11px] text-slate-400 mb-0.5">{item.label}</div>
+                <div className="text-sm font-medium text-slate-700">{item.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {content?.body ? (
+            <>
+              {/* 본문 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-500 mb-2">본문</label>
+                <div className="border border-slate-100 rounded-lg p-5 max-h-[400px] overflow-y-auto bg-slate-50/30">
+                  <PostBodyRenderer body={content.body} images={content.generatedImages} />
+                </div>
+              </div>
+
+              {/* 해시태그 */}
+              {content.hashtags && content.hashtags.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 mb-2">해시태그</label>
+                  <div className="flex flex-wrap gap-2">
+                    {content.hashtags.map((tag, i) => (
+                      <span key={i} className="px-2.5 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 이미지 갤러리 */}
+              {content.generatedImages && content.generatedImages.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 mb-2">생성된 이미지 ({content.generatedImages.length})</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {content.generatedImages.map((img, i) => (
+                      <div key={i} className="rounded-lg border border-slate-200 overflow-hidden">
+                        {img.path ? (
+                          <img src={img.path} alt={img.prompt} className="w-full aspect-square object-cover" />
+                        ) : (
+                          <div className="w-full aspect-square bg-slate-100 flex items-center justify-center">
+                            <PhotoIcon className="h-8 w-8 text-slate-300" />
+                          </div>
+                        )}
+                        <div className="px-2 py-1.5 text-[11px] text-slate-500 truncate">{img.fileName || img.prompt}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8 text-slate-400">
+              <DocumentTextIcon className="h-10 w-10 mx-auto mb-2" />
+              <p className="text-sm">생성된 콘텐츠가 없습니다</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── 본문 렌더러 (간소화) ───
+function PostBodyRenderer({
+  body,
+  images,
+}: {
+  body: string
+  images?: { fileName: string; prompt: string; path?: string }[]
+}) {
+  const lines = body.split('\n')
+  const elements: React.ReactNode[] = []
+  let paragraphBuffer: string[] = []
+  let key = 0
+  let fallbackIndex = 0
+  const usedImageIndices = new Set<number>()
+
+  const findImage = (prompt: string) => {
+    if (!images || images.length === 0) return undefined
+    const exactIdx = images.findIndex((img, i) => !usedImageIndices.has(i) && img.prompt === prompt)
+    if (exactIdx >= 0) { usedImageIndices.add(exactIdx); return images[exactIdx] }
+    while (fallbackIndex < images.length && usedImageIndices.has(fallbackIndex)) fallbackIndex++
+    if (fallbackIndex < images.length) { usedImageIndices.add(fallbackIndex); return images[fallbackIndex++] }
+    return undefined
+  }
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length > 0) {
+      const text = paragraphBuffer.join('\n').trim()
+      if (text) {
+        elements.push(
+          <p key={key++} className="text-sm leading-7 text-slate-700 mb-3">
+            {renderBold(text)}
+          </p>
+        )
+      }
+      paragraphBuffer = []
+    }
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    if (/\[IMAGE:\s*.+?\]/.test(trimmed)) {
+      flushParagraph()
+      const match = trimmed.match(/\[IMAGE:\s*(.+?)\]/)
+      const prompt = match ? match[1] : ''
+      const img = findImage(prompt)
+      if (img?.path) {
+        elements.push(
+          <div key={key++} className="my-3">
+            <img src={img.path} alt={img.prompt || prompt} className="w-full rounded-lg border border-slate-200" />
+          </div>
+        )
+      }
+      continue
+    }
+    if (trimmed.startsWith('## ')) {
+      flushParagraph()
+      elements.push(<h3 key={key++} className="text-base font-bold text-slate-800 mt-5 mb-2">{trimmed.replace(/^##\s+/, '')}</h3>)
+      continue
+    }
+    if (trimmed.startsWith('### ')) {
+      flushParagraph()
+      elements.push(<h4 key={key++} className="text-sm font-semibold text-slate-800 mt-4 mb-1.5">{trimmed.replace(/^###\s+/, '')}</h4>)
+      continue
+    }
+    if (!trimmed) { flushParagraph(); continue }
+    paragraphBuffer.push(line)
+  }
+  flushParagraph()
+
+  return <div>{elements}</div>
+}
+
+function renderBold(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-semibold text-slate-800">{part.slice(2, -2)}</strong>
+    }
+    return part
+  })
 }
 
 // ─── 캘린더 ───

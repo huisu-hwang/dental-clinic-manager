@@ -15,7 +15,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { generatedContent, status, title } = body;
+    const { generatedContent, status, title, publishDate, publishTime } = body;
 
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -34,6 +34,12 @@ export async function PATCH(
     }
     if (title !== undefined) {
       updateData.title = title;
+    }
+    if (publishDate !== undefined) {
+      updateData.publish_date = publishDate;
+    }
+    if (publishTime !== undefined) {
+      updateData.publish_time = publishTime;
     }
 
     const { data, error } = await supabase

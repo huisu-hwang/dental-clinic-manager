@@ -1,5 +1,6 @@
 import { CONFIG } from './config.js';
 import { startScheduler, stopScheduler } from './scheduler.js';
+import { startHttpServer } from './server.js';
 
 // ============================================
 // 마케팅 워커 엔트리포인트
@@ -17,6 +18,9 @@ async function main() {
 
   // 스케줄러 시작
   startScheduler();
+
+  // HTTP 트리거 서버 시작
+  startHttpServer(CONFIG.worker.port);
 
   // 프로세스 종료 처리
   process.on('SIGINT', async () => {
