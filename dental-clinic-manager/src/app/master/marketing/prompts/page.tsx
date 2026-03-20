@@ -41,7 +41,7 @@ const CATEGORY_LABELS: Record<PromptCategory, string> = {
 }
 
 
-export default function PromptManagementPage() {
+function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
   const { user } = useAuth()
   const router = useRouter()
 
@@ -186,20 +186,22 @@ export default function PromptManagementPage() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className={embedded ? '' : 'min-h-screen bg-slate-50'}>
       {/* 헤더 */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16 gap-4">
-            <button onClick={() => router.back()} className="p-2 text-slate-400 hover:text-slate-600">
-              <ArrowLeftIcon className="h-5 w-5" />
-            </button>
-            <SparklesIcon className="h-5 w-5 text-purple-600" />
-            <h1 className="text-xl font-bold text-slate-800">프롬프트 관리</h1>
-            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">마스터 전용</span>
+      {!embedded && (
+        <div className="bg-white border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center h-16 gap-4">
+              <button onClick={() => router.back()} className="p-2 text-slate-400 hover:text-slate-600">
+                <ArrowLeftIcon className="h-5 w-5" />
+              </button>
+              <SparklesIcon className="h-5 w-5 text-purple-600" />
+              <h1 className="text-xl font-bold text-slate-800">프롬프트 관리</h1>
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">마스터 전용</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 카테고리 탭 */}
       <div className="bg-white border-b border-slate-200">
@@ -408,6 +410,10 @@ export default function PromptManagementPage() {
   )
 }
 
+export default function PromptManagementPage({ embedded }: { embedded?: boolean } = {}) {
+  return <PromptManagementContent embedded={embedded} />
+}
+
 // ─── 테스트 결과 컴포넌트 ───
 
 function TestResultView({ result }: { result: TestResult }) {
@@ -500,3 +506,4 @@ function ImageCard({ img, compact }: { img: GeneratedImage; compact?: boolean })
     </div>
   )
 }
+
