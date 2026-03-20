@@ -40,29 +40,6 @@ const CATEGORY_LABELS: Record<PromptCategory, string> = {
   quality: '품질 검증',
 }
 
-// body 텍스트를 [IMAGE: ...] 마커 기준으로 분리
-function parseBodySegments(body: string, images: GeneratedImage[]) {
-  const parts: Array<{ type: 'text' | 'image'; text?: string; image?: GeneratedImage; prompt?: string }> = []
-  const imageRegex = /\[IMAGE:\s*(.+?)\]/g
-  let lastIndex = 0
-  let match
-  let imageIdx = 0
-
-  while ((match = imageRegex.exec(body)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push({ type: 'text', text: body.slice(lastIndex, match.index) })
-    }
-    const prompt = match[1].trim()
-    const img = images[imageIdx] || null
-    parts.push({ type: 'image', image: img || undefined, prompt })
-    imageIdx++
-    lastIndex = match.index + match[0].length
-  }
-  if (lastIndex < body.length) {
-    parts.push({ type: 'text', text: body.slice(lastIndex) })
-  }
-  return parts
-}
 
 export default function PromptManagementPage() {
   const { user } = useAuth()
@@ -398,7 +375,7 @@ export default function PromptManagementPage() {
                       {isTesting ? (
                         <>
                           <ClockIcon className="h-4 w-4 animate-spin" />
-                          {activeCategory === 'image' ? '이미지 생성 중... (30~60초 소요)' : '글 생성 중... (이미지 포함 시 1~2분 소요)'}
+                          {activeCategory === 'image' ? '이미지 생성 중... (30~60초 소요)' : '글 생성 중... (30~60초 소요)'}
                         </>
                       ) : '테스트 실행'}
                     </button>
@@ -457,9 +434,7 @@ function TestResultView({ result }: { result: TestResult }) {
   }
 
   // content / transform / quality
-  const bodySegments = result.body
-    ? parseBodySegments(result.body, images)
-    : []
+  const imageMarkerCount = (result.body?.match(/\[IMAGE:/g) || []).length
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
@@ -467,7 +442,9 @@ function TestResultView({ result }: { result: TestResult }) {
       <div className="flex gap-4 px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs text-slate-500">
         <span>글자수: <strong className="text-slate-700">{result.wordCount?.toLocaleString()}자</strong></span>
         <span>키워드: <strong className="text-slate-700">{result.keywordCount}회</strong></span>
-        <span>이미지: <strong className="text-slate-700">{images.length}/{(result.body?.match(/\[IMAGE:/g) || []).length}장</strong></span>
+        {imageMarkerCount > 0 && (
+          <span>이미지 위치: <strong className="text-slate-700">{imageMarkerCount}곳</strong></span>
+        )}
         {(result.hashtags?.length ?? 0) > 0 && (
           <span>해시태그: <strong className="text-slate-700">{result.hashtags!.length}개</strong></span>
         )}
@@ -481,30 +458,13 @@ function TestResultView({ result }: { result: TestResult }) {
         </div>
       )}
 
-      {/* 본문 (이미지 인라인 렌더링) */}
-      <div className="px-4 py-3 max-h-[600px] overflow-y-auto space-y-3">
-        {bodySegments.map((seg, i) => {
-          if (seg.type === 'text') {
-            return (
-              <div key={i} className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
-                {seg.text}
-              </div>
-            )
-          }
-          // image segment
-          return (
-            <div key={i} className="my-2">
-              {seg.image ? (
-                <ImageCard img={seg.image} compact />
-              ) : (
-                <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg text-xs text-slate-400">
-                  <PhotoIcon className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">[이미지 생성 실패] {seg.prompt}</span>
-                </div>
-              )}
-            </div>
-          )
-        })}
+      {/* 본문 ([IMAGE:] 마커는 위치 표시만) */}
+      <div className="px-4 py-3 max-h-[600px] overflow-y-auto">
+        <div className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+          {result.body?.replace(/\[IMAGE:\s*(.+?)\]/g, (_, desc) =>
+            `📷 [이미지 위치: ${desc.trim()}]`
+          )}
+        </div>
       </div>
 
       {/* 해시태그 */}

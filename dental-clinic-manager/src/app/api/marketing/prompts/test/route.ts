@@ -107,49 +107,6 @@ export async function POST(request: NextRequest) {
       customSystemPrompt || undefined,
     );
 
-    // 이미지 생성 (최대 2개)
-    const generatedImages: { fileName: string; prompt: string; path: string }[] = [];
-    const admin = getSupabaseAdmin();
-    const markersToGenerate = result.imageMarkers.slice(0, 2);
-
-    await Promise.allSettled(
-      markersToGenerate.map(async (marker) => {
-        try {
-          const { imageBase64, fileName } = await generateBlogImage(marker.prompt);
-          let imagePath = '';
-
-          if (admin && imageBase64) {
-            try {
-              const buffer = Buffer.from(imageBase64, 'base64');
-              const safeFileName = `test_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
-              const storagePath = `generated/${safeFileName}`;
-              const { error: uploadError } = await admin.storage
-                .from('marketing-images')
-                .upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
-              if (!uploadError) {
-                const { data: urlData } = admin.storage
-                  .from('marketing-images')
-                  .getPublicUrl(storagePath);
-                imagePath = urlData.publicUrl;
-              }
-            } catch {
-              // Storage 실패 시 base64로 폴백
-            }
-          }
-
-          if (!imagePath && imageBase64) {
-            imagePath = `data:image/png;base64,${imageBase64}`;
-          }
-
-          if (imagePath) {
-            generatedImages.push({ fileName, prompt: marker.prompt, path: imagePath });
-          }
-        } catch (imgErr) {
-          console.error('[API] 테스트 이미지 생성 실패:', marker.prompt, imgErr);
-        }
-      })
-    );
-
     return NextResponse.json({
       data: {
         category: category || 'content',
@@ -159,7 +116,6 @@ export async function POST(request: NextRequest) {
         keywordCount: result.keywordCount,
         imageMarkers: result.imageMarkers,
         hashtags: result.hashtags,
-        images: generatedImages,
       },
     });
   } catch (error) {
