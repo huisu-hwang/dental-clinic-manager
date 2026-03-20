@@ -27,7 +27,9 @@ import {
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { getTabRoute } from '@/utils/tabRouting'
-import ContentEditor from '@/components/marketing/ContentEditor'
+import dynamic from 'next/dynamic'
+
+const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 
 type GeneratedResultType = GeneratedContent & {
   generatedImages?: { fileName: string; prompt: string; path?: string }[]

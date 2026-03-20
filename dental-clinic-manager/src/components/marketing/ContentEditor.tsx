@@ -227,6 +227,7 @@ export default function ContentEditor({ body, images, onChange }: ContentEditorP
         placeholder: '생성된 글이 여기에 표시됩니다...',
       }),
     ],
+    immediatelyRender: false,
     editorProps: {
       attributes: {
         class: 'prose prose-sm max-w-none focus:outline-none min-h-[400px] px-4 py-3',
