@@ -23,13 +23,11 @@ type GeneratedImage = {
 
 type TestResult = {
   category: PromptCategory
-  // content/transform/quality
   title?: string
   body?: string
   wordCount?: number
   keywordCount?: number
   hashtags?: string[]
-  // images (content + image category)
   images?: GeneratedImage[]
 }
 
@@ -40,8 +38,7 @@ const CATEGORY_LABELS: Record<PromptCategory, string> = {
   quality: '품질 검증',
 }
 
-
-function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
+export function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
   const { user } = useAuth()
   const router = useRouter()
 
@@ -53,7 +50,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // 테스트 샌드박스
   const [showTest, setShowTest] = useState(false)
   const [testTopic, setTestTopic] = useState('')
   const [testKeyword, setTestKeyword] = useState('')
@@ -63,14 +59,12 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
   const [testResult, setTestResult] = useState<TestResult | null>(null)
   const [testError, setTestError] = useState<string | null>(null)
 
-  // 권한 체크
   useEffect(() => {
     if (user && user.role !== 'master_admin' && user.role !== 'owner') {
       router.push('/dashboard')
     }
   }, [user, router])
 
-  // 프롬프트 목록 로딩
   const loadPrompts = useCallback(async () => {
     try {
       const res = await fetch(`/api/marketing/prompts?category=${activeCategory}`)
@@ -85,15 +79,11 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
     }
   }, [activeCategory])
 
-  // user 객체 대신 user.id(string) 사용:
-  // 테스트 실행 중 Supabase 토큰 갱신 시 user 객체 참조가 변경되면
-  // loadPrompts()가 재실행되어 selectedPrompt가 초기화되는 버그 방지
   useEffect(() => {
     if (user?.id) loadPrompts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, activeCategory, loadPrompts])
 
-  // 프롬프트 선택
   const handleSelectPrompt = (prompt: MarketingPrompt) => {
     setSelectedPrompt(prompt)
     setEditedContent(prompt.system_prompt)
@@ -104,7 +94,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
     setTestError(null)
   }
 
-  // 프롬프트 저장
   const handleSave = async () => {
     if (!selectedPrompt || editedContent === selectedPrompt.system_prompt) return
 
@@ -135,7 +124,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
     }
   }
 
-  // 프롬프트 테스트
   const handleTest = async () => {
     if (!selectedPrompt) return
     if (activeCategory === 'image' && !testImagePrompt) return
@@ -187,7 +175,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
 
   return (
     <div className={embedded ? '' : 'min-h-screen bg-slate-50'}>
-      {/* 헤더 */}
       {!embedded && (
         <div className="bg-white border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -256,7 +243,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
           <div className="col-span-8">
             {selectedPrompt ? (
               <div className="space-y-4">
-                {/* 프롬프트 정보 */}
                 <div className="bg-white rounded-xl border border-slate-200 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -283,7 +269,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                     </div>
                   </div>
 
-                  {/* 변경 사유 */}
                   {editedContent !== selectedPrompt.system_prompt && (
                     <input
                       type="text"
@@ -294,7 +279,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                     />
                   )}
 
-                  {/* 저장 메시지 */}
                   {saveMessage && (
                     <div className={`flex items-center gap-2 text-xs p-2 rounded-lg mb-3 ${
                       saveMessage.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
@@ -304,7 +288,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                     </div>
                   )}
 
-                  {/* 에디터 */}
                   <textarea
                     value={editedContent}
                     onChange={(e) => setEditedContent(e.target.value)}
@@ -314,7 +297,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                   />
                 </div>
 
-                {/* 테스트 샌드박스 */}
                 {showTest && (
                   <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
@@ -327,7 +309,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                       </span>
                     </div>
 
-                    {/* 카테고리별 입력 */}
                     {activeCategory === 'image' ? (
                       <input
                         type="text"
@@ -382,7 +363,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                       ) : '테스트 실행'}
                     </button>
 
-                    {/* 에러 */}
                     {testError && (
                       <div className="flex items-center gap-2 text-xs p-3 rounded-lg bg-red-50 text-red-600">
                         <ExclamationTriangleIcon className="h-4 w-4 flex-shrink-0" />
@@ -390,7 +370,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                       </div>
                     )}
 
-                    {/* 결과 */}
                     {testResult && (
                       <TestResultView result={testResult} />
                     )}
@@ -408,10 +387,6 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
       </div>
     </div>
   )
-}
-
-export default function Page() {
-  return <PromptManagementContent />
 }
 
 // ─── 테스트 결과 컴포넌트 ───
@@ -439,12 +414,10 @@ function TestResultView({ result }: { result: TestResult }) {
     )
   }
 
-  // content / transform / quality
   const imageMarkerCount = (result.body?.match(/\[IMAGE:/g) || []).length
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
-      {/* 통계 바 */}
       <div className="flex gap-4 px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs text-slate-500">
         <span>글자수: <strong className="text-slate-700">{result.wordCount?.toLocaleString()}자</strong></span>
         <span>키워드: <strong className="text-slate-700">{result.keywordCount}회</strong></span>
@@ -456,7 +429,6 @@ function TestResultView({ result }: { result: TestResult }) {
         )}
       </div>
 
-      {/* 제목 */}
       {result.title && (
         <div className="px-4 py-3 border-b border-slate-200">
           <div className="text-xs text-slate-400 mb-1">제목</div>
@@ -464,7 +436,6 @@ function TestResultView({ result }: { result: TestResult }) {
         </div>
       )}
 
-      {/* 본문 ([IMAGE:] 마커는 위치 표시만) */}
       <div className="px-4 py-3 max-h-[600px] overflow-y-auto">
         <div className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
           {result.body?.replace(/\[IMAGE:\s*(.+?)\]/g, (_, desc) =>
@@ -473,7 +444,6 @@ function TestResultView({ result }: { result: TestResult }) {
         </div>
       </div>
 
-      {/* 해시태그 */}
       {(result.hashtags?.length ?? 0) > 0 && (
         <div className="px-4 py-3 border-t border-slate-200 flex flex-wrap gap-1.5">
           {result.hashtags!.map((tag, i) => (
@@ -506,4 +476,3 @@ function ImageCard({ img, compact }: { img: GeneratedImage; compact?: boolean })
     </div>
   )
 }
-
