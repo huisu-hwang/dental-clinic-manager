@@ -530,7 +530,7 @@ function ImageCard({ img, compact }: { img: GeneratedImage; compact?: boolean })
           alt={img.prompt}
           fill
           className="object-cover"
-          unoptimized={img.path.startsWith('data:')}
+          unoptimized
         />
       </div>
       <div className="px-2 py-1.5 bg-white">
