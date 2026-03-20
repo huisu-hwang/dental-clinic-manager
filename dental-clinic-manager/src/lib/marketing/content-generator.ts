@@ -191,13 +191,8 @@ function parseGeneratedContent(
   const bodyLines = lines.slice(bodyStartIndex);
   let body = bodyLines.join('\n').trim();
 
-  // 후처리: [IMAGE:] 마커와 ## 소제목을 별도 줄로 분리
-  // Claude가 텍스트와 같은 줄에 붙여 쓸 수 있으므로 강제 분리
-  body = body.replace(/([^\n])\s*(\[IMAGE:\s*.+?\])/g, '$1\n\n$2');
-  body = body.replace(/(\[IMAGE:\s*.+?\])\s*([^\n])/g, '$1\n\n$2');
-  body = body.replace(/([^\n])\s*(## )/g, '$1\n\n$2');
-  // 연속 빈 줄 정리 (3줄 이상 → 2줄로)
-  body = body.replace(/\n{3,}/g, '\n\n');
+  // 후처리: 구조 정규화
+  body = normalizeBodyStructure(body);
 
   // [IMAGE: ...] 마커 추출
   const imageMarkers: ImageMarker[] = [];
@@ -290,7 +285,80 @@ export function filterForbiddenKeywords(text: string): string {
     const regex = new RegExp(`(?<![가-힣a-zA-Z])${keyword}(?![가-힣a-zA-Z])`, 'g');
     result = result.replace(regex, '');
   }
-  // 연속된 공백 정리
-  result = result.replace(/\s{2,}/g, ' ');
+  // 연속된 공백 정리 (줄바꿈은 보존, 수평 공백만 정리)
+  result = result.replace(/[^\S\n]{2,}/g, ' ');
   return result;
+}
+
+// ─── 본문 구조 정규화 ───
+
+function normalizeBodyStructure(body: string): string {
+  let result = body;
+
+  // 1. [IMAGE:] 마커를 별도 줄로 분리
+  result = result.replace(/([^\n])\s*(\[IMAGE:\s*.+?\])/g, '$1\n\n$2');
+  result = result.replace(/(\[IMAGE:\s*.+?\])\s*([^\n])/g, '$1\n\n$2');
+
+  // 2. ## 소제목을 별도 줄로 분리
+  result = result.replace(/([^\n])\s*(#{2,3}\s+)/g, '$1\n\n$2');
+
+  // 3. **볼드 텍스트**로 시작하는 독립 구문을 소제목으로 변환
+  // 예: "**치아 미백의 종류** 어쩌구" → "## 치아 미백의 종류\n\n어쩌구"
+  result = result.replace(
+    /(?:^|\n)\s*\*\*([^*]{2,30})\*\*\s*(?:\n|$)/gm,
+    '\n\n## $1\n\n'
+  );
+
+  // 4. 긴 줄을 문장 단위로 단락 분리 (200자 초과 시)
+  const lines = result.split('\n');
+  const processed: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // 이미지 마커, 소제목, 리스트, 구분선은 그대로 유지
+    if (
+      !trimmed ||
+      trimmed.startsWith('##') ||
+      trimmed.startsWith('#') ||
+      /^\[IMAGE:/.test(trimmed) ||
+      /^[-*]\s+/.test(trimmed) ||
+      /^\d+\.\s+/.test(trimmed) ||
+      /^[-─━]{3,}$/.test(trimmed) ||
+      /^#\S/.test(trimmed) // 해시태그
+    ) {
+      processed.push(line);
+      continue;
+    }
+
+    // 200자 초과하는 텍스트 줄은 문장 단위로 분리
+    if (trimmed.length > 200) {
+      // 마침표/물음표/느낌표 + 공백 뒤에서 분리
+      const sentences = trimmed.split(/(?<=[.?!。])\s+/);
+      let currentParagraph: string[] = [];
+      let currentLength = 0;
+
+      for (const sentence of sentences) {
+        currentParagraph.push(sentence);
+        currentLength += sentence.length;
+        // 150자 이상 누적되면 단락 분리
+        if (currentLength >= 150) {
+          processed.push(currentParagraph.join(' '));
+          processed.push('');
+          currentParagraph = [];
+          currentLength = 0;
+        }
+      }
+      if (currentParagraph.length > 0) {
+        processed.push(currentParagraph.join(' '));
+      }
+    } else {
+      processed.push(line);
+    }
+  }
+
+  result = processed.join('\n');
+
+  // 5. 연속 빈 줄 정리 (3줄 이상 → 2줄로)
+  result = result.replace(/\n{3,}/g, '\n\n');
+
+  return result.trim();
 }
