@@ -108,9 +108,13 @@ export default function PromptManagementPage() {
     }
   }, [activeCategory])
 
+  // user 객체 대신 user.id(string) 사용:
+  // 테스트 실행 중 Supabase 토큰 갱신 시 user 객체 참조가 변경되면
+  // loadPrompts()가 재실행되어 selectedPrompt가 초기화되는 버그 방지
   useEffect(() => {
-    if (user) loadPrompts()
-  }, [user, activeCategory, loadPrompts])
+    if (user?.id) loadPrompts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, activeCategory, loadPrompts])
 
   // 프롬프트 선택
   const handleSelectPrompt = (prompt: MarketingPrompt) => {
