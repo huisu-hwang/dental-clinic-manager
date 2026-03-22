@@ -448,6 +448,10 @@ function PostsContent() {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
+                      })}{' '}
+                      {new Date(post.created_at).toLocaleTimeString('ko-KR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
                       })}
                     </span>
                     {content && (

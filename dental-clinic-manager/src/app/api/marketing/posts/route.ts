@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
         content_calendars!inner(clinic_id)
       `)
       .eq('content_calendars.clinic_id', userData.clinic_id)
-      .order('publish_date', { ascending: false })
+      .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (status) query = query.eq('status', status);
