@@ -1,5 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
+import { createClient } from '@/lib/supabase/server';
+import { seedDefaultPromptsIfNeeded } from './seed-prompts';
 import type { GeneratedImageMeta, ImageMarker } from '@/types/marketing';
 
 // ============================================
@@ -14,19 +16,91 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// ─── 마스터가 설정한 이미지 프롬프트 로딩 ───
+
+async function loadImagePromptTemplate(clinicId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('marketing_prompts')
+    .select('system_prompt')
+    .eq('clinic_id', clinicId)
+    .eq('prompt_key', 'image.blog')
+    .eq('is_active', true)
+    .order('version', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!data) {
+    // 기본 프롬프트 시드 후 재시도
+    const seeded = await seedDefaultPromptsIfNeeded(clinicId);
+    if (seeded) {
+      const { data: retryData } = await supabase
+        .from('marketing_prompts')
+        .select('system_prompt')
+        .eq('clinic_id', clinicId)
+        .eq('prompt_key', 'image.blog')
+        .eq('is_active', true)
+        .order('version', { ascending: false })
+        .limit(1)
+        .single();
+      return retryData?.system_prompt || null;
+    }
+    return null;
+  }
+  return data.system_prompt;
+}
+
 // ─── 블로그 이미지 생성 ───
 
-export async function generateBlogImage(prompt: string): Promise<{
+export async function generateBlogImage(
+  prompt: string,
+  clinicId?: string,
+  customSystemPrompt?: string,
+): Promise<{
   imageBase64: string;
   fileName: string;
 }> {
-  // 1. 나노바나나 2로 이미지 생성
-  const imageBase64 = await generateImageWithGemini(prompt);
+  // 마스터 이미지 프롬프트 템플릿 적용
+  let fullPrompt: string;
+
+  if (customSystemPrompt) {
+    // 테스트 모드: 마스터가 편집 중인 미저장 프롬프트 사용
+    fullPrompt = customSystemPrompt.replaceAll('{{image_prompt}}', prompt);
+  } else if (clinicId) {
+    // 실제 생성: DB에서 마스터 설정 프롬프트 로딩
+    const template = await loadImagePromptTemplate(clinicId);
+    if (template) {
+      fullPrompt = template.replaceAll('{{image_prompt}}', prompt);
+    } else {
+      fullPrompt = buildDefaultImagePrompt(prompt);
+    }
+  } else {
+    fullPrompt = buildDefaultImagePrompt(prompt);
+  }
+
+  // 1. Gemini로 이미지 생성
+  const imageBase64 = await generateImageWithGemini(fullPrompt);
 
   // 2. 한글 파일명 생성
   const fileName = await generateImageFileName(prompt);
 
   return { imageBase64, fileName };
+}
+
+// ─── 기본 이미지 프롬프트 (DB 미조회 시 폴백) ───
+
+function buildDefaultImagePrompt(prompt: string): string {
+  return `치과 블로그에 사용할 고품질 이미지를 생성하세요.
+
+## 스타일 가이드
+- 깔끔하고 전문적인 느낌
+- 밝고 친근한 색감 (하얀색, 하늘색, 민트색 계열)
+- 치과 관련 의료 이미지
+- 홍보 문구나 텍스트를 이미지에 넣지 마세요
+- 사실적인 일러스트 또는 3D 렌더링 스타일
+
+## 이미지 설명
+${prompt}`;
 }
 
 // ─── 본문의 모든 이미지 마커에서 이미지 일괄 생성 ───
@@ -58,12 +132,10 @@ export async function generateImagesFromMarkers(
 // ─── Gemini 3.0 Flash API 호출 ───
 
 async function generateImageWithGemini(prompt: string): Promise<string> {
-  const dentalPrompt = `치과 블로그용 고품질 이미지. 깔끔하고 전문적인 느낌, 밝고 친근한 색감. 홍보 문구나 텍스트 없이 순수 이미지만: ${prompt}`;
-
   try {
     const response = await genai.models.generateContent({
       model: 'gemini-3.1-flash-image-preview',
-      contents: dentalPrompt,
+      contents: prompt,
       config: {
         responseModalities: ['image', 'text'],
       },
