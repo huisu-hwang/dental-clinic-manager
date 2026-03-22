@@ -76,6 +76,7 @@ export default function HometaxSyncPanel({
   const [loginId, setLoginId] = useState('')
   const [loginPw, setLoginPw] = useState('')
   const [bizNo, setBizNo] = useState('')
+  const [residentNumber, setResidentNumber] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -171,8 +172,15 @@ export default function HometaxSyncPanel({
 
   // 인증정보 저장
   const handleSaveCredentials = async () => {
-    if (!loginId || !loginPw || !bizNo) {
+    if (!loginId || !loginPw || !bizNo || !residentNumber) {
       setError('모든 필드를 입력해주세요.')
+      return
+    }
+
+    // 주민등록번호 앞 7자리 검증
+    const residentClean = residentNumber.replace(/[^0-9]/g, '')
+    if (residentClean.length !== 7) {
+      setError('주민등록번호는 생년월일 6자리 + 뒷자리 1자리 (총 7자리)를 입력해주세요.')
       return
     }
 
@@ -188,6 +196,7 @@ export default function HometaxSyncPanel({
           loginId,
           loginPw,
           businessNumber: bizNo,
+          residentNumber: residentClean,
         }),
       })
       const data = await res.json()
@@ -197,6 +206,7 @@ export default function HometaxSyncPanel({
         setShowCredForm(false)
         setLoginId('')
         setLoginPw('')
+        setResidentNumber('')
         setSuccess('인증정보가 저장되었습니다.')
       } else {
         setError(data.error || '저장에 실패했습니다.')
@@ -444,6 +454,32 @@ export default function HometaxSyncPanel({
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">주민등록번호 (생년월일 + 뒷자리 1자리)</label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    value={residentNumber}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9-]/g, '')
+                      if (val.replace(/-/g, '').length <= 7) {
+                        setResidentNumber(val)
+                      }
+                    }}
+                    placeholder="000000-0"
+                    maxLength={8}
+                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">홈택스 ID/PW 로그인 시 본인확인에 필요합니다</p>
               </div>
               <div className="flex gap-2 pt-1">
                 <button

@@ -13,11 +13,20 @@ function getServiceClient() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { clinicId, loginId, loginPw, businessNumber } = body;
+    const { clinicId, loginId, loginPw, businessNumber, residentNumber } = body;
 
-    if (!clinicId || !loginId || !loginPw || !businessNumber) {
+    if (!clinicId || !loginId || !loginPw || !businessNumber || !residentNumber) {
       return NextResponse.json(
-        { error: 'clinicId, loginId, loginPw, businessNumber가 필요합니다.' },
+        { error: 'clinicId, loginId, loginPw, businessNumber, residentNumber가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    // 주민등록번호 앞 7자리 검증
+    const residentClean = residentNumber.replace(/[^0-9]/g, '');
+    if (residentClean.length !== 7) {
+      return NextResponse.json(
+        { error: '주민등록번호는 생년월일 6자리 + 뒷자리 1자리 (총 7자리)를 입력해주세요.' },
         { status: 400 }
       );
     }
@@ -33,8 +42,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceClient();
 
-    // 비밀번호 암호화 (로그인 ID는 평문 저장)
+    // 비밀번호 및 주민등록번호 암호화 (로그인 ID는 평문 저장)
     const encryptedPw = hometaxEncryptToJson(loginPw);
+    const encryptedResident = hometaxEncryptToJson(residentClean);
 
     const { data, error } = await supabase
       .from('hometax_credentials')
@@ -43,6 +53,7 @@ export async function POST(request: NextRequest) {
         business_number: bizNoClean,
         hometax_user_id: loginId,
         encrypted_password: encryptedPw,
+        encrypted_resident_number: encryptedResident,
         login_method: 'id_pw',
         is_active: true,
         updated_at: new Date().toISOString(),
