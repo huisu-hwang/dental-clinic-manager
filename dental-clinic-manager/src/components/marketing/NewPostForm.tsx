@@ -24,6 +24,7 @@ import {
   type PlatformOptions,
   type GeneratedContent,
   type ImageStyleOption,
+  type PlatformContent,
 } from '@/types/marketing'
 import dynamic from 'next/dynamic'
 import ScheduleModal from '@/components/marketing/ScheduleModal'
@@ -32,6 +33,7 @@ const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor
 
 type GeneratedResultType = GeneratedContent & {
   generatedImages?: { fileName: string; prompt: string; path?: string }[]
+  platformContent?: PlatformContent
 }
 
 interface NewPostFormProps {
@@ -707,6 +709,60 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               )}
             </div>
           </div>
+
+          {/* 플랫폼별 생성 결과 */}
+          {generatedResult.platformContent && (
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-slate-500">플랫폼별 글</label>
+
+              {generatedResult.platformContent.instagram && (
+                <div className="border border-pink-200 bg-pink-50/50 rounded-lg p-3 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-pink-600">Instagram</span>
+                  </div>
+                  <p className="text-xs text-slate-700 whitespace-pre-wrap leading-5">
+                    {generatedResult.platformContent.instagram.caption}
+                  </p>
+                  {generatedResult.platformContent.instagram.hashtags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {generatedResult.platformContent.instagram.hashtags.map((tag, i) => (
+                        <span key={i} className="text-[10px] text-pink-500">#{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {generatedResult.platformContent.facebook && (
+                <div className="border border-blue-200 bg-blue-50/50 rounded-lg p-3 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-blue-600">Facebook</span>
+                  </div>
+                  <p className="text-xs text-slate-700 whitespace-pre-wrap leading-5">
+                    {generatedResult.platformContent.facebook.message}
+                  </p>
+                  {generatedResult.platformContent.facebook.hashtags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {generatedResult.platformContent.facebook.hashtags.map((tag, i) => (
+                        <span key={i} className="text-[10px] text-blue-500">#{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {generatedResult.platformContent.threads && (
+                <div className="border border-slate-200 bg-slate-50/50 rounded-lg p-3 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-slate-600">Threads</span>
+                  </div>
+                  <p className="text-xs text-slate-700 whitespace-pre-wrap leading-5">
+                    {generatedResult.platformContent.threads.text}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 액션 버튼 */}
           <div className="space-y-3 pt-2">

@@ -3,7 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { generateContent } from '@/lib/marketing/content-generator';
 import { generateBlogImage } from '@/lib/marketing/image-generator';
-import type { ContentGenerateOptions } from '@/types/marketing';
+import { transformToInstagram } from '@/lib/marketing/platform-adapters/instagram';
+import { transformToFacebook } from '@/lib/marketing/platform-adapters/facebook';
+import { transformToThreads } from '@/lib/marketing/platform-adapters/threads';
+import type { ContentGenerateOptions, PlatformContent } from '@/types/marketing';
 
 // Vercel 서버리스 함수 타임아웃 확장 (Claude + Gemini API 호출 소요 시간 대응)
 export const maxDuration = 120;
@@ -171,7 +174,53 @@ export async function POST(request: NextRequest) {
           (result as any).generatedImages = generatedImages;
         }
 
-        // 3단계: 캘린더 항목 저장
+        // 3단계: 플랫폼별 글 변환 (선택된 플랫폼만)
+        const { platforms } = options;
+        const hasSnsPlatform = platforms.instagram || platforms.facebook || platforms.threads;
+
+        if (hasSnsPlatform) {
+          sendEvent(controller, {
+            progress: 92,
+            step: '플랫폼별 글을 변환하고 있습니다...',
+          });
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const generatedImages = (result as any).generatedImages || [];
+          const platformContent: PlatformContent = {};
+
+          const transformPromises: Promise<void>[] = [];
+
+          if (platforms.instagram) {
+            transformPromises.push(
+              transformToInstagram(result.title, result.body, options.keyword, generatedImages)
+                .then(content => { platformContent.instagram = content; })
+                .catch(err => console.error('[API] Instagram 변환 실패:', err))
+            );
+          }
+
+          if (platforms.facebook) {
+            transformPromises.push(
+              transformToFacebook(result.title, result.body, '', generatedImages)
+                .then(content => { platformContent.facebook = content; })
+                .catch(err => console.error('[API] Facebook 변환 실패:', err))
+            );
+          }
+
+          if (platforms.threads) {
+            transformPromises.push(
+              transformToThreads(result.title, result.body, '', generatedImages)
+                .then(content => { platformContent.threads = content; })
+                .catch(err => console.error('[API] Threads 변환 실패:', err))
+            );
+          }
+
+          await Promise.allSettled(transformPromises);
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (result as any).platformContent = platformContent;
+        }
+
+        // 4단계: 캘린더 항목 저장
         sendEvent(controller, { progress: 95, step: '저장 중...' });
 
         if (body.itemId) {
