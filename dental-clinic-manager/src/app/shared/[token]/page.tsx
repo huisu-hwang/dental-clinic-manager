@@ -90,9 +90,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         description,
       },
       robots: {
-        index: true,
+        // 병원 게시판(announcement, document)은 검색엔진 노출 차단, 자유게시판(community_post)만 허용
+        index: link.source_type === 'community_post',
         follow: false,
-        'max-snippet': -1,
+        'max-snippet': link.source_type === 'community_post' ? -1 : 0,
       },
       other: {
         'article:published_time': new Date().toISOString(),

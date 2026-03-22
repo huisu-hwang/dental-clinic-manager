@@ -17,11 +17,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const supabase = getSupabaseAdmin()
     if (supabase) {
+      // 자유게시판(community_post)만 사이트맵에 포함 (병원 게시판은 검색 노출 차단)
       const { data: publicLinks } = await supabase
         .from('shared_links')
         .select('token, created_at')
         .eq('is_active', true)
         .eq('access_level', 'public')
+        .eq('source_type', 'community_post')
         .order('created_at', { ascending: false })
         .limit(200)
 
