@@ -258,6 +258,8 @@ function PostsContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedPost, setSelectedPost] = useState<ContentCalendarItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   const loadPosts = useCallback(async () => {
     try {
@@ -285,11 +287,54 @@ function PostsContent() {
       if (res.ok) {
         setPosts((prev) => prev.filter((p) => p.id !== id))
         if (selectedPost?.id === id) setSelectedPost(null)
+        setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next })
       }
     } catch {
       console.error('삭제 실패')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`선택한 ${selectedIds.size}개의 글을 삭제하시겠습니까?`)) return
+    setIsBulkDeleting(true)
+    const idsToDelete = Array.from(selectedIds)
+    const failed: string[] = []
+    for (const id of idsToDelete) {
+      try {
+        const res = await fetch(`/api/marketing/posts/${id}`, { method: 'DELETE' })
+        if (!res.ok) failed.push(id)
+      } catch {
+        failed.push(id)
+      }
+    }
+    setPosts((prev) => prev.filter((p) => failed.includes(p.id) || !selectedIds.has(p.id)))
+    if (selectedPost && selectedIds.has(selectedPost.id) && !failed.includes(selectedPost.id)) {
+      setSelectedPost(null)
+    }
+    setSelectedIds(new Set(failed))
+    setIsBulkDeleting(false)
+    if (failed.length > 0) {
+      alert(`${failed.length}개의 글 삭제에 실패했습니다.`)
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === posts.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(posts.map((p) => p.id)))
     }
   }
 
@@ -325,14 +370,37 @@ function PostsContent() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-800">생성된 글 ({posts.length})</h2>
-        <button
-          onClick={() => { setIsLoading(true); loadPosts() }}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-        >
-          <ArrowPathIcon className="h-4 w-4" />
-          새로고침
-        </button>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={posts.length > 0 && selectedIds.size === posts.length}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-500">전체 선택</span>
+          </label>
+          <h2 className="text-lg font-semibold text-slate-800">생성된 글 ({posts.length})</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={isBulkDeleting}
+              className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <TrashIcon className="h-4 w-4" />
+              {isBulkDeleting ? '삭제 중...' : `선택 삭제 (${selectedIds.size})`}
+            </button>
+          )}
+          <button
+            onClick={() => { setIsLoading(true); loadPosts() }}
+            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <ArrowPathIcon className="h-4 w-4" />
+            새로고침
+          </button>
+        </div>
       </div>
 
       {/* 글 목록 */}
@@ -345,12 +413,26 @@ function PostsContent() {
           return (
             <div
               key={post.id}
-              className="bg-slate-50 rounded-xl border border-slate-200 p-4 hover:border-slate-300 transition-colors"
+              className={`bg-slate-50 rounded-xl border p-4 transition-colors ${
+                selectedIds.has(post.id) ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300'
+              }`}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  {/* 제목 */}
-                  <h3 className="font-medium text-slate-800 truncate">{post.title || '(제목 없음)'}</h3>
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  {/* 체크박스 */}
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(post.id)}
+                    onChange={() => toggleSelect(post.id)}
+                    className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
+                  {/* 제목 - 클릭하면 편집 모달 열기 */}
+                  <h3
+                    className="font-medium text-slate-800 truncate cursor-pointer hover:text-blue-600 transition-colors"
+                    onClick={() => setSelectedPost(post)}
+                    title="클릭하여 보기/수정"
+                  >{post.title || '(제목 없음)'}</h3>
 
                   {/* 메타 정보 */}
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
@@ -381,6 +463,7 @@ function PostsContent() {
                       {content.body.replace(/\[IMAGE:[^\]]*\]/g, '').replace(/#{1,3}\s/g, '').replace(/\*\*/g, '').slice(0, 150)}
                     </p>
                   )}
+                  </div>
                 </div>
 
                 {/* 액션 버튼 */}
