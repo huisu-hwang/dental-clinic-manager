@@ -34,6 +34,7 @@ const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor
 type GeneratedResultType = GeneratedContent & {
   generatedImages?: { fileName: string; prompt: string; path?: string }[]
   platformContent?: PlatformContent
+  savedItemId?: string
 }
 
 interface NewPostFormProps {
@@ -162,39 +163,11 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               setEditedBody(result.body)
               setEditedHashtags(result.hashtags || [])
 
-              try {
-                if (savedItemId) {
-                  await fetch(`/api/marketing/posts/${savedItemId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ generatedContent: result }),
-                  })
-                  setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
-                } else {
-                  const saveRes = await fetch('/api/marketing/posts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      title: result.title,
-                      topic,
-                      keyword,
-                      postType,
-                      tone,
-                      useResearch,
-                      factCheck,
-                      platforms,
-                      generatedContent: result,
-                    }),
-                  })
-                  if (saveRes.ok) {
-                    const saveJson = await saveRes.json()
-                    setSavedItemId(saveJson.data.id)
-                    setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
-                  }
-                }
-              } catch (saveErr) {
-                console.error('자동 저장 실패:', saveErr)
+              // 서버에서 자동 저장된 항목 ID 반영
+              if (result.savedItemId) {
+                setSavedItemId(result.savedItemId)
               }
+              setSaveMessage({ type: 'success', text: '자동 저장되었습니다.' })
             }
           } catch (parseErr) {
             if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {

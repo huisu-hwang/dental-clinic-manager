@@ -220,18 +220,70 @@ export async function POST(request: NextRequest) {
           (result as any).platformContent = platformContent;
         }
 
-        // 4단계: 캘린더 항목 저장
+        // 4단계: 자동 저장
         sendEvent(controller, { progress: 95, step: '저장 중...' });
 
-        if (body.itemId) {
+        let savedItemId: string | null = body.itemId || null;
+
+        if (savedItemId) {
+          // 기존 항목 업데이트
           await supabase
             .from('content_calendar_items')
             .update({
               generated_content: JSON.stringify(result),
-              status: 'scheduled',
+              generated_images: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (result as any).generatedImages || null,
+              status: 'review',
             })
-            .eq('id', body.itemId);
+            .eq('id', savedItemId);
+        } else {
+          // 신규 항목 자동 생성 (캘린더 + 항목)
+          const today = new Date().toISOString().split('T')[0];
+          const { data: calendar } = await supabase
+            .from('content_calendars')
+            .insert({
+              clinic_id: userData.clinic_id,
+              period_start: today,
+              period_end: today,
+              status: 'approved',
+              created_by: user.id,
+              approved_by: user.id,
+              approved_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (calendar) {
+            const { data: item } = await supabase
+              .from('content_calendar_items')
+              .insert({
+                calendar_id: calendar.id,
+                publish_date: today,
+                publish_time: '09:00',
+                title: result.title,
+                topic: options.topic,
+                keyword: options.keyword,
+                post_type: options.postType,
+                tone: options.tone,
+                use_research: options.useResearch,
+                fact_check: options.factCheck,
+                platforms: options.platforms,
+                status: 'review',
+                generated_content: JSON.stringify(result),
+                generated_images: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (result as any).generatedImages || null,
+              })
+              .select('id')
+              .single();
+
+            if (item) {
+              savedItemId = item.id;
+            }
+          }
         }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (result as any).savedItemId = savedItemId;
 
         // 완료 - 최종 결과 전송
         sendEvent(controller, {
