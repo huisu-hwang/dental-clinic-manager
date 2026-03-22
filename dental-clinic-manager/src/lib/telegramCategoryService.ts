@@ -69,7 +69,7 @@ ${categoryList || '(아직 카테고리가 없습니다)'}
 
   try {
     const response = await genAI.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         temperature: 0.2,

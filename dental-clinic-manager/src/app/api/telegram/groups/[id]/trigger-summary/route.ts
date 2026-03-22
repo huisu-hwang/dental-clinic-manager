@@ -102,7 +102,7 @@ export async function POST(
         source_message_ids: [],
         file_urls: [],
         link_urls: [],
-        ai_model: 'gemini-2.0-flash',
+        ai_model: 'gemini-2.5-flash',
         created_by: userId,
         telegram_sender_name: 'AI 요약',
       })
