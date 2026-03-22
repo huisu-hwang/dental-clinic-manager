@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
       try {
         const { imageBase64, fileName } = await generateBlogImage(
           prompt,
+          undefined, // imageStyle
+          undefined, // referenceImageBase64
           userData.clinic_id,
           customSystemPrompt || undefined,
         );

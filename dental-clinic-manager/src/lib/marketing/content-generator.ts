@@ -45,7 +45,17 @@ export async function generateContent(
     promptTemplate = prompt.system_prompt;
   }
 
-  // 2. 변수 치환
+  // 2. 이미지 스타일 지시문 생성
+  let imageStyleInstruction = '';
+  if (options.imageStyle === 'allow_person') {
+    imageStyleInstruction = '\n\n## 이미지 마커 지침\n[IMAGE:] 마커 작성 시 사람(환자, 치과의사 등)이 포함된 장면을 자연스럽게 묘사하세요. 예: "치과의사가 환자에게 올바른 칫솔질 방법을 설명하는 장면"';
+  } else if (options.imageStyle === 'use_own_image') {
+    imageStyleInstruction = '\n\n## 이미지 마커 지침\n[IMAGE:] 마커 작성 시 치과 원장/직원이 등장하는 장면을 묘사하세요. 예: "원장님이 치아 모형을 들고 임플란트 구조를 설명하는 장면"';
+  } else if (options.imageStyle === 'infographic_only') {
+    imageStyleInstruction = '\n\n## 이미지 마커 지침\n[IMAGE:] 마커 작성 시 사람을 포함하지 마세요. 인포그래픽, 도표, 다이어그램, 일러스트, 아이콘 등 정보 시각화 중심으로 묘사하세요. 예: "스케일링 전후 치아 상태를 비교하는 인포그래픽 다이어그램"';
+  }
+
+  // 3. 변수 치환
   const systemPrompt = substituteVariables(promptTemplate, {
     keyword: options.keyword,
     topic: options.topic,
@@ -62,9 +72,9 @@ export async function generateContent(
     chief_complaint: options.clinical?.chiefComplaint || '',
     // 공지글 변수
     ...options.notice?.templateData,
-  });
+  }) + imageStyleInstruction;
 
-  // 3. Claude API 호출
+  // 4. Claude API 호출
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
@@ -79,18 +89,18 @@ export async function generateContent(
 
   const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
 
-  // 4. 결과 파싱
+  // 5. 결과 파싱
   const parsed = parseGeneratedContent(rawText, options.keyword);
 
-  // 5. SEO 검증
+  // 6. SEO 검증
   const validation = validateSEORules(parsed, options.keyword);
 
-  // 6. 금지 키워드 필터링
+  // 7. 금지 키워드 필터링
   if (validation.forbiddenKeywordsFound.length > 0) {
     parsed.body = filterForbiddenKeywords(parsed.body);
   }
 
-  // 7. 글자수 부족 시 재생성 (1회)
+  // 8. 글자수 부족 시 재생성 (1회)
   if (!validation.bodyLengthPassed) {
     const retryResponse = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',

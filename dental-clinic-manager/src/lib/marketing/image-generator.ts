@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { seedDefaultPromptsIfNeeded } from './seed-prompts';
-import type { GeneratedImageMeta, ImageMarker } from '@/types/marketing';
+import type { GeneratedImageMeta, ImageMarker, ImageStyleOption } from '@/types/marketing';
 
 // ============================================
 // AI 이미지 생성 (Gemini 3.0 Flash)
@@ -15,6 +15,21 @@ const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
+
+// ─── 이미지 스타일별 추가 지침 ───
+
+function getImageStyleInstruction(imageStyle?: ImageStyleOption): string {
+  switch (imageStyle) {
+    case 'allow_person':
+      return '\n\n추가 지침: 사람(환자, 치과의사 등)을 자연스럽게 포함하여 생성하세요.';
+    case 'use_own_image':
+      return '\n\n추가 지침: 다음 참조 이미지의 인물 특징을 반영하여 치과 블로그용 이미지를 생성하세요.';
+    case 'infographic_only':
+      return '\n\n추가 지침: 사람이나 인물 사진을 절대 포함하지 마세요. 도표, 다이어그램, 아이콘, 일러스트 등 정보 시각화 중심으로 생성하세요.';
+    default:
+      return '';
+  }
+}
 
 // ─── 마스터가 설정한 이미지 프롬프트 로딩 ───
 
@@ -54,6 +69,8 @@ async function loadImagePromptTemplate(clinicId: string): Promise<string | null>
 
 export async function generateBlogImage(
   prompt: string,
+  imageStyle?: ImageStyleOption,
+  referenceImageBase64?: string,
   clinicId?: string,
   customSystemPrompt?: string,
 ): Promise<{
@@ -78,8 +95,11 @@ export async function generateBlogImage(
     fullPrompt = buildDefaultImagePrompt(prompt);
   }
 
+  // 이미지 스타일 지침 추가
+  fullPrompt += getImageStyleInstruction(imageStyle);
+
   // 1. Gemini로 이미지 생성
-  const imageBase64 = await generateImageWithGemini(fullPrompt);
+  const imageBase64 = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
 
   // 2. 한글 파일명 생성
   const fileName = await generateImageFileName(prompt);
@@ -106,13 +126,15 @@ ${prompt}`;
 // ─── 본문의 모든 이미지 마커에서 이미지 일괄 생성 ───
 
 export async function generateImagesFromMarkers(
-  markers: ImageMarker[]
+  markers: ImageMarker[],
+  imageStyle?: ImageStyleOption,
+  referenceImageBase64?: string,
 ): Promise<GeneratedImageMeta[]> {
   const results: GeneratedImageMeta[] = [];
 
   for (const marker of markers) {
     try {
-      const { imageBase64, fileName } = await generateBlogImage(marker.prompt);
+      const { imageBase64, fileName } = await generateBlogImage(marker.prompt, imageStyle, referenceImageBase64);
 
       results.push({
         fileName,
@@ -131,11 +153,37 @@ export async function generateImagesFromMarkers(
 
 // ─── Gemini 3.0 Flash API 호출 ───
 
-async function generateImageWithGemini(prompt: string): Promise<string> {
+async function generateImageWithGemini(
+  prompt: string,
+  imageStyle?: ImageStyleOption,
+  referenceImageBase64?: string,
+): Promise<string> {
   try {
+    // 참조 이미지가 있는 경우 (use_own_image 모드) 멀티모달 입력
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let contents: any;
+    if (imageStyle === 'use_own_image' && referenceImageBase64) {
+      contents = [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: referenceImageBase64,
+              },
+            },
+            { text: prompt },
+          ],
+        },
+      ];
+    } else {
+      contents = prompt;
+    }
+
     const response = await genai.models.generateContent({
       model: 'gemini-3.1-flash-image-preview',
-      contents: prompt,
+      contents,
       config: {
         responseModalities: ['image', 'text'],
       },
