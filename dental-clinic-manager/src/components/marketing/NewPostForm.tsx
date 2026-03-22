@@ -52,6 +52,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [factCheck, setFactCheck] = useState(false)
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
   const [imageStyle, setImageStyle] = useState<ImageStyleOption>('infographic_only')
+  const [imageCount, setImageCount] = useState(3)
   const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
   const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
 
@@ -116,7 +117,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic, keyword, postType, tone, useResearch, factCheck, platforms,
-          imageStyle,
+          imageStyle, imageCount,
           ...(imageStyle === 'use_own_image' && referenceImageBase64 ? { referenceImageBase64 } : {}),
         }),
       })
@@ -408,8 +409,32 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
       {/* 이미지 스타일 옵션 */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
         <h2 className="text-lg font-semibold text-slate-800">이미지 옵션</h2>
-        <p className="text-xs text-slate-400">AI 이미지 생성 시 인물 포함 여부를 선택하세요</p>
-        {(Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
+        <p className="text-xs text-slate-400">이미지 개수와 스타일을 설정하세요</p>
+
+        {/* 이미지 개수 */}
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-slate-700 min-w-[80px]">이미지 개수</label>
+          <div className="flex items-center gap-2">
+            {[0, 1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setImageCount(n)}
+                className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                  imageCount === n
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-slate-400">{imageCount === 0 ? '이미지 없이 글만 생성' : `최대 ${imageCount}개`}</span>
+        </div>
+
+        {imageCount > 0 && <hr className="border-slate-100" />}
+        {imageCount > 0 && (Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
           ([value, { label, description }]) => (
             <label key={value} className="flex items-start gap-3 cursor-pointer">
               <input
@@ -435,7 +460,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         )}
 
         {/* 참조 이미지 업로드 (본인 이미지 활용 선택 시) */}
-        {imageStyle === 'use_own_image' && (
+        {imageCount > 0 && imageStyle === 'use_own_image' && (
           <div className="ml-7 mt-2 space-y-2">
             <label className="block text-xs font-medium text-slate-600">참조 이미지 업로드</label>
             <div className="flex items-center gap-3">

@@ -179,6 +179,7 @@ export interface ContentGenerateOptions {
   factCheck: boolean;
   platforms: PlatformOptions;
   imageStyle?: ImageStyleOption;
+  imageCount?: number;
   referenceImageBase64?: string;
   schedule: {
     publishAt?: string;

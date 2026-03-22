@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
             threads: false,
           },
           imageStyle: body.imageStyle || undefined,
+          imageCount: body.imageCount !== undefined ? Number(body.imageCount) : 3,
           referenceImageBase64: body.referenceImageBase64 || undefined,
           schedule: body.schedule || { snsDelayMinutes: 30 },
           clinical: body.clinical,
@@ -94,7 +95,8 @@ export async function POST(request: NextRequest) {
         });
 
         // 2단계: 이미지 병렬 생성 (Gemini) + Storage 업로드
-        const imageMarkers = (result.imageMarkers || []).slice(0, 3); // 최대 3개
+        const maxImages = options.imageCount ?? 3;
+        const imageMarkers = maxImages > 0 ? (result.imageMarkers || []).slice(0, maxImages) : [];
         if (imageMarkers.length > 0) {
           const admin = getSupabaseAdmin();
 
