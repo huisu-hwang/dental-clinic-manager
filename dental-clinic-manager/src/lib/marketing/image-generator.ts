@@ -107,6 +107,35 @@ export async function generateBlogImage(
   return { imageBase64, fileName };
 }
 
+// ─── 플랫폼별 이미지 생성 ───
+
+type SocialPlatform = 'instagram' | 'facebook' | 'threads';
+
+const PLATFORM_IMAGE_STYLES: Record<SocialPlatform, string> = {
+  instagram: `인스타그램용 정사각형(1:1) 이미지. 시선을 사로잡는 비주얼, 선명하고 생동감 있는 색감,
+깔끔한 구도. 인스타그램 피드에서 눈에 띄는 스타일. 텍스트 오버레이 없이 순수 이미지만.`,
+  facebook: `페이스북 공유용 가로형(1200x630) 이미지. 공유하고 싶은 매력적인 비주얼,
+정보성을 느낄 수 있는 깔끔한 구도. 텍스트 오버레이 없이 순수 이미지만.`,
+  threads: `쓰레드용 정사각형 이미지. 미니멀하고 임팩트 있는 단일 비주얼,
+여백을 활용한 깔끔한 구도. 텍스트 오버레이 없이 순수 이미지만.`,
+};
+
+export async function generatePlatformImage(
+  prompt: string,
+  platform: SocialPlatform,
+  imageStyle?: ImageStyleOption,
+  referenceImageBase64?: string,
+): Promise<{ imageBase64: string; fileName: string }> {
+  const platformStyle = PLATFORM_IMAGE_STYLES[platform];
+  const styleInstruction = getImageStyleInstruction(imageStyle);
+  const fullPrompt = `${platformStyle}\n\n치과 블로그 주제: ${prompt}${styleInstruction}`;
+
+  const imageBase64 = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
+  const fileName = await generateImageFileName(`${platform}_${prompt}`);
+
+  return { imageBase64, fileName };
+}
+
 // ─── 기본 이미지 프롬프트 (DB 미조회 시 폴백) ───
 
 function buildDefaultImagePrompt(prompt: string): string {

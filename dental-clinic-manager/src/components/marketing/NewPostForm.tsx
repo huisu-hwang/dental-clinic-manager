@@ -714,10 +714,18 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               <label className="block text-sm font-medium text-slate-500">플랫폼별 글</label>
 
               {generatedResult.platformContent.instagram && (
-                <div className="border border-pink-200 bg-pink-50/50 rounded-lg p-3 space-y-1.5">
+                <div className="border border-pink-200 bg-pink-50/50 rounded-lg p-3 space-y-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-semibold text-pink-600">Instagram</span>
+                    <span className="text-[10px] text-pink-400">1:1 정사각형</span>
                   </div>
+                  {generatedResult.platformContent.instagram.images?.length > 0 && generatedResult.platformContent.instagram.images[0]?.path && (
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {generatedResult.platformContent.instagram.images.filter(img => img.path).map((img, i) => (
+                        <img key={i} src={img.path} alt={img.fileName} className="w-24 h-24 rounded-lg object-cover border border-pink-200 flex-shrink-0" />
+                      ))}
+                    </div>
+                  )}
                   <p className="text-xs text-slate-700 whitespace-pre-wrap leading-5">
                     {generatedResult.platformContent.instagram.caption}
                   </p>
@@ -732,10 +740,14 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               )}
 
               {generatedResult.platformContent.facebook && (
-                <div className="border border-blue-200 bg-blue-50/50 rounded-lg p-3 space-y-1.5">
+                <div className="border border-blue-200 bg-blue-50/50 rounded-lg p-3 space-y-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-semibold text-blue-600">Facebook</span>
+                    <span className="text-[10px] text-blue-400">가로형 OG</span>
                   </div>
+                  {generatedResult.platformContent.facebook.images && generatedResult.platformContent.facebook.images.length > 0 && generatedResult.platformContent.facebook.images[0]?.path && (
+                    <img src={generatedResult.platformContent.facebook.images[0].path} alt="Facebook" className="w-full h-32 rounded-lg object-cover border border-blue-200" />
+                  )}
                   <p className="text-xs text-slate-700 whitespace-pre-wrap leading-5">
                     {generatedResult.platformContent.facebook.message}
                   </p>
@@ -750,10 +762,14 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               )}
 
               {generatedResult.platformContent.threads && (
-                <div className="border border-slate-200 bg-slate-50/50 rounded-lg p-3 space-y-1.5">
+                <div className="border border-slate-200 bg-slate-50/50 rounded-lg p-3 space-y-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-semibold text-slate-600">Threads</span>
+                    <span className="text-[10px] text-slate-400">미니멀</span>
                   </div>
+                  {generatedResult.platformContent.threads.image?.path && (
+                    <img src={generatedResult.platformContent.threads.image.path} alt="Threads" className="w-24 h-24 rounded-lg object-cover border border-slate-200" />
+                  )}
                   <p className="text-xs text-slate-700 whitespace-pre-wrap leading-5">
                     {generatedResult.platformContent.threads.text}
                   </p>
