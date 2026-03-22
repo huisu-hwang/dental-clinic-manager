@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('hometax_credentials')
-      .select('id, clinic_id, business_number, login_method, is_active, last_login_success, last_login_error, created_at, updated_at')
+      .select('id, clinic_id, business_number, login_method, is_active, last_login_success, last_login_attempt, last_login_error, created_at, updated_at')
       .eq('clinic_id', clinicId)
       .single();
 

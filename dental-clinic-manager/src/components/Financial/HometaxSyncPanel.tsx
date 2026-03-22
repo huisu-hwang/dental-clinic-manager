@@ -401,7 +401,13 @@ export default function HometaxSyncPanel({
               )}
               <div className="flex gap-2 pt-2">
                 <button
-                  onClick={() => setShowCredForm(true)}
+                  onClick={() => {
+                    setBizNo(credentials.business_number)
+                    setLoginId('')
+                    setLoginPw('')
+                    setResidentNumber('')
+                    setShowCredForm(true)
+                  }}
                   className="flex-1 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors"
                 >
                   수정

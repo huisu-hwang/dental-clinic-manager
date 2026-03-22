@@ -19,7 +19,7 @@ async function getCredentials(clinicId: string): Promise<{ login_id: string; log
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('hometax_credentials')
-    .select('encrypted_login_id, encrypted_login_pw, encrypted_resident_number, business_number')
+    .select('hometax_user_id, encrypted_password, encrypted_resident_number, business_number')
     .eq('clinic_id', clinicId)
     .single();
 
@@ -30,8 +30,8 @@ async function getCredentials(clinicId: string): Promise<{ login_id: string; log
 
   try {
     return {
-      login_id: decryptFromJson(data.encrypted_login_id),
-      login_pw: decryptFromJson(data.encrypted_login_pw),
+      login_id: data.hometax_user_id,
+      login_pw: decryptFromJson(data.encrypted_password),
       resident_number: data.encrypted_resident_number ? decryptFromJson(data.encrypted_resident_number) : null,
       business_number: data.business_number,
     };
