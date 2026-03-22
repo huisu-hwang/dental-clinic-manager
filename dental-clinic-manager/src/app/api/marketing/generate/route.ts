@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
           keyword: body.keyword,
           postType: body.postType || 'informational',
           tone: body.tone || 'friendly',
+          imageStyle: body.imageStyle || 'professional',
           useResearch: body.useResearch || false,
           factCheck: body.factCheck || false,
           platforms: body.platforms || {
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
                 setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 55000)
               );
               const { imageBase64, fileName } = await Promise.race([
-                generateBlogImage(marker.prompt),
+                generateBlogImage(marker.prompt, options.imageStyle),
                 timeoutPromise,
               ]);
 

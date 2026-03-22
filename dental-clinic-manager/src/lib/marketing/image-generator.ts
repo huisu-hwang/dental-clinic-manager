@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
-import type { GeneratedImageMeta, ImageMarker } from '@/types/marketing';
+import type { GeneratedImageMeta, ImageMarker, ImageStyle } from '@/types/marketing';
 
 // ============================================
 // AI 이미지 생성 (Gemini 3.0 Flash)
@@ -14,14 +14,25 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// ─── 이미지 스타일별 프롬프트 지시문 ───
+
+const IMAGE_STYLE_PROMPTS: Record<ImageStyle, string> = {
+  professional: '깔끔하고 전문적인 느낌, 밝고 친근한 색감, 고해상도 사진 스타일',
+  illustration: '친근한 벡터 일러스트레이션 스타일, 깔끔한 선과 밝은 파스텔 색상, 플랫 디자인',
+  watercolor: '부드러운 수채화 스타일, 따뜻하고 자연스러운 색감, 손으로 그린 듯한 질감',
+  minimal: '미니멀한 디자인, 심플한 아이콘과 도형 위주, 여백을 활용한 깔끔한 구성',
+  infographic: '정보 전달에 최적화된 인포그래픽 스타일, 명확한 색상 구분, 아이콘과 도표 활용',
+  warm: '따뜻하고 밝은 톤의 실사 이미지, 자연광 느낌, 부드러운 색감과 온화한 분위기',
+};
+
 // ─── 블로그 이미지 생성 ───
 
-export async function generateBlogImage(prompt: string): Promise<{
+export async function generateBlogImage(prompt: string, imageStyle?: ImageStyle): Promise<{
   imageBase64: string;
   fileName: string;
 }> {
-  // 1. 나노바나나 2로 이미지 생성
-  const imageBase64 = await generateImageWithGemini(prompt);
+  // 1. 이미지 생성
+  const imageBase64 = await generateImageWithGemini(prompt, imageStyle);
 
   // 2. 한글 파일명 생성
   const fileName = await generateImageFileName(prompt);
@@ -32,13 +43,14 @@ export async function generateBlogImage(prompt: string): Promise<{
 // ─── 본문의 모든 이미지 마커에서 이미지 일괄 생성 ───
 
 export async function generateImagesFromMarkers(
-  markers: ImageMarker[]
+  markers: ImageMarker[],
+  imageStyle?: ImageStyle
 ): Promise<GeneratedImageMeta[]> {
   const results: GeneratedImageMeta[] = [];
 
   for (const marker of markers) {
     try {
-      const { imageBase64, fileName } = await generateBlogImage(marker.prompt);
+      const { imageBase64, fileName } = await generateBlogImage(marker.prompt, imageStyle);
 
       results.push({
         fileName,
@@ -57,8 +69,9 @@ export async function generateImagesFromMarkers(
 
 // ─── Gemini 3.0 Flash API 호출 ───
 
-async function generateImageWithGemini(prompt: string): Promise<string> {
-  const dentalPrompt = `치과 블로그용 고품질 이미지. 깔끔하고 전문적인 느낌, 밝고 친근한 색감. 홍보 문구나 텍스트 없이 순수 이미지만: ${prompt}`;
+async function generateImageWithGemini(prompt: string, imageStyle?: ImageStyle): Promise<string> {
+  const styleInstruction = IMAGE_STYLE_PROMPTS[imageStyle || 'professional'];
+  const dentalPrompt = `치과 블로그용 고품질 이미지. ${styleInstruction}. 홍보 문구나 텍스트 없이 순수 이미지만: ${prompt}`;
 
   try {
     const response = await genai.models.generateContent({

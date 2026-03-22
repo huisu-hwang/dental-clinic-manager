@@ -16,9 +16,11 @@ import {
 import {
   TONE_LABELS,
   POST_TYPE_LABELS,
+  IMAGE_STYLE_LABELS,
   DEFAULT_PLATFORM_PRESETS,
   type PostType,
   type ToneType,
+  type ImageStyle,
   type PlatformOptions,
   type GeneratedContent,
 } from '@/types/marketing'
@@ -41,6 +43,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [keyword, setKeyword] = useState('')
   const [postType, setPostType] = useState<PostType>('informational')
   const [tone, setTone] = useState<ToneType>('friendly')
+  const [imageStyle, setImageStyle] = useState<ImageStyle>('professional')
   const [useResearch, setUseResearch] = useState(false)
   const [factCheck, setFactCheck] = useState(false)
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
@@ -103,7 +106,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
       const res = await fetch('/api/marketing/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, keyword, postType, tone, useResearch, factCheck, platforms }),
+        body: JSON.stringify({ topic, keyword, postType, tone, imageStyle, useResearch, factCheck, platforms }),
       })
 
       if (!res.ok || !res.body) {
@@ -374,6 +377,32 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                 <option key={value} value={value}>{label} - {description}</option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            <span className="flex items-center gap-1.5">
+              <PhotoIcon className="h-4 w-4 text-indigo-500" />
+              이미지 스타일
+            </span>
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(IMAGE_STYLE_LABELS).map(([value, { label, description }]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setImageStyle(value as ImageStyle)}
+                className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-all ${
+                  imageStyle === value
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <div className="font-medium">{label}</div>
+                <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{description}</div>
+              </button>
+            ))}
           </div>
         </div>
       </div>

@@ -10,6 +10,8 @@ export type ToneType = 'friendly' | 'polite' | 'casual' | 'expert' | 'warm';
 
 export type NoticeTemplate = 'holiday' | 'schedule' | 'event' | 'equipment' | 'staff' | 'general';
 
+export type ImageStyle = 'professional' | 'illustration' | 'watercolor' | 'minimal' | 'infographic' | 'warm';
+
 export type PromptCategory = 'content' | 'image' | 'transform' | 'quality';
 
 export type CalendarStatus = 'draft' | 'pending_approval' | 'approved' | 'in_progress' | 'completed';
@@ -173,6 +175,7 @@ export interface ContentGenerateOptions {
   keyword: string;
   postType: PostType;
   tone: ToneType;
+  imageStyle?: ImageStyle;
   useResearch: boolean;
   factCheck: boolean;
   platforms: PlatformOptions;
@@ -321,6 +324,15 @@ export const POST_TYPE_LABELS: Record<PostType, string> = {
   promotional: '홍보성',
   notice: '공지글',
   clinical: '임상글',
+};
+
+export const IMAGE_STYLE_LABELS: Record<ImageStyle, { label: string; description: string }> = {
+  professional: { label: '전문적', description: '깔끔하고 신뢰감 있는 사진 스타일' },
+  illustration: { label: '일러스트', description: '친근한 손그림/벡터 일러스트' },
+  watercolor: { label: '수채화', description: '부드럽고 따뜻한 수채화 느낌' },
+  minimal: { label: '미니멀', description: '심플한 아이콘/도형 위주' },
+  infographic: { label: '인포그래픽', description: '정보 전달에 최적화된 도표/다이어그램' },
+  warm: { label: '따뜻한 사진', description: '밝고 따뜻한 톤의 실사 이미지' },
 };
 
 export const NOTICE_TEMPLATE_LABELS: Record<NoticeTemplate, string> = {
