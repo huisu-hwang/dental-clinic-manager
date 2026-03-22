@@ -9,7 +9,7 @@ async function getCredentials(clinicId) {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('hometax_credentials')
-        .select('encrypted_login_id, encrypted_login_pw, business_number')
+        .select('hometax_user_id, encrypted_password, encrypted_resident_number, business_number')
         .eq('clinic_id', clinicId)
         .single();
     if (error || !data) {
@@ -18,8 +18,9 @@ async function getCredentials(clinicId) {
     }
     try {
         return {
-            login_id: decryptFromJson(data.encrypted_login_id),
-            login_pw: decryptFromJson(data.encrypted_login_pw),
+            login_id: data.hometax_user_id,
+            login_pw: decryptFromJson(data.encrypted_password),
+            resident_number: data.encrypted_resident_number ? decryptFromJson(data.encrypted_resident_number) : null,
             business_number: data.business_number,
         };
     }
@@ -48,18 +49,24 @@ async function recordLoginResult(clinicId, success, errorMessage) {
         .eq('clinic_id', clinicId);
 }
 /** HTTP 기반 홈택스 로그인 수행 */
-async function performHttpLogin(session, loginId, loginPw) {
+async function performHttpLogin(session, loginId, loginPw, residentNumber) {
     try {
         // 1. 초기 세션 획득 (WMONID 등 쿠키)
         await initSession(session);
-        // 2. 로그인 POST 요청
+        // 2. 로그인 POST 요청 (주민등록번호 포함)
         log.info('HTTP 로그인 시도');
-        const loginRes = await httpPost(session, '/pubcLogin/Login.do', {
+        const loginParams = {
             userId: loginId,
             userPw: loginPw,
             loginType: 'ID',
             ssoLoginYN: 'N',
-        }, 'form');
+        };
+        // 주민등록번호가 있으면 생년월일 + 성별코드 추가
+        if (residentNumber) {
+            loginParams.srnoBirth = residentNumber.substring(0, 6);
+            loginParams.srnoGndr = residentNumber.substring(6, 7);
+        }
+        const loginRes = await httpPost(session, '/pubcLogin/Login.do', loginParams, 'form');
         // 3. 응답 분석
         const body = loginRes.body;
         // 에러 케이스 감지
@@ -135,7 +142,7 @@ export async function loginViaProtocol(clinicId) {
     const session = createHttpSession();
     try {
         await withRetry(async () => {
-            const result = await performHttpLogin(session, credentials.login_id, credentials.login_pw);
+            const result = await performHttpLogin(session, credentials.login_id, credentials.login_pw, credentials.resident_number);
             if (!result.success) {
                 if (result.errorCode === 'CAPTCHA_REQUIRED' || result.errorCode === 'ADDITIONAL_AUTH') {
                     throw Object.assign(new Error(result.errorMessage), { noRetry: true });
