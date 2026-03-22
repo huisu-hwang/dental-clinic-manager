@@ -49,7 +49,11 @@ export async function POST(request: NextRequest) {
     if (category === 'image') {
       const prompt = imagePrompt || '치과 치아 건강 관리 이미지';
       try {
-        const { imageBase64, fileName } = await generateBlogImage(prompt);
+        const { imageBase64, fileName } = await generateBlogImage(
+          prompt,
+          userData.clinic_id,
+          customSystemPrompt || undefined,
+        );
         const admin = getSupabaseAdmin();
 
         let imagePath = '';

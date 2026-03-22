@@ -1,0 +1,30 @@
+[    1116ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[  216271ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[  216272ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  216284ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  217562ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  218249ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  218902ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  219542ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  220173ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  220859ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  221847ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  222545ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  223219ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  223909ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  224586ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  225239ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  225914ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  226597ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  227289ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  227934ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  228604ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  229282ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  229944ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  230213ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  230580ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  230652ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  231114ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  231671ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  231735ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats&_rsc=8vvmq:0
+[  232232ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?tab=stats:0

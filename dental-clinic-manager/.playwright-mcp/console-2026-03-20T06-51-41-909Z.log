@@ -1,0 +1,21 @@
+[  117335ms] Error: Invalid src prop (https://beahjntkmkfhpcbhfnrr.supabase.co/storage/v1/object/public/marketing-images/generated/test_1773989604783_rfnk.png) on `next/image`, hostname "beahjntkmkfhpcbhfnrr.supabase.co" is not configured under images in your `next.config.js`
+See more info: https://nextjs.org/docs/messages/next-image-unconfigured-host
+    at defaultLoader (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/image-loader.js:67:49)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/get-img-props.js:108:36)
+    at Array.map (<anonymous>)
+    at generateImgAttrs (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/get-img-props.js:108:24)
+    at getImgProps (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/get-img-props.js:502:27)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/image-component.js:272:82)
+    at Object.react_stack_bottom_frame (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:23584:20)
+    at renderWithHooks (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:6793:22)
+    at updateForwardRef (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:8807:19)
+    at beginWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:11197:18)
+    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:872:30)
+    at performUnitOfWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15727:22)
+    at workLoopSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15547:41)
+    at renderRootSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15527:11)
+    at performWorkOnRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15034:44)
+    at performWorkOnRootViaSchedulerTask (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16816:7)
+    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:45:48)
+[  117813ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  357430ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed:  @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/use-websocket.js:41

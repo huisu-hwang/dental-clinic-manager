@@ -1,0 +1,7 @@
+[     728ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://beahjntkmkfhpcbhfnrr.supabase.co/auth/v1/token?grant_type=refresh_token:0
+[     729ms] [ERROR] AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+    at handleError (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:80:11)
+    at async _handleRequest (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:123:9)
+    at async _request (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:105:18)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1588:24)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/helpers.js:206:36) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56

@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
                 setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 55000)
               );
               const { imageBase64, fileName } = await Promise.race([
-                generateBlogImage(marker.prompt),
+                generateBlogImage(marker.prompt, userData.clinic_id),
                 timeoutPromise,
               ]);
 
