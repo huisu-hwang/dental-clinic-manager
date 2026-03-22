@@ -4,13 +4,106 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import SharedPostView from './SharedPostView'
 import type { SharedPostData } from '@/types/sharedLink'
+import { SOURCE_TYPE_LABELS } from '@/types/sharedLink'
 
 interface PageProps {
   params: Promise<{ token: string }>
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-  return { title: '공유된 게시물 | 하얀치과' }
+// 동적 OG 메타데이터 생성
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { token } = await params
+
+  try {
+    const supabaseAdmin = getSupabaseAdmin()
+    if (!supabaseAdmin) throw new Error('DB 연결 실패')
+
+    // 토큰으로 공유 링크 조회
+    const { data: link } = await supabaseAdmin
+      .from('shared_links')
+      .select('source_type, source_id')
+      .eq('token', token)
+      .eq('is_active', true)
+      .single()
+
+    if (!link) throw new Error('링크 없음')
+
+    let title = ''
+    let description = ''
+
+    if (link.source_type === 'announcement') {
+      const { data } = await supabaseAdmin
+        .from('announcements')
+        .select('title, content')
+        .eq('id', link.source_id)
+        .single()
+      if (data) {
+        title = data.title
+        description = (data.content || '').replace(/<[^>]*>/g, '').slice(0, 150)
+      }
+    } else if (link.source_type === 'document') {
+      const { data } = await supabaseAdmin
+        .from('documents')
+        .select('title, description, content')
+        .eq('id', link.source_id)
+        .single()
+      if (data) {
+        title = data.title
+        description = data.description || (data.content || '').replace(/<[^>]*>/g, '').slice(0, 150)
+      }
+    } else if (link.source_type === 'community_post') {
+      const { data } = await supabaseAdmin
+        .from('community_posts')
+        .select('title, content')
+        .eq('id', link.source_id)
+        .single()
+      if (data) {
+        title = data.title
+        description = (data.content || '').replace(/<[^>]*>/g, '').slice(0, 150)
+      }
+    }
+
+    if (!title) throw new Error('게시글 없음')
+
+    const sourceLabel = SOURCE_TYPE_LABELS[link.source_type as keyof typeof SOURCE_TYPE_LABELS] || '게시물'
+    const fullTitle = `${title} - 하얀치과 ${sourceLabel}`
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hi-clinic.co.kr'
+    const canonicalUrl = `${siteUrl}/shared/${token}`
+
+    return {
+      title: fullTitle,
+      description,
+      alternates: {
+        canonical: canonicalUrl,
+      },
+      openGraph: {
+        title: fullTitle,
+        description,
+        url: canonicalUrl,
+        type: 'article',
+        siteName: '클리닉 매니저',
+        locale: 'ko_KR',
+      },
+      twitter: {
+        card: 'summary',
+        title: fullTitle,
+        description,
+      },
+      robots: {
+        index: true,
+        follow: false,
+        'max-snippet': -1,
+      },
+      other: {
+        'article:published_time': new Date().toISOString(),
+      },
+    }
+  } catch {
+    return {
+      title: '공유된 게시물 | 클리닉 매니저',
+      description: '하얀치과 대시보드에서 공유한 게시글입니다.',
+    }
+  }
 }
 
 export default async function SharedPage({ params }: PageProps) {
@@ -125,5 +218,37 @@ export default async function SharedPage({ params }: PageProps) {
 
   if (!postData) return notFound()
 
-  return <SharedPostView postData={postData} />
+  // JSON-LD 구조화 데이터 (Article 스키마)
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hi-clinic.co.kr'
+  const plainText = postData.content.replace(/<[^>]*>/g, '').slice(0, 300)
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: postData.title,
+    description: plainText,
+    author: {
+      '@type': 'Person',
+      name: postData.author_name,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: '클리닉 매니저',
+      url: siteUrl,
+    },
+    datePublished: postData.created_at,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${siteUrl}/shared/${token}`,
+    },
+  }
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <SharedPostView postData={postData} />
+    </>
+  )
 }

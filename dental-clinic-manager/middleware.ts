@@ -102,7 +102,7 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/auth') ||
     request.nextUrl.pathname.startsWith('/api') ||
     request.nextUrl.pathname.startsWith('/qr') ||
-    request.nextUrl.pathname.startsWith('/shared')
+    request.nextUrl.pathname.startsWith('/share')
 
   // 5. 인증 필요한 경로에 미인증 사용자 접근 시 리다이렉트
   if (!user && !isPublicPath) {
