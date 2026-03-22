@@ -413,8 +413,9 @@ function PostsContent() {
           return (
             <div
               key={post.id}
-              className={`bg-slate-50 rounded-xl border p-4 transition-colors ${
-                selectedIds.has(post.id) ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300'
+              onClick={() => setSelectedPost(post)}
+              className={`bg-slate-50 rounded-xl border p-4 transition-colors cursor-pointer ${
+                selectedIds.has(post.id) ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -424,15 +425,12 @@ function PostsContent() {
                     type="checkbox"
                     checked={selectedIds.has(post.id)}
                     onChange={() => toggleSelect(post.id)}
+                    onClick={(e) => e.stopPropagation()}
                     className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
                   />
                   <div className="flex-1 min-w-0">
-                  {/* 제목 - 클릭하면 편집 모달 열기 */}
-                  <h3
-                    className="font-medium text-slate-800 truncate cursor-pointer hover:text-blue-600 transition-colors"
-                    onClick={() => setSelectedPost(post)}
-                    title="클릭하여 보기/수정"
-                  >{post.title || '(제목 없음)'}</h3>
+                  {/* 제목 */}
+                  <h3 className="font-medium text-slate-800 truncate">{post.title || '(제목 없음)'}</h3>
 
                   {/* 메타 정보 */}
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
@@ -467,7 +465,7 @@ function PostsContent() {
                 </div>
 
                 {/* 액션 버튼 */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => setSelectedPost(post)}
                     className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
