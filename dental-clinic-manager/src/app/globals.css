@@ -73,10 +73,23 @@ select:disabled {
   -webkit-text-fill-color: #6b7280 !important;
 }
 
-/* 안전 영역 (노치, 홈 버튼 등) */
+/* 안전 영역 (노치, 홈 버튼, PWA title bar 등) */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@supports (top: env(safe-area-inset-top)) {
+  .fixed-header-safe {
+    top: env(safe-area-inset-top, 0px);
+  }
+  .fixed-sidebar-safe {
+    top: calc(3.5rem + env(safe-area-inset-top, 0px));
+    height: calc(100vh - 3.5rem - env(safe-area-inset-top, 0px));
+  }
+  .pt-header-safe {
+    padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
   }
 }
 

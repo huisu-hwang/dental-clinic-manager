@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import PasswordResetHandler from "@/components/PasswordResetHandler";
 import { AppDialogRoot } from "@/components/ui/AppDialog";
@@ -46,6 +46,12 @@ export const metadata: Metadata = {
   other: {
     'mobile-web-app-capable': 'yes',
   },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
