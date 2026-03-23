@@ -10,6 +10,68 @@
 
 ---
 
+## 2026-03-23 [버그 수정] 스크래핑 워커 인증정보 읽기 실패 (stale 프로세스)
+
+**키워드:** #스크래핑워커 #tsx모듈캐싱 #stale프로세스 #워커재시작
+
+### 📋 작업 내용
+- 수동 동기화 클릭 시 "홈택스 인증정보가 등록되지 않았습니다" 오류 수정
+
+### 🐛 문제
+- 인증정보가 DB에 정상 저장됨에도 불구하고 워커가 "인증정보 없음"으로 실패
+
+### 🔍 근본 원인
+- 워커 프로세스(PID 62285)가 금요일 11PM부터 장기 실행 중
+- `tsx`로 TypeScript 소스를 직접 실행하는 방식은 모듈 캐싱 적용
+- 오늘 11:14에 `loginService.ts` 소스 업데이트 → 기존 프로세스는 구버전 코드 사용
+- 구버전 코드의 `getCredentials` 쿼리 실패 → null 반환 → "인증정보 없음"
+
+### ✅ 해결 방법
+- `kill 62285` 후 `npm run start`로 워커 재시작
+- 재시작 후 오류가 "Execution context was destroyed" (실제 Playwright 로그인 시도)로 변경 확인
+
+### 🧪 테스트 결과
+- 재시작 전: "인증정보 없음" 즉시 실패 (1초 내)
+- 재시작 후: 실제 홈택스 로그인 시도 (~13초 소요) ✅
+
+### 💡 배운 점
+- `tsx`로 장기 실행 워커 시 소스 코드 변경 후 **반드시 워커 재시작 필요**
+- watchdog에 소스 변경 감지 후 자동 재시작 기능 추가 고려
+
+---
+
+## 2026-03-23 [버그 수정] 홈택스 인증정보 저장/조회 실패 버그 수정
+
+**키워드:** #홈택스 #인증정보 #RLS #supabase_admin #getSupabaseAdmin #서비스롤키
+
+### 📋 작업 내용
+- 홈택스 인증정보 저장 후 즉시 "인증정보 없음" 상태로 표시되는 버그 수정
+- 수동 동기화 버튼 클릭 시 "홈택스 인증정보가 없다"는 오류 수정
+
+### 🐛 문제
+- 홈택스 인증정보를 저장해도 저장 직후 폼이 비어있고, 동기화 버튼에서 인증정보 없음 오류 발생
+
+### 🔍 근본 원인
+1. `credentials/route.ts`와 `sync/route.ts` 모두 자체적으로 `getServiceClient()`를 정의하여 사용
+2. 해당 함수는 `SUPABASE_SERVICE_ROLE_KEY`가 없으면 `createClient(url, undefined)`로 익명 클라이언트 생성
+3. 익명 접근 시 RLS가 `hometax_credentials` 접근을 차단 → DB 쿼리 결과 `null` 반환
+4. `HometaxSyncPanel.tsx`에서 저장 성공 후 응답 데이터를 바로 state에 설정했으나, upsert 응답이 null이면 stale 상태 유지
+
+### ✅ 해결 방법
+- `credentials/route.ts`, `sync/route.ts`: 자체 `getServiceClient()` 제거 → `getSupabaseAdmin()` 사용으로 통일
+- Admin 클라이언트 null 체크 추가 → 명확한 500 에러 반환
+- `HometaxSyncPanel.tsx`: 저장 성공 후 `await loadCredentials()` 호출로 DB에서 재조회
+
+### 🧪 테스트 결과
+- 빌드 성공 (`npm run build`)
+- `develop` 브랜치 푸시 완료 (커밋: `d5f089b`)
+
+### 💡 배운 점
+- Supabase admin 클라이언트는 반드시 `getSupabaseAdmin()` 중앙 함수 사용 (분산 관리 금지)
+- RLS 환경에서 서비스 롤 키 누락 시 쿼리 결과가 에러 없이 `null` 반환되어 디버깅이 어려움
+
+---
+
 ## 2026-03-23 [기능 개발] 마케팅 워커 DB 시그널링 원격 제어 구현
 
 **키워드:** #마케팅워커 #마스터페이지 #DB시그널링 #Supervisor #Watchdog

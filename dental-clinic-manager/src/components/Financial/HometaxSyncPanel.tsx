@@ -32,6 +32,7 @@ interface Credentials {
   last_login_success: boolean | null
   last_login_attempt: string | null
   last_login_error: string | null
+  has_resident_number?: boolean
 }
 
 interface SyncJob {
@@ -172,14 +173,21 @@ export default function HometaxSyncPanel({
 
   // 인증정보 저장
   const handleSaveCredentials = async () => {
-    if (!loginId || !loginPw || !bizNo || !residentNumber) {
-      setError('모든 필드를 입력해주세요.')
+    const isEditing = !!credentials
+
+    // 신규 등록 시 모든 필드 필수, 수정 시 비밀번호/주민번호는 선택
+    if (!loginId || !bizNo) {
+      setError('아이디와 사업자등록번호를 입력해주세요.')
+      return
+    }
+    if (!isEditing && (!loginPw || !residentNumber)) {
+      setError('신규 등록 시 비밀번호와 주민등록번호를 모두 입력해주세요.')
       return
     }
 
-    // 주민등록번호 앞 7자리 검증
+    // 주민등록번호 앞 7자리 검증 (입력된 경우)
     const residentClean = residentNumber.replace(/[^0-9]/g, '')
-    if (residentClean.length !== 7) {
+    if (residentNumber && residentClean.length !== 7) {
       setError('주민등록번호는 생년월일 6자리 + 뒷자리 1자리 (총 7자리)를 입력해주세요.')
       return
     }
@@ -444,13 +452,20 @@ export default function HometaxSyncPanel({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">홈택스 비밀번호</label>
+                <label className="text-xs font-medium text-slate-600 mb-1 flex items-center gap-1.5">
+                  홈택스 비밀번호
+                  {credentials && !loginPw && (
+                    <span className="flex items-center gap-0.5 text-emerald-600 font-medium">
+                      <Check className="w-3 h-3" />저장됨
+                    </span>
+                  )}
+                </label>
                 <div className="relative">
                   <input
                     type={showPw ? 'text' : 'password'}
                     value={loginPw}
                     onChange={(e) => setLoginPw(e.target.value)}
-                    placeholder="홈택스 로그인 비밀번호"
+                    placeholder={credentials ? '변경하려면 입력 (비워두면 기존값 유지)' : '홈택스 로그인 비밀번호'}
                     className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                   <button
@@ -463,7 +478,14 @@ export default function HometaxSyncPanel({
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">주민등록번호 (생년월일 + 뒷자리 1자리)</label>
+                <label className="text-xs font-medium text-slate-600 mb-1 flex items-center gap-1.5">
+                  주민등록번호 (생년월일 + 뒷자리 1자리)
+                  {credentials?.has_resident_number && !residentNumber && (
+                    <span className="flex items-center gap-0.5 text-emerald-600 font-medium">
+                      <Check className="w-3 h-3" />저장됨
+                    </span>
+                  )}
+                </label>
                 <div className="relative">
                   <input
                     type={showPw ? 'text' : 'password'}
@@ -474,7 +496,7 @@ export default function HometaxSyncPanel({
                         setResidentNumber(val)
                       }
                     }}
-                    placeholder="000000-0"
+                    placeholder={credentials?.has_resident_number ? '변경하려면 입력 (비워두면 기존값 유지)' : '000000-0'}
                     maxLength={8}
                     className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />

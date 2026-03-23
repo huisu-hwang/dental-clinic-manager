@@ -8,18 +8,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { clinicId, loginId, loginPw, businessNumber, residentNumber } = body;
 
-    if (!clinicId || !loginId || !loginPw || !businessNumber || !residentNumber) {
+    if (!clinicId || !loginId || !businessNumber) {
       return NextResponse.json(
-        { error: 'clinicId, loginId, loginPw, businessNumber, residentNumber가 필요합니다.' },
-        { status: 400 }
-      );
-    }
-
-    // 주민등록번호 앞 7자리 검증
-    const residentClean = residentNumber.replace(/[^0-9]/g, '');
-    if (residentClean.length !== 7) {
-      return NextResponse.json(
-        { error: '주민등록번호는 생년월일 6자리 + 뒷자리 1자리 (총 7자리)를 입력해주세요.' },
+        { error: 'clinicId, loginId, businessNumber가 필요합니다.' },
         { status: 400 }
       );
     }
@@ -38,22 +29,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '서버 설정 오류: Admin 클라이언트 초기화 실패' }, { status: 500 });
     }
 
-    // 비밀번호 및 주민등록번호 암호화 (로그인 ID는 평문 저장)
-    const encryptedPw = hometaxEncryptToJson(loginPw);
-    const encryptedResident = hometaxEncryptToJson(residentClean);
+    // 기존 레코드 확인 (신규 등록 vs 수정 구분)
+    const { data: existing } = await supabase
+      .from('hometax_credentials')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .single();
+
+    const isNew = !existing;
+
+    // 신규 등록 시 비밀번호, 주민등록번호 필수
+    if (isNew && (!loginPw || !residentNumber)) {
+      return NextResponse.json(
+        { error: '신규 등록 시 비밀번호와 주민등록번호가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    // 주민등록번호 검증 (입력된 경우)
+    const residentClean = residentNumber ? residentNumber.replace(/[^0-9]/g, '') : null;
+    if (residentClean !== null && residentClean.length !== 7) {
+      return NextResponse.json(
+        { error: '주민등록번호는 생년월일 6자리 + 뒷자리 1자리 (총 7자리)를 입력해주세요.' },
+        { status: 400 }
+      );
+    }
+
+    // 업서트 데이터 구성 (비밀번호/주민번호는 입력된 경우에만 업데이트)
+    const upsertData: Record<string, unknown> = {
+      clinic_id: clinicId,
+      business_number: bizNoClean,
+      hometax_user_id: loginId,
+      login_method: 'id_pw',
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (loginPw) {
+      upsertData.encrypted_password = hometaxEncryptToJson(loginPw);
+    }
+    if (residentClean) {
+      upsertData.encrypted_resident_number = hometaxEncryptToJson(residentClean);
+    }
 
     const { data, error } = await supabase
       .from('hometax_credentials')
-      .upsert({
-        clinic_id: clinicId,
-        business_number: bizNoClean,
-        hometax_user_id: loginId,
-        encrypted_password: encryptedPw,
-        encrypted_resident_number: encryptedResident,
-        login_method: 'id_pw',
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'clinic_id' })
+      .upsert(upsertData, { onConflict: 'clinic_id' })
       .select('id, clinic_id, business_number, login_method, is_active, last_login_success, last_login_attempt, last_login_error, created_at, updated_at')
       .single();
 
@@ -86,7 +107,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('hometax_credentials')
-      .select('id, clinic_id, business_number, login_method, is_active, last_login_success, last_login_attempt, last_login_error, created_at, updated_at')
+      .select('id, clinic_id, business_number, login_method, is_active, last_login_success, last_login_attempt, last_login_error, encrypted_resident_number, created_at, updated_at')
       .eq('clinic_id', clinicId)
       .single();
 
@@ -94,7 +115,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '인증정보 조회에 실패했습니다.' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: data || null });
+    if (!data) {
+      return NextResponse.json({ success: true, data: null });
+    }
+
+    // 민감 정보는 반환하지 않고 존재 여부만 표시
+    const { encrypted_resident_number, ...safeData } = data;
+    return NextResponse.json({
+      success: true,
+      data: { ...safeData, has_resident_number: !!encrypted_resident_number },
+    });
   } catch (error) {
     console.error('GET /api/hometax/credentials error:', error);
     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });

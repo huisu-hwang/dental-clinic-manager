@@ -77,8 +77,12 @@ async function recordLoginResult(clinicId: string, success: boolean, errorMessag
 async function performLogin(page: Page, loginId: string, loginPw: string, residentNumber?: string | null): Promise<{ success: boolean; errorMessage?: string; errorCode?: LoginResult['errorCode'] }> {
   try {
     // 1. 홈택스 메인 접속
+    // waitUntil: 'load' 사용 (domcontentloaded는 WebSquare SPA의 추가 네비게이션을 기다리지 않아
+    // "Execution context was destroyed" 에러 발생)
     log.info('홈택스 메인 페이지 접속');
-    await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.goto(LOGIN_URL, { waitUntil: 'load', timeout: 30000 });
+    // WebSquare SPA 초기화 완료 대기 (JS 기반 리다이렉트/네비게이션 안정화)
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 
     // 보안 프로그램 팝업 닫기 (있는 경우)
     await dismissSecurityPopups(page);
@@ -88,7 +92,8 @@ async function performLogin(page: Page, loginId: string, loginPw: string, reside
     const loginBtn = await page.$('a[href*="login"], button:has-text("로그인"), .login_btn, #login_btn');
     if (loginBtn) {
       await loginBtn.click();
-      await page.waitForLoadState('domcontentloaded', { timeout: 15000 });
+      await page.waitForLoadState('load', { timeout: 15000 }).catch(() => {});
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
     }
 
     // 3. "아이디 로그인" 탭 선택
