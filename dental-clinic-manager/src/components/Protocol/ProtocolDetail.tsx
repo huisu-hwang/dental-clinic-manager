@@ -7,11 +7,40 @@ import ProtocolVersionHistory from './ProtocolVersionHistory'
 import ProtocolStepViewer from './ProtocolStepViewer'
 import ProtocolPermissionManager from './ProtocolPermissionManager'
 import { dataService } from '@/lib/dataService'
-import { userNotificationService } from '@/lib/userNotificationService'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Protocol, ProtocolVersion, ProtocolReview } from '@/types'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
+
+// API를 통해 알림 생성 (service_role로 RLS 우회)
+async function sendNotificationViaApi(
+  clinicId: string,
+  createdBy: string,
+  notifications: Array<{
+    user_id: string
+    type: string
+    title: string
+    content?: string
+    link?: string
+    reference_type?: string
+    reference_id?: string
+  }>
+) {
+  try {
+    const response = await fetch('/api/user-notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clinicId, createdBy, notifications }),
+    })
+    const result = await response.json()
+    if (!response.ok) {
+      console.error('[sendNotificationViaApi] Error:', result.error)
+    }
+    return result
+  } catch (err) {
+    console.error('[sendNotificationViaApi] Error:', err)
+  }
+}
 
 interface ProtocolDetailProps {
   protocolId: string
@@ -117,16 +146,22 @@ export default function ProtocolDetail({
         setError(result.error)
         return
       }
-      // 대표원장에게 알림 전송
+      // 대표원장에게 알림 전송 (API를 통해 service_role로 RLS 우회)
       const ownerResult = await dataService.getClinicOwnerIds()
       if (!ownerResult.error && ownerResult.data.length > 0) {
         const userName = user?.name || '사용자'
-        await userNotificationService.notifyProtocolReviewRequested(
-          ownerResult.data,
-          userName,
-          protocol.title,
-          result.data.id,
-          protocolId
+        await sendNotificationViaApi(
+          protocol.clinic_id,
+          user?.id || '',
+          ownerResult.data.map((ownerId: string) => ({
+            user_id: ownerId,
+            type: 'protocol_review_requested',
+            title: '프로토콜 검토 요청',
+            content: `${userName}님이 "${protocol.title}" 프로토콜의 검토를 요청했습니다`,
+            link: `/management?tab=protocol&review=${protocolId}`,
+            reference_type: 'protocol_review',
+            reference_id: result.data.id,
+          }))
         )
       }
       setShowReviewRequestModal(false)
@@ -152,12 +187,21 @@ export default function ProtocolDetail({
         return
       }
       // 요청자에게 승인 알림
-      await userNotificationService.notifyProtocolReviewApproved(
-        pendingReview.requested_by,
-        protocol?.title || '',
-        pendingReview.id,
-        protocolId
-      )
+      if (protocol) {
+        await sendNotificationViaApi(
+          protocol.clinic_id,
+          user?.id || '',
+          [{
+            user_id: pendingReview.requested_by,
+            type: 'protocol_review_approved',
+            title: '프로토콜 검토 승인',
+            content: `"${protocol.title}" 프로토콜이 승인되어 활성화되었습니다`,
+            link: `/management?tab=protocol&view=${protocolId}`,
+            reference_type: 'protocol_review',
+            reference_id: pendingReview.id,
+          }]
+        )
+      }
       await fetchProtocol()
       await fetchPendingReview()
       await appAlert('프로토콜이 승인되어 활성화되었습니다.')
@@ -178,13 +222,24 @@ export default function ProtocolDetail({
         return
       }
       // 요청자에게 반려 알림
-      await userNotificationService.notifyProtocolReviewRejected(
-        pendingReview.requested_by,
-        protocol?.title || '',
-        pendingReview.id,
-        protocolId,
-        rejectMessage || undefined
-      )
+      if (protocol) {
+        const rejectContent = rejectMessage
+          ? `"${protocol.title}" 프로토콜이 반려되었습니다. 사유: ${rejectMessage}`
+          : `"${protocol.title}" 프로토콜이 반려되었습니다`
+        await sendNotificationViaApi(
+          protocol.clinic_id,
+          user?.id || '',
+          [{
+            user_id: pendingReview.requested_by,
+            type: 'protocol_review_rejected',
+            title: '프로토콜 검토 반려',
+            content: rejectContent,
+            link: `/management?tab=protocol&view=${protocolId}`,
+            reference_type: 'protocol_review',
+            reference_id: pendingReview.id,
+          }]
+        )
+      }
       setShowRejectModal(false)
       setRejectMessage('')
       await fetchProtocol()

@@ -56,6 +56,19 @@ ALTER TABLE protocols DROP CONSTRAINT IF EXISTS protocols_status_check;
 ALTER TABLE protocols ADD CONSTRAINT protocols_status_check
   CHECK (status IN ('draft', 'active', 'archived', 'pending_review'));
 
+-- user_notifications type 체크 제약조건 업데이트 (새 알림 타입 추가)
+ALTER TABLE user_notifications DROP CONSTRAINT IF EXISTS user_notifications_type_check;
+ALTER TABLE user_notifications ADD CONSTRAINT user_notifications_type_check
+  CHECK (type = ANY (ARRAY[
+    'leave_approval_pending', 'leave_approved', 'leave_rejected', 'leave_forwarded',
+    'contract_signature_required', 'contract_signed', 'contract_completed', 'contract_cancelled',
+    'document_resignation', 'document_approved', 'document_rejected', 'document',
+    'telegram_board_approved', 'telegram_board_rejected', 'telegram_board_pending',
+    'task_assigned', 'task_completed',
+    'protocol_review_requested', 'protocol_review_approved', 'protocol_review_rejected',
+    'important', 'system'
+  ]));
+
 -- ============================================
 -- Migration Complete
 -- ============================================

@@ -73,11 +73,31 @@ export default function ServiceWorkerRegistrar() {
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
+    // 모바일: bfcache에서 복원될 때 업데이트 확인 (iOS Safari PWA)
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted && registration) {
+        console.log('[SW] bfcache에서 복원, 업데이트 확인...')
+        registration.update().catch(() => {})
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+
+    // 모바일: 오프라인→온라인 전환 시 업데이트 확인
+    const handleOnline = () => {
+      if (registration) {
+        console.log('[SW] 네트워크 복원, 업데이트 확인...')
+        registration.update().catch(() => {})
+      }
+    }
+    window.addEventListener('online', handleOnline)
+
     registerSW()
 
     return () => {
       clearInterval(updateInterval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pageshow', handlePageShow)
+      window.removeEventListener('online', handleOnline)
       navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
     }
   }, [])
