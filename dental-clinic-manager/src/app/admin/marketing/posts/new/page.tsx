@@ -21,10 +21,12 @@ import {
   TONE_LABELS,
   POST_TYPE_LABELS,
   DEFAULT_PLATFORM_PRESETS,
+  IMAGE_STYLE_LABELS,
   type PostType,
   type ToneType,
   type PlatformOptions,
   type GeneratedContent,
+  type ImageStyleOption,
 } from '@/types/marketing'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
@@ -50,6 +52,10 @@ export default function NewMarketingPostPage() {
   const [useResearch, setUseResearch] = useState(false)
   const [factCheck, setFactCheck] = useState(false)
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
+  const [imageStyle, setImageStyle] = useState<ImageStyleOption>('infographic_only')
+  const [imageCount, setImageCount] = useState(3)
+  const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
+  const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
 
   // ── 생성 / 저장 상태 ──
   const [isGenerating, setIsGenerating] = useState(false)
@@ -128,7 +134,11 @@ export default function NewMarketingPostPage() {
       const res = await fetch('/api/marketing/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, keyword, postType, tone, useResearch, factCheck, platforms }),
+        body: JSON.stringify({
+          topic, keyword, postType, tone, useResearch, factCheck, platforms,
+          imageStyle, imageCount,
+          ...(imageStyle === 'use_own_image' && referenceImageBase64 ? { referenceImageBase64 } : {}),
+        }),
       })
 
       if (!res.ok || !res.body) {
@@ -491,6 +501,117 @@ export default function NewMarketingPostPage() {
                   <span className="text-xs text-slate-400 ml-2">생성된 글의 사실 여부를 검증</span>
                 </div>
               </label>
+            </div>
+
+            {/* 이미지 옵션 */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+              <h2 className="text-lg font-semibold text-slate-800">이미지 옵션</h2>
+              <p className="text-xs text-slate-400">이미지 개수와 스타일을 설정하세요</p>
+
+              {/* 이미지 개수 */}
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-slate-700 min-w-[80px]">이미지 개수</label>
+                <div className="flex items-center gap-2">
+                  {[0, 1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setImageCount(n)}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                        imageCount === n
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-xs text-slate-400">{imageCount === 0 ? '이미지 없이 글만 생성' : `최대 ${imageCount}개`}</span>
+              </div>
+
+              {imageCount > 0 && <hr className="border-slate-100" />}
+              {imageCount > 0 && (Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
+                ([value, { label, description }]) => (
+                  <label key={value} className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="imageStyle"
+                      value={value}
+                      checked={imageStyle === value}
+                      onChange={() => {
+                        setImageStyle(value)
+                        if (value !== 'use_own_image') {
+                          setReferenceImageBase64('')
+                          setReferenceImagePreview('')
+                        }
+                      }}
+                      className="mt-0.5 w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-slate-700">{label}</span>
+                      <span className="text-xs text-slate-400 ml-2">{description}</span>
+                    </div>
+                  </label>
+                )
+              )}
+
+              {/* 참조 이미지 업로드 (본인 이미지 활용 선택 시) */}
+              {imageCount > 0 && imageStyle === 'use_own_image' && (
+                <div className="ml-7 mt-2 space-y-2">
+                  <label className="block text-xs font-medium text-slate-600">참조 이미지 업로드</label>
+                  <div className="flex items-center gap-3">
+                    <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors text-xs font-medium">
+                      <PhotoIcon className="h-4 w-4" />
+                      이미지 선택
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          if (file.size > 5 * 1024 * 1024) {
+                            setError('이미지 파일은 5MB 이하만 업로드 가능합니다.')
+                            return
+                          }
+                          const reader = new FileReader()
+                          reader.onload = () => {
+                            const result = reader.result as string
+                            setReferenceImagePreview(result)
+                            const base64 = result.split(',')[1] || ''
+                            setReferenceImageBase64(base64)
+                          }
+                          reader.readAsDataURL(file)
+                        }}
+                      />
+                    </label>
+                    {referenceImagePreview && (
+                      <button
+                        onClick={() => {
+                          setReferenceImageBase64('')
+                          setReferenceImagePreview('')
+                        }}
+                        className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        삭제
+                      </button>
+                    )}
+                  </div>
+                  {referenceImagePreview && (
+                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200">
+                      <img
+                        src={referenceImagePreview}
+                        alt="참조 이미지"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  {!referenceImageBase64 && (
+                    <p className="text-xs text-amber-500">인물 이미지를 업로드해주세요</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 배포 플랫폼 */}
