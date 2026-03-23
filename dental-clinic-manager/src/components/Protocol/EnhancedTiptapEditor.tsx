@@ -36,7 +36,10 @@ import {
   ExclamationTriangleIcon,
   ArrowUturnLeftIcon,
   ArrowUturnRightIcon,
-  Bars3Icon
+  Bars3Icon,
+  PlusIcon,
+  MinusIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline'
 import { appAlert, appPrompt } from '@/components/ui/AppDialog'
 
@@ -510,6 +513,8 @@ export default function EnhancedTiptapEditor({
   const [showLineHeightPicker, setShowLineHeightPicker] = useState(false)
   // 비디오 업로드 중 상태
   const [videoUploading, setVideoUploading] = useState(false)
+  // 테이블 우클릭 컨텍스트 메뉴 위치
+  const [tableContextMenu, setTableContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   // Tiptap Editor 설정
   const editor = useEditor({
@@ -854,7 +859,7 @@ export default function EnhancedTiptapEditor({
         <div className="relative flex gap-1">
           <button
             type="button"
-            onClick={() => setShowColorPicker(!showColorPicker)}
+            onClick={() => { setShowColorPicker(!showColorPicker); setShowLineHeightPicker(false) }}
             className="p-2 rounded hover:bg-slate-200 transition-colors relative"
             title="글자 색"
           >
@@ -927,7 +932,7 @@ export default function EnhancedTiptapEditor({
         <div className="relative flex gap-1">
           <button
             type="button"
-            onClick={() => setShowLineHeightPicker(!showLineHeightPicker)}
+            onClick={() => { setShowLineHeightPicker(!showLineHeightPicker); setShowColorPicker(false) }}
             className="p-2 rounded hover:bg-slate-200 transition-colors flex items-center gap-1"
             title="줄간격"
           >
@@ -1115,7 +1120,15 @@ export default function EnhancedTiptapEditor({
       </div>
 
       {/* 에디터 본문 */}
-      <div className={`relative ${isDragActive ? 'bg-blue-50' : ''}`}>
+      <div
+        className={`relative ${isDragActive ? 'bg-blue-50' : ''}`}
+        onContextMenu={(e) => {
+          if (enableTable && editor.isActive('table')) {
+            e.preventDefault()
+            setTableContextMenu({ x: e.clientX, y: e.clientY })
+          }
+        }}
+      >
         <EditorContent editor={editor} />
         {isDragActive && (
           <div className="absolute inset-0 flex items-center justify-center bg-blue-100 bg-opacity-50 pointer-events-none">
@@ -1126,6 +1139,107 @@ export default function EnhancedTiptapEditor({
           </div>
         )}
       </div>
+
+      {/* 테이블 우클릭 컨텍스트 메뉴 */}
+      {tableContextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setTableContextMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setTableContextMenu(null) }}
+          />
+          <div
+            className="fixed bg-white border border-slate-300 rounded-lg shadow-xl p-1.5 z-50 min-w-[180px]"
+            style={{ left: tableContextMenu.x, top: tableContextMenu.y }}
+          >
+            <div className="text-xs text-slate-400 px-3 py-1 font-medium">행</div>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().addRowBefore().run()
+                setTableContextMenu(null)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+            >
+              <PlusIcon className="h-3.5 w-3.5 text-slate-500" />
+              위에 행 추가
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().addRowAfter().run()
+                setTableContextMenu(null)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+            >
+              <PlusIcon className="h-3.5 w-3.5 text-slate-500" />
+              아래에 행 추가
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().deleteRow().run()
+                setTableContextMenu(null)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-red-50 text-red-600 rounded transition-colors"
+            >
+              <MinusIcon className="h-3.5 w-3.5" />
+              행 삭제
+            </button>
+
+            <div className="border-t border-slate-200 my-1" />
+
+            <div className="text-xs text-slate-400 px-3 py-1 font-medium">열</div>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().addColumnBefore().run()
+                setTableContextMenu(null)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+            >
+              <PlusIcon className="h-3.5 w-3.5 text-slate-500" />
+              왼쪽에 열 추가
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().addColumnAfter().run()
+                setTableContextMenu(null)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+            >
+              <PlusIcon className="h-3.5 w-3.5 text-slate-500" />
+              오른쪽에 열 추가
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().deleteColumn().run()
+                setTableContextMenu(null)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-red-50 text-red-600 rounded transition-colors"
+            >
+              <MinusIcon className="h-3.5 w-3.5" />
+              열 삭제
+            </button>
+
+            <div className="border-t border-slate-200 my-1" />
+
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().deleteTable().run()
+                setTableContextMenu(null)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-red-50 text-red-600 rounded transition-colors"
+            >
+              <TrashIcon className="h-3.5 w-3.5" />
+              표 삭제
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

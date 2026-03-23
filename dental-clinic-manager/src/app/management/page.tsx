@@ -41,6 +41,7 @@ export default function ManagementPage() {
   const [showProfile, setShowProfile] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [permissionsLoaded, setPermissionsLoaded] = useState(false)
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set([tabFromUrl || 'menu']))
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -57,6 +58,14 @@ export default function ManagementPage() {
       setActiveTab(tabFromUrl)
     }
   }, [tabFromUrl])
+
+  // 방문한 탭 추적 (한 번 마운트된 탭은 유지하여 편집 상태 보존)
+  useEffect(() => {
+    setVisitedTabs(prev => {
+      if (prev.has(activeTab)) return prev
+      return new Set(prev).add(activeTab)
+    })
+  }, [activeTab])
 
   // 모바일 메뉴가 열려 있을 때 스크롤 방지
   useEffect(() => {
@@ -240,47 +249,59 @@ export default function ManagementPage() {
               </nav>
             </div>
 
-            {/* 탭 콘텐츠 */}
+            {/* 탭 콘텐츠 - 방문한 탭은 display로 숨겨 편집 상태 보존 */}
             <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6">
-              <div key={activeTab} className="tab-content">
-                {/* Staff Management Tab */}
-                {activeTab === 'staff' && (
+              {/* Staff Management Tab */}
+              {visitedTabs.has('staff') && canAccessStaffManagement && (
+                <div style={{ display: activeTab === 'staff' ? 'block' : 'none' }}>
                   <StaffManagement currentUser={user} />
-                )}
+                </div>
+              )}
 
-                {/* Branch Management Tab */}
-                {activeTab === 'branches' && (
+              {/* Branch Management Tab */}
+              {visitedTabs.has('branches') && canAccessClinicSettings && (
+                <div style={{ display: activeTab === 'branches' ? 'block' : 'none' }}>
                   <BranchManagement currentUser={user} />
-                )}
+                </div>
+              )}
 
-                {/* Clinic Settings Tab */}
-                {activeTab === 'clinic' && (
+              {/* Clinic Settings Tab */}
+              {visitedTabs.has('clinic') && canAccessClinicSettings && (
+                <div style={{ display: activeTab === 'clinic' ? 'block' : 'none' }}>
                   <ClinicSettings currentUser={user} />
-                )}
+                </div>
+              )}
 
-                {/* Protocol Management Tab */}
-                {activeTab === 'protocols' && (
+              {/* Protocol Management Tab */}
+              {visitedTabs.has('protocols') && canAccessProtocols && (
+                <div style={{ display: activeTab === 'protocols' ? 'block' : 'none' }}>
                   <ProtocolManagement currentUser={user} hideHeader />
-                )}
+                </div>
+              )}
 
-                {/* Leave Management Tab */}
-                {activeTab === 'leave' && (
+              {/* Leave Management Tab */}
+              {visitedTabs.has('leave') && canAccessLeave && (
+                <div style={{ display: activeTab === 'leave' ? 'block' : 'none' }}>
                   <LeaveManagement currentUser={user} initialSubtab={subtabFromUrl} />
-                )}
+                </div>
+              )}
 
-                {/* Analytics Tab */}
-                {activeTab === 'analytics' && (
+              {/* Analytics Tab */}
+              {visitedTabs.has('analytics') && (
+                <div style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
                   <div className="text-center py-12">
                     <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                     <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Menu Settings Tab - 모든 사용자 접근 가능 */}
-                {activeTab === 'menu' && (
+              {/* Menu Settings Tab - 모든 사용자 접근 가능 */}
+              {visitedTabs.has('menu') && (
+                <div style={{ display: activeTab === 'menu' ? 'block' : 'none' }}>
                   <MenuSettings />
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </main>

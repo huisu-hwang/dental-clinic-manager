@@ -32,14 +32,14 @@ export default function ServiceWorkerRegistrar() {
 
           newSW.addEventListener('statechange', () => {
             if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-              // 새 버전이 설치되었고, 기존 SW가 제어 중 → 업데이트 적용
-              console.log('[SW] 새 버전 감지, 업데이트 적용 중...')
-              handleUpdate(reg)
+              // 새 버전이 설치됨 - 편집 중 데이터 유실 방지를 위해 즉시 적용하지 않음
+              // 다음 페이지 로드 시 자연스럽게 적용됨
+              console.log('[SW] 새 버전 설치됨, 다음 페이지 로드 시 적용됩니다.')
             }
           })
         })
 
-        // 이미 대기 중인 SW가 있으면 즉시 적용
+        // 초기 페이지 로드 시 대기 중인 SW가 있으면 즉시 적용 (편집 데이터 없으므로 안전)
         if (reg.waiting) {
           handleUpdate(reg)
         }

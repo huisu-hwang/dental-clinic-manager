@@ -423,6 +423,15 @@ export type LastVisitPeriod =
   | 'custom'        // 사용자 정의
   | 'no_date'       // 내원일 없음
 
+// 마지막 연락 기간 필터 프리셋
+export type LastContactPeriod =
+  | 'all'           // 전체
+  | '1month'        // 1개월 이상
+  | '3months'       // 3개월 이상
+  | '6months'       // 6개월 이상
+  | '1year'         // 1년 이상
+  | 'no_contact'    // 연락 없음
+
 // 경과 개월수 계산
 export function getElapsedMonths(dateStr: string): number {
   const date = new Date(dateStr)
@@ -480,6 +489,7 @@ export interface RecallPatientFilters {
   lastVisitPeriod?: LastVisitPeriod   // 최종 내원일 프리셋 기간 필터
   lastVisitFrom?: string              // 사용자 정의: 시작일
   lastVisitTo?: string                // 사용자 정의: 종료일
+  lastContactPeriod?: LastContactPeriod  // 마지막 연락 프리셋 기간 필터
   sortBy?: 'patient_name' | 'status' | 'last_contact_date' | 'last_visit_date'
   sortDirection?: 'asc' | 'desc'
 }
