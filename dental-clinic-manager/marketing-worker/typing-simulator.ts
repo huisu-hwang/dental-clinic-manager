@@ -1,25 +1,16 @@
-import type { Page, FrameLocator } from 'playwright';
+import type { Page } from 'playwright';
 import { CONFIG } from './config.js';
 import { randomDelay, randomMs } from './utils/delay.js';
 
 // ============================================
 // 타이핑 시뮬레이터
 // 네이버 에디터에 사람처럼 타이핑하여 봇 감지 회피
-//
-// 핵심 원칙:
-// - 복사 붙여넣기(Ctrl+V) 절대 금지
-// - 한 글자씩 타이핑 (10~50ms 랜덤 딜레이)
-// - 문단 사이 1~3초 휴식
-// - 모든 동작 전환에 랜덤 대기
-// - 고정 딜레이 금지 → 반드시 랜덤 범위
 // ============================================
 
 const { delays } = CONFIG;
 
 /**
  * 한 글자씩 사람처럼 타이핑
- * - 글자마다 10~50ms 랜덤 딜레이
- * - 2,000자 기준 약 1~2분 소요
  */
 export async function humanType(page: Page, text: string): Promise<void> {
   for (const char of text) {
@@ -43,37 +34,15 @@ export async function humanTypeInto(
 }
 
 /**
- * 문단 단위로 타이핑 (문단 사이 1~3초 휴식)
- * - 각 문단 후 Enter 키 입력
- * - 사람이 생각하는 시간을 시뮬레이션
- */
-export async function typeParagraphs(
-  page: Page,
-  paragraphs: string[]
-): Promise<void> {
-  for (let i = 0; i < paragraphs.length; i++) {
-    const para = paragraphs[i].trim();
-    if (!para) continue;
-
-    await humanType(page, para);
-
-    // 마지막 문단이 아니면 줄바꿈 + 문단 간 휴식
-    if (i < paragraphs.length - 1) {
-      await page.keyboard.press('Enter');
-      await randomDelay(delays.paragraph);
-    }
-  }
-}
-
-/**
  * 네이버 에디터 본문에 글 입력
- * - 본문을 문단으로 분리
  * - [IMAGE: ...] 마커 위치에서 이미지 삽입 콜백 실행
+ * - ## 소제목은 onHeading 콜백으로 스타일 전환 후 입력
  */
 export async function typeBodyContent(
   page: Page,
   body: string,
-  onImageMarker?: (prompt: string) => Promise<void>
+  onImageMarker?: (prompt: string) => Promise<void>,
+  onHeading?: (text: string) => Promise<void>
 ): Promise<void> {
   const lines = body.split('\n');
 
@@ -99,8 +68,12 @@ export async function typeBodyContent(
     // 소제목 (##, ### 등) 처리
     if (line.startsWith('#')) {
       const headingText = line.replace(/^#+\s*/, '');
-      await humanType(page, headingText);
-      await page.keyboard.press('Enter');
+      if (onHeading) {
+        await onHeading(headingText);
+      } else {
+        await humanType(page, headingText);
+        await page.keyboard.press('Enter');
+      }
       await randomDelay(delays.paragraph);
       continue;
     }
@@ -119,59 +92,54 @@ export async function typeBodyContent(
 }
 
 /**
- * 네이버 에디터 iframe으로 전환
- * - iframe 전환 시 1.5~3.5초 대기 필수
- * - 빠르면 버튼 클릭 실패
- */
-export async function switchToEditorFrame(page: Page): Promise<FrameLocator> {
-  await randomDelay(delays.iframeSwitch);
-  const frame = page.frameLocator('iframe.se-frame-content');
-  return frame;
-}
-
-/**
- * 메인 프레임으로 복귀
- */
-export async function switchToMainFrame(page: Page): Promise<void> {
-  await randomDelay(delays.iframeSwitch);
-  // Playwright에서는 page 자체가 메인 프레임이므로 별도 전환 불필요
-  // 대기 시간만 확보
-}
-
-/**
  * 페이지 로딩 후 안정화 대기
  */
 export async function waitForPageStable(page: Page): Promise<void> {
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('networkidle').catch(() => {});
   await randomDelay(delays.pageLoad);
 }
 
 /**
- * 팝업 닫기 (임시저장 알림 등)
+ * 임시저장 복원 팝업 닫기 → 새 글 작성
  */
-export async function handlePopups(page: Page): Promise<void> {
+export async function handleDraftPopup(page: Page): Promise<void> {
   try {
-    // 임시저장 복원 팝업
-    const restorePopup = page.locator('button:has-text("아니오"), button:has-text("닫기")');
-    if (await restorePopup.isVisible({ timeout: 2000 })) {
-      await restorePopup.click();
-      await randomDelay(delays.popupHandle);
+    const popup = page.locator('.se-popup-alert-confirm');
+    if (await popup.isVisible({ timeout: 3000 })) {
+      console.log('[NaverBlog] 임시저장 복원 팝업 감지');
+      // "아니오" 또는 취소 버튼 클릭
+      const cancelBtn = popup.locator('button:has-text("아니오"), button:has-text("취소"), button.se-popup-button-cancel').first();
+      if (await cancelBtn.isVisible({ timeout: 2000 })) {
+        await cancelBtn.click();
+        console.log('[NaverBlog] 임시저장 복원 거부 → 새 글 작성');
+        await randomDelay(delays.popupHandle);
+      }
     }
   } catch {
     // 팝업이 없으면 무시
   }
+
+  // 도움말 패널 닫기
+  try {
+    const helpClose = page.locator('.se-help-panel-close-button, button.se-help-close-button').first();
+    if (await helpClose.isVisible({ timeout: 1000 })) {
+      await helpClose.click();
+      await randomDelay({ min: 300, max: 600 });
+    }
+  } catch {
+    // 무시
+  }
 }
 
 /**
- * 해시태그 입력
- * - 각 태그마다 짧은 딜레이
+ * 해시태그 입력 (발행 패널에서)
  */
 export async function typeHashtags(
   page: Page,
   hashtags: string[]
 ): Promise<void> {
   for (const tag of hashtags) {
-    const tagText = tag.startsWith('#') ? tag : `#${tag}`;
+    const tagText = tag.startsWith('#') ? tag.slice(1) : tag;
     await humanType(page, tagText);
     await page.keyboard.press('Enter');
     await randomDelay({ min: 300, max: 800 });
