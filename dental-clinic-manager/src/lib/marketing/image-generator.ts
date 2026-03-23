@@ -1,6 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
-import type { GeneratedImageMeta, ImageMarker } from '@/types/marketing';
+import { createClient } from '@/lib/supabase/server';
+import { seedDefaultPromptsIfNeeded } from './seed-prompts';
+import type { GeneratedImageMeta, ImageMarker, ImageStyleOption } from '@/types/marketing';
 
 // ============================================
 // AI 이미지 생성 (Gemini 3.0 Flash)
@@ -14,14 +16,90 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// ─── 이미지 스타일별 추가 지침 ───
+
+function getImageStyleInstruction(imageStyle?: ImageStyleOption): string {
+  switch (imageStyle) {
+    case 'allow_person':
+      return '\n\n추가 지침: 사람(환자, 치과의사 등)을 자연스럽게 포함하여 생성하세요.';
+    case 'use_own_image':
+      return '\n\n추가 지침: 다음 참조 이미지의 인물 특징을 반영하여 치과 블로그용 이미지를 생성하세요.';
+    case 'infographic_only':
+      return '\n\n추가 지침: 사람이나 인물 사진을 절대 포함하지 마세요. 도표, 다이어그램, 아이콘, 일러스트 등 정보 시각화 중심으로 생성하세요.';
+    default:
+      return '';
+  }
+}
+
+// ─── 마스터가 설정한 이미지 프롬프트 로딩 ───
+
+async function loadImagePromptTemplate(clinicId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('marketing_prompts')
+    .select('system_prompt')
+    .eq('clinic_id', clinicId)
+    .eq('prompt_key', 'image.blog')
+    .eq('is_active', true)
+    .order('version', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!data) {
+    // 기본 프롬프트 시드 후 재시도
+    const seeded = await seedDefaultPromptsIfNeeded(clinicId);
+    if (seeded) {
+      const { data: retryData } = await supabase
+        .from('marketing_prompts')
+        .select('system_prompt')
+        .eq('clinic_id', clinicId)
+        .eq('prompt_key', 'image.blog')
+        .eq('is_active', true)
+        .order('version', { ascending: false })
+        .limit(1)
+        .single();
+      return retryData?.system_prompt || null;
+    }
+    return null;
+  }
+  return data.system_prompt;
+}
+
 // ─── 블로그 이미지 생성 ───
 
-export async function generateBlogImage(prompt: string): Promise<{
+export async function generateBlogImage(
+  prompt: string,
+  imageStyle?: ImageStyleOption,
+  referenceImageBase64?: string,
+  clinicId?: string,
+  customSystemPrompt?: string,
+): Promise<{
   imageBase64: string;
   fileName: string;
 }> {
-  // 1. 나노바나나 2로 이미지 생성
-  const imageBase64 = await generateImageWithGemini(prompt);
+  // 마스터 이미지 프롬프트 템플릿 적용
+  let fullPrompt: string;
+
+  if (customSystemPrompt) {
+    // 테스트 모드: 마스터가 편집 중인 미저장 프롬프트 사용
+    fullPrompt = customSystemPrompt.replaceAll('{{image_prompt}}', prompt);
+  } else if (clinicId) {
+    // 실제 생성: DB에서 마스터 설정 프롬프트 로딩
+    const template = await loadImagePromptTemplate(clinicId);
+    if (template) {
+      fullPrompt = template.replaceAll('{{image_prompt}}', prompt);
+    } else {
+      fullPrompt = buildDefaultImagePrompt(prompt);
+    }
+  } else {
+    fullPrompt = buildDefaultImagePrompt(prompt);
+  }
+
+  // 이미지 스타일 지침 추가
+  fullPrompt += getImageStyleInstruction(imageStyle);
+
+  // 1. Gemini로 이미지 생성
+  const imageBase64 = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
 
   // 2. 한글 파일명 생성
   const fileName = await generateImageFileName(prompt);
@@ -29,16 +107,63 @@ export async function generateBlogImage(prompt: string): Promise<{
   return { imageBase64, fileName };
 }
 
+// ─── 플랫폼별 이미지 생성 ───
+
+type SocialPlatform = 'instagram' | 'facebook' | 'threads';
+
+const PLATFORM_IMAGE_STYLES: Record<SocialPlatform, string> = {
+  instagram: `인스타그램용 정사각형(1:1) 이미지. 시선을 사로잡는 비주얼, 선명하고 생동감 있는 색감,
+깔끔한 구도. 인스타그램 피드에서 눈에 띄는 스타일. 텍스트 오버레이 없이 순수 이미지만.`,
+  facebook: `페이스북 공유용 가로형(1200x630) 이미지. 공유하고 싶은 매력적인 비주얼,
+정보성을 느낄 수 있는 깔끔한 구도. 텍스트 오버레이 없이 순수 이미지만.`,
+  threads: `쓰레드용 정사각형 이미지. 미니멀하고 임팩트 있는 단일 비주얼,
+여백을 활용한 깔끔한 구도. 텍스트 오버레이 없이 순수 이미지만.`,
+};
+
+export async function generatePlatformImage(
+  prompt: string,
+  platform: SocialPlatform,
+  imageStyle?: ImageStyleOption,
+  referenceImageBase64?: string,
+): Promise<{ imageBase64: string; fileName: string }> {
+  const platformStyle = PLATFORM_IMAGE_STYLES[platform];
+  const styleInstruction = getImageStyleInstruction(imageStyle);
+  const fullPrompt = `${platformStyle}\n\n치과 블로그 주제: ${prompt}${styleInstruction}`;
+
+  const imageBase64 = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
+  const fileName = await generateImageFileName(`${platform}_${prompt}`);
+
+  return { imageBase64, fileName };
+}
+
+// ─── 기본 이미지 프롬프트 (DB 미조회 시 폴백) ───
+
+function buildDefaultImagePrompt(prompt: string): string {
+  return `치과 블로그에 사용할 고품질 이미지를 생성하세요.
+
+## 스타일 가이드
+- 깔끔하고 전문적인 느낌
+- 밝고 친근한 색감 (하얀색, 하늘색, 민트색 계열)
+- 치과 관련 의료 이미지
+- 홍보 문구나 텍스트를 이미지에 넣지 마세요
+- 사실적인 일러스트 또는 3D 렌더링 스타일
+
+## 이미지 설명
+${prompt}`;
+}
+
 // ─── 본문의 모든 이미지 마커에서 이미지 일괄 생성 ───
 
 export async function generateImagesFromMarkers(
-  markers: ImageMarker[]
+  markers: ImageMarker[],
+  imageStyle?: ImageStyleOption,
+  referenceImageBase64?: string,
 ): Promise<GeneratedImageMeta[]> {
   const results: GeneratedImageMeta[] = [];
 
   for (const marker of markers) {
     try {
-      const { imageBase64, fileName } = await generateBlogImage(marker.prompt);
+      const { imageBase64, fileName } = await generateBlogImage(marker.prompt, imageStyle, referenceImageBase64);
 
       results.push({
         fileName,
@@ -57,13 +182,37 @@ export async function generateImagesFromMarkers(
 
 // ─── Gemini 3.0 Flash API 호출 ───
 
-async function generateImageWithGemini(prompt: string): Promise<string> {
-  const dentalPrompt = `치과 블로그용 고품질 이미지. 깔끔하고 전문적인 느낌, 밝고 친근한 색감. 홍보 문구나 텍스트 없이 순수 이미지만: ${prompt}`;
-
+async function generateImageWithGemini(
+  prompt: string,
+  imageStyle?: ImageStyleOption,
+  referenceImageBase64?: string,
+): Promise<string> {
   try {
+    // 참조 이미지가 있는 경우 (use_own_image 모드) 멀티모달 입력
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let contents: any;
+    if (imageStyle === 'use_own_image' && referenceImageBase64) {
+      contents = [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: referenceImageBase64,
+              },
+            },
+            { text: prompt },
+          ],
+        },
+      ];
+    } else {
+      contents = prompt;
+    }
+
     const response = await genai.models.generateContent({
       model: 'gemini-3.1-flash-image-preview',
-      contents: dentalPrompt,
+      contents,
       config: {
         responseModalities: ['image', 'text'],
       },

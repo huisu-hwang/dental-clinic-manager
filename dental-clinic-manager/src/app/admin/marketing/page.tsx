@@ -28,6 +28,7 @@ import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { getTabRoute } from '@/utils/tabRouting'
 import NewPostForm from '@/components/marketing/NewPostForm'
+import ScheduleModal from '@/components/marketing/ScheduleModal'
 import dynamic from 'next/dynamic'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
@@ -257,6 +258,8 @@ function PostsContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedPost, setSelectedPost] = useState<ContentCalendarItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   const loadPosts = useCallback(async () => {
     try {
@@ -284,11 +287,54 @@ function PostsContent() {
       if (res.ok) {
         setPosts((prev) => prev.filter((p) => p.id !== id))
         if (selectedPost?.id === id) setSelectedPost(null)
+        setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next })
       }
     } catch {
       console.error('삭제 실패')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`선택한 ${selectedIds.size}개의 글을 삭제하시겠습니까?`)) return
+    setIsBulkDeleting(true)
+    const idsToDelete = Array.from(selectedIds)
+    const failed: string[] = []
+    for (const id of idsToDelete) {
+      try {
+        const res = await fetch(`/api/marketing/posts/${id}`, { method: 'DELETE' })
+        if (!res.ok) failed.push(id)
+      } catch {
+        failed.push(id)
+      }
+    }
+    setPosts((prev) => prev.filter((p) => failed.includes(p.id) || !selectedIds.has(p.id)))
+    if (selectedPost && selectedIds.has(selectedPost.id) && !failed.includes(selectedPost.id)) {
+      setSelectedPost(null)
+    }
+    setSelectedIds(new Set(failed))
+    setIsBulkDeleting(false)
+    if (failed.length > 0) {
+      alert(`${failed.length}개의 글 삭제에 실패했습니다.`)
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === posts.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(posts.map((p) => p.id)))
     }
   }
 
@@ -324,14 +370,37 @@ function PostsContent() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-800">생성된 글 ({posts.length})</h2>
-        <button
-          onClick={() => { setIsLoading(true); loadPosts() }}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-        >
-          <ArrowPathIcon className="h-4 w-4" />
-          새로고침
-        </button>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={posts.length > 0 && selectedIds.size === posts.length}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-500">전체 선택</span>
+          </label>
+          <h2 className="text-lg font-semibold text-slate-800">생성된 글 ({posts.length})</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={isBulkDeleting}
+              className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <TrashIcon className="h-4 w-4" />
+              {isBulkDeleting ? '삭제 중...' : `선택 삭제 (${selectedIds.size})`}
+            </button>
+          )}
+          <button
+            onClick={() => { setIsLoading(true); loadPosts() }}
+            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <ArrowPathIcon className="h-4 w-4" />
+            새로고침
+          </button>
+        </div>
       </div>
 
       {/* 글 목록 */}
@@ -344,10 +413,22 @@ function PostsContent() {
           return (
             <div
               key={post.id}
-              className="bg-slate-50 rounded-xl border border-slate-200 p-4 hover:border-slate-300 transition-colors"
+              onClick={() => setSelectedPost(post)}
+              className={`bg-slate-50 rounded-xl border p-4 transition-colors cursor-pointer ${
+                selectedIds.has(post.id) ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+              }`}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  {/* 체크박스 */}
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(post.id)}
+                    onChange={() => toggleSelect(post.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
                   {/* 제목 */}
                   <h3 className="font-medium text-slate-800 truncate">{post.title || '(제목 없음)'}</h3>
 
@@ -367,6 +448,10 @@ function PostsContent() {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
+                      })}{' '}
+                      {new Date(post.created_at).toLocaleTimeString('ko-KR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
                       })}
                     </span>
                     {content && (
@@ -380,10 +465,11 @@ function PostsContent() {
                       {content.body.replace(/\[IMAGE:[^\]]*\]/g, '').replace(/#{1,3}\s/g, '').replace(/\*\*/g, '').slice(0, 150)}
                     </p>
                   )}
+                  </div>
                 </div>
 
                 {/* 액션 버튼 */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => setSelectedPost(post)}
                     className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
@@ -440,7 +526,10 @@ function PostEditModal({
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [hasChanges, setHasChanges] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
   const statusInfo = STATUS_LABELS[post.status] || STATUS_LABELS.review
+  const canPublish = content?.body && !['published', 'publishing'].includes(post.status)
 
   const handleSave = async () => {
     setSaving(true)
@@ -468,6 +557,59 @@ function PostEditModal({
     } finally {
       setSaving(false)
     }
+  }
+
+  const handlePublish = async (targetDate: string, targetTime: string, isImmediate: boolean) => {
+    setIsPublishing(true)
+    setSaveMsg(null)
+    try {
+      const updatedContent = {
+        ...content,
+        title: editedTitle,
+        body: editedBody,
+        hashtags: editedHashtags,
+        wordCount: editedBody.length,
+      }
+      const res = await fetch(`/api/marketing/posts/${post.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editedTitle,
+          generatedContent: updatedContent,
+          status: 'scheduled',
+          publishDate: targetDate,
+          publishTime: targetTime,
+        }),
+      })
+      if (!res.ok) throw new Error('저장 실패')
+      const { data } = await res.json()
+
+      try {
+        await fetch('/api/marketing/publish/trigger', { method: 'POST' })
+      } catch { /* 워커 미실행 시 5분 내 자동 처리 */ }
+
+      const msg = isImmediate
+        ? '바로 발행이 시작됩니다!'
+        : `${targetDate} ${targetTime}에 발행이 예약되었습니다.`
+      setSaveMsg({ type: 'success', text: msg })
+      setHasChanges(false)
+      setTimeout(() => onSaved(data), 1000)
+    } catch (err) {
+      setSaveMsg({ type: 'error', text: err instanceof Error ? err.message : '발행 실패' })
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  const handlePublishNow = () => {
+    const today = new Date().toISOString().split('T')[0]
+    const now = new Date().toTimeString().slice(0, 5)
+    handlePublish(today, now, true)
+  }
+
+  const handleScheduleConfirm = (date: string, time: string) => {
+    setShowScheduleModal(false)
+    handlePublish(date, time, false)
   }
 
   return (
@@ -578,6 +720,44 @@ function PostEditModal({
                   </span>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* 발행 액션 */}
+          {canPublish && (
+            <div className="space-y-3 pt-2 border-t border-slate-200">
+              <div className="flex gap-3">
+                <button
+                  onClick={handlePublishNow}
+                  disabled={isPublishing || saving}
+                  className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  {isPublishing ? (
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <CheckCircleIcon className="h-4 w-4" />
+                  )}
+                  바로 발행
+                </button>
+                <button
+                  onClick={() => setShowScheduleModal(true)}
+                  disabled={isPublishing || saving}
+                  className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <CalendarDaysIcon className="h-4 w-4" />
+                  예약 발행
+                </button>
+              </div>
+
+              <ScheduleModal
+                isOpen={showScheduleModal}
+                onClose={() => setShowScheduleModal(false)}
+                onConfirm={handleScheduleConfirm}
+                isLoading={isPublishing}
+              />
             </div>
           )}
         </div>

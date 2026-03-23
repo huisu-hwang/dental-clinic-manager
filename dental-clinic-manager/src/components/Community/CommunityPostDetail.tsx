@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Pencil, Trash2, Eye } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Eye, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { communityPostService, communityPollService } from '@/lib/communityService'
 import type { CommunityPost, CommunityPoll } from '@/types/community'
@@ -13,6 +13,7 @@ import WatermarkOverlay from './WatermarkOverlay'
 import CommentList from './CommentList'
 import PollDisplay from './PollDisplay'
 import ReportModal from './ReportModal'
+import ShareDialog from '@/components/shared/ShareDialog'
 import { appConfirm } from '@/components/ui/AppDialog'
 
 interface CommunityPostDetailProps {
@@ -35,6 +36,7 @@ export default function CommunityPostDetail({
   const [poll, setPoll] = useState<CommunityPoll | null>(null)
   const [loading, setLoading] = useState(true)
   const [showReport, setShowReport] = useState(false)
+  const [showShareDialog, setShowShareDialog] = useState(false)
 
   const fetchPost = async () => {
     const { data } = await communityPostService.getPost(postId)
@@ -129,16 +131,21 @@ export default function CommunityPostDetail({
               {post.profile && <ProfileCard profile={post.profile} compact />}
               <span className="text-xs text-gray-400">{formatDate(post.created_at)}</span>
             </div>
-            {isOwner && (
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
-                  <Pencil className="w-3.5 h-3.5 mr-1" />수정
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleDelete} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
-                  <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setShowShareDialog(true)} className="text-gray-400 hover:text-blue-500 hidden sm:inline-flex">
+                <Share2 className="w-3.5 h-3.5 mr-1" />공유
+              </Button>
+              {isOwner && (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
+                    <Pencil className="w-3.5 h-3.5 mr-1" />수정
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleDelete} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
+                    <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* 본문 (보호 래퍼) */}
@@ -197,6 +204,13 @@ export default function CommunityPostDetail({
           <ArrowLeft className="w-4 h-4" />
           목록으로
         </button>
+        <button
+          onClick={() => setShowShareDialog(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+        >
+          <Share2 className="w-4 h-4" />
+          공유
+        </button>
         {isOwner && (
           <>
             <button
@@ -216,6 +230,14 @@ export default function CommunityPostDetail({
           </>
         )}
       </div>
+
+      {/* 공유 다이얼로그 */}
+      <ShareDialog
+        isOpen={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        sourceType="community_post"
+        sourceId={post.id}
+      />
     </div>
   )
 }

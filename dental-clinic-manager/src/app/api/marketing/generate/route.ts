@@ -2,8 +2,11 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { generateContent } from '@/lib/marketing/content-generator';
-import { generateBlogImage } from '@/lib/marketing/image-generator';
-import type { ContentGenerateOptions } from '@/types/marketing';
+import { generateBlogImage, generatePlatformImage } from '@/lib/marketing/image-generator';
+import { transformToInstagram } from '@/lib/marketing/platform-adapters/instagram';
+import { transformToFacebook } from '@/lib/marketing/platform-adapters/facebook';
+import { transformToThreads } from '@/lib/marketing/platform-adapters/threads';
+import type { ContentGenerateOptions, PlatformContent } from '@/types/marketing';
 
 // Vercel 서버리스 함수 타임아웃 확장 (Claude + Gemini API 호출 소요 시간 대응)
 export const maxDuration = 120;
@@ -64,6 +67,9 @@ export async function POST(request: NextRequest) {
             facebook: false,
             threads: false,
           },
+          imageStyle: body.imageStyle || undefined,
+          imageCount: body.imageCount !== undefined ? Number(body.imageCount) : 3,
+          referenceImageBase64: body.referenceImageBase64 || undefined,
           schedule: body.schedule || { snsDelayMinutes: 30 },
           clinical: body.clinical,
           notice: body.notice,
@@ -89,9 +95,10 @@ export async function POST(request: NextRequest) {
         });
 
         // 2단계: 이미지 병렬 생성 (Gemini) + Storage 업로드
-        const imageMarkers = (result.imageMarkers || []).slice(0, 3); // 최대 3개
+        const maxImages = options.imageCount ?? 3;
+        const imageMarkers = maxImages > 0 ? (result.imageMarkers || []).slice(0, maxImages) : [];
+        const admin = getSupabaseAdmin();
         if (imageMarkers.length > 0) {
-          const admin = getSupabaseAdmin();
 
           sendEvent(controller, {
             progress: 60,
@@ -112,7 +119,7 @@ export async function POST(request: NextRequest) {
                 setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 55000)
               );
               const { imageBase64, fileName } = await Promise.race([
-                generateBlogImage(marker.prompt),
+                generateBlogImage(marker.prompt, options.imageStyle, options.referenceImageBase64, userData.clinic_id),
                 timeoutPromise,
               ]);
 
@@ -169,18 +176,198 @@ export async function POST(request: NextRequest) {
           (result as any).generatedImages = generatedImages;
         }
 
-        // 3단계: 캘린더 항목 저장
+        // 3단계: 플랫폼별 글 변환 + 플랫폼별 이미지 생성
+        const { platforms } = options;
+        const hasSnsPlatform = platforms.instagram || platforms.facebook || platforms.threads;
+
+        if (hasSnsPlatform) {
+          sendEvent(controller, {
+            progress: 92,
+            step: '플랫폼별 글과 이미지를 생성하고 있습니다...',
+          });
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const generatedImages = (result as any).generatedImages || [];
+          const platformContent: PlatformContent = {};
+
+          // 첫 번째 이미지 마커의 프롬프트를 플랫폼 이미지 생성에 사용
+          const firstImagePrompt = result.imageMarkers?.[0]?.prompt || result.title;
+
+          // 플랫폼별 이미지 생성 + 텍스트 변환을 병렬 수행
+          const transformPromises: Promise<void>[] = [];
+
+          if (platforms.instagram) {
+            transformPromises.push(
+              (async () => {
+                // 인스타그램용 이미지 생성 (정사각형, 캐러셀용)
+                let instaImages = generatedImages;
+                if (maxImages > 0) {
+                  try {
+                    const { imageBase64, fileName } = await generatePlatformImage(
+                      firstImagePrompt, 'instagram', options.imageStyle, options.referenceImageBase64
+                    );
+                    let imagePath = '';
+                    if (admin) {
+                      try {
+                        const buffer = Buffer.from(imageBase64, 'base64');
+                        const safeFileName = `insta_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
+                        const storagePath = `generated/${safeFileName}`;
+                        const { error: upErr } = await admin.storage.from('marketing-images').upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
+                        if (!upErr) imagePath = admin.storage.from('marketing-images').getPublicUrl(storagePath).data.publicUrl;
+                      } catch { /* fallback */ }
+                    }
+                    if (!imagePath && imageBase64.length < 500000) imagePath = `data:image/png;base64,${imageBase64}`;
+                    if (imagePath) {
+                      instaImages = [{ fileName, prompt: firstImagePrompt, path: imagePath, width: 1080, height: 1080 }, ...generatedImages];
+                    }
+                  } catch (err) {
+                    console.error('[API] Instagram 이미지 생성 실패:', err);
+                  }
+                }
+                const content = await transformToInstagram(result.title, result.body, options.keyword, instaImages);
+                platformContent.instagram = content;
+              })().catch(err => console.error('[API] Instagram 변환 실패:', err))
+            );
+          }
+
+          if (platforms.facebook) {
+            transformPromises.push(
+              (async () => {
+                // 페이스북용 이미지 생성 (가로형)
+                let fbImages = generatedImages;
+                if (maxImages > 0) {
+                  try {
+                    const { imageBase64, fileName } = await generatePlatformImage(
+                      firstImagePrompt, 'facebook', options.imageStyle, options.referenceImageBase64
+                    );
+                    let imagePath = '';
+                    if (admin) {
+                      try {
+                        const buffer = Buffer.from(imageBase64, 'base64');
+                        const safeFileName = `fb_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
+                        const storagePath = `generated/${safeFileName}`;
+                        const { error: upErr } = await admin.storage.from('marketing-images').upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
+                        if (!upErr) imagePath = admin.storage.from('marketing-images').getPublicUrl(storagePath).data.publicUrl;
+                      } catch { /* fallback */ }
+                    }
+                    if (!imagePath && imageBase64.length < 500000) imagePath = `data:image/png;base64,${imageBase64}`;
+                    if (imagePath) {
+                      fbImages = [{ fileName, prompt: firstImagePrompt, path: imagePath }];
+                    }
+                  } catch (err) {
+                    console.error('[API] Facebook 이미지 생성 실패:', err);
+                  }
+                }
+                const content = await transformToFacebook(result.title, result.body, '', fbImages);
+                platformContent.facebook = content;
+              })().catch(err => console.error('[API] Facebook 변환 실패:', err))
+            );
+          }
+
+          if (platforms.threads) {
+            transformPromises.push(
+              (async () => {
+                // 쓰레드용 이미지 생성 (미니멀)
+                let threadsImages = generatedImages;
+                if (maxImages > 0) {
+                  try {
+                    const { imageBase64, fileName } = await generatePlatformImage(
+                      firstImagePrompt, 'threads', options.imageStyle, options.referenceImageBase64
+                    );
+                    let imagePath = '';
+                    if (admin) {
+                      try {
+                        const buffer = Buffer.from(imageBase64, 'base64');
+                        const safeFileName = `threads_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
+                        const storagePath = `generated/${safeFileName}`;
+                        const { error: upErr } = await admin.storage.from('marketing-images').upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
+                        if (!upErr) imagePath = admin.storage.from('marketing-images').getPublicUrl(storagePath).data.publicUrl;
+                      } catch { /* fallback */ }
+                    }
+                    if (!imagePath && imageBase64.length < 500000) imagePath = `data:image/png;base64,${imageBase64}`;
+                    if (imagePath) {
+                      threadsImages = [{ fileName, prompt: firstImagePrompt, path: imagePath }];
+                    }
+                  } catch (err) {
+                    console.error('[API] Threads 이미지 생성 실패:', err);
+                  }
+                }
+                const content = await transformToThreads(result.title, result.body, '', threadsImages);
+                platformContent.threads = content;
+              })().catch(err => console.error('[API] Threads 변환 실패:', err))
+            );
+          }
+
+          await Promise.allSettled(transformPromises);
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (result as any).platformContent = platformContent;
+        }
+
+        // 4단계: 자동 저장
         sendEvent(controller, { progress: 95, step: '저장 중...' });
 
-        if (body.itemId) {
+        let savedItemId: string | null = body.itemId || null;
+
+        if (savedItemId) {
+          // 기존 항목 업데이트
           await supabase
             .from('content_calendar_items')
             .update({
               generated_content: JSON.stringify(result),
-              status: 'scheduled',
+              generated_images: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (result as any).generatedImages || null,
+              status: 'review',
             })
-            .eq('id', body.itemId);
+            .eq('id', savedItemId);
+        } else {
+          // 신규 항목 자동 생성 (캘린더 + 항목)
+          const today = new Date().toISOString().split('T')[0];
+          const { data: calendar } = await supabase
+            .from('content_calendars')
+            .insert({
+              clinic_id: userData.clinic_id,
+              period_start: today,
+              period_end: today,
+              status: 'approved',
+              created_by: user.id,
+              approved_by: user.id,
+              approved_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (calendar) {
+            const { data: item } = await supabase
+              .from('content_calendar_items')
+              .insert({
+                calendar_id: calendar.id,
+                publish_date: today,
+                publish_time: '09:00',
+                title: result.title,
+                topic: options.topic,
+                keyword: options.keyword,
+                post_type: options.postType,
+                tone: options.tone,
+                use_research: options.useResearch,
+                fact_check: options.factCheck,
+                platforms: options.platforms,
+                status: 'review',
+                generated_content: JSON.stringify(result),
+                generated_images: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (result as any).generatedImages || null,
+              })
+              .select('id')
+              .single();
+
+            if (item) {
+              savedItemId = item.id;
+            }
+          }
         }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (result as any).savedItemId = savedItemId;
 
         // 완료 - 최종 결과 전송
         sendEvent(controller, {

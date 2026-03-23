@@ -10,6 +10,8 @@ export type ToneType = 'friendly' | 'polite' | 'casual' | 'expert' | 'warm';
 
 export type NoticeTemplate = 'holiday' | 'schedule' | 'event' | 'equipment' | 'staff' | 'general';
 
+export type ImageStyleOption = 'allow_person' | 'use_own_image' | 'infographic_only';
+
 export type PromptCategory = 'content' | 'image' | 'transform' | 'quality';
 
 export type CalendarStatus = 'draft' | 'pending_approval' | 'approved' | 'in_progress' | 'completed';
@@ -176,6 +178,9 @@ export interface ContentGenerateOptions {
   useResearch: boolean;
   factCheck: boolean;
   platforms: PlatformOptions;
+  imageStyle?: ImageStyleOption;
+  imageCount?: number;
+  referenceImageBase64?: string;
   schedule: {
     publishAt?: string;
     snsDelayMinutes: number;
@@ -330,6 +335,12 @@ export const NOTICE_TEMPLATE_LABELS: Record<NoticeTemplate, string> = {
   equipment: '신규 장비/시설',
   staff: '인사/채용',
   general: '일반 공지',
+};
+
+export const IMAGE_STYLE_LABELS: Record<ImageStyleOption, { label: string; description: string }> = {
+  allow_person: { label: '인물 포함', description: '이미지에 인물(환자, 의사 등) 생성 허용' },
+  use_own_image: { label: '본인 이미지 활용', description: '인물 생성 시 업로드한 참조 이미지 활용' },
+  infographic_only: { label: '인포그래픽만', description: '도표, 다이어그램 등 정보 시각화 이미지만 생성' },
 };
 
 // ─── 금지 키워드 (네이버 SEO) ───

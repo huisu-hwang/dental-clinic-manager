@@ -12,22 +12,29 @@ import {
   PlusIcon,
   CloudArrowUpIcon,
   ArrowLeftIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline'
 import {
   TONE_LABELS,
   POST_TYPE_LABELS,
   DEFAULT_PLATFORM_PRESETS,
+  IMAGE_STYLE_LABELS,
   type PostType,
   type ToneType,
   type PlatformOptions,
   type GeneratedContent,
+  type ImageStyleOption,
+  type PlatformContent,
 } from '@/types/marketing'
 import dynamic from 'next/dynamic'
+import ScheduleModal from '@/components/marketing/ScheduleModal'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 
 type GeneratedResultType = GeneratedContent & {
   generatedImages?: { fileName: string; prompt: string; path?: string }[]
+  platformContent?: PlatformContent
+  savedItemId?: string
 }
 
 interface NewPostFormProps {
@@ -44,6 +51,10 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [useResearch, setUseResearch] = useState(false)
   const [factCheck, setFactCheck] = useState(false)
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
+  const [imageStyle, setImageStyle] = useState<ImageStyleOption>('infographic_only')
+  const [imageCount, setImageCount] = useState(3)
+  const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
+  const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
 
   // ── 생성 / 저장 상태 ──
   const [isGenerating, setIsGenerating] = useState(false)
@@ -54,6 +65,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [isScheduling, setIsScheduling] = useState(false)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [error, setError] = useState('')
 
   // ── 편집 상태 ──
@@ -103,7 +115,11 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
       const res = await fetch('/api/marketing/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, keyword, postType, tone, useResearch, factCheck, platforms }),
+        body: JSON.stringify({
+          topic, keyword, postType, tone, useResearch, factCheck, platforms,
+          imageStyle, imageCount,
+          ...(imageStyle === 'use_own_image' && referenceImageBase64 ? { referenceImageBase64 } : {}),
+        }),
       })
 
       if (!res.ok || !res.body) {
@@ -148,39 +164,11 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               setEditedBody(result.body)
               setEditedHashtags(result.hashtags || [])
 
-              try {
-                if (savedItemId) {
-                  await fetch(`/api/marketing/posts/${savedItemId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ generatedContent: result }),
-                  })
-                  setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
-                } else {
-                  const saveRes = await fetch('/api/marketing/posts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      title: result.title,
-                      topic,
-                      keyword,
-                      postType,
-                      tone,
-                      useResearch,
-                      factCheck,
-                      platforms,
-                      generatedContent: result,
-                    }),
-                  })
-                  if (saveRes.ok) {
-                    const saveJson = await saveRes.json()
-                    setSavedItemId(saveJson.data.id)
-                    setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
-                  }
-                }
-              } catch (saveErr) {
-                console.error('자동 저장 실패:', saveErr)
+              // 서버에서 자동 저장된 항목 ID 반영
+              if (result.savedItemId) {
+                setSavedItemId(result.savedItemId)
               }
+              setSaveMessage({ type: 'success', text: '자동 저장되었습니다.' })
             }
           } catch (parseErr) {
             if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {
@@ -222,8 +210,8 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     }
   }
 
-  // ── 발행 예약 ──
-  const handleSchedule = async () => {
+  // ── 발행 처리 (공통) ──
+  const handlePublish = async (targetDate: string, targetTime: string, isImmediate: boolean) => {
     if (!generatedResult) return
     setIsScheduling(true)
     try {
@@ -234,9 +222,6 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         hashtags: editedHashtags,
       }
 
-      const today = new Date().toISOString().split('T')[0]
-      const now = new Date().toTimeString().slice(0, 5)
-
       if (savedItemId) {
         const res = await fetch(`/api/marketing/posts/${savedItemId}`, {
           method: 'PATCH',
@@ -245,8 +230,8 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             title: editedTitle,
             generatedContent: updatedContent,
             status: 'scheduled',
-            publishDate: today,
-            publishTime: now,
+            publishDate: targetDate,
+            publishTime: targetTime,
           }),
         })
         if (!res.ok) throw new Error('저장 실패')
@@ -263,8 +248,8 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             useResearch,
             factCheck,
             platforms,
-            publishDate: today,
-            publishTime: now,
+            publishDate: targetDate,
+            publishTime: targetTime,
             generatedContent: updatedContent,
           }),
         })
@@ -284,14 +269,28 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         // 워커 미실행 시 5분 내 자동 처리
       }
 
-      setSaveMessage({ type: 'success', text: '발행 예약이 완료되었습니다! 마케팅 워커가 곧 발행합니다.' })
+      const msg = isImmediate
+        ? '바로 발행이 시작됩니다! 마케팅 워커가 곧 발행합니다.'
+        : `${targetDate} ${targetTime}에 발행이 예약되었습니다.`
+      setSaveMessage({ type: 'success', text: msg })
       setTimeout(() => {
         onComplete ? onComplete() : onClose()
       }, 1500)
     } catch (err) {
-      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : '발행 예약에 실패했습니다.' })
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : '발행에 실패했습니다.' })
       setIsScheduling(false)
     }
+  }
+
+  const handlePublishNow = () => {
+    const today = new Date().toISOString().split('T')[0]
+    const now = new Date().toTimeString().slice(0, 5)
+    handlePublish(today, now, true)
+  }
+
+  const handleScheduleConfirm = (date: string, time: string) => {
+    setShowScheduleModal(false)
+    handlePublish(date, time, false)
   }
 
   // ── 해시태그 관리 ──
@@ -405,6 +404,118 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             <span className="text-xs text-slate-400 ml-2">생성된 글의 사실 여부를 검증</span>
           </div>
         </label>
+      </div>
+
+      {/* 이미지 스타일 옵션 */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+        <h2 className="text-lg font-semibold text-slate-800">이미지 옵션</h2>
+        <p className="text-xs text-slate-400">이미지 개수와 스타일을 설정하세요</p>
+
+        {/* 이미지 개수 */}
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-slate-700 min-w-[80px]">이미지 개수</label>
+          <div className="flex items-center gap-2">
+            {[0, 1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setImageCount(n)}
+                className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                  imageCount === n
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-slate-400">{imageCount === 0 ? '이미지 없이 글만 생성' : `최대 ${imageCount}개`}</span>
+        </div>
+
+        {imageCount > 0 && <hr className="border-slate-100" />}
+        {imageCount > 0 && (Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
+          ([value, { label, description }]) => (
+            <label key={value} className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="imageStyle"
+                value={value}
+                checked={imageStyle === value}
+                onChange={() => {
+                  setImageStyle(value)
+                  if (value !== 'use_own_image') {
+                    setReferenceImageBase64('')
+                    setReferenceImagePreview('')
+                  }
+                }}
+                className="mt-0.5 w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500"
+              />
+              <div>
+                <span className="text-sm font-medium text-slate-700">{label}</span>
+                <span className="text-xs text-slate-400 ml-2">{description}</span>
+              </div>
+            </label>
+          )
+        )}
+
+        {/* 참조 이미지 업로드 (본인 이미지 활용 선택 시) */}
+        {imageCount > 0 && imageStyle === 'use_own_image' && (
+          <div className="ml-7 mt-2 space-y-2">
+            <label className="block text-xs font-medium text-slate-600">참조 이미지 업로드</label>
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors text-xs font-medium">
+                <PhotoIcon className="h-4 w-4" />
+                이미지 선택
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    if (file.size > 5 * 1024 * 1024) {
+                      setError('이미지 파일은 5MB 이하만 업로드 가능합니다.')
+                      return
+                    }
+                    const reader = new FileReader()
+                    reader.onload = () => {
+                      const result = reader.result as string
+                      setReferenceImagePreview(result)
+                      // data:image/...;base64, 접두사 제거하여 순수 base64만 저장
+                      const base64 = result.split(',')[1] || ''
+                      setReferenceImageBase64(base64)
+                    }
+                    reader.readAsDataURL(file)
+                  }}
+                />
+              </label>
+              {referenceImagePreview && (
+                <button
+                  onClick={() => {
+                    setReferenceImageBase64('')
+                    setReferenceImagePreview('')
+                  }}
+                  className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                >
+                  삭제
+                </button>
+              )}
+            </div>
+            {referenceImagePreview && (
+              <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200">
+                <img
+                  src={referenceImagePreview}
+                  alt="참조 이미지"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            {imageStyle === 'use_own_image' && !referenceImageBase64 && (
+              <p className="text-xs text-amber-500">인물 이미지를 업로드해주세요</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 배포 플랫폼 */}
@@ -597,13 +708,83 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             </div>
           </div>
 
+          {/* 플랫폼별 생성 결과 */}
+          {generatedResult.platformContent && (
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-slate-500">플랫폼별 글</label>
+
+              {generatedResult.platformContent.instagram && (
+                <div className="border border-pink-200 bg-pink-50/50 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-pink-600">Instagram</span>
+                    <span className="text-[10px] text-pink-400">1:1 정사각형</span>
+                  </div>
+                  {generatedResult.platformContent.instagram.images?.length > 0 && generatedResult.platformContent.instagram.images[0]?.path && (
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {generatedResult.platformContent.instagram.images.filter(img => img.path).map((img, i) => (
+                        <img key={i} src={img.path} alt={img.fileName} className="w-24 h-24 rounded-lg object-cover border border-pink-200 flex-shrink-0" />
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-slate-700 whitespace-pre-wrap leading-5">
+                    {generatedResult.platformContent.instagram.caption}
+                  </p>
+                  {generatedResult.platformContent.instagram.hashtags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {generatedResult.platformContent.instagram.hashtags.map((tag, i) => (
+                        <span key={i} className="text-[10px] text-pink-500">#{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {generatedResult.platformContent.facebook && (
+                <div className="border border-blue-200 bg-blue-50/50 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-blue-600">Facebook</span>
+                    <span className="text-[10px] text-blue-400">가로형 OG</span>
+                  </div>
+                  {generatedResult.platformContent.facebook.images && generatedResult.platformContent.facebook.images.length > 0 && generatedResult.platformContent.facebook.images[0]?.path && (
+                    <img src={generatedResult.platformContent.facebook.images[0].path} alt="Facebook" className="w-full h-32 rounded-lg object-cover border border-blue-200" />
+                  )}
+                  <p className="text-xs text-slate-700 whitespace-pre-wrap leading-5">
+                    {generatedResult.platformContent.facebook.message}
+                  </p>
+                  {generatedResult.platformContent.facebook.hashtags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {generatedResult.platformContent.facebook.hashtags.map((tag, i) => (
+                        <span key={i} className="text-[10px] text-blue-500">#{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {generatedResult.platformContent.threads && (
+                <div className="border border-slate-200 bg-slate-50/50 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-slate-600">Threads</span>
+                    <span className="text-[10px] text-slate-400">미니멀</span>
+                  </div>
+                  {generatedResult.platformContent.threads.image?.path && (
+                    <img src={generatedResult.platformContent.threads.image.path} alt="Threads" className="w-24 h-24 rounded-lg object-cover border border-slate-200" />
+                  )}
+                  <p className="text-xs text-slate-700 whitespace-pre-wrap leading-5">
+                    {generatedResult.platformContent.threads.text}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 액션 버튼 */}
-          <div className="flex gap-3 pt-2">
+          <div className="space-y-3 pt-2">
             {savedItemId && hasUnsavedChanges && (
               <button
                 onClick={handleSaveDraft}
                 disabled={isSavingDraft}
-                className="flex items-center justify-center gap-2 px-4 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium disabled:opacity-60"
+                className="flex items-center justify-center gap-2 px-4 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium disabled:opacity-60 w-full"
               >
                 {isSavingDraft ? (
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -616,21 +797,39 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                 임시 저장
               </button>
             )}
-            <button
-              onClick={handleSchedule}
-              disabled={isScheduling || !generatedResult}
-              className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
-            >
-              {isScheduling ? (
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              ) : (
-                <DocumentCheckIcon className="h-4 w-4" />
-              )}
-              발행 예약
-            </button>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handlePublishNow}
+                disabled={isScheduling || !generatedResult}
+                className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+              >
+                {isScheduling ? (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <DocumentCheckIcon className="h-4 w-4" />
+                )}
+                바로 발행
+              </button>
+              <button
+                onClick={() => setShowScheduleModal(true)}
+                disabled={isScheduling || !generatedResult}
+                className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <CalendarDaysIcon className="h-4 w-4" />
+                예약 발행
+              </button>
+            </div>
+
+            <ScheduleModal
+              isOpen={showScheduleModal}
+              onClose={() => setShowScheduleModal(false)}
+              onConfirm={handleScheduleConfirm}
+              isLoading={isScheduling}
+            />
           </div>
         </div>
       )}

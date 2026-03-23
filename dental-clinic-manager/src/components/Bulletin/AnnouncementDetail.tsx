@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   ArrowLeft,
   Calendar,
@@ -8,10 +9,12 @@ import {
   Trash2,
   Pin,
   AlertCircle,
+  Share2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { Announcement } from '@/types/bulletin'
 import { ANNOUNCEMENT_CATEGORY_LABELS } from '@/types/bulletin'
+import ShareDialog from '@/components/shared/ShareDialog'
 
 interface AnnouncementDetailProps {
   announcement: Announcement
@@ -26,6 +29,7 @@ export default function AnnouncementDetail({
   onEdit,
   onDelete,
 }: AnnouncementDetailProps) {
+  const [showShareDialog, setShowShareDialog] = useState(false)
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ko-KR', {
       year: 'numeric',
@@ -88,20 +92,21 @@ export default function AnnouncementDetail({
                 <Eye className="w-3 h-3" />{announcement.view_count}
               </span>
             </div>
-            {(onEdit || onDelete) && (
-              <div className="flex items-center gap-1">
-                {onEdit && (
-                  <Button variant="ghost" size="sm" onClick={onEdit} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
-                    <Pencil className="w-3.5 h-3.5 mr-1" />수정
-                  </Button>
-                )}
-                {onDelete && (
-                  <Button variant="ghost" size="sm" onClick={onDelete} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
-                    <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
-                  </Button>
-                )}
-              </div>
-            )}
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setShowShareDialog(true)} className="text-gray-400 hover:text-blue-500 hidden sm:inline-flex">
+                <Share2 className="w-3.5 h-3.5 mr-1" />공유
+              </Button>
+              {onEdit && (
+                <Button variant="ghost" size="sm" onClick={onEdit} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
+                  <Pencil className="w-3.5 h-3.5 mr-1" />수정
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="ghost" size="sm" onClick={onDelete} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
+                </Button>
+              )}
+            </div>
           </div>
           {/* 일정 정보 */}
           {announcement.start_date && (
@@ -138,6 +143,13 @@ export default function AnnouncementDetail({
           <ArrowLeft className="w-4 h-4" />
           목록으로
         </button>
+        <button
+          onClick={() => setShowShareDialog(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+        >
+          <Share2 className="w-4 h-4" />
+          공유
+        </button>
         {onEdit && (
           <button
             onClick={onEdit}
@@ -157,6 +169,14 @@ export default function AnnouncementDetail({
           </button>
         )}
       </div>
+
+      {/* 공유 다이얼로그 */}
+      <ShareDialog
+        isOpen={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        sourceType="announcement"
+        sourceId={announcement.id}
+      />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Send, ChevronDown, ChevronUp, Power, PowerOff, Loader2, AlertCircle, Users } from 'lucide-react'
+import { Plus, Send, ChevronDown, ChevronUp, Power, PowerOff, Loader2, AlertCircle, Users, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { telegramGroupService } from '@/lib/telegramService'
 import { useAuth } from '@/contexts/AuthContext'
@@ -43,6 +43,17 @@ export default function AdminTelegramManager() {
       setError(updateError)
     } else {
       setGroups(prev => prev.map(g => g.id === group.id ? { ...g, is_active: newActive } : g))
+    }
+  }
+
+  // 일일 요약 활성/비활성 토글
+  const handleToggleSummary = async (group: TelegramGroup) => {
+    const newValue = !group.summary_enabled
+    const { error: updateError } = await telegramGroupService.updateGroup(group.id, { summary_enabled: newValue })
+    if (updateError) {
+      setError(updateError)
+    } else {
+      setGroups(prev => prev.map(g => g.id === group.id ? { ...g, summary_enabled: newValue } : g))
     }
   }
 
@@ -137,11 +148,21 @@ export default function AdminTelegramManager() {
                       <p className="text-xs text-gray-400">
                         {group.chat_title} · /{group.board_slug}
                         {!group.is_active && <span className="text-red-400 ml-1">(비활성)</span>}
+                        {group.is_active && group.summary_enabled && <span className="text-amber-500 ml-1">(일일요약 ON)</span>}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleSummary(group)}
+                      className={`h-7 w-7 p-0 ${group.summary_enabled ? 'text-amber-500' : 'text-gray-300'}`}
+                      title={group.summary_enabled ? '일일요약 비활성화' : '일일요약 활성화'}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"

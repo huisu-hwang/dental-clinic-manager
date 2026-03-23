@@ -12,7 +12,7 @@ async function getCredentials(clinicId) {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('hometax_credentials')
-        .select('encrypted_login_id, encrypted_login_pw, business_number')
+        .select('hometax_user_id, encrypted_password, encrypted_resident_number, business_number')
         .eq('clinic_id', clinicId)
         .single();
     if (error || !data) {
@@ -21,8 +21,9 @@ async function getCredentials(clinicId) {
     }
     try {
         return {
-            login_id: decryptFromJson(data.encrypted_login_id),
-            login_pw: decryptFromJson(data.encrypted_login_pw),
+            login_id: data.hometax_user_id,
+            login_pw: decryptFromJson(data.encrypted_password),
+            resident_number: data.encrypted_resident_number ? decryptFromJson(data.encrypted_resident_number) : null,
             business_number: data.business_number,
         };
     }
@@ -51,7 +52,7 @@ async function recordLoginResult(clinicId, success, errorMessage) {
         .eq('clinic_id', clinicId);
 }
 /** 홈택스 ID/PW 로그인 수행 */
-async function performLogin(page, loginId, loginPw) {
+async function performLogin(page, loginId, loginPw, residentNumber) {
     try {
         // 1. 홈택스 메인 접속
         log.info('홈택스 메인 페이지 접속');
@@ -89,6 +90,26 @@ async function performLogin(page, loginId, loginPw) {
         await pwInput.click();
         await pwInput.fill('');
         await page.keyboard.type(loginPw, { delay: 50 });
+        // 5.5. 주민등록번호 입력 (생년월일 6자리 + 뒷자리 첫 번째 1자리)
+        if (residentNumber) {
+            log.info('주민등록번호 입력');
+            const birthDate = residentNumber.substring(0, 6);
+            const genderDigit = residentNumber.substring(6, 7);
+            // 생년월일 입력 필드
+            const birthInput = await page.$('input[id*="iptSrnoBirth"], input[name*="srnoBirth"], input[id*="birth"], input[placeholder*="생년월일"]');
+            if (birthInput) {
+                await birthInput.click();
+                await birthInput.fill('');
+                await page.keyboard.type(birthDate, { delay: 50 });
+            }
+            // 뒷자리 첫 번째 자리 입력 필드
+            const genderInput = await page.$('input[id*="iptSrnoGndr"], input[name*="srnoGndr"], input[id*="gender"], input[placeholder*="뒷자리"]');
+            if (genderInput) {
+                await genderInput.click();
+                await genderInput.fill('');
+                await page.keyboard.type(genderDigit, { delay: 50 });
+            }
+        }
         // 6. 로그인 버튼 클릭
         log.info('로그인 시도');
         const submitBtn = await page.$('button:has-text("로그인"), input[type="submit"], .btn_login, #btn_login');
@@ -211,7 +232,7 @@ export async function loginToHometax(clinicId) {
     const page = await createPage(context);
     try {
         await withRetry(async () => {
-            const loginResult = await performLogin(page, credentials.login_id, credentials.login_pw);
+            const loginResult = await performLogin(page, credentials.login_id, credentials.login_pw, credentials.resident_number);
             if (!loginResult.success) {
                 // CAPTCHA나 추가인증은 재시도 불가
                 if (loginResult.errorCode === 'CAPTCHA_REQUIRED' || loginResult.errorCode === 'ADDITIONAL_AUTH') {

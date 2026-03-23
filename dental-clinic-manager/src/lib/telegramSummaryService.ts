@@ -53,7 +53,7 @@ ${conversationText}
 - 다른 마크다운이나 코드 블록 없이 순수 HTML만 출력하세요.`
 
   const response = await genAI.models.generateContent({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     config: {
       temperature: 0.7,

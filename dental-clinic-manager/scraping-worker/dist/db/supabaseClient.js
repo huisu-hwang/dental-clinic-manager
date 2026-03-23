@@ -44,6 +44,7 @@ export async function registerWorker() {
         id: config.worker.id,
         hostname: (await import('os')).hostname(),
         status: 'idle',
+        stop_requested: false,
         last_heartbeat: new Date().toISOString(),
         started_at: new Date().toISOString(),
         metadata: {
@@ -58,7 +59,7 @@ export async function registerWorker() {
     }
     log.info({ workerId: config.worker.id }, '워커 등록 완료');
 }
-/** 워커 heartbeat 업데이트 */
+/** 워커 heartbeat 업데이트. stop_requested=true이면 true 반환 */
 export async function updateHeartbeat(status = 'idle', currentJobId) {
     const supabase = getSupabaseClient();
     const { error } = await supabase
@@ -71,7 +72,15 @@ export async function updateHeartbeat(status = 'idle', currentJobId) {
         .eq('id', config.worker.id);
     if (error) {
         log.warn({ error }, 'heartbeat 업데이트 실패');
+        return false;
     }
+    // stop_requested 플래그 확인
+    const { data } = await supabase
+        .from('scraping_workers')
+        .select('stop_requested')
+        .eq('id', config.worker.id)
+        .single();
+    return data?.stop_requested === true;
 }
 /** 워커 상태를 offline으로 변경 */
 export async function deregisterWorker() {

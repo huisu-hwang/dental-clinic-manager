@@ -15,11 +15,11 @@ export interface ProtocolLoginResult {
 }
 
 /** DB에서 클리닉의 홈택스 인증정보 복호화 조회 */
-async function getCredentials(clinicId: string): Promise<{ login_id: string; login_pw: string; business_number: string } | null> {
+async function getCredentials(clinicId: string): Promise<{ login_id: string; login_pw: string; resident_number: string | null; business_number: string } | null> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('hometax_credentials')
-    .select('encrypted_login_id, encrypted_login_pw, business_number')
+    .select('hometax_user_id, encrypted_password, encrypted_resident_number, business_number')
     .eq('clinic_id', clinicId)
     .single();
 
@@ -30,8 +30,9 @@ async function getCredentials(clinicId: string): Promise<{ login_id: string; log
 
   try {
     return {
-      login_id: decryptFromJson(data.encrypted_login_id),
-      login_pw: decryptFromJson(data.encrypted_login_pw),
+      login_id: data.hometax_user_id,
+      login_pw: decryptFromJson(data.encrypted_password),
+      resident_number: data.encrypted_resident_number ? decryptFromJson(data.encrypted_resident_number) : null,
       business_number: data.business_number,
     };
   } catch (err) {
@@ -62,22 +63,30 @@ async function recordLoginResult(clinicId: string, success: boolean, errorMessag
 }
 
 /** HTTP 기반 홈택스 로그인 수행 */
-async function performHttpLogin(session: HttpSession, loginId: string, loginPw: string): Promise<{ success: boolean; errorMessage?: string; errorCode?: ProtocolLoginResult['errorCode'] }> {
+async function performHttpLogin(session: HttpSession, loginId: string, loginPw: string, residentNumber?: string | null): Promise<{ success: boolean; errorMessage?: string; errorCode?: ProtocolLoginResult['errorCode'] }> {
   try {
     // 1. 초기 세션 획득 (WMONID 등 쿠키)
     await initSession(session);
 
-    // 2. 로그인 POST 요청
+    // 2. 로그인 POST 요청 (주민등록번호 포함)
     log.info('HTTP 로그인 시도');
+    const loginParams: Record<string, string> = {
+      userId: loginId,
+      userPw: loginPw,
+      loginType: 'ID',
+      ssoLoginYN: 'N',
+    };
+
+    // 주민등록번호가 있으면 생년월일 + 성별코드 추가
+    if (residentNumber) {
+      loginParams.srnoBirth = residentNumber.substring(0, 6);
+      loginParams.srnoGndr = residentNumber.substring(6, 7);
+    }
+
     const loginRes = await httpPost(
       session,
       '/pubcLogin/Login.do',
-      {
-        userId: loginId,
-        userPw: loginPw,
-        loginType: 'ID',
-        ssoLoginYN: 'N',
-      },
+      loginParams,
       'form',
     );
 
@@ -168,7 +177,7 @@ export async function loginViaProtocol(clinicId: string): Promise<ProtocolLoginR
   try {
     await withRetry(
       async () => {
-        const result = await performHttpLogin(session, credentials.login_id, credentials.login_pw);
+        const result = await performHttpLogin(session, credentials.login_id, credentials.login_pw, credentials.resident_number);
         if (!result.success) {
           if (result.errorCode === 'CAPTCHA_REQUIRED' || result.errorCode === 'ADDITIONAL_AUTH') {
             throw Object.assign(new Error(result.errorMessage), { noRetry: true });
