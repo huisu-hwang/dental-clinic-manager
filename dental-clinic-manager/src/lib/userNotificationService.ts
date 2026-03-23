@@ -531,6 +531,75 @@ export const userNotificationService = {
     })
     return { success: !!result.data, error: result.error }
   },
+
+  // =====================================================
+  // 프로토콜 검토 관련 알림 헬퍼 함수
+  // =====================================================
+
+  /**
+   * 프로토콜 검토 요청 시 대표원장에게 알림
+   */
+  async notifyProtocolReviewRequested(
+    ownerIds: string[],
+    requesterName: string,
+    protocolTitle: string,
+    reviewId: string,
+    protocolId: string
+  ): Promise<{ success: boolean; error: string | null }> {
+    return this.createNotificationForUsers(ownerIds, {
+      type: 'protocol_review_requested',
+      title: '프로토콜 검토 요청',
+      content: `${requesterName}님이 "${protocolTitle}" 프로토콜의 검토를 요청했습니다`,
+      link: `/management?tab=protocol&review=${protocolId}`,
+      reference_type: 'protocol_review',
+      reference_id: reviewId,
+    })
+  },
+
+  /**
+   * 프로토콜 검토 승인 시 요청자에게 알림
+   */
+  async notifyProtocolReviewApproved(
+    requesterId: string,
+    protocolTitle: string,
+    reviewId: string,
+    protocolId: string
+  ): Promise<{ success: boolean; error: string | null }> {
+    const result = await this.createNotification({
+      user_id: requesterId,
+      type: 'protocol_review_approved',
+      title: '프로토콜 검토 승인',
+      content: `"${protocolTitle}" 프로토콜이 승인되어 활성화되었습니다`,
+      link: `/management?tab=protocol&view=${protocolId}`,
+      reference_type: 'protocol_review',
+      reference_id: reviewId,
+    })
+    return { success: !!result.data, error: result.error }
+  },
+
+  /**
+   * 프로토콜 검토 반려 시 요청자에게 알림
+   */
+  async notifyProtocolReviewRejected(
+    requesterId: string,
+    protocolTitle: string,
+    reviewId: string,
+    protocolId: string,
+    reason?: string
+  ): Promise<{ success: boolean; error: string | null }> {
+    const result = await this.createNotification({
+      user_id: requesterId,
+      type: 'protocol_review_rejected',
+      title: '프로토콜 검토 반려',
+      content: reason
+        ? `"${protocolTitle}" 프로토콜이 반려되었습니다. 사유: ${reason}`
+        : `"${protocolTitle}" 프로토콜이 반려되었습니다`,
+      link: `/management?tab=protocol&view=${protocolId}`,
+      reference_type: 'protocol_review',
+      reference_id: reviewId,
+    })
+    return { success: !!result.data, error: result.error }
+  },
 }
 
 export default userNotificationService

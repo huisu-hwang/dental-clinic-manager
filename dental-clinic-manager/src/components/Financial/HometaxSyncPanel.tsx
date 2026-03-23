@@ -202,12 +202,13 @@ export default function HometaxSyncPanel({
       const data = await res.json()
 
       if (data.success) {
-        setCredentials(data.data)
         setShowCredForm(false)
         setLoginId('')
         setLoginPw('')
+        setBizNo('')
         setResidentNumber('')
         setSuccess('인증정보가 저장되었습니다.')
+        await loadCredentials()
       } else {
         setError(data.error || '저장에 실패했습니다.')
       }

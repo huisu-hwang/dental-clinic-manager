@@ -10,7 +10,7 @@ export async function POST() {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    const workerUrl = process.env.MARKETING_WORKER_URL || 'http://localhost:3001';
+    const workerUrl = process.env.MARKETING_WORKER_URL || 'http://localhost:4001';
 
     try {
       const res = await fetch(`${workerUrl}/trigger`, {

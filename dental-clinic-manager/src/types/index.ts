@@ -239,7 +239,7 @@ export interface Protocol {
   title: string;
   category_id?: string;
   category?: ProtocolCategory;
-  status: 'draft' | 'active' | 'archived';
+  status: 'draft' | 'active' | 'archived' | 'pending_review';
   current_version_id?: string;
   currentVersion?: ProtocolVersion;
   tags: string[];
@@ -252,6 +252,44 @@ export interface Protocol {
   created_at: string;
   updated_at: string;
   deleted_at?: string;
+}
+
+// 프로토콜 검토 요청
+export interface ProtocolReview {
+  id: string;
+  clinic_id: string;
+  protocol_id: string;
+  version_id: string;
+  requested_by: string;
+  reviewer_id?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  request_message?: string;
+  review_message?: string;
+  previous_version_id?: string;
+  previous_status?: string;
+  created_at: string;
+  reviewed_at?: string;
+  updated_at: string;
+  // 조인된 정보
+  requested_by_user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  reviewer_user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  protocol?: {
+    id: string;
+    title: string;
+    status: string;
+  };
+  version?: {
+    id: string;
+    version_number: string;
+  };
 }
 
 export interface ProtocolVersion {
@@ -276,7 +314,7 @@ export interface ProtocolFormData {
   category_id?: string;
   clinic_id?: string;
   content: string;
-  status: 'draft' | 'active' | 'archived';
+  status: 'draft' | 'active' | 'archived' | 'pending_review';
   tags: string[];
   change_summary?: string;
   change_type?: 'major' | 'minor';
@@ -320,7 +358,7 @@ export interface ProtocolListItem {
     name: string;
     color: string;
   };
-  status: 'draft' | 'active' | 'archived';
+  status: 'draft' | 'active' | 'archived' | 'pending_review';
   currentVersion: {
     version_number: string;
     updated_at: string;

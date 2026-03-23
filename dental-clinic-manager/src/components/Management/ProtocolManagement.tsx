@@ -558,7 +558,8 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
     const labels: Record<string, string> = {
       draft: '작성중',
       active: '활성',
-      archived: '보관됨'
+      archived: '보관됨',
+      pending_review: '검토 대기'
     }
     return labels[status] || status
   }
@@ -567,7 +568,8 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
     const classes: Record<string, string> = {
       draft: 'bg-gray-100 text-gray-800',
       active: 'bg-green-100 text-green-800',
-      archived: 'bg-slate-100 text-slate-600'
+      archived: 'bg-slate-100 text-slate-600',
+      pending_review: 'bg-amber-100 text-amber-800'
     }
     return classes[status] || 'bg-gray-100 text-gray-800'
   }
@@ -870,6 +872,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                   <option value="all">모든 상태</option>
                   <option value="active">활성</option>
                   <option value="draft">작성중</option>
+                  <option value="pending_review">검토 대기</option>
                   <option value="archived">보관됨</option>
                 </select>
               </div>

@@ -41,7 +41,7 @@ export const CONFIG = {
 
   // 워커
   worker: {
-    port: parseInt(process.env.MARKETING_WORKER_PORT || '3001', 10),
+    port: parseInt(process.env.MARKETING_WORKER_PORT || '4001', 10),
     cronInterval: '*/5 * * * *', // 매 5분
   },
 } as const;

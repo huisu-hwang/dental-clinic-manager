@@ -12,6 +12,14 @@ export type NoticeTemplate = 'holiday' | 'schedule' | 'event' | 'equipment' | 's
 
 export type ImageStyleOption = 'allow_person' | 'use_own_image' | 'infographic_only';
 
+export type ImageVisualStyle =
+  | 'realistic'
+  | 'pixar_3d'
+  | 'ghibli'
+  | 'flat_illustration'
+  | 'watercolor'
+  | 'minimal_line';
+
 export type PromptCategory = 'content' | 'image' | 'transform' | 'quality';
 
 export type CalendarStatus = 'draft' | 'pending_approval' | 'approved' | 'in_progress' | 'completed';
@@ -179,6 +187,7 @@ export interface ContentGenerateOptions {
   factCheck: boolean;
   platforms: PlatformOptions;
   imageStyle?: ImageStyleOption;
+  imageVisualStyle?: ImageVisualStyle;
   imageCount?: number;
   referenceImageBase64?: string;
   schedule: {
@@ -341,6 +350,15 @@ export const IMAGE_STYLE_LABELS: Record<ImageStyleOption, { label: string; descr
   allow_person: { label: '인물 포함', description: '이미지에 인물(환자, 의사 등) 생성 허용' },
   use_own_image: { label: '본인 이미지 활용', description: '인물 생성 시 업로드한 참조 이미지 활용' },
   infographic_only: { label: '인포그래픽만', description: '도표, 다이어그램 등 정보 시각화 이미지만 생성' },
+};
+
+export const IMAGE_VISUAL_STYLE_LABELS: Record<ImageVisualStyle, { label: string; description: string; emoji: string }> = {
+  realistic: { label: '사실적 사진', description: '실제 사진처럼 리얼한 스타일', emoji: '📷' },
+  pixar_3d: { label: '3D 캐릭터', description: '픽사/디즈니풍 귀여운 3D 렌더링', emoji: '🎬' },
+  ghibli: { label: '지브리풍', description: '스튜디오 지브리 스타일 따뜻한 수채화', emoji: '🎨' },
+  flat_illustration: { label: '플랫 일러스트', description: '깔끔한 벡터 스타일 일러스트', emoji: '✏️' },
+  watercolor: { label: '수채화', description: '부드러운 수채화 텍스처 아트', emoji: '🖌️' },
+  minimal_line: { label: '미니멀 라인아트', description: '심플한 선화 스타일', emoji: '〰️' },
 };
 
 // ─── 금지 키워드 (네이버 SEO) ───

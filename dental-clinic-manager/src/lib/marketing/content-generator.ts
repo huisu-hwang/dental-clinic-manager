@@ -51,16 +51,16 @@ export async function generateContent(
   if (imgCount === 0) {
     imageStyleInstruction = '\n\n## 이미지 마커 지침\n[IMAGE:] 마커를 사용하지 마세요. 텍스트만 작성하세요.';
   } else {
-    const countNote = imgCount !== 3 ? `[IMAGE:] 마커를 정확히 ${imgCount}개 삽입하세요. ` : '';
+    const countNote = `본문에 [IMAGE:] 마커를 정확히 ${imgCount}개 삽입하세요. 글 구조 예시의 이미지 개수와 관계없이 반드시 ${imgCount}개를 삽입해야 합니다. `;
+    let styleNote = '';
     if (options.imageStyle === 'allow_person') {
-      imageStyleInstruction = `\n\n## 이미지 마커 지침\n${countNote}[IMAGE:] 마커 작성 시 사람(환자, 치과의사 등)이 포함된 장면을 자연스럽게 묘사하세요. 예: "치과의사가 환자에게 올바른 칫솔질 방법을 설명하는 장면"`;
+      styleNote = `[IMAGE:] 마커 작성 시 사람(환자, 치과의사 등)이 포함된 장면을 자연스럽게 묘사하세요. 예: "치과의사가 환자에게 올바른 칫솔질 방법을 설명하는 장면"`;
     } else if (options.imageStyle === 'use_own_image') {
-      imageStyleInstruction = `\n\n## 이미지 마커 지침\n${countNote}[IMAGE:] 마커 작성 시 치과 원장/직원이 등장하는 장면을 묘사하세요. 예: "원장님이 치아 모형을 들고 임플란트 구조를 설명하는 장면"`;
+      styleNote = `[IMAGE:] 마커 작성 시 치과 원장/직원이 등장하는 장면을 묘사하세요. 예: "원장님이 치아 모형을 들고 임플란트 구조를 설명하는 장면"`;
     } else if (options.imageStyle === 'infographic_only') {
-      imageStyleInstruction = `\n\n## 이미지 마커 지침\n${countNote}[IMAGE:] 마커 작성 시 사람을 포함하지 마세요. 인포그래픽, 도표, 다이어그램, 일러스트, 아이콘 등 정보 시각화 중심으로 묘사하세요. 예: "스케일링 전후 치아 상태를 비교하는 인포그래픽 다이어그램"`;
-    } else if (countNote) {
-      imageStyleInstruction = `\n\n## 이미지 마커 지침\n${countNote}`;
+      styleNote = `[IMAGE:] 마커 작성 시 사람을 포함하지 마세요. 인포그래픽, 도표, 다이어그램, 일러스트, 아이콘 등 정보 시각화 중심으로 묘사하세요. 예: "스케일링 전후 치아 상태를 비교하는 인포그래픽 다이어그램"`;
     }
+    imageStyleInstruction = `\n\n## 이미지 마커 지침 (필수)\n${countNote}${styleNote}`;
   }
 
   // 3. 변수 치환

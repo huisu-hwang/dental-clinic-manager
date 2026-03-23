@@ -1,7 +1,7 @@
 import { createClient } from './supabase/client'
 import { ensureConnection } from './supabase/connectionCheck'
 import { applyClinicFilter, ensureClinicIds, backfillClinicIds } from './clinicScope'
-import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftCategory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData, CashRegisterRowData, ProtocolPermission, ProtocolPermissionFormData } from '@/types'
+import type { DailyReport, ConsultLog, GiftLog, HappyCallLog, ConsultRowData, GiftRowData, HappyCallRowData, GiftInventory, GiftCategory, InventoryLog, ProtocolVersion, ProtocolFormData, ProtocolStep, SpecialNotesHistory, VendorContact, VendorCategory, VendorContactFormData, VendorCategoryFormData, VendorContactImportData, CashRegisterRowData, ProtocolPermission, ProtocolPermissionFormData, ProtocolReview } from '@/types'
 import type { ClinicBranch } from '@/types/branch'
 import { mapStepsForInsert, normalizeStepsFromDb, serializeStepsToHtml } from '@/utils/protocolStepUtils'
 
@@ -4413,6 +4413,264 @@ export const dataService = {
     } catch (error: unknown) {
       console.error('[getAllProtocolPermissions] Exception:', error)
       return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // =====================================================
+  // 프로토콜 검토 요청 관리
+  // =====================================================
+
+  // 검토 요청 생성
+  async createProtocolReview(protocolId: string, versionId: string, requestMessage?: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) throw new Error('User clinic information not available')
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // 현재 프로토콜 정보 가져오기 (이전 상태 저장용)
+      const { data: protocol, error: protoErr } = await (supabase
+        .from('protocols') as any)
+        .select('status, current_version_id')
+        .eq('id', protocolId)
+        .single()
+
+      if (protoErr) throw protoErr
+
+      // 기존 pending 리뷰가 있으면 취소
+      await (supabase.from('protocol_reviews') as any)
+        .update({ status: 'rejected', review_message: '새 검토 요청으로 대체됨', reviewed_at: new Date().toISOString() })
+        .eq('protocol_id', protocolId)
+        .eq('status', 'pending')
+
+      // 검토 요청 생성
+      const { data: review, error: reviewError } = await (supabase
+        .from('protocol_reviews') as any)
+        .insert({
+          clinic_id: clinicId,
+          protocol_id: protocolId,
+          version_id: versionId,
+          requested_by: user.id,
+          status: 'pending',
+          request_message: requestMessage || null,
+          previous_version_id: protocol.current_version_id || null,
+          previous_status: protocol.status || null
+        })
+        .select()
+        .single()
+
+      if (reviewError) throw reviewError
+
+      // 프로토콜 상태를 pending_review로 변경
+      const { error: updateError } = await (supabase
+        .from('protocols') as any)
+        .update({ status: 'pending_review', updated_at: new Date().toISOString() })
+        .eq('id', protocolId)
+        .eq('clinic_id', clinicId)
+
+      if (updateError) throw updateError
+
+      return { success: true, data: review }
+    } catch (error: unknown) {
+      console.error('[createProtocolReview] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 검토 승인
+  async approveProtocolReview(reviewId: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) throw new Error('User clinic information not available')
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // 리뷰 정보 가져오기
+      const { data: review, error: fetchErr } = await (supabase
+        .from('protocol_reviews') as any)
+        .select('*')
+        .eq('id', reviewId)
+        .single()
+
+      if (fetchErr) throw fetchErr
+      if (review.status !== 'pending') throw new Error('이미 처리된 검토 요청입니다')
+
+      // 리뷰 승인 처리
+      const { error: updateReviewErr } = await (supabase
+        .from('protocol_reviews') as any)
+        .update({
+          status: 'approved',
+          reviewer_id: user.id,
+          reviewed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', reviewId)
+
+      if (updateReviewErr) throw updateReviewErr
+
+      // 프로토콜 상태를 active로 변경, current_version_id 업데이트
+      const { error: updateProtoErr } = await (supabase
+        .from('protocols') as any)
+        .update({
+          status: 'active',
+          current_version_id: review.version_id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', review.protocol_id)
+        .eq('clinic_id', clinicId)
+
+      if (updateProtoErr) throw updateProtoErr
+
+      return { success: true, data: review }
+    } catch (error: unknown) {
+      console.error('[approveProtocolReview] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 검토 반려
+  async rejectProtocolReview(reviewId: string, reviewMessage?: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) throw new Error('User clinic information not available')
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // 리뷰 정보 가져오기
+      const { data: review, error: fetchErr } = await (supabase
+        .from('protocol_reviews') as any)
+        .select('*')
+        .eq('id', reviewId)
+        .single()
+
+      if (fetchErr) throw fetchErr
+      if (review.status !== 'pending') throw new Error('이미 처리된 검토 요청입니다')
+
+      // 리뷰 반려 처리
+      const { error: updateReviewErr } = await (supabase
+        .from('protocol_reviews') as any)
+        .update({
+          status: 'rejected',
+          reviewer_id: user.id,
+          review_message: reviewMessage || null,
+          reviewed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', reviewId)
+
+      if (updateReviewErr) throw updateReviewErr
+
+      // 프로토콜 상태 복원 (이전 상태로)
+      const restoreStatus = review.previous_status || 'draft'
+      const updateData: any = {
+        status: restoreStatus,
+        updated_at: new Date().toISOString()
+      }
+      // 이전 버전이 있으면 복원
+      if (review.previous_version_id) {
+        updateData.current_version_id = review.previous_version_id
+      }
+
+      const { error: updateProtoErr } = await (supabase
+        .from('protocols') as any)
+        .update(updateData)
+        .eq('id', review.protocol_id)
+        .eq('clinic_id', clinicId)
+
+      if (updateProtoErr) throw updateProtoErr
+
+      return { success: true, data: review }
+    } catch (error: unknown) {
+      console.error('[rejectProtocolReview] Error:', error)
+      return { error: extractErrorMessage(error) }
+    }
+  },
+
+  // 프로토콜의 검토 요청 목록 조회
+  async getProtocolReviews(protocolId: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await (supabase
+        .from('protocol_reviews') as any)
+        .select(`
+          *,
+          requested_by_user:users!protocol_reviews_requested_by_fkey(id, name, email),
+          reviewer_user:users!protocol_reviews_reviewer_id_fkey(id, name, email)
+        `)
+        .eq('protocol_id', protocolId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data: data || [], error: null }
+    } catch (error: unknown) {
+      console.error('[getProtocolReviews] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  // 대기 중인 검토 요청 목록 (대표원장용)
+  async getPendingProtocolReviews() {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) throw new Error('User clinic information not available')
+
+      const { data, error } = await (supabase
+        .from('protocol_reviews') as any)
+        .select(`
+          *,
+          requested_by_user:users!protocol_reviews_requested_by_fkey(id, name, email),
+          protocol:protocols!protocol_reviews_protocol_id_fkey(id, title, status),
+          version:protocol_versions!protocol_reviews_version_id_fkey(id, version_number)
+        `)
+        .eq('clinic_id', clinicId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { data: data || [], error: null }
+    } catch (error: unknown) {
+      console.error('[getPendingProtocolReviews] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  // 클리닉의 owner(대표원장) 사용자 ID 목록 조회
+  async getClinicOwnerIds() {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) throw new Error('User clinic information not available')
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('role', 'owner')
+
+      if (error) throw error
+      return { data: (data || []).map((u: { id: string }) => u.id), error: null }
+    } catch (error: unknown) {
+      console.error('[getClinicOwnerIds] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
     }
   }
 }

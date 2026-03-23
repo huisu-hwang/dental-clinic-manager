@@ -106,9 +106,30 @@ async function publishItem(item: Record<string, unknown>): Promise<void> {
 
     // 네이버 블로그 발행
     if (platforms.naverBlog) {
+      // DB에서 플랫폼 설정 조회
+      const clinicId = (item.content_calendars as Record<string, unknown>)?.clinic_id as string;
+      const { data: platformSettings } = await supabase
+        .from('marketing_platform_settings')
+        .select('config')
+        .eq('clinic_id', clinicId)
+        .eq('platform', 'naverBlog')
+        .single();
+
+      const blogConfig = platformSettings?.config as {
+        blogId?: string;
+        naverId?: string;
+        naverPassword?: string;
+        loginCookie?: string;
+      } | null;
+
       if (!publisher) {
         publisher = new NaverBlogPublisher();
-        await publisher.init();
+        await publisher.init(blogConfig ? {
+          blogId: blogConfig.blogId || blogConfig.naverId || '',
+          naverId: blogConfig.naverId,
+          naverPassword: blogConfig.naverPassword,
+          loginCookie: blogConfig.loginCookie,
+        } : undefined);
       }
 
       const result = await publisher.publish({

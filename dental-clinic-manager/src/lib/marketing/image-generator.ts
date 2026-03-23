@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { seedDefaultPromptsIfNeeded } from './seed-prompts';
-import type { GeneratedImageMeta, ImageMarker, ImageStyleOption } from '@/types/marketing';
+import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyle } from '@/types/marketing';
 
 // ============================================
 // AI 이미지 생성 (Gemini 3.0 Flash)
@@ -26,6 +26,25 @@ function getImageStyleInstruction(imageStyle?: ImageStyleOption): string {
       return '\n\n추가 지침: 다음 참조 이미지의 인물 특징을 반영하여 치과 블로그용 이미지를 생성하세요.';
     case 'infographic_only':
       return '\n\n추가 지침: 사람이나 인물 사진을 절대 포함하지 마세요. 도표, 다이어그램, 아이콘, 일러스트 등 정보 시각화 중심으로 생성하세요.';
+    default:
+      return '';
+  }
+}
+
+function getVisualStyleInstruction(visualStyle?: ImageVisualStyle): string {
+  switch (visualStyle) {
+    case 'realistic':
+      return '\n\n시각적 스타일: 실제 DSLR 카메라로 촬영한 것처럼 사실적이고 고해상도인 사진 스타일. 자연스러운 조명, 선명한 디테일, 현실감 있는 질감과 색감.';
+    case 'pixar_3d':
+      return '\n\n시각적 스타일: 픽사/디즈니 애니메이션처럼 귀엽고 매력적인 3D 렌더링 스타일. 둥글둥글한 형태, 생동감 있는 색상, 캐릭터는 큰 눈과 친근한 표정. Pixar-style 3D rendering.';
+    case 'ghibli':
+      return '\n\n시각적 스타일: 스튜디오 지브리 애니메이션처럼 따뜻하고 감성적인 수채화풍 일러스트. 부드러운 색감, 섬세한 배경 디테일, 동화 같은 분위기. Studio Ghibli anime watercolor style.';
+    case 'flat_illustration':
+      return '\n\n시각적 스타일: 깔끔한 플랫 디자인 벡터 일러스트 스타일. 단순한 도형, 선명한 색상 블록, 그림자 최소화, 모던하고 세련된 느낌. Flat vector illustration style.';
+    case 'watercolor':
+      return '\n\n시각적 스타일: 전통 수채화 기법의 부드럽고 자연스러운 아트 스타일. 물감이 번지는 텍스처, 투명한 레이어, 따뜻하고 감성적인 색감. Traditional watercolor painting style.';
+    case 'minimal_line':
+      return '\n\n시각적 스타일: 미니멀한 라인아트 스타일. 깔끔한 단일 선, 최소한의 색상(흰 배경에 1~2색), 심플하고 세련된 느낌. Minimal single-line art style.';
     default:
       return '';
   }
@@ -73,6 +92,7 @@ export async function generateBlogImage(
   referenceImageBase64?: string,
   clinicId?: string,
   customSystemPrompt?: string,
+  imageVisualStyle?: ImageVisualStyle,
 ): Promise<{
   imageBase64: string;
   fileName: string;
@@ -97,6 +117,7 @@ export async function generateBlogImage(
 
   // 이미지 스타일 지침 추가
   fullPrompt += getImageStyleInstruction(imageStyle);
+  fullPrompt += getVisualStyleInstruction(imageVisualStyle);
 
   // 1. Gemini로 이미지 생성
   const imageBase64 = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
@@ -125,10 +146,12 @@ export async function generatePlatformImage(
   platform: SocialPlatform,
   imageStyle?: ImageStyleOption,
   referenceImageBase64?: string,
+  imageVisualStyle?: ImageVisualStyle,
 ): Promise<{ imageBase64: string; fileName: string }> {
   const platformStyle = PLATFORM_IMAGE_STYLES[platform];
   const styleInstruction = getImageStyleInstruction(imageStyle);
-  const fullPrompt = `${platformStyle}\n\n치과 블로그 주제: ${prompt}${styleInstruction}`;
+  const visualInstruction = getVisualStyleInstruction(imageVisualStyle);
+  const fullPrompt = `${platformStyle}\n\n치과 블로그 주제: ${prompt}${styleInstruction}${visualInstruction}`;
 
   const imageBase64 = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
   const fileName = await generateImageFileName(`${platform}_${prompt}`);
