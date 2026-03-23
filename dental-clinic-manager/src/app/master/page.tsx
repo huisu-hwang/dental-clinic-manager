@@ -1717,6 +1717,7 @@ function ScrapingWorkerPanel() {
 function WorkerPanel() {
   const [status, setStatus] = useState<{
     workerOnline: boolean
+    supervisorOnline: boolean
     workerUrl: string
     pendingCount: number
     publishedTodayCount: number
@@ -1945,7 +1946,7 @@ function WorkerPanel() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        워커 시작 중... (약 5초 소요)
+                        워커 시작 중... (약 10초 소요)
                       </>
                     ) : (
                       <>
@@ -1956,12 +1957,35 @@ function WorkerPanel() {
                       </>
                     )}
                   </button>
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
-                    <p className="font-medium text-amber-800 mb-2">수동 시작 방법 (버튼이 작동하지 않을 경우)</p>
-                    <code className="block bg-amber-100 text-amber-900 px-3 py-2 rounded-lg text-xs font-mono">
-                      cd marketing-worker && npm run dev
-                    </code>
+
+                  {/* Supervisor 상태 */}
+                  <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm ${
+                    status.supervisorOnline
+                      ? 'bg-blue-50 border-blue-200 text-blue-700'
+                      : 'bg-gray-50 border-gray-200 text-gray-500'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full ${
+                      status.supervisorOnline ? 'bg-blue-500 animate-pulse' : 'bg-gray-400'
+                    }`} />
+                    <span className="font-medium">
+                      Supervisor: {status.supervisorOnline ? '온라인' : '오프라인'}
+                    </span>
+                    {!status.supervisorOnline && (
+                      <span className="text-xs text-gray-400 ml-auto">워커 원격 시작 불가</span>
+                    )}
                   </div>
+
+                  {!status.supervisorOnline && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                      <p className="font-medium text-amber-800 mb-2">Supervisor 시작 방법</p>
+                      <code className="block bg-amber-100 text-amber-900 px-3 py-2 rounded-lg text-xs font-mono">
+                        cd marketing-worker && npm run supervisor
+                      </code>
+                      <p className="text-amber-600 text-xs mt-2">
+                        pm2로 상시 실행: pm2 start --name marketing-supervisor -- npm run supervisor
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

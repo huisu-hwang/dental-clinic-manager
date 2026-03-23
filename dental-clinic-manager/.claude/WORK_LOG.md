@@ -10,6 +10,30 @@
 
 ---
 
+## 2026-03-23 [기능 개발] 마케팅 워커 DB 시그널링 원격 제어 구현
+
+**키워드:** #마케팅워커 #마스터페이지 #DB시그널링 #Supervisor #Watchdog
+
+### 📋 작업 내용
+1. 마케팅 워커 시작 버튼 `action: 'start'` 핸들러 누락 수정
+2. Vercel(서버리스)에서 `child_process.spawn` 불가 → DB 시그널링 방식으로 전환
+
+### 🐛 문제
+- 마스터 계정에서 마케팅 워커 "워커 시작" 버튼이 동작하지 않음
+- Vercel 배포 환경에서는 로컬 프로세스 실행이 원천 불가능
+
+### ✅ 해결 방법
+- **DB 시그널링 패턴** 도입 (스크래핑 워커 watchdog 패턴 참고)
+- `marketing_worker_control` 테이블 생성
+- `marketing-worker/supervisor.ts` 생성 (Mac mini에서 pm2로 상시 실행, 10초 폴링)
+- API route를 DB 시그널링 방식으로 전면 수정
+- 프론트엔드에 Supervisor 온라인 상태 표시 추가
+
+### 🧪 테스트 결과
+- 빌드 성공 (`npm run build`)
+
+---
+
 ## 2026-03-09 [버그 수정] 리콜 관리 마지막 연락 기록 및 일일 활동 카운트 버그 수정
 
 **키워드:** #리콜관리 #마지막연락 #일일활동기록 #KST타임존 #낙관적업데이트 #recall_datetime

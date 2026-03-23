@@ -24,7 +24,7 @@ export async function GET() {
     const user = await checkMasterAuth();
     if (!user) return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
 
-    // 1. 워커 헬스 체크
+    // 1. 워커 헬스 체크 (HTTP 직접 + DB 상태 병행)
     let workerOnline = false;
     try {
       const res = await fetch(`${WORKER_URL}/health`, {
@@ -35,8 +35,9 @@ export async function GET() {
       workerOnline = false;
     }
 
-    // 2. 예약된/대기 중인 글 수 조회
+    // 2. DB에서 supervisor/워커 상태 조회
     const admin = getSupabaseAdmin();
+    let supervisorOnline = false;
     let pendingCount = 0;
     let publishedTodayCount = 0;
     let recentLogs: {
@@ -51,6 +52,26 @@ export async function GET() {
     }[] = [];
 
     if (admin) {
+      // supervisor 상태 확인
+      const { data: controlData } = await admin
+        .from('marketing_worker_control')
+        .select('watchdog_online, worker_running, last_updated')
+        .eq('id', 'main')
+        .single();
+
+      if (controlData) {
+        supervisorOnline = controlData.watchdog_online || false;
+        // HTTP 헬스체크 실패 시 DB 상태도 참고
+        if (!workerOnline && controlData.worker_running) {
+          // DB에서는 실행 중이라고 하지만 HTTP 응답 없음 → 시작 중이거나 포트 미응답
+          // last_updated가 30초 이내면 실행 중으로 간주
+          const lastUpdated = new Date(controlData.last_updated);
+          if (Date.now() - lastUpdated.getTime() < 30_000) {
+            workerOnline = true;
+          }
+        }
+      }
+
       const today = new Date().toISOString().split('T')[0];
 
       const { count } = await admin
@@ -77,6 +98,7 @@ export async function GET() {
 
     return NextResponse.json({
       workerOnline,
+      supervisorOnline,
       workerUrl: WORKER_URL,
       pendingCount,
       publishedTodayCount,
@@ -88,7 +110,7 @@ export async function GET() {
   }
 }
 
-// 즉시 발행 트리거
+// 워커 제어 (시작/중지/트리거)
 export async function POST(request: NextRequest) {
   try {
     const user = await checkMasterAuth();
@@ -112,11 +134,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: false,
         workerOnline: false,
-        message: '워커가 실행 중이 아닙니다. 서버에서 먼저 워커를 시작해주세요.',
+        message: '워커가 실행 중이 아닙니다. 워커를 먼저 시작해주세요.',
       });
     }
 
     if (action === 'stop') {
+      // 1차: HTTP로 직접 중지 시도
       try {
         const res = await fetch(`${WORKER_URL}/stop`, {
           method: 'POST',
@@ -126,21 +149,23 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ ok: true, message: '워커를 중지했습니다.' });
         }
       } catch {
-        // 워커 미실행 또는 이미 중지됨
+        // HTTP 실패 → DB 시그널링으로 폴백
       }
-      return NextResponse.json({ ok: false, message: '워커가 이미 중지되어 있습니다.' });
+
+      // 2차: DB 시그널링으로 중지 요청
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        await admin
+          .from('marketing_worker_control')
+          .update({ stop_requested: true })
+          .eq('id', 'main');
+        return NextResponse.json({ ok: true, message: '워커에 중지 요청을 보냈습니다. 잠시 후 중지됩니다.' });
+      }
+
+      return NextResponse.json({ ok: false, message: '워커 중지에 실패했습니다.' });
     }
 
     if (action === 'start') {
-      // Vercel 환경에서는 프로세스 실행 불가
-      if (process.env.VERCEL || process.env.VERCEL_ENV) {
-        return NextResponse.json({
-          ok: false,
-          message: 'Vercel 환경에서는 워커를 원격으로 시작할 수 없습니다.',
-          manualCommand: 'cd marketing-worker && npm run dev',
-        });
-      }
-
       // 이미 실행 중인지 헬스체크로 확인
       try {
         const healthRes = await fetch(`${WORKER_URL}/health`, {
@@ -153,29 +178,40 @@ export async function POST(request: NextRequest) {
         // 워커 미실행 → 시작 진행
       }
 
-      // 프로세스 시작
-      try {
-        const { spawn } = await import('child_process');
-        const path = await import('path');
-        const workerDir = path.join(process.cwd(), 'marketing-worker');
+      // DB 시그널링으로 시작 요청 (Vercel/로컬 모두 동작)
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        // supervisor가 온라인인지 확인
+        const { data: controlData } = await admin
+          .from('marketing_worker_control')
+          .select('watchdog_online, last_updated')
+          .eq('id', 'main')
+          .single();
 
-        const child = spawn('npm', ['run', 'dev'], {
-          cwd: workerDir,
-          detached: true,
-          stdio: 'ignore',
-          env: { ...process.env },
-        });
-        child.unref();
+        const supervisorOnline = controlData?.watchdog_online &&
+          controlData?.last_updated &&
+          (Date.now() - new Date(controlData.last_updated).getTime() < 60_000);
 
-        return NextResponse.json({ ok: true, message: '워커 시작 요청을 보냈습니다. 잠시 후 상태를 확인하세요.' });
-      } catch (err) {
-        console.error('[API] 마케팅 워커 시작 실패:', err);
+        if (!supervisorOnline) {
+          return NextResponse.json({
+            ok: false,
+            message: 'Supervisor가 실행 중이 아닙니다. 서버에서 supervisor를 먼저 시작해주세요.',
+            manualCommand: 'cd marketing-worker && npm run supervisor',
+          });
+        }
+
+        await admin
+          .from('marketing_worker_control')
+          .update({ start_requested: true })
+          .eq('id', 'main');
+
         return NextResponse.json({
-          ok: false,
-          message: '워커 자동 시작에 실패했습니다.',
-          manualCommand: 'cd marketing-worker && npm run dev',
+          ok: true,
+          message: '워커 시작 요청을 보냈습니다. 약 10초 후 상태를 확인하세요.',
         });
       }
+
+      return NextResponse.json({ ok: false, message: '시작 요청에 실패했습니다.' });
     }
 
     return NextResponse.json({ error: '알 수 없는 액션' }, { status: 400 });
