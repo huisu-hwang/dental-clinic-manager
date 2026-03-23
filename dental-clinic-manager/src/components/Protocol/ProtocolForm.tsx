@@ -63,11 +63,17 @@ export default function ProtocolForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [clinicId, setClinicId] = useState<string>('')
+  // 폼 초기화 여부 추적 (부모 리렌더로 인한 initialData 참조 변경 시 폼 리셋 방지)
+  const formInitializedRef = useRef(false)
+
   useEffect(() => {
     fetchInitialData()
   }, [])
 
   useEffect(() => {
+    // 이미 폼이 초기화되었으면 initialData 참조 변경에 반응하지 않음
+    if (formInitializedRef.current) return
+
     if (initialData) {
       const nextSteps =
         initialData.steps && initialData.steps.length > 0
@@ -85,6 +91,7 @@ export default function ProtocolForm({
         steps: nextSteps
       })
     }
+    formInitializedRef.current = true
   }, [initialData, resolvedInitialSteps])
 
   const handleStepsChange = (steps: ProtocolStep[]) => {
