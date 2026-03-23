@@ -308,6 +308,9 @@ export type UserNotificationType =
   | 'telegram_board_pending'      // 텔레그램 게시판 신청 접수 (관리자에게)
   | 'task_assigned'               // 새 업무 할당됨 (담당자에게)
   | 'task_completed'              // 업무 완료됨 (할당자에게)
+  | 'protocol_review_requested'   // 프로토콜 검토 요청 (대표원장에게)
+  | 'protocol_review_approved'    // 프로토콜 검토 승인 (요청자에게)
+  | 'protocol_review_rejected'    // 프로토콜 검토 반려 (요청자에게)
   | 'important'                   // 중요 알림
   | 'system'                      // 시스템 알림
 
@@ -330,6 +333,9 @@ export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string>
   telegram_board_pending: '게시판 신청',
   task_assigned: '업무 할당',
   task_completed: '업무 완료',
+  protocol_review_requested: '프로토콜 검토 요청',
+  protocol_review_approved: '프로토콜 검토 승인',
+  protocol_review_rejected: '프로토콜 검토 반려',
   important: '중요 알림',
   system: '시스템 알림'
 }
@@ -353,6 +359,9 @@ export const USER_NOTIFICATION_TYPE_ICONS: Record<UserNotificationType, string> 
   telegram_board_pending: 'clock',
   task_assigned: 'clipboard-list',
   task_completed: 'check-circle',
+  protocol_review_requested: 'clipboard-document-check',
+  protocol_review_approved: 'check-circle',
+  protocol_review_rejected: 'x-circle',
   important: 'exclamation-circle',
   system: 'bell'
 }
@@ -376,6 +385,9 @@ export const USER_NOTIFICATION_TYPE_COLORS: Record<UserNotificationType, { icon:
   telegram_board_pending: { icon: 'text-amber-500', bg: 'bg-amber-50', text: 'text-amber-700' },
   task_assigned: { icon: 'text-purple-500', bg: 'bg-purple-50', text: 'text-purple-700' },
   task_completed: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
+  protocol_review_requested: { icon: 'text-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-700' },
+  protocol_review_approved: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
+  protocol_review_rejected: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
   important: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
   system: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' }
 }

@@ -1,16 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { XMarkIcon, PencilIcon, TrashIcon, ClockIcon, TagIcon, FolderIcon, ShieldCheckIcon, ScissorsIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PencilIcon, TrashIcon, ClockIcon, TagIcon, FolderIcon, ShieldCheckIcon, ScissorsIcon, PaperAirplaneIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import EnhancedTiptapEditor from './EnhancedTiptapEditor'
 import ProtocolVersionHistory from './ProtocolVersionHistory'
 import ProtocolStepViewer from './ProtocolStepViewer'
 import ProtocolPermissionManager from './ProtocolPermissionManager'
 import { dataService } from '@/lib/dataService'
+import { userNotificationService } from '@/lib/userNotificationService'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useAuth } from '@/contexts/AuthContext'
-import type { Protocol, ProtocolVersion } from '@/types'
-import { appConfirm } from '@/components/ui/AppDialog'
+import type { Protocol, ProtocolVersion, ProtocolReview } from '@/types'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface ProtocolDetailProps {
   protocolId: string
@@ -37,6 +38,12 @@ export default function ProtocolDetail({
   const [showPermissionManager, setShowPermissionManager] = useState(false)
   const [hasEditPermission, setHasEditPermission] = useState(false)
   const [hasDeletePermission, setHasDeletePermission] = useState(false)
+  const [pendingReview, setPendingReview] = useState<ProtocolReview | null>(null)
+  const [showReviewRequestModal, setShowReviewRequestModal] = useState(false)
+  const [reviewRequestMessage, setReviewRequestMessage] = useState('')
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [rejectMessage, setRejectMessage] = useState('')
+  const [reviewLoading, setReviewLoading] = useState(false)
 
   const canViewHistory = hasPermission('protocol_history_view')
   const isOwner = user?.role === 'owner'
@@ -89,8 +96,110 @@ export default function ProtocolDetail({
     }
   }, [protocolId])
 
+  const fetchPendingReview = useCallback(async () => {
+    const result = await dataService.getProtocolReviews(protocolId)
+    if (!result.error && result.data) {
+      const pending = result.data.find((r: ProtocolReview) => r.status === 'pending')
+      setPendingReview(pending || null)
+    }
+  }, [protocolId])
+
+  const handleRequestReview = async () => {
+    if (!protocol?.current_version_id) return
+    setReviewLoading(true)
+    try {
+      const result = await dataService.createProtocolReview(
+        protocolId,
+        protocol.current_version_id,
+        reviewRequestMessage || undefined
+      )
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      // 대표원장에게 알림 전송
+      const ownerResult = await dataService.getClinicOwnerIds()
+      if (!ownerResult.error && ownerResult.data.length > 0) {
+        const userName = user?.name || '사용자'
+        await userNotificationService.notifyProtocolReviewRequested(
+          ownerResult.data,
+          userName,
+          protocol.title,
+          result.data.id,
+          protocolId
+        )
+      }
+      setShowReviewRequestModal(false)
+      setReviewRequestMessage('')
+      await fetchProtocol()
+      await fetchPendingReview()
+      await appAlert('검토 요청이 전송되었습니다.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '검토 요청 중 오류가 발생했습니다.')
+    } finally {
+      setReviewLoading(false)
+    }
+  }
+
+  const handleApproveReview = async () => {
+    if (!pendingReview) return
+    if (!await appConfirm('이 프로토콜을 승인하시겠습니까?\n승인 시 프로토콜이 활성화됩니다.')) return
+    setReviewLoading(true)
+    try {
+      const result = await dataService.approveProtocolReview(pendingReview.id)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      // 요청자에게 승인 알림
+      await userNotificationService.notifyProtocolReviewApproved(
+        pendingReview.requested_by,
+        protocol?.title || '',
+        pendingReview.id,
+        protocolId
+      )
+      await fetchProtocol()
+      await fetchPendingReview()
+      await appAlert('프로토콜이 승인되어 활성화되었습니다.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '승인 처리 중 오류가 발생했습니다.')
+    } finally {
+      setReviewLoading(false)
+    }
+  }
+
+  const handleRejectReview = async () => {
+    if (!pendingReview) return
+    setReviewLoading(true)
+    try {
+      const result = await dataService.rejectProtocolReview(pendingReview.id, rejectMessage || undefined)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      // 요청자에게 반려 알림
+      await userNotificationService.notifyProtocolReviewRejected(
+        pendingReview.requested_by,
+        protocol?.title || '',
+        pendingReview.id,
+        protocolId,
+        rejectMessage || undefined
+      )
+      setShowRejectModal(false)
+      setRejectMessage('')
+      await fetchProtocol()
+      await fetchPendingReview()
+      await appAlert('프로토콜이 반려되었습니다.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '반려 처리 중 오류가 발생했습니다.')
+    } finally {
+      setReviewLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchProtocol()
+    fetchPendingReview()
     if (canViewHistory) {
       fetchVersions()
     }
@@ -129,7 +238,8 @@ export default function ProtocolDetail({
     const labels: Record<string, string> = {
       draft: '작성중',
       active: '활성',
-      archived: '보관됨'
+      archived: '보관됨',
+      pending_review: '검토 대기'
     }
     return labels[status] || status
   }
@@ -138,7 +248,8 @@ export default function ProtocolDetail({
     const classes: Record<string, string> = {
       draft: 'bg-gray-100 text-gray-800',
       active: 'bg-green-100 text-green-800',
-      archived: 'bg-slate-100 text-slate-600'
+      archived: 'bg-slate-100 text-slate-600',
+      pending_review: 'bg-amber-100 text-amber-800'
     }
     return classes[status] || 'bg-gray-100 text-gray-800'
   }
@@ -239,6 +350,40 @@ export default function ProtocolDetail({
           </div>
 
           <div className="flex items-center gap-2 ml-4">
+            {/* 검토 요청 버튼 (수정 권한이 있고, pending_review가 아닌 경우) */}
+            {canEdit && protocol.status !== 'pending_review' && !isOwner && (
+              <button
+                onClick={() => setShowReviewRequestModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"
+                title="검토 요청"
+              >
+                <PaperAirplaneIcon className="h-4 w-4" />
+                검토 요청
+              </button>
+            )}
+            {/* 대표원장: 승인/반려 버튼 (pending_review 상태일 때) */}
+            {isOwner && protocol.status === 'pending_review' && pendingReview && (
+              <>
+                <button
+                  onClick={handleApproveReview}
+                  disabled={reviewLoading}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-md border border-green-200 transition-colors disabled:opacity-50"
+                  title="승인"
+                >
+                  <CheckCircleIcon className="h-4 w-4" />
+                  승인
+                </button>
+                <button
+                  onClick={() => setShowRejectModal(true)}
+                  disabled={reviewLoading}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-md border border-red-200 transition-colors disabled:opacity-50"
+                  title="반려"
+                >
+                  <XCircleIcon className="h-4 w-4" />
+                  반려
+                </button>
+              </>
+            )}
             {isOwner && (
               <button
                 onClick={() => setShowPermissionManager(true)}
@@ -257,7 +402,7 @@ export default function ProtocolDetail({
                 <ScissorsIcon className="h-5 w-5" />
               </button>
             )}
-            {canEdit && (
+            {canEdit && protocol.status !== 'pending_review' && (
               <button
                 onClick={() => onEdit(protocol)}
                 className="p-2 text-blue-600 hover:bg-blue-50 rounded-md"
@@ -310,6 +455,27 @@ export default function ProtocolDetail({
                 버전 히스토리 ({versions.length})
               </button>
             </nav>
+          </div>
+        )}
+
+        {/* 검토 대기 안내 배너 */}
+        {protocol.status === 'pending_review' && pendingReview && (
+          <div className="mx-6 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <ClockIcon className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800">검토 대기 중</p>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  {pendingReview.requested_by_user?.name || '사용자'}님이 검토를 요청했습니다.
+                  {pendingReview.request_message && (
+                    <span className="block mt-1 text-amber-600">요청 메시지: {pendingReview.request_message}</span>
+                  )}
+                </p>
+                <p className="text-xs text-amber-500 mt-1">
+                  {new Date(pendingReview.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -377,6 +543,96 @@ export default function ProtocolDetail({
             // 권한 저장 후 프로토콜 재조회 (필요시)
           }}
         />
+      )}
+
+      {/* 검토 요청 모달 */}
+      {showReviewRequestModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">프로토콜 검토 요청</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              대표원장에게 &quot;{protocol.title}&quot; 프로토콜의 검토를 요청합니다.
+              승인되면 프로토콜이 활성화됩니다.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                요청 메시지 (선택)
+              </label>
+              <textarea
+                value={reviewRequestMessage}
+                onChange={(e) => setReviewRequestMessage(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                rows={3}
+                placeholder="검토 시 참고할 내용을 작성해주세요..."
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setShowReviewRequestModal(false); setReviewRequestMessage('') }}
+                className="px-4 py-2 text-sm text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleRequestReview}
+                disabled={reviewLoading}
+                className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center gap-2"
+              >
+                {reviewLoading ? (
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                ) : (
+                  <PaperAirplaneIcon className="h-4 w-4" />
+                )}
+                검토 요청
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 반려 사유 모달 */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">프로토콜 검토 반려</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              &quot;{protocol.title}&quot; 프로토콜을 반려합니다.
+              프로토콜은 이전 상태로 되돌아갑니다.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                반려 사유 (선택)
+              </label>
+              <textarea
+                value={rejectMessage}
+                onChange={(e) => setRejectMessage(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                rows={3}
+                placeholder="반려 사유를 입력해주세요..."
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setShowRejectModal(false); setRejectMessage('') }}
+                className="px-4 py-2 text-sm text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleRejectReview}
+                disabled={reviewLoading}
+                className="px-4 py-2 text-sm text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 inline-flex items-center gap-2"
+              >
+                {reviewLoading ? (
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                ) : (
+                  <XCircleIcon className="h-4 w-4" />
+                )}
+                반려
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
