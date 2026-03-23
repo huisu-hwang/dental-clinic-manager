@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
             threads: false,
           },
           imageStyle: body.imageStyle || undefined,
+          imageVisualStyle: body.imageVisualStyle || undefined,
           imageCount: body.imageCount !== undefined ? Number(body.imageCount) : 3,
           referenceImageBase64: body.referenceImageBase64 || undefined,
           schedule: body.schedule || { snsDelayMinutes: 30 },
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
                 setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 55000)
               );
               const { imageBase64, fileName } = await Promise.race([
-                generateBlogImage(marker.prompt, options.imageStyle, options.referenceImageBase64, userData.clinic_id),
+                generateBlogImage(marker.prompt, options.imageStyle, options.referenceImageBase64, userData.clinic_id, undefined, options.imageVisualStyle),
                 timeoutPromise,
               ]);
 

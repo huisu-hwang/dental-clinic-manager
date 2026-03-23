@@ -22,11 +22,13 @@ import {
   POST_TYPE_LABELS,
   DEFAULT_PLATFORM_PRESETS,
   IMAGE_STYLE_LABELS,
+  IMAGE_VISUAL_STYLE_LABELS,
   type PostType,
   type ToneType,
   type PlatformOptions,
   type GeneratedContent,
   type ImageStyleOption,
+  type ImageVisualStyle,
 } from '@/types/marketing'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
@@ -53,6 +55,7 @@ export default function NewMarketingPostPage() {
   const [factCheck, setFactCheck] = useState(false)
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
   const [imageStyle, setImageStyle] = useState<ImageStyleOption>('infographic_only')
+  const [imageVisualStyle, setImageVisualStyle] = useState<ImageVisualStyle>('realistic')
   const [imageCount, setImageCount] = useState(3)
   const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
   const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
@@ -136,7 +139,7 @@ export default function NewMarketingPostPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic, keyword, postType, tone, useResearch, factCheck, platforms,
-          imageStyle, imageCount,
+          imageStyle, imageVisualStyle, imageCount,
           ...(imageStyle === 'use_own_image' && referenceImageBase64 ? { referenceImageBase64 } : {}),
         }),
       })
@@ -611,6 +614,34 @@ export default function NewMarketingPostPage() {
                     <p className="text-xs text-amber-500">인물 이미지를 업로드해주세요</p>
                   )}
                 </div>
+              )}
+
+              {/* 시각적 스타일 */}
+              {imageCount > 0 && (
+                <>
+                  <hr className="border-slate-100" />
+                  <label className="text-sm font-medium text-slate-700">시각적 스타일</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {(Object.entries(IMAGE_VISUAL_STYLE_LABELS) as [ImageVisualStyle, { label: string; description: string; emoji: string }][]).map(
+                      ([value, { label, description, emoji }]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setImageVisualStyle(value)}
+                          className={`flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-all ${
+                            imageVisualStyle === value
+                              ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
+                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="text-lg">{emoji}</span>
+                          <span className={`text-sm font-medium ${imageVisualStyle === value ? 'text-indigo-700' : 'text-slate-700'}`}>{label}</span>
+                          <span className="text-[11px] text-slate-400 leading-tight">{description}</span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                </>
               )}
             </div>
 
