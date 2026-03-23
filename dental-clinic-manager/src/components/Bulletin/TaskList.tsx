@@ -124,13 +124,14 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
 
   const handleStatusUpdate = async (id: string, status: TaskStatus) => {
     const { error: updateError } = await taskService.updateTaskStatus(id, status)
-    if (!updateError) {
-      fetchTasks()
-      fetchStats()
-      if (selectedTask?.id === id) {
-        const { data } = await taskService.getTask(id)
-        if (data) setSelectedTask(data)
-      }
+    if (updateError) {
+      await appAlert(`상태 변경에 실패했습니다: ${updateError}`)
+      return
+    }
+    await Promise.all([fetchTasks(), fetchStats()])
+    if (selectedTask?.id === id) {
+      const { data } = await taskService.getTask(id)
+      if (data) setSelectedTask(data)
     }
   }
 
@@ -378,10 +379,16 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
             )}
           </div>
           <p className="font-medium text-gray-600 mb-1">
-            {activeTab === 'active' ? '진행 중인 업무가 없습니다' : '완료된 업무가 없습니다'}
+            {statusFilter && statusFilter !== 'overdue'
+              ? `${TASK_STATUS_LABELS[statusFilter as TaskStatus]} 상태의 업무가 없습니다`
+              : statusFilter === 'overdue'
+                ? '기한 초과된 업무가 없습니다'
+                : activeTab === 'active' ? '진행 중인 업무가 없습니다' : '완료된 업무가 없습니다'}
           </p>
           <p className="text-sm text-gray-400">
-            {activeTab === 'active' ? '새로운 업무가 할당되면 여기에 표시됩니다.' : '업무가 완료되면 여기에 표시됩니다.'}
+            {statusFilter
+              ? '다른 상태를 선택하거나 전체 보기를 눌러주세요.'
+              : activeTab === 'active' ? '새로운 업무가 할당되면 여기에 표시됩니다.' : '업무가 완료되면 여기에 표시됩니다.'}
           </p>
         </div>
       ) : (
