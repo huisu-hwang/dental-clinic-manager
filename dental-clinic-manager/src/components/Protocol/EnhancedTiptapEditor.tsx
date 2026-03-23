@@ -36,7 +36,10 @@ import {
   ExclamationTriangleIcon,
   ArrowUturnLeftIcon,
   ArrowUturnRightIcon,
-  Bars3Icon
+  Bars3Icon,
+  PlusIcon,
+  MinusIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline'
 import { appAlert, appPrompt } from '@/components/ui/AppDialog'
 
@@ -510,6 +513,8 @@ export default function EnhancedTiptapEditor({
   const [showLineHeightPicker, setShowLineHeightPicker] = useState(false)
   // 비디오 업로드 중 상태
   const [videoUploading, setVideoUploading] = useState(false)
+  // 테이블 조작 드롭다운 표시 상태
+  const [showTableMenu, setShowTableMenu] = useState(false)
 
   // Tiptap Editor 설정
   const editor = useEditor({
@@ -854,7 +859,7 @@ export default function EnhancedTiptapEditor({
         <div className="relative flex gap-1">
           <button
             type="button"
-            onClick={() => setShowColorPicker(!showColorPicker)}
+            onClick={() => { setShowColorPicker(!showColorPicker); setShowLineHeightPicker(false); setShowTableMenu(false) }}
             className="p-2 rounded hover:bg-slate-200 transition-colors relative"
             title="글자 색"
           >
@@ -927,7 +932,7 @@ export default function EnhancedTiptapEditor({
         <div className="relative flex gap-1">
           <button
             type="button"
-            onClick={() => setShowLineHeightPicker(!showLineHeightPicker)}
+            onClick={() => { setShowLineHeightPicker(!showLineHeightPicker); setShowColorPicker(false); setShowTableMenu(false) }}
             className="p-2 rounded hover:bg-slate-200 transition-colors flex items-center gap-1"
             title="줄간격"
           >
@@ -1070,14 +1075,135 @@ export default function EnhancedTiptapEditor({
             </label>
           )}
           {enableTable && (
-            <button
-              type="button"
-              onClick={addTable}
-              className="p-2 rounded hover:bg-slate-200 transition-colors"
-              title="표 삽입"
-            >
-              <TableCellsIcon className="h-4 w-4" />
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowColorPicker(false)
+                  setShowLineHeightPicker(false)
+                  if (editor.isActive('table')) {
+                    setShowTableMenu(!showTableMenu)
+                  } else {
+                    addTable()
+                  }
+                }}
+                className={`p-2 rounded hover:bg-slate-200 transition-colors ${
+                  editor.isActive('table') ? 'bg-blue-100 text-blue-700' : ''
+                }`}
+                title={editor.isActive('table') ? '표 편집' : '표 삽입'}
+              >
+                <TableCellsIcon className="h-4 w-4" />
+              </button>
+
+              {showTableMenu && editor.isActive('table') && (
+                <div className="absolute top-12 left-0 bg-white border border-slate-300 rounded-lg shadow-lg p-2 z-20 min-w-[180px]">
+                  <div className="text-xs text-slate-500 px-2 py-1 font-medium">행</div>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      editor.chain().focus().addRowBefore().run()
+                      setShowTableMenu(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+                  >
+                    <PlusIcon className="h-3.5 w-3.5" />
+                    위에 행 추가
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      editor.chain().focus().addRowAfter().run()
+                      setShowTableMenu(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+                  >
+                    <PlusIcon className="h-3.5 w-3.5" />
+                    아래에 행 추가
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      editor.chain().focus().deleteRow().run()
+                      setShowTableMenu(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:bg-red-50 text-red-600 rounded transition-colors"
+                  >
+                    <MinusIcon className="h-3.5 w-3.5" />
+                    행 삭제
+                  </button>
+
+                  <div className="border-t border-slate-200 my-1" />
+
+                  <div className="text-xs text-slate-500 px-2 py-1 font-medium">열</div>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      editor.chain().focus().addColumnBefore().run()
+                      setShowTableMenu(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+                  >
+                    <PlusIcon className="h-3.5 w-3.5" />
+                    왼쪽에 열 추가
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      editor.chain().focus().addColumnAfter().run()
+                      setShowTableMenu(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+                  >
+                    <PlusIcon className="h-3.5 w-3.5" />
+                    오른쪽에 열 추가
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      editor.chain().focus().deleteColumn().run()
+                      setShowTableMenu(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:bg-red-50 text-red-600 rounded transition-colors"
+                  >
+                    <MinusIcon className="h-3.5 w-3.5" />
+                    열 삭제
+                  </button>
+
+                  <div className="border-t border-slate-200 my-1" />
+
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      addTable()
+                      setShowTableMenu(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+                  >
+                    <TableCellsIcon className="h-3.5 w-3.5" />
+                    새 표 삽입
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      editor.chain().focus().deleteTable().run()
+                      setShowTableMenu(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:bg-red-50 text-red-600 rounded transition-colors"
+                  >
+                    <TrashIcon className="h-3.5 w-3.5" />
+                    표 삭제
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           <button
             type="button"
