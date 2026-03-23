@@ -1,0 +1,2 @@
+[     810ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth/login:0
+[    1392ms] Invalid or unexpected token

@@ -1,0 +1,12 @@
+{"t":0,"agent":"a2f3d3a","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"system","event":"keyword_detected","keyword":"ralph"}
+{"t":0,"agent":"system","event":"mode_change","mode_from":"none","mode_to":"ralph"}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"oh-my-claudecode:ralph"}
+{"t":0,"agent":"af2c4e5","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"oh-my-claudecode:cancel"}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"oh-my-claudecode:cancel"}
+{"t":0,"agent":"a6e8987","agent_type":"explore","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a6e8987","agent_type":"explore","event":"agent_stop","success":true,"duration_ms":72760}
+{"t":0,"agent":"ae99b0f","agent_type":"explore","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"ae99b0f","agent_type":"explore","event":"agent_stop","success":true,"duration_ms":118207}
+{"t":0,"agent":"a84f358","agent_type":"unknown","event":"agent_stop","success":true}

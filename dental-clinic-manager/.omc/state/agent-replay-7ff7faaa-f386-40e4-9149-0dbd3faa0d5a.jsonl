@@ -1,0 +1,6 @@
+{"t":0,"agent":"a5b6e15","agent_type":"explore","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a5b6e15","agent_type":"explore","event":"agent_stop","success":true,"duration_ms":68501}
+{"t":0,"agent":"system","event":"keyword_detected","keyword":"ultrapilot"}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"oh-my-claudecode:ultrapilot"}
+{"t":0,"agent":"a7c9971","agent_type":"explore","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a7c9971","agent_type":"explore","event":"agent_stop","success":true,"duration_ms":36785}

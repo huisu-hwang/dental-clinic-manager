@@ -1,0 +1,68 @@
+[    2002ms] [ERROR] [telegramGroupService.getMyApplications] Error: Error: User not found
+    at Object.getMyApplications (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:314:32)
+    at async TelegramMyApplications.useEffect.fetchApplications (webpack-internal:///(app-pages-browser)/./src/components/Telegram/TelegramMyApplications.tsx:52:38) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    2033ms] [ERROR] [telegramGroupService.getMyGroups] Error: Error: User not found
+    at Object.getMyGroups (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:119:32)
+    at async TelegramBoardListPage.useEffect.fetchGroups (webpack-internal:///(app-pages-browser)/./src/app/community/telegram/page.tsx:54:42) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    2072ms] [ERROR] [telegramGroupService.getMyApplications] Error: Error: User not found
+    at Object.getMyApplications (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:314:32)
+    at async TelegramMyApplications.useEffect.fetchApplications (webpack-internal:///(app-pages-browser)/./src/components/Telegram/TelegramMyApplications.tsx:52:38) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    2075ms] [ERROR] [telegramGroupService.getMyGroups] Error: Error: User not found
+    at Object.getMyGroups (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:119:32)
+    at async TelegramBoardListPage.useEffect.fetchGroups (webpack-internal:///(app-pages-browser)/./src/app/community/telegram/page.tsx:54:42) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   19351ms] [ERROR] [telegramGroupService.getMyApplications] Error: Error: User not found
+    at Object.getMyApplications (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:324:32)
+    at async TelegramMyApplications.useEffect.fetchApplications (webpack-internal:///(app-pages-browser)/./src/components/Telegram/TelegramMyApplications.tsx:52:38) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   19354ms] [ERROR] [telegramGroupService.getMyGroups] Error: Error: User not found
+    at Object.getMyGroups (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:119:32)
+    at async TelegramBoardListPage.useEffect.fetchGroups (webpack-internal:///(app-pages-browser)/./src/app/community/telegram/page.tsx:55:42) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   35598ms] [ERROR] [telegramGroupService.getMyApplications] Error: Error: User not found
+    at Object.getMyApplications (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:324:32)
+    at async TelegramMyApplications.useEffect.fetchApplications (webpack-internal:///(app-pages-browser)/./src/components/Telegram/TelegramMyApplications.tsx:52:38) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   35600ms] [ERROR] [telegramGroupService.getMyApplications] Error: Error: User not found
+    at Object.getMyApplications (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:324:32)
+    at async TelegramMyApplications.useEffect.fetchApplications (webpack-internal:///(app-pages-browser)/./src/components/Telegram/TelegramMyApplications.tsx:52:38) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   54404ms] Invalid or unexpected token
+[  175591ms] ChunkLoadError: Loading chunk app/layout failed.
+(timeout: http://localhost:3000/_next/static/chunks/app/layout.js)
+    at __webpack_require__.f.j (http://localhost:3000/_next/static/chunks/webpack.js?v=1772648547827:850:29)
+    at http://localhost:3000/_next/static/chunks/webpack.js?v=1772648547827:145:40
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1772648547827:144:67)
+    at fn.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1772648547827:381:50)
+    at loadChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:113:34)
+    at preloadModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:82:31)
+    at resolveModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2078:20)
+    at processFullStringRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2769:11)
+    at processFullBinaryRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2764:7)
+    at processBinaryChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2967:15)
+    at progress (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:3231:13)
+[  176679ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/favicon.ico:0
+[  177194ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  177196ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  179400ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  179400ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  187577ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  187578ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  193845ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  193845ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  209798ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  209798ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  210563ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  210563ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  214442ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  214443ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  214870ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  214870ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  216325ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  216325ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  219029ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  219029ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  219336ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  219336ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  221433ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  221433ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  223286ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/050e09d4edd5982d.webpack.hot-update.json:0
+[  223286ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  224632ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram:0
+[  225390ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/favicon.ico:0

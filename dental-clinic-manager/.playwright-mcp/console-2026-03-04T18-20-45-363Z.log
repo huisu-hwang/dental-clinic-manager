@@ -1,0 +1,12 @@
+[    2911ms] [ERROR] [telegramGroupService.getMyApplications] Error: Error: User not found
+    at Object.getMyApplications (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:314:32)
+    at async TelegramMyApplications.useEffect.fetchApplications (webpack-internal:///(app-pages-browser)/./src/components/Telegram/TelegramMyApplications.tsx:52:38) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    2935ms] [ERROR] [telegramGroupService.getMyGroups] Error: Error: User not found
+    at Object.getMyGroups (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:119:32)
+    at async TelegramBoardListPage.useEffect.fetchGroups (webpack-internal:///(app-pages-browser)/./src/app/community/telegram/page.tsx:54:42) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    2978ms] [ERROR] [telegramGroupService.getMyApplications] Error: Error: User not found
+    at Object.getMyApplications (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:314:32)
+    at async TelegramMyApplications.useEffect.fetchApplications (webpack-internal:///(app-pages-browser)/./src/components/Telegram/TelegramMyApplications.tsx:52:38) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    2981ms] [ERROR] [telegramGroupService.getMyGroups] Error: Error: User not found
+    at Object.getMyGroups (webpack-internal:///(app-pages-browser)/./src/lib/telegramService.ts:119:32)
+    at async TelegramBoardListPage.useEffect.fetchGroups (webpack-internal:///(app-pages-browser)/./src/app/community/telegram/page.tsx:54:42) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
