@@ -33,7 +33,8 @@ import type {
   PatientRecallStatus,
   RecallExcludeReason,
   RecallPatientFilters,
-  LastVisitPeriod
+  LastVisitPeriod,
+  LastContactPeriod
 } from '@/types/recall'
 import {
   RECALL_STATUS_LABELS,
@@ -153,6 +154,16 @@ export default function PatientList({
     { value: '2years', label: '2년↑' },
     { value: 'no_date', label: '없음' },
     { value: 'custom', label: '직접설정' }
+  ]
+
+  // 마지막 연락 기간 필터 옵션
+  const lastContactOptions: { value: LastContactPeriod; label: string }[] = [
+    { value: 'all', label: '전체' },
+    { value: '1month', label: '1개월↑' },
+    { value: '3months', label: '3개월↑' },
+    { value: '6months', label: '6개월↑' },
+    { value: '1year', label: '1년↑' },
+    { value: 'no_contact', label: '없음' }
   ]
 
   // 경과 기간 색상 클래스
@@ -290,52 +301,23 @@ export default function PatientList({
               </button>
             ))}
 
-            {/* 정렬 기준 선택 + 방향 토글 (no_date 제외 항상 표시) */}
+            {/* 최종 내원일 정렬 방향 토글 */}
             {(!filters.lastVisitPeriod || filters.lastVisitPeriod !== 'no_date') && (
-              <>
-                <span className="ml-2 text-xs text-gray-400">|</span>
-                <span className="text-sm font-medium text-gray-600 whitespace-nowrap">정렬:</span>
-                <button
-                  onClick={() => {
-                    const newSortBy = 'last_visit_date' as const
-                    const newDir = sortField === newSortBy ? (sortDirection === 'asc' ? 'desc' : 'asc') : 'desc'
-                    setSortField(newSortBy)
-                    setSortDirection(newDir)
-                    onFiltersChange({ ...filters, sortBy: newSortBy, sortDirection: newDir })
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all flex items-center gap-1 ${
-                    sortField === 'last_visit_date'
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                  title="최종 내원일 기준 정렬"
-                >
-                  최종 내원일
-                  {sortField === 'last_visit_date' && (
-                    sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    const newSortBy = 'last_contact_date' as const
-                    const newDir = sortField === newSortBy ? (sortDirection === 'asc' ? 'desc' : 'asc') : 'desc'
-                    setSortField(newSortBy)
-                    setSortDirection(newDir)
-                    onFiltersChange({ ...filters, sortBy: newSortBy, sortDirection: newDir })
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all flex items-center gap-1 ${
-                    sortField === 'last_contact_date'
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                  title="마지막 연락 기준 정렬"
-                >
-                  마지막 연락
-                  {sortField === 'last_contact_date' && (
-                    sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                  )}
-                </button>
-              </>
+              <button
+                onClick={() => {
+                  const newDir = (filters.sortDirection || 'desc') === 'asc' ? 'desc' : 'asc'
+                  setSortField('last_visit_date')
+                  setSortDirection(newDir)
+                  onFiltersChange({ ...filters, sortBy: 'last_visit_date', sortDirection: newDir })
+                }}
+                className="ml-1 px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-all flex items-center gap-1"
+                title={sortField === 'last_visit_date' && sortDirection === 'asc' ? '오래된 순' : '최근 순'}
+              >
+                {sortField === 'last_visit_date' && sortDirection === 'asc'
+                  ? <><ArrowUp className="w-3 h-3" /> 오래된 순</>
+                  : <><ArrowDown className="w-3 h-3" /> 최근 순</>
+                }
+              </button>
             )}
           </div>
 
@@ -359,6 +341,55 @@ export default function PatientList({
               />
             </div>
           )}
+        </div>
+
+        {/* 마지막 연락 기간 필터 칩 */}
+        <div className="mt-2 pt-2 border-t border-gray-100">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-gray-600 whitespace-nowrap">마지막 연락:</span>
+            {lastContactOptions.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  const isSortable = opt.value !== 'no_contact'
+                  const newFilters = {
+                    ...filters,
+                    lastContactPeriod: opt.value,
+                    ...(isSortable ? { sortBy: 'last_contact_date' as const, sortDirection: 'desc' as const } : {})
+                  }
+                  setSortField(isSortable ? 'last_contact_date' : 'patient_name')
+                  setSortDirection(isSortable ? 'desc' : 'asc')
+                  onFiltersChange(newFilters)
+                }}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  (filters.lastContactPeriod || 'all') === opt.value
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+
+            {/* 마지막 연락 정렬 방향 토글 */}
+            {filters.lastContactPeriod && filters.lastContactPeriod !== 'all' && filters.lastContactPeriod !== 'no_contact' && (
+              <button
+                onClick={() => {
+                  const newDir = (filters.sortDirection || 'desc') === 'asc' ? 'desc' : 'asc'
+                  setSortField('last_contact_date')
+                  setSortDirection(newDir)
+                  onFiltersChange({ ...filters, sortBy: 'last_contact_date', sortDirection: newDir })
+                }}
+                className="ml-1 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-all flex items-center gap-1"
+                title={sortField === 'last_contact_date' && sortDirection === 'asc' ? '오래된 순' : '최근 순'}
+              >
+                {sortField === 'last_contact_date' && sortDirection === 'asc'
+                  ? <><ArrowUp className="w-3 h-3" /> 오래된 순</>
+                  : <><ArrowDown className="w-3 h-3" /> 최근 순</>
+                }
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 확장 필터 */}

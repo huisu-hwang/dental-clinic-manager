@@ -189,6 +189,44 @@ function applyLastVisitFilter(
   return query
 }
 
+// 마지막 연락 필터 적용 헬퍼 함수
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyLastContactFilter(
+  query: any,
+  filters?: RecallPatientFilters
+): any {
+  if (!filters?.lastContactPeriod || filters.lastContactPeriod === 'all') return query
+
+  const now = new Date()
+
+  if (filters.lastContactPeriod === 'no_contact') {
+    return query.is('last_contact_date', null)
+  }
+
+  // 프리셋 기간 필터 - last_contact_date가 null이 아닌 것만
+  query = query.not('last_contact_date', 'is', null)
+
+  if (filters.lastContactPeriod === '1month') {
+    // 1개월 이상 경과
+    const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+    query = query.lte('last_contact_date', oneMonthAgo.toISOString())
+  } else if (filters.lastContactPeriod === '3months') {
+    // 3개월 이상 경과
+    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
+    query = query.lte('last_contact_date', threeMonthsAgo.toISOString())
+  } else if (filters.lastContactPeriod === '6months') {
+    // 6개월 이상 경과
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate())
+    query = query.lte('last_contact_date', sixMonthsAgo.toISOString())
+  } else if (filters.lastContactPeriod === '1year') {
+    // 1년 이상 경과
+    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+    query = query.lte('last_contact_date', oneYearAgo.toISOString())
+  }
+
+  return query
+}
+
 // ========================================
 // Recall Campaign Service
 // ========================================
@@ -399,6 +437,8 @@ export const recallPatientService = {
 
       // 최종 내원일 필터 (count 쿼리)
       countQuery = applyLastVisitFilter(countQuery, filters)
+      // 마지막 연락 필터 (count 쿼리)
+      countQuery = applyLastContactFilter(countQuery, filters)
 
       const { count, error: countError } = await countQuery
       if (countError) throw countError
@@ -447,6 +487,8 @@ export const recallPatientService = {
 
       // 최종 내원일 필터 (data 쿼리)
       dataQuery = applyLastVisitFilter(dataQuery, filters)
+      // 마지막 연락 필터 (data 쿼리)
+      dataQuery = applyLastContactFilter(dataQuery, filters)
 
       const { data, error } = await dataQuery
 
