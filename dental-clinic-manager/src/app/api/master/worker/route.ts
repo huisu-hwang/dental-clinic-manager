@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
-const WORKER_URL = process.env.MARKETING_WORKER_URL || 'http://localhost:3001';
+const WORKER_URL = process.env.MARKETING_WORKER_URL || 'http://localhost:4001';
 
 // 마스터 권한 확인
 async function checkMasterAuth() {
