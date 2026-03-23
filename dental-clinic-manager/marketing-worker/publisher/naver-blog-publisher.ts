@@ -36,14 +36,33 @@ interface BlogPostData {
   images?: { path: string; prompt: string }[];
 }
 
+interface NaverBlogConfig {
+  blogId: string;
+  naverId?: string;
+  naverPassword?: string;
+  loginCookie?: string;
+}
+
 export class NaverBlogPublisher {
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
+  private blogConfig: NaverBlogConfig | null = null;
 
   /**
    * 브라우저 인스턴스 시작
+   * @param config DB에서 가져온 블로그 설정 (없으면 환경변수 사용)
    */
-  async init(): Promise<void> {
+  async init(config?: NaverBlogConfig): Promise<void> {
+    // DB 설정 우선, 없으면 환경변수 폴백
+    this.blogConfig = config || {
+      blogId: CONFIG.naver.blogId,
+      loginCookie: CONFIG.naver.loginCookie,
+    };
+
+    if (!this.blogConfig.blogId) {
+      throw new Error('블로그 ID가 설정되지 않았습니다. 마케팅 설정에서 블로그 ID를 입력해주세요.');
+    }
+
     this.browser = await chromium.launch({
       headless: false, // 네이버 봇 감지 방지: headful 모드
       args: [
@@ -59,14 +78,17 @@ export class NaverBlogPublisher {
     });
 
     // 네이버 로그인 쿠키 복원
-    if (CONFIG.naver.loginCookie) {
+    const cookieStr = this.blogConfig.loginCookie || CONFIG.naver.loginCookie;
+    if (cookieStr) {
       try {
-        const cookies = JSON.parse(CONFIG.naver.loginCookie);
+        const cookies = JSON.parse(cookieStr);
         await this.context.addCookies(cookies);
       } catch (e) {
         console.error('[NaverBlog] 쿠키 파싱 실패:', e);
       }
     }
+
+    console.log(`[NaverBlog] 초기화 완료 (blogId: ${this.blogConfig.blogId})`);
   }
 
   /**
@@ -146,7 +168,10 @@ export class NaverBlogPublisher {
    * 글쓰기 페이지로 이동
    */
   private async navigateToEditor(page: Page): Promise<void> {
-    const blogId = CONFIG.naver.blogId;
+    const blogId = this.blogConfig?.blogId || CONFIG.naver.blogId;
+    if (!blogId) {
+      throw new Error('블로그 ID가 설정되지 않았습니다.');
+    }
     const editorUrl = `https://blog.naver.com/${blogId}/postwrite`;
 
     await page.goto(editorUrl, { waitUntil: 'domcontentloaded' });
