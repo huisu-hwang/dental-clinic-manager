@@ -131,6 +131,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, message: '워커가 이미 중지되어 있습니다.' });
     }
 
+    if (action === 'start') {
+      // Vercel 환경에서는 프로세스 실행 불가
+      if (process.env.VERCEL || process.env.VERCEL_ENV) {
+        return NextResponse.json({
+          ok: false,
+          message: 'Vercel 환경에서는 워커를 원격으로 시작할 수 없습니다.',
+          manualCommand: 'cd marketing-worker && npm run dev',
+        });
+      }
+
+      // 이미 실행 중인지 헬스체크로 확인
+      try {
+        const healthRes = await fetch(`${WORKER_URL}/health`, {
+          signal: AbortSignal.timeout(3000),
+        });
+        if (healthRes.ok) {
+          return NextResponse.json({ ok: true, message: '워커가 이미 실행 중입니다.' });
+        }
+      } catch {
+        // 워커 미실행 → 시작 진행
+      }
+
+      // 프로세스 시작
+      try {
+        const { spawn } = await import('child_process');
+        const path = await import('path');
+        const workerDir = path.join(process.cwd(), 'marketing-worker');
+
+        const child = spawn('npm', ['run', 'dev'], {
+          cwd: workerDir,
+          detached: true,
+          stdio: 'ignore',
+          env: { ...process.env },
+        });
+        child.unref();
+
+        return NextResponse.json({ ok: true, message: '워커 시작 요청을 보냈습니다. 잠시 후 상태를 확인하세요.' });
+      } catch (err) {
+        console.error('[API] 마케팅 워커 시작 실패:', err);
+        return NextResponse.json({
+          ok: false,
+          message: '워커 자동 시작에 실패했습니다.',
+          manualCommand: 'cd marketing-worker && npm run dev',
+        });
+      }
+    }
+
     return NextResponse.json({ error: '알 수 없는 액션' }, { status: 400 });
   } catch (error) {
     console.error('[API] master/worker POST:', error);
