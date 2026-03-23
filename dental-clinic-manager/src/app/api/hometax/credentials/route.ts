@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { hometaxEncryptToJson } from '@/lib/hometaxCrypto';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function getServiceClient() {
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
 
 // POST: 홈택스 인증정보 등록/수정
 export async function POST(request: NextRequest) {
@@ -40,7 +33,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getServiceClient();
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      return NextResponse.json({ error: '서버 설정 오류: Admin 클라이언트 초기화 실패' }, { status: 500 });
+    }
 
     // 비밀번호 및 주민등록번호 암호화 (로그인 ID는 평문 저장)
     const encryptedPw = hometaxEncryptToJson(loginPw);
@@ -58,7 +54,7 @@ export async function POST(request: NextRequest) {
         is_active: true,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'clinic_id' })
-      .select('id, clinic_id, business_number, login_method, is_active, last_login_success, created_at, updated_at')
+      .select('id, clinic_id, business_number, login_method, is_active, last_login_success, last_login_attempt, last_login_error, created_at, updated_at')
       .single();
 
     if (error) {
@@ -83,7 +79,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'clinicId가 필요합니다.' }, { status: 400 });
     }
 
-    const supabase = getServiceClient();
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      return NextResponse.json({ error: '서버 설정 오류: Admin 클라이언트 초기화 실패' }, { status: 500 });
+    }
 
     const { data, error } = await supabase
       .from('hometax_credentials')
@@ -112,7 +111,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'clinicId가 필요합니다.' }, { status: 400 });
     }
 
-    const supabase = getServiceClient();
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      return NextResponse.json({ error: '서버 설정 오류: Admin 클라이언트 초기화 실패' }, { status: 500 });
+    }
 
     const { error } = await supabase
       .from('hometax_credentials')
