@@ -646,6 +646,14 @@ export default function EnhancedTiptapEditor({
         }
 
         const html = event.clipboardData?.getData('text/html')
+
+        // 에디터 내부 복사(ProseMirror data-pm-slice 포함)는 기본 핸들러에 위임
+        // 내부 복사를 normalizeClipboardHtml로 처리하면 insertContent가
+        // 블록 요소를 새 노드로 삽입하여 앞뒤에 빈 줄이 추가됨
+        if (html && html.includes('data-pm-slice')) {
+          return false
+        }
+
         const normalizedHtml = html ? normalizeClipboardHtml(html) : null
 
         if (normalizedHtml && editor) {
