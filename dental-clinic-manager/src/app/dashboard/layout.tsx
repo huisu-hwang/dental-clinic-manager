@@ -8,6 +8,8 @@ import TabNavigation from '@/components/Layout/TabNavigation'
 import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/ui/Toast'
 import InstallBanner from '@/components/PWA/InstallBanner'
+import FloatingSyncProgress from '@/components/Financial/FloatingSyncProgress'
+import { HometaxSyncProvider } from '@/contexts/HometaxSyncContext'
 import { useClinicNotifications } from '@/hooks/useClinicNotifications'
 import { getTabRoute } from '@/utils/tabRouting'
 
@@ -104,6 +106,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <HometaxSyncProvider>
     <div className="min-h-screen bg-slate-100">
       {/* Header - 상단 고정, 중앙 정렬 */}
       <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200 fixed-header-safe">
@@ -185,6 +188,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
 
       <InstallBanner />
+      <FloatingSyncProgress />
     </div>
+    </HometaxSyncProvider>
   )
 }
