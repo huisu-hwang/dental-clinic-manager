@@ -251,9 +251,9 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                 style={{ animationDelay: '0.35s' }}
               >
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600">
-                  나머지는 시스템에
+                  나머지는 시스템이
                 </span>{' '}
-                <span className="text-slate-900">맡기세요.</span>
+                <span className="text-slate-900">합니다.</span>
               </span>
             </h1>
 
