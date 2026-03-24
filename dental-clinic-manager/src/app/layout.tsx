@@ -3,6 +3,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import PasswordResetHandler from "@/components/PasswordResetHandler";
 import { AppDialogRoot } from "@/components/ui/AppDialog";
 import ServiceWorkerRegistrar from "@/components/PWA/ServiceWorkerRegistrar";
+import UpdatePrompt from "@/components/PWA/UpdatePrompt";
 import "./globals.css";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://hi-clinic.co.kr'
@@ -64,6 +65,7 @@ export default function RootLayout({
       <body className="antialiased font-sans">
         <AuthProvider>
           <ServiceWorkerRegistrar />
+          <UpdatePrompt autoReloadDelay={30000} />
           <PasswordResetHandler />
           {children}
           <AppDialogRoot />
