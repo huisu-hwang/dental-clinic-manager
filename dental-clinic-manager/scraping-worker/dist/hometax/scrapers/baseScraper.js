@@ -14,36 +14,83 @@ export async function setPeriod(page, year, month) {
     const startDate = `${year}${String(month).padStart(2, '0')}01`;
     const lastDay = new Date(year, month, 0).getDate();
     const endDate = `${year}${String(month).padStart(2, '0')}${String(lastDay).padStart(2, '0')}`;
-    // 시작일 입력
-    const startInput = await page.$('input[id*="start"], input[id*="Start"], input[id*="from"], input[id*="From"]');
-    if (startInput) {
-        await startInput.fill('');
-        await startInput.fill(startDate);
+    // 시작일 입력 — locator + JS fallback
+    const startSelectors = ['input[id*="start"]', 'input[id*="Start"]', 'input[id*="from"]', 'input[id*="From"]'];
+    for (const sel of startSelectors) {
+        try {
+            const loc = page.locator(sel).first();
+            if (await loc.isVisible().catch(() => false)) {
+                await loc.fill('');
+                await loc.fill(startDate);
+                break;
+            }
+        }
+        catch { /* continue */ }
     }
     // 종료일 입력
-    const endInput = await page.$('input[id*="end"], input[id*="End"], input[id*="to"], input[id*="To"]');
-    if (endInput) {
-        await endInput.fill('');
-        await endInput.fill(endDate);
+    const endSelectors = ['input[id*="end"]', 'input[id*="End"]', 'input[id*="to"]', 'input[id*="To"]'];
+    for (const sel of endSelectors) {
+        try {
+            const loc = page.locator(sel).first();
+            if (await loc.isVisible().catch(() => false)) {
+                await loc.fill('');
+                await loc.fill(endDate);
+                break;
+            }
+        }
+        catch { /* continue */ }
     }
     log.debug({ startDate, endDate }, '조회 기간 설정');
 }
-/** 조회 버튼 클릭 후 결과 대기 */
+/** 조회 버튼 클릭 후 결과 대기 — WebSquare <a> 태그 지원 */
 export async function clickSearchAndWait(page) {
-    const searchBtn = await page.$('button:has-text("조회"), a:has-text("조회"), input[value="조회"]');
-    if (!searchBtn) {
+    // WebSquare에서 조회 버튼은 <a> 태그일 수 있음
+    const searchSelectors = [
+        'a:has-text("조회")',
+        'button:has-text("조회")',
+        'input[value="조회"]',
+        '[class*="search"]:has-text("조회")',
+    ];
+    let clicked = false;
+    for (const sel of searchSelectors) {
+        try {
+            const loc = page.locator(sel).first();
+            await loc.click({ timeout: 10000 });
+            log.debug({ selector: sel }, '조회 버튼 클릭 (locator)');
+            clicked = true;
+            break;
+        }
+        catch {
+            // JS fallback
+            try {
+                const jsClicked = await page.evaluate((s) => {
+                    const doc = globalThis.document; // eslint-disable-line @typescript-eslint/no-explicit-any
+                    const el = doc.querySelector(s);
+                    if (el) {
+                        el.click();
+                        return true;
+                    } // eslint-disable-line @typescript-eslint/no-explicit-any
+                    return false;
+                }, sel);
+                if (jsClicked) {
+                    log.debug({ selector: sel }, '조회 버튼 클릭 (JS fallback)');
+                    clicked = true;
+                    break;
+                }
+            }
+            catch { /* continue */ }
+        }
+    }
+    if (!clicked) {
         throw new Error('조회 버튼을 찾을 수 없습니다');
     }
-    await searchBtn.click();
-    log.debug('조회 버튼 클릭');
-    // 로딩 완료 대기 (로딩 인디케이터 사라질 때까지)
+    // 로딩 완료 대기
     try {
         await page.waitForSelector('.loading, .spinner, .w2loading', { state: 'hidden', timeout: 30000 });
     }
     catch {
         // 로딩 인디케이터가 없을 수 있음
     }
-    // 결과 테이블이 나타날 때까지 대기
     await page.waitForTimeout(2000);
 }
 /** HTML 테이블에서 데이터 추출 */

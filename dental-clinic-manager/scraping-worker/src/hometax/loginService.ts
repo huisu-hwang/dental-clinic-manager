@@ -11,6 +11,109 @@ const log = createChildLogger('loginService');
 const HOMETAX_URL = 'https://www.hometax.go.kr';
 const LOGIN_URL = `${HOMETAX_URL}/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml`;
 
+/**
+ * 안전한 클릭 헬퍼 — Playwright의 가시성 기반 클릭을 시도하고,
+ * 실패하면 JavaScript 직접 클릭으로 폴백
+ */
+async function safeClick(page: Page, selectors: string | string[], description: string, options?: { timeout?: number }): Promise<boolean> {
+  const selectorList = Array.isArray(selectors) ? selectors : [selectors];
+  const timeout = options?.timeout ?? 10000;
+
+  for (const selector of selectorList) {
+    try {
+      // 1차: locator로 visible 요소만 대상으로 클릭 시도
+      const locator = page.locator(selector).first();
+      await locator.click({ timeout });
+      log.info({ selector, description }, '클릭 성공 (locator)');
+      return true;
+    } catch {
+      // 2차: JS 직접 클릭 시도 — page.evaluate 내부는 브라우저 컨텍스트
+      try {
+        const clicked = await page.evaluate((sel: string) => {
+          /* eslint-disable @typescript-eslint/no-explicit-any */
+          const doc = (globalThis as any).document;
+          const elements = doc.querySelectorAll(sel);
+          for (let i = 0; i < elements.length; i++) {
+            const el = elements[i] as any;
+            const rect = el.getBoundingClientRect();
+            if (rect.width > 0 || rect.height > 0 || el.offsetParent !== null) {
+              el.click();
+              return true;
+            }
+          }
+          if (elements.length > 0) {
+            (elements[0] as any).click();
+            return true;
+          }
+          return false;
+        }, selector);
+
+        if (clicked) {
+          log.info({ selector, description }, '클릭 성공 (JS fallback)');
+          return true;
+        }
+      } catch {
+        log.debug({ selector, description }, 'JS 클릭도 실패, 다음 셀렉터 시도');
+      }
+    }
+  }
+  log.warn({ selectors: selectorList, description }, '모든 셀렉터 클릭 실패');
+  return false;
+}
+
+/**
+ * 안전한 입력 헬퍼 — visible 요소를 찾아 포커스 후 타이핑
+ */
+async function safeType(page: Page, selectors: string | string[], text: string, description: string): Promise<boolean> {
+  const selectorList = Array.isArray(selectors) ? selectors : [selectors];
+
+  for (const selector of selectorList) {
+    try {
+      const locator = page.locator(selector).first();
+      await locator.waitFor({ state: 'visible', timeout: 5000 });
+      await locator.click({ timeout: 5000 });
+      await locator.fill('');
+      await page.keyboard.type(text, { delay: 50 });
+      log.info({ selector, description }, '입력 성공');
+      return true;
+    } catch {
+      // JS 폴백: focus + value 설정 후 이벤트 발생 — 브라우저 컨텍스트
+      try {
+        const found = await page.evaluate(({ sel, val }: { sel: string; val: string }) => {
+          /* eslint-disable @typescript-eslint/no-explicit-any */
+          const doc = (globalThis as any).document;
+          const win = globalThis as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+          const el = doc.querySelector(sel);
+          if (!el) return false;
+          el.focus();
+          el.value = '';
+          const nativeInputValueSetter = win.Object.getOwnPropertyDescriptor(
+            win.HTMLInputElement.prototype, 'value'
+          )?.set;
+          if (nativeInputValueSetter) {
+            nativeInputValueSetter.call(el, val);
+          } else {
+            el.value = val;
+          }
+          el.dispatchEvent(new win.Event('input', { bubbles: true }));
+          el.dispatchEvent(new win.Event('change', { bubbles: true }));
+          el.dispatchEvent(new win.Event('keyup', { bubbles: true }));
+          return true;
+        }, { sel: selector, val: text });
+
+        if (found) {
+          log.info({ selector, description }, '입력 성공 (JS fallback)');
+          return true;
+        }
+      } catch {
+        log.debug({ selector, description }, 'JS 입력도 실패, 다음 셀렉터 시도');
+      }
+    }
+  }
+  log.warn({ selectors: selectorList, description }, '모든 셀렉터 입력 실패');
+  return false;
+}
+
 export interface LoginResult {
   success: boolean;
   context: BrowserContext | null;
@@ -77,86 +180,116 @@ async function recordLoginResult(clinicId: string, success: boolean, errorMessag
 async function performLogin(page: Page, loginId: string, loginPw: string, residentNumber?: string | null): Promise<{ success: boolean; errorMessage?: string; errorCode?: LoginResult['errorCode'] }> {
   try {
     // 1. 홈택스 메인 접속
+    // waitUntil: 'load' 사용 (domcontentloaded는 WebSquare SPA의 추가 네비게이션을 기다리지 않아
+    // "Execution context was destroyed" 에러 발생)
     log.info('홈택스 메인 페이지 접속');
-    await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.goto(LOGIN_URL, { waitUntil: 'load', timeout: 30000 });
+    // WebSquare SPA 초기화 완료 대기 (JS 기반 리다이렉트/네비게이션 안정화)
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 
     // 보안 프로그램 팝업 닫기 (있는 경우)
     await dismissSecurityPopups(page);
 
     // 2. 로그인 버튼 클릭하여 로그인 페이지 이동
     log.info('로그인 페이지 이동');
-    const loginBtn = await page.$('a[href*="login"], button:has-text("로그인"), .login_btn, #login_btn');
-    if (loginBtn) {
-      await loginBtn.click();
-      await page.waitForLoadState('domcontentloaded', { timeout: 15000 });
+    const loginClicked = await safeClick(page, [
+      'a.hd_log',                           // 홈택스 헤더 로그인 링크
+      'a[href*="login"]',
+      '#login_btn',
+      '.login_btn',
+      'button:has-text("로그인")',
+      'a:has-text("로그인")',
+      'text=로그인',
+    ], '로그인 버튼', { timeout: 10000 });
+
+    if (loginClicked) {
+      await page.waitForLoadState('load', { timeout: 15000 }).catch(() => {});
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
     }
 
     // 3. "아이디 로그인" 탭 선택
     log.info('아이디 로그인 탭 선택');
-    const idLoginTab = await page.$('text=아이디 로그인');
-    if (idLoginTab) {
-      await idLoginTab.click();
-      await page.waitForTimeout(1000);
-    }
+    await safeClick(page, [
+      'li:has-text("아이디 로그인") > a',
+      'a:has-text("아이디 로그인")',
+      'text=아이디 로그인',
+      '[class*="tab"]:has-text("아이디")',
+    ], '아이디 로그인 탭', { timeout: 10000 });
+    await page.waitForTimeout(1500); // 탭 전환 후 폼 렌더링 대기
 
     // 4. ID 입력 (홈택스는 키보드 이벤트를 감지하므로 type 사용)
     log.info('ID/PW 입력');
-    const idInput = await page.$('input[id*="iptUserId"], input[name*="userId"], input[id*="id"]');
-    if (!idInput) {
+    const idTyped = await safeType(page, [
+      'input[id="iptUserId"]',
+      'input[id*="iptUserId"]',
+      'input[name*="userId"]',
+      'input[id*="id"]:not([type="password"]):not([type="hidden"])',
+    ], loginId, '아이디 입력');
+
+    if (!idTyped) {
       return { success: false, errorMessage: '아이디 입력 필드를 찾을 수 없습니다', errorCode: 'UNKNOWN' };
     }
 
-    await idInput.click();
-    await idInput.fill('');
-    await page.keyboard.type(loginId, { delay: 50 });
-
     // 5. PW 입력
-    const pwInput = await page.$('input[id*="iptUserPw"], input[name*="userPw"], input[type="password"]');
-    if (!pwInput) {
+    const pwTyped = await safeType(page, [
+      'input[id="iptUserPw"]',
+      'input[id*="iptUserPw"]',
+      'input[name*="userPw"]',
+      'input[type="password"]:visible',
+      'input[type="password"]',
+    ], loginPw, '비밀번호 입력');
+
+    if (!pwTyped) {
       return { success: false, errorMessage: '비밀번호 입력 필드를 찾을 수 없습니다', errorCode: 'UNKNOWN' };
     }
 
-    await pwInput.click();
-    await pwInput.fill('');
-    await page.keyboard.type(loginPw, { delay: 50 });
-
-    // 5.5. 주민등록번호 입력 (생년월일 6자리 + 뒷자리 첫 번째 1자리)
+    // 5.5. 주민등록번호 입력 (현재 홈택스 아이디 로그인에서는 불필요할 수 있음)
+    // 필드가 존재하지 않을 경우 빠르게 스킵 (짧은 타임아웃)
     if (residentNumber) {
-      log.info('주민등록번호 입력');
+      log.info('주민등록번호 입력 시도 (필드 존재 시에만)');
       const birthDate = residentNumber.substring(0, 6);
       const genderDigit = residentNumber.substring(6, 7);
 
-      // 생년월일 입력 필드
-      const birthInput = await page.$('input[id*="iptSrnoBirth"], input[name*="srnoBirth"], input[id*="birth"], input[placeholder*="생년월일"]');
-      if (birthInput) {
-        await birthInput.click();
-        await birthInput.fill('');
-        await page.keyboard.type(birthDate, { delay: 50 });
-      }
+      // 생년월일 필드가 있는지 빠르게 확인 (2초)
+      const hasBirthField = await page.locator('input[id*="iptSrnoBirth"], input[id*="birth"], input[placeholder*="생년월일"]').first().isVisible().catch(() => false);
+      if (hasBirthField) {
+        await safeType(page, [
+          'input[id*="iptSrnoBirth"]',
+          'input[id*="birth"]',
+          'input[placeholder*="생년월일"]',
+        ], birthDate, '생년월일 입력');
 
-      // 뒷자리 첫 번째 자리 입력 필드
-      const genderInput = await page.$('input[id*="iptSrnoGndr"], input[name*="srnoGndr"], input[id*="gender"], input[placeholder*="뒷자리"]');
-      if (genderInput) {
-        await genderInput.click();
-        await genderInput.fill('');
-        await page.keyboard.type(genderDigit, { delay: 50 });
+        await safeType(page, [
+          'input[id*="iptSrnoGndr"]',
+          'input[id*="gender"]',
+          'input[placeholder*="뒷자리"]',
+        ], genderDigit, '주민번호 뒷자리 입력');
+      } else {
+        log.info('주민등록번호 입력 필드 없음 - 현재 홈택스에서 불필요, 스킵');
       }
     }
 
-    // 6. 로그인 버튼 클릭
+    // 6. 로그인 버튼 클릭 (홈택스는 <a> 태그를 버튼으로 사용 — WebSquare)
     log.info('로그인 시도');
-    const submitBtn = await page.$('button:has-text("로그인"), input[type="submit"], .btn_login, #btn_login');
-    if (!submitBtn) {
+    const submitClicked = await safeClick(page, [
+      '#mf_txppWframe_anchor25',              // 아이디 로그인 페이지 제출 버튼 (정확한 ID)
+      'a.logingbtn',                           // 로그인 버튼 고유 클래스
+      '.logingbtn',                            // 클래스 단독
+      '#mf_txppWframe_anchor48',              // 대체 로그인 버튼 ID
+      'a[role="button"]:has-text("로그인"):not(:has-text("아이디")):not(:has-text("비회원"))', // <a> 태그 버튼 중 정확히 "로그인"만
+      'button:has-text("로그인")',              // 일반 버튼 폴백
+    ], '로그인 제출 버튼', { timeout: 10000 });
+
+    if (!submitClicked) {
       return { success: false, errorMessage: '로그인 버튼을 찾을 수 없습니다', errorCode: 'UNKNOWN' };
     }
 
-    await submitBtn.click();
-
-    // 7. 로그인 결과 확인 (최대 15초 대기)
+    // 7. 로그인 결과 확인 (로그인 요청 처리 시간 대기 후)
+    await page.waitForTimeout(3000); // 서버 응답 대기
     const result = await Promise.race([
       waitForLoginSuccess(page),
       waitForLoginError(page),
-      page.waitForTimeout(15000).then(() => ({
+      page.waitForTimeout(20000).then(() => ({
         success: false,
         errorMessage: '로그인 응답 시간 초과',
         errorCode: 'TIMEOUT' as const,
@@ -171,48 +304,83 @@ async function performLogin(page: Page, loginId: string, loginPw: string, reside
   }
 }
 
-/** 로그인 성공 감지 */
+/** 로그인 성공 감지 — 로그아웃 버튼, URL 변경, 또는 사용자 정보 출현 감지 */
 async function waitForLoginSuccess(page: Page): Promise<{ success: boolean; errorMessage?: string; errorCode?: LoginResult['errorCode'] }> {
   try {
-    // 로그아웃 버튼 또는 마이페이지 요소 출현 대기
-    await page.waitForSelector('text=로그아웃, text=마이홈택스, .user_name, #logoutBtn', {
-      timeout: 12000,
-    });
+    // Playwright .or() 체이닝으로 여러 성공 지표 감지
+    const successLocator = page.locator('text=로그아웃')
+      .or(page.locator('text=마이홈택스'))
+      .or(page.locator('#logoutBtn'))
+      .or(page.locator('a:has-text("로그아웃")'));
+
+    await successLocator.first().waitFor({ state: 'visible', timeout: 15000 });
+    log.info('로그인 성공 감지');
     return { success: true };
   } catch {
+    // URL 변경으로 성공 감지 시도 (로그인 후 메인/대시보드로 리다이렉트)
+    const currentUrl = page.url();
+    if (currentUrl.includes('index_pp') && !currentUrl.includes('login')) {
+      // 메인 페이지로 돌아왔으면 로그인 성공일 수 있음
+      const logoutBtn = await page.locator('text=로그아웃').isVisible().catch(() => false);
+      if (logoutBtn) {
+        log.info('로그인 성공 감지 (URL 기반)');
+        return { success: true };
+      }
+    }
+    log.warn({ currentUrl }, '로그인 성공 확인 실패');
     return { success: false, errorMessage: '로그인 성공 확인 실패', errorCode: 'UNKNOWN' };
   }
 }
 
-/** 로그인 에러 감지 */
+/** 로그인 에러 감지 — WebSquare alert 또는 visible 에러 메시지 감지 */
 async function waitForLoginError(page: Page): Promise<{ success: boolean; errorMessage?: string; errorCode?: LoginResult['errorCode'] }> {
   try {
-    // 에러 메시지 팝업/알림 감지
-    const errorEl = await page.waitForSelector(
-      '.err_msg, .alert_msg, text=비밀번호가 일치하지 않습니다, text=아이디를 확인해 주세요, text=입력하신 정보가 올바르지 않습니다',
-      { timeout: 12000 }
-    );
+    // WebSquare는 alert() 다이얼로그를 사용할 수 있음 — dialog 이벤트 감지
+    const dialogPromise = new Promise<string>((resolve) => {
+      const handler = (dialog: { message: () => string; accept: () => Promise<void> }) => {
+        const msg = dialog.message();
+        dialog.accept().catch(() => {});
+        page.removeListener('dialog', handler);
+        resolve(msg);
+      };
+      page.on('dialog', handler);
+      // 15초 후 타임아웃
+      setTimeout(() => {
+        page.removeListener('dialog', handler);
+        resolve('');
+      }, 15000);
+    });
 
-    if (errorEl) {
-      const errorText = await errorEl.textContent();
+    // visible 에러 요소 감지 (OR 체이닝)
+    const errorLocator = page.locator('text=비밀번호가 일치하지 않습니다')
+      .or(page.locator('text=아이디를 확인해 주세요'))
+      .or(page.locator('text=입력하신 정보가 올바르지 않습니다'))
+      .or(page.locator('text=로그인 정보가 올바르지 않습니다'));
 
-      // CAPTCHA 감지
-      if (errorText?.includes('보안문자') || errorText?.includes('자동입력방지')) {
-        return { success: false, errorMessage: 'CAPTCHA 입력이 필요합니다', errorCode: 'CAPTCHA_REQUIRED' };
-      }
+    const errorElementPromise = errorLocator.first()
+      .waitFor({ state: 'visible', timeout: 15000 })
+      .then(() => errorLocator.first().textContent())
+      .catch(() => '');
 
-      // 추가 인증 감지
-      if (errorText?.includes('추가인증') || errorText?.includes('본인확인')) {
-        return { success: false, errorMessage: '추가 인증이 필요합니다', errorCode: 'ADDITIONAL_AUTH' };
-      }
+    // dialog 또는 visible 에러 중 먼저 발생하는 것 감지
+    const errorText = await Promise.race([dialogPromise, errorElementPromise]);
 
-      // 잘못된 자격증명
-      return { success: false, errorMessage: errorText?.trim() || '로그인 실패', errorCode: 'INVALID_CREDENTIALS' };
+    if (!errorText) {
+      // 아무 에러도 감지되지 않음
+      return { success: false, errorMessage: '로그인 결과 확인 실패', errorCode: 'UNKNOWN' };
     }
 
-    return { success: false, errorMessage: '알 수 없는 로그인 오류', errorCode: 'UNKNOWN' };
+    log.warn({ errorText }, '로그인 에러 감지');
+
+    if (errorText.includes('보안문자') || errorText.includes('자동입력방지')) {
+      return { success: false, errorMessage: 'CAPTCHA 입력이 필요합니다', errorCode: 'CAPTCHA_REQUIRED' };
+    }
+    if (errorText.includes('추가인증') || errorText.includes('본인확인')) {
+      return { success: false, errorMessage: '추가 인증이 필요합니다', errorCode: 'ADDITIONAL_AUTH' };
+    }
+
+    return { success: false, errorMessage: errorText.trim() || '로그인 실패', errorCode: 'INVALID_CREDENTIALS' };
   } catch {
-    // waitForSelector timeout → 에러 메시지가 없음 (성공 가능성)
     return { success: false, errorMessage: '로그인 결과 확인 실패', errorCode: 'UNKNOWN' };
   }
 }
@@ -222,22 +390,34 @@ async function dismissSecurityPopups(page: Page): Promise<void> {
   try {
     // 일반적인 보안 프로그램 팝업 닫기 버튼들
     const closeSelectors = [
+      '.popup_close',
+      '.btn_close',
+      'button:has-text("닫기")',
+      'a:has-text("닫기")',
+      'button:has-text("나중에 설치")',
+      'button:has-text("설치 안 함")',
       'text=닫기',
       'text=나중에 설치',
       'text=설치 안 함',
-      '.popup_close',
-      '.btn_close',
     ];
 
     for (const selector of closeSelectors) {
-      const btn = await page.$(selector);
-      if (btn) {
-        const isVisible = await btn.isVisible();
+      try {
+        const locator = page.locator(selector).first();
+        const isVisible = await locator.isVisible().catch(() => false);
         if (isVisible) {
-          await btn.click();
+          await locator.click({ timeout: 3000 }).catch(() => {
+            // JS fallback
+            page.evaluate((sel: string) => {
+              const el = ((globalThis as any).document).querySelector(sel); // eslint-disable-line @typescript-eslint/no-explicit-any
+              if (el) (el as any).click(); // eslint-disable-line @typescript-eslint/no-explicit-any
+            }, selector).catch(() => {});
+          });
           await page.waitForTimeout(500);
           log.debug({ selector }, '보안 팝업 닫기');
         }
+      } catch {
+        // 개별 셀렉터 실패 무시
       }
     }
   } catch {

@@ -13,7 +13,7 @@ export interface ScrapeResult {
 export declare function navigateToMenu(page: Page, menuPath: string): Promise<void>;
 /** 조회 기간 설정 (연/월) */
 export declare function setPeriod(page: Page, year: number, month: number): Promise<void>;
-/** 조회 버튼 클릭 후 결과 대기 */
+/** 조회 버튼 클릭 후 결과 대기 — WebSquare <a> 태그 지원 */
 export declare function clickSearchAndWait(page: Page): Promise<void>;
 /** HTML 테이블에서 데이터 추출 */
 export declare function parseTable(page: Page, tableSelector?: string): Promise<Record<string, unknown>[]>;

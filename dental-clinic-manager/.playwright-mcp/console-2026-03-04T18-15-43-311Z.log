@@ -1,0 +1,70 @@
+[  135241ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/telegram/email-invite:0
+[  194882ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772648333436 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/community/telegram/-------------:0
+[  194882ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772648331399 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/community/telegram/-------------:0
+[  194882ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772648316084 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/community/telegram/-------------:0
+[  197013ms] [ERROR] ./src/app/api/telegram/email-invite/route.ts
+Module parse failed: Identifier 'resendApiKey' has already been declared (149:14)
+|         }
+|         // 6. Resend로 이메일 발송
+>         const resendApiKey = process.env.RESEND_API_KEY;
+|         if (!resendApiKey) {
+|             console.error('[email-invite] RESEND_API_KEY not configured');
+
+Import trace for requested module:
+./src/app/api/telegram/email-invite/route.ts @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  200936ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772648333436 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/community/telegram/-------------:0
+[  200936ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772648331399 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/community/telegram/-------------:0
+[  200936ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772648316084 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/community/telegram/-------------:0
+[  206018ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772648333436 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/community/telegram/-------------:0
+[  206018ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772648331399 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/community/telegram/-------------:0
+[  206018ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772648316084 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/community/telegram/-------------:0
+[  210856ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  211183ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed:  @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/use-websocket.js:41
+[  211183ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  211184ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at useUserNotifications.useCallback[fetchNotifications] (webpack-internal:///(app-pages-browser)/./src/hooks/useUserNotifications.ts:50:40) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  211188ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  211192ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  211194ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  211197ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  233101ms] Invalid or unexpected token

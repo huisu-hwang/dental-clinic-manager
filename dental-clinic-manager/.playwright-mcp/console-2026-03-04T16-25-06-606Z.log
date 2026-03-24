@@ -1,0 +1,128 @@
+[     350ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1772641489998 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31727ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://beahjntkmkfhpcbhfnrr.supabase.co/rest/v1/telegram_group_members?select=*%2Cuser%3Ausers%28name%2Cemail%29&telegram_group_id=eq.9416f728-3db7-4fd0-b6e1-f5a989b46fb6&order=created_at.desc:0
+[   31728ms] [ERROR] [telegramMemberService.getMembers] Error: {code: PGRST200, details: Searched for a foreign key relationship between 't…n the schema 'public', but no matches were found., hint: null, message: Could not find a relationship between 'telegram_group_members' and 'users' in the schema cache} @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  122466ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[  122467ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  125393ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  127523ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  130058ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  132090ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  136348ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  140165ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[  140165ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  140300ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  143820ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  145729ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  148573ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  151727ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  154279ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  156549ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  158336ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  160307ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  163554ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  165388ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  167507ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  171861ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[  171862ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  171915ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  175878ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  178249ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  181456ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  183884ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  185697ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  187775ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  190020ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  191650ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  193696ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  195303ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  197677ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  201537ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  201575ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[  201576ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  205636ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  208821ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  211550ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  214539ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  217122ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  219736ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  223177ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  226071ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  229018ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  233568ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[  233569ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  235105ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  237877ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  240616ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  243273ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  246644ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  249242ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  251794ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  254963ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  257952ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  261143ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  261180ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[  261180ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  266753ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  269571ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  271367ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  272643ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  274324ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  275811ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  276927ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  278097ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  279303ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed:  @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/use-websocket.js:41
+[  279304ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  279308ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  279310ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  279313ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  279317ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[  280703ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/community/telegram/-------------?_rsc=ml849:0
+[  280703ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/community/telegram/-------------. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:27)
+    at hmrRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js:34:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:65)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:156:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:66:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:44:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router-instance.js:73:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56

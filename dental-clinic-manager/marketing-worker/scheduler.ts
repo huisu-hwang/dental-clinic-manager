@@ -33,8 +33,9 @@ export function startScheduler(): void {
  * 예약된 발행 항목 처리
  */
 async function processScheduledItems(): Promise<void> {
-  // 일일 카운터 리셋
-  const today = new Date().toISOString().split('T')[0];
+  // 일일 카운터 리셋 (KST 기준)
+  const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const today = todayKst.toISOString().split('T')[0];
   if (lastPublishDate !== today) {
     dailyPublishCount = 0;
     lastPublishDate = today;
@@ -45,12 +46,16 @@ async function processScheduledItems(): Promise<void> {
     return;
   }
 
-  // 현재 시간 기준 발행 대상 조회
+  // 현재 시간 기준 발행 대상 조회 (KST 기준)
+  // 1차: 과거 날짜 항목 (시간 무관, 즉시 발행)
+  // 2차: 오늘 날짜 + 발행 시간 지난 항목
   const now = new Date();
-  const currentDate = now.toISOString().split('T')[0];
-  const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9
+  const currentDate = kst.toISOString().split('T')[0];
+  const currentTime = kst.toISOString().split('T')[1].slice(0, 5); // HH:MM (KST)
 
-  const { data: items, error } = await supabase
+  // 1차: 과거 날짜 항목
+  let { data: items, error } = await supabase
     .from('content_calendar_items')
     .select(`
       *,
@@ -58,13 +63,37 @@ async function processScheduledItems(): Promise<void> {
     `)
     .in('status', ['approved', 'scheduled'])
     .eq('content_calendars.status', 'approved')
-    .lte('publish_date', currentDate)
-    .lte('publish_time', currentTime)
+    .lt('publish_date', currentDate)
     .order('publish_date', { ascending: true })
     .order('publish_time', { ascending: true })
-    .limit(1); // 한 번에 1건씩 처리
+    .limit(1);
 
-  if (error || !items?.length) return;
+  // 2차: 오늘 날짜 + 시간 지난 항목
+  if (!error && (!items || items.length === 0)) {
+    const result = await supabase
+      .from('content_calendar_items')
+      .select(`
+        *,
+        content_calendars!inner(clinic_id, status)
+      `)
+      .in('status', ['approved', 'scheduled'])
+      .eq('content_calendars.status', 'approved')
+      .eq('publish_date', currentDate)
+      .lte('publish_time', currentTime)
+      .order('publish_time', { ascending: true })
+      .limit(1);
+    items = result.data;
+    error = result.error;
+  }
+
+  if (error) {
+    console.error('[Scheduler] 조회 오류:', error.message);
+    return;
+  }
+  if (!items?.length) {
+    console.log(`[Scheduler] 발행 대상 없음 (date: ${currentDate}, time: ${currentTime})`);
+    return;
+  }
 
   const item = items[0];
   console.log(`[Scheduler] 발행 대상: "${item.title}" (${item.publish_date} ${item.publish_time})`);
@@ -173,12 +202,12 @@ async function publishItem(item: Record<string, unknown>): Promise<void> {
     const keyword = item.keyword as string;
     const clinicId = (item.content_calendars as Record<string, unknown>)?.clinic_id as string;
     if (keyword && clinicId) {
-      await supabase.from('keyword_publish_history').insert({
+      await supabase.from('keyword_publish_history').upsert({
         clinic_id: clinicId,
         keyword,
-        published_at: new Date().toISOString().split('T')[0],
+        published_at: new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0],
         item_id: itemId,
-      }).onConflict('clinic_id,keyword,published_at');
+      }, { onConflict: 'clinic_id,keyword,published_at' });
     }
 
     dailyPublishCount++;
