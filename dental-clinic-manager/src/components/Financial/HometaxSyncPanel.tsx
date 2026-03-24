@@ -26,6 +26,7 @@ interface HometaxSyncPanelProps {
 
 interface Credentials {
   id: string
+  hometax_user_id?: string
   business_number: string
   login_method: string
   is_active: boolean
@@ -412,7 +413,7 @@ export default function HometaxSyncPanel({
                 <button
                   onClick={() => {
                     setBizNo(credentials.business_number)
-                    setLoginId('')
+                    setLoginId(credentials.hometax_user_id || '')
                     setLoginPw('')
                     setResidentNumber('')
                     setShowCredForm(true)
