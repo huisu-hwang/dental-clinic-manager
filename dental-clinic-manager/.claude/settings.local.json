@@ -72,7 +72,9 @@
       "Bash(dir:*)",
       "Bash(tee:*)",
       "mcp__chrome-devtools__handle_dialog",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(lsof -ti:3001)",
+      "Bash(curl -s http://localhost:3001/health)"
     ],
     "deny": [],
     "ask": []
