@@ -88,6 +88,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '동기화 작업 생성에 실패했습니다.' }, { status: 500 });
     }
 
+    // 워커가 실행 중이 아니면 watchdog에게 시작 요청
+    const { data: workerControl } = await supabase
+      .from('worker_control')
+      .select('worker_running')
+      .eq('id', 'main')
+      .single();
+
+    if (!workerControl?.worker_running) {
+      await supabase
+        .from('worker_control')
+        .update({ start_requested: true })
+        .eq('id', 'main');
+      console.log('[sync] 워커가 실행 중이 아님, watchdog에 시작 요청');
+    }
+
     return NextResponse.json({ success: true, data: job });
   } catch (error) {
     console.error('POST /api/hometax/sync error:', error);

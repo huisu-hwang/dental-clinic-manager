@@ -99,6 +99,22 @@ async function poll(): Promise<void> {
       .eq('id', CONTROL_ID);
 
     startWorker();
+    return;
+  }
+
+  // 워커가 실행 중이 아닌데 pending job이 있으면 자동 시작 (자가 복구)
+  if (!isWorkerRunning()) {
+    const { data: pendingJob } = await supabase
+      .from('scraping_jobs')
+      .select('id')
+      .in('status', ['pending', 'running'])
+      .limit(1)
+      .single();
+
+    if (pendingJob) {
+      console.log('[Watchdog] 미처리 Job 감지, 워커 자동 시작');
+      startWorker();
+    }
   }
 }
 
