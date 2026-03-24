@@ -1,4 +1,6 @@
 import cron from 'node-cron';
+import fs from 'fs';
+import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { CONFIG } from './config.js';
 import { NaverBlogPublisher } from './publisher/naver-blog-publisher.js';
@@ -10,9 +12,54 @@ import { NaverBlogPublisher } from './publisher/naver-blog-publisher.js';
 
 const supabase = createClient(CONFIG.supabase.url, CONFIG.supabase.serviceRoleKey);
 
+const IMAGE_TEMP_DIR = '/tmp/marketing-images-publish';
+
 let publisher: NaverBlogPublisher | null = null;
 let dailyPublishCount = 0;
 let lastPublishDate = '';
+
+/**
+ * Supabase Storage URL에서 이미지를 로컬 임시 파일로 다운로드
+ */
+async function downloadImages(
+  generatedImages: { path: string; prompt: string; fileName?: string }[]
+): Promise<{ path: string; prompt: string }[]> {
+  if (!fs.existsSync(IMAGE_TEMP_DIR)) {
+    fs.mkdirSync(IMAGE_TEMP_DIR, { recursive: true });
+  }
+
+  const downloaded: { path: string; prompt: string }[] = [];
+
+  for (let i = 0; i < generatedImages.length; i++) {
+    const img = generatedImages[i];
+    try {
+      const response = await fetch(img.path);
+      if (!response.ok) {
+        console.warn(`[Scheduler] 이미지 다운로드 실패 (${response.status}): ${img.path}`);
+        continue;
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const ext = path.extname(img.fileName || 'image.png') || '.png';
+      const localPath = path.join(IMAGE_TEMP_DIR, `img_${Date.now()}_${i}${ext}`);
+      fs.writeFileSync(localPath, buffer);
+      downloaded.push({ path: localPath, prompt: img.prompt });
+      console.log(`[Scheduler] 이미지 다운로드 완료 (${i + 1}/${generatedImages.length}): ${img.fileName || img.path}`);
+    } catch (error) {
+      console.warn(`[Scheduler] 이미지 다운로드 오류: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  return downloaded;
+}
+
+/**
+ * 임시 이미지 파일 정리
+ */
+function cleanupTempImages(images: { path: string }[]): void {
+  for (const img of images) {
+    try { fs.unlinkSync(img.path); } catch { /* ignore */ }
+  }
+}
 
 /**
  * 스케줄러 시작
@@ -106,6 +153,7 @@ async function processScheduledItems(): Promise<void> {
  */
 async function publishItem(item: Record<string, unknown>): Promise<void> {
   const itemId = item.id as string;
+  let downloadedImages: { path: string; prompt: string }[] = [];
 
   try {
     // 1. 상태 → generating
@@ -126,10 +174,18 @@ async function publishItem(item: Record<string, unknown>): Promise<void> {
       parsedContent = { title: item.title as string, body: content };
     }
 
-    // 3. 상태 → publishing
+    // 3. 이미지 다운로드 (generated_images가 있는 경우)
+    const generatedImages = item.generated_images as { path: string; prompt: string; fileName?: string }[] | null;
+    if (generatedImages && generatedImages.length > 0) {
+      console.log(`[Scheduler] 이미지 ${generatedImages.length}장 다운로드 시작...`);
+      downloadedImages = await downloadImages(generatedImages);
+      console.log(`[Scheduler] 이미지 다운로드 완료: ${downloadedImages.length}/${generatedImages.length}장`);
+    }
+
+    // 4. 상태 → publishing
     await updateItemStatus(itemId, 'publishing');
 
-    // 4. 플랫폼별 발행
+    // 5. 플랫폼별 발행
     const platforms = item.platforms as Record<string, boolean>;
     const publishedUrls: Record<string, string> = {};
 
@@ -165,6 +221,7 @@ async function publishItem(item: Record<string, unknown>): Promise<void> {
         title: parsedContent.title,
         body: parsedContent.body,
         hashtags: parsedContent.hashtags,
+        images: downloadedImages.length > 0 ? downloadedImages : undefined,
       });
 
       // 발행 로그 기록
@@ -217,6 +274,11 @@ async function publishItem(item: Record<string, unknown>): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Scheduler] 발행 실패: "${item.title}"`, errorMessage);
     await updateItemStatus(itemId, 'failed', errorMessage);
+  } finally {
+    // 임시 이미지 파일 정리
+    if (downloadedImages.length > 0) {
+      cleanupTempImages(downloadedImages);
+    }
   }
 }
 
