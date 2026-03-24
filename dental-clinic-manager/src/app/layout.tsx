@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AIGenerationProvider } from "@/contexts/AIGenerationContext";
 import PasswordResetHandler from "@/components/PasswordResetHandler";
 import { AppDialogRoot } from "@/components/ui/AppDialog";
 import ServiceWorkerRegistrar from "@/components/PWA/ServiceWorkerRegistrar";
+import AIGenerationFloating from "@/components/marketing/AIGenerationFloating";
 import "./globals.css";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://hi-clinic.co.kr'
@@ -63,10 +65,13 @@ export default function RootLayout({
     <html lang="ko">
       <body className="antialiased font-sans">
         <AuthProvider>
-          <ServiceWorkerRegistrar />
-          <PasswordResetHandler />
-          {children}
-          <AppDialogRoot />
+          <AIGenerationProvider>
+            <ServiceWorkerRegistrar />
+            <PasswordResetHandler />
+            {children}
+            <AIGenerationFloating />
+            <AppDialogRoot />
+          </AIGenerationProvider>
         </AuthProvider>
       </body>
     </html>
