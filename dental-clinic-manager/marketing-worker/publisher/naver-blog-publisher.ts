@@ -365,7 +365,8 @@ export class NaverBlogPublisher {
   }
 
   /**
-   * [FIX #4] 이미지 삽입 - 사진 버튼 → 파일 업로드
+   * [FIX #4] 이미지 삽입 - fileChooser 이벤트 가로채기 방식
+   * 사진 버튼 클릭 시 발생하는 파일 선택 다이얼로그를 Playwright가 직접 처리
    */
   private async insertImage(page: Page, imagePath: string): Promise<void> {
     try {
@@ -375,28 +376,35 @@ export class NaverBlogPublisher {
         return;
       }
 
-      // "사진" 버튼 클릭
-      const photoBtn = page.locator('button.se-image-toolbar-button').first();
-      await photoBtn.click({ timeout: 5000 });
-      console.log('[NaverBlog] 사진 추가 버튼 클릭');
-      await randomDelay(delays.popupHandle);
+      const fileSize = (fs.statSync(imagePath).size / 1024).toFixed(1);
+      console.log(`[NaverBlog] 이미지 삽입 시도: ${imagePath} (${fileSize}KB)`);
 
-      // 파일 선택
-      const fileInput = page.locator('input[type="file"][accept*="image"]').first();
-      await fileInput.setInputFiles(imagePath);
-      console.log(`[NaverBlog] 이미지 업로드: ${imagePath}`);
+      // fileChooser 이벤트를 기다리면서 동시에 사진 버튼 클릭
+      const [fileChooser] = await Promise.all([
+        page.waitForEvent('filechooser', { timeout: 10000 }),
+        (async () => {
+          // 사진 버튼 클릭
+          const photoBtn = page.locator('button.se-image-toolbar-button').first();
+          await photoBtn.click({ timeout: 5000 });
+          console.log('[NaverBlog] 사진 추가 버튼 클릭');
+        })(),
+      ]);
 
-      // 업로드 완료 대기
+      // fileChooser로 직접 파일 설정 (file input 셀렉터 불필요)
+      await fileChooser.setFiles(imagePath);
+      console.log('[NaverBlog] fileChooser로 이미지 파일 설정 완료');
+
+      // 업로드 완료 대기 (이미지 컴포넌트가 DOM에 나타날 때까지)
       try {
         await page.waitForSelector('.se-image-resource, .se-module-image, .se-component-image', { timeout: 30000 });
         console.log('[NaverBlog] 이미지 삽입 완료');
       } catch {
-        console.warn('[NaverBlog] 이미지 업로드 타임아웃');
+        console.warn('[NaverBlog] 이미지 업로드 대기 타임아웃');
       }
 
       await randomDelay(delays.imageUpload);
 
-      // 본문으로 포커스 복귀
+      // 본문으로 포커스 복귀 후 줄바꿈
       await page.keyboard.press('Escape');
       await page.waitForTimeout(500);
       await page.keyboard.press('Enter');
