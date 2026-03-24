@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
     'gaxios',
     'node-fetch',
   ],
+  // 빌드마다 고유한 ID 생성 (PWA 업데이트 감지용)
+  generateBuildId: async () => {
+    return `build-${Date.now()}`
+  },
+  env: {
+    BUILD_TIMESTAMP: Date.now().toString(),
+    NEXT_BUILD_ID: `build-${Date.now()}`,
+  },
 };
 
 export default nextConfig;
