@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import {
@@ -34,16 +34,14 @@ import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { getTabRoute } from '@/utils/tabRouting'
 import dynamic from 'next/dynamic'
+import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
-
-type GeneratedResultType = GeneratedContent & {
-  generatedImages?: { fileName: string; prompt: string; path?: string }[]
-}
 
 export default function NewMarketingPostPage() {
   const { user, logout, loading } = useAuth()
   const router = useRouter()
+  const aiGen = useAIGeneration()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // ── 입력 폼 상태 ──
@@ -60,10 +58,10 @@ export default function NewMarketingPostPage() {
   const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
   const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
 
-  // ── 생성 / 저장 상태 ──
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [generationProgress, setGenerationProgress] = useState(0)
-  const [generationStep, setGenerationStep] = useState('')
+  // ── 생성 / 저장 상태 (컨텍스트에서 가져옴) ──
+  const isGenerating = aiGen.isGenerating
+  const generationProgress = aiGen.generationProgress
+  const generationStep = aiGen.generationStep
   const [generatedResult, setGeneratedResult] = useState<GeneratedResultType | null>(null)
   const [savedItemId, setSavedItemId] = useState<string | null>(null)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
@@ -119,122 +117,88 @@ export default function NewMarketingPostPage() {
     setPlatforms(DEFAULT_PLATFORM_PRESETS[type])
   }
 
-  // ── AI 글 생성 + 자동 저장 (SSE 스트리밍) ──
-  const handleGenerate = async () => {
+  // 컨텍스트에서 결과가 오면 로컬 상태에 반영 + 자동 저장
+  const handleResult = useCallback(async (result: GeneratedResultType) => {
+    setGeneratedResult(result)
+    setEditedTitle(result.title)
+    setEditedBody(result.body)
+    setEditedHashtags(result.hashtags || [])
+
+    // 자동 DB 저장
+    try {
+      if (savedItemId) {
+        await fetch(`/api/marketing/posts/${savedItemId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ generatedContent: result }),
+        })
+        setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
+      } else {
+        const saveRes = await fetch('/api/marketing/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: result.title,
+            topic,
+            keyword,
+            postType,
+            tone,
+            useResearch,
+            factCheck,
+            platforms,
+            generatedContent: result,
+          }),
+        })
+        if (saveRes.ok) {
+          const saveJson = await saveRes.json()
+          setSavedItemId(saveJson.data.id)
+          setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
+        }
+      }
+    } catch (saveErr) {
+      console.error('자동 저장 실패:', saveErr)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedItemId, topic, keyword, postType, tone, useResearch, factCheck, platforms])
+
+  // 결과 콜백 등록
+  useEffect(() => {
+    aiGen.onResultCallback.current = handleResult
+    return () => {
+      aiGen.onResultCallback.current = null
+    }
+  }, [aiGen.onResultCallback, handleResult])
+
+  // 컨텍스트 에러 반영
+  useEffect(() => {
+    if (aiGen.generationError) {
+      setError(aiGen.generationError)
+    }
+  }, [aiGen.generationError])
+
+  // 이미 컨텍스트에 결과가 있으면 반영 (페이지 복귀 시)
+  useEffect(() => {
+    if (aiGen.generatedResult && !generatedResult) {
+      handleResult(aiGen.generatedResult)
+    }
+  }, [aiGen.generatedResult, generatedResult, handleResult])
+
+  // ── AI 글 생성 (컨텍스트 통해 SSE 스트리밍) ──
+  const handleGenerate = () => {
     if (!topic || !keyword) {
       setError('주제와 키워드를 입력해주세요.')
       return
     }
 
-    setIsGenerating(true)
-    setGenerationProgress(0)
-    setGenerationStep('준비 중...')
     setError('')
     setIsEditingBody(false)
     setHasUnsavedChanges(false)
 
-    try {
-      const res = await fetch('/api/marketing/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic, keyword, postType, tone, useResearch, factCheck, platforms,
-          imageStyle, imageVisualStyle, imageCount,
-          ...(imageStyle === 'use_own_image' && referenceImageBase64 ? { referenceImageBase64 } : {}),
-        }),
-      })
-
-      if (!res.ok || !res.body) {
-        // Vercel 인프라 오류 시 plain text 응답일 수 있으므로 text()로 읽기
-        const text = await res.text()
-        let errorMessage = '글 생성 실패'
-        try {
-          const json = JSON.parse(text)
-          errorMessage = json.error || errorMessage
-        } catch {
-          errorMessage = text.length > 100 ? text.slice(0, 100) + '...' : text || errorMessage
-        }
-        throw new Error(errorMessage)
-      }
-
-      // SSE 스트림 읽기
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          try {
-            const data = JSON.parse(line.slice(6))
-
-            if (data.heartbeat) continue // keepalive 무시
-            if (data.error) throw new Error(data.error)
-
-            if (data.progress !== undefined) setGenerationProgress(data.progress)
-            if (data.step) setGenerationStep(data.step)
-
-            if (data.result) {
-              const result: GeneratedResultType = data.result
-              setGeneratedResult(result)
-              setEditedTitle(result.title)
-              setEditedBody(result.body)
-              setEditedHashtags(result.hashtags || [])
-
-              // 자동 DB 저장 (비차단)
-              try {
-                if (savedItemId) {
-                  await fetch(`/api/marketing/posts/${savedItemId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ generatedContent: result }),
-                  })
-                  setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
-                } else {
-                  const saveRes = await fetch('/api/marketing/posts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      title: result.title,
-                      topic,
-                      keyword,
-                      postType,
-                      tone,
-                      useResearch,
-                      factCheck,
-                      platforms,
-                      generatedContent: result,
-                    }),
-                  })
-                  if (saveRes.ok) {
-                    const saveJson = await saveRes.json()
-                    setSavedItemId(saveJson.data.id)
-                    setSaveMessage({ type: 'success', text: '임시 저장되었습니다.' })
-                  }
-                }
-              } catch (saveErr) {
-                console.error('자동 저장 실패:', saveErr)
-              }
-            }
-          } catch (parseErr) {
-            if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {
-              throw parseErr
-            }
-          }
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '글 생성 중 오류가 발생했습니다.')
-    } finally {
-      setIsGenerating(false)
-    }
+    aiGen.startGeneration({
+      topic, keyword, postType, tone, useResearch, factCheck, platforms,
+      imageStyle, imageVisualStyle, imageCount,
+      referenceImageBase64: imageStyle === 'use_own_image' ? referenceImageBase64 : undefined,
+    })
   }
 
   // ── 수동 임시 저장 ──
@@ -423,7 +387,7 @@ export default function NewMarketingPostPage() {
 
           <div className="max-w-4xl space-y-6">
             {/* 기본 정보 */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-4 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
               <h2 className="text-lg font-semibold text-slate-800">기본 정보</h2>
 
               <div>
@@ -433,7 +397,7 @@ export default function NewMarketingPostPage() {
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="예: 스케일링 후 주의사항"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -444,7 +408,7 @@ export default function NewMarketingPostPage() {
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   placeholder="예: 스케일링 주의사항"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -454,7 +418,7 @@ export default function NewMarketingPostPage() {
                   <select
                     value={postType}
                     onChange={(e) => handlePostTypeChange(e.target.value as PostType)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
                   >
                     {Object.entries(POST_TYPE_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
@@ -467,7 +431,7 @@ export default function NewMarketingPostPage() {
                   <select
                     value={tone}
                     onChange={(e) => setTone(e.target.value as ToneType)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
                   >
                     {Object.entries(TONE_LABELS).map(([value, { label, description }]) => (
                       <option key={value} value={value}>{label} - {description}</option>
@@ -475,39 +439,39 @@ export default function NewMarketingPostPage() {
                   </select>
                 </div>
               </div>
-            </div>
+            </fieldset>
 
             {/* 품질 옵션 */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
               <h2 className="text-lg font-semibold text-slate-800">품질 옵션</h2>
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                 <input
                   type="checkbox"
                   checked={useResearch}
                   onChange={(e) => setUseResearch(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 disabled:cursor-not-allowed"
                 />
                 <div>
                   <span className="text-sm font-medium text-slate-700">논문 인용</span>
                   <span className="text-xs text-slate-400 ml-2">관련 학술 논문을 검색하여 인용</span>
                 </div>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                 <input
                   type="checkbox"
                   checked={factCheck}
                   onChange={(e) => setFactCheck(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 disabled:cursor-not-allowed"
                 />
                 <div>
                   <span className="text-sm font-medium text-slate-700">팩트체크</span>
                   <span className="text-xs text-slate-400 ml-2">생성된 글의 사실 여부를 검증</span>
                 </div>
               </label>
-            </div>
+            </fieldset>
 
             {/* 이미지 옵션 */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
               <h2 className="text-lg font-semibold text-slate-800">이미지 옵션</h2>
               <p className="text-xs text-slate-400">이미지 개수와 스타일을 설정하세요</p>
 
@@ -643,18 +607,18 @@ export default function NewMarketingPostPage() {
                   </div>
                 </>
               )}
-            </div>
+            </fieldset>
 
             {/* 배포 플랫폼 */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
               <h2 className="text-lg font-semibold text-slate-800">배포 플랫폼</h2>
               {(['naverBlog', 'instagram', 'facebook', 'threads'] as const).map((key) => (
-                <label key={key} className="flex items-center gap-3 cursor-pointer">
+                <label key={key} className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                   <input
                     type="checkbox"
                     checked={platforms[key]}
                     onChange={(e) => setPlatforms({ ...platforms, [key]: e.target.checked })}
-                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 disabled:cursor-not-allowed"
                   />
                   <span className="text-sm text-slate-700">
                     {key === 'naverBlog' ? '네이버 블로그' :
@@ -663,7 +627,7 @@ export default function NewMarketingPostPage() {
                   </span>
                 </label>
               ))}
-            </div>
+            </fieldset>
 
             {/* 에러 */}
             {error && (

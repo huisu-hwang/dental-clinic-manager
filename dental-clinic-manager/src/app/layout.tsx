@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AIGenerationProvider } from "@/contexts/AIGenerationContext";
 import PasswordResetHandler from "@/components/PasswordResetHandler";
 import { AppDialogRoot } from "@/components/ui/AppDialog";
 import ServiceWorkerRegistrar from "@/components/PWA/ServiceWorkerRegistrar";
+import AIGenerationFloating from "@/components/marketing/AIGenerationFloating";
 import UpdatePrompt from "@/components/PWA/UpdatePrompt";
 import "./globals.css";
 
@@ -64,11 +66,14 @@ export default function RootLayout({
     <html lang="ko">
       <body className="antialiased font-sans">
         <AuthProvider>
-          <ServiceWorkerRegistrar />
-          <UpdatePrompt autoReloadDelay={30000} />
-          <PasswordResetHandler />
-          {children}
-          <AppDialogRoot />
+          <AIGenerationProvider>
+            <ServiceWorkerRegistrar />
+            <UpdatePrompt autoReloadDelay={30000} />
+            <PasswordResetHandler />
+            {children}
+            <AIGenerationFloating />
+            <AppDialogRoot />
+          </AIGenerationProvider>
         </AuthProvider>
       </body>
     </html>
