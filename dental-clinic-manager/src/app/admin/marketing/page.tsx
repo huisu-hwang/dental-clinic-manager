@@ -14,6 +14,7 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   EyeIcon,
+  EyeSlashIcon,
   TrashIcon,
   ArrowPathIcon,
   PhotoIcon,
@@ -920,6 +921,7 @@ function SettingsContent() {
   const [editEnabled, setEditEnabled] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({})
 
   const loadSettings = useCallback(async () => {
     try {
@@ -1056,13 +1058,29 @@ function SettingsContent() {
                       className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
                     />
                   ) : (
-                    <input
-                      type={field.type}
-                      value={editConfig[field.key] || ''}
-                      onChange={(e) => setEditConfig({ ...editConfig, [field.key]: e.target.value })}
-                      placeholder={field.placeholder}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
+                    <div className={field.type === 'password' ? 'relative' : ''}>
+                      <input
+                        type={field.type === 'password' && visiblePasswords[field.key] ? 'text' : field.type}
+                        value={editConfig[field.key] || ''}
+                        onChange={(e) => setEditConfig({ ...editConfig, [field.key]: e.target.value })}
+                        placeholder={field.placeholder}
+                        className={`w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500${field.type === 'password' ? ' pr-10' : ''}`}
+                      />
+                      {field.type === 'password' && (
+                        <button
+                          type="button"
+                          onClick={() => setVisiblePasswords(prev => ({ ...prev, [field.key]: !prev[field.key] }))}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                          title={visiblePasswords[field.key] ? '비밀번호 숨기기' : '비밀번호 보기'}
+                        >
+                          {visiblePasswords[field.key] ? (
+                            <EyeSlashIcon className="h-4.5 w-4.5" />
+                          ) : (
+                            <EyeIcon className="h-4.5 w-4.5" />
+                          )}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
