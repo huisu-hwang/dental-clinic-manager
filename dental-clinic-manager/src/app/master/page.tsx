@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { dataService } from '@/lib/dataService'
@@ -44,6 +44,9 @@ export default function MasterAdminPage() {
   const [activityLogs, setActivityLogs] = useState<UserActivityLog[]>([])
   const [loadingActivity, setLoadingActivity] = useState(false)
   const [activityTotal, setActivityTotal] = useState(0)
+
+  // 로그인 기록 확장 상태
+  const [expandedLoginUsers, setExpandedLoginUsers] = useState<Set<string>>(new Set())
 
   // 사용자 편집 관련 상태
   const [showEditModal, setShowEditModal] = useState(false)
@@ -480,6 +483,19 @@ export default function MasterAdminPage() {
     return date.toLocaleDateString('ko-KR')
   }
 
+  // 로그인 기록 확장 토글
+  const toggleLoginHistory = (userId: string) => {
+    setExpandedLoginUsers(prev => {
+      const next = new Set(prev)
+      if (next.has(userId)) {
+        next.delete(userId)
+      } else {
+        next.add(userId)
+      }
+      return next
+    })
+  }
+
   // 활동 타입 라벨
   const getActivityTypeLabel = (type: string) => {
     switch (type) {
@@ -882,7 +898,8 @@ export default function MasterAdminPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
+                    <Fragment key={user.id}>
+                    <tr className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.name}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
                       <td className="px-6 py-4">
@@ -910,12 +927,21 @@ export default function MasterAdminPage() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">{user.clinic?.name || '-'}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        <div className="flex items-center">
+                        <button
+                          onClick={() => toggleLoginHistory(user.id)}
+                          className="flex items-center hover:text-blue-600 transition-colors cursor-pointer"
+                          title="클릭하여 로그인 기록 펼치기"
+                        >
                           <ClockIcon className="w-4 h-4 mr-1 text-gray-400" />
                           <span title={user.last_login_at ? new Date(user.last_login_at).toLocaleString('ko-KR') : '기록 없음'}>
                             {formatRelativeTime(user.last_login_at)}
                           </span>
-                        </div>
+                          {user.recent_logins?.length > 0 && (
+                            <span className="ml-1.5 text-xs text-blue-500">
+                              {expandedLoginUsers.has(user.id) ? '▲' : '▼'}
+                            </span>
+                          )}
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {new Date(user.created_at).toLocaleDateString()}
@@ -948,6 +974,39 @@ export default function MasterAdminPage() {
                         </div>
                       </td>
                     </tr>
+                    {/* 로그인 기록 확장 행 */}
+                    {expandedLoginUsers.has(user.id) && (
+                      <tr className="bg-blue-50/50">
+                        <td colSpan={8} className="px-6 py-3">
+                          <div className="ml-4">
+                            <p className="text-xs font-semibold text-gray-600 mb-2">최근 로그인 기록</p>
+                            {user.recent_logins?.length > 0 ? (
+                              <div className="space-y-1.5">
+                                {user.recent_logins.map((log: any) => (
+                                  <div key={log.id} className="flex items-center gap-3 text-xs text-gray-600 bg-white rounded px-3 py-2 border border-gray-100">
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">
+                                      로그인
+                                    </span>
+                                    <span className="text-gray-800">
+                                      {new Date(log.created_at).toLocaleString('ko-KR')}
+                                    </span>
+                                    {log.ip_address && log.ip_address !== 'unknown' && (
+                                      <span className="text-gray-400">IP: {log.ip_address}</span>
+                                    )}
+                                    {log.metadata?.clinic_name && (
+                                      <span className="text-gray-400">병원: {log.metadata.clinic_name}</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-400 py-1">로그인 기록이 없습니다.</p>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
