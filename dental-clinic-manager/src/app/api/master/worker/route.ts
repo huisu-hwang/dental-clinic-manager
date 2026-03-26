@@ -38,6 +38,7 @@ export async function GET() {
     // 2. DB에서 supervisor/워커 상태 조회
     const admin = getSupabaseAdmin();
     let supervisorOnline = false;
+    let headless = false;
     let pendingCount = 0;
     let publishedTodayCount = 0;
     let recentLogs: {
@@ -55,12 +56,13 @@ export async function GET() {
       // supervisor 상태 확인
       const { data: controlData } = await admin
         .from('marketing_worker_control')
-        .select('watchdog_online, worker_running, last_updated')
+        .select('watchdog_online, worker_running, last_updated, headless')
         .eq('id', 'main')
         .single();
 
       if (controlData) {
         supervisorOnline = controlData.watchdog_online || false;
+        headless = controlData.headless || false;
         // HTTP 헬스체크 실패 시 DB 상태도 참고
         if (!workerOnline && controlData.worker_running) {
           // DB에서는 실행 중이라고 하지만 HTTP 응답 없음 → 시작 중이거나 포트 미응답
@@ -99,6 +101,7 @@ export async function GET() {
     return NextResponse.json({
       workerOnline,
       supervisorOnline,
+      headless,
       workerUrl: WORKER_URL,
       pendingCount,
       publishedTodayCount,
@@ -223,6 +226,19 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json({ ok: false, message: '시작 요청에 실패했습니다.' });
+    }
+
+    if (action === 'updateSettings') {
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        const update: Record<string, unknown> = {};
+        if (body.headless !== undefined) update.headless = body.headless;
+        if (Object.keys(update).length > 0) {
+          await admin.from('marketing_worker_control').update(update).eq('id', 'main');
+          return NextResponse.json({ ok: true, message: '설정이 저장되었습니다.' });
+        }
+      }
+      return NextResponse.json({ ok: false, message: '설정 저장 실패' });
     }
 
     return NextResponse.json({ error: '알 수 없는 액션' }, { status: 400 });

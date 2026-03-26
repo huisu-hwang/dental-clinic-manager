@@ -26,6 +26,7 @@ export interface PollResult {
   control: {
     start_requested: boolean;
     stop_requested: boolean;
+    headless: boolean;
   };
   nextItem: ScheduledItem | null;
 }

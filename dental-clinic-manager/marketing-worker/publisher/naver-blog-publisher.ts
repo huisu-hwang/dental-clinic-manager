@@ -50,18 +50,22 @@ export class NaverBlogPublisher {
   /**
    * 브라우저 인스턴스 시작
    */
-  async init(config?: NaverBlogConfig): Promise<void> {
+  private headless = false;
+
+  async init(config?: NaverBlogConfig, options?: { headless?: boolean }): Promise<void> {
     this.blogConfig = config || {
       blogId: CONFIG.naver.blogId,
       loginCookie: CONFIG.naver.loginCookie,
     };
+
+    if (options?.headless !== undefined) this.headless = options.headless;
 
     if (!this.blogConfig.blogId) {
       throw new Error('블로그 ID가 설정되지 않았습니다. 마케팅 설정에서 블로그 ID를 입력해주세요.');
     }
 
     this.browser = await chromium.launch({
-      headless: false,
+      headless: this.headless,
       args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
     });
 
