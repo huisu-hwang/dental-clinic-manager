@@ -21,13 +21,19 @@ if (existsSync(localEnv)) {
 // ============================================
 
 export const CONFIG = {
-  // Supabase
+  // 대시보드 API (유저 PC 독립 실행 시 사용)
+  api: {
+    dashboardUrl: process.env.DASHBOARD_API_URL || '',
+    workerApiKey: process.env.WORKER_API_KEY || '',
+  },
+
+  // Supabase (서버 직접 실행 시 폴백, 없어도 동작)
   supabase: {
     url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   },
 
-  // 네이버 블로그
+  // 네이버 블로그 (API를 통해 조회하므로 비워둬도 됨)
   naver: {
     blogId: process.env.NAVER_BLOG_ID || '',
     loginCookie: process.env.NAVER_LOGIN_COOKIE || '',
@@ -60,3 +66,11 @@ export const CONFIG = {
     cronInterval: '*/5 * * * *', // 매 5분
   },
 } as const;
+
+/**
+ * API 모드 여부 (대시보드 API를 통해 동작)
+ * DASHBOARD_API_URL과 WORKER_API_KEY가 설정되어 있으면 API 모드
+ */
+export function isApiMode(): boolean {
+  return !!(CONFIG.api.dashboardUrl && CONFIG.api.workerApiKey);
+}
