@@ -120,6 +120,16 @@ export async function POST(request: NextRequest) {
     const action = body.action || 'trigger';
 
     if (action === 'trigger') {
+      // 1차: DB 시그널로 워커 시작 요청 (유저 PC/서버 어디서든 동작)
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        await admin
+          .from('marketing_worker_control')
+          .update({ start_requested: true })
+          .eq('id', 'main');
+      }
+
+      // 2차: HTTP 직접 트리거 시도 (같은 서버에서 실행 중인 경우)
       try {
         const res = await fetch(`${WORKER_URL}/trigger`, {
           method: 'POST',
@@ -129,12 +139,13 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ ok: true, workerOnline: true, message: '즉시 처리를 시작했습니다.' });
         }
       } catch {
-        // 워커 미실행
+        // 워커가 같은 서버에 없는 경우 (유저 PC에서 실행 중) - 정상
       }
+
       return NextResponse.json({
-        ok: false,
+        ok: true,
         workerOnline: false,
-        message: '워커가 실행 중이 아닙니다. 워커를 먼저 시작해주세요.',
+        message: '발행 요청을 보냈습니다. 워커가 실행 중이면 곧 처리됩니다.',
       });
     }
 
@@ -195,7 +206,7 @@ export async function POST(request: NextRequest) {
         if (!supervisorOnline) {
           return NextResponse.json({
             ok: false,
-            message: 'Supervisor가 실행 중이 아닙니다. 서버에서 supervisor를 먼저 시작해주세요.',
+            message: 'Supervisor가 실행 중이 아닙니다. 로컬 PC에서 supervisor를 시작해주세요.',
             manualCommand: 'cd marketing-worker && npm run supervisor',
           });
         }

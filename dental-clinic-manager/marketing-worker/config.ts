@@ -1,5 +1,20 @@
 import dotenv from 'dotenv';
-dotenv.config({ path: '../.env.local' });
+import { existsSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// 1순위: 자기 디렉토리의 .env.local (유저 PC 독립 실행)
+// 2순위: 부모 디렉토리의 .env.local (서버 실행 호환)
+const localEnv = resolve(__dirname, '.env.local');
+const parentEnv = resolve(__dirname, '..', '.env.local');
+
+if (existsSync(localEnv)) {
+  dotenv.config({ path: localEnv });
+} else {
+  dotenv.config({ path: parentEnv });
+}
 
 // ============================================
 // 마케팅 워커 설정

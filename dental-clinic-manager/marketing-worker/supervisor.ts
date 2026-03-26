@@ -20,7 +20,12 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-dotenv.config({ path: resolve(__dirname, '..', '.env.local') });
+
+// 1순위: 자기 디렉토리, 2순위: 부모 디렉토리
+import { existsSync } from 'fs';
+const localEnv = resolve(__dirname, '.env.local');
+const parentEnv = resolve(__dirname, '..', '.env.local');
+dotenv.config({ path: existsSync(localEnv) ? localEnv : parentEnv });
 
 const POLL_INTERVAL_MS = 10_000; // 10초마다 폴링
 const CONTROL_ID = 'main';
