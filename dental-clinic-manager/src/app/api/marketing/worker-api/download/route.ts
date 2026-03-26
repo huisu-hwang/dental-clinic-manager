@@ -2,24 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
-// 마스터 권한 확인
-async function checkMasterAuth() {
+// 인증된 유저 확인 (마케팅 페이지 접근 가능한 유저면 다운로드 허용)
+async function checkAuth() {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return null;
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-  if (!userData || !['master_admin', 'admin'].includes(userData.role)) return null;
   return user;
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await checkMasterAuth();
-    if (!user) return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
+    const user = await checkAuth();
+    if (!user) return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const os = searchParams.get('os') || 'mac';
