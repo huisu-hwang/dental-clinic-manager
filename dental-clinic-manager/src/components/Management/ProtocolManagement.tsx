@@ -450,6 +450,68 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
     setTimeout(() => setSuccess(''), 3000)
   }
 
+  const handleUpdateAndRequestReview = async (formData: ProtocolFormData) => {
+    if (!editingProtocol) return
+
+    // 1. 프로토콜 저장
+    const result = await dataService.updateProtocol(editingProtocol.id, formData)
+    if (result.error) {
+      throw new Error(result.error)
+    }
+
+    // 2. 저장된 프로토콜의 current_version_id 가져오기
+    const protocolResult = await dataService.getProtocolById(editingProtocol.id)
+    if (protocolResult.error || !protocolResult.data) {
+      throw new Error(protocolResult.error || '프로토콜 조회 실패')
+    }
+    const updatedProtocol = protocolResult.data as Protocol
+
+    // 3. 검토 요청 생성
+    if (updatedProtocol.current_version_id) {
+      const reviewResult = await dataService.createProtocolReview(
+        editingProtocol.id,
+        updatedProtocol.current_version_id
+      )
+      if (reviewResult.error) {
+        throw new Error(reviewResult.error)
+      }
+
+      // 4. 대표원장에게 알림 전송
+      const ownerResult = await dataService.getClinicOwnerIds()
+      if (!ownerResult.error && ownerResult.data.length > 0) {
+        const userName = currentUser.name || '사용자'
+        try {
+          await fetch('/api/user-notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clinicId: currentUser.clinic_id,
+              createdBy: currentUser.id,
+              notifications: ownerResult.data.map((ownerId: string) => ({
+                user_id: ownerId,
+                type: 'protocol_review_requested',
+                title: '프로토콜 검토 요청',
+                content: `${userName}님이 "${editingProtocol.title}" 프로토콜의 검토를 요청했습니다`,
+                link: `/management?tab=protocol&review=${editingProtocol.id}`,
+                reference_type: 'protocol_review',
+                reference_id: reviewResult.data.id,
+              }))
+            }),
+          })
+        } catch (err) {
+          console.error('[handleUpdateAndRequestReview] Notification error:', err)
+        }
+      }
+    }
+
+    setSuccess('프로토콜이 수정되고 검토 요청이 전송되었습니다.')
+    setShowEditForm(false)
+    setSelectedProtocol(null)
+    setEditingProtocol(null)
+    fetchProtocols()
+    setTimeout(() => setSuccess(''), 3000)
+  }
+
   const handleDeleteProtocol = (protocolId: string) => {
     setShowDetail(false)
     setSelectedProtocol(null)
@@ -1088,6 +1150,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                   setSelectedProtocol(null)
                   setEditingProtocol(null)
                 }}
+                onRequestReview={!isOwner ? handleUpdateAndRequestReview : undefined}
               />
             )}
 

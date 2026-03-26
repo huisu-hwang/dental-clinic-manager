@@ -1772,6 +1772,122 @@ function ScrapingWorkerPanel() {
   )
 }
 
+// ─── 마케팅 워커 설치 안내 ───
+function WorkerInstallGuide() {
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadDone, setDownloadDone] = useState(false)
+
+  const detectOS = (): 'mac' | 'windows' | 'linux' => {
+    const ua = navigator.userAgent.toLowerCase()
+    if (ua.includes('win')) return 'windows'
+    if (ua.includes('linux')) return 'linux'
+    return 'mac'
+  }
+
+  const osLabels = { mac: 'macOS', windows: 'Windows', linux: 'Linux' }
+
+  const handleDownload = async () => {
+    setIsDownloading(true)
+    try {
+      const os = detectOS()
+      const res = await fetch(`/api/marketing/worker-api/download?os=${os}`)
+      if (!res.ok) throw new Error('다운로드 실패')
+
+      const blob = await res.blob()
+      const disposition = res.headers.get('Content-Disposition') || ''
+      const filenameMatch = disposition.match(/filename="(.+)"/)
+      const filename = filenameMatch ? filenameMatch[1] : `marketing-worker-setup.${os === 'windows' ? 'bat' : 'command'}`
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+      setDownloadDone(true)
+    } catch (err) {
+      console.error('워커 다운로드 실패:', err)
+      alert('다운로드에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  const os = typeof window !== 'undefined' ? detectOS() : 'mac'
+
+  return (
+    <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-5 text-sm space-y-4">
+      <div>
+        <p className="font-semibold text-indigo-900 text-base mb-2">블로그 자동 발행을 위해 워커 설치가 필요합니다</p>
+        <p className="text-indigo-700 leading-relaxed">
+          블로그 글 발행은 실제 브라우저를 열어 네이버 블로그에 자동으로 글을 작성합니다.
+          이 작업은 현재 사용 중인 PC에서 실행되어야 하므로, 아래 파일을 다운로드하고 실행해주세요.
+        </p>
+      </div>
+
+      <div className="bg-white/60 rounded-lg p-4 space-y-2">
+        <div className="flex items-center gap-2 text-indigo-800">
+          <span className="font-medium">설치 과정 (자동)</span>
+          <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">최초 1회</span>
+        </div>
+        <ol className="list-decimal list-inside text-indigo-700 space-y-1 text-xs">
+          <li>필요한 프로그램 자동 설치 (약 2~3분)</li>
+          <li>발행용 브라우저(Chromium) 자동 다운로드</li>
+          <li>설치 완료 후 자동으로 워커 시작</li>
+        </ol>
+        <p className="text-xs text-indigo-500 mt-1">
+          * 이후에는 파일을 다시 실행하면 바로 워커가 시작됩니다.
+        </p>
+      </div>
+
+      {!downloadDone ? (
+        <button
+          onClick={handleDownload}
+          disabled={isDownloading}
+          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        >
+          {isDownloading ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              다운로드 중...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              {osLabels[os]}용 설치 파일 다운로드
+            </>
+          )}
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-green-700">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">다운로드 완료!</span>
+          </div>
+          <div className="text-xs text-indigo-600 leading-relaxed">
+            <p className="font-medium mb-1">다음 단계:</p>
+            <p>1. 다운로드된 파일을 더블클릭하여 실행하세요.</p>
+            <p>2. 설치가 완료되면 이 페이지가 자동으로 워커 연결을 감지합니다.</p>
+          </div>
+          <button
+            onClick={handleDownload}
+            className="w-full py-2.5 bg-white text-indigo-600 border border-indigo-200 rounded-xl text-sm font-medium hover:bg-indigo-50 transition-colors"
+          >
+            다시 다운로드
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── 마케팅 워커 제어 패널 ───
 function WorkerPanel() {
   const [status, setStatus] = useState<{
@@ -2035,15 +2151,7 @@ function WorkerPanel() {
                   </div>
 
                   {!status.supervisorOnline && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
-                      <p className="font-medium text-amber-800 mb-2">Supervisor 시작 방법</p>
-                      <code className="block bg-amber-100 text-amber-900 px-3 py-2 rounded-lg text-xs font-mono">
-                        cd marketing-worker && npm run supervisor
-                      </code>
-                      <p className="text-amber-600 text-xs mt-2">
-                        pm2로 상시 실행: pm2 start --name marketing-supervisor -- npm run supervisor
-                      </p>
-                    </div>
+                    <WorkerInstallGuide />
                   )}
                 </div>
               )}
