@@ -1,28 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getSupabaseAdmin } from '@/lib/supabase/admin';
-
-// 인증된 유저 확인 (마케팅 페이지 접근 가능한 유저면 다운로드 허용)
-async function checkAuth() {
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
-}
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await checkAuth();
-    if (!user) return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const os = searchParams.get('os') || 'mac';
 
-    // API 키 조회
-    const admin = getSupabaseAdmin();
-    if (!admin) return NextResponse.json({ error: 'Admin client error' }, { status: 500 });
-
-    const { data } = await admin
+    // API 키 조회 (RLS 비활성화 테이블이므로 일반 클라이언트로 조회 가능)
+    const { data } = await supabase
       .from('marketing_worker_control')
       .select('worker_api_key')
       .eq('id', 'main')
