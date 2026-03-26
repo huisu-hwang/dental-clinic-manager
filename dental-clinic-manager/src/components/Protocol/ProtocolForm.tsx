@@ -19,13 +19,15 @@ interface ProtocolFormProps {
   onSubmit: (data: ProtocolFormData) => Promise<void>
   onCancel: () => void
   mode: 'create' | 'edit'
+  onRequestReview?: (data: ProtocolFormData) => Promise<void>
 }
 
 export default function ProtocolForm({
   initialData,
   onSubmit,
   onCancel,
-  mode
+  mode,
+  onRequestReview
 }: ProtocolFormProps) {
   const resolvedInitialSteps = useMemo(() => {
     if (initialData?.steps && initialData.steps.length > 0) {
@@ -61,6 +63,7 @@ export default function ProtocolForm({
 
   const [categories, setCategories] = useState<ProtocolCategory[]>([])
   const [loading, setLoading] = useState(false)
+  const [reviewLoading, setReviewLoading] = useState(false)
   const [error, setError] = useState('')
   const [clinicId, setClinicId] = useState<string>('')
   // 폼 초기화 여부 추적 (부모 리렌더로 인한 initialData 참조 변경 시 폼 리셋 방지)
@@ -337,17 +340,63 @@ export default function ProtocolForm({
               type="button"
               onClick={onCancel}
               className="px-4 py-2 text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
-              disabled={loading}
+              disabled={loading || reviewLoading}
             >
               취소
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
-              disabled={loading}
+              disabled={loading || reviewLoading}
             >
               {loading ? '저장 중...' : mode === 'create' ? '프로토콜 생성' : '변경 사항 저장'}
             </button>
+            {mode === 'edit' && onRequestReview && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!formData.title.trim()) {
+                    setError('프로토콜 제목을 입력하세요.')
+                    return
+                  }
+                  if (!hasValidSteps(formData.steps)) {
+                    setError('최소 1개 이상의 단계에 제목과 내용을 입력하세요.')
+                    return
+                  }
+                  if (!formData.change_summary?.trim()) {
+                    setError('변경 사항 요약을 입력하세요.')
+                    return
+                  }
+                  setReviewLoading(true)
+                  setError('')
+                  try {
+                    if (formData.tags.length > 0 && clinicId) {
+                      await tagSuggestionService.updateTagStatistics(
+                        clinicId,
+                        formData.tags,
+                        formData.category_id
+                      )
+                    }
+                    const stepsHtml = serializeStepsToHtml(formData.steps || [])
+                    await onRequestReview({
+                      ...formData,
+                      clinic_id: clinicId,
+                      content: stepsHtml,
+                      steps: formData.steps
+                    })
+                  } catch (err) {
+                    const errorMessage = err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.'
+                    setError(errorMessage)
+                  } finally {
+                    setReviewLoading(false)
+                  }
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-indigo-400 inline-flex items-center gap-2"
+                disabled={loading || reviewLoading}
+              >
+                {reviewLoading ? '처리 중...' : '저장 후 검토요청'}
+              </button>
+            )}
           </div>
         </form>
       </div>
