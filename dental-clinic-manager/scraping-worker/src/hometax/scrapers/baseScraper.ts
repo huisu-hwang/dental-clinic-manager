@@ -16,10 +16,49 @@ export interface ScrapeResult {
 
 /** 홈택스 메뉴 페이지로 이동 */
 export async function navigateToMenu(page: Page, menuPath: string): Promise<void> {
-  const url = `${HOMETAX_BASE}/websquare/websquare.wq?w2xPath=${menuPath}`;
-  log.info({ menuPath }, '메뉴 이동');
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.waitForTimeout(2000); // WebSquare 렌더링 대기
+  const menuUrl = `${HOMETAX_BASE}/websquare/websquare.wq?w2xPath=${menuPath}`;
+  const mainUrl = `${HOMETAX_BASE}/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml`;
+
+  // 1. 메인 페이지 먼저 방문하여 세션 활성화 (신규 탭에서 직접 서브메뉴 접근 시 메인으로 리다이렉트되는 문제 방지)
+  log.info({ menuPath }, '메인 페이지 세션 활성화');
+  await page.goto(mainUrl, { waitUntil: 'load', timeout: 30000 });
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(2000);
+
+  // 2. 로그인 상태 확인 (waitFor로 실제 대기)
+  const mainPageUrl = page.url();
+  const mainPageScreenshot = `/tmp/hometax-main-${Date.now()}.png`;
+  await page.screenshot({ path: mainPageScreenshot, fullPage: false }).catch(() => {});
+  log.info({ mainPageUrl, mainPageScreenshot }, '메인 페이지 상태 스크린샷');
+
+  // "로그아웃" 텍스트가 나타날 때까지 최대 10초 대기 (isVisible은 대기 안 함)
+  const isLoggedIn = await page.locator('a:has-text("로그아웃"), button:has-text("로그아웃"), text=로그아웃').first()
+    .waitFor({ state: 'visible', timeout: 10000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!isLoggedIn) {
+    log.error({ mainPageUrl }, '홈택스 세션 만료 — 재로그인 필요');
+    throw new Error('홈택스 세션이 만료되었습니다. 재로그인이 필요합니다.');
+  }
+  log.info({ mainPageUrl }, '로그인 상태 확인 완료');
+
+  // 3. 메뉴 페이지로 이동
+  log.info({ menuPath, menuUrl }, '메뉴 이동');
+  await page.goto(menuUrl, { waitUntil: 'load', timeout: 30000 });
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+  await page.waitForTimeout(3000);
+
+  // 4. 리다이렉트 감지
+  const currentUrl = page.url();
+  if (currentUrl.includes('index_pp')) {
+    const screenshotPath = `/tmp/hometax-redirect-${Date.now()}.png`;
+    await page.screenshot({ path: screenshotPath, fullPage: false }).catch(() => {});
+    log.error({ menuPath, currentUrl, screenshotPath }, '메뉴 접근 실패: 메인 페이지로 리다이렉트됨');
+    throw new Error(`메뉴 페이지 접근 실패: ${menuPath}`);
+  }
+
+  log.info({ currentUrl, frameCount: page.frames().length }, '메뉴 이동 완료');
 }
 
 /** 조회 기간 설정 (연/월) */
@@ -57,7 +96,7 @@ export async function setPeriod(page: Page, year: number, month: number): Promis
   log.debug({ startDate, endDate }, '조회 기간 설정');
 }
 
-/** 조회 버튼 클릭 후 결과 대기 — WebSquare <a> 태그 지원 */
+/** 조회 버튼 클릭 후 결과 대기 — WebSquare <a> 태그 지원, iframe 포함 탐색 */
 export async function clickSearchAndWait(page: Page): Promise<void> {
   // WebSquare에서 조회 버튼은 <a> 태그일 수 있음
   const searchSelectors = [
@@ -65,13 +104,23 @@ export async function clickSearchAndWait(page: Page): Promise<void> {
     'button:has-text("조회")',
     'input[value="조회"]',
     '[class*="search"]:has-text("조회")',
+    '[role="button"]:has-text("조회")',
+    'span:has-text("조회")',
   ];
 
+  // 먼저 메인 프레임에서 조회 버튼이 나타날 때까지 최대 20초 대기
+  const combinedSelector = searchSelectors.join(', ');
+  await page.waitForSelector(combinedSelector, { state: 'visible', timeout: 20000 }).catch(() => {
+    log.warn({ url: page.url() }, '조회 버튼 대기 타임아웃 (20s), 강제 진행');
+  });
+
   let clicked = false;
+
+  // 1. 메인 프레임 시도
   for (const sel of searchSelectors) {
     try {
       const loc = page.locator(sel).first();
-      await loc.click({ timeout: 10000 });
+      await loc.click({ timeout: 5000 });
       log.debug({ selector: sel }, '조회 버튼 클릭 (locator)');
       clicked = true;
       break;
@@ -93,7 +142,36 @@ export async function clickSearchAndWait(page: Page): Promise<void> {
     }
   }
 
+  // 2. iframe 내부 탐색 (WebSquare가 iframe을 사용하는 경우)
   if (!clicked) {
+    const frames = page.frames().filter(f => f !== page.mainFrame());
+    log.info({ frameCount: frames.length }, 'iframe 탐색 시작');
+    for (const frame of frames) {
+      for (const sel of searchSelectors) {
+        try {
+          const loc = frame.locator(sel).first();
+          await loc.click({ timeout: 3000 });
+          log.info({ selector: sel, frameUrl: frame.url() }, '조회 버튼 클릭 (iframe)');
+          clicked = true;
+          break;
+        } catch { /* continue */ }
+      }
+      if (clicked) break;
+    }
+  }
+
+  if (!clicked) {
+    // 디버그: 페이지 텍스트와 URL 덤프
+    const pageText = await page.evaluate(() => ((globalThis as any).document?.body?.innerText || '').substring(0, 2000)).catch(() => ''); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const pageUrl = page.url();
+    const frameUrls = page.frames().map(f => f.url());
+    log.error({ pageUrl, frameUrls, pageText }, '조회 버튼을 찾을 수 없음 - 페이지 상태 덤프');
+
+    // 디버그 스크린샷 저장
+    const screenshotPath = `/tmp/hometax-debug-${Date.now()}.png`;
+    await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => {});
+    log.error({ screenshotPath }, '디버그 스크린샷 저장');
+
     throw new Error('조회 버튼을 찾을 수 없습니다');
   }
 

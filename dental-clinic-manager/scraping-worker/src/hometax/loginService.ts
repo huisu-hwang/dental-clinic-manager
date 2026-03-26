@@ -187,6 +187,11 @@ async function performLogin(page: Page, loginId: string, loginPw: string, reside
     // WebSquare SPA 초기화 완료 대기 (JS 기반 리다이렉트/네비게이션 안정화)
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 
+    // 디버그: 메인 페이지 스크린샷
+    const mainSS = `/tmp/login-1-main-${Date.now()}.png`;
+    await page.screenshot({ path: mainSS, fullPage: false }).catch(() => {});
+    log.info({ screenshot: mainSS, url: page.url() }, '1) 메인 페이지 접속 후 스크린샷');
+
     // 보안 프로그램 팝업 닫기 (있는 경우)
     await dismissSecurityPopups(page);
 
@@ -207,15 +212,74 @@ async function performLogin(page: Page, loginId: string, loginPw: string, reside
       await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
     }
 
+    // 디버그: 로그인 버튼 클릭 후 스크린샷
+    const loginPageSS = `/tmp/login-2-loginpage-${Date.now()}.png`;
+    await page.screenshot({ path: loginPageSS, fullPage: false }).catch(() => {});
+    log.info({ screenshot: loginPageSS, url: page.url(), loginClicked }, '2) 로그인 버튼 클릭 후 스크린샷');
+
     // 3. "아이디 로그인" 탭 선택
     log.info('아이디 로그인 탭 선택');
-    await safeClick(page, [
-      'li:has-text("아이디 로그인") > a',
-      'a:has-text("아이디 로그인")',
-      'text=아이디 로그인',
-      '[class*="tab"]:has-text("아이디")',
-    ], '아이디 로그인 탭', { timeout: 10000 });
-    await page.waitForTimeout(1500); // 탭 전환 후 폼 렌더링 대기
+
+    // JS TreeWalker로 "아이디 로그인" 텍스트 직접 클릭 (WebSquare SPA에서 Playwright 셀렉터 실패 보완)
+    const jsIdTabResult = await page.evaluate(() => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const win = globalThis as any;
+      const doc = win.document;
+      const walker = doc.createTreeWalker(doc.body, win.NodeFilter.SHOW_ELEMENT);
+      let node: any = walker.currentNode;
+      while (node) {
+        const el = node as any;
+        const directText = Array.from(el.childNodes as any[])
+          .filter((n: any) => n.nodeType === win.Node.TEXT_NODE)
+          .map((n: any) => (n.textContent?.trim() || '') as string)
+          .join('');
+        if (directText === '아이디 로그인') {
+          el.click();
+          return `clicked: ${el.tagName}#${el.id}.${el.className}`;
+        }
+        node = walker.nextNode();
+      }
+      return 'not found';
+    }).catch(() => 'error');
+
+    log.info({ jsIdTabResult }, '아이디 로그인 탭 JS 클릭 결과');
+
+    // ID 입력 필드가 visible해질 때까지 대기 (최대 10초) — 탭 클릭 성공의 핵심 지표
+    const idFieldAppeared = await page.locator('input[id*="iptUserId"], input[id*="userId"]')
+      .first()
+      .waitFor({ state: 'visible', timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (!idFieldAppeared) {
+      // Playwright locator로도 재시도
+      await safeClick(page, [
+        'text=아이디 로그인',
+        'a:has-text("아이디 로그인")',
+        '[class*="tab"]:has-text("아이디")',
+      ], '아이디 로그인 탭 재시도', { timeout: 5000 });
+      await page.waitForTimeout(3000);
+    }
+
+    // 디버그: 아이디 로그인 탭 클릭 후 스크린샷
+    const idTabSS = `/tmp/login-3-idtab-${Date.now()}.png`;
+    await page.screenshot({ path: idTabSS, fullPage: false }).catch(() => {});
+    // 버튼 관련 요소만 추출 (디버그)
+    const btnHtml = await page.evaluate(() => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const doc = (globalThis as any).document;
+      const buttons = Array.from(doc.querySelectorAll('a, button, input[type="submit"], input[type="button"], input[type="password"], input[type="text"]') as any[])
+        .filter((el: any) => {
+          const text = el.textContent?.trim() || '';
+          const cls = el.className || '';
+          const id = el.id || '';
+          return text.includes('로그인') || cls.includes('login') || cls.includes('Login') || cls.includes('logingbtn') || id.includes('UserId') || id.includes('UserPw');
+        })
+        .map((el: any) => `<${el.tagName} id="${el.id}" class="${el.className}" type="${el.type || ''}">${el.textContent?.trim().substring(0, 30)}</${el.tagName}>`)
+        .join('\n');
+      return buttons;
+    }).catch(() => '');
+    log.info({ screenshot: idTabSS, idFieldAppeared, loginButtons: btnHtml }, '3) 아이디 로그인 탭 후 스크린샷');
 
     // 4. ID 입력 (홈택스는 키보드 이벤트를 감지하므로 type 사용)
     log.info('ID/PW 입력');
@@ -269,27 +333,92 @@ async function performLogin(page: Page, loginId: string, loginPw: string, reside
       }
     }
 
-    // 6. 로그인 버튼 클릭 (홈택스는 <a> 태그를 버튼으로 사용 — WebSquare)
+    // 6. 로그인 버튼 클릭
     log.info('로그인 시도');
+    // 홈택스 아이디 로그인 폼 제출 버튼은 두 가지 화면에 따라 다름:
+    // [팝업 방식] input.btn_idlogin, input.btn_login (loginboxFrame 내부)
+    // [전체 페이지 방식] a#mf_txppWframe_anchor25.logingbtn (로그인 타입 선택 후 아이디 탭)
     const submitClicked = await safeClick(page, [
-      '#mf_txppWframe_anchor25',              // 아이디 로그인 페이지 제출 버튼 (정확한 ID)
-      'a.logingbtn',                           // 로그인 버튼 고유 클래스
-      '.logingbtn',                            // 클래스 단독
-      '#mf_txppWframe_anchor48',              // 대체 로그인 버튼 ID
-      'a[role="button"]:has-text("로그인"):not(:has-text("아이디")):not(:has-text("비회원"))', // <a> 태그 버튼 중 정확히 "로그인"만
-      'button:has-text("로그인")',              // 일반 버튼 폴백
+      'input[class*="btn_idlogin"]',              // 팝업 방식 아이디 로그인 제출 버튼
+      'input[class*="btn_login"]',                // 팝업 방식 로그인 버튼
+      '#mf_txppWframe_loginboxFrame_wq_uuid_923', // 팝업 방식 직접 ID
+      '#mf_txppWframe_loginboxFrame_trigger2',    // 팝업 방식 직접 ID
+      '#mf_txppWframe_anchor25',                  // 전체 페이지 방식 아이디 로그인 버튼
+      'a.logingbtn',                              // 전체 페이지 방식 클래스 (아이디 탭 선택 후)
+      '#mf_txppWframe_anchor48',                  // 전체 페이지 방식 대체 버튼
+      'button:has-text("로그인")',                 // 표준 HTML 버튼 (폴백)
     ], '로그인 제출 버튼', { timeout: 10000 });
 
     if (!submitClicked) {
       return { success: false, errorMessage: '로그인 버튼을 찾을 수 없습니다', errorCode: 'UNKNOWN' };
     }
 
-    // 7. 로그인 결과 확인 (로그인 요청 처리 시간 대기 후)
-    await page.waitForTimeout(3000); // 서버 응답 대기
+    // 디버그: 로그인 제출 직후 스크린샷
+    const submitSS = `/tmp/login-4-submit-${Date.now()}.png`;
+    await page.screenshot({ path: submitSS, fullPage: false }).catch(() => {});
+    log.info({ screenshot: submitSS, submitClicked }, '4) 로그인 제출 직후 스크린샷');
+
+    // 7. 서버 응답 대기
+    await page.waitForTimeout(3000);
+
+    // 디버그: 3초 대기 후 스크린샷
+    const waitSS = `/tmp/login-5-wait-${Date.now()}.png`;
+    await page.screenshot({ path: waitSS, fullPage: false }).catch(() => {});
+    log.info({ screenshot: waitSS, url: page.url() }, '5) 3초 대기 후 스크린샷');
+
+    // 8. 아이디 로그인 2차 인증 팝업 처리 (주민등록번호 필요)
+    const has2FA = await page.locator('text=아이디 로그인 2차 인증').first()
+      .waitFor({ state: 'visible', timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (has2FA) {
+      log.info('아이디 로그인 2차 인증 팝업 감지');
+      if (!residentNumber) {
+        const ss2fa = `/tmp/login-2fa-noresident-${Date.now()}.png`;
+        await page.screenshot({ path: ss2fa }).catch(() => {});
+        log.error({ screenshot: ss2fa }, '2차 인증 필요하지만 주민등록번호 미등록');
+        return {
+          success: false,
+          errorMessage: '아이디 로그인 2차 인증이 필요합니다. 주민등록번호를 등록해 주세요.',
+          errorCode: 'ADDITIONAL_AUTH',
+        };
+      }
+
+      // 주민번호 앞 6자리(생년월일) + 성별 1자리
+      const birth6 = residentNumber.substring(0, 6);
+      const gender1 = residentNumber.substring(6, 7);
+      log.info('2차 인증 주민번호 입력 시도');
+
+      // 팝업 내 생년월일 6자리 입력
+      await safeType(page, [
+        'input[id*="birth"]:not([disabled])',
+        '.w2window input[type="text"]',
+        'input[placeholder*="생년월일"]',
+      ], birth6, '2차 인증 생년월일');
+
+      // 팝업 내 성별 1자리 입력
+      await safeType(page, [
+        'input[id*="gndr"]:not([disabled])',
+        'input[id*="gender"]:not([disabled])',
+        'input[placeholder*="뒷자리"]',
+      ], gender1, '2차 인증 성별');
+
+      // 확인 버튼 클릭
+      await safeClick(page, [
+        'button:has-text("확인")',
+        'a:has-text("확인")',
+        '.w2window button:has-text("확인")',
+      ], '2차 인증 확인 버튼');
+
+      await page.waitForTimeout(3000);
+      log.info('2차 인증 완료, 로그인 결과 대기');
+    }
+
     const result = await Promise.race([
       waitForLoginSuccess(page),
       waitForLoginError(page),
-      page.waitForTimeout(20000).then(() => ({
+      page.waitForTimeout(25000).then(() => ({
         success: false,
         errorMessage: '로그인 응답 시간 초과',
         errorCode: 'TIMEOUT' as const,
@@ -304,31 +433,25 @@ async function performLogin(page: Page, loginId: string, loginPw: string, reside
   }
 }
 
-/** 로그인 성공 감지 — 로그아웃 버튼, URL 변경, 또는 사용자 정보 출현 감지 */
+/** 로그인 성공 감지 — 로그아웃 버튼 출현으로 판단 (가장 확실한 지표) */
 async function waitForLoginSuccess(page: Page): Promise<{ success: boolean; errorMessage?: string; errorCode?: LoginResult['errorCode'] }> {
   try {
-    // Playwright .or() 체이닝으로 여러 성공 지표 감지
-    const successLocator = page.locator('text=로그아웃')
-      .or(page.locator('text=마이홈택스'))
-      .or(page.locator('#logoutBtn'))
-      .or(page.locator('a:has-text("로그아웃")'));
+    // 로그아웃 버튼이 나타날 때까지 대기 — 로그인 성공의 가장 확실한 지표
+    // 로그인 폼 URL(index_pp)과 로그인 후 메인(index_pp)이 같아서 URL 기반 판단 불가
+    await page.locator('a:has-text("로그아웃"), button:has-text("로그아웃"), text=로그아웃').first()
+      .waitFor({ state: 'visible', timeout: 25000 });
 
-    await successLocator.first().waitFor({ state: 'visible', timeout: 15000 });
-    log.info('로그인 성공 감지');
-    return { success: true };
-  } catch {
-    // URL 변경으로 성공 감지 시도 (로그인 후 메인/대시보드로 리다이렉트)
     const currentUrl = page.url();
-    if (currentUrl.includes('index_pp') && !currentUrl.includes('login')) {
-      // 메인 페이지로 돌아왔으면 로그인 성공일 수 있음
-      const logoutBtn = await page.locator('text=로그아웃').isVisible().catch(() => false);
-      if (logoutBtn) {
-        log.info('로그인 성공 감지 (URL 기반)');
-        return { success: true };
-      }
-    }
-    log.warn({ currentUrl }, '로그인 성공 확인 실패');
-    return { success: false, errorMessage: '로그인 성공 확인 실패', errorCode: 'UNKNOWN' };
+    const ss = `/tmp/login-success-${Date.now()}.png`;
+    await page.screenshot({ path: ss }).catch(() => {});
+    log.info({ screenshot: ss, url: currentUrl }, '로그인 성공 감지 (로그아웃 버튼 확인)');
+    return { success: true };
+  } catch (err) {
+    const currentUrl = page.url();
+    const ss = `/tmp/login-fail-${Date.now()}.png`;
+    await page.screenshot({ path: ss }).catch(() => {});
+    log.warn({ currentUrl, screenshot: ss, err }, '로그인 성공 확인 실패 (로그아웃 버튼 미표시)');
+    return { success: false, errorMessage: '로그인 후 로그아웃 버튼이 표시되지 않음', errorCode: 'UNKNOWN' };
   }
 }
 

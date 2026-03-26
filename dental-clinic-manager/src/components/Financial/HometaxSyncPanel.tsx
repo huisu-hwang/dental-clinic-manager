@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useHometaxSync } from '@/contexts/HometaxSyncContext'
 import {
   Building2,
   Loader2,
@@ -26,6 +27,7 @@ interface HometaxSyncPanelProps {
 
 interface Credentials {
   id: string
+  hometax_user_id?: string
   business_number: string
   login_method: string
   is_active: boolean
@@ -33,18 +35,6 @@ interface Credentials {
   last_login_attempt: string | null
   last_login_error: string | null
   has_resident_number?: boolean
-}
-
-interface SyncJob {
-  id: string
-  status: string
-  data_types: string[]
-  result_summary: Record<string, unknown> | null
-  error_message: string | null
-  created_at: string
-  started_at: string | null
-  completed_at: string | null
-  completedTypes?: string[]
 }
 
 interface SyncLog {
@@ -71,6 +61,20 @@ export default function HometaxSyncPanel({
   month,
   onSyncComplete,
 }: HometaxSyncPanelProps) {
+  // Global sync context
+  const {
+    currentJob,
+    syncing,
+    cancelling,
+    error: syncError,
+    success: syncSuccess,
+    startSync,
+    cancelSync,
+    loadActiveJob,
+    clearMessages,
+    onSyncComplete: onSyncCompleteRef,
+  } = useHometaxSync()
+
   // 인증정보 상태
   const [credentials, setCredentials] = useState<Credentials | null>(null)
   const [showCredForm, setShowCredForm] = useState(false)
@@ -81,17 +85,24 @@ export default function HometaxSyncPanel({
   const [showPw, setShowPw] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // 동기화 상태
-  const [syncing, setSyncing] = useState(false)
-  const [cancelling, setCancelling] = useState(false)
-  const [currentJob, setCurrentJob] = useState<SyncJob | null>(null)
+  // 동기화 선택 상태 (local)
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
   const [showLogs, setShowLogs] = useState(false)
   const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>(Object.keys(DATA_TYPE_LABELS))
 
-  // 메시지
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  // 로컬 메시지 (인증정보 관련)
+  const [localError, setLocalError] = useState<string | null>(null)
+  const [localSuccess, setLocalSuccess] = useState<string | null>(null)
+
+  // Register onSyncComplete callback
+  useEffect(() => {
+    onSyncCompleteRef.current = () => {
+      onSyncComplete?.()
+      loadSyncLogs()
+      loadCredentials()
+    }
+    return () => { onSyncCompleteRef.current = null }
+  }, [onSyncComplete, onSyncCompleteRef])
 
   // 인증정보 로드
   const loadCredentials = useCallback(async () => {
@@ -119,81 +130,41 @@ export default function HometaxSyncPanel({
     }
   }, [clinicId])
 
-  // 진행 중인 Job 확인 및 로드
-  const loadActiveJob = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/hometax/sync/status?clinicId=${clinicId}`)
-      const data = await res.json()
-      if (data.success && data.data && ['pending', 'running'].includes(data.data.status)) {
-        setCurrentJob(data.data)
-        setSyncing(true)
-      }
-    } catch {
-      // 조회 실패 무시
-    }
-  }, [clinicId])
-
   useEffect(() => {
     loadCredentials()
     loadSyncLogs()
-    loadActiveJob()
-  }, [loadCredentials, loadSyncLogs, loadActiveJob])
+    loadActiveJob(clinicId)
+  }, [loadCredentials, loadSyncLogs, loadActiveJob, clinicId])
 
-  // Job 상태 폴링
+  // Reload logs when sync finishes
   useEffect(() => {
-    if (!currentJob || currentJob.status === 'completed' || currentJob.status === 'failed' || currentJob.status === 'cancelled') return
-
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/hometax/sync/status?jobId=${currentJob.id}`)
-        const data = await res.json()
-        if (data.success && data.data) {
-          setCurrentJob(data.data)
-          if (data.data.status === 'completed' || data.data.status === 'failed' || data.data.status === 'cancelled') {
-            setSyncing(false)
-            loadSyncLogs()
-            loadCredentials()
-            if (data.data.status === 'completed') {
-              setSuccess('동기화가 완료되었습니다.')
-              onSyncComplete?.()
-            } else if (data.data.status === 'cancelled') {
-              setError('동기화가 취소되었습니다.')
-            } else {
-              setError(`동기화 실패: ${data.data.error_message || '알 수 없는 오류'}`)
-            }
-          }
-        }
-      } catch {
-        // 폴링 실패 무시
-      }
-    }, 3000)
-
-    return () => clearInterval(interval)
-  }, [currentJob, loadSyncLogs, loadCredentials, onSyncComplete])
+    if (currentJob && ['completed', 'failed', 'cancelled'].includes(currentJob.status)) {
+      loadSyncLogs()
+      loadCredentials()
+    }
+  }, [currentJob?.status, loadSyncLogs, loadCredentials])
 
   // 인증정보 저장
   const handleSaveCredentials = async () => {
     const isEditing = !!credentials
 
-    // 신규 등록 시 모든 필드 필수, 수정 시 비밀번호/주민번호는 선택
     if (!loginId || !bizNo) {
-      setError('아이디와 사업자등록번호를 입력해주세요.')
+      setLocalError('아이디와 사업자등록번호를 입력해주세요.')
       return
     }
     if (!isEditing && (!loginPw || !residentNumber)) {
-      setError('신규 등록 시 비밀번호와 주민등록번호를 모두 입력해주세요.')
+      setLocalError('신규 등록 시 비밀번호와 주민등록번호를 모두 입력해주세요.')
       return
     }
 
-    // 주민등록번호 앞 7자리 검증 (입력된 경우)
     const residentClean = residentNumber.replace(/[^0-9]/g, '')
     if (residentNumber && residentClean.length !== 7) {
-      setError('주민등록번호는 생년월일 6자리 + 뒷자리 1자리 (총 7자리)를 입력해주세요.')
+      setLocalError('주민등록번호는 생년월일 6자리 + 뒷자리 1자리 (총 7자리)를 입력해주세요.')
       return
     }
 
     setSaving(true)
-    setError(null)
+    setLocalError(null)
 
     try {
       const res = await fetch('/api/hometax/credentials', {
@@ -215,13 +186,13 @@ export default function HometaxSyncPanel({
         setLoginPw('')
         setBizNo('')
         setResidentNumber('')
-        setSuccess('인증정보가 저장되었습니다.')
+        setLocalSuccess('인증정보가 저장되었습니다.')
         await loadCredentials()
       } else {
-        setError(data.error || '저장에 실패했습니다.')
+        setLocalError(data.error || '저장에 실패했습니다.')
       }
     } catch {
-      setError('서버 연결 중 오류가 발생했습니다.')
+      setLocalError('서버 연결 중 오류가 발생했습니다.')
     } finally {
       setSaving(false)
     }
@@ -238,86 +209,21 @@ export default function HometaxSyncPanel({
       const data = await res.json()
       if (data.success) {
         setCredentials(null)
-        setSuccess('인증정보가 삭제되었습니다.')
+        setLocalSuccess('인증정보가 삭제되었습니다.')
       }
     } catch {
-      setError('삭제 중 오류가 발생했습니다.')
+      setLocalError('삭제 중 오류가 발생했습니다.')
     }
   }
 
-  // 수동 동기화 요청
+  // 수동 동기화 요청 - delegates to context
   const handleSync = async () => {
-    if (selectedDataTypes.length === 0) {
-      setError('동기화할 데이터 유형을 선택해주세요.')
-      return
-    }
-
-    setSyncing(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const res = await fetch('/api/hometax/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clinicId,
-          year,
-          month,
-          dataTypes: selectedDataTypes,
-          jobType: 'manual_sync',
-        }),
-      })
-      const data = await res.json()
-
-      if (res.status === 409 && data.jobId) {
-        // 이미 진행 중인 Job → 해당 Job 로드하여 표시
-        const statusRes = await fetch(`/api/hometax/sync/status?jobId=${data.jobId}`)
-        const statusData = await statusRes.json()
-        if (statusData.success && statusData.data) {
-          setCurrentJob(statusData.data)
-          setSuccess('진행 중인 동기화 작업을 불러왔습니다.')
-        } else {
-          setError('진행 중인 동기화 작업이 있습니다.')
-          setSyncing(false)
-        }
-      } else if (data.success) {
-        setCurrentJob(data.data)
-        setSuccess('동기화 작업이 시작되었습니다.')
-      } else {
-        setError(data.error || '동기화 요청에 실패했습니다.')
-        setSyncing(false)
-      }
-    } catch {
-      setError('서버 연결 중 오류가 발생했습니다.')
-      setSyncing(false)
-    }
+    await startSync({ clinicId, year, month, dataTypes: selectedDataTypes })
   }
 
-  // 동기화 취소
+  // 동기화 취소 - delegates to context
   const handleCancelSync = async () => {
-    if (!currentJob) return
-
-    setCancelling(true)
-    try {
-      const res = await fetch('/api/hometax/sync/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: currentJob.id, clinicId }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        setCurrentJob(prev => prev ? { ...prev, status: 'cancelled' } : null)
-        setSyncing(false)
-        setSuccess('동기화가 취소되었습니다.')
-      } else {
-        setError(data.error || '취소에 실패했습니다.')
-      }
-    } catch {
-      setError('취소 중 오류가 발생했습니다.')
-    } finally {
-      setCancelling(false)
-    }
+    await cancelSync()
   }
 
   // 데이터 타입 토글
@@ -348,6 +254,10 @@ export default function HometaxSyncPanel({
   const isActiveJob = currentJob && ['pending', 'running'].includes(currentJob.status)
   const progress = getProgress()
 
+  // Combined error/success from local + sync context
+  const error = localError || syncError
+  const success = localSuccess || syncSuccess
+
   return (
     <div className="space-y-4">
       {/* 메시지 */}
@@ -355,14 +265,14 @@ export default function HometaxSyncPanel({
         <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="ml-auto"><X className="w-4 h-4" /></button>
+          <button onClick={() => { setLocalError(null); clearMessages() }} className="ml-auto"><X className="w-4 h-4" /></button>
         </div>
       )}
       {success && (
         <div className="flex items-start gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700">
           <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
           <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="ml-auto"><X className="w-4 h-4" /></button>
+          <button onClick={() => { setLocalSuccess(null); clearMessages() }} className="ml-auto"><X className="w-4 h-4" /></button>
         </div>
       )}
 
@@ -412,7 +322,7 @@ export default function HometaxSyncPanel({
                 <button
                   onClick={() => {
                     setBizNo(credentials.business_number)
-                    setLoginId('')
+                    setLoginId(credentials.hometax_user_id || '')
                     setLoginPw('')
                     setResidentNumber('')
                     setShowCredForm(true)

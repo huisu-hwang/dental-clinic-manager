@@ -94,18 +94,45 @@ export async function GET() {
     console.log(`[Admin API] Found ${authUsers?.length || 0} users in auth.users`)
     console.log('[Admin API] Merging data...')
 
-    // 3. 데이터 병합 (email_verified 추가)
+    // 3. 최근 로그인 기록 조회 (각 사용자별 최근 5건)
+    console.log('[Admin API] Fetching recent login activities...')
+    const { data: recentLogins, error: loginsError } = await supabase
+      .from('user_activity_logs')
+      .select('id, user_id, activity_type, activity_description, ip_address, created_at, metadata')
+      .eq('activity_type', 'login')
+      .order('created_at', { ascending: false })
+      .limit(500)
+
+    if (loginsError) {
+      console.error('[Admin API] Error fetching login activities:', loginsError)
+    }
+
+    // 사용자별 최근 로그인 기록 그룹핑 (최근 5건)
+    const loginsByUser: Record<string, any[]> = {}
+    if (recentLogins) {
+      for (const log of recentLogins) {
+        if (!loginsByUser[log.user_id]) {
+          loginsByUser[log.user_id] = []
+        }
+        if (loginsByUser[log.user_id].length < 5) {
+          loginsByUser[log.user_id].push(log)
+        }
+      }
+    }
+
+    // 4. 데이터 병합 (email_verified + recent_logins 추가)
     const mergedData = publicUsers.map((user: any) => {
       const authUser = authUsers.find((au: any) => au.id === user.id)
       return {
         ...user,
         email_confirmed_at: authUser?.email_confirmed_at,
-        email_verified: !!authUser?.email_confirmed_at
+        email_verified: !!authUser?.email_confirmed_at,
+        recent_logins: loginsByUser[user.id] || []
       }
     })
 
     console.log('[Admin API] Data merged successfully')
-    console.log(`[Admin API] Returning ${mergedData.length} users with email verification status`)
+    console.log(`[Admin API] Returning ${mergedData.length} users with email verification status and login history`)
 
     return NextResponse.json({ data: mergedData, error: null })
 
