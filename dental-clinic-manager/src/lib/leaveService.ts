@@ -1084,6 +1084,121 @@ export const leaveService = {
   },
 
   /**
+   * 승인된 연차 내역 수정 (관리자용)
+   * 시작일, 종료일, 연차종류, 일수, 반차타입, 사유 수정 가능
+   */
+  async updateApprovedRequest(
+    requestId: string,
+    updates: {
+      start_date?: string
+      end_date?: string
+      leave_type_id?: string
+      total_days?: number
+      half_day_type?: string | null
+      reason?: string
+    }
+  ): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      // 관리자 권한 확인 (owner, manager)
+      if (!['owner', 'manager'].includes(user.role)) {
+        throw new Error('연차 내역을 수정할 권한이 없습니다.')
+      }
+
+      // 기존 요청 조회
+      const { data: existing, error: fetchError } = await (supabase as any)
+        .from('leave_requests')
+        .select('*, users:user_id (id, name)')
+        .eq('id', requestId)
+        .eq('clinic_id', user.clinic_id)
+        .single()
+
+      if (fetchError || !existing) throw new Error('연차 내역을 찾을 수 없습니다.')
+
+      // 업데이트 데이터 구성
+      const updateData: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      }
+
+      if (updates.start_date !== undefined) updateData.start_date = updates.start_date
+      if (updates.end_date !== undefined) updateData.end_date = updates.end_date
+      if (updates.leave_type_id !== undefined) updateData.leave_type_id = updates.leave_type_id
+      if (updates.total_days !== undefined) updateData.total_days = updates.total_days
+      if (updates.half_day_type !== undefined) updateData.half_day_type = updates.half_day_type
+      if (updates.reason !== undefined) updateData.reason = updates.reason
+
+      const { error } = await (supabase as any)
+        .from('leave_requests')
+        .update(updateData)
+        .eq('id', requestId)
+
+      if (error) throw error
+
+      // 해당 직원의 연차 잔여 재계산
+      await this.initializeBalance(existing.user_id)
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.updateApprovedRequest] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 승인된 연차 내역 삭제 (관리자용)
+   */
+  async deleteApprovedRequest(requestId: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      if (!['owner', 'manager'].includes(user.role)) {
+        throw new Error('연차 내역을 삭제할 권한이 없습니다.')
+      }
+
+      // 기존 요청 조회 (user_id 필요)
+      const { data: existing, error: fetchError } = await (supabase as any)
+        .from('leave_requests')
+        .select('user_id')
+        .eq('id', requestId)
+        .eq('clinic_id', user.clinic_id)
+        .single()
+
+      if (fetchError || !existing) throw new Error('연차 내역을 찾을 수 없습니다.')
+
+      // 관련 승인 내역 먼저 삭제
+      await (supabase as any)
+        .from('leave_approvals')
+        .delete()
+        .eq('leave_request_id', requestId)
+
+      // 연차 신청 삭제
+      const { error } = await (supabase as any)
+        .from('leave_requests')
+        .delete()
+        .eq('id', requestId)
+
+      if (error) throw error
+
+      // 해당 직원의 연차 잔여 재계산
+      await this.initializeBalance(existing.user_id)
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.deleteApprovedRequest] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 본인 연차 신청 목록 조회
    */
   async getMyRequests(year?: number): Promise<{ data: any[]; error: string | null }> {
