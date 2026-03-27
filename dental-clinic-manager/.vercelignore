@@ -4,6 +4,12 @@
 # 스크래핑 워커 (별도 Docker 배포)
 /scraping-worker/
 
+# SEO 워커 (별도 실행)
+/seo-worker/
+
+# 마케팅 워커 (유저 PC 실행)
+/marketing-worker/
+
 # SQL 파일
 *.sql
 
