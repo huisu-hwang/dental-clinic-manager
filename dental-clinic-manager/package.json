@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/stamp-sw-version.js",
+    "prebuild": "node scripts/stamp-sw-version.js && node scripts/bundle-marketing-worker.js",
     "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
     "lint": "eslint",

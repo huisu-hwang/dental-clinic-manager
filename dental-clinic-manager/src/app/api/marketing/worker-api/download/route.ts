@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
       ? PRODUCTION_URL
       : origin;
     const apiKey = data.worker_api_key;
-    const repoUrl = 'https://github.com/huisu-hwang/dental-clinic-manager';
 
     let script: string;
     let filename: string;
@@ -40,11 +39,11 @@ export async function GET(request: NextRequest) {
       filename = 'marketing-worker-setup.bat';
       contentType = 'application/x-bat';
       // Windows .bat 파일은 반드시 CRLF 줄바꿈 필요
-      script = generateWindowsScript(dashboardUrl, apiKey, repoUrl).replace(/\n/g, '\r\n');
+      script = generateWindowsScript(dashboardUrl, apiKey).replace(/\n/g, '\r\n');
     } else {
       filename = os === 'mac' ? 'marketing-worker-setup.command' : 'marketing-worker-setup.sh';
       contentType = 'application/x-sh';
-      script = generateUnixScript(dashboardUrl, apiKey, repoUrl);
+      script = generateUnixScript(dashboardUrl, apiKey);
     }
 
     return new NextResponse(script, {
@@ -60,7 +59,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function generateUnixScript(dashboardUrl: string, apiKey: string, repoUrl: string): string {
+function generateUnixScript(dashboardUrl: string, apiKey: string): string {
   return `#!/bin/bash
 # ============================================
 # 하얀치과 마케팅 워커 설치 및 실행
@@ -68,17 +67,14 @@ function generateUnixScript(dashboardUrl: string, apiKey: string, repoUrl: strin
 # ============================================
 
 # --- 기본 설정 ---
-# PATH에 homebrew, nvm, fnm 등 일반적인 node 설치 경로 추가
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
-# nvm 로드
 [ -s "$HOME/.nvm/nvm.sh" ] && source "$HOME/.nvm/nvm.sh"
-# fnm 로드
 command -v fnm &>/dev/null && eval "$(fnm env)"
 
 INSTALL_DIR="$HOME/marketing-worker"
 DASHBOARD_URL="${dashboardUrl}"
 WORKER_API_KEY="${apiKey}"
-REPO_URL="${repoUrl}"
+DOWNLOAD_URL="${dashboardUrl}/downloads/marketing-worker.tar.gz"
 
 # 종료 시 항상 터미널 유지
 cleanup() {
@@ -134,35 +130,19 @@ else
   mkdir -p "$INSTALL_DIR"
 
   echo "[2/5] 마케팅 워커 다운로드 중..."
+  echo "       URL: $DOWNLOAD_URL"
 
-  # tarball로 다운로드 (가장 안정적인 방법)
   TEMP_DIR=$(mktemp -d)
-  echo "       임시 디렉토리: $TEMP_DIR"
 
-  if curl -fsSL "$REPO_URL/archive/refs/heads/develop.tar.gz" -o "$TEMP_DIR/repo.tar.gz"; then
+  if curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_DIR/marketing-worker.tar.gz"; then
     echo "       다운로드 완료. 압축 해제 중..."
-    tar xzf "$TEMP_DIR/repo.tar.gz" -C "$TEMP_DIR"
-
-    # 압축 해제된 디렉토리 찾기
-    EXTRACTED_DIR=$(ls -d "$TEMP_DIR"/dental-clinic-manager-* 2>/dev/null | head -1)
-    if [ -z "$EXTRACTED_DIR" ]; then
-      echo "[오류] 압축 해제 실패: 디렉토리를 찾을 수 없습니다."
-      rm -rf "$TEMP_DIR"
-      exit 1
-    fi
-
-    WORKER_SRC="$EXTRACTED_DIR/dental-clinic-manager/marketing-worker"
-    if [ ! -d "$WORKER_SRC" ]; then
-      echo "[오류] marketing-worker 디렉토리를 찾을 수 없습니다."
-      echo "       경로: $WORKER_SRC"
-      ls -la "$EXTRACTED_DIR/" 2>/dev/null
-      rm -rf "$TEMP_DIR"
-      exit 1
-    fi
-
-    cp -r "$WORKER_SRC"/* "$INSTALL_DIR/" 2>/dev/null
-    cp -r "$WORKER_SRC"/.[!.]* "$INSTALL_DIR/" 2>/dev/null
+    tar xzf "$TEMP_DIR/marketing-worker.tar.gz" -C "$INSTALL_DIR" --strip-components=1
     rm -rf "$TEMP_DIR"
+
+    if [ ! -f "$INSTALL_DIR/package.json" ]; then
+      echo "[오류] 압축 해제 실패: package.json을 찾을 수 없습니다."
+      exit 1
+    fi
     echo "       [OK] 파일 복사 완료"
   else
     echo "[오류] 다운로드 실패. 네트워크를 확인해주세요."
@@ -201,7 +181,7 @@ fi
 `;
 }
 
-function generateWindowsScript(dashboardUrl: string, apiKey: string, repoUrl: string): string {
+function generateWindowsScript(dashboardUrl: string, apiKey: string): string {
   return `@echo off
 chcp 65001 >nul
 REM ============================================
@@ -223,7 +203,7 @@ exit /b
 set INSTALL_DIR=%USERPROFILE%\\marketing-worker
 set DASHBOARD_URL=${dashboardUrl}
 set WORKER_API_KEY=${apiKey}
-set REPO_URL=${repoUrl}
+set DOWNLOAD_URL=${dashboardUrl}/downloads/marketing-worker.tar.gz
 
 echo ============================================
 echo  하얀치과 마케팅 워커
@@ -263,30 +243,30 @@ echo [1/5] 설치 디렉토리 생성: %INSTALL_DIR%
 mkdir "%INSTALL_DIR%" 2>nul
 
 echo [2/5] 마케팅 워커 다운로드 중...
+echo        URL: %DOWNLOAD_URL%
 
-REM tarball로 다운로드 (curl 사용)
-set TEMP_DIR=%TEMP%\\marketing-worker-dl
-mkdir "%TEMP_DIR%" 2>nul
-curl -fsSL "%REPO_URL%/archive/refs/heads/develop.tar.gz" -o "%TEMP_DIR%\\repo.tar.gz"
+REM 대시보드 서버에서 직접 다운로드 (GitHub 접속 불필요)
+set TEMP_FILE=%TEMP%\\marketing-worker.tar.gz
+curl -fsSL "%DOWNLOAD_URL%" -o "%TEMP_FILE%"
 if %ERRORLEVEL% NEQ 0 (
   echo [오류] 다운로드 실패. 네트워크를 확인해주세요.
+  echo        URL: %DOWNLOAD_URL%
   exit /b 1
 )
 
 echo        다운로드 완료. 압축 해제 중...
-cd /d "%TEMP_DIR%"
-tar xzf repo.tar.gz
+cd /d "%INSTALL_DIR%"
+tar xzf "%TEMP_FILE%" --strip-components=1
 if %ERRORLEVEL% NEQ 0 (
   echo [오류] 압축 해제 실패.
   exit /b 1
 )
+del "%TEMP_FILE%" 2>nul
 
-REM 압축 해제된 디렉토리에서 marketing-worker 복사
-for /d %%d in (dental-clinic-manager-*) do (
-  xcopy /s /e /y "%%d\\dental-clinic-manager\\marketing-worker\\*" "%INSTALL_DIR%\\" >nul
+if not exist "%INSTALL_DIR%\\package.json" (
+  echo [오류] 압축 해제 실패: package.json을 찾을 수 없습니다.
+  exit /b 1
 )
-cd /d "%INSTALL_DIR%"
-rmdir /s /q "%TEMP_DIR%" 2>nul
 echo        [OK] 파일 복사 완료
 
 echo [3/5] 패키지 설치 중... (시간이 걸릴 수 있습니다)
