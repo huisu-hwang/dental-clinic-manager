@@ -63,7 +63,8 @@ function generateUnixScript(dashboardUrl: string, apiKey: string, repoUrl: strin
 # 더블클릭하면 자동으로 설치 및 실행됩니다
 # ============================================
 
-set -e
+# 에러 발생 시 바로 종료하지 않고 메시지 표시
+trap 'echo ""; echo "[오류] 실행 중 문제가 발생했습니다."; echo "위의 에러 메시지를 확인해주세요."; echo ""; read -p "엔터를 누르면 종료합니다..."' ERR
 
 INSTALL_DIR="$HOME/marketing-worker"
 DASHBOARD_URL="${dashboardUrl}"
@@ -105,9 +106,12 @@ ENVEOF
   echo "[OK] 설정 업데이트 완료"
   echo ""
   echo "워커를 시작합니다..."
+  echo "(종료하려면 Ctrl+C를 누르세요)"
   echo ""
   cd "$INSTALL_DIR"
   npm run supervisor
+  echo ""
+  read -p "워커가 종료되었습니다. 엔터를 누르면 창을 닫습니다..."
 else
   echo ""
   echo "[1/5] 설치 디렉토리 생성: $INSTALL_DIR"
@@ -150,9 +154,12 @@ ENVEOF
   echo "============================================"
   echo ""
   echo "워커를 시작합니다..."
+  echo "(종료하려면 Ctrl+C를 누르세요)"
   echo ""
 
   npm run supervisor
+  echo ""
+  read -p "워커가 종료되었습니다. 엔터를 누르면 창을 닫습니다..."
 fi
 `;
 }
@@ -198,9 +205,12 @@ if exist "%INSTALL_DIR%\\package.json" (
   echo [OK] 설정 업데이트 완료
   echo.
   echo 워커를 시작합니다...
+  echo (종료하려면 Ctrl+C를 누르세요)
   echo.
   cd /d "%INSTALL_DIR%"
   npm run supervisor
+  echo.
+  pause
 ) else (
   echo.
   echo [1/5] 설치 디렉토리 생성: %INSTALL_DIR%
@@ -234,9 +244,12 @@ if exist "%INSTALL_DIR%\\package.json" (
   echo ============================================
   echo.
   echo 워커를 시작합니다...
+  echo (종료하려면 Ctrl+C를 누르세요)
   echo.
 
   npm run supervisor
+  echo.
+  pause
 )
 `;
 }
