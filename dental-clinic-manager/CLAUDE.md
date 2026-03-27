@@ -210,6 +210,11 @@ EOF
 - 테스트 URL: `http://localhost:3000` (개발) 또는 Vercel Preview URL (배포)
 - 로그인 페이지: `/auth` 또는 루트 페이지에서 로그인
 
+### 마스터 관리자 계정 (마스터 전용 기능 테스트용)
+- **마스터 페이지(/master) 등 master_admin 권한이 필요한 기능 테스트 시 사용**
+- 이메일: `sani81@gmail.com`
+- 비밀번호: `ghkdgmltn81!`
+
 ### 테스트 절차 (절대 생략 금지 - 성공할 때까지 반복)
 1. Chrome DevTools MCP로 브라우저에서 테스트 계정으로 로그인
 2. 해당 기능 페이지로 이동하여 실제 동작 테스트

@@ -37,52 +37,86 @@ export async function searchNaverBlog(keyword: string): Promise<ScrapedPost[]> {
   const posts: ScrapedPost[] = [];
 
   try {
-    const searchUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(keyword)}&sm=tab_opt&nso=so%3Ar%2Cp%3Aall`;
+    // 블로그 탭 전용 URL (ssc=tab.blog.all 파라미터 포함)
+    const searchUrl = `https://search.naver.com/search.naver?ssc=tab.blog.all&where=blog&query=${encodeURIComponent(keyword)}`;
     log.info({ keyword, url: searchUrl }, '네이버 블로그 검색 시작');
 
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
-    // 블로그 검색 결과 수집 (상위 5개)
-    const results = await page.$$('div.detail_box');
-    const maxResults = Math.min(results.length, 5);
+    // page.evaluate로 DOM에서 직접 블로그 글 추출
+    const extractedPosts = await page.evaluate(() => {
+      const results: { title: string; postUrl: string; blogUrl: string; blogName: string }[] = [];
+      const seenUrls = new Set<string>();
 
-    for (let i = 0; i < maxResults; i++) {
-      try {
-        const detail = results[i];
+      // 모든 blog.naver.com 링크 중 글 URL 패턴(blogid/postnum)인 것을 찾기
+      const allLinks = document.querySelectorAll('a[href*="blog.naver.com"]');
 
-        // 제목과 URL
-        const titleEl = await detail.$('a.title_link');
-        if (!titleEl) continue;
+      allLinks.forEach((a) => {
+        const href = a.getAttribute('href') || '';
+        const text = (a.textContent || '').trim();
 
-        const title = (await titleEl.textContent() || '').trim();
-        const postUrl = await titleEl.getAttribute('href') || '';
+        // 글 URL 패턴 확인 (blog.naver.com/blogid/숫자)
+        const postMatch = href.match(/blog\.naver\.com\/([^/?#]+)\/(\d+)/);
+        if (!postMatch) return;
 
-        // 블로그명
-        const blogNameEl = await detail.$('a.name');
-        const blogName = (await blogNameEl?.textContent() || '').trim();
-        const blogUrl = await blogNameEl?.getAttribute('href') || '';
+        // 제목 텍스트가 충분히 긴 링크만 (5자 이상, 미리보기 텍스트는 보통 더 김)
+        if (text.length < 5 || text.length > 200) return;
 
-        // 광고 필터링 (ad 클래스 확인)
-        const parent = await detail.$('xpath=..');
-        const adBadge = await parent?.$('.spblog_og.ico_ad, .ad_dsc');
-        if (adBadge) {
-          log.debug({ rank: i + 1, title }, '광고 글 건너뜀');
-          continue;
+        // 이미 수집된 URL 건너뜀
+        if (seenUrls.has(href)) return;
+
+        // 미리보기/본문 스니펫 링크 제외 - 제목 링크만 선택
+        // 제목 링크는 보통 상위 컨테이너에서 첫 번째로 등장하는 짧은 텍스트
+        const parentText = (a.parentElement?.textContent || '').trim();
+        // 본문 미리보기 링크는 텍스트가 매우 길다 (60자 이상)
+        if (text.length > 60) return;
+
+        seenUrls.add(href);
+
+        const blogId = postMatch[1];
+        const blogUrl = `https://blog.naver.com/${blogId}`;
+
+        // 블로그명 찾기 - 상위 요소에서 blogid 링크 중 글이 아닌 것
+        let blogName = blogId;
+        let container = a.parentElement;
+        for (let i = 0; i < 15 && container; i++) {
+          container = container.parentElement;
+        }
+        if (container) {
+          const nameLinks = container.querySelectorAll(`a[href*="blog.naver.com/${blogId}"]`);
+          nameLinks.forEach((nl) => {
+            const nlHref = nl.getAttribute('href') || '';
+            const nlText = (nl.textContent || '').trim();
+            // 글 URL이 아닌 블로그 홈 URL이고 텍스트가 있으면 블로그명
+            if (!nlHref.match(/\/\d+$/) && nlText.length > 0 && nlText.length < 50) {
+              blogName = nlText;
+            }
+          });
         }
 
-        posts.push({
-          rank: posts.length + 1,
-          postUrl,
+        results.push({
+          title: text,
+          postUrl: href,
           blogUrl,
           blogName,
-          title,
         });
+      });
 
-        if (posts.length >= 5) break;
-      } catch (err) {
-        log.warn({ err, index: i }, '검색 결과 파싱 중 오류');
-      }
+      return results;
+    });
+
+    // 상위 5개만 사용
+    const maxResults = Math.min(extractedPosts.length, 5);
+    for (let i = 0; i < maxResults; i++) {
+      const p = extractedPosts[i];
+      posts.push({
+        rank: i + 1,
+        postUrl: p.postUrl,
+        blogUrl: p.blogUrl,
+        blogName: p.blogName,
+        title: p.title,
+      });
     }
 
     log.info({ keyword, count: posts.length }, '검색 결과 수집 완료');

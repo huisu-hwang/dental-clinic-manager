@@ -5,6 +5,7 @@ import { createChildLogger } from '../utils/logger.js';
 const log = createChildLogger('supabase');
 
 let client: SupabaseClient | null = null;
+let workerId: string | null = null;
 
 export function getSupabaseClient(): SupabaseClient {
   if (!client) {
@@ -17,6 +18,10 @@ export function getSupabaseClient(): SupabaseClient {
     log.info('Supabase 클라이언트 초기화 완료');
   }
   return client;
+}
+
+export function getWorkerId(): string | null {
+  return workerId;
 }
 
 export async function testConnection(): Promise<boolean> {
@@ -42,25 +47,32 @@ export async function testConnection(): Promise<boolean> {
 
 export async function registerWorker(): Promise<void> {
   const supabase = getSupabaseClient();
-  const { error } = await supabase
+  const workerName = config.worker.id;
+
+  const { data, error } = await supabase
     .from('seo_workers')
     .upsert({
-      id: config.worker.id,
-      worker_name: config.worker.id,
+      worker_name: workerName,
       status: 'online',
       stop_requested: false,
       last_heartbeat: new Date().toISOString(),
       started_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
+    }, { onConflict: 'worker_name' })
+    .select('id')
+    .single();
 
   if (error) {
     log.error({ error }, '워커 등록 실패');
     throw error;
   }
-  log.info({ workerId: config.worker.id }, 'SEO 워커 등록 완료');
+
+  workerId = data.id;
+  log.info({ workerId, workerName }, 'SEO 워커 등록 완료');
 }
 
 export async function updateHeartbeat(status: 'online' | 'offline' = 'online'): Promise<boolean> {
+  if (!workerId) return false;
+
   const supabase = getSupabaseClient();
   const { error } = await supabase
     .from('seo_workers')
@@ -68,7 +80,7 @@ export async function updateHeartbeat(status: 'online' | 'offline' = 'online'): 
       status,
       last_heartbeat: new Date().toISOString(),
     })
-    .eq('id', config.worker.id);
+    .eq('id', workerId);
 
   if (error) {
     log.warn({ error }, 'heartbeat 업데이트 실패');
@@ -78,13 +90,15 @@ export async function updateHeartbeat(status: 'online' | 'offline' = 'online'): 
   const { data } = await supabase
     .from('seo_workers')
     .select('stop_requested')
-    .eq('id', config.worker.id)
+    .eq('id', workerId)
     .single();
 
   return data?.stop_requested === true;
 }
 
 export async function deregisterWorker(): Promise<void> {
+  if (!workerId) return;
+
   const supabase = getSupabaseClient();
   const { error } = await supabase
     .from('seo_workers')
@@ -92,7 +106,7 @@ export async function deregisterWorker(): Promise<void> {
       status: 'offline',
       last_heartbeat: new Date().toISOString(),
     })
-    .eq('id', config.worker.id);
+    .eq('id', workerId);
 
   if (error) {
     log.warn({ error }, '워커 해제 실패');
