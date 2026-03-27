@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { CONFIG, isApiMode } from './config.js';
 import { NaverBlogPublisher } from './publisher/naver-blog-publisher.js';
 import { WorkerApiClient, type ScheduledItem } from './api-client.js';
@@ -11,7 +12,7 @@ import { WorkerApiClient, type ScheduledItem } from './api-client.js';
 // 레거시 모드: Supabase 직접 접속 (하위 호환)
 // ============================================
 
-const IMAGE_TEMP_DIR = '/tmp/marketing-images-publish';
+const IMAGE_TEMP_DIR = path.join(os.tmpdir(), 'marketing-images-publish');
 
 let apiClient: WorkerApiClient | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

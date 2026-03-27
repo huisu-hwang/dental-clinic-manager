@@ -51,6 +51,7 @@ function startWorker(): void {
     cwd: __dirname,
     stdio: 'inherit',
     env: { ...process.env },
+    shell: true, // Windows에서 npm.cmd 호출을 위해 필요
   });
 
   workerProcess.on('exit', (code, signal) => {

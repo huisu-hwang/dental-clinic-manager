@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
     if (os === 'windows') {
       filename = 'marketing-worker-setup.bat';
       contentType = 'application/x-bat';
-      script = generateWindowsScript(dashboardUrl, apiKey, repoUrl);
+      // Windows .bat 파일은 반드시 CRLF 줄바꿈 필요
+      script = generateWindowsScript(dashboardUrl, apiKey, repoUrl).replace(/\n/g, '\r\n');
     } else {
       filename = os === 'mac' ? 'marketing-worker-setup.command' : 'marketing-worker-setup.sh';
       contentType = 'application/x-sh';
@@ -253,7 +254,7 @@ if exist "%INSTALL_DIR%\\package.json" (
   echo 워커를 시작합니다... (종료: Ctrl+C)
   echo.
   cd /d "%INSTALL_DIR%"
-  npm run supervisor
+  call npm run supervisor
   exit /b
 )
 
@@ -322,7 +323,7 @@ echo.
 echo 워커를 시작합니다... (종료: Ctrl+C)
 echo.
 
-npm run supervisor
+call npm run supervisor
 exit /b
 `;
 }
