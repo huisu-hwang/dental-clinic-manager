@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+// 안정적인 대시보드 URL (Vercel preview URL 대신 프로덕션 URL 사용)
+const PRODUCTION_URL = 'https://dental-clinic-manager.vercel.app';
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -10,7 +13,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const os = searchParams.get('os') || 'mac';
 
-    // API 키 조회 (RLS 비활성화 테이블이므로 일반 클라이언트로 조회 가능)
+    // API 키 조회
     const { data } = await supabase
       .from('marketing_worker_control')
       .select('worker_api_key')
@@ -21,11 +24,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'API 키가 생성되지 않았습니다.' }, { status: 500 });
     }
 
-    // 대시보드 URL (현재 요청의 origin 사용)
-    const dashboardUrl = new URL(request.url).origin;
+    // 대시보드 URL: 프로덕션 URL 우선, 없으면 현재 origin
+    const origin = new URL(request.url).origin;
+    const dashboardUrl = origin.includes('vercel.app') && !origin.includes('dental-clinic-manager.vercel.app')
+      ? PRODUCTION_URL
+      : origin;
     const apiKey = data.worker_api_key;
-
-    // GitHub raw URL for marketing-worker
     const repoUrl = 'https://github.com/huisu-hwang/dental-clinic-manager';
 
     let script: string;
@@ -37,7 +41,6 @@ export async function GET(request: NextRequest) {
       contentType = 'application/x-bat';
       script = generateWindowsScript(dashboardUrl, apiKey, repoUrl);
     } else {
-      // macOS / Linux 공용 (.command는 macOS에서 더블클릭 가능)
       filename = os === 'mac' ? 'marketing-worker-setup.command' : 'marketing-worker-setup.sh';
       contentType = 'application/x-sh';
       script = generateUnixScript(dashboardUrl, apiKey, repoUrl);
@@ -63,20 +66,36 @@ function generateUnixScript(dashboardUrl: string, apiKey: string, repoUrl: strin
 # 더블클릭하면 자동으로 설치 및 실행됩니다
 # ============================================
 
-# 에러 발생 시 바로 종료하지 않고 메시지 표시
-trap 'echo ""; echo "[오류] 실행 중 문제가 발생했습니다."; echo "위의 에러 메시지를 확인해주세요."; echo ""; read -p "엔터를 누르면 종료합니다..."' ERR
+# --- 기본 설정 ---
+# PATH에 homebrew, nvm, fnm 등 일반적인 node 설치 경로 추가
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+# nvm 로드
+[ -s "$HOME/.nvm/nvm.sh" ] && source "$HOME/.nvm/nvm.sh"
+# fnm 로드
+command -v fnm &>/dev/null && eval "$(fnm env)"
 
 INSTALL_DIR="$HOME/marketing-worker"
 DASHBOARD_URL="${dashboardUrl}"
 WORKER_API_KEY="${apiKey}"
 REPO_URL="${repoUrl}"
 
+# 종료 시 항상 터미널 유지
+cleanup() {
+  echo ""
+  echo "============================================"
+  echo " 워커가 종료되었습니다."
+  echo "============================================"
+  echo ""
+  read -p "엔터를 누르면 창을 닫습니다..."
+}
+trap cleanup EXIT
+
 echo "============================================"
 echo " 하얀치과 마케팅 워커"
 echo "============================================"
 echo ""
 
-# Node.js 확인
+# --- Node.js 확인 ---
 if ! command -v node &> /dev/null; then
   echo "[오류] Node.js가 설치되어 있지 않습니다."
   echo ""
@@ -84,82 +103,99 @@ if ! command -v node &> /dev/null; then
   echo "  brew install node"
   echo ""
   echo "또는 https://nodejs.org 에서 다운로드해주세요."
-  echo ""
-  read -p "엔터를 누르면 종료합니다..."
   exit 1
 fi
 
-echo "[OK] Node.js $(node -v) 감지"
+NODE_VER=$(node -v)
+echo "[OK] Node.js $NODE_VER 감지"
 
-# 설치 여부 확인
+# --- 설치 여부 확인 ---
 if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/package.json" ]; then
   echo "[OK] 이미 설치됨: $INSTALL_DIR"
   echo ""
 
-  # .env.local 업데이트 (API 키가 변경되었을 수 있음)
-  cat > "$INSTALL_DIR/.env.local" << ENVEOF
-DASHBOARD_API_URL=$DASHBOARD_URL
-WORKER_API_KEY=$WORKER_API_KEY
+  # .env.local 업데이트
+  cat > "$INSTALL_DIR/.env.local" << 'ENVEOF'
+DASHBOARD_API_URL=${dashboardUrl}
+WORKER_API_KEY=${apiKey}
 MARKETING_WORKER_PORT=4001
 ENVEOF
 
   echo "[OK] 설정 업데이트 완료"
   echo ""
-  echo "워커를 시작합니다..."
-  echo "(종료하려면 Ctrl+C를 누르세요)"
+  echo "워커를 시작합니다... (종료: Ctrl+C)"
   echo ""
   cd "$INSTALL_DIR"
   npm run supervisor
-  echo ""
-  read -p "워커가 종료되었습니다. 엔터를 누르면 창을 닫습니다..."
 else
   echo ""
   echo "[1/5] 설치 디렉토리 생성: $INSTALL_DIR"
   mkdir -p "$INSTALL_DIR"
 
   echo "[2/5] 마케팅 워커 다운로드 중..."
-  cd "$INSTALL_DIR"
 
-  # Git이 있으면 sparse checkout으로 marketing-worker만 다운로드
-  if command -v git &> /dev/null; then
-    git clone --depth 1 --filter=blob:none --sparse "$REPO_URL.git" _temp 2>/dev/null
-    cd _temp
-    git sparse-checkout set dental-clinic-manager/marketing-worker 2>/dev/null
-    cp -r dental-clinic-manager/marketing-worker/* "$INSTALL_DIR/"
-    cd "$INSTALL_DIR"
-    rm -rf _temp
+  # tarball로 다운로드 (가장 안정적인 방법)
+  TEMP_DIR=$(mktemp -d)
+  echo "       임시 디렉토리: $TEMP_DIR"
+
+  if curl -fsSL "$REPO_URL/archive/refs/heads/develop.tar.gz" -o "$TEMP_DIR/repo.tar.gz"; then
+    echo "       다운로드 완료. 압축 해제 중..."
+    tar xzf "$TEMP_DIR/repo.tar.gz" -C "$TEMP_DIR"
+
+    # 압축 해제된 디렉토리 찾기
+    EXTRACTED_DIR=$(ls -d "$TEMP_DIR"/dental-clinic-manager-* 2>/dev/null | head -1)
+    if [ -z "$EXTRACTED_DIR" ]; then
+      echo "[오류] 압축 해제 실패: 디렉토리를 찾을 수 없습니다."
+      rm -rf "$TEMP_DIR"
+      exit 1
+    fi
+
+    WORKER_SRC="$EXTRACTED_DIR/dental-clinic-manager/marketing-worker"
+    if [ ! -d "$WORKER_SRC" ]; then
+      echo "[오류] marketing-worker 디렉토리를 찾을 수 없습니다."
+      echo "       경로: $WORKER_SRC"
+      ls -la "$EXTRACTED_DIR/" 2>/dev/null
+      rm -rf "$TEMP_DIR"
+      exit 1
+    fi
+
+    cp -r "$WORKER_SRC"/* "$INSTALL_DIR/" 2>/dev/null
+    cp -r "$WORKER_SRC"/.[!.]* "$INSTALL_DIR/" 2>/dev/null
+    rm -rf "$TEMP_DIR"
+    echo "       [OK] 파일 복사 완료"
   else
-    # Git 없으면 tarball로 다운로드
-    curl -sL "$REPO_URL/archive/refs/heads/develop.tar.gz" | tar xz --strip-components=2 -C "$INSTALL_DIR" "*/dental-clinic-manager/marketing-worker"
+    echo "[오류] 다운로드 실패. 네트워크를 확인해주세요."
+    rm -rf "$TEMP_DIR"
+    exit 1
   fi
 
-  echo "[3/5] 패키지 설치 중..."
-  npm install
+  cd "$INSTALL_DIR"
 
-  echo "[4/5] Chromium 브라우저 설치 중..."
-  npx playwright install chromium
+  echo "[3/5] 패키지 설치 중... (시간이 걸릴 수 있습니다)"
+  npm install || { echo "[오류] npm install 실패"; exit 1; }
+
+  echo "[4/5] Chromium 브라우저 설치 중... (시간이 걸릴 수 있습니다)"
+  npx playwright install chromium || { echo "[오류] Chromium 설치 실패"; exit 1; }
 
   echo "[5/5] 환경 설정 중..."
-  cat > "$INSTALL_DIR/.env.local" << ENVEOF
-DASHBOARD_API_URL=$DASHBOARD_URL
-WORKER_API_KEY=$WORKER_API_KEY
+  cat > "$INSTALL_DIR/.env.local" << 'ENVEOF'
+DASHBOARD_API_URL=${dashboardUrl}
+WORKER_API_KEY=${apiKey}
 MARKETING_WORKER_PORT=4001
 ENVEOF
 
-  npm run build
+  echo "       TypeScript 빌드 중..."
+  npm run build || { echo "[오류] 빌드 실패"; exit 1; }
 
   echo ""
   echo "============================================"
   echo " 설치 완료!"
   echo "============================================"
   echo ""
-  echo "워커를 시작합니다..."
-  echo "(종료하려면 Ctrl+C를 누르세요)"
+  echo "워커를 시작합니다... (종료: Ctrl+C)"
   echo ""
 
   npm run supervisor
-  echo ""
-  read -p "워커가 종료되었습니다. 엔터를 누르면 창을 닫습니다..."
 fi
 `;
 }
@@ -204,8 +240,7 @@ if exist "%INSTALL_DIR%\\package.json" (
 
   echo [OK] 설정 업데이트 완료
   echo.
-  echo 워커를 시작합니다...
-  echo (종료하려면 Ctrl+C를 누르세요)
+  echo 워커를 시작합니다... (종료: Ctrl+C)
   echo.
   cd /d "%INSTALL_DIR%"
   npm run supervisor
@@ -243,8 +278,7 @@ if exist "%INSTALL_DIR%\\package.json" (
   echo  설치 완료!
   echo ============================================
   echo.
-  echo 워커를 시작합니다...
-  echo (종료하려면 Ctrl+C를 누르세요)
+  echo 워커를 시작합니다... (종료: Ctrl+C)
   echo.
 
   npm run supervisor

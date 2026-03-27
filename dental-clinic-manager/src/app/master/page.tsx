@@ -10,11 +10,12 @@ import Header from '@/components/Layout/Header'
 
 import dynamic from 'next/dynamic'
 const PromptsPage = dynamic(() => import('@/app/master/marketing/prompts/page'), { ssr: false })
+const SeoAnalysisTab = dynamic(() => import('@/components/SEO/SeoAnalysisTab'), { ssr: false })
 import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
 import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
 
-type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping' | 'prompts'
+type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping' | 'prompts' | 'seo-analysis'
 type CommunitySubTab = 'categories' | 'telegram'
 
 export default function MasterAdminPage() {
@@ -670,6 +671,17 @@ export default function MasterAdminPage() {
               <SparklesIcon className="w-5 h-5 inline-block mr-2" />
               프롬프트 관리
             </button>
+            <button
+              onClick={() => setActiveTab('seo-analysis')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'seo-analysis'
+                  ? 'border-teal-600 text-teal-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <ChartBarIcon className="w-5 h-5 inline-block mr-2" />
+              SEO 분석
+            </button>
           </div>
         </div>
       </div>
@@ -1052,6 +1064,8 @@ export default function MasterAdminPage() {
         {activeTab === 'scraping' && <ScrapingWorkerPanel />}
 
         {activeTab === 'prompts' && <PromptsPage />}
+
+        {activeTab === 'seo-analysis' && <SeoAnalysisTab />}
 
         {activeTab === 'community' && (
           <div className="bg-white rounded-lg shadow">

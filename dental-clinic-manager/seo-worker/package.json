@@ -1,0 +1,27 @@
+{
+  "name": "seo-analysis-worker",
+  "version": "1.0.0",
+  "description": "네이버 블로그 SEO 분석 워커 - Playwright 기반 상위 노출 분석",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "playwright": "^1.51.0",
+    "pino": "^9.6.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
