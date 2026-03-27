@@ -41,9 +41,11 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
   const [contracts, setContracts] = useState<EmploymentContract[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // 대표원장만 전체 계약서 조회, 나머지는 본인 계약서만
+  const isFullAccessRole = currentUser.role === 'owner'
   const [filters, setFilters] = useState<ContractListFilters>({
     status: undefined,
-    employee_user_id: undefined,
+    employee_user_id: isFullAccessRole ? undefined : currentUser.id,
     search: undefined
   })
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)

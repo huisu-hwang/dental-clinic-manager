@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { CONFIG, isApiMode } from './config.js';
 import { NaverBlogPublisher } from './publisher/naver-blog-publisher.js';
 import { WorkerApiClient, type ScheduledItem } from './api-client.js';
@@ -11,7 +12,7 @@ import { WorkerApiClient, type ScheduledItem } from './api-client.js';
 // 레거시 모드: Supabase 직접 접속 (하위 호환)
 // ============================================
 
-const IMAGE_TEMP_DIR = '/tmp/marketing-images-publish';
+const IMAGE_TEMP_DIR = path.join(os.tmpdir(), 'marketing-images-publish');
 
 let apiClient: WorkerApiClient | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -121,20 +122,20 @@ async function processScheduledItems(): Promise<void> {
  */
 async function processViaApi(): Promise<void> {
   const client = getApiClient();
-  const { nextItem } = await client.poll();
+  const { nextItem, control } = await client.poll();
 
   if (!nextItem) {
     return;
   }
 
   console.log(`[Scheduler] 발행 대상: "${nextItem.title}" (${nextItem.publish_date} ${nextItem.publish_time})`);
-  await publishItemApi(nextItem);
+  await publishItemApi(nextItem, control.headless);
 }
 
 /**
  * API 모드: 개별 항목 발행
  */
-async function publishItemApi(item: ScheduledItem): Promise<void> {
+async function publishItemApi(item: ScheduledItem, headless = false): Promise<void> {
   const client = getApiClient();
   let downloadedImages: { path: string; prompt: string }[] = [];
 
@@ -175,7 +176,7 @@ async function publishItemApi(item: ScheduledItem): Promise<void> {
           naverId: blogConfig.naverId,
           naverPassword: blogConfig.naverPassword,
           loginCookie: blogConfig.loginCookie,
-        } : undefined);
+        } : undefined, { headless });
       }
 
       const result = await publisher.publish({

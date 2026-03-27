@@ -11,6 +11,7 @@ export async function PATCH(request: NextRequest) {
 
     if (body.watchdog_online !== undefined) update.watchdog_online = body.watchdog_online;
     if (body.worker_running !== undefined) update.worker_running = body.worker_running;
+    if (body.headless !== undefined) update.headless = body.headless;
     if (body.clear_start_requested) update.start_requested = false;
     if (body.clear_stop_requested) update.stop_requested = false;
 

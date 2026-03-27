@@ -24,11 +24,12 @@ export default function PermissionSelector({
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (initialPermissions) {
+    if (initialPermissions && initialPermissions.length > 0) {
+      // 커스텀 권한이 저장되어 있으면 사용
       setSelectedPermissions(new Set(initialPermissions))
       setUseDefaultPermissions(false)
     } else {
-      // 역할 기반 기본 권한 설정
+      // 권한이 없거나 빈 배열이면 역할 기반 기본 권한 설정
       const defaultPerms = DEFAULT_PERMISSIONS[role] || []
       setSelectedPermissions(new Set(defaultPerms))
       setUseDefaultPermissions(true)

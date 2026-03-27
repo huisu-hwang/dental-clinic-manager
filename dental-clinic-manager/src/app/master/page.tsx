@@ -10,11 +10,12 @@ import Header from '@/components/Layout/Header'
 
 import dynamic from 'next/dynamic'
 const PromptsPage = dynamic(() => import('@/app/master/marketing/prompts/page'), { ssr: false })
+const SeoAnalysisTab = dynamic(() => import('@/components/SEO/SeoAnalysisTab'), { ssr: false })
 import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
 import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
 
-type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping' | 'prompts'
+type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping' | 'prompts' | 'seo-analysis'
 type CommunitySubTab = 'categories' | 'telegram'
 
 export default function MasterAdminPage() {
@@ -670,6 +671,17 @@ export default function MasterAdminPage() {
               <SparklesIcon className="w-5 h-5 inline-block mr-2" />
               프롬프트 관리
             </button>
+            <button
+              onClick={() => setActiveTab('seo-analysis')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'seo-analysis'
+                  ? 'border-teal-600 text-teal-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <ChartBarIcon className="w-5 h-5 inline-block mr-2" />
+              SEO 분석
+            </button>
           </div>
         </div>
       </div>
@@ -1052,6 +1064,8 @@ export default function MasterAdminPage() {
         {activeTab === 'scraping' && <ScrapingWorkerPanel />}
 
         {activeTab === 'prompts' && <PromptsPage />}
+
+        {activeTab === 'seo-analysis' && <SeoAnalysisTab />}
 
         {activeTab === 'community' && (
           <div className="bg-white rounded-lg shadow">
@@ -1893,6 +1907,7 @@ function WorkerPanel() {
   const [status, setStatus] = useState<{
     workerOnline: boolean
     supervisorOnline: boolean
+    headless: boolean
     workerUrl: string
     pendingCount: number
     publishedTodayCount: number
@@ -2040,6 +2055,34 @@ function WorkerPanel() {
                 </span>
               </div>
               <span className="text-xs text-gray-400">{status.workerUrl}</span>
+            </div>
+
+            {/* 설정 */}
+            <div className="flex items-center justify-between mb-4 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div>
+                <span className="text-sm font-medium text-slate-700">발행 시 브라우저 숨기기</span>
+                <p className="text-xs text-slate-400 mt-0.5">켜면 백그라운드에서 발행됩니다</p>
+              </div>
+              <button
+                onClick={async () => {
+                  const newValue = !status.headless
+                  try {
+                    await fetch('/api/master/worker', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'updateSettings', headless: newValue }),
+                    })
+                    setStatus(prev => prev ? { ...prev, headless: newValue } : prev)
+                  } catch { /* ignore */ }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  status.headless ? 'bg-indigo-600' : 'bg-slate-300'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  status.headless ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
             </div>
 
             {/* 통계 */}

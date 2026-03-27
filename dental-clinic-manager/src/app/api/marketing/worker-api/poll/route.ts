@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     // 1. 제어 신호 조회
     const { data: controlData } = await admin
       .from('marketing_worker_control')
-      .select('start_requested, stop_requested')
+      .select('start_requested, stop_requested, headless')
       .eq('id', 'main')
       .single();
 
@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
       control: {
         start_requested: controlData?.start_requested || false,
         stop_requested: controlData?.stop_requested || false,
+        headless: controlData?.headless || false,
       },
       nextItem,
     });

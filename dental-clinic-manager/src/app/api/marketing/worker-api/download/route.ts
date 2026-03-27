@@ -1,34 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
-// 마스터 권한 확인
-async function checkMasterAuth() {
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-  if (!userData || !['master_admin', 'admin'].includes(userData.role)) return null;
-  return user;
-}
+// 안정적인 대시보드 URL (Vercel preview URL 대신 프로덕션 URL 사용)
+const PRODUCTION_URL = 'https://dental-clinic-manager.vercel.app';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await checkMasterAuth();
-    if (!user) return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const os = searchParams.get('os') || 'mac';
 
     // API 키 조회
-    const admin = getSupabaseAdmin();
-    if (!admin) return NextResponse.json({ error: 'Admin client error' }, { status: 500 });
-
-    const { data } = await admin
+    const { data } = await supabase
       .from('marketing_worker_control')
       .select('worker_api_key')
       .eq('id', 'main')
@@ -38,12 +24,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'API 키가 생성되지 않았습니다.' }, { status: 500 });
     }
 
-    // 대시보드 URL (현재 요청의 origin 사용)
-    const dashboardUrl = new URL(request.url).origin;
+    // 대시보드 URL: 프로덕션 URL 우선, 없으면 현재 origin
+    const origin = new URL(request.url).origin;
+    const dashboardUrl = origin.includes('vercel.app') && !origin.includes('dental-clinic-manager.vercel.app')
+      ? PRODUCTION_URL
+      : origin;
     const apiKey = data.worker_api_key;
-
-    // GitHub raw URL for marketing-worker
-    const repoUrl = 'https://github.com/huisu-hwang/dental-clinic-manager';
 
     let script: string;
     let filename: string;
@@ -52,12 +38,12 @@ export async function GET(request: NextRequest) {
     if (os === 'windows') {
       filename = 'marketing-worker-setup.bat';
       contentType = 'application/x-bat';
-      script = generateWindowsScript(dashboardUrl, apiKey, repoUrl);
+      // Windows .bat 파일은 반드시 CRLF 줄바꿈 필요
+      script = generateWindowsScript(dashboardUrl, apiKey).replace(/\n/g, '\r\n');
     } else {
-      // macOS / Linux 공용 (.command는 macOS에서 더블클릭 가능)
       filename = os === 'mac' ? 'marketing-worker-setup.command' : 'marketing-worker-setup.sh';
       contentType = 'application/x-sh';
-      script = generateUnixScript(dashboardUrl, apiKey, repoUrl);
+      script = generateUnixScript(dashboardUrl, apiKey);
     }
 
     return new NextResponse(script, {
@@ -73,26 +59,40 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function generateUnixScript(dashboardUrl: string, apiKey: string, repoUrl: string): string {
+function generateUnixScript(dashboardUrl: string, apiKey: string): string {
   return `#!/bin/bash
 # ============================================
 # 하얀치과 마케팅 워커 설치 및 실행
 # 더블클릭하면 자동으로 설치 및 실행됩니다
 # ============================================
 
-set -e
+# --- 기본 설정 ---
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+[ -s "$HOME/.nvm/nvm.sh" ] && source "$HOME/.nvm/nvm.sh"
+command -v fnm &>/dev/null && eval "$(fnm env)"
 
 INSTALL_DIR="$HOME/marketing-worker"
 DASHBOARD_URL="${dashboardUrl}"
 WORKER_API_KEY="${apiKey}"
-REPO_URL="${repoUrl}"
+DOWNLOAD_URL="${dashboardUrl}/downloads/marketing-worker.tar.gz"
+
+# 종료 시 항상 터미널 유지
+cleanup() {
+  echo ""
+  echo "============================================"
+  echo " 워커가 종료되었습니다."
+  echo "============================================"
+  echo ""
+  read -p "엔터를 누르면 창을 닫습니다..."
+}
+trap cleanup EXIT
 
 echo "============================================"
 echo " 하얀치과 마케팅 워커"
 echo "============================================"
 echo ""
 
-# Node.js 확인
+# --- Node.js 확인 ---
 if ! command -v node &> /dev/null; then
   echo "[오류] Node.js가 설치되어 있지 않습니다."
   echo ""
@@ -100,28 +100,27 @@ if ! command -v node &> /dev/null; then
   echo "  brew install node"
   echo ""
   echo "또는 https://nodejs.org 에서 다운로드해주세요."
-  echo ""
-  read -p "엔터를 누르면 종료합니다..."
   exit 1
 fi
 
-echo "[OK] Node.js $(node -v) 감지"
+NODE_VER=$(node -v)
+echo "[OK] Node.js $NODE_VER 감지"
 
-# 설치 여부 확인
+# --- 설치 여부 확인 ---
 if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/package.json" ]; then
   echo "[OK] 이미 설치됨: $INSTALL_DIR"
   echo ""
 
-  # .env.local 업데이트 (API 키가 변경되었을 수 있음)
-  cat > "$INSTALL_DIR/.env.local" << ENVEOF
-DASHBOARD_API_URL=$DASHBOARD_URL
-WORKER_API_KEY=$WORKER_API_KEY
+  # .env.local 업데이트
+  cat > "$INSTALL_DIR/.env.local" << 'ENVEOF'
+DASHBOARD_API_URL=${dashboardUrl}
+WORKER_API_KEY=${apiKey}
 MARKETING_WORKER_PORT=4001
 ENVEOF
 
   echo "[OK] 설정 업데이트 완료"
   echo ""
-  echo "워커를 시작합니다..."
+  echo "워커를 시작합니다... (종료: Ctrl+C)"
   echo ""
   cd "$INSTALL_DIR"
   npm run supervisor
@@ -131,42 +130,50 @@ else
   mkdir -p "$INSTALL_DIR"
 
   echo "[2/5] 마케팅 워커 다운로드 중..."
-  cd "$INSTALL_DIR"
+  echo "       URL: $DOWNLOAD_URL"
 
-  # Git이 있으면 sparse checkout으로 marketing-worker만 다운로드
-  if command -v git &> /dev/null; then
-    git clone --depth 1 --filter=blob:none --sparse "$REPO_URL.git" _temp 2>/dev/null
-    cd _temp
-    git sparse-checkout set dental-clinic-manager/marketing-worker 2>/dev/null
-    cp -r dental-clinic-manager/marketing-worker/* "$INSTALL_DIR/"
-    cd "$INSTALL_DIR"
-    rm -rf _temp
+  TEMP_DIR=$(mktemp -d)
+
+  if curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_DIR/marketing-worker.tar.gz"; then
+    echo "       다운로드 완료. 압축 해제 중..."
+    tar xzf "$TEMP_DIR/marketing-worker.tar.gz" -C "$INSTALL_DIR" --strip-components=1
+    rm -rf "$TEMP_DIR"
+
+    if [ ! -f "$INSTALL_DIR/package.json" ]; then
+      echo "[오류] 압축 해제 실패: package.json을 찾을 수 없습니다."
+      exit 1
+    fi
+    echo "       [OK] 파일 복사 완료"
   else
-    # Git 없으면 tarball로 다운로드
-    curl -sL "$REPO_URL/archive/refs/heads/develop.tar.gz" | tar xz --strip-components=2 -C "$INSTALL_DIR" "*/dental-clinic-manager/marketing-worker"
+    echo "[오류] 다운로드 실패. 네트워크를 확인해주세요."
+    rm -rf "$TEMP_DIR"
+    exit 1
   fi
 
-  echo "[3/5] 패키지 설치 중..."
-  npm install
+  cd "$INSTALL_DIR"
 
-  echo "[4/5] Chromium 브라우저 설치 중..."
-  npx playwright install chromium
+  echo "[3/5] 패키지 설치 중... (시간이 걸릴 수 있습니다)"
+  npm install || { echo "[오류] npm install 실패"; exit 1; }
+
+  echo "[4/5] Chromium 브라우저 설치 중... (시간이 걸릴 수 있습니다)"
+  npx playwright install chromium || { echo "[오류] Chromium 설치 실패"; exit 1; }
 
   echo "[5/5] 환경 설정 중..."
-  cat > "$INSTALL_DIR/.env.local" << ENVEOF
-DASHBOARD_API_URL=$DASHBOARD_URL
-WORKER_API_KEY=$WORKER_API_KEY
+  cat > "$INSTALL_DIR/.env.local" << 'ENVEOF'
+DASHBOARD_API_URL=${dashboardUrl}
+WORKER_API_KEY=${apiKey}
 MARKETING_WORKER_PORT=4001
 ENVEOF
 
-  npm run build
+  echo "       TypeScript 빌드 중..."
+  npm run build || { echo "[오류] 빌드 실패"; exit 1; }
 
   echo ""
   echo "============================================"
   echo " 설치 완료!"
   echo "============================================"
   echo ""
-  echo "워커를 시작합니다..."
+  echo "워커를 시작합니다... (종료: Ctrl+C)"
   echo ""
 
   npm run supervisor
@@ -174,18 +181,33 @@ fi
 `;
 }
 
-function generateWindowsScript(dashboardUrl: string, apiKey: string, repoUrl: string): string {
+function generateWindowsScript(dashboardUrl: string, apiKey: string): string {
   return `@echo off
 chcp 65001 >nul
+title 하얀치과 마케팅 워커
 REM ============================================
 REM 하얀치과 마케팅 워커 설치 및 실행
 REM 더블클릭하면 자동으로 설치 및 실행됩니다
 REM ============================================
 
-set INSTALL_DIR=%USERPROFILE%\\marketing-worker
-set DASHBOARD_URL=${dashboardUrl}
-set WORKER_API_KEY=${apiKey}
-set REPO_URL=${repoUrl}
+REM 메인 로직 실행 후 항상 pause로 터미널 유지
+call :main
+goto :done
+
+:done
+echo.
+echo ============================================
+echo  워커가 종료되었습니다.
+echo ============================================
+echo.
+pause
+exit /b
+
+:main
+set "INSTALL_DIR=%USERPROFILE%\\marketing-worker"
+set "DASHBOARD_URL=${dashboardUrl}"
+set "WORKER_API_KEY=${apiKey}"
+set "DOWNLOAD_URL=${dashboardUrl}/downloads/marketing-worker.tar.gz"
 
 echo ============================================
 echo  하얀치과 마케팅 워커
@@ -194,66 +216,104 @@ echo.
 
 REM Node.js 확인
 where node >nul 2>nul
-if %ERRORLEVEL% NEQ 0 (
-  echo [오류] Node.js가 설치되어 있지 않습니다.
-  echo https://nodejs.org 에서 Node.js를 설치해주세요.
-  pause
-  exit /b 1
-)
-
+if errorlevel 1 goto :no_node
 for /f "tokens=*" %%v in ('node -v') do echo [OK] Node.js %%v 감지
+goto :check_install
 
-REM 설치 여부 확인
-if exist "%INSTALL_DIR%\\package.json" (
-  echo [OK] 이미 설치됨: %INSTALL_DIR%
-  echo.
+:no_node
+echo [오류] Node.js가 설치되어 있지 않습니다.
+echo https://nodejs.org 에서 Node.js를 설치해주세요.
+exit /b 1
 
-  echo DASHBOARD_API_URL=%DASHBOARD_URL%> "%INSTALL_DIR%\\.env.local"
-  echo WORKER_API_KEY=%WORKER_API_KEY%>> "%INSTALL_DIR%\\.env.local"
-  echo MARKETING_WORKER_PORT=4001>> "%INSTALL_DIR%\\.env.local"
+:check_install
+REM node_modules가 있으면 이미 설치 완료된 것
+if not exist "%INSTALL_DIR%\\node_modules" goto :fresh_install
+if not exist "%INSTALL_DIR%\\package.json" goto :fresh_install
 
-  echo [OK] 설정 업데이트 완료
-  echo.
-  echo 워커를 시작합니다...
-  echo.
-  cd /d "%INSTALL_DIR%"
-  npm run supervisor
-) else (
-  echo.
-  echo [1/5] 설치 디렉토리 생성: %INSTALL_DIR%
-  mkdir "%INSTALL_DIR%" 2>nul
+REM === 이미 설치됨 - 설정 업데이트 후 실행 ===
+echo [OK] 이미 설치됨: %INSTALL_DIR%
+echo.
 
-  echo [2/5] 마케팅 워커 다운로드 중...
-  cd /d "%INSTALL_DIR%"
-  git clone --depth 1 --filter=blob:none --sparse "%REPO_URL%.git" _temp
-  cd _temp
-  git sparse-checkout set dental-clinic-manager/marketing-worker
-  xcopy /s /e /y "dental-clinic-manager\\marketing-worker\\*" "%INSTALL_DIR%\\"
-  cd /d "%INSTALL_DIR%"
-  rmdir /s /q _temp
+echo DASHBOARD_API_URL=%DASHBOARD_URL%> "%INSTALL_DIR%\\.env.local"
+echo WORKER_API_KEY=%WORKER_API_KEY%>> "%INSTALL_DIR%\\.env.local"
+echo MARKETING_WORKER_PORT=4001>> "%INSTALL_DIR%\\.env.local"
 
-  echo [3/5] 패키지 설치 중...
-  npm install
+echo [OK] 설정 업데이트 완료
+echo.
+echo 워커를 시작합니다... (종료: Ctrl+C)
+echo.
+cd /d "%INSTALL_DIR%"
+call npm run supervisor
+exit /b
 
-  echo [4/5] Chromium 브라우저 설치 중...
-  npx playwright install chromium
+:fresh_install
+REM === 신규 설치 ===
+REM 이전 실패한 설치 정리
+if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%" 2>nul
 
-  echo [5/5] 환경 설정 중...
-  echo DASHBOARD_API_URL=%DASHBOARD_URL%> "%INSTALL_DIR%\\.env.local"
-  echo WORKER_API_KEY=%WORKER_API_KEY%>> "%INSTALL_DIR%\\.env.local"
-  echo MARKETING_WORKER_PORT=4001>> "%INSTALL_DIR%\\.env.local"
+echo.
+echo [1/5] 설치 디렉토리 생성: %INSTALL_DIR%
+mkdir "%INSTALL_DIR%"
+if errorlevel 1 goto :err_mkdir
 
-  npm run build
+echo [2/5] 마케팅 워커 다운로드 중...
+echo        URL: %DOWNLOAD_URL%
 
-  echo.
-  echo ============================================
-  echo  설치 완료!
-  echo ============================================
-  echo.
-  echo 워커를 시작합니다...
-  echo.
+REM 대시보드 서버에서 직접 다운로드 (GitHub 접속 불필요)
+set "TEMP_FILE=%TEMP%\\marketing-worker.tar.gz"
+curl -fsSL "%DOWNLOAD_URL%" -o "%TEMP_FILE%"
+if errorlevel 1 goto :err_download
 
-  npm run supervisor
-)
+echo        다운로드 완료. 압축 해제 중...
+cd /d "%INSTALL_DIR%"
+tar xzf "%TEMP_FILE%" --strip-components=1
+if errorlevel 1 goto :err_extract
+del "%TEMP_FILE%" 2>nul
+
+if not exist "%INSTALL_DIR%\\package.json" goto :err_no_pkg
+echo        [OK] 파일 복사 완료
+
+echo [3/5] 패키지 설치 중... (시간이 걸릴 수 있습니다)
+call npm install
+if errorlevel 1 goto :err_npm
+
+echo [4/5] Chromium 브라우저 설치 중... (시간이 걸릴 수 있습니다)
+call npx playwright install chromium
+if errorlevel 1 goto :err_chromium
+
+echo [5/5] 환경 설정 중...
+echo DASHBOARD_API_URL=%DASHBOARD_URL%> "%INSTALL_DIR%\\.env.local"
+echo WORKER_API_KEY=%WORKER_API_KEY%>> "%INSTALL_DIR%\\.env.local"
+echo MARKETING_WORKER_PORT=4001>> "%INSTALL_DIR%\\.env.local"
+
+echo.
+echo ============================================
+echo  설치 완료!
+echo ============================================
+echo.
+echo 워커를 시작합니다... (종료: Ctrl+C)
+echo.
+call npm run supervisor
+exit /b
+
+:err_mkdir
+echo [오류] 설치 디렉토리 생성 실패: %INSTALL_DIR%
+exit /b 1
+:err_download
+echo [오류] 다운로드 실패. 네트워크를 확인해주세요.
+echo        URL: %DOWNLOAD_URL%
+exit /b 1
+:err_extract
+echo [오류] 압축 해제 실패.
+exit /b 1
+:err_no_pkg
+echo [오류] 압축 해제 후 package.json을 찾을 수 없습니다.
+exit /b 1
+:err_npm
+echo [오류] npm install 실패
+exit /b 1
+:err_chromium
+echo [오류] Chromium 설치 실패
+exit /b 1
 `;
 }

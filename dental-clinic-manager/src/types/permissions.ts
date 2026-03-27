@@ -238,7 +238,7 @@ export const PERMISSION_GROUPS = {
     { key: 'protocol_category_manage', label: '카테고리 관리' }
   ],
   '근로계약서': [
-    { key: 'contract_view', label: '계약서 조회' },
+    { key: 'contract_view', label: '본인 근로계약서 조회' },
     { key: 'contract_create', label: '계약서 생성' },
     { key: 'contract_edit', label: '계약서 수정' },
     { key: 'contract_delete', label: '계약서 삭제' },
@@ -322,7 +322,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'protocol_history_view': '프로토콜 변경 히스토리를 조회할 수 있습니다.',
   'protocol_category_manage': '프로토콜 카테고리를 관리할 수 있습니다.',
   // 근로계약서 관리 권한 설명
-  'contract_view': '근로계약서를 조회할 수 있습니다.',
+  'contract_view': '본인의 근로계약서를 조회할 수 있습니다. (대표원장/실장은 전체 조회)',
   'contract_create': '새로운 근로계약서를 생성할 수 있습니다.',
   'contract_edit': '근로계약서를 수정할 수 있습니다.',
   'contract_delete': '근로계약서를 삭제할 수 있습니다.',

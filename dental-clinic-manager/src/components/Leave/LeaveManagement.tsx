@@ -14,6 +14,10 @@ import {
   ChevronRight,
   ChevronDown,
   Building2,
+  Pencil,
+  Trash2,
+  Save,
+  X,
 } from 'lucide-react'
 import { UserProfile } from '@/contexts/AuthContext'
 import { leaveService, calculateAnnualLeaveDays, calculateYearsOfService } from '@/lib/leaveService'
@@ -489,58 +493,193 @@ const LeaveByTypeCell = ({
   )
 }
 
+// 연차 내역 수정 폼 상태 타입
+interface EditingRequest {
+  id: string
+  start_date: string
+  end_date: string
+  leave_type_id: string
+  total_days: number
+  half_day_type: string | null
+  reason: string
+}
+
 // 전체 직원 연차 현황 컴포넌트
 function AllEmployeeBalances() {
+  const { hasPermission } = usePermissions()
+  const canManageBalance = hasPermission('leave_balance_manage')
+
   const [balances, setBalances] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedUserRequests, setSelectedUserRequests] = useState<any[]>([])
   const [loadingRequests, setLoadingRequests] = useState(false)
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
+  const [editingRequest, setEditingRequest] = useState<EditingRequest | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: '', type: 'success' })
 
   useEffect(() => {
     loadBalances()
+    loadLeaveTypes()
   }, [])
 
   const loadBalances = async () => {
-    // 연도 필터 없이 전체 조회
     const result = await leaveService.getAllEmployeeBalances()
     setBalances(result.data || [])
     setLoading(false)
   }
 
+  const loadLeaveTypes = async () => {
+    const result = await leaveService.getLeaveTypes()
+    setLeaveTypes(result.data || [])
+  }
+
   const handleRowClick = async (userId: string) => {
-    // 같은 직원 클릭 시 닫기
     if (selectedUserId === userId) {
       setSelectedUserId(null)
       setSelectedUserRequests([])
+      setEditingRequest(null)
       return
     }
 
     setSelectedUserId(userId)
     setLoadingRequests(true)
+    setEditingRequest(null)
 
-    // 승인된 연차 내역 조회 (연도 필터 없이 전체)
     const result = await leaveService.getAllRequests({ userId, status: 'approved' })
     setSelectedUserRequests(result.data || [])
     setLoadingRequests(false)
   }
 
-  // 날짜 포맷팅
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return `${date.getMonth() + 1}/${date.getDate()}`
   }
 
-  // 연차 상태 표시 (사용 완료 vs 예정)
   const getLeaveStatus = (startDate: string) => {
     const today = new Date().toISOString().split('T')[0]
     return startDate <= today ? '사용 완료' : '사용 예정'
   }
 
-  // 종류별 합계 계산 (차감 대상만)
   const calculateDeductTotal = (byType?: Record<string, number>) => {
     if (!byType) return 0
     return DEDUCT_LEAVE_TYPES.reduce((sum, code) => sum + (byType[code] || 0), 0)
+  }
+
+  // 수정 모드 시작
+  const startEditing = (request: any) => {
+    setEditingRequest({
+      id: request.id,
+      start_date: request.start_date,
+      end_date: request.end_date,
+      leave_type_id: request.leave_type_id,
+      total_days: request.total_days,
+      half_day_type: request.half_day_type || null,
+      reason: request.reason || '',
+    })
+  }
+
+  // 수정 취소
+  const cancelEditing = () => {
+    setEditingRequest(null)
+  }
+
+  // 수정 저장
+  const saveEditing = async () => {
+    if (!editingRequest) return
+    setSaving(true)
+
+    const result = await leaveService.updateApprovedRequest(editingRequest.id, {
+      start_date: editingRequest.start_date,
+      end_date: editingRequest.end_date,
+      leave_type_id: editingRequest.leave_type_id,
+      total_days: editingRequest.total_days,
+      half_day_type: editingRequest.half_day_type,
+      reason: editingRequest.reason,
+    })
+
+    setSaving(false)
+
+    if (result.error) {
+      setToast({ show: true, message: result.error, type: 'error' })
+    } else {
+      setToast({ show: true, message: '연차 내역이 수정되었습니다.', type: 'success' })
+      setEditingRequest(null)
+      // 데이터 새로고침
+      if (selectedUserId) {
+        const res = await leaveService.getAllRequests({ userId: selectedUserId, status: 'approved' })
+        setSelectedUserRequests(res.data || [])
+      }
+      await loadBalances()
+    }
+  }
+
+  // 삭제
+  const handleDelete = async (requestId: string, userName: string) => {
+    if (!await appConfirm(`${userName}님의 이 연차 내역을 삭제하시겠습니까?\n삭제하면 연차 잔여일이 재계산됩니다.`)) return
+
+    const result = await leaveService.deleteApprovedRequest(requestId)
+
+    if (result.error) {
+      setToast({ show: true, message: result.error, type: 'error' })
+    } else {
+      setToast({ show: true, message: '연차 내역이 삭제되었습니다.', type: 'success' })
+      if (selectedUserId) {
+        const res = await leaveService.getAllRequests({ userId: selectedUserId, status: 'approved' })
+        setSelectedUserRequests(res.data || [])
+      }
+      await loadBalances()
+    }
+  }
+
+  // 수정 폼 필드 업데이트
+  const updateEditField = (field: keyof EditingRequest, value: any) => {
+    if (!editingRequest) return
+    const updated = { ...editingRequest, [field]: value }
+
+    // 날짜 변경 시 일수 자동 계산
+    if (field === 'start_date' || field === 'end_date') {
+      if (updated.half_day_type) {
+        updated.total_days = 0.5
+      } else if (updated.start_date && updated.end_date) {
+        const start = new Date(updated.start_date)
+        const end = new Date(updated.end_date)
+        let days = 0
+        const current = new Date(start)
+        while (current <= end) {
+          const day = current.getDay()
+          if (day !== 0 && day !== 6) days++
+          current.setDate(current.getDate() + 1)
+        }
+        updated.total_days = days
+      }
+    }
+
+    // 반차 선택 시 일수 0.5로, end_date = start_date로
+    if (field === 'half_day_type') {
+      if (value) {
+        updated.total_days = 0.5
+        updated.end_date = updated.start_date
+      } else {
+        // 반차 해제 시 1일로
+        updated.total_days = 1
+      }
+    }
+
+    // 연차 종류 변경 시 반차 타입 조회
+    if (field === 'leave_type_id') {
+      const selectedType = leaveTypes.find(t => t.id === value)
+      if (selectedType?.code === 'half_day') {
+        updated.half_day_type = updated.half_day_type || 'AM'
+        updated.total_days = 0.5
+        updated.end_date = updated.start_date
+      } else {
+        updated.half_day_type = null
+      }
+    }
+
+    setEditingRequest(updated)
   }
 
   if (loading) {
@@ -552,171 +691,323 @@ function AllEmployeeBalances() {
   }
 
   return (
-    <div className="overflow-x-auto border border-slate-200 rounded-lg">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-slate-50 border-b border-slate-200">
-            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직원</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직급</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">총 연차</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">
-              <div>이미 사용</div>
-              <div className="text-[10px] text-slate-400 font-normal">(연차/반차/병가)</div>
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">
-              <div>사용 예정</div>
-              <div className="text-[10px] text-slate-400 font-normal">(연차/반차/병가)</div>
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">잔여</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용률</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-200">
-          {balances.map((item) => {
-            const usageRate = item.total_days > 0
-              ? Math.round((item.used_days / item.total_days) * 100)
-              : 0
-            const isSelected = selectedUserId === item.user_id
+    <>
+      <div className="overflow-x-auto border border-slate-200 rounded-lg">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직원</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직급</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">총 연차</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">
+                <div>이미 사용</div>
+                <div className="text-[10px] text-slate-400 font-normal">(연차/반차/병가)</div>
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">
+                <div>사용 예정</div>
+                <div className="text-[10px] text-slate-400 font-normal">(연차/반차/병가)</div>
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">잔여</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용률</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {balances.map((item) => {
+              const usageRate = item.total_days > 0
+                ? Math.round((item.used_days / item.total_days) * 100)
+                : 0
+              const isSelected = selectedUserId === item.user_id
 
-            // 이미 사용 (차감 대상만)
-            const usedDeductTotal = calculateDeductTotal(item.used_by_type)
-            // 사용 예정 (차감 대상만)
-            const pendingDeductTotal = calculateDeductTotal(item.pending_by_type)
+              const usedDeductTotal = calculateDeductTotal(item.used_by_type)
+              const pendingDeductTotal = calculateDeductTotal(item.pending_by_type)
 
-            return (
-              <React.Fragment key={item.id}>
-                <tr
-                  className={`hover:bg-slate-50 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : ''}`}
-                  onClick={() => handleRowClick(item.user_id)}
-                >
-                  <td className="px-4 py-3 font-medium text-slate-800">
-                    <div className="flex items-center gap-2">
-                      {isSelected ? (
-                        <ChevronDown className="w-4 h-4 text-blue-500" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
-                      )}
-                      <div>
-                        <div>{item.user_name || '알 수 없음'}</div>
-                        {item.leave_period_start && item.leave_period_end && (
-                          <div className="text-[10px] text-slate-400 font-normal">
-                            {item.leave_period_start.slice(5).replace('-', '/')} ~ {item.leave_period_end.slice(5).replace('-', '/')}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                      {getRoleLabel(item.user_role)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center font-medium">{item.total_days}일</td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="font-medium text-green-600">{usedDeductTotal}일</span>
-                      <LeaveByTypeCell byType={item.used_by_type} emptyText="" />
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="font-medium text-yellow-600">{pendingDeductTotal}일</span>
-                      <LeaveByTypeCell byType={item.pending_by_type} emptyText="" />
-                    </div>
-                  </td>
-                  <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
-                    {item.remaining_days}일
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-16 bg-slate-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-500 h-2 rounded-full"
-                          style={{ width: `${Math.min(usageRate, 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-slate-500">{usageRate}%</span>
-                    </div>
-                  </td>
-                </tr>
-                {/* 선택된 직원의 연차 내역 */}
-                {isSelected && (
-                  <tr>
-                    <td colSpan={7} className="px-0 py-0 bg-slate-50">
-                      <div className="px-6 py-4 border-t border-slate-200">
-                        <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          {item.user_name}님의 연차 사용 내역
-                        </h4>
-                        {loadingRequests ? (
-                          <div className="flex justify-center py-4">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
-                          </div>
-                        ) : selectedUserRequests.length > 0 ? (
-                          <div className="space-y-2">
-                            {selectedUserRequests.map((request) => {
-                              const status = getLeaveStatus(request.start_date)
-                              const isCompleted = status === '사용 완료'
-                              return (
-                                <div
-                                  key={request.id}
-                                  className="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-slate-200"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <span
-                                      className="px-2 py-1 text-xs font-medium rounded"
-                                      style={{
-                                        backgroundColor: request.leave_types?.color ? `${request.leave_types.color}20` : '#e2e8f0',
-                                        color: request.leave_types?.color || '#64748b'
-                                      }}
-                                    >
-                                      {request.leave_types?.name || '연차'}
-                                    </span>
-                                    <span className="text-sm text-slate-700">
-                                      {formatDate(request.start_date)}
-                                      {request.start_date !== request.end_date && ` ~ ${formatDate(request.end_date)}`}
-                                    </span>
-                                    <span className="text-sm text-slate-500">
-                                      ({request.total_days}일)
-                                    </span>
-                                    {request.reason && (
-                                      <span className="text-xs text-slate-400 truncate max-w-[200px]">
-                                        {request.reason}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                    isCompleted
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-yellow-100 text-yellow-700'
-                                  }`}>
-                                    {status}
-                                  </span>
-                                </div>
-                              )
-                            })}
-                          </div>
+              return (
+                <React.Fragment key={item.id}>
+                  <tr
+                    className={`hover:bg-slate-50 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : ''}`}
+                    onClick={() => handleRowClick(item.user_id)}
+                  >
+                    <td className="px-4 py-3 font-medium text-slate-800">
+                      <div className="flex items-center gap-2">
+                        {isSelected ? (
+                          <ChevronDown className="w-4 h-4 text-blue-500" />
                         ) : (
-                          <p className="text-sm text-slate-500 text-center py-4">
-                            승인된 연차 내역이 없습니다.
-                          </p>
+                          <ChevronRight className="w-4 h-4 text-slate-400" />
                         )}
+                        <div>
+                          <div>{item.user_name || '알 수 없음'}</div>
+                          {item.leave_period_start && item.leave_period_end && (
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              {item.leave_period_start.slice(5).replace('-', '/')} ~ {item.leave_period_end.slice(5).replace('-', '/')}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                        {getRoleLabel(item.user_role)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center font-medium">{item.total_days}일</td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="font-medium text-green-600">{usedDeductTotal}일</span>
+                        <LeaveByTypeCell byType={item.used_by_type} emptyText="" />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="font-medium text-yellow-600">{pendingDeductTotal}일</span>
+                        <LeaveByTypeCell byType={item.pending_by_type} emptyText="" />
+                      </div>
+                    </td>
+                    <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
+                      {item.remaining_days}일
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-16 bg-slate-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-500 h-2 rounded-full"
+                            style={{ width: `${Math.min(usageRate, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-slate-500">{usageRate}%</span>
                       </div>
                     </td>
                   </tr>
-                )}
-              </React.Fragment>
-            )
-          })}
-          {balances.length === 0 && (
-            <tr>
-              <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
-                등록된 연차 현황이 없습니다.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+                  {/* 선택된 직원의 연차 내역 */}
+                  {isSelected && (
+                    <tr>
+                      <td colSpan={7} className="px-0 py-0 bg-slate-50">
+                        <div className="px-6 py-4 border-t border-slate-200">
+                          <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            {item.user_name}님의 연차 사용 내역
+                          </h4>
+                          {loadingRequests ? (
+                            <div className="flex justify-center py-4">
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                            </div>
+                          ) : selectedUserRequests.length > 0 ? (
+                            <div className="space-y-2">
+                              {selectedUserRequests.map((request) => {
+                                const status = getLeaveStatus(request.start_date)
+                                const isCompleted = status === '사용 완료'
+                                const isEditing = editingRequest?.id === request.id
+
+                                if (isEditing && editingRequest) {
+                                  // 수정 모드 UI
+                                  return (
+                                    <div
+                                      key={request.id}
+                                      className="bg-white rounded-lg px-4 py-4 border-2 border-blue-300 space-y-3"
+                                    >
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                        {/* 연차 종류 */}
+                                        <div>
+                                          <label className="block text-xs font-medium text-slate-500 mb-1">종류</label>
+                                          <select
+                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            value={editingRequest.leave_type_id}
+                                            onChange={(e) => updateEditField('leave_type_id', e.target.value)}
+                                          >
+                                            {leaveTypes.filter(t => t.is_active).map((type) => (
+                                              <option key={type.id} value={type.id}>{type.name}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+
+                                        {/* 시작일 */}
+                                        <div>
+                                          <label className="block text-xs font-medium text-slate-500 mb-1">시작일</label>
+                                          <input
+                                            type="date"
+                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            value={editingRequest.start_date}
+                                            onChange={(e) => updateEditField('start_date', e.target.value)}
+                                          />
+                                        </div>
+
+                                        {/* 종료일 */}
+                                        <div>
+                                          <label className="block text-xs font-medium text-slate-500 mb-1">종료일</label>
+                                          <input
+                                            type="date"
+                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            value={editingRequest.end_date}
+                                            min={editingRequest.start_date}
+                                            onChange={(e) => updateEditField('end_date', e.target.value)}
+                                            disabled={!!editingRequest.half_day_type}
+                                          />
+                                        </div>
+
+                                        {/* 일수 */}
+                                        <div>
+                                          <label className="block text-xs font-medium text-slate-500 mb-1">일수</label>
+                                          <input
+                                            type="number"
+                                            step="0.5"
+                                            min="0.5"
+                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            value={editingRequest.total_days}
+                                            onChange={(e) => updateEditField('total_days', parseFloat(e.target.value) || 0)}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {/* 반차 타입 */}
+                                        <div>
+                                          <label className="block text-xs font-medium text-slate-500 mb-1">반차</label>
+                                          <select
+                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            value={editingRequest.half_day_type || ''}
+                                            onChange={(e) => updateEditField('half_day_type', e.target.value || null)}
+                                          >
+                                            <option value="">해당 없음</option>
+                                            <option value="AM">오전 반차</option>
+                                            <option value="PM">오후 반차</option>
+                                          </select>
+                                        </div>
+
+                                        {/* 사유 */}
+                                        <div>
+                                          <label className="block text-xs font-medium text-slate-500 mb-1">사유</label>
+                                          <input
+                                            type="text"
+                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            placeholder="사유 입력"
+                                            value={editingRequest.reason}
+                                            onChange={(e) => updateEditField('reason', e.target.value)}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {/* 저장/취소 버튼 */}
+                                      <div className="flex justify-end gap-2 pt-1">
+                                        <button
+                                          onClick={cancelEditing}
+                                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+                                          disabled={saving}
+                                        >
+                                          <X className="w-3 h-3" />
+                                          취소
+                                        </button>
+                                        <button
+                                          onClick={saveEditing}
+                                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+                                          disabled={saving}
+                                        >
+                                          <Save className="w-3 h-3" />
+                                          {saving ? '저장 중...' : '저장'}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )
+                                }
+
+                                // 보기 모드 UI
+                                return (
+                                  <div
+                                    key={request.id}
+                                    className="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-slate-200 group"
+                                  >
+                                    <div className="flex items-center gap-4">
+                                      <span
+                                        className="px-2 py-1 text-xs font-medium rounded"
+                                        style={{
+                                          backgroundColor: request.leave_types?.color ? `${request.leave_types.color}20` : '#e2e8f0',
+                                          color: request.leave_types?.color || '#64748b'
+                                        }}
+                                      >
+                                        {request.leave_types?.name || '연차'}
+                                      </span>
+                                      <span className="text-sm text-slate-700">
+                                        {formatDate(request.start_date)}
+                                        {request.start_date !== request.end_date && ` ~ ${formatDate(request.end_date)}`}
+                                      </span>
+                                      {request.half_day_type && (
+                                        <span className="text-xs text-slate-500">
+                                          ({request.half_day_type === 'AM' ? '오전' : '오후'})
+                                        </span>
+                                      )}
+                                      <span className="text-sm text-slate-500">
+                                        ({request.total_days}일)
+                                      </span>
+                                      {request.reason && (
+                                        <span className="text-xs text-slate-400 truncate max-w-[200px]">
+                                          {request.reason}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                        isCompleted
+                                          ? 'bg-green-100 text-green-700'
+                                          : 'bg-yellow-100 text-yellow-700'
+                                      }`}>
+                                        {status}
+                                      </span>
+                                      {canManageBalance && (
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              startEditing(request)
+                                            }}
+                                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                            title="수정"
+                                          >
+                                            <Pencil className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleDelete(request.id, item.user_name)
+                                            }}
+                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                            title="삭제"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-500 text-center py-4">
+                              승인된 연차 내역이 없습니다.
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              )
+            })}
+            {balances.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                  등록된 연차 현황이 없습니다.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        show={toast.show}
+        onClose={() => setToast(prev => ({ ...prev, show: false }))}
+      />
+    </>
   )
 }
