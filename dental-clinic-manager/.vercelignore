@@ -7,11 +7,11 @@
 # SEO 워커 (별도 실행)
 /seo-worker/
 
-# 마케팅 워커 (유저 PC 실행)
-/marketing-worker/
+# 마케팅 워커 빌드 산출물만 제외 (소스는 prebuild tarball 생성에 필요)
+/marketing-worker/node_modules/
+/marketing-worker/dist/
+/marketing-worker/.env*
+/marketing-worker/naver-cookies.json
 
 # SQL 파일
 *.sql
-
-# 개발/배포 스크립트
-/scripts/
