@@ -166,13 +166,8 @@ export async function scrapePostDetail(postUrl: string): Promise<PostDetail> {
       'title',
     ]);
 
-    // 본문 텍스트
-    const bodyText = await extractText(contentPage, [
-      '.se-main-container',
-      '#postViewArea',
-      '.post-view',
-      '#post-area',
-    ]);
+    // 본문 텍스트 (SE 에디터 텍스트 블록만 추출 — 이미지 alt, 지도, 공백 문자 제외)
+    const bodyText = await extractBodyText(contentPage);
 
     // 본문 HTML
     const bodyHtml = await extractHtml(contentPage, [
@@ -181,11 +176,11 @@ export async function scrapePostDetail(postUrl: string): Promise<PostDetail> {
       '.post-view',
     ]);
 
-    // 이미지 수
+    // 이미지 수 (콘텐츠 이미지만 카운트 — 지도 타일, UI 아이콘 제외)
     const imageCount = await countElements(contentPage, [
       '.se-main-container img.se-image-resource',
-      '.se-main-container img',
-      '#postViewArea img',
+      '.se-module-image img',
+      '#postViewArea img[src*="postfiles"], #postViewArea img[src*="blogfiles"]',
     ]);
 
     // 동영상 수
@@ -263,6 +258,52 @@ export async function scrapePostDetail(postUrl: string): Promise<PostDetail> {
 }
 
 // --- 유틸리티 함수들 ---
+
+/** 본문 텍스트만 정확하게 추출 (SE 에디터 텍스트 블록, 이미지/지도/공백 제외) */
+async function extractBodyText(page: Page): Promise<string> {
+  try {
+    // SE 에디터: .se-text-paragraph 에서 순수 텍스트만 수집
+    const seText = await page.evaluate(() => {
+      const paragraphs = document.querySelectorAll('.se-main-container .se-text-paragraph');
+      if (paragraphs.length > 0) {
+        const texts: string[] = [];
+        paragraphs.forEach((p) => {
+          const t = (p.textContent || '').trim()
+            .replace(/\u200B/g, '') // zero-width space 제거
+            .replace(/\u00A0/g, ' '); // non-breaking space → 일반 공백
+          if (t) texts.push(t);
+        });
+        return texts.join('\n');
+      }
+      return '';
+    });
+    if (seText && seText.length > 0) return seText;
+
+    // 구형 에디터: #postViewArea 내 p 태그 텍스트
+    const legacyText = await page.evaluate(() => {
+      const area = document.querySelector('#postViewArea');
+      if (!area) return '';
+      const paragraphs = area.querySelectorAll('p, div.se_textarea');
+      if (paragraphs.length > 0) {
+        const texts: string[] = [];
+        paragraphs.forEach((p) => {
+          const t = (p.textContent || '').trim()
+            .replace(/\u200B/g, '')
+            .replace(/\u00A0/g, ' ');
+          if (t) texts.push(t);
+        });
+        return texts.join('\n');
+      }
+      // fallback: 전체 textContent에서 공백 정리
+      return (area.textContent || '').trim()
+        .replace(/\u200B/g, '')
+        .replace(/\s{3,}/g, '\n');
+    });
+    return legacyText;
+  } catch {
+    return '';
+  }
+}
 
 async function extractText(page: Page, selectors: string[]): Promise<string> {
   for (const selector of selectors) {

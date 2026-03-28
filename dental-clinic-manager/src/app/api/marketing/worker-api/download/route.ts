@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// 안정적인 대시보드 URL (Vercel preview URL 대신 프로덕션 URL 사용)
-const PRODUCTION_URL = 'https://dental-clinic-manager.vercel.app';
+// 안정적인 대시보드 URL (프로덕션 도메인)
+const PRODUCTION_URL = 'https://www.hi-clinic.co.kr';
 
 export async function GET(request: NextRequest) {
   try {
