@@ -181,11 +181,11 @@ export async function scrapePostDetail(postUrl: string): Promise<PostDetail> {
       '.post-view',
     ]);
 
-    // 이미지 수
+    // 이미지 수 (콘텐츠 이미지만 카운트 — 지도 타일, UI 아이콘 제외)
     const imageCount = await countElements(contentPage, [
       '.se-main-container img.se-image-resource',
-      '.se-main-container img',
-      '#postViewArea img',
+      '.se-module-image img',
+      '#postViewArea img[src*="postfiles"], #postViewArea img[src*="blogfiles"]',
     ]);
 
     // 동영상 수
