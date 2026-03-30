@@ -83,7 +83,18 @@ function cleanupTempImages(images: { path: string }[]): void {
  * 스케줄러 시작
  */
 export function startScheduler(): void {
-  console.log(`[Scheduler] 시작 (${CONFIG.worker.cronInterval}, 모드: ${isApiMode() ? 'API' : '레거시'})`);
+  const mode = isApiMode() ? 'API' : '레거시';
+  console.log(`[Scheduler] 시작 (${CONFIG.worker.cronInterval}, 모드: ${mode})`);
+
+  // 시작 직후 첫 번째 실행 (cron 대기 없이 즉시)
+  setTimeout(async () => {
+    console.log('[Scheduler] 초기 실행 시작...');
+    try {
+      await processScheduledItems();
+    } catch (error) {
+      console.error('[Scheduler] 초기 실행 오류:', error);
+    }
+  }, 3000); // 서버 초기화 대기 3초
 
   cron.schedule(CONFIG.worker.cronInterval, async () => {
     try {
@@ -98,15 +109,20 @@ export function startScheduler(): void {
  * 예약된 발행 항목 처리
  */
 async function processScheduledItems(): Promise<void> {
+  const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const today = nowKst.toISOString().split('T')[0];
+  const timeKst = nowKst.toISOString().split('T')[1].slice(0, 5);
+
+  console.log(`[Scheduler] 폴링 실행 (${today} ${timeKst} KST, 오늘 발행: ${dailyPublishCount}/${CONFIG.publishing.maxPostsPerDay}건)`);
+
   // 일일 카운터 리셋 (KST 기준)
-  const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const today = todayKst.toISOString().split('T')[0];
   if (lastPublishDate !== today) {
     dailyPublishCount = 0;
     lastPublishDate = today;
   }
 
   if (dailyPublishCount >= CONFIG.publishing.maxPostsPerDay) {
+    console.log(`[Scheduler] 하루 최대 발행 수(${CONFIG.publishing.maxPostsPerDay}건) 도달 - 대기`);
     return;
   }
 
@@ -122,9 +138,13 @@ async function processScheduledItems(): Promise<void> {
  */
 async function processViaApi(): Promise<void> {
   const client = getApiClient();
+
+  console.log(`[Scheduler] API 폴링: ${CONFIG.api.dashboardUrl}/api/marketing/worker-api/poll`);
   const { nextItem, control } = await client.poll();
+  console.log(`[Scheduler] API 응답: nextItem=${nextItem ? `"${nextItem.title}"` : '없음'}, headless=${control.headless}`);
 
   if (!nextItem) {
+    console.log('[Scheduler] 발행 대상 없음 - 다음 폴링까지 대기');
     return;
   }
 
@@ -227,6 +247,8 @@ async function processViaSupabase(): Promise<void> {
   const currentDate = kst.toISOString().split('T')[0];
   const currentTime = kst.toISOString().split('T')[1].slice(0, 5);
 
+  console.log(`[Scheduler] Supabase 조회: date=${currentDate}, time=${currentTime}`);
+
   let { data: items, error } = await sb
     .from('content_calendar_items')
     .select(`*, content_calendars!inner(clinic_id, status)`)
@@ -256,6 +278,7 @@ async function processViaSupabase(): Promise<void> {
     return;
   }
   if (!items?.length) {
+    console.log('[Scheduler] 발행 대상 없음 - 다음 폴링까지 대기');
     return;
   }
 
