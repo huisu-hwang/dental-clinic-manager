@@ -60,12 +60,10 @@ jobs:
           path: dental-clinic-manager/marketing-worker/electron/release/*.exe
           retention-days: 30
 
-      - name: Upload to Supabase Storage
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+      - name: Upload to GitHub Release
         shell: bash
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           EXE_FILE=$(ls release/*.exe | head -1)
           if [ -z "$EXE_FILE" ]; then
@@ -74,31 +72,23 @@ jobs:
           fi
 
           FILE_NAME=$(basename "$EXE_FILE")
-          BUCKET="marketing-worker"
-          OBJECT_PATH="installer/${FILE_NAME}"
-          LATEST_PATH="installer/marketing-worker-latest.exe"
+          TAG="marketing-worker-v1.0.0"
 
-          FILE_SIZE=$(stat -c%s "$EXE_FILE" 2>/dev/null || wc -c < "$EXE_FILE" | tr -d ' ')
-          echo "Uploading ${FILE_NAME} (${FILE_SIZE} bytes) to Supabase Storage..."
+          echo "Uploading ${FILE_NAME} to GitHub Release ${TAG}..."
 
-          # 스트리밍 업로드 (-T 플래그 사용, 대용량 파일 지원)
-          curl -X PUT \
-            "${SUPABASE_URL}/storage/v1/object/${BUCKET}/${OBJECT_PATH}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Content-Type: application/octet-stream" \
-            -H "x-upsert: true" \
-            -T "${EXE_FILE}" \
-            --fail --show-error
+          # Release 생성 (이미 있으면 무시)
+          gh release create "${TAG}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "마케팅 워커 인스톨러 v1.0.0" \
+            --notes "하얀치과 마케팅 워커 Windows 인스톨러" \
+            --prerelease 2>/dev/null || true
 
-          echo "Uploaded versioned: ${OBJECT_PATH}"
+          # 기존 asset 삭제 후 재업로드
+          gh release delete-asset "${TAG}" "${FILE_NAME}" \
+            --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
 
-          curl -X PUT \
-            "${SUPABASE_URL}/storage/v1/object/${BUCKET}/${LATEST_PATH}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Content-Type: application/octet-stream" \
-            -H "x-upsert: true" \
-            -T "${EXE_FILE}" \
-            --fail --show-error
+          gh release upload "${TAG}" "${EXE_FILE}" \
+            --repo "$GITHUB_REPOSITORY" --clobber
 
-          echo "Uploaded latest: ${LATEST_PATH}"
-          echo "Download URL: ${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${LATEST_PATH}"
+          echo "Upload complete!"
+          echo "Download URL: https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${FILE_NAME}"
