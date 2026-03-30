@@ -2,12 +2,14 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Banknote, FileText, Settings, History } from 'lucide-react'
+import { Banknote, FileText, Settings, History, Upload } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { checkSecuritySession, setSecuritySession } from '@/lib/securitySession'
 import PasswordVerificationModal from '@/components/Security/PasswordVerificationModal'
 import PayrollForm from './PayrollForm'
 import PayrollSettings from './PayrollSettings'
+import TaxOfficeUploadModal from './TaxOfficeUploadModal'
+import { getEmployeesForPayroll } from '@/lib/payrollService'
 
 type PayrollSubTab = 'view' | 'history' | 'settings'
 
@@ -17,8 +19,20 @@ export default function PayrollManagement() {
   const [activeSubTab, setActiveSubTab] = useState<PayrollSubTab>('view')
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([])
+  const [uploadKey, setUploadKey] = useState(0) // to trigger PayrollForm refresh
 
   const isOwner = user?.role === 'owner'
+
+  // 직원 목록 로드 (업로드 모달용)
+  useEffect(() => {
+    if (isOwner && user?.clinic_id && isVerified) {
+      getEmployeesForPayroll(user.clinic_id).then(emps => {
+        setEmployees(emps.map(e => ({ id: e.id, name: e.name })))
+      }).catch(console.error)
+    }
+  }, [isOwner, user?.clinic_id, isVerified])
 
   // Check security session on mount
   useEffect(() => {
@@ -84,14 +98,26 @@ export default function PayrollManagement() {
     <div className="space-y-4">
       {/* 헤더 */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-            <Banknote className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <Banknote className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">급여 명세서</h2>
+              <p className="text-blue-100 text-sm">Payroll Statement</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-white">급여 명세서</h2>
-            <p className="text-blue-100 text-sm">Payroll Statement</p>
-          </div>
+          {isOwner && (
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-all"
+            >
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">세무사무실 명세서 업로드</span>
+              <span className="sm:hidden">업로드</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -120,7 +146,7 @@ export default function PayrollManagement() {
 
       {/* 콘텐츠 */}
       <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
-        {activeSubTab === 'view' && <PayrollForm />}
+        {activeSubTab === 'view' && <PayrollForm key={uploadKey} />}
 
         {activeSubTab === 'history' && (
           <div className="text-center py-12 text-slate-500">
@@ -157,6 +183,20 @@ export default function PayrollManagement() {
           )}
         </ul>
       </div>
+
+      {/* 세무사무실 명세서 업로드 모달 */}
+      {isOwner && user?.clinic_id && (
+        <TaxOfficeUploadModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          onUploadComplete={() => {
+            setShowUploadModal(false)
+            setUploadKey(prev => prev + 1)
+          }}
+          clinicId={user.clinic_id}
+          employees={employees}
+        />
+      )}
     </div>
   )
 }

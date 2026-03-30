@@ -123,6 +123,11 @@ export default function PayrollForm() {
     insuranceExempt: boolean
   } | null>(null)
 
+  const [viewMode, setViewMode] = useState<'self' | 'taxOffice'>('self')
+  const [taxOfficeFileUrl, setTaxOfficeFileUrl] = useState<string | null>(null)
+  const [taxOfficeFileName, setTaxOfficeFileName] = useState<string | null>(null)
+  const [loadingTaxOfficeFile, setLoadingTaxOfficeFile] = useState(false)
+
   const yearMonthOptions = useMemo(() => generatePayrollYearMonthOptions(), [])
 
   // 자동 저장 디바운스 타이머
@@ -506,6 +511,51 @@ export default function PayrollForm() {
     loadOrGeneratePayroll()
   }, [selectedEmployeeId, selectedYear, selectedMonth, user?.clinic_id, user?.id, user?.role, employees, salarySettings, isOwner])
 
+  // 세무사무실 파일 존재 여부 확인
+  useEffect(() => {
+    const checkTaxOfficeFile = async () => {
+      if (!user?.clinic_id || !selectedEmployeeId) {
+        setTaxOfficeFileUrl(null)
+        setTaxOfficeFileName(null)
+        return
+      }
+
+      setLoadingTaxOfficeFile(true)
+      try {
+        const res = await fetch(
+          `/api/payroll/tax-office-files?clinicId=${user.clinic_id}&employeeId=${selectedEmployeeId}&year=${selectedYear}&month=${selectedMonth}`
+        )
+        const data = await res.json()
+
+        if (data.success && data.data && data.data.length > 0) {
+          const file = data.data[0]
+          const urlRes = await fetch(
+            `/api/payroll/tax-office-files/url?storagePath=${encodeURIComponent(file.storage_path)}`
+          )
+          const urlData = await urlRes.json()
+          if (urlData.success) {
+            setTaxOfficeFileUrl(urlData.url)
+            setTaxOfficeFileName(file.file_name)
+          } else {
+            setTaxOfficeFileUrl(null)
+            setTaxOfficeFileName(null)
+          }
+        } else {
+          setTaxOfficeFileUrl(null)
+          setTaxOfficeFileName(null)
+        }
+      } catch (error) {
+        console.error('Tax office file check error:', error)
+        setTaxOfficeFileUrl(null)
+        setTaxOfficeFileName(null)
+      } finally {
+        setLoadingTaxOfficeFile(false)
+      }
+    }
+
+    checkTaxOfficeFile()
+  }, [user?.clinic_id, selectedEmployeeId, selectedYear, selectedMonth])
+
   // 자동 저장 함수
   async function autoSavePayroll(
     employee: Employee,
@@ -684,6 +734,85 @@ export default function PayrollForm() {
           </div>
         )}
       </div>
+
+      {/* 명세서 보기 모드 토글 */}
+      {selectedEmployeeId && (
+        <div className="flex items-center gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+          <span className="text-sm font-medium text-slate-600 mr-2">명세서 유형:</span>
+          <button
+            onClick={() => setViewMode('self')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              viewMode === 'self'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <Calculator className="w-4 h-4 inline mr-1.5" />
+            자체 계산
+          </button>
+          <button
+            onClick={() => setViewMode('taxOffice')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              viewMode === 'taxOffice'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <FileText className="w-4 h-4 inline mr-1.5" />
+            세무사무실
+            {taxOfficeFileUrl && (
+              <span className="ml-1.5 w-2 h-2 bg-green-400 rounded-full inline-block" />
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* 세무사무실 PDF 뷰어 */}
+      {viewMode === 'taxOffice' && selectedEmployeeId && (
+        <div className="space-y-4">
+          {taxOfficeFileUrl ? (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-slate-600">
+                  <FileText className="w-4 h-4 inline mr-1" />
+                  {taxOfficeFileName}
+                </p>
+                <a
+                  href={taxOfficeFileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  새 탭에서 열기
+                </a>
+              </div>
+              <div className="border border-slate-200 rounded-lg overflow-hidden" style={{ height: '80vh' }}>
+                <iframe
+                  src={taxOfficeFileUrl}
+                  className="w-full h-full"
+                  title="세무사무실 급여명세서"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-16 text-slate-500">
+              <FileText className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+              <p className="text-lg font-medium mb-2">세무사무실 명세서가 없습니다</p>
+              <p className="text-sm">
+                {selectedYear}년 {selectedMonth}월 세무사무실 급여명세서가 아직 업로드되지 않았습니다.
+              </p>
+              {user?.role === 'owner' && (
+                <p className="text-sm text-blue-600 mt-2">
+                  상단 &quot;세무사무실 명세서 업로드&quot; 버튼으로 업로드할 수 있습니다.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 자체 계산 모드 콘텐츠 */}
+      {viewMode === 'self' && <>
 
       {/* 접근 권한 제한 메시지 */}
       {accessResult && !accessResult.canAccess && selectedEmployeeId && (
@@ -1357,6 +1486,8 @@ export default function PayrollForm() {
           </div>
         </div>
       )}
+
+      </> /* end viewMode === 'self' */}
 
       {/* 명세서 미리보기 모달 */}
       {showPreview && calculationResult && selectedEmployee && user && (

@@ -474,3 +474,35 @@ export interface PayrollStatementWithAttendance extends PayrollStatement {
   attendanceSummary?: AttendanceSummaryForPayroll
   attendanceDeduction?: AttendanceDeduction
 }
+
+// =====================================================================
+// 세무사무실 급여명세서 PDF 관련 타입
+// =====================================================================
+
+export interface TaxOfficePayslipFile {
+  id: string
+  clinicId: string
+  employeeUserId: string
+  paymentYear: number
+  paymentMonth: number
+  fileName: string
+  storagePath: string
+  uploadedBy: string
+  createdAt: string
+}
+
+export interface TaxOfficeFileMatch {
+  fileName: string
+  fileIndex: number
+  matchedEmployeeId: string | null
+  matchedEmployeeName: string | null
+  autoMatched: boolean
+  confidence: 'exact' | 'partial' | 'none'
+}
+
+export interface TaxOfficeUploadResult {
+  success: boolean
+  uploadedCount: number
+  skippedCount: number
+  errors: string[]
+}
