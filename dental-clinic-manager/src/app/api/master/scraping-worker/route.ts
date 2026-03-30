@@ -55,11 +55,32 @@ export async function GET() {
     const workerList = workers || [];
     const onlineWorkers = workerList.filter(isWorkerOnline);
 
+    // watchdog 상태 조회 (worker_control 테이블)
+    const { data: controlRow } = await admin
+      .from('worker_control')
+      .select('watchdog_online, worker_running, last_updated')
+      .eq('id', 'main')
+      .single();
+
+    // watchdog_online이 true여도 last_updated가 2분 이상 지났으면 오프라인으로 판단
+    let watchdogOnline = controlRow?.watchdog_online ?? false;
+    if (watchdogOnline && controlRow?.last_updated) {
+      const lastUpdated = new Date(controlRow.last_updated);
+      if (Date.now() - lastUpdated.getTime() > 2 * 60 * 1000) {
+        watchdogOnline = false;
+      }
+    }
+
     return NextResponse.json({
       workers: workerList,
       onlineCount: onlineWorkers.length,
       pendingJobsCount: pendingJobsCount || 0,
       recentJobs: recentJobs || [],
+      watchdog: {
+        online: watchdogOnline,
+        workerRunning: controlRow?.worker_running ?? false,
+        lastUpdated: controlRow?.last_updated ?? null,
+      },
     });
   } catch (error) {
     console.error('[API] master/scraping-worker GET:', error);
@@ -94,15 +115,6 @@ export async function POST(request: NextRequest) {
 
     // ─── 시작 ───
     if (action === 'start') {
-      // Vercel 환경에서는 프로세스 실행 불가
-      if (process.env.VERCEL || process.env.VERCEL_ENV) {
-        return NextResponse.json({
-          ok: false,
-          message: 'Vercel 환경에서는 워커를 원격으로 시작할 수 없습니다.',
-          manualCommand: 'cd scraping-worker && npm start',
-        });
-      }
-
       // stop_requested 초기화
       await admin
         .from('scraping_workers')
@@ -120,29 +132,20 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true, message: '워커가 이미 실행 중입니다.' });
       }
 
-      // 프로세스 시작
-      try {
-        const { spawn } = await import('child_process');
-        const path = await import('path');
-        const workerDir = path.join(process.cwd(), 'scraping-worker');
+      // watchdog에게 시작 요청 (worker_control.start_requested = true)
+      const { error: startError } = await admin
+        .from('worker_control')
+        .update({ start_requested: true })
+        .eq('id', 'main');
 
-        const child = spawn('npm', ['start'], {
-          cwd: workerDir,
-          detached: true,
-          stdio: 'ignore',
-          env: { ...process.env },
-        });
-        child.unref();
-
-        return NextResponse.json({ ok: true, message: '워커 시작 요청을 보냈습니다. 잠시 후 상태를 확인하세요.' });
-      } catch (err) {
-        console.error('[API] 스크래핑 워커 시작 실패:', err);
-        return NextResponse.json({
-          ok: false,
-          message: '워커 자동 시작에 실패했습니다.',
-          manualCommand: 'cd scraping-worker && npm start',
-        });
+      if (startError) {
+        return NextResponse.json({ ok: false, message: '시작 요청 실패: ' + startError.message });
       }
+
+      return NextResponse.json({
+        ok: true,
+        message: 'Watchdog에 시작 요청을 보냈습니다. 최대 10초 후 워커가 시작됩니다.',
+      });
     }
 
     return NextResponse.json({ error: '알 수 없는 액션' }, { status: 400 });
