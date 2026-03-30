@@ -11,11 +11,7 @@
       "schedule": "0 15 * * *"
     },
     {
-      "path": "/api/cron/news",
-      "schedule": "0 23 * * *"
-    },
-    {
-      "path": "/api/cron/telegram-summary",
+      "path": "/api/cron/daily-tasks",
       "schedule": "30 14 * * *"
     }
   ]
