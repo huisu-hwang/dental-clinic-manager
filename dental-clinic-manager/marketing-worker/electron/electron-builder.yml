@@ -28,16 +28,7 @@ nsis:
   uninstallerIcon: assets/icon.ico
 
 extraResources:
-  - from: node_modules/playwright/.local-browsers
+  - from: playwright-browsers
     to: browsers
     filter:
       - chromium-*/**
-
-mac:
-  target: dmg
-  icon: assets/icon.png
-  category: public.app-category.business
-
-linux:
-  target: AppImage
-  icon: assets/icon.png

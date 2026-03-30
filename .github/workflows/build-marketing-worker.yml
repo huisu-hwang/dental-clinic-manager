@@ -34,6 +34,20 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install chromium
 
+      - name: Copy Playwright browsers for packaging
+        shell: bash
+        run: |
+          # Playwright 브라우저를 electron-builder가 찾을 수 있는 위치로 복사
+          BROWSERS_SRC="$USERPROFILE/AppData/Local/ms-playwright"
+          if [ -d "$BROWSERS_SRC" ]; then
+            cp -r "$BROWSERS_SRC" playwright-browsers
+            echo "Copied browsers from $BROWSERS_SRC"
+            ls playwright-browsers/
+          else
+            echo "Warning: Playwright browsers not found at $BROWSERS_SRC"
+            mkdir -p playwright-browsers
+          fi
+
       - name: Build Windows Installer
         run: npx electron-builder --win --publish never
         env:
