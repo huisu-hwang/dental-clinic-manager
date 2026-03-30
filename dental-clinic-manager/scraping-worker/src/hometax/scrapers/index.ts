@@ -22,8 +22,8 @@ export type DataType =
   | 'business_card_purchase'
   | 'credit_card_sales';
 
-/** Playwright 모드 스크래퍼 매핑 */
-const PLAYWRIGHT_SCRAPER_MAP: Record<DataType, (ctx: BrowserContext, year: number, month: number) => Promise<ScrapeResult>> = {
+/** Playwright 모드 스크래퍼 매핑 (clinicId 전달 지원) */
+const PLAYWRIGHT_SCRAPER_MAP: Record<DataType, (ctx: BrowserContext, year: number, month: number, clinicId?: string) => Promise<ScrapeResult>> = {
   tax_invoice_sales: scrapeTaxInvoiceSales,
   tax_invoice_purchase: scrapeTaxInvoicePurchase,
   cash_receipt_sales: scrapeCashReceiptSales,
@@ -42,6 +42,7 @@ export async function runScraper(
   dataType: DataType,
   year: number,
   month: number,
+  clinicId?: string,
 ): Promise<ScrapeResult> {
   // ScrapingSession 타입인지 확인 (type 필드 존재)
   if (isScrapingSession(context)) {
@@ -55,7 +56,7 @@ export async function runScraper(
     if (!scraper) {
       throw new Error(`지원하지 않는 데이터 타입: ${dataType}`);
     }
-    return scraper(browserContext, year, month);
+    return scraper(browserContext, year, month, clinicId);
   }
 
   // 하위 호환: BrowserContext 직접 전달
@@ -63,7 +64,7 @@ export async function runScraper(
   if (!scraper) {
     throw new Error(`지원하지 않는 데이터 타입: ${dataType}`);
   }
-  return scraper(context as BrowserContext, year, month);
+  return scraper(context as BrowserContext, year, month, clinicId);
 }
 
 /** 현재 설정된 스크래핑 모드 확인 */

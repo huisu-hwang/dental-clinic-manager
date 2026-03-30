@@ -16,23 +16,24 @@ export interface ScrapeResult {
 
 /** 홈택스 메뉴 페이지로 이동 */
 export async function navigateToMenu(page: Page, menuPath: string): Promise<void> {
-  const menuUrl = `${HOMETAX_BASE}/websquare/websquare.wq?w2xPath=${menuPath}`;
   const mainUrl = `${HOMETAX_BASE}/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml`;
 
-  // 1. 메인 페이지 먼저 방문하여 세션 활성화 (신규 탭에서 직접 서브메뉴 접근 시 메인으로 리다이렉트되는 문제 방지)
+  // 1. 메인 페이지 먼저 방문하여 세션 활성화
   log.info({ menuPath }, '메인 페이지 세션 활성화');
   await page.goto(mainUrl, { waitUntil: 'load', timeout: 30000 });
   await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
   await page.waitForTimeout(2000);
 
-  // 2. 로그인 상태 확인 (waitFor로 실제 대기)
+  // 2. 로그인 상태 확인
   const mainPageUrl = page.url();
   const mainPageScreenshot = `/tmp/hometax-main-${Date.now()}.png`;
   await page.screenshot({ path: mainPageScreenshot, fullPage: false }).catch(() => {});
   log.info({ mainPageUrl, mainPageScreenshot }, '메인 페이지 상태 스크린샷');
 
-  // "로그아웃" 텍스트가 나타날 때까지 최대 10초 대기 (isVisible은 대기 안 함)
-  const isLoggedIn = await page.locator('a:has-text("로그아웃"), button:has-text("로그아웃"), text=로그아웃').first()
+  const isLoggedIn = await page.locator('a:has-text("로그아웃")')
+    .or(page.locator('button:has-text("로그아웃")'))
+    .or(page.locator('text=로그아웃'))
+    .first()
     .waitFor({ state: 'visible', timeout: 10000 })
     .then(() => true)
     .catch(() => false);
@@ -43,22 +44,121 @@ export async function navigateToMenu(page: Page, menuPath: string): Promise<void
   }
   log.info({ mainPageUrl }, '로그인 상태 확인 완료');
 
-  // 3. 메뉴 페이지로 이동
-  log.info({ menuPath, menuUrl }, '메뉴 이동');
-  await page.goto(menuUrl, { waitUntil: 'load', timeout: 30000 });
-  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-  await page.waitForTimeout(3000);
+  // 3. $c.pp.fn_topMenuOpen 함수를 사용한 메뉴 네비게이션
+  log.info({ menuPath }, 'WebSquare 메뉴 네비게이션 시도');
 
-  // 4. 리다이렉트 감지
-  const currentUrl = page.url();
-  if (currentUrl.includes('index_pp')) {
-    const screenshotPath = `/tmp/hometax-redirect-${Date.now()}.png`;
-    await page.screenshot({ path: screenshotPath, fullPage: false }).catch(() => {});
-    log.error({ menuPath, currentUrl, screenshotPath }, '메뉴 접근 실패: 메인 페이지로 리다이렉트됨');
+  // 3-1. "조회" 관련 메뉴 ID 탐색
+  const menuExploreResult = await page.evaluate((targetMenuPath: string) => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const doc = (globalThis as any).document;
+
+    // 모든 메뉴 항목 수집 (onclick에 fn_topMenuOpen이 있는 것들)
+    const menuItems = Array.from(doc.querySelectorAll('a[id*="menuAtag"], a[id*="combineMenuAtag"]') as any[])
+      .map((el: any) => ({
+        id: el.id, text: el.textContent?.trim() || '', onclick: el.getAttribute('onclick') || '',
+      }));
+
+    // 조회 관련 메뉴 필터링
+    const queryMenus = menuItems.filter((m: any) =>
+      m.text.includes('조회') || m.text.includes('목록') || m.text.includes('합계표') || m.text.includes('현황')
+    );
+
+    return { total: menuItems.length, queryMenus, allMenus: menuItems.slice(0, 100) };
+  }).catch(() => ({ total: 0, queryMenus: [], allMenus: [] }));
+
+  log.info({
+    totalMenus: menuExploreResult.total,
+    queryMenuCount: menuExploreResult.queryMenus.length,
+    queryMenus: menuExploreResult.queryMenus,
+  }, '홈택스 조회 메뉴 탐색 결과');
+
+  // 3-2. menuPath → 홈택스 메뉴 ID 직접 매핑
+  // 발견된 메뉴 코드 기반 (menuAtag_XXXXXXXXXX → $c.pp.fn_topMenuOpen 호출)
+  const MENU_ID_MAP: Record<string, string> = {
+    '/ui/pp/agaab/a/EtsaabAMain.xml': 'menuAtag_4609060300',   // 전자세금계산서 기간별 매출/매입 통계 조회
+    '/ui/pp/agbab/a/EtsbabAMain.xml': 'menuAtag_4609060300',   // 전자세금계산서 기간별 매출/매입 통계 조회 (매입 탭)
+    '/ui/pp/agcaa/a/EtscaaAMain.xml': 'menuAtag_4606010100',   // 현금영수증 매출내역 조회
+    '/ui/pp/agcba/a/EtscbaAMain.xml': 'menuAtag_4605010100',   // 현금영수증 매입내역(지출증빙) 조회
+    '/ui/pp/agdba/a/EtsdbaAMain.xml': 'menuAtag_4608020300',   // 사업용신용카드 매입내역 누계 조회
+    '/ui/pp/agdaa/a/EtsdaaAMain.xml': 'menuAtag_4607010000',   // 신용카드·판매(결제)대행 매출자료 조회
+  };
+
+  let targetMenuId = MENU_ID_MAP[menuPath] || '';
+
+  // 직접 매핑에 없으면 키워드 기반 검색
+  if (!targetMenuId) {
+    const MENU_SEARCH_KEYWORDS: Record<string, string[]> = {
+      '/ui/pp/agaab/a/EtsaabAMain.xml': ['기간별 매출/매입 통계', '발급 목록조회', '매출'],
+      '/ui/pp/agbab/a/EtsbabAMain.xml': ['기간별 매출/매입 통계', '합계표 조회', '매입'],
+      '/ui/pp/agcaa/a/EtscaaAMain.xml': ['현금영수증 매출내역', '현금영수증 매출'],
+      '/ui/pp/agcba/a/EtscbaAMain.xml': ['현금영수증 매입내역', '현금영수증 매입'],
+      '/ui/pp/agdba/a/EtsdbaAMain.xml': ['매입내역 누계 조회', '사업용 신용카드'],
+      '/ui/pp/agdaa/a/EtsdaaAMain.xml': ['신용카드·판매(결제)대행', '신용카드 매출'],
+    };
+
+    const keywords = MENU_SEARCH_KEYWORDS[menuPath] || [];
+    for (const keyword of keywords) {
+      const match = menuExploreResult.allMenus.find((m: any) => m.text.includes(keyword) && m.onclick.includes('fn_topMenuOpen'));
+      if (match) {
+        targetMenuId = match.id;
+        log.info({ targetMenuId, matchedText: match.text, keyword }, '메뉴 ID 키워드 매칭 성공');
+        break;
+      }
+    }
+  }
+
+  // 3-3. $c.pp.fn_topMenuOpen으로 메뉴 열기
+  if (targetMenuId) {
+    log.info({ targetMenuId, menuPath }, '$c.pp.fn_topMenuOpen 호출');
+    const openResult = await page.evaluate((menuId: string) => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const win = globalThis as any;
+      try {
+        if (win.$c?.pp?.fn_topMenuOpen) {
+          win.$c.pp.fn_topMenuOpen(win.$p, menuId);
+          return 'success';
+        }
+        // 대안: 해당 메뉴 요소를 직접 클릭
+        const el = win.document.getElementById(menuId);
+        if (el) {
+          el.click();
+          return 'clicked';
+        }
+        return 'not_found';
+      } catch (e) {
+        return `error: ${(e as any).message}`;
+      }
+    }, targetMenuId).catch(() => 'evaluate_error');
+
+    log.info({ openResult, targetMenuId }, '메뉴 열기 결과');
+
+    // 네비게이션 대기
+    await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(5000);
+  } else {
+    log.warn({ menuPath, keywords }, '매칭되는 메뉴 ID를 찾지 못함 — 전체 메뉴 목록 로깅');
+    // 발견된 모든 메뉴 로깅 (디버그용)
+    for (const m of menuExploreResult.allMenus.slice(0, 50)) {
+      log.debug({ id: m.id, text: m.text }, '메뉴 항목');
+    }
+  }
+
+  // 4. 최종 상태 확인 — SPA이므로 URL 파라미터(tmIdx, tm3lIdx)로 판단
+  const finalUrl = page.url();
+  const ss = `/tmp/hometax-nav-result-${Date.now()}.png`;
+  await page.screenshot({ path: ss, fullPage: false }).catch(() => {});
+
+  log.info({ finalUrl, screenshot: ss }, '메뉴 이동 후 상태');
+
+  // 성공 조건: URL에 tmIdx 또는 tm3lIdx 파라미터가 있으면 메뉴 이동 성공
+  const hasMenuParam = finalUrl.includes('tmIdx=') || finalUrl.includes('tm3lIdx=');
+
+  if (!hasMenuParam) {
+    log.error({ menuPath, finalUrl, targetMenuId }, '메뉴 접근 실패');
     throw new Error(`메뉴 페이지 접근 실패: ${menuPath}`);
   }
 
-  log.info({ currentUrl, frameCount: page.frames().length }, '메뉴 이동 완료');
+  log.info({ finalUrl, frameCount: page.frames().length }, '메뉴 이동 완료');
 }
 
 /** 조회 기간 설정 (연/월) */

@@ -74,7 +74,10 @@
       "mcp__chrome-devtools__handle_dialog",
       "Bash(find:*)",
       "Bash(lsof -ti:3001)",
-      "Bash(curl -s http://localhost:3001/health)"
+      "Bash(curl -s http://localhost:3001/health)",
+      "Bash(npx tsc:*)",
+      "Bash(chmod +x /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/marketing-worker/setup.sh)",
+      "mcp__supabase__execute_sql"
     ],
     "deny": [],
     "ask": []

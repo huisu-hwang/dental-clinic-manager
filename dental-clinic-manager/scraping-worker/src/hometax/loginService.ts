@@ -390,6 +390,22 @@ async function performLogin(page: Page, loginId: string, loginPw: string, reside
       const gender1 = residentNumber.substring(6, 7);
       log.info('2차 인증 주민번호 입력 시도');
 
+      // 2차 인증 팝업 DOM 분석 (디버그용)
+      const popupInfo = await page.evaluate(() => {
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        const doc = (globalThis as any).document;
+        const popup = doc.querySelector('.w2window') || doc.querySelector('[class*="popup"]') || doc.querySelector('[class*="modal"]');
+        if (!popup) return { found: false, inputs: [], buttons: [] };
+        const inputs = Array.from(popup.querySelectorAll('input') as any[]).map((el: any) => ({
+          id: el.id, type: el.type, class: el.className, placeholder: el.placeholder || '', visible: el.offsetParent !== null || el.offsetWidth > 0,
+        }));
+        const buttons = Array.from(popup.querySelectorAll('a, button, input[type="button"], input[type="submit"]') as any[]).map((el: any) => ({
+          id: el.id, tag: el.tagName, class: el.className, text: el.textContent?.trim().substring(0, 30) || '',
+        }));
+        return { found: true, inputs, buttons };
+      }).catch(() => ({ found: false, inputs: [], buttons: [] }));
+      log.info({ popupInfo }, '2차 인증 팝업 DOM 분석');
+
       // 팝업 내 생년월일 6자리 입력
       await safeType(page, [
         'input[id*="birth"]:not([disabled])',
@@ -398,18 +414,73 @@ async function performLogin(page: Page, loginId: string, loginPw: string, reside
       ], birth6, '2차 인증 생년월일');
 
       // 팝업 내 성별 1자리 입력
-      await safeType(page, [
+      // WebSquare 팝업의 password 필드 또는 두 번째 visible input을 타겟
+      const genderTyped = await safeType(page, [
         'input[id*="gndr"]:not([disabled])',
         'input[id*="gender"]:not([disabled])',
+        '.w2window input[type="password"]',
         'input[placeholder*="뒷자리"]',
       ], gender1, '2차 인증 성별');
 
-      // 확인 버튼 클릭
-      await safeClick(page, [
+      if (!genderTyped) {
+        // JS 폴백: 팝업 내 두 번째 visible input에 직접 입력
+        log.info('2차 인증 성별 JS 폴백 시도');
+        await page.evaluate((val: string) => {
+          /* eslint-disable @typescript-eslint/no-explicit-any */
+          const doc = (globalThis as any).document;
+          const win = globalThis as any;
+          const popup = doc.querySelector('.w2window') || doc.querySelector('[class*="popup"]') || doc.body;
+          const inputs = Array.from(popup.querySelectorAll('input:not([type="hidden"])') as any[])
+            .filter((el: any) => el.offsetParent !== null || el.offsetWidth > 0);
+          // 두 번째 input이 성별/뒷자리 필드
+          const target = inputs.length >= 2 ? inputs[1] : inputs[inputs.length - 1];
+          if (target) {
+            target.focus();
+            const setter = win.Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value')?.set;
+            if (setter) setter.call(target, val);
+            else target.value = val;
+            target.dispatchEvent(new win.Event('input', { bubbles: true }));
+            target.dispatchEvent(new win.Event('change', { bubbles: true }));
+          }
+        }, gender1).catch((e: unknown) => log.warn({ err: e }, '2차 인증 성별 JS 폴백 실패'));
+      }
+
+      // 확인 버튼 클릭 — WebSquare 팝업의 확인 버튼은 input[type="button"].w2trigger.btn
+      const confirmClicked = await safeClick(page, [
+        '.w2window input[type="button"].btn',           // WebSquare 팝업 내 확인 버튼 (가장 정확)
+        '.w2window input.w2trigger.btn',                // 대체 셀렉터
+        '.w2window a:has-text("확인")',
+        '.w2window button:has-text("확인")',
         'button:has-text("확인")',
         'a:has-text("확인")',
-        '.w2window button:has-text("확인")',
       ], '2차 인증 확인 버튼');
+
+      if (!confirmClicked) {
+        // JS 폴백: value 속성 또는 텍스트로 확인 버튼 찾기
+        log.info('2차 인증 확인 버튼 JS 폴백 시도');
+        await page.evaluate(() => {
+          /* eslint-disable @typescript-eslint/no-explicit-any */
+          const doc = (globalThis as any).document;
+          const popup = doc.querySelector('.w2window') || doc.querySelector('[class*="popup"]') || doc.body;
+          // input[type="button"]의 value 속성 체크
+          const inputs = popup.querySelectorAll('input[type="button"]');
+          for (const el of Array.from(inputs) as any[]) {
+            if (el.value === '확인' || el.className.includes('btn')) {
+              el.click();
+              return;
+            }
+          }
+          // 텍스트/value 기반 폴백
+          const elements = popup.querySelectorAll('a, button, input[type="button"], span');
+          for (const el of Array.from(elements) as any[]) {
+            const text = el.textContent?.trim() || el.value || '';
+            if (text === '확인') {
+              el.click();
+              return;
+            }
+          }
+        }).catch((e: unknown) => log.warn({ err: e }, '2차 인증 확인 버튼 JS 폴백 실패'));
+      }
 
       await page.waitForTimeout(3000);
       log.info('2차 인증 완료, 로그인 결과 대기');
@@ -438,7 +509,10 @@ async function waitForLoginSuccess(page: Page): Promise<{ success: boolean; erro
   try {
     // 로그아웃 버튼이 나타날 때까지 대기 — 로그인 성공의 가장 확실한 지표
     // 로그인 폼 URL(index_pp)과 로그인 후 메인(index_pp)이 같아서 URL 기반 판단 불가
-    await page.locator('a:has-text("로그아웃"), button:has-text("로그아웃"), text=로그아웃').first()
+    await page.locator('a:has-text("로그아웃")')
+      .or(page.locator('button:has-text("로그아웃")'))
+      .or(page.locator('text=로그아웃'))
+      .first()
       .waitFor({ state: 'visible', timeout: 25000 });
 
     const currentUrl = page.url();

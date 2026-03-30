@@ -132,7 +132,7 @@ export async function processScrapingJob(job: ScrapingJob): Promise<void> {
       try {
         log.info({ jobId, dataType, year, month, mode }, '스크래핑 실행');
 
-        const result = await runScraper(session, dataType as DataType, year, month);
+        const result = await runScraper(session, dataType as DataType, year, month, clinicId);
 
         // 결과 저장
         await saveRawData(clinicId, result);

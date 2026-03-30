@@ -1,0 +1,88 @@
+name: Build Marketing Worker Installer
+
+on:
+  push:
+    branches: [develop, main]
+    paths:
+      - 'dental-clinic-manager/marketing-worker/electron/**'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: dental-clinic-manager/marketing-worker/electron
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dental-clinic-manager/marketing-worker/electron/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npx tsc
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Build Windows Installer
+        run: npx electron-builder --win --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketing-worker-installer
+          path: dental-clinic-manager/marketing-worker/electron/release/*.exe
+          retention-days: 30
+
+      - name: Upload to Supabase Storage
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          EXE_FILE=$(ls release/*.exe | head -1)
+          if [ -z "$EXE_FILE" ]; then
+            echo "No .exe file found"
+            exit 1
+          fi
+
+          FILE_NAME=$(basename "$EXE_FILE")
+          BUCKET="marketing-worker"
+          OBJECT_PATH="installer/${FILE_NAME}"
+          LATEST_PATH="installer/marketing-worker-latest.exe"
+
+          echo "Uploading ${FILE_NAME} to Supabase Storage..."
+
+          curl -X POST \
+            "${SUPABASE_URL}/storage/v1/object/${BUCKET}/${OBJECT_PATH}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/octet-stream" \
+            -H "x-upsert: true" \
+            --data-binary "@${EXE_FILE}" \
+            --fail --silent --show-error
+
+          echo "Uploaded versioned: ${OBJECT_PATH}"
+
+          curl -X POST \
+            "${SUPABASE_URL}/storage/v1/object/${BUCKET}/${LATEST_PATH}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/octet-stream" \
+            -H "x-upsert: true" \
+            --data-binary "@${EXE_FILE}" \
+            --fail --silent --show-error
+
+          echo "Uploaded latest: ${LATEST_PATH}"
+          echo "Download URL: ${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${LATEST_PATH}"

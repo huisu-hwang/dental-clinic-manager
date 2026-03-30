@@ -11,3 +11,11 @@
 - [ ] Phase 5 Protocol 전환 착수 시점 — Phase 2 MVP 안정 운영 기간을 얼마나 둘지 (1개월? 3개월?) 결정 필요
 - [ ] 홈택스 접속 차단 시 대응 프로세스 — IP 밴 발생 시 프록시 전환 vs 수동 개입 vs 수집 일시 중단 중 선호 방안 결정 필요
 - [ ] 알림 채널 우선순위 — 앱 내 알림만으로 충분한지, 카카오톡/이메일 알림도 Phase 4에 포함할지 결정 필요
+
+## marketing-worker-electron - 2026-03-30
+
+- [ ] Playwright 번들 포함 여부 — 인스톨러에 Chromium을 포함할지(~200MB), 첫 실행 시 다운로드할지(~30MB). 사용자 네트워크 환경에 따라 결정 필요
+- [ ] node-cron vs setInterval — Electron main process에서 node-cron이 정상 동작하는지 확인 필요. 문제 있으면 setInterval로 전환
+- [ ] 로그 뷰어 구현 수준 — MVP에서 트레이 툴팁 + 파일 로그로 충분한지, 별도 로그 윈도우가 필요한지 결정
+- [ ] 인스톨러 호스팅 위치 — Supabase Storage, GitHub Releases, 또는 Vercel 정적 파일 중 어디에 호스팅할지
+- [ ] macOS 지원 시점 — Mac mini 서버에서는 CLI 워커로 충분하지만, 추후 macOS .dmg 빌드 필요 여부 결정
