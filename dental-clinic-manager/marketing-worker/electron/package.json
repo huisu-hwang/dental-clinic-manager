@@ -1,0 +1,24 @@
+{
+  "name": "hayan-marketing-worker",
+  "version": "1.0.0",
+  "description": "하얀치과 마케팅 워커 - Electron 데스크탑 앱",
+  "productName": "하얀치과 마케팅 워커",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "tsc && electron dist/main.js",
+    "build": "tsc",
+    "build:win": "tsc && electron-builder --win",
+    "start": "electron dist/main.js"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "playwright": "^1.50.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.7.0"
+  }
+}

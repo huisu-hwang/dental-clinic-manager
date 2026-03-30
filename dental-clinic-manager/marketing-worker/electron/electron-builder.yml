@@ -1,0 +1,43 @@
+appId: kr.co.hi-clinic.marketing-worker
+productName: 하얀치과 마케팅 워커
+copyright: Copyright © 2025 하얀치과
+
+directories:
+  output: release
+  buildResources: assets
+
+files:
+  - dist/**
+  - renderer/**
+  - assets/**
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 하얀치과 마케팅 워커
+  installerIcon: assets/icon.ico
+  uninstallerIcon: assets/icon.ico
+
+extraResources:
+  - from: node_modules/playwright/.local-browsers
+    to: browsers
+    filter:
+      - chromium-*/**
+
+mac:
+  target: dmg
+  icon: assets/icon.png
+  category: public.app-category.business
+
+linux:
+  target: AppImage
+  icon: assets/icon.png
