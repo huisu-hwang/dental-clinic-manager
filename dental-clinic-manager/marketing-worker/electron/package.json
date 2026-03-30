@@ -4,6 +4,11 @@
   "description": "하얀치과 마케팅 워커 - Electron 데스크탑 앱",
   "productName": "하얀치과 마케팅 워커",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/huisu-hwang/dental-clinic-manager.git"
+  },
+  "author": "하얀치과",
   "main": "dist/main.js",
   "scripts": {
     "dev": "tsc && electron dist/main.js",
