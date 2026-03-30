@@ -809,19 +809,26 @@ function WorkerInstallBanner() {
     setIsDownloading(true)
     try {
       const os = detectOS()
-      const res = await fetch(`/api/marketing/worker-api/download?os=${os}`)
-      if (!res.ok) throw new Error('다운로드 실패')
-      const blob = await res.blob()
-      const disposition = res.headers.get('Content-Disposition') || ''
-      const match = disposition.match(/filename="(.+)"/)
-      const filename = match ? match[1] : `marketing-worker-setup.${os === 'windows' ? 'bat' : 'command'}`
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(url)
-      setDownloaded(true)
+      if (os === 'windows') {
+        // Windows: GitHub Release .exe 인스톨러 직접 다운로드
+        window.open(`/api/marketing/worker-api/download?os=windows`, '_blank')
+        setDownloaded(true)
+      } else {
+        // macOS/Linux: 스크립트 파일 다운로드
+        const res = await fetch(`/api/marketing/worker-api/download?os=${os}`)
+        if (!res.ok) throw new Error('다운로드 실패')
+        const blob = await res.blob()
+        const disposition = res.headers.get('Content-Disposition') || ''
+        const match = disposition.match(/filename="(.+)"/)
+        const filename = match ? match[1] : 'marketing-worker-setup.command'
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        a.click()
+        URL.revokeObjectURL(url)
+        setDownloaded(true)
+      }
     } catch {
       alert('다운로드에 실패했습니다.')
     } finally {
