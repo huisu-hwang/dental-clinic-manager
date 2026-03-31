@@ -16,11 +16,13 @@ interface TaxOfficeUploadModalProps {
   onClose: () => void
   onUploadComplete: () => void
   clinicId: string
+  uploadedBy: string
   employees: { id: string; name: string }[]
 }
 
 interface FileMatch {
   fileName: string
+  zipPath: string  // ZIP 내부 전체 경로
   employeeId: string | null
   autoMatched: boolean
 }
@@ -43,6 +45,7 @@ export default function TaxOfficeUploadModal({
   onClose,
   onUploadComplete,
   clinicId,
+  uploadedBy,
   employees,
 }: TaxOfficeUploadModalProps) {
   const currentDate = new Date()
@@ -81,20 +84,20 @@ export default function TaxOfficeUploadModal({
   }, [resetState, onClose])
 
   const autoMatch = useCallback(
-    (fileNames: string[]): FileMatch[] => {
-      return fileNames.map((fileName) => {
-        const extracted = extractKoreanName(fileName)
-        if (!extracted) return { fileName, employeeId: null, autoMatched: false }
+    (files: { name: string; path: string }[]): FileMatch[] => {
+      return files.map((file) => {
+        const extracted = extractKoreanName(file.name)
+        if (!extracted) return { fileName: file.name, zipPath: file.path, employeeId: null, autoMatched: false }
 
         const exact = employees.find((e) => e.name === extracted)
-        if (exact) return { fileName, employeeId: exact.id, autoMatched: true }
+        if (exact) return { fileName: file.name, zipPath: file.path, employeeId: exact.id, autoMatched: true }
 
         const partial = employees.find(
           (e) => e.name.includes(extracted) || extracted.includes(e.name)
         )
-        if (partial) return { fileName, employeeId: partial.id, autoMatched: true }
+        if (partial) return { fileName: file.name, zipPath: file.path, employeeId: partial.id, autoMatched: true }
 
-        return { fileName, employeeId: null, autoMatched: false }
+        return { fileName: file.name, zipPath: file.path, employeeId: null, autoMatched: false }
       })
     },
     [employees]
@@ -137,8 +140,8 @@ export default function TaxOfficeUploadModal({
       }
 
       const data = await res.json()
-      const files: string[] = data.files ?? []
-      setPdfFiles(files)
+      const files: { name: string; path: string }[] = data.data ?? []
+      setPdfFiles(files.map(f => f.name))
       setMatches(autoMatch(files))
       setStep(2)
     } catch (err) {
@@ -160,7 +163,19 @@ export default function TaxOfficeUploadModal({
       formData.append('year', String(year))
       formData.append('month', String(month))
       formData.append('clinicId', clinicId)
-      formData.append('matches', JSON.stringify(matches.filter((m) => m.employeeId !== null)))
+      formData.append('uploadedBy', uploadedBy)
+      // API expects matchedEmployeeId field name, and fileName must be the ZIP-internal path
+      const apiMatches = matches
+        .filter((m) => m.employeeId !== null)
+        .map((m, i) => ({
+          fileName: m.zipPath,  // ZIP 내부 전체 경로 (zip.file() 조회용)
+          fileIndex: i,
+          matchedEmployeeId: m.employeeId,
+          matchedEmployeeName: employees.find(e => e.id === m.employeeId)?.name || null,
+          autoMatched: m.autoMatched,
+          confidence: m.autoMatched ? 'exact' : 'none',
+        }))
+      formData.append('matches', JSON.stringify(apiMatches))
 
       setUploadProgress(40)
 

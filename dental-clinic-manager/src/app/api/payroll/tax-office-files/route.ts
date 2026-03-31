@@ -102,13 +102,25 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // ZIP에서 해당 파일 찾기
-      const zipEntry = zip.file(match.fileName)
+      // ZIP에서 해당 파일 찾기 (fileName은 ZIP 내부 전체 경로)
+      let zipEntry = zip.file(match.fileName)
+      if (!zipEntry) {
+        // 폴더 구조 없이 파일명으로도 시도
+        const baseName = match.fileName.split('/').pop() || match.fileName
+        zip.forEach((path, entry) => {
+          if (!entry.dir && (path === match.fileName || path.endsWith('/' + baseName) || path === baseName)) {
+            zipEntry = entry
+          }
+        })
+      }
       if (!zipEntry) {
         result.errors.push(`파일을 ZIP에서 찾을 수 없음: ${match.fileName}`)
         result.skippedCount++
         continue
       }
+
+      // 표시용 원본 파일명 (경로에서 파일명만 추출)
+      const displayFileName = match.fileName.split('/').pop() || match.fileName
 
       try {
         const pdfArrayBuffer = await zipEntry.async('arraybuffer')
@@ -153,7 +165,7 @@ export async function POST(request: NextRequest) {
           employee_user_id: match.matchedEmployeeId,
           payment_year: paymentYear,
           payment_month: paymentMonth,
-          file_name: match.fileName,
+          file_name: displayFileName,
           storage_path: storagePath,
           uploaded_by: uploadedBy,
           created_at: new Date().toISOString()
@@ -163,7 +175,7 @@ export async function POST(request: NextRequest) {
           const { error: updateError } = await supabase
             .from('payroll_tax_office_files')
             .update({
-              file_name: match.fileName,
+              file_name: displayFileName,
               storage_path: storagePath,
               uploaded_by: uploadedBy,
               created_at: new Date().toISOString()

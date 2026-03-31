@@ -194,6 +194,7 @@ export default function PayrollManagement() {
             setUploadKey(prev => prev + 1)
           }}
           clinicId={user.clinic_id}
+          uploadedBy={user.id}
           employees={employees}
         />
       )}
