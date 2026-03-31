@@ -9,7 +9,11 @@ import CostChart from './CostChart'
 import CostTable from './CostTable'
 import CostSettings from './CostSettings'
 
-export default function CostDashboardContent() {
+interface Props {
+  embedded?: boolean
+}
+
+export default function CostDashboardContent({ embedded }: Props) {
   const { user } = useAuth()
   const router = useRouter()
 
@@ -21,6 +25,25 @@ export default function CostDashboardContent() {
 
   if (!user) return null
 
+  // 마스터 페이지 내 탭으로 임베드된 경우
+  if (embedded) {
+    return (
+      <div className="space-y-6">
+        <CostSummaryCards />
+        <CostChart />
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2">
+            <CostTable />
+          </div>
+          <div className="xl:col-span-1">
+            <CostSettings />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 독립 페이지로 접근한 경우
   return (
     <div className="min-h-screen bg-slate-50">
       {/* 헤더 */}
@@ -42,13 +65,8 @@ export default function CostDashboardContent() {
 
       {/* 콘텐츠 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* 요약 카드 */}
         <CostSummaryCards />
-
-        {/* 기간별 차트 */}
         <CostChart />
-
-        {/* 하단 2컬럼: 테이블 + 설정 */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div className="xl:col-span-2">
             <CostTable />
