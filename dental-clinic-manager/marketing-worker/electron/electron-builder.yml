@@ -1,7 +1,7 @@
 publish: null
-appId: kr.co.hi-clinic.marketing-worker
+appId: kr.co.hi-clinic.clinic-manager-worker
 productName: 클리닉 매니저 워커
-artifactName: "hayan-marketing-worker-${version}-setup.${ext}"
+artifactName: "clinic-manager-worker-${version}-setup.${ext}"
 copyright: Copyright © 2025 하얀치과
 
 directories:

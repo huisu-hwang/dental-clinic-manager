@@ -1,0 +1,7 @@
+[     851ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://beahjntkmkfhpcbhfnrr.supabase.co/auth/v1/token?grant_type=refresh_token:0
+[     852ms] [ERROR] AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+    at ti (https://www.hi-clinic.co.kr/_next/static/chunks/5040-bd43ec31ab6fc57b.js:21:30395)
+    at async to (https://www.hi-clinic.co.kr/_next/static/chunks/5040-bd43ec31ab6fc57b.js:21:31369)
+    at async tn (https://www.hi-clinic.co.kr/_next/static/chunks/5040-bd43ec31ab6fc57b.js:21:30779)
+    at async r (https://www.hi-clinic.co.kr/_next/static/chunks/5040-bd43ec31ab6fc57b.js:21:66929)
+    at async https://www.hi-clinic.co.kr/_next/static/chunks/5040-bd43ec31ab6fc57b.js:21:67192 @ https://www.hi-clinic.co.kr/_next/static/chunks/5040-bd43ec31ab6fc57b.js:20

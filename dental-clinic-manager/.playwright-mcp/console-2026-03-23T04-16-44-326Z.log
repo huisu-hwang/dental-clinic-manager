@@ -1,0 +1,146 @@
+[ 3618107ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard/ai-analysis?_rsc=skepm:0
+[ 3631568ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 3631568ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 3660933ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 3660933ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 3720709ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 3720709ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 3845046ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 3845047ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 3870826ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 3870827ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 3900837ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 3900837ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 3930778ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 3930779ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 3960746ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 3960746ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 3990777ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 3990777ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4020767ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4020767ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4050762ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4050762ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4080754ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4080755ms] [ERROR] [useUserNotifications] Fetch error: SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4094726ms] [ERROR] WebSocket connection to 'wss://beahjntkmkfhpcbhfnrr.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlYWhqbnRrbWtmaHBjYmhmbnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDEyNzUsImV4cCI6MjA3MzUxNzI3NX0.Af5GbqP_qQAEax5nj_ojTSz3xy1I-rBcV-TU1CwceFA&vsn=1.0.0' failed:  @ http://localhost:3000/_next/static/chunks/5040-bd43ec31ab6fc57b.js:2
+[ 4094727ms] [ERROR] WebSocket connection to 'wss://beahjntkmkfhpcbhfnrr.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlYWhqbnRrbWtmaHBjYmhmbnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDEyNzUsImV4cCI6MjA3MzUxNzI3NX0.Af5GbqP_qQAEax5nj_ojTSz3xy1I-rBcV-TU1CwceFA&vsn=1.0.0' failed:  @ http://localhost:3000/_next/static/chunks/5040-bd43ec31ab6fc57b.js:2
+[ 4269305ms] [ERROR] WebSocket connection to 'wss://beahjntkmkfhpcbhfnrr.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlYWhqbnRrbWtmaHBjYmhmbnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDEyNzUsImV4cCI6MjA3MzUxNzI3NX0.Af5GbqP_qQAEax5nj_ojTSz3xy1I-rBcV-TU1CwceFA&vsn=1.0.0' failed:  @ http://localhost:3000/_next/static/chunks/5040-bd43ec31ab6fc57b.js:2
+[ 4269305ms] [ERROR] WebSocket connection to 'wss://beahjntkmkfhpcbhfnrr.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlYWhqbnRrbWtmaHBjYmhmbnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDEyNzUsImV4cCI6MjA3MzUxNzI3NX0.Af5GbqP_qQAEax5nj_ojTSz3xy1I-rBcV-TU1CwceFA&vsn=1.0.0' failed:  @ http://localhost:3000/_next/static/chunks/5040-bd43ec31ab6fc57b.js:2
+[ 4290678ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4290678ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4320680ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4320680ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4350680ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4350680ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4380678ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4380679ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4410680ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4410680ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4440680ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4440680ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4470681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4470681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4500681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4500681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4530681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4530681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4560682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4560682ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4590682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4590682ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4620680ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4620680ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4650681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4650681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4680681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4680681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4710681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4710681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4740681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4740681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4770680ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4770680ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4800681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4800681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4830681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4830681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4860682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4860682ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4890682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4890682ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4920682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4920682ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4950682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4950682ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 4980681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 4980681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5010683ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5010683ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5040682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5040682ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5070682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5070683ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5100681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5100681ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5130683ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5130683ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5160683ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5160683ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5190682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5190682ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5220684ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5220684ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5250682ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5250682ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5280684ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5280684ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5310685ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5310685ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5340684ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5340684ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5370684ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5370684ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5400685ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5400685ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0
+[ 5430685ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/user-notifications?userId=eb46c51d-95a1-4be9-9b30-edcdbd9eb8be&clinicId=de87b3fd-f936-49d8-a659-7b50b0019fe9&limit=10:0
+[ 5430685ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:1:8735 @ http://localhost:3000/_next/static/chunks/5872-e924402261d5325a.js:0

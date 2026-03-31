@@ -1,0 +1,9 @@
+[     591ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://beahjntkmkfhpcbhfnrr.supabase.co/auth/v1/token?grant_type=refresh_token:0
+[     593ms] [ERROR] AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+    at ti (http://localhost:3000/_next/static/chunks/5040-bd43ec31ab6fc57b.js:21:30395)
+    at async to (http://localhost:3000/_next/static/chunks/5040-bd43ec31ab6fc57b.js:21:31369)
+    at async tn (http://localhost:3000/_next/static/chunks/5040-bd43ec31ab6fc57b.js:21:30779)
+    at async r (http://localhost:3000/_next/static/chunks/5040-bd43ec31ab6fc57b.js:21:66929)
+    at async http://localhost:3000/_next/static/chunks/5040-bd43ec31ab6fc57b.js:21:67192 @ http://localhost:3000/_next/static/chunks/5040-bd43ec31ab6fc57b.js:20
+[    3019ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/management?_rsc=7sikt:0
+[    3020ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard?_rsc=7sikt:0

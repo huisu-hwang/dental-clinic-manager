@@ -1,0 +1,25 @@
+[     162ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ https://www.hi-clinic.co.kr/_next/static/chunks/5040-bd43ec31ab6fc57b.js:20
+[     192ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ https://www.hi-clinic.co.kr/_next/static/chunks/app/dashboard/page-3eec2bc510ad0296.js:0
+[     194ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ https://www.hi-clinic.co.kr/_next/static/chunks/5380-e089d2c34e7fdc09.js:0
+[    1197ms] [ERROR] [sessionUtils] Attempt 2/2 failed: Auth session missing! @ https://www.hi-clinic.co.kr/_next/static/chunks/5380-e089d2c34e7fdc09.js:0
+[    1197ms] [ERROR] [useSupabaseData] 세션 갱신 실패: SESSION_EXPIRED @ https://www.hi-clinic.co.kr/_next/static/chunks/app/dashboard/page-3eec2bc510ad0296.js:0
+[    1237ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ https://www.hi-clinic.co.kr/_next/static/chunks/app/dashboard/page-3eec2bc510ad0296.js:0
+[    1256ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ https://www.hi-clinic.co.kr/_next/static/chunks/5380-e089d2c34e7fdc09.js:0
+[    1355ms] [ERROR] [DashboardHome] Error loading dental news: TypeError: Failed to fetch
+    at E (https://www.hi-clinic.co.kr/_next/static/chunks/app/dashboard/page-3eec2bc510ad0296.js:1:304199)
+    at https://www.hi-clinic.co.kr/_next/static/chunks/app/dashboard/page-3eec2bc510ad0296.js:1:304152
+    at o1 (https://www.hi-clinic.co.kr/_next/static/chunks/4bd1b696-100b9d70ed4e49c1.js:1:88957)
+    at uE (https://www.hi-clinic.co.kr/_next/static/chunks/4bd1b696-100b9d70ed4e49c1.js:1:104849)
+    at ux (https://www.hi-clinic.co.kr/_next/static/chunks/4bd1b696-100b9d70ed4e49c1.js:1:104733)
+    at uE (https://www.hi-clinic.co.kr/_next/static/chunks/4bd1b696-100b9d70ed4e49c1.js:1:104829)
+    at ux (https://www.hi-clinic.co.kr/_next/static/chunks/4bd1b696-100b9d70ed4e49c1.js:1:104733)
+    at uE (https://www.hi-clinic.co.kr/_next/static/chunks/4bd1b696-100b9d70ed4e49c1.js:1:104829)
+    at ux (https://www.hi-clinic.co.kr/_next/static/chunks/4bd1b696-100b9d70ed4e49c1.js:1:104733)
+    at uE (https://www.hi-clinic.co.kr/_next/static/chunks/4bd1b696-100b9d70ed4e49c1.js:1:104894) @ https://www.hi-clinic.co.kr/_next/static/chunks/app/dashboard/page-3eec2bc510ad0296.js:0
+[   14822ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ https://www.hi-clinic.co.kr/_next/static/chunks/5040-bd43ec31ab6fc57b.js:20
+[   16160ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ https://www.hi-clinic.co.kr/_next/static/chunks/5040-bd43ec31ab6fc57b.js:20
+[   16380ms] [WARNING] Geolocation permission has been blocked as the user has ignored the permission prompt several times. This can be reset in Page Info which can be accessed by clicking the tune icon next to the URL. See https://www.chromestatus.com/feature/6443143280984064 for more information. @ https://www.hi-clinic.co.kr/dashboard:0
+[  646600ms] [ERROR] [useUserNotifications] Fetch error: TypeError: Failed to fetch
+    at https://www.hi-clinic.co.kr/_next/static/chunks/5872-33b50ab5be09420a.js:1:8834 @ https://www.hi-clinic.co.kr/_next/static/chunks/5872-33b50ab5be09420a.js:0
+[  646978ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ https://www.hi-clinic.co.kr/_next/static/chunks/5040-bd43ec31ab6fc57b.js:20
+[  647712ms] [WARNING] Geolocation permission has been blocked as the user has ignored the permission prompt several times. This can be reset in Page Info which can be accessed by clicking the tune icon next to the URL. See https://www.chromestatus.com/feature/6443143280984064 for more information. @ https://www.hi-clinic.co.kr/dashboard:0

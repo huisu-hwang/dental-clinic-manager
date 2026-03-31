@@ -115,4 +115,51 @@ export class WorkerApiClient {
       body: JSON.stringify(params),
     });
   }
+
+  // ============================================
+  // 스크래핑 워커 API (API Mode 통신용)
+  // ============================================
+
+  // 워커 등록
+  async registerScrapingWorker(params: {
+    workerId: string;
+    hostname: string;
+    metadata: unknown;
+  }): Promise<void> {
+    await this.request('/scraping/register', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  // 하트비트
+  async sendScrapingHeartbeat(workerId: string, status: string, currentJobId?: string | null): Promise<{ stop_requested: boolean }> {
+    return this.request<{ stop_requested: boolean }>('/scraping/heartbeat', {
+      method: 'PATCH',
+      body: JSON.stringify({ workerId, status, currentJobId }),
+    });
+  }
+
+  // 워커 등록 해제
+  async deregisterScrapingWorker(workerId: string): Promise<void> {
+    await this.request('/scraping/deregister', {
+      method: 'POST',
+      body: JSON.stringify({ workerId }),
+    });
+  }
+
+  // Job 가져오기 (배치 작업용, 예외적으로 queue 모듈에서 구현하더라도 API 클라이언트는 제공)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async fetchScrapingJobs(workerId: string, limit: number): Promise<any[]> {
+    return this.request<any[]>(`/scraping/jobs?workerId=${workerId}&limit=${limit}`, { method: 'GET' });
+  }
+
+  // Job 상태 보고
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async reportScrapingResult(jobId: string, params: { status: string; result?: any; error?: string }): Promise<void> {
+    await this.request(`/scraping/jobs/${jobId}/result`, {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
 }

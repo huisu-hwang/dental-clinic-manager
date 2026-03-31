@@ -20,7 +20,7 @@ export function createSetupWindow(onSaved: () => void): void {
     height: 400,
     resizable: false,
     frame: true,
-    title: '하얀치과 마케팅 워커 설정',
+    title: '클리닉 매니저 워커 설정',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

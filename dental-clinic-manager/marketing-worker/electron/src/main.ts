@@ -2,6 +2,7 @@ import { app, Notification } from 'electron';
 import { isFirstRun, getConfig, setConfig } from './config-store';
 import { createTray, updateTrayStatus } from './tray';
 import { start as startWorker, stop as stopWorker, onStatusChange, onPublishResult } from './worker-bridge';
+import { createSetupWindow } from './setup-window';
 import { log } from './logger';
 
 // ============================================
@@ -21,35 +22,7 @@ app.on('second-instance', () => {
   log('info', '[Main] 두 번째 인스턴스 감지: 기존 인스턴스로 포커스');
 });
 
-/**
- * 대시보드에서 API Key를 자동으로 가져와 설정
- */
-async function autoRegister(): Promise<boolean> {
-  try {
-    log('info', '[Main] API Key 자동 등록 시도...');
-    const res = await fetch(`${DASHBOARD_URL}/api/marketing/worker-api/register`, {
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) {
-      log('error', `[Main] 자동 등록 실패 (HTTP ${res.status})`);
-      return false;
-    }
-    const data = await res.json();
-    if (data.apiKey) {
-      setConfig({
-        dashboardUrl: data.dashboardUrl || DASHBOARD_URL,
-        workerApiKey: data.apiKey,
-      });
-      log('info', '[Main] API Key 자동 등록 완료');
-      return true;
-    }
-    log('error', '[Main] API Key가 응답에 없음');
-    return false;
-  } catch (err) {
-    log('error', `[Main] 자동 등록 오류: ${err instanceof Error ? err.message : String(err)}`);
-    return false;
-  }
-}
+// 자동 등록 대신 Setup 창 표시로 변경됨
 
 async function onAppReady(): Promise<void> {
   log('info', '[Main] App ready');
@@ -68,31 +41,26 @@ async function onAppReady(): Promise<void> {
     }
   });
 
-  // 첫 실행: 자동으로 API Key 등록
-  if (isFirstRun()) {
-    log('info', '[Main] 첫 실행: 자동 설정 시작');
-    const registered = await autoRegister();
-    if (registered) {
+  // 첫 실행 여부 체크 (또는 API Key가 없는 경우)
+  const cfg = getConfig();
+  if (isFirstRun() || !cfg.workerApiKey) {
+    log('info', '[Main] 설정 필요: 로그인(설정) 창 표시');
+    createSetupWindow(async () => {
+      log('info', '[Main] 설정 완료. 워커를 시작합니다.');
       if (Notification.isSupported()) {
         new Notification({
           title: '클리닉 매니저 워커',
           body: '설정이 완료되었습니다. 워커가 시작됩니다.',
         }).show();
       }
-    } else {
-      if (Notification.isSupported()) {
-        new Notification({
-          title: '클리닉 매니저 워커',
-          body: '자동 설정에 실패했습니다. 대시보드에서 워커 API Key를 확인해주세요.',
-        }).show();
-      }
-      updateTrayStatus('error', '설정 실패');
-      return;
-    }
+      applyAutoStart();
+      await startWorker();
+    });
+  } else {
+    log('info', '[Main] 설정 완료 상태. 자동 시작');
+    applyAutoStart();
+    await startWorker();
   }
-
-  applyAutoStart();
-  await startWorker();
 }
 
 function applyAutoStart(): void {

@@ -21,7 +21,7 @@ interface HometaxDataViewProps {
 }
 
 interface HometaxSummary {
-  summary: Record<string, { count: number; scrapedAt: string | null }>
+  summary: Record<string, { count: number; totalAmount: number; scrapedAt: string | null }>
   lastSyncedAt: string | null
   hasData: boolean
 }

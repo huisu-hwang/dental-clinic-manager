@@ -1,0 +1,156 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e11] [cursor=pointer]:
+    - img [ref=e12]
+  - alert [ref=e15]
+  - generic [ref=e16]:
+    - banner [ref=e19]:
+      - link "클리닉 매니저 하얀치과" [ref=e21] [cursor=pointer]:
+        - /url: /dashboard
+        - generic [ref=e22]:
+          - img [ref=e24]
+          - generic [ref=e26]:
+            - heading "클리닉 매니저" [level=1] [ref=e27]
+            - paragraph [ref=e28]: 하얀치과
+      - generic [ref=e29]:
+        - generic [ref=e32]: 연결됨
+        - generic [ref=e33]:
+          - link "관리" [ref=e34] [cursor=pointer]:
+            - /url: /management
+            - img [ref=e35]
+            - generic [ref=e46]: 관리
+          - button "알림" [ref=e48]:
+            - img [ref=e49]
+          - button "황희수" [ref=e51]:
+            - img [ref=e52]
+            - generic [ref=e55]: 황희수
+          - button "자동로그인" [ref=e56]:
+            - generic [ref=e57]: 자동로그인
+          - button "로그아웃" [ref=e61]:
+            - img [ref=e62]
+            - generic [ref=e65]: 로그아웃
+    - complementary [ref=e66]:
+      - navigation [ref=e67]:
+        - button "메뉴 편집" [ref=e69]:
+          - img [ref=e70]
+          - generic [ref=e73]: 메뉴 편집
+        - generic [ref=e74]:
+          - button "대시보드" [ref=e75]:
+            - img [ref=e76]
+            - generic [ref=e79]: 대시보드
+          - button "병원 게시판" [ref=e80]:
+            - img [ref=e81]
+            - generic [ref=e84]: 병원 게시판
+          - generic [ref=e87]:
+            - button "업무 관리" [ref=e88]:
+              - generic [ref=e89]:
+                - img [ref=e90]
+                - generic [ref=e93]: 업무 관리
+              - img [ref=e94]
+            - generic [ref=e96]:
+              - button "일일보고서" [ref=e97]:
+                - img [ref=e98]
+                - generic [ref=e101]: 일일보고서
+              - button "근태관리" [ref=e102]:
+                - img [ref=e103]
+                - generic [ref=e106]: 근태관리
+              - button "연차 관리" [ref=e107]:
+                - img [ref=e108]
+                - generic [ref=e110]: 연차 관리
+              - button "통계" [ref=e111]:
+                - img [ref=e112]
+                - generic [ref=e114]: 통계
+              - button "상세 기록" [ref=e115]:
+                - img [ref=e116]
+                - generic [ref=e120]: 상세 기록
+              - button "AI 데이터 분석" [ref=e121]:
+                - img [ref=e122]
+                - generic [ref=e125]: AI 데이터 분석
+              - button "업무 체크리스트" [ref=e126]:
+                - img [ref=e127]
+                - generic [ref=e131]: 업무 체크리스트
+          - generic [ref=e132]:
+            - button "문서 · 자료" [ref=e133]:
+              - generic [ref=e134]:
+                - img [ref=e135]
+                - generic [ref=e137]: 문서 · 자료
+              - img [ref=e138]
+            - generic [ref=e140]:
+              - button "진료 프로토콜" [ref=e141]:
+                - img [ref=e142]
+                - generic [ref=e144]: 진료 프로토콜
+              - button "근로계약서" [ref=e145]:
+                - img [ref=e146]
+                - generic [ref=e149]: 근로계약서
+              - button "급여 명세서" [ref=e150]:
+                - img [ref=e151]
+                - generic [ref=e154]: 급여 명세서
+              - button "문서 양식" [ref=e155]:
+                - img [ref=e156]
+                - generic [ref=e159]: 문서 양식
+          - generic [ref=e160]:
+            - button "커뮤니티" [ref=e161]:
+              - generic [ref=e162]:
+                - img [ref=e163]
+                - generic [ref=e166]: 커뮤니티
+              - img [ref=e167]
+            - generic [ref=e169]:
+              - button "자유게시판" [ref=e170]:
+                - img [ref=e171]
+                - generic [ref=e174]: 자유게시판
+              - button "소모임" [ref=e175]:
+                - img [ref=e176]
+                - generic [ref=e179]: 소모임
+          - generic [ref=e180]:
+            - button "운영 관리" [ref=e181]:
+              - generic [ref=e182]:
+                - img [ref=e183]
+                - generic [ref=e186]: 운영 관리
+              - img [ref=e187]
+            - generic [ref=e190]:
+              - button "업체 연락처" [ref=e191]:
+                - img [ref=e192]
+                - generic [ref=e196]: 업체 연락처
+              - button "재고 관리" [ref=e197]:
+                - img [ref=e198]
+                - generic [ref=e202]: 재고 관리
+              - button "리콜 관리" [ref=e203]:
+                - img [ref=e204]
+                - generic [ref=e208]: 리콜 관리
+              - button "경영 현황" [ref=e209]:
+                - img [ref=e210]
+                - generic [ref=e212]: 경영 현황
+              - button "마케팅 자동화" [ref=e213]:
+                - img [ref=e214]
+                - generic [ref=e217]: 마케팅 자동화
+        - button "사용 안내" [ref=e219]:
+          - img [ref=e220]
+          - generic [ref=e223]: 사용 안내
+    - main [ref=e225]:
+      - generic [ref=e226]:
+        - generic [ref=e229]:
+          - img [ref=e231]
+          - generic [ref=e234]:
+            - heading "병원 관리" [level=2] [ref=e235]
+            - paragraph [ref=e236]: Hospital Management
+        - navigation "Tabs" [ref=e238]:
+          - button "메뉴 설정" [ref=e239]:
+            - img [ref=e240]
+            - text: 메뉴 설정
+          - button "직원 관리" [ref=e251]:
+            - img [ref=e252]
+            - text: 직원 관리
+          - button "연차 관리" [ref=e257]:
+            - img [ref=e258]
+            - text: 연차 관리
+          - button "지점 관리" [ref=e260]:
+            - img [ref=e261]
+            - text: 지점 관리
+          - button "병원 설정" [ref=e265]:
+            - img [ref=e266]
+            - text: 병원 설정
+          - button "프로토콜 관리" [ref=e269]:
+            - img [ref=e270]
+            - text: 프로토콜 관리
+          - button "통계 분석" [ref=e273]:
+            - img [ref=e274]
+            - text: 통계 분석

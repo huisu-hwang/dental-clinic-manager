@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1774833745840,
+  "lastScanned": 1774927220566,
   "projectRoot": "/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager",
   "techStack": {
     "languages": [
@@ -81,7 +81,7 @@
       "path": "codef참고문서",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1774833745775,
+      "lastAccessed": 1774927220487,
       "keyFiles": [
         "신용카드 매출자료 조회_20260225.pdf",
         "전자세금계산서 상세_20260225.pdf",
@@ -94,7 +94,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 3,
-      "lastAccessed": 1774833745785,
+      "lastAccessed": 1774927220501,
       "keyFiles": [
         "marketing-automation-plan.md",
         "marketing-implementation-plan.md",
@@ -105,7 +105,7 @@
       "path": "marketing-worker",
       "purpose": null,
       "fileCount": 14,
-      "lastAccessed": 1774833745786,
+      "lastAccessed": 1774927220502,
       "keyFiles": [
         "api-client.ts",
         "config.ts",
@@ -118,7 +118,7 @@
       "path": "public",
       "purpose": "Public files",
       "fileCount": 6,
-      "lastAccessed": 1774833745788,
+      "lastAccessed": 1774927220502,
       "keyFiles": [
         "file.svg",
         "globe.svg",
@@ -131,7 +131,7 @@
       "path": "scraping-worker",
       "purpose": null,
       "fileCount": 9,
-      "lastAccessed": 1774833745789,
+      "lastAccessed": 1774927220503,
       "keyFiles": [
         "Dockerfile",
         "docker-compose.yml",
@@ -144,7 +144,7 @@
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 60,
-      "lastAccessed": 1774833745791,
+      "lastAccessed": 1774927220505,
       "keyFiles": [
         "LOGIN_SYSTEM_TEST_REPORT.md",
         "apply-clinic-branches-rls.js",
@@ -157,7 +157,7 @@
       "path": "seo-worker",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1774833745792,
+      "lastAccessed": 1774927220508,
       "keyFiles": [
         "package-lock.json",
         "package.json",
@@ -168,14 +168,14 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1774833745795,
+      "lastAccessed": 1774927220508,
       "keyFiles": []
     },
     "supabase": {
       "path": "supabase",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1774833745798,
+      "lastAccessed": 1774927220509,
       "keyFiles": [
         "DEPLOYMENT_GUIDE.md",
         "SETUP_CONTRACT_TABLES.sql",
@@ -187,7 +187,7 @@
       "path": "marketing-worker/dist",
       "purpose": "Distribution/build output",
       "fileCount": 19,
-      "lastAccessed": 1774833745801,
+      "lastAccessed": 1774927220512,
       "keyFiles": [
         "api-client.d.ts",
         "api-client.js",
@@ -198,14 +198,14 @@
       "path": "marketing-worker/node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1774833745802,
+      "lastAccessed": 1774927220514,
       "keyFiles": []
     },
     "scraping-worker/dist": {
       "path": "scraping-worker/dist",
       "purpose": "Distribution/build output",
       "fileCount": 12,
-      "lastAccessed": 1774833745803,
+      "lastAccessed": 1774927220517,
       "keyFiles": [
         "config.d.ts",
         "config.d.ts.map",
@@ -216,21 +216,21 @@
       "path": "scraping-worker/node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1774833745805,
+      "lastAccessed": 1774927220519,
       "keyFiles": []
     },
     "seo-worker/node_modules": {
       "path": "seo-worker/node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1774833745807,
+      "lastAccessed": 1774927220526,
       "keyFiles": []
     },
     "seo-worker/src": {
       "path": "seo-worker/src",
       "purpose": "Source code",
       "fileCount": 2,
-      "lastAccessed": 1774833745808,
+      "lastAccessed": 1774927220531,
       "keyFiles": [
         "config.ts",
         "index.ts"
@@ -240,7 +240,7 @@
       "path": "src/app",
       "purpose": "Application code",
       "fileCount": 8,
-      "lastAccessed": 1774833745809,
+      "lastAccessed": 1774927220538,
       "keyFiles": [
         "AuthApp.tsx",
         "favicon.ico",
@@ -251,7 +251,7 @@
       "path": "src/components",
       "purpose": "UI components",
       "fileCount": 2,
-      "lastAccessed": 1774833745811,
+      "lastAccessed": 1774927220544,
       "keyFiles": [
         "PasswordResetHandler.tsx",
         "WorkerStatusBanner.tsx"
@@ -261,7 +261,7 @@
       "path": "src/config",
       "purpose": "Configuration files",
       "fileCount": 1,
-      "lastAccessed": 1774833745811,
+      "lastAccessed": 1774927220551,
       "keyFiles": [
         "menuConfig.ts"
       ]
@@ -269,8 +269,8 @@
     "src/lib": {
       "path": "src/lib",
       "purpose": "Library code",
-      "fileCount": 41,
-      "lastAccessed": 1774833745815,
+      "fileCount": 43,
+      "lastAccessed": 1774927220553,
       "keyFiles": [
         "aiAnalysisService.ts",
         "aiAnalysisServiceV2.ts",
@@ -281,7 +281,7 @@
       "path": "src/types",
       "purpose": "Type definitions",
       "fileCount": 27,
-      "lastAccessed": 1774833745817,
+      "lastAccessed": 1774927220554,
       "keyFiles": [
         "aiAnalysis.ts",
         "attendance.ts",
@@ -292,7 +292,7 @@
       "path": "src/utils",
       "purpose": "Utility functions",
       "fileCount": 13,
-      "lastAccessed": 1774833745819,
+      "lastAccessed": 1774927220555,
       "keyFiles": [
         "dataValidator.ts",
         "dateUtils.ts",
@@ -302,8 +302,8 @@
     "supabase/migrations": {
       "path": "supabase/migrations",
       "purpose": "Database migrations",
-      "fileCount": 103,
-      "lastAccessed": 1774833745823,
+      "fileCount": 104,
+      "lastAccessed": 1774927220562,
       "keyFiles": [
         "001_multi_tenant_schema.sql",
         "002_clinic_join_requests.sql",
@@ -313,63 +313,303 @@
   },
   "hotPaths": [
     {
-      "path": "marketing-worker/electron/src/worker-bridge.ts",
-      "accessCount": 4,
-      "lastAccessed": 1774833913163,
+      "path": "src/app/master/page.tsx",
+      "accessCount": 22,
+      "lastAccessed": 1774968072208,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/tray.ts",
-      "accessCount": 4,
-      "lastAccessed": 1774833913623,
+      "path": "src/app/admin/marketing/page.tsx",
+      "accessCount": 16,
+      "lastAccessed": 1774971025469,
+      "type": "directory"
+    },
+    {
+      "path": "scraping-worker/src/hometax/scrapers/cashReceiptScraper.ts",
+      "accessCount": 13,
+      "lastAccessed": 1774972636826,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/config-store.ts",
-      "accessCount": 4,
-      "lastAccessed": 1774833933261,
+      "path": "src/lib/marketing/content-generator.ts",
+      "accessCount": 12,
+      "lastAccessed": 1774968480301,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/logger.ts",
+      "path": "src/components/Payroll/TaxOfficeUploadModal.tsx",
+      "accessCount": 11,
+      "lastAccessed": 1774942348474,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/marketing/generate/route.ts",
+      "accessCount": 11,
+      "lastAccessed": 1774968471194,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/marketing/image-generator.ts",
+      "accessCount": 10,
+      "lastAccessed": 1774968472443,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/marketing/costs/sessions/route.ts",
+      "accessCount": 8,
+      "lastAccessed": 1774971100550,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Payroll/PayrollForm.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1774944079889,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/publisher/naver-blog-publisher.ts",
+      "accessCount": 6,
+      "lastAccessed": 1774951473936,
+      "type": "file"
+    },
+    {
+      "path": "src/app/master/marketing/costs/CostDashboardContent.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1774968026830,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/payroll/tax-office-files/route.ts",
+      "accessCount": 5,
+      "lastAccessed": 1774942386070,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/scheduler.ts",
+      "accessCount": 5,
+      "lastAccessed": 1774951127183,
+      "type": "file"
+    },
+    {
+      "path": "src/app/master/marketing/costs/CostSummaryCards.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1774968608732,
+      "type": "file"
+    },
+    {
+      "path": "src/app/master/marketing/costs/CostTable.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1774971150070,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-03-31-marketing-api-cost-tracking-design.md",
+      "accessCount": 4,
+      "lastAccessed": 1774934559504,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/marketing/costs/route.ts",
+      "accessCount": 4,
+      "lastAccessed": 1774968550535,
+      "type": "file"
+    },
+    {
+      "path": "src/app/master/marketing/costs/CostChart.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1774968624924,
+      "type": "file"
+    },
+    {
+      "path": "src/app/master/marketing/costs/CostSettings.tsx",
       "accessCount": 3,
-      "lastAccessed": 1774833790420,
+      "lastAccessed": 1774935118922,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/main.ts",
+      "path": "src/app/api/marketing/costs/sessions/[sessionId]/route.ts",
       "accessCount": 3,
-      "lastAccessed": 1774833908565,
+      "lastAccessed": 1774968571453,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/setup-window.ts",
+      "path": "src/lib/marketing/api-usage-logger.ts",
+      "accessCount": 3,
+      "lastAccessed": 1774968581767,
+      "type": "file"
+    },
+    {
+      "path": "scraping-worker/src/hometax/scrapers/index.ts",
+      "accessCount": 3,
+      "lastAccessed": 1774972668820,
+      "type": "file"
+    },
+    {
+      "path": "docs/marketing-implementation-plan.md",
       "accessCount": 2,
-      "lastAccessed": 1774833807717,
+      "lastAccessed": 1774927440657,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/renderer/setup.html",
-      "accessCount": 1,
-      "lastAccessed": 1774833868778,
+      "path": "docs/marketing-automation-plan.md",
+      "accessCount": 2,
+      "lastAccessed": 1774927441606,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/preload.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774833879882,
+      "path": "src/lib/supabase/admin.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774934549619,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/package.json",
-      "accessCount": 1,
-      "lastAccessed": 1774833908073,
+      "path": "src/app/master/marketing/prompts/page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1774934568462,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/tsconfig.json",
+      "path": "",
+      "accessCount": 2,
+      "lastAccessed": 1774934575074,
+      "type": "directory"
+    },
+    {
+      "path": "src/app/master/marketing/costs/page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1774934900492,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/marketing/costs/settings/route.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774935047605,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/payroll/tax-office-files/parse-zip/route.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774942314688,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/package.json",
       "accessCount": 1,
-      "lastAccessed": 1774833908302,
+      "lastAccessed": 1774927388731,
+      "type": "file"
+    },
+    {
+      "path": "seo-worker/package.json",
+      "accessCount": 1,
+      "lastAccessed": 1774927388965,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774927391351,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/api-client.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774927391592,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774927391829,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260317_create_marketing_tables.sql",
+      "accessCount": 1,
+      "lastAccessed": 1774927401270,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/marketing/worker-api/poll/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774927401559,
+      "type": "file"
+    },
+    {
+      "path": "seo-worker/src/index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774927409421,
+      "type": "file"
+    },
+    {
+      "path": "seo-worker/src/config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774927409666,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260323_create_marketing_worker_control.sql",
+      "accessCount": 1,
+      "lastAccessed": 1774927418676,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/marketing/settings/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774934544397,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api",
+      "accessCount": 1,
+      "lastAccessed": 1774934549120,
+      "type": "directory"
+    },
+    {
+      "path": "src/app/api/telegram/setup-webhook/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774934552846,
+      "type": "file"
+    },
+    {
+      "path": "src/app/master/marketing/prompts/PromptManagementContent.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1774934568881,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/admin/users/delete/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774934862284,
+      "type": "file"
+    },
+    {
+      "path": "src/contexts",
+      "accessCount": 1,
+      "lastAccessed": 1774934921334,
+      "type": "directory"
+    },
+    {
+      "path": "supabase/migrations/20260331_create_marketing_api_usage_tables.sql",
+      "accessCount": 1,
+      "lastAccessed": 1774935495217,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Payroll/PayrollManagement.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1774942356450,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker",
+      "accessCount": 1,
+      "lastAccessed": 1774951074078,
+      "type": "directory"
+    },
+    {
+      "path": "src/app/api/marketing/publish/trigger/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774951078507,
       "type": "file"
     }
   ],

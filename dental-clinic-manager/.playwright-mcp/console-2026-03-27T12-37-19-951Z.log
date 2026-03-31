@@ -1,0 +1,89 @@
+[    1652ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/:0
+[    2022ms] Error: Cannot find module './4996.js'
+Require stack:
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/.next/server/webpack-runtime.js
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/.next/server/app/api/version/route.js
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/require.js
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/load-components.js
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/build/utils.js
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/build/swc/options.js
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/build/swc/index.js
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/build/next-config-ts/transpile-config.js
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/config.js
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/next.js
+- /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/lib/start-server.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1453:15)
+    at <unknown> (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/require-hook.js:57:36)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1064:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1069:22)
+    at Module._load (node:internal/modules/cjs/loader:1239:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1553:12)
+    at mod.require (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/require-hook.js:68:28)
+    at require (node:internal/modules/helpers:152:16)
+    at __webpack_require__.f.require (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/.next/server/webpack-runtime.js:200:28)
+    at <unknown> (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/.next/server/webpack-runtime.js:108:40)
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/.next/server/webpack-runtime.js:107:67)
+    at Array.map (<anonymous>)
+    at __webpack_require__.X (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/.next/server/webpack-runtime.js:159:22)
+    at <unknown> (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/.next/server/app/page.js:18:20741)
+    at Object.<anonymous> (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/.next/server/app/page.js:18:20798)
+    at Module._compile (node:internal/modules/cjs/loader:1809:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1940:10)
+    at Module.load (node:internal/modules/cjs/loader:1530:32)
+    at Module._load (node:internal/modules/cjs/loader:1332:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1553:12)
+    at mod.require (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/require-hook.js:68:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/require.js:99:80)
+    at loadComponentsImpl (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/load-components.js:132:57)
+    at async DevServer.findPageComponentsImpl (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/next-server.js:899:36)
+    at async DevServer.findPageComponents (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/dev/next-dev-server.js:705:16)
+    at async DevServer.renderPageComponent (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/base-server.js:1460:24)
+    at async DevServer.renderToResponseImpl (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/base-server.js:1514:32)
+    at async DevServer.pipeImpl (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/base-server.js:1025:25)
+    at async NextNodeServer.handleCatchallRenderRequest (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/next-server.js:393:17)
+    at async DevServer.handleRequestImpl (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/base-server.js:916:17)
+    at async (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/dev/next-dev-server.js:399:20)
+    at async Span.traceAsyncFn (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/dev/next-dev-server.js:395:24)
+    at async invokeRender (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/lib/router-server.js:240:21)
+    at async handleRequest (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/lib/router-server.js:437:24)
+    at async requestHandlerImpl (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/lib/router-server.js:485:13)
+    at async Server.requestListener (file:///Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/node_modules/next/dist/server/lib/start-server.js:226:13)
+[    2578ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    2870ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    3113ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    3368ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    3591ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    3862ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    4119ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    4347ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    4622ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    4874ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    5110ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    5384ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    5677ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    6131ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    6396ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    6646ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    6869ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    7136ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    7378ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    7598ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    7855ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    8113ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    8366ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    8617ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    8865ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    9127ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[    9397ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[   18519ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://beahjntkmkfhpcbhfnrr.supabase.co/auth/v1/token?grant_type=refresh_token:0
+[   18520ms] [ERROR] AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+    at handleError (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:80:11)
+    at async _handleRequest (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:123:9)
+    at async _request (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:105:18)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1588:24)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/helpers.js:206:36) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56

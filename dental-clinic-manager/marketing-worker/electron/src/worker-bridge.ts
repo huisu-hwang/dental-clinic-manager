@@ -70,9 +70,6 @@ interface SchedulerModule {
  */
 async function runSchedulerOnce(): Promise<void> {
   try {
-    // CommonJS require로 빌드된 marketing-worker dist 파일을 로드
-    // marketing-worker는 별도 tsconfig으로 commonjs 빌드 필요
-    // 경로: electron/dist/ 기준으로 ../../dist/scheduler.js
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const scheduler = require('../../dist/scheduler.js') as SchedulerModule;
     await scheduler.processScheduledItemsOnce();
@@ -81,6 +78,23 @@ async function runSchedulerOnce(): Promise<void> {
     const msg = err instanceof Error ? err.message : String(err);
     log('error', `[WorkerBridge] 스케줄러 실행 오류: ${msg}`);
     notifyResult({ success: false, error: msg });
+  }
+}
+
+let scrapingStarted = false;
+async function toggleScrapingWorker(start: boolean): Promise<void> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const scraping = require('../../dist/scraping/index.js');
+    if (start && !scrapingStarted) {
+      await scraping.startScrapingWorker();
+      scrapingStarted = true;
+    } else if (!start && scrapingStarted) {
+      await scraping.stopScrapingWorker();
+      scrapingStarted = false;
+    }
+  } catch (err) {
+    log('error', `[WorkerBridge] 스크래핑 워커 ${start ? '시작' : '종료'} 오류: ${err}`);
   }
 }
 
@@ -107,6 +121,9 @@ export async function start(): Promise<void> {
   // 즉시 1회 실행
   await runSchedulerOnce();
 
+  // 스크래핑 워커 시작
+  await toggleScrapingWorker(true);
+
   // 5분 간격 반복
   pollTimer = setInterval(async () => {
     if (currentStatus !== 'running') return;
@@ -117,11 +134,12 @@ export async function start(): Promise<void> {
 /**
  * 워커 중지
  */
-export function stop(): void {
+export async function stop(): Promise<void> {
   if (pollTimer !== null) {
     clearInterval(pollTimer);
     pollTimer = null;
   }
+  await toggleScrapingWorker(false);
   setStatus('stopped');
   log('info', '[WorkerBridge] 워커 중지');
 }
