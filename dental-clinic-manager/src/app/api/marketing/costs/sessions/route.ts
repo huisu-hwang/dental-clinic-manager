@@ -88,6 +88,10 @@ export async function GET(request: NextRequest) {
       if (isImageCall) session.image_cost_usd += costUsd;
       session.call_count += 1;
       if (!row.success) session.success = false;
+      // generation_options가 null인 경우, null이 아닌 값으로 업데이트
+      if (!session.generation_options && row.generation_options) {
+        session.generation_options = row.generation_options;
+      }
       // created_at은 MIN (첫 번째 호출 시각) — rows는 DESC 정렬이므로 마지막 값이 가장 이름
       // 실제로는 세션 내 가장 이른 시각을 사용
       if (row.created_at < session.created_at) {
