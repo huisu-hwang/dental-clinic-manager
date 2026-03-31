@@ -56,7 +56,12 @@ export async function scrapeCreditCardSales(
   year: number,
   month: number,
 ): Promise<ScrapeResult> {
-  log.info({ year, month }, '신용카드 매출 스크래핑 시작');
+  // 오늘 날짜 기준으로 분기/년도 계산
+  const today = new Date();
+  const currentMonth = today.getMonth() + 1;
+  const quarter = Math.ceil(currentMonth / 3);
+  const queryYear = today.getFullYear();
+  log.info({ year, month, quarter, queryYear, currentMonth }, '신용카드 매출 스크래핑 시작 (오늘 날짜 기준 분기)');
 
   const records = await withPage(context, async (page) => {
     // ── Step 1: 메인 페이지 접속 + 로그인 확인 ──
@@ -158,12 +163,11 @@ export async function scrapeCreditCardSales(
       }
 
       return results.length > 0 ? results : ['no_year_field_found'];
-    }, year).catch(() => ['error']);
+    }, queryYear).catch(() => ['error']);
 
     log.info({ yearSet }, '년도 설정 결과');
 
-    // 분기 선택 (month → 분기 변환: 1~3=1분기, 4~6=2분기, ...)
-    const quarter = Math.ceil(month / 3);
+    // 분기 선택 (오늘 날짜 기준)
     const quarterSet = await page.evaluate((q: number) => {
       /* eslint-disable @typescript-eslint/no-explicit-any */
       const doc = (globalThis as any).document;
