@@ -123,7 +123,7 @@ export default function PayrollForm() {
     insuranceExempt: boolean
   } | null>(null)
 
-  const [viewMode, setViewMode] = useState<'self' | 'taxOffice'>('self')
+  const [viewMode] = useState<'self' | 'taxOffice'>('taxOffice')
   const [taxOfficeFileUrl, setTaxOfficeFileUrl] = useState<string | null>(null)
   const [taxOfficeFileName, setTaxOfficeFileName] = useState<string | null>(null)
   const [loadingTaxOfficeFile, setLoadingTaxOfficeFile] = useState(false)
@@ -735,40 +735,10 @@ export default function PayrollForm() {
         )}
       </div>
 
-      {/* 명세서 보기 모드 토글 */}
-      {selectedEmployeeId && (
-        <div className="flex items-center gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
-          <span className="text-sm font-medium text-slate-600 mr-2">명세서 유형:</span>
-          <button
-            onClick={() => setViewMode('self')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              viewMode === 'self'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            <Calculator className="w-4 h-4 inline mr-1.5" />
-            자체 계산
-          </button>
-          <button
-            onClick={() => setViewMode('taxOffice')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              viewMode === 'taxOffice'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            <FileText className="w-4 h-4 inline mr-1.5" />
-            세무사무실
-            {taxOfficeFileUrl && (
-              <span className="ml-1.5 w-2 h-2 bg-green-400 rounded-full inline-block" />
-            )}
-          </button>
-        </div>
-      )}
+      {/* 토글 제거됨 - 세무사무실 명세서만 표시 */}
 
       {/* 세무사무실 PDF 뷰어 */}
-      {viewMode === 'taxOffice' && selectedEmployeeId && (
+      {selectedEmployeeId && (
         <div className="space-y-4">
           {taxOfficeFileUrl ? (
             <div>
