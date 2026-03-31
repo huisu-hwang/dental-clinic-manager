@@ -21,7 +21,7 @@ export interface AppConfig {
 }
 
 const store = new Store<StoreSchema>({
-  name: 'hayan-marketing-worker',
+  name: 'clinic-manager-worker',
   defaults: {
     dashboardUrl: 'https://www.hi-clinic.co.kr',
     workerApiKey: '',
