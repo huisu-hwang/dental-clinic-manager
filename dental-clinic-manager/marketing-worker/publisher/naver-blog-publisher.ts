@@ -369,8 +369,8 @@ export class NaverBlogPublisher {
   }
 
   /**
-   * [FIX #4] 이미지 삽입 - fileChooser 이벤트 가로채기 방식
-   * 사진 버튼 클릭 시 발생하는 파일 선택 다이얼로그를 Playwright가 직접 처리
+   * 이미지 삽입 - 클립보드 복사-붙여넣기 방식
+   * UI 버튼/fileChooser 의존 없이 직접 클립보드에 이미지를 넣고 Ctrl+V
    */
   private async insertImage(page: Page, imagePath: string): Promise<void> {
     const MAX_RETRIES = 2;
@@ -382,7 +382,13 @@ export class NaverBlogPublisher {
     }
 
     const fileSize = (fs.statSync(imagePath).size / 1024).toFixed(1);
-    console.log(`[NaverBlog] 이미지 삽입 시도: ${imagePath} (${fileSize}KB)`);
+    console.log(`[NaverBlog] 이미지 삽입 시도 (클립보드 방식): ${imagePath} (${fileSize}KB)`);
+
+    // 이미지를 base64로 읽기
+    const imageBuffer = fs.readFileSync(imagePath);
+    const base64 = imageBuffer.toString('base64');
+    const ext = imagePath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+    const mimeType = `image/${ext}`;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
@@ -391,23 +397,43 @@ export class NaverBlogPublisher {
           await page.waitForTimeout(2000);
         }
 
-        // 이미지 삽입 전 기존 이미지 개수 확인
+        // 삽입 전 이미지 개수 확인
         const beforeCount = await page.locator('.se-image-resource, .se-component-image img').count();
 
-        // fileChooser 이벤트를 기다리면서 동시에 사진 버튼 클릭
-        const [fileChooser] = await Promise.all([
-          page.waitForEvent('filechooser', { timeout: 15000 }),
-          (async () => {
-            const photoBtn = page.locator('button.se-image-toolbar-button').first();
-            await photoBtn.click({ timeout: 5000 });
-            console.log('[NaverBlog] 사진 추가 버튼 클릭');
-          })(),
-        ]);
+        // 에디터 본문에 포커스
+        const editorBody = page.locator('.se-component-content .se-text-paragraph').last();
+        await editorBody.click({ timeout: 5000 });
+        await page.waitForTimeout(300);
 
-        await fileChooser.setFiles(imagePath);
-        console.log('[NaverBlog] fileChooser로 이미지 파일 설정 완료');
+        // 클립보드에 이미지를 넣고 paste 이벤트 발생
+        await page.evaluate(async ({ base64Data, mime }: { base64Data: string; mime: string }) => {
+          const byteChars = atob(base64Data);
+          const byteArray = new Uint8Array(byteChars.length);
+          for (let i = 0; i < byteChars.length; i++) {
+            byteArray[i] = byteChars.charCodeAt(i);
+          }
+          const blob = new Blob([byteArray], { type: mime });
+          const file = new File([blob], `image.${mime.split('/')[1]}`, { type: mime });
 
-        // 업로드 완료 대기 — 새 이미지가 DOM에 추가될 때까지
+          const clipboardData = new DataTransfer();
+          clipboardData.items.add(file);
+
+          const pasteEvent = new ClipboardEvent('paste', {
+            bubbles: true,
+            cancelable: true,
+            clipboardData: clipboardData,
+          });
+
+          const editor = document.querySelector('.se-component-content [contenteditable="true"]')
+            || document.querySelector('.se-text-paragraph');
+          if (editor) {
+            editor.dispatchEvent(pasteEvent);
+          }
+        }, { base64Data: base64, mime: mimeType });
+
+        console.log('[NaverBlog] 클립보드 paste 이벤트 발생');
+
+        // 이미지 업로드 완료 대기
         try {
           await page.waitForFunction(
             (prevCount: number) => {
@@ -417,20 +443,18 @@ export class NaverBlogPublisher {
             beforeCount,
             { timeout: 30000 }
           );
-          console.log('[NaverBlog] 이미지 삽입 완료');
+          console.log('[NaverBlog] 이미지 삽입 완료 (클립보드 방식)');
         } catch {
           console.warn('[NaverBlog] 이미지 업로드 대기 타임아웃 — 재시도');
-          continue; // 재시도
+          continue;
         }
 
         await randomDelay(delays.imageUpload);
 
-        // 본문으로 포커스 복귀 후 줄바꿈
-        await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
+        // 줄바꿈
         await page.keyboard.press('Enter');
         await randomDelay({ min: 500, max: 1000 });
-        return; // 성공 시 종료
+        return; // 성공
       } catch (error) {
         console.warn(`[NaverBlog] 이미지 삽입 실패 (시도 ${attempt + 1}): ${error instanceof Error ? error.message : error}`);
       }
