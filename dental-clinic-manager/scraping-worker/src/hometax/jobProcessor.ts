@@ -11,6 +11,26 @@ import { ScrapingSession } from '../types/scrapingContext.js';
 
 const log = createChildLogger('jobProcessor');
 
+/** 데이터 타입 → 한글 라벨 */
+const DATA_TYPE_LABELS: Record<string, string> = {
+  tax_invoice_sales: '세금계산서 매출',
+  tax_invoice_purchase: '세금계산서 매입',
+  cash_receipt_sales: '현금영수증 매출',
+  cash_receipt_purchase: '현금영수증 매입',
+  business_card_purchase: '사업용카드 매입',
+  credit_card_sales: '신용카드 매출',
+};
+
+/** 진행 상태 메시지 업데이트 */
+async function updateProgress(jobId: string, message: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  await supabase
+    .from('scraping_jobs')
+    .update({ progress_message: message })
+    .eq('id', jobId);
+  log.info({ jobId, progress: message }, '진행 상태 업데이트');
+}
+
 /** 스크래핑 결과를 hometax_raw_data에 저장 */
 async function saveRawData(
   clinicId: string,
@@ -108,6 +128,7 @@ export async function processScrapingJob(job: ScrapingJob): Promise<void> {
   log.info({ jobId, clinicId, dataTypes, year, month, mode }, 'Job 처리 시작');
 
   // 1. 홈택스 로그인
+  await updateProgress(jobId, '홈택스 로그인 중...');
   const loginResult = await login(clinicId, mode);
   if (!loginResult.success || !loginResult.session) {
     const errorMsg = `홈택스 로그인 실패: ${loginResult.errorMessage}`;
@@ -130,6 +151,8 @@ export async function processScrapingJob(job: ScrapingJob): Promise<void> {
   try {
     for (const dataType of dataTypes) {
       try {
+        const label = DATA_TYPE_LABELS[dataType] || dataType;
+        await updateProgress(jobId, `${label} 자료 수집 중...`);
         log.info({ jobId, dataType, year, month, mode }, '스크래핑 실행');
 
         const result = await runScraper(session, dataType as DataType, year, month, clinicId);

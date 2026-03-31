@@ -47,8 +47,7 @@ interface SyncLog {
 }
 
 const DATA_TYPE_LABELS: Record<string, string> = {
-  tax_invoice_sales: '세금계산서 매출',
-  tax_invoice_purchase: '세금계산서 매입',
+  // 세금계산서는 현재 제외 (추후 구현 예정)
   cash_receipt_sales: '현금영수증 매출',
   cash_receipt_purchase: '현금영수증 매입',
   business_card_purchase: '사업용카드 매입',
@@ -464,7 +463,9 @@ export default function HometaxSyncPanel({
                     <div className="flex items-center gap-2 text-sm text-blue-700">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span className="font-medium">
-                        {currentJob?.status === 'pending' ? '워커 대기 중...' : '스크래핑 진행 중...'}
+                        {currentJob?.status === 'pending'
+                          ? '워커 대기 중...'
+                          : currentJob?.progress_message || '스크래핑 진행 중...'}
                       </span>
                     </div>
                     <span className="text-xs font-bold text-blue-700">
