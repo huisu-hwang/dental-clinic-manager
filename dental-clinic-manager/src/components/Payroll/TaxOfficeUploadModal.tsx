@@ -137,7 +137,7 @@ export default function TaxOfficeUploadModal({
       }
 
       const data = await res.json()
-      const files: string[] = data.files ?? []
+      const files: string[] = data.data ?? []
       setPdfFiles(files)
       setMatches(autoMatch(files))
       setStep(2)
