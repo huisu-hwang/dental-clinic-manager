@@ -67,14 +67,15 @@ export async function GET(request: NextRequest) {
       endDate = lastDay.toISOString().split('T')[0];
     }
 
-    const { data: rows, error: queryError } = await supabase
+    // master_admin은 모든 클리닉 데이터 조회
+    let query = supabase
       .from('marketing_api_usage')
       .select('cost_usd, created_at')
-      .eq('clinic_id', userData.clinic_id)
       .gte('created_at', `${startDate}T00:00:00.000Z`)
       .lte('created_at', `${endDate}T23:59:59.999Z`)
       .order('created_at', { ascending: true });
 
+    const { data: rows, error: queryError } = await query;
     if (queryError) throw queryError;
 
     // 집계: 날짜별 breakdown

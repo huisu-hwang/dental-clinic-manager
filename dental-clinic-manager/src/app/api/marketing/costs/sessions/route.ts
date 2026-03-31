@@ -40,11 +40,10 @@ export async function GET(request: NextRequest) {
 
     const exchangeRate = exchangeRateRow?.usd_to_krw ?? 1380;
 
-    // 세션별 전체 데이터 조회 (GROUP BY를 지원하지 않으므로 raw rows 조회 후 클라이언트 집계)
+    // master_admin은 모든 클리닉 데이터 조회
     const { data: rows, error: queryError } = await supabase
       .from('marketing_api_usage')
       .select('generation_session_id, cost_usd, call_type, generation_options, success, created_at')
-      .eq('clinic_id', userData.clinic_id)
       .order('created_at', { ascending: false });
 
     if (queryError) throw queryError;
