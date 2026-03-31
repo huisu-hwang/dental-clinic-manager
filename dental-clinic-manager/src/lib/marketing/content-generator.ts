@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { TONE_INSTRUCTIONS } from './default-prompts';
 import { seedDefaultPromptsIfNeeded } from './seed-prompts';
+import { logApiUsage } from './api-usage-logger';
 import {
   ContentGenerateOptions,
   GeneratedContent,
@@ -25,7 +26,8 @@ const anthropic = new Anthropic({
 export async function generateContent(
   options: ContentGenerateOptions,
   clinicId: string,
-  customSystemPrompt?: string
+  customSystemPrompt?: string,
+  generationSessionId?: string
 ): Promise<GeneratedContent> {
   // 1. 프롬프트 로딩 (customSystemPrompt 제공 시 DB 조회 생략)
   let promptTemplate: string;
@@ -83,6 +85,7 @@ export async function generateContent(
   }) + imageStyleInstruction;
 
   // 4. Claude API 호출
+  const callStart = Date.now();
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
@@ -94,6 +97,29 @@ export async function generateContent(
     ],
     system: systemPrompt,
   });
+  const callDurationMs = Date.now() - callStart;
+
+  if (generationSessionId) {
+    logApiUsage({
+      clinicId,
+      generationSessionId,
+      apiProvider: 'anthropic',
+      model: 'claude-sonnet-4-6',
+      callType: 'text_generation',
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      totalTokens: response.usage.input_tokens + response.usage.output_tokens,
+      generationOptions: {
+        topic: options.topic,
+        keyword: options.keyword,
+        tone: options.tone,
+        postType: options.postType,
+        imageCount: options.imageCount,
+      },
+      success: true,
+      durationMs: callDurationMs,
+    });
+  }
 
   const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
 
@@ -110,6 +136,7 @@ export async function generateContent(
 
   // 8. 글자수 부족 시 재생성 (1회)
   if (!validation.bodyLengthPassed) {
+    const retryStart = Date.now();
     const retryResponse = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
@@ -129,6 +156,29 @@ export async function generateContent(
       ],
       system: systemPrompt,
     });
+    const retryDurationMs = Date.now() - retryStart;
+
+    if (generationSessionId) {
+      logApiUsage({
+        clinicId,
+        generationSessionId,
+        apiProvider: 'anthropic',
+        model: 'claude-sonnet-4-6',
+        callType: 'text_retry',
+        inputTokens: retryResponse.usage.input_tokens,
+        outputTokens: retryResponse.usage.output_tokens,
+        totalTokens: retryResponse.usage.input_tokens + retryResponse.usage.output_tokens,
+        generationOptions: {
+          topic: options.topic,
+          keyword: options.keyword,
+          tone: options.tone,
+          postType: options.postType,
+          imageCount: options.imageCount,
+        },
+        success: true,
+        durationMs: retryDurationMs,
+      });
+    }
 
     const retryText = retryResponse.content[0].type === 'text' ? retryResponse.content[0].text : '';
     const retryParsed = parseGeneratedContent(retryText, options.keyword);

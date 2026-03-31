@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { seedDefaultPromptsIfNeeded } from './seed-prompts';
+import { logApiUsage } from './api-usage-logger';
 import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyle } from '@/types/marketing';
 
 // ============================================
@@ -93,19 +94,24 @@ export async function generateBlogImage(
   clinicId?: string,
   customSystemPrompt?: string,
   imageVisualStyle?: ImageVisualStyle,
+  generationSessionId?: string,
+  generationClinicId?: string,
 ): Promise<{
   imageBase64: string;
   fileName: string;
 }> {
+  // clinicId 우선순위: 기존 파라미터 > 새 파라미터
+  const resolvedClinicId = clinicId || generationClinicId;
+
   // 마스터 이미지 프롬프트 템플릿 적용
   let fullPrompt: string;
 
   if (customSystemPrompt) {
     // 테스트 모드: 마스터가 편집 중인 미저장 프롬프트 사용
     fullPrompt = customSystemPrompt.replaceAll('{{image_prompt}}', prompt);
-  } else if (clinicId) {
+  } else if (resolvedClinicId) {
     // 실제 생성: DB에서 마스터 설정 프롬프트 로딩
-    const template = await loadImagePromptTemplate(clinicId);
+    const template = await loadImagePromptTemplate(resolvedClinicId);
     if (template) {
       fullPrompt = template.replaceAll('{{image_prompt}}', prompt);
     } else {
@@ -120,10 +126,27 @@ export async function generateBlogImage(
   fullPrompt += getVisualStyleInstruction(imageVisualStyle);
 
   // 1. Gemini로 이미지 생성
-  const imageBase64 = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
+  const geminiStart = Date.now();
+  const { imageBase64, usageMetadata } = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
+  const geminiDurationMs = Date.now() - geminiStart;
+
+  if (generationSessionId && resolvedClinicId) {
+    logApiUsage({
+      clinicId: resolvedClinicId,
+      generationSessionId,
+      apiProvider: 'google',
+      model: 'gemini-3.0-flash',
+      callType: 'image_generation',
+      inputTokens: usageMetadata?.promptTokenCount ?? 0,
+      outputTokens: usageMetadata?.candidatesTokenCount ?? 0,
+      totalTokens: usageMetadata?.totalTokenCount ?? 0,
+      success: true,
+      durationMs: geminiDurationMs,
+    });
+  }
 
   // 2. 한글 파일명 생성
-  const fileName = await generateImageFileName(prompt);
+  const fileName = await generateImageFileName(prompt, generationSessionId, resolvedClinicId);
 
   return { imageBase64, fileName };
 }
@@ -147,14 +170,34 @@ export async function generatePlatformImage(
   imageStyle?: ImageStyleOption,
   referenceImageBase64?: string,
   imageVisualStyle?: ImageVisualStyle,
+  generationSessionId?: string,
+  generationClinicId?: string,
 ): Promise<{ imageBase64: string; fileName: string }> {
   const platformStyle = PLATFORM_IMAGE_STYLES[platform];
   const styleInstruction = getImageStyleInstruction(imageStyle);
   const visualInstruction = getVisualStyleInstruction(imageVisualStyle);
   const fullPrompt = `${platformStyle}\n\n치과 블로그 주제: ${prompt}${styleInstruction}${visualInstruction}`;
 
-  const imageBase64 = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
-  const fileName = await generateImageFileName(`${platform}_${prompt}`);
+  const geminiStart = Date.now();
+  const { imageBase64, usageMetadata } = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
+  const geminiDurationMs = Date.now() - geminiStart;
+
+  if (generationSessionId && generationClinicId) {
+    logApiUsage({
+      clinicId: generationClinicId,
+      generationSessionId,
+      apiProvider: 'google',
+      model: 'gemini-3.0-flash',
+      callType: 'platform_image',
+      inputTokens: usageMetadata?.promptTokenCount ?? 0,
+      outputTokens: usageMetadata?.candidatesTokenCount ?? 0,
+      totalTokens: usageMetadata?.totalTokenCount ?? 0,
+      success: true,
+      durationMs: geminiDurationMs,
+    });
+  }
+
+  const fileName = await generateImageFileName(`${platform}_${prompt}`, generationSessionId, generationClinicId);
 
   return { imageBase64, fileName };
 }
@@ -205,11 +248,20 @@ export async function generateImagesFromMarkers(
 
 // ─── Gemini 3.0 Flash API 호출 ───
 
+interface GeminiResult {
+  imageBase64: string;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
+}
+
 async function generateImageWithGemini(
   prompt: string,
   imageStyle?: ImageStyleOption,
   referenceImageBase64?: string,
-): Promise<string> {
+): Promise<GeminiResult> {
   try {
     // 참조 이미지가 있는 경우 (use_own_image 모드) 멀티모달 입력
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -247,9 +299,12 @@ async function generateImageWithGemini(
       throw new Error('이미지 생성 응답이 비어있습니다');
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const usageMetadata = (response as any).usageMetadata as GeminiResult['usageMetadata'];
+
     for (const part of parts) {
       if (part.inlineData?.mimeType?.startsWith('image/')) {
-        return part.inlineData.data || '';
+        return { imageBase64: part.inlineData.data || '', usageMetadata };
       }
     }
 
@@ -262,7 +317,12 @@ async function generateImageWithGemini(
 
 // ─── 한글 파일명 생성 (Claude Haiku) ───
 
-export async function generateImageFileName(prompt: string): Promise<string> {
+export async function generateImageFileName(
+  prompt: string,
+  generationSessionId?: string,
+  generationClinicId?: string,
+): Promise<string> {
+  const haikuStart = Date.now();
   try {
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -282,6 +342,23 @@ export async function generateImageFileName(prompt: string): Promise<string> {
         },
       ],
     });
+
+    const haikuDurationMs = Date.now() - haikuStart;
+
+    if (generationSessionId && generationClinicId) {
+      logApiUsage({
+        clinicId: generationClinicId,
+        generationSessionId,
+        apiProvider: 'anthropic',
+        model: 'claude-haiku-4-5-20251001',
+        callType: 'filename_generation',
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        totalTokens: response.usage.input_tokens + response.usage.output_tokens,
+        success: true,
+        durationMs: haikuDurationMs,
+      });
+    }
 
     const text = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
     // 파일명 정리 (특수문자 제거, .png 추가)

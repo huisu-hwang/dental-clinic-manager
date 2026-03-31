@@ -82,13 +82,16 @@ export async function POST(request: NextRequest) {
           return;
         }
 
+        // 글 생성 세션 ID 발급 (비용 추적용)
+        const generationSessionId = crypto.randomUUID();
+
         // 1단계: 텍스트 생성 (Claude)
         sendEvent(controller, {
           progress: 5,
           step: 'AI가 글을 작성하고 있습니다...',
         });
 
-        const result = await generateContent(options, userData.clinic_id);
+        const result = await generateContent(options, userData.clinic_id, undefined, generationSessionId);
 
         sendEvent(controller, {
           progress: 55,
@@ -120,7 +123,7 @@ export async function POST(request: NextRequest) {
                 setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 55000)
               );
               const { imageBase64, fileName } = await Promise.race([
-                generateBlogImage(marker.prompt, options.imageStyle, options.referenceImageBase64, userData.clinic_id, undefined, options.imageVisualStyle),
+                generateBlogImage(marker.prompt, options.imageStyle, options.referenceImageBase64, userData.clinic_id, undefined, options.imageVisualStyle, generationSessionId, userData.clinic_id),
                 timeoutPromise,
               ]);
 
@@ -205,7 +208,7 @@ export async function POST(request: NextRequest) {
                 if (maxImages > 0) {
                   try {
                     const { imageBase64, fileName } = await generatePlatformImage(
-                      firstImagePrompt, 'instagram', options.imageStyle, options.referenceImageBase64
+                      firstImagePrompt, 'instagram', options.imageStyle, options.referenceImageBase64, undefined, generationSessionId, userData.clinic_id
                     );
                     let imagePath = '';
                     if (admin) {
@@ -239,7 +242,7 @@ export async function POST(request: NextRequest) {
                 if (maxImages > 0) {
                   try {
                     const { imageBase64, fileName } = await generatePlatformImage(
-                      firstImagePrompt, 'facebook', options.imageStyle, options.referenceImageBase64
+                      firstImagePrompt, 'facebook', options.imageStyle, options.referenceImageBase64, undefined, generationSessionId, userData.clinic_id
                     );
                     let imagePath = '';
                     if (admin) {
@@ -273,7 +276,7 @@ export async function POST(request: NextRequest) {
                 if (maxImages > 0) {
                   try {
                     const { imageBase64, fileName } = await generatePlatformImage(
-                      firstImagePrompt, 'threads', options.imageStyle, options.referenceImageBase64
+                      firstImagePrompt, 'threads', options.imageStyle, options.referenceImageBase64, undefined, generationSessionId, userData.clinic_id
                     );
                     let imagePath = '';
                     if (admin) {
