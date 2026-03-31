@@ -21,7 +21,7 @@ interface HometaxDataViewProps {
 }
 
 interface HometaxSummary {
-  summary: Record<string, { count: number; scrapedAt: string | null }>
+  summary: Record<string, { count: number; totalAmount: number; scrapedAt: string | null }>
   lastSyncedAt: string | null
   hasData: boolean
 }
@@ -34,8 +34,7 @@ interface RawDataRecord {
 }
 
 const DATA_TYPE_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; bgColor: string }> = {
-  tax_invoice_sales: { label: '세금계산서 매출', icon: FileText, color: 'text-blue-600', bgColor: 'bg-blue-100' },
-  tax_invoice_purchase: { label: '세금계산서 매입', icon: FileText, color: 'text-rose-600', bgColor: 'bg-rose-100' },
+  // 세금계산서는 현재 제외 (추후 구현 예정)
   cash_receipt_sales: { label: '현금영수증 매출', icon: Receipt, color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
   cash_receipt_purchase: { label: '현금영수증 매입', icon: Receipt, color: 'text-orange-600', bgColor: 'bg-orange-100' },
   business_card_purchase: { label: '사업용카드 매입', icon: CreditCard, color: 'text-purple-600', bgColor: 'bg-purple-100' },
@@ -106,7 +105,7 @@ export default function HometaxDataView({ clinicId, year, month }: HometaxDataVi
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {Object.entries(DATA_TYPE_CONFIG).map(([key, config]) => {
           const data = summary?.summary[key]
-          const count = data?.count || 0
+          const totalAmount = data?.totalAmount || 0
           const Icon = config.icon
           const isSales = key.includes('sales')
 
@@ -131,12 +130,12 @@ export default function HometaxDataView({ clinicId, year, month }: HometaxDataVi
                 )}
               </div>
               <p className="text-xs font-medium text-slate-500">{config.label}</p>
-              <p className={`text-lg font-bold mt-0.5 ${count > 0 ? config.color : 'text-slate-300'}`}>
-                {count}건
+              <p className={`text-lg font-bold mt-0.5 ${totalAmount > 0 ? config.color : 'text-slate-300'}`}>
+                {totalAmount > 0 ? formatCurrency(totalAmount) : '0원'}
               </p>
               {expandedType === key ? (
                 <ChevronUp className="w-3 h-3 text-indigo-400 mt-1" />
-              ) : count > 0 ? (
+              ) : totalAmount > 0 ? (
                 <ChevronDown className="w-3 h-3 text-slate-300 mt-1" />
               ) : null}
             </button>

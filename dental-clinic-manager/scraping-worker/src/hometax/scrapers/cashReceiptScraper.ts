@@ -54,10 +54,7 @@ export async function scrapeCashReceiptSales(
   year: number,
   month: number,
 ): Promise<ScrapeResult> {
-  // 오늘 날짜 기준 년도
-  const today = new Date();
-  const queryYear = today.getFullYear();
-  log.info({ year, month, queryYear }, '현금영수증 매출내역 누계조회 스크래핑 시작');
+  log.info({ year, month }, '현금영수증 매출내역 누계조회 스크래핑 시작');
 
   const records = await withPage(context, async (page) => {
     // ── Step 1: 메인 페이지 + 로그인 확인 ──
@@ -105,7 +102,7 @@ export async function scrapeCashReceiptSales(
     await screenshot(page, '2.3-menu-opened');
 
     // ── Step 2.4: 조회년도 확인 후 조회 클릭 ──
-    log.info({ queryYear }, 'Step 2.4: 조회년도 설정 + 조회');
+    log.info({ year }, 'Step 2.4: 조회년도 설정 + 조회');
     await page.waitForTimeout(3000);
 
     // Form 요소 분석 (디버그)
@@ -147,7 +144,7 @@ export async function scrapeCashReceiptSales(
       }
 
       return results.length > 0 ? results : ['no_year_field_found'];
-    }, queryYear).catch(() => ['error']);
+    }, year).catch(() => ['error']);
     log.info({ yearSet }, '년도 설정 결과');
 
     await page.waitForTimeout(1000);
@@ -262,7 +259,7 @@ export async function scrapeCashReceiptSales(
     return data;
   });
 
-  log.info({ year, month, queryYear, count: records.length }, '현금영수증 매출내역 누계조회 스크래핑 완료');
+  log.info({ year, month, count: records.length }, '현금영수증 매출내역 누계조회 스크래핑 완료');
 
   return {
     dataType: 'cash_receipt_sales',
@@ -289,12 +286,9 @@ export async function scrapeCashReceiptPurchase(
   year: number,
   month: number,
 ): Promise<ScrapeResult> {
-  // 오늘 날짜 기준으로 분기 계산
-  const today = new Date();
-  const currentMonth = today.getMonth() + 1; // 1-12
-  const quarter = getQuarter(currentMonth);
-  const queryYear = today.getFullYear();
-  log.info({ year, month, quarter, queryYear, currentMonth }, '현금영수증 매입 지출증빙 스크래핑 시작 (오늘 날짜 기준 분기)');
+  // 사용자 설정 월 기준으로 분기 계산
+  const quarter = getQuarter(month || 1);
+  log.info({ year, month, quarter }, '현금영수증 매입 지출증빙 스크래핑 시작');
 
   const records = await withPage(context, async (page) => {
     // ── Step 1: 메인 페이지 + 로그인 확인 ──
@@ -421,9 +415,9 @@ export async function scrapeCashReceiptPurchase(
     await screenshot(page, '2.3-quarter-tab');
 
     // ── Step 2.4: 조회기간에서 해당 분기인지 확인 ──
-    log.info({ queryYear, quarter }, 'Step 2.4: 조회기간 확인/설정 (오늘 날짜 기준)');
+    log.info({ year, quarter }, 'Step 2.4: 조회기간 확인/설정');
 
-    const period = getQuarterPeriod(queryYear, quarter);
+    const period = getQuarterPeriod(year, quarter);
     const quarterLabel = `${quarter}분기`;
 
     // 년도 설정 (오늘 날짜 기준)
@@ -465,7 +459,7 @@ export async function scrapeCashReceiptPurchase(
       }
 
       return results.length > 0 ? results : ['no_year_field_found'];
-    }, queryYear).catch(() => ['error']);
+    }, year).catch(() => ['error']);
     log.info({ yearSet }, '년도 설정 결과');
 
     // 분기 설정 (select에서 해당 분기 선택)

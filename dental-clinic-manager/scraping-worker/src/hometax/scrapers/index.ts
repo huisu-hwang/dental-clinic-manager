@@ -1,6 +1,7 @@
 import { BrowserContext } from 'playwright';
 import { ScrapeResult } from './baseScraper.js';
-import { scrapeTaxInvoiceSales, scrapeTaxInvoicePurchase } from './taxInvoiceScraper.js';
+// 세금계산서는 현재 제외 (추후 구현 예정)
+// import { scrapeTaxInvoiceSales, scrapeTaxInvoicePurchase } from './taxInvoiceScraper.js';
 import { scrapeCashReceiptSales, scrapeCashReceiptPurchase } from './cashReceiptScraper.js';
 import { scrapeBusinessCardPurchase } from './businessCardScraper.js';
 import { scrapeCreditCardSales } from './creditCardSalesScraper.js';
@@ -22,10 +23,12 @@ export type DataType =
   | 'business_card_purchase'
   | 'credit_card_sales';
 
-/** Playwright 모드 스크래퍼 매핑 (clinicId 전달 지원) */
-const PLAYWRIGHT_SCRAPER_MAP: Record<DataType, (ctx: BrowserContext, year: number, month: number, clinicId?: string) => Promise<ScrapeResult>> = {
-  tax_invoice_sales: scrapeTaxInvoiceSales,
-  tax_invoice_purchase: scrapeTaxInvoicePurchase,
+type ScraperFn = (ctx: BrowserContext, year: number, month: number, clinicId?: string) => Promise<ScrapeResult>;
+
+/** Playwright 모드 스크래퍼 매핑 — 세금계산서는 현재 제외 */
+const PLAYWRIGHT_SCRAPER_MAP: Partial<Record<DataType, ScraperFn>> = {
+  // tax_invoice_sales: 추후 구현
+  // tax_invoice_purchase: 추후 구현
   cash_receipt_sales: scrapeCashReceiptSales,
   cash_receipt_purchase: scrapeCashReceiptPurchase,
   business_card_purchase: scrapeBusinessCardPurchase,

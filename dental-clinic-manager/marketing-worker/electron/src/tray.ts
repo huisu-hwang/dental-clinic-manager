@@ -2,6 +2,7 @@ import { Tray, Menu, app, Notification, nativeImage } from 'electron';
 import path from 'path';
 import { getConfig, setConfig } from './config-store';
 import { start as startWorker, stop as stopWorker, getStatus } from './worker-bridge';
+import { getScrapingStatus } from './scraping-bridge';
 import { log } from './logger';
 
 // ============================================
@@ -33,9 +34,21 @@ function rebuildMenu(): void {
   const status = getStatus();
   const isRunning = status === 'running';
 
+  const scrapingStatusLabels: Record<string, string> = {
+    idle: '중지됨',
+    polling: '대기 중',
+    scraping: '수집 중',
+    error: '오류',
+  };
+  const scrapingLabel = scrapingStatusLabels[getScrapingStatus()] ?? '알 수 없음';
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: `상태: ${currentStatusLabel}`,
+      enabled: false,
+    },
+    {
+      label: `스크래핑: ${scrapingLabel}`,
       enabled: false,
     },
     { type: 'separator' },
