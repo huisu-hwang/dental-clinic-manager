@@ -828,6 +828,10 @@ function PostEditModal({
                       >
                         발행 워커 설치 프로그램 다운로드
                       </button>
+                      <p className="text-slate-400 text-[11px] text-center leading-relaxed">
+                        Windows 보호 화면이 나타나면 &apos;추가 정보&apos; &rarr; &apos;실행&apos;을 클릭하세요.<br />
+                        하얀치과에서 제공하는 안전한 프로그램입니다.
+                      </p>
                       <button
                         onClick={() => setShowWorkerRequired(false)}
                         className="w-full py-2 text-slate-500 text-sm hover:text-slate-700 transition-colors"
@@ -913,17 +917,25 @@ function WorkerInstallBanner({ isOnline }: { isOnline: boolean }) {
         </div>
       </div>
       {!downloaded ? (
-        <button
-          onClick={handleDownload}
-          disabled={isDownloading}
-          className="w-full py-2 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 disabled:bg-amber-300 transition-colors flex items-center justify-center gap-1.5"
-        >
-          {isDownloading ? '다운로드 중...' : '발행 워커 설치 프로그램 다운로드'}
-        </button>
+        <>
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="w-full py-2 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 disabled:bg-amber-300 transition-colors flex items-center justify-center gap-1.5"
+          >
+            {isDownloading ? '다운로드 중...' : '발행 워커 설치 프로그램 다운로드'}
+          </button>
+          <p className="text-amber-600/70 text-[10px] leading-relaxed">
+            Windows 보호 화면이 나타나면 &apos;추가 정보&apos; &rarr; &apos;실행&apos;을 클릭하세요. 하얀치과에서 제공하는 안전한 프로그램입니다.
+          </p>
+        </>
       ) : (
         <div className="text-amber-700 bg-amber-100/50 rounded-lg px-3 py-2">
           <p className="font-medium">다운로드 완료 — 설치 후 실행하세요.</p>
           <p className="mt-0.5">실행 후 이 화면이 자동으로 연결을 감지합니다.</p>
+          <p className="mt-1 text-[10px] text-amber-600/70">
+            Windows 보호 화면이 나타나면 &apos;추가 정보&apos; &rarr; &apos;실행&apos;을 클릭하세요.
+          </p>
         </div>
       )}
     </div>
