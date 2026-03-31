@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 // GitHub Release URL for Windows installer
-const INSTALLER_URL = 'https://github.com/huisu-hwang/dental-clinic-manager/releases/download/marketing-worker-v1.0.0/hayan-marketing-worker-1.0.0-setup.exe';
+const INSTALLER_URL = 'https://github.com/huisu-hwang/dental-clinic-manager/releases/download/marketing-worker-v1.0.0/clinic-manager-worker-1.0.0-setup.exe';
 
 // 안정적인 대시보드 URL (프로덕션 도메인)
 const PRODUCTION_URL = 'https://www.hi-clinic.co.kr';
