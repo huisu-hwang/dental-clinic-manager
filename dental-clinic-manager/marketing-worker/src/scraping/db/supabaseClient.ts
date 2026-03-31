@@ -1,114 +1,83 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { WorkerApiClient } from '../../../api-client.js';
 import { config } from '../config.js';
 import { createChildLogger } from '../utils/logger.js';
 
-const log = createChildLogger('supabase');
+const log = createChildLogger('supabase-adapter');
 
-let client: SupabaseClient | null = null;
+let apiClient: WorkerApiClient | null = null;
 
-export function getSupabaseClient(): SupabaseClient {
-  if (!client) {
-    client = createClient(config.supabase.url, config.supabase.serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-    log.info('Supabase 클라이언트 초기화 완료');
+export function getApiClient(): WorkerApiClient {
+  if (!apiClient) {
+    if (!config.api.dashboardUrl || !config.api.workerApiKey) {
+      throw new Error('API config missing: dashboardUrl or workerApiKey');
+    }
+    const dashUrl = config.api.dashboardUrl.replace(/\/$/, '');
+    apiClient = new WorkerApiClient(dashUrl, config.api.workerApiKey);
+    log.info('API 클라이언트 초기화 완료');
   }
-  return client;
+  return apiClient;
 }
 
-/** Supabase 연결 테스트 */
+// 하위 호환성 및 마이그레이션을 위한 에러 투척용
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getSupabaseClient(): any {
+  throw new Error('API Mode 진행 중: 더 이상 getSupabaseClient()를 사용하지 마세요.');
+}
+
+/** API 연결 테스트 */
 export async function testConnection(): Promise<boolean> {
   try {
-    const supabase = getSupabaseClient();
-    const { error } = await supabase
-      .from('scraping_workers')
-      .select('id')
-      .limit(1);
-
-    if (error) {
-      log.error({ error }, 'Supabase 연결 테스트 실패');
-      return false;
-    }
-
-    log.info('Supabase 연결 테스트 성공');
+    const client = getApiClient();
+    await client.sendScrapingHeartbeat(config.worker.id, 'idle');
+    log.info('API 서버 연결 테스트 성공');
     return true;
   } catch (err) {
-    log.error({ err }, 'Supabase 연결 테스트 예외');
+    log.error({ err }, 'API 서버 연결 테스트 실패');
     return false;
   }
 }
 
-/** 워커 heartbeat 등록/업데이트 */
+/** 워커 등록 */
 export async function registerWorker(): Promise<void> {
-  const supabase = getSupabaseClient();
-  const { error } = await supabase
-    .from('scraping_workers')
-    .upsert({
-      id: config.worker.id,
-      hostname: (await import('os')).hostname(),
-      status: 'idle',
-      stop_requested: false,
-      last_heartbeat: new Date().toISOString(),
-      started_at: new Date().toISOString(),
+  try {
+    const client = getApiClient();
+    const os = await import('os');
+    await client.registerScrapingWorker({
+      workerId: config.worker.id,
+      hostname: os.hostname(),
       metadata: {
         node_version: process.version,
         platform: process.platform,
         arch: process.arch,
       },
-    }, { onConflict: 'id' });
-
-  if (error) {
-    log.error({ error }, '워커 등록 실패');
-    throw error;
+    });
+    log.info({ workerId: config.worker.id }, '워커 등록 완료');
+  } catch (err) {
+    log.error({ err }, '워커 등록 실패');
+    throw err;
   }
-  log.info({ workerId: config.worker.id }, '워커 등록 완료');
 }
 
-/** 워커 heartbeat 업데이트. stop_requested=true이면 true 반환 */
+/** 하트비트 업데이트 */
 export async function updateHeartbeat(status: 'idle' | 'busy' = 'idle', currentJobId?: string): Promise<boolean> {
-  const supabase = getSupabaseClient();
-  const { error } = await supabase
-    .from('scraping_workers')
-    .update({
-      status,
-      current_job_id: currentJobId || null,
-      last_heartbeat: new Date().toISOString(),
-    })
-    .eq('id', config.worker.id);
-
-  if (error) {
-    log.warn({ error }, 'heartbeat 업데이트 실패');
+  try {
+    const client = getApiClient();
+    const result = await client.sendScrapingHeartbeat(config.worker.id, status, currentJobId || null);
+    return result.stop_requested;
+  } catch (err) {
+    log.warn({ err }, 'heartbeat 업데이트 실패');
     return false;
   }
-
-  // stop_requested 플래그 확인
-  const { data } = await supabase
-    .from('scraping_workers')
-    .select('stop_requested')
-    .eq('id', config.worker.id)
-    .single();
-
-  return data?.stop_requested === true;
 }
 
-/** 워커 상태를 offline으로 변경 */
+/** 워커 해제 */
 export async function deregisterWorker(): Promise<void> {
-  const supabase = getSupabaseClient();
-  const { error } = await supabase
-    .from('scraping_workers')
-    .update({
-      status: 'offline',
-      current_job_id: null,
-      last_heartbeat: new Date().toISOString(),
-    })
-    .eq('id', config.worker.id);
-
-  if (error) {
-    log.warn({ error }, '워커 해제 실패');
-  } else {
+  try {
+    const client = getApiClient();
+    await client.deregisterScrapingWorker(config.worker.id);
     log.info('워커 상태 offline으로 변경');
+  } catch (err) {
+    log.warn({ err }, '워커 해제 실패');
   }
 }
+
