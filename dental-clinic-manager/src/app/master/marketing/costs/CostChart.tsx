@@ -11,10 +11,8 @@ interface ChartDataPoint {
 }
 
 interface ChartResponse {
-  data?: {
-    points?: ChartDataPoint[]
-    exchangeRate?: number
-  }
+  breakdown?: { date: string; costUsd: number; costKrw: number; callCount: number }[]
+  exchangeRate?: number
 }
 
 const PERIOD_LABELS: Record<Period, string> = {
@@ -102,9 +100,14 @@ export default function CostChart() {
       setError(null)
       try {
         const today = new Date().toISOString().split('T')[0]
-        const res = await fetch(`/api/marketing/costs?period=${period}&date=${today}&chart=true`)
+        const res = await fetch(`/api/marketing/costs?period=${period}&date=${today}`)
         const json: ChartResponse = await res.json()
-        setPoints(json?.data?.points ?? [])
+        const exchangeRate = json?.exchangeRate ?? 1380
+        setPoints((json?.breakdown ?? []).map(b => ({
+          label: b.date.slice(5), // MM-DD
+          usd: b.costUsd,
+          krw: b.costKrw || b.costUsd * exchangeRate,
+        })))
       } catch (err) {
         console.error('차트 데이터 로딩 실패:', err)
         setError('차트 데이터를 불러오지 못했습니다.')

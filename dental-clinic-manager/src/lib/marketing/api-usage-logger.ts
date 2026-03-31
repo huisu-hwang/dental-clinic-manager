@@ -136,8 +136,8 @@ export function calculateCost(
 
   if (!setting) return 0;
 
-  // 이미지 전용 모델 (토큰 없음)
-  if (setting.imagePricePerCall > 0 && inputTokens === 0 && outputTokens === 0) {
+  // 이미지 모델: per-call 단가 우선 (토큰 유무 관계없이)
+  if (setting.imagePricePerCall > 0) {
     return setting.imagePricePerCall;
   }
 

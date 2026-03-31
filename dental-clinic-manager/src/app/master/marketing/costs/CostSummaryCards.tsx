@@ -94,16 +94,16 @@ export default function CostSummaryCards() {
           settingsRes.json(),
         ])
 
-        const exchangeRate = settingsJson?.data?.find((s: { model: string; usd_to_krw: number }) => s.model === 'exchange_rate')?.usd_to_krw ?? 1380
+        const exchangeRate = settingsJson?.settings?.find((s: { model: string; usd_to_krw: number }) => s.model === 'exchange_rate')?.usd_to_krw ?? 1380
 
         const toKrw = (usd: number) => usd * exchangeRate
 
-        const extractPeriod = (json: { data?: { totalUsd?: number; changePercent?: number } }): PeriodCost => {
-          const totalUsd = json?.data?.totalUsd ?? 0
+        const extractPeriod = (json: { totalCostUsd?: number; changePercent?: number }): PeriodCost => {
+          const totalUsd = json?.totalCostUsd ?? 0
           return {
             totalUsd,
             totalKrw: toKrw(totalUsd),
-            changePercent: json?.data?.changePercent ?? null,
+            changePercent: json?.changePercent ?? null,
           }
         }
 

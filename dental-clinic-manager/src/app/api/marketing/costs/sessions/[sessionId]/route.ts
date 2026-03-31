@@ -43,7 +43,6 @@ export async function GET(
     const { data: calls, error: queryError } = await supabase
       .from('marketing_api_usage')
       .select('*')
-      .eq('clinic_id', userData.clinic_id)
       .eq('generation_session_id', sessionId)
       .order('created_at', { ascending: true });
 
