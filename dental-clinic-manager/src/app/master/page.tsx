@@ -10,12 +10,13 @@ import Header from '@/components/Layout/Header'
 
 import dynamic from 'next/dynamic'
 const PromptsPage = dynamic(() => import('@/app/master/marketing/prompts/page'), { ssr: false })
+const CostDashboardContent = dynamic(() => import('@/app/master/marketing/costs/CostDashboardContent'), { ssr: false })
 const SeoAnalysisTab = dynamic(() => import('@/components/SEO/SeoAnalysisTab'), { ssr: false })
 import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
 import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
 
-type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping' | 'prompts' | 'seo-analysis'
+type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping' | 'prompts' | 'api-costs' | 'seo-analysis'
 type CommunitySubTab = 'categories' | 'telegram'
 
 export default function MasterAdminPage() {
@@ -672,8 +673,12 @@ export default function MasterAdminPage() {
               프롬프트 관리
             </button>
             <button
-              onClick={() => router.push('/master/marketing/costs')}
-              className="py-4 px-2 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700"
+              onClick={() => setActiveTab('api-costs')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'api-costs'
+                  ? 'border-emerald-600 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
             >
               <CurrencyDollarIcon className="w-5 h-5 inline-block mr-2" />
               API 비용
@@ -1073,6 +1078,8 @@ export default function MasterAdminPage() {
         {activeTab === 'prompts' && <PromptsPage />}
 
         {activeTab === 'seo-analysis' && <SeoAnalysisTab />}
+
+        {activeTab === 'api-costs' && <CostDashboardContent embedded />}
 
         {activeTab === 'community' && (
           <div className="bg-white rounded-lg shadow">
