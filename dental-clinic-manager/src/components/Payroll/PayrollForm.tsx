@@ -530,12 +530,12 @@ export default function PayrollForm() {
         if (data.success && data.data && data.data.length > 0) {
           const file = data.data[0]
           const urlRes = await fetch(
-            `/api/payroll/tax-office-files/url?storagePath=${encodeURIComponent(file.storage_path)}`
+            `/api/payroll/tax-office-files/url?storagePath=${encodeURIComponent(file.storagePath)}`
           )
           const urlData = await urlRes.json()
           if (urlData.success) {
             setTaxOfficeFileUrl(urlData.url)
-            setTaxOfficeFileName(file.file_name)
+            setTaxOfficeFileName(file.fileName)
           } else {
             setTaxOfficeFileUrl(null)
             setTaxOfficeFileName(null)
