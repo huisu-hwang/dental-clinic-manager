@@ -22,12 +22,16 @@ win:
 
 nsis:
   oneClick: false
-  allowToChangeInstallationDirectory: true
-  createDesktopShortcut: true
+  allowToChangeInstallationDirectory: false
+  createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: 하얀치과 마케팅 워커
   installerIcon: assets/icon.ico
   uninstallerIcon: assets/icon.ico
+  runAfterFinish: true
+  installerHeaderIcon: assets/icon.ico
+  deleteAppDataOnUninstall: true
+  displayLanguage: 0x0412
 
 extraResources:
   - from: playwright-browsers
