@@ -1,6 +1,6 @@
 publish: null
 appId: kr.co.hi-clinic.marketing-worker
-productName: 하얀치과 마케팅 워커
+productName: 클리닉 매니저 워커
 artifactName: "hayan-marketing-worker-${version}-setup.${ext}"
 copyright: Copyright © 2025 하얀치과
 
@@ -25,7 +25,7 @@ nsis:
   allowToChangeInstallationDirectory: false
   createDesktopShortcut: always
   createStartMenuShortcut: true
-  shortcutName: 하얀치과 마케팅 워커
+  shortcutName: 클리닉 매니저 워커
   installerIcon: assets/icon.ico
   uninstallerIcon: assets/icon.ico
   runAfterFinish: true

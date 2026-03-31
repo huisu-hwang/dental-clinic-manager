@@ -2,7 +2,6 @@ import { Tray, Menu, app, Notification, nativeImage } from 'electron';
 import path from 'path';
 import { getConfig, setConfig } from './config-store';
 import { start as startWorker, stop as stopWorker, getStatus } from './worker-bridge';
-import { createSetupWindow } from './setup-window';
 import { log } from './logger';
 
 // ============================================
@@ -22,7 +21,7 @@ export function createTray(): void {
   }
 
   tray = new Tray(icon);
-  tray.setToolTip('하얀치과 마케팅 워커 - 중지됨');
+  tray.setToolTip('클리닉 매니저 워커 - 중지됨');
   rebuildMenu();
   log('info', '[Tray] 트레이 생성 완료');
 }
@@ -52,15 +51,6 @@ function rebuildMenu(): void {
       },
     },
     { type: 'separator' },
-    {
-      label: '설정 열기',
-      click: () => {
-        createSetupWindow(() => {
-          log('info', '[Tray] 설정 재저장: 워커 재시작');
-          startWorker();
-        });
-      },
-    },
     {
       label: '시작 시 자동 실행',
       type: 'checkbox',
@@ -104,7 +94,7 @@ export function updateTrayStatus(
   currentStatusLabel = message ? `${labels[status]}: ${message}` : labels[status];
 
   if (tray) {
-    tray.setToolTip(`하얀치과 마케팅 워커 - ${currentStatusLabel}`);
+    tray.setToolTip(`클리닉 매니저 워커 - ${currentStatusLabel}`);
   }
 
   rebuildMenu();
