@@ -2,6 +2,7 @@ import { app, Notification } from 'electron';
 import { isFirstRun, getConfig, setConfig } from './config-store';
 import { createTray, updateTrayStatus } from './tray';
 import { start as startWorker, stop as stopWorker, onStatusChange, onPublishResult } from './worker-bridge';
+import { startScraping, stopScraping, onScrapingStatusChange } from './scraping-bridge';
 import { log } from './logger';
 
 // ============================================
@@ -91,8 +92,15 @@ async function onAppReady(): Promise<void> {
     }
   }
 
+  onScrapingStatusChange((status, message) => {
+    if (status === 'scraping') {
+      log('info', `[Main] 스크래핑: ${message || '진행 중'}`);
+    }
+  });
+
   applyAutoStart();
   await startWorker();
+  startScraping();
 }
 
 function applyAutoStart(): void {
@@ -116,5 +124,6 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', async () => {
   log('info', '[Main] 앱 종료 중...');
+  stopScraping();
   await stopWorker();
 });
