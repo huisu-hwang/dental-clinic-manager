@@ -1,5 +1,5 @@
 import { BrowserContext } from 'playwright';
-import { getSupabaseClient } from '../db/supabaseClient.js';
+import { getApiClient } from '../db/supabaseClient.js';
 import { createChildLogger } from '../utils/logger.js';
 
 const log = createChildLogger('sessionManager');
@@ -35,29 +35,25 @@ export async function saveSession(clinicId: string, context: BrowserContext): Pr
     savedAt: new Date().toISOString(),
   };
 
-  const supabase = getSupabaseClient();
-  const { error } = await supabase
-    .from('hometax_credentials')
-    .update({ session_data: session })
-    .eq('clinic_id', clinicId);
-
-  if (error) {
-    log.error({ error, clinicId }, '세션 저장 실패');
-  } else {
+  const client = getApiClient();
+  
+  try {
+    await client.updateHometaxCredentials(clinicId, {
+      session_data: session
+    });
     log.info({ clinicId, cookieCount: hometaxCookies.length }, '세션 저장 완료');
+  } catch (err) {
+    log.error({ err, clinicId }, '세션 저장 실패');
   }
 }
 
 /** DB에서 저장된 세션 쿠키 로드 */
 export async function loadSession(clinicId: string): Promise<StoredSession | null> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('hometax_credentials')
-    .select('session_data')
-    .eq('clinic_id', clinicId)
-    .single();
+  const client = getApiClient();
+  const credentialsList = await client.getHometaxCredentials(clinicId);
+  const data = credentialsList?.[0];
 
-  if (error || !data?.session_data) {
+  if (!data || !data.session_data) {
     return null;
   }
 

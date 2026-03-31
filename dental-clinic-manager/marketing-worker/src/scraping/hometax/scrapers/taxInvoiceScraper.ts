@@ -1,7 +1,7 @@
 import { Page, BrowserContext } from 'playwright';
 import { withPage, ScrapeResult } from './baseScraper.js';
 import { createChildLogger } from '../../utils/logger.js';
-import { getSupabaseClient } from '../../db/supabaseClient.js';
+import { getApiClient } from '../../db/supabaseClient.js';
 import { decryptFromJson } from '../../crypto/encryption.js';
 
 const log = createChildLogger('taxInvoiceScraper');
@@ -77,13 +77,12 @@ async function screenshot(page: Page, label: string): Promise<string> {
 
 /** 인증서 비밀번호 조회 */
 async function getCertPassword(clinicId: string): Promise<string | null> {
-  const supabase = getSupabaseClient();
-  const { data } = await supabase
-    .from('hometax_credentials')
-    .select('encrypted_cert_password')
-    .eq('clinic_id', clinicId)
-    .single();
+  const client = getApiClient();
+  const credentialsList = await client.getHometaxCredentials(clinicId);
+  const data = credentialsList?.[0];
+  
   if (!data?.encrypted_cert_password) return null;
+  
   try {
     return decryptFromJson(data.encrypted_cert_password);
   } catch {

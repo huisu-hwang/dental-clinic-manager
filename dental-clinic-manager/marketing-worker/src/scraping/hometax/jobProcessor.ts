@@ -2,7 +2,7 @@ import { ScrapingJob, completeJob, failJob } from '../queue/jobConsumer.js';
 import { loginToHometax, logoutFromHometax } from './loginService.js';
 import { runScraper, DataType, getScrapingMode } from './scrapers/index.js';
 import type { ScrapeResult } from './scrapers/index.js';
-import { getSupabaseClient } from '../db/supabaseClient.js';
+import { getApiClient } from '../db/supabaseClient.js';
 import { createChildLogger } from '../utils/logger.js';
 import { notifySyncComplete, notifySyncFailed, notifySettlementComplete } from '../scheduler/notifier.js';
 import { aggregateSettlement } from '../scheduler/monthlySettlement.js';
@@ -23,12 +23,13 @@ const DATA_TYPE_LABELS: Record<string, string> = {
 
 /** 진행 상태 메시지 업데이트 */
 async function updateProgress(jobId: string, message: string): Promise<void> {
-  const supabase = getSupabaseClient();
-  await supabase
-    .from('scraping_jobs')
-    .update({ progress_message: message })
-    .eq('id', jobId);
-  log.info({ jobId, progress: message }, '진행 상태 업데이트');
+  try {
+    const client = getApiClient();
+    await client.updateJobProgress(jobId, message);
+    log.info({ jobId, progress: message }, '진행 상태 업데이트');
+  } catch (err) {
+    log.error({ err, jobId }, '진행 상태 업데이트 실패');
+  }
 }
 
 /** 스크래핑 결과를 hometax_raw_data에 저장 */
@@ -36,28 +37,14 @@ async function saveRawData(
   clinicId: string,
   result: ScrapeResult,
 ): Promise<void> {
-  const supabase = getSupabaseClient();
-
-  const { error } = await supabase
-    .from('hometax_raw_data')
-    .upsert({
-      clinic_id: clinicId,
-      data_type: result.dataType,
-      year: result.period.year,
-      month: result.period.month,
-      raw_data: result.records,
-      record_count: result.totalCount,
-      scraped_at: result.scrapedAt,
-    }, {
-      onConflict: 'clinic_id,data_type,year,month',
-    });
-
-  if (error) {
-    log.error({ error, clinicId, dataType: result.dataType }, 'raw_data 저장 실패');
-    throw error;
+  try {
+    const client = getApiClient();
+    await client.saveRawData(clinicId, result);
+    log.info({ clinicId, dataType: result.dataType, count: result.totalCount }, 'raw_data 저장 완료');
+  } catch (err) {
+    log.error({ err, clinicId, dataType: result.dataType }, 'raw_data 저장 실패');
+    throw err;
   }
-
-  log.info({ clinicId, dataType: result.dataType, count: result.totalCount }, 'raw_data 저장 완료');
 }
 
 /** 동기화 로그 기록 */
@@ -69,11 +56,9 @@ async function logSync(
   recordCount: number,
   errorMessage?: string,
 ): Promise<void> {
-  const supabase = getSupabaseClient();
-
-  await supabase
-    .from('scraping_sync_logs')
-    .insert({
+  try {
+    const client = getApiClient();
+    await client.insertSyncLog({
       clinic_id: clinicId,
       job_id: jobId,
       data_type: dataType,
@@ -82,6 +67,9 @@ async function logSync(
       error_message: errorMessage || null,
       synced_at: new Date().toISOString(),
     });
+  } catch (err) {
+    log.error({ err, clinicId, dataType }, '동기화 로그 기록 실패');
+  }
 }
 
 /** 모드별 로그인 수행 */

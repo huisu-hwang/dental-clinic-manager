@@ -148,18 +148,92 @@ export class WorkerApiClient {
     });
   }
 
-  // Job 가져오기 (배치 작업용, 예외적으로 queue 모듈에서 구현하더라도 API 클라이언트는 제공)
+  // Job 취득
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async fetchScrapingJobs(workerId: string, limit: number): Promise<any[]> {
-    return this.request<any[]>(`/scraping/jobs?workerId=${workerId}&limit=${limit}`, { method: 'GET' });
+  async acquireScrapingJob(workerId: string): Promise<any> {
+    const res = await this.request<{ job: any }>('/scraping/jobs/acquire', {
+      method: 'POST',
+      body: JSON.stringify({ workerId }),
+    });
+    return res.job;
   }
 
-  // Job 상태 보고
+  // Job 완료/실패 보고
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async reportScrapingResult(jobId: string, params: { status: string; result?: any; error?: string }): Promise<void> {
+  async reportScrapingJobResult(
+    jobId: string,
+    params: {
+      status: 'completed' | 'failed';
+      resultSummary?: Record<string, unknown>;
+      errorMessage?: string;
+      errorDetails?: unknown;
+    }
+  ): Promise<void> {
     await this.request(`/scraping/jobs/${jobId}/result`, {
       method: 'POST',
       body: JSON.stringify(params),
+    });
+  }
+
+  // 새로운 Job 일괄 등록 (스케줄러 용)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async createScrapingJobs(jobs: any[]): Promise<number> {
+    const res = await this.request<{ count: number }>('/scraping/jobs/create', {
+      method: 'POST',
+      body: JSON.stringify({ jobs }),
+    });
+    return res.count;
+  }
+
+  // 홈택스 자격증명 조회
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async getHometaxCredentials(clinicId?: string): Promise<any[]> {
+    const url = clinicId ? `/scraping/credentials?clinicId=${clinicId}` : '/scraping/credentials';
+    const res = await this.request<{ credentials: any[] }>(url, { method: 'GET' });
+    return res.credentials || [];
+  }
+
+  // 홈택스 세션/로그인 상태 업데이트
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async updateHometaxCredentials(clinicId: string, updateData: Record<string, any>): Promise<void> {
+    await this.request('/scraping/credentials/update', {
+      method: 'PATCH',
+      body: JSON.stringify({ clinicId, updateData }),
+    });
+  }
+
+  // 홈택스 스크래핑 Raw 데이터 저장
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async saveRawData(clinicId: string, result: any): Promise<void> {
+    await this.request('/scraping/data/raw', {
+      method: 'POST',
+      body: JSON.stringify({ clinicId, result }),
+    });
+  }
+
+  // 알림 보내기 (시스템/앱)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async insertNotification(notification: any): Promise<void> {
+    await this.request('/scraping/notifications', {
+      method: 'POST',
+      body: JSON.stringify({ notification }),
+    });
+  }
+
+  // Job 진행상태 메시지 업데이트
+  async updateJobProgress(jobId: string, progressMessage: string): Promise<void> {
+    await this.request(`/scraping/jobs/${jobId}/progress`, {
+      method: 'PATCH',
+      body: JSON.stringify({ progressMessage }),
+    });
+  }
+
+  // 동기화 로그 기록
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async insertSyncLog(logSync: any): Promise<void> {
+    await this.request('/scraping/sync-logs', {
+      method: 'POST',
+      body: JSON.stringify({ log: logSync }),
     });
   }
 }

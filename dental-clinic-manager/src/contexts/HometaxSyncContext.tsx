@@ -8,6 +8,7 @@ interface SyncJob {
   data_types: string[]
   result_summary: Record<string, unknown> | null
   error_message: string | null
+  progress_message?: string
   created_at: string
   started_at: string | null
   completed_at: string | null

@@ -1,4 +1,4 @@
-import { getSupabaseClient } from '../db/supabaseClient.js';
+import { getApiClient } from '../db/supabaseClient.js';
 import { createChildLogger } from '../utils/logger.js';
 
 const log = createChildLogger('notifier');
@@ -15,11 +15,10 @@ interface NotificationPayload {
 
 /** 앱 내 알림 생성 (notifications 테이블) */
 export async function createNotification(payload: NotificationPayload): Promise<void> {
-  const supabase = getSupabaseClient();
+  const client = getApiClient();
 
-  const { error } = await supabase
-    .from('notifications')
-    .insert({
+  try {
+    await client.insertNotification({
       clinic_id: payload.clinicId,
       type: payload.type,
       title: payload.title,
@@ -28,12 +27,10 @@ export async function createNotification(payload: NotificationPayload): Promise<
       is_read: false,
       created_at: new Date().toISOString(),
     });
-
-  if (error) {
+    log.info({ clinicId: payload.clinicId, type: payload.type }, '알림 생성 완료');
+  } catch (error) {
     // notifications 테이블이 없을 수 있음 - 경고만 출력
     log.warn({ error, type: payload.type }, '알림 생성 실패 (테이블 미존재 가능)');
-  } else {
-    log.info({ clinicId: payload.clinicId, type: payload.type }, '알림 생성 완료');
   }
 }
 

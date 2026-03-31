@@ -1,7 +1,7 @@
 import { Page, BrowserContext } from 'playwright';
 import { createContext, createPage } from '../browser/browserManager.js';
 import { saveSession, loadSession, isSessionValid } from './sessionManager.js';
-import { getSupabaseClient } from '../db/supabaseClient.js';
+import { getApiClient } from '../db/supabaseClient.js';
 import { decryptFromJson } from '../crypto/encryption.js';
 import { createChildLogger } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
@@ -130,17 +130,15 @@ interface HometaxCredentials {
 
 /** DB에서 클리닉의 홈택스 인증정보 복호화 조회 */
 async function getCredentials(clinicId: string): Promise<HometaxCredentials | null> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('hometax_credentials')
-    .select('hometax_user_id, encrypted_password, encrypted_resident_number, business_number')
-    .eq('clinic_id', clinicId)
-    .single();
-
-  if (error || !data) {
-    log.error({ error, clinicId }, '홈택스 인증정보 조회 실패');
+  const client = getApiClient();
+  const credentialsList = await client.getHometaxCredentials(clinicId);
+  
+  if (!credentialsList || credentialsList.length === 0) {
+    log.error({ clinicId }, '홈택스 인증정보 조회 실패');
     return null;
   }
+  
+  const data = credentialsList[0];
 
   try {
     return {
@@ -157,7 +155,7 @@ async function getCredentials(clinicId: string): Promise<HometaxCredentials | nu
 
 /** 로그인 결과를 DB에 기록 */
 async function recordLoginResult(clinicId: string, success: boolean, errorMessage?: string): Promise<void> {
-  const supabase = getSupabaseClient();
+  const client = getApiClient();
   const update: Record<string, unknown> = {
     last_login_attempt: new Date().toISOString(),
     last_login_success: success,
@@ -170,10 +168,11 @@ async function recordLoginResult(clinicId: string, success: boolean, errorMessag
     update.last_login_error = errorMessage || '알 수 없는 오류';
   }
 
-  await supabase
-    .from('hometax_credentials')
-    .update(update)
-    .eq('clinic_id', clinicId);
+  try {
+    await client.updateHometaxCredentials(clinicId, update);
+  } catch (err) {
+    log.error({ err, clinicId }, '로그인 결과 DB 기록 실패');
+  }
 }
 
 /** 홈택스 ID/PW 로그인 수행 */

@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { getSupabaseClient } from '../db/supabaseClient.js';
+import { getApiClient } from '../db/supabaseClient.js';
 import { config } from '../config.js';
 import { createChildLogger } from '../utils/logger.js';
 
@@ -16,18 +16,13 @@ const ALL_DATA_TYPES = [
 
 /** 활성 클리닉 목록 조회 */
 async function getActiveClinics(): Promise<Array<{ clinic_id: string; business_number: string }>> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('hometax_credentials')
-    .select('clinic_id, business_number')
-    .eq('is_active', true);
-
-  if (error) {
-    log.error({ error }, '활성 클리닉 조회 실패');
-    return [];
-  }
-
-  return data || [];
+  const client = getApiClient();
+  const credentials = await client.getHometaxCredentials();
+  
+  return credentials.filter(c => c.is_active).map(c => ({
+    clinic_id: c.clinic_id,
+    business_number: c.business_number
+  }));
 }
 
 /** 전일(D-1) 날짜 계산 */
@@ -51,56 +46,40 @@ async function createDailySyncJobs(): Promise<number> {
   }
 
   const { year, month, date } = getYesterday();
-  const supabase = getSupabaseClient();
   const intervalMinutes = config.schedule.clinicIntervalMinutes;
   let created = 0;
+  
+  const client = getApiClient();
 
   log.info({ clinicCount: clinics.length, targetDate: date }, '일일 배치 Job 생성 시작');
-
-  for (let i = 0; i < clinics.length; i++) {
-    const clinic = clinics[i];
-
-    // 이미 오늘 생성된 daily_sync Job이 있는지 확인
-    const today = new Date().toISOString().split('T')[0];
-    const { data: existing } = await supabase
-      .from('scraping_jobs')
-      .select('id')
-      .eq('clinic_id', clinic.clinic_id)
-      .eq('job_type', 'daily_sync')
-      .eq('target_date', date)
-      .gte('created_at', `${today}T00:00:00`)
-      .limit(1)
-      .single();
-
-    if (existing) {
-      log.debug({ clinicId: clinic.clinic_id }, '이미 생성된 daily_sync Job 존재, 건너뜀');
-      continue;
-    }
-
-    // 시차를 둔 scheduled_at 설정
+  
+  const jobsToCreate = clinics.map((clinic, i) => {
+    // 시차를 둔 scheduled_at 설정 (필요하다면 나중에 DB 모델에 반영 가능, 현재는 pending 상태로 일괄 추가 후 큐에서 지연 획득)
     const scheduledAt = new Date();
     scheduledAt.setMinutes(scheduledAt.getMinutes() + (i * intervalMinutes));
 
-    const { error } = await supabase
-      .from('scraping_jobs')
-      .insert({
-        clinic_id: clinic.clinic_id,
-        job_type: 'daily_sync',
-        data_types: ALL_DATA_TYPES,
-        target_year: year,
-        target_month: month,
-        target_date: date,
-        status: 'pending',
-        priority: 5,
-        max_retries: 3,
-      });
+    return {
+      clinic_id: clinic.clinic_id,
+      job_type: 'daily_sync',
+      data_types: ALL_DATA_TYPES,
+      target_year: year,
+      target_month: month,
+      target_date: date,
+      status: 'pending',
+      priority: 5,
+      max_retries: 3,
+    };
+  });
 
-    if (error) {
-      log.error({ error, clinicId: clinic.clinic_id }, 'daily_sync Job 생성 실패');
+  try {
+    created = await client.createScrapingJobs(jobsToCreate);
+    if (created > 0) {
+      log.info({ created }, 'daily_sync Job 생성 성공');
     } else {
-      created++;
-      log.info({ clinicId: clinic.clinic_id, order: i + 1, totalClinics: clinics.length }, 'daily_sync Job 생성');
+      log.info('생성된 Job이 없거나 이미 모두 존재합니다.');
     }
+  } catch (err) {
+    log.error({ err }, 'daily_sync Job 일괄 생성 실패');
   }
 
   log.info({ created, total: clinics.length }, '일일 배치 Job 생성 완료');

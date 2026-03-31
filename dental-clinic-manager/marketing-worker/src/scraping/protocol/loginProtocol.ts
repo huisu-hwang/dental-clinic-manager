@@ -1,6 +1,6 @@
 import { createHttpSession, initSession, httpPost, httpGet, closeHttpSession } from './httpClient.js';
 import { HttpSession } from '../types/scrapingContext.js';
-import { getSupabaseClient } from '../db/supabaseClient.js';
+import { getApiClient } from '../db/supabaseClient.js';
 import { decryptFromJson } from '../crypto/encryption.js';
 import { createChildLogger } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
@@ -16,15 +16,12 @@ export interface ProtocolLoginResult {
 
 /** DB에서 클리닉의 홈택스 인증정보 복호화 조회 */
 async function getCredentials(clinicId: string): Promise<{ login_id: string; login_pw: string; resident_number: string | null; business_number: string } | null> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('hometax_credentials')
-    .select('hometax_user_id, encrypted_password, encrypted_resident_number, business_number')
-    .eq('clinic_id', clinicId)
-    .single();
+  const client = getApiClient();
+  const credentialsList = await client.getHometaxCredentials(clinicId);
+  const data = credentialsList?.[0];
 
-  if (error || !data) {
-    log.error({ error, clinicId }, '홈택스 인증정보 조회 실패');
+  if (!data) {
+    log.error({ clinicId }, '홈택스 인증정보 조회 실패');
     return null;
   }
 
@@ -43,7 +40,7 @@ async function getCredentials(clinicId: string): Promise<{ login_id: string; log
 
 /** 로그인 결과를 DB에 기록 */
 async function recordLoginResult(clinicId: string, success: boolean, errorMessage?: string): Promise<void> {
-  const supabase = getSupabaseClient();
+  const client = getApiClient();
   const update: Record<string, unknown> = {
     last_login_attempt: new Date().toISOString(),
     last_login_success: success,
@@ -56,10 +53,11 @@ async function recordLoginResult(clinicId: string, success: boolean, errorMessag
     update.last_login_error = errorMessage || '알 수 없는 오류';
   }
 
-  await supabase
-    .from('hometax_credentials')
-    .update(update)
-    .eq('clinic_id', clinicId);
+  try {
+    await client.updateHometaxCredentials(clinicId, update);
+  } catch (err) {
+    log.error({ err, clinicId }, '로그인 결과 DB 기록 실패');
+  }
 }
 
 /** HTTP 기반 홈택스 로그인 수행 */
@@ -143,14 +141,11 @@ export async function loginViaProtocol(clinicId: string): Promise<ProtocolLoginR
     };
   }
 
-  // 2. 저장된 세션 복원 시도
-  const supabase = getSupabaseClient();
-  const { data: savedSession } = await supabase
-    .from('hometax_sessions')
-    .select('cookies')
-    .eq('clinic_id', clinicId)
-    .gt('expires_at', new Date().toISOString())
-    .single();
+  // 2. 저장된 세션 복원 시도 (API를 통해)
+  const client = getApiClient();
+  const credentialsList = await client.getHometaxCredentials(clinicId);
+  const data = credentialsList?.[0];
+  const savedSession = data?.protocol_session_data;
 
   if (savedSession?.cookies) {
     log.info({ clinicId }, '저장된 HTTP 세션으로 복원 시도');
@@ -197,14 +192,17 @@ export async function loginViaProtocol(clinicId: string): Promise<ProtocolLoginR
     // 세션 쿠키 DB 저장
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 1); // 1시간 유효
-    await supabase
-      .from('hometax_sessions')
-      .upsert({
-        clinic_id: clinicId,
-        cookies: session.cookies,
-        expires_at: expiresAt.toISOString(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'clinic_id' });
+    
+    try {
+      await client.updateHometaxCredentials(clinicId, {
+        protocol_session_data: {
+          cookies: session.cookies,
+          expires_at: expiresAt.toISOString()
+        }
+      });
+    } catch (err) {
+      log.error({ err, clinicId }, 'Protocol 세션 저장 실패');
+    }
 
     return { success: true, session };
   } catch (err) {
