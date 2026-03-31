@@ -607,9 +607,23 @@ function PostEditModal({
       if (!res.ok) throw new Error('저장 실패')
       const { data } = await res.json()
 
-      try {
-        await fetch('/api/marketing/publish/trigger', { method: 'POST' })
-      } catch { /* 워커 미실행 시 5분 내 자동 처리 */ }
+      // 즉시 발행: 사용자 PC 워커(localhost:4001)에 직접 트리거
+      if (isImmediate) {
+        try {
+          const localRes = await fetch('http://localhost:4001/trigger', { method: 'POST', signal: AbortSignal.timeout(5000) })
+          if (!localRes.ok) throw new Error('local worker error')
+        } catch {
+          // 로컬 워커 실패 시 서버 트리거 폴백
+          try {
+            await fetch('/api/marketing/publish/trigger', { method: 'POST' })
+          } catch { /* 5분 내 자동 처리 */ }
+        }
+      } else {
+        // 예약 발행: 서버 트리거 (스케줄러가 시간에 맞춰 처리)
+        try {
+          await fetch('/api/marketing/publish/trigger', { method: 'POST' })
+        } catch { /* 5분 내 자동 처리 */ }
+      }
 
       const msg = isImmediate
         ? '바로 발행이 시작됩니다!'
