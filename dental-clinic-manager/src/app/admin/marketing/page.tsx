@@ -582,6 +582,8 @@ function PostEditModal({
     }
   }
 
+  const [showWorkerRequired, setShowWorkerRequired] = useState(false)
+
   const handlePublish = async (targetDate: string, targetTime: string, isImmediate: boolean) => {
     setIsPublishing(true)
     setSaveMsg(null)
@@ -607,30 +609,29 @@ function PostEditModal({
       if (!res.ok) throw new Error('저장 실패')
       const { data } = await res.json()
 
-      // 즉시 발행: 사용자 PC 워커(localhost:4001)에 직접 트리거
       if (isImmediate) {
+        // 즉시 발행: 사용자 PC 워커(localhost:4001)에 직접 트리거
         try {
           const localRes = await fetch('http://localhost:4001/trigger', { method: 'POST', signal: AbortSignal.timeout(5000) })
           if (!localRes.ok) throw new Error('local worker error')
+          setSaveMsg({ type: 'success', text: '바로 발행이 시작됩니다!' })
         } catch {
-          // 로컬 워커 실패 시 서버 트리거 폴백
-          try {
-            await fetch('/api/marketing/publish/trigger', { method: 'POST' })
-          } catch { /* 5분 내 자동 처리 */ }
+          // 로컬 워커 미실행 → 설치 안내 팝업
+          setShowWorkerRequired(true)
+          setSaveMsg({ type: 'success', text: '발행이 예약되었습니다. 워커를 설치/실행하면 자동 발행됩니다.' })
         }
       } else {
-        // 예약 발행: 서버 트리거 (스케줄러가 시간에 맞춰 처리)
-        try {
-          await fetch('/api/marketing/publish/trigger', { method: 'POST' })
-        } catch { /* 5분 내 자동 처리 */ }
+        // 예약 발행
+        setSaveMsg({
+          type: 'success',
+          text: `${targetDate} ${targetTime}에 발행이 예약되었습니다.\n예약 시간에 컴퓨터가 켜져 있어야 합니다.\n꺼져 있었다면 워커 실행 후 5분 내 자동 발행됩니다.`
+        })
       }
 
-      const msg = isImmediate
-        ? '바로 발행이 시작됩니다!'
-        : `${targetDate} ${targetTime}에 발행이 예약되었습니다.`
-      setSaveMsg({ type: 'success', text: msg })
       setHasChanges(false)
-      setTimeout(() => onSaved(data), 1000)
+      if (!showWorkerRequired) {
+        setTimeout(() => onSaved(data), 2000)
+      }
     } catch (err) {
       setSaveMsg({ type: 'error', text: err instanceof Error ? err.message : '발행 실패' })
     } finally {
@@ -799,6 +800,44 @@ function PostEditModal({
                 onConfirm={handleScheduleConfirm}
                 isLoading={isPublishing}
               />
+
+              {/* 워커 미실행 안내 팝업 */}
+              {showWorkerRequired && (
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setShowWorkerRequired(false)}>
+                  <div className="bg-white rounded-xl p-6 max-w-sm w-full space-y-4" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-2">
+                      <ExclamationTriangleIcon className="w-6 h-6 text-amber-500" />
+                      <h3 className="text-lg font-bold text-slate-800">발행 워커가 필요합니다</h3>
+                    </div>
+                    <div className="text-sm text-slate-600 space-y-2">
+                      <p>블로그 발행을 위해서는 이 컴퓨터에 발행 워커가 설치되어 실행 중이어야 합니다.</p>
+                      <p>워커를 설치하고 실행하면 예약된 글이 자동으로 발행됩니다.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => {
+                          const ua = navigator.userAgent.toLowerCase()
+                          const os = ua.includes('win') ? 'windows' : 'mac'
+                          if (os === 'windows') {
+                            window.open('/api/marketing/worker-api/download?os=windows', '_blank')
+                          } else {
+                            window.open('/api/marketing/worker-api/download?os=mac', '_blank')
+                          }
+                        }}
+                        className="w-full py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors"
+                      >
+                        발행 워커 설치 프로그램 다운로드
+                      </button>
+                      <button
+                        onClick={() => setShowWorkerRequired(false)}
+                        className="w-full py-2 text-slate-500 text-sm hover:text-slate-700 transition-colors"
+                      >
+                        닫기
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
