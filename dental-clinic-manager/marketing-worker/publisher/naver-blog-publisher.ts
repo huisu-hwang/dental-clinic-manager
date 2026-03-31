@@ -373,49 +373,69 @@ export class NaverBlogPublisher {
    * 사진 버튼 클릭 시 발생하는 파일 선택 다이얼로그를 Playwright가 직접 처리
    */
   private async insertImage(page: Page, imagePath: string): Promise<void> {
-    try {
-      const fs = await import('fs');
-      if (!fs.existsSync(imagePath)) {
-        console.warn(`[NaverBlog] 이미지 파일 없음: ${imagePath}`);
-        return;
-      }
+    const MAX_RETRIES = 2;
+    const fs = await import('fs');
 
-      const fileSize = (fs.statSync(imagePath).size / 1024).toFixed(1);
-      console.log(`[NaverBlog] 이미지 삽입 시도: ${imagePath} (${fileSize}KB)`);
-
-      // fileChooser 이벤트를 기다리면서 동시에 사진 버튼 클릭
-      const [fileChooser] = await Promise.all([
-        page.waitForEvent('filechooser', { timeout: 10000 }),
-        (async () => {
-          // 사진 버튼 클릭
-          const photoBtn = page.locator('button.se-image-toolbar-button').first();
-          await photoBtn.click({ timeout: 5000 });
-          console.log('[NaverBlog] 사진 추가 버튼 클릭');
-        })(),
-      ]);
-
-      // fileChooser로 직접 파일 설정 (file input 셀렉터 불필요)
-      await fileChooser.setFiles(imagePath);
-      console.log('[NaverBlog] fileChooser로 이미지 파일 설정 완료');
-
-      // 업로드 완료 대기 (이미지 컴포넌트가 DOM에 나타날 때까지)
-      try {
-        await page.waitForSelector('.se-image-resource, .se-module-image, .se-component-image', { timeout: 30000 });
-        console.log('[NaverBlog] 이미지 삽입 완료');
-      } catch {
-        console.warn('[NaverBlog] 이미지 업로드 대기 타임아웃');
-      }
-
-      await randomDelay(delays.imageUpload);
-
-      // 본문으로 포커스 복귀 후 줄바꿈
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
-      await page.keyboard.press('Enter');
-      await randomDelay({ min: 500, max: 1000 });
-    } catch (error) {
-      console.warn(`[NaverBlog] 이미지 삽입 실패: ${error instanceof Error ? error.message : error}`);
+    if (!fs.existsSync(imagePath)) {
+      console.warn(`[NaverBlog] 이미지 파일 없음: ${imagePath}`);
+      return;
     }
+
+    const fileSize = (fs.statSync(imagePath).size / 1024).toFixed(1);
+    console.log(`[NaverBlog] 이미지 삽입 시도: ${imagePath} (${fileSize}KB)`);
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) {
+          console.log(`[NaverBlog] 이미지 삽입 재시도 (${attempt + 1}/${MAX_RETRIES})`);
+          await page.waitForTimeout(2000);
+        }
+
+        // 이미지 삽입 전 기존 이미지 개수 확인
+        const beforeCount = await page.locator('.se-image-resource, .se-component-image img').count();
+
+        // fileChooser 이벤트를 기다리면서 동시에 사진 버튼 클릭
+        const [fileChooser] = await Promise.all([
+          page.waitForEvent('filechooser', { timeout: 15000 }),
+          (async () => {
+            const photoBtn = page.locator('button.se-image-toolbar-button').first();
+            await photoBtn.click({ timeout: 5000 });
+            console.log('[NaverBlog] 사진 추가 버튼 클릭');
+          })(),
+        ]);
+
+        await fileChooser.setFiles(imagePath);
+        console.log('[NaverBlog] fileChooser로 이미지 파일 설정 완료');
+
+        // 업로드 완료 대기 — 새 이미지가 DOM에 추가될 때까지
+        try {
+          await page.waitForFunction(
+            (prevCount: number) => {
+              const imgs = document.querySelectorAll('.se-image-resource, .se-component-image img');
+              return imgs.length > prevCount;
+            },
+            beforeCount,
+            { timeout: 30000 }
+          );
+          console.log('[NaverBlog] 이미지 삽입 완료');
+        } catch {
+          console.warn('[NaverBlog] 이미지 업로드 대기 타임아웃 — 재시도');
+          continue; // 재시도
+        }
+
+        await randomDelay(delays.imageUpload);
+
+        // 본문으로 포커스 복귀 후 줄바꿈
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+        await page.keyboard.press('Enter');
+        await randomDelay({ min: 500, max: 1000 });
+        return; // 성공 시 종료
+      } catch (error) {
+        console.warn(`[NaverBlog] 이미지 삽입 실패 (시도 ${attempt + 1}): ${error instanceof Error ? error.message : error}`);
+      }
+    }
+    console.error(`[NaverBlog] 이미지 삽입 최종 실패: ${imagePath}`);
   }
 
   /**

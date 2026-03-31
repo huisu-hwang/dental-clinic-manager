@@ -47,23 +47,42 @@ async function downloadImages(
   }
 
   const downloaded: { path: string; prompt: string }[] = [];
+  const MAX_RETRIES = 3;
 
   for (let i = 0; i < generatedImages.length; i++) {
     const img = generatedImages[i];
-    try {
-      const response = await fetch(img.path);
-      if (!response.ok) {
-        console.warn(`[Scheduler] 이미지 다운로드 실패 (${response.status}): ${img.path}`);
-        continue;
+    let success = false;
+
+    for (let retry = 0; retry < MAX_RETRIES && !success; retry++) {
+      try {
+        if (retry > 0) {
+          console.log(`[Scheduler] 이미지 다운로드 재시도 (${retry + 1}/${MAX_RETRIES}): ${img.fileName || img.path}`);
+          await new Promise(r => setTimeout(r, 2000 * retry)); // 점진적 대기
+        }
+
+        const response = await fetch(img.path, { signal: AbortSignal.timeout(30000) });
+        if (!response.ok) {
+          console.warn(`[Scheduler] 이미지 다운로드 실패 (HTTP ${response.status}): ${img.path}`);
+          continue;
+        }
+        const buffer = Buffer.from(await response.arrayBuffer());
+        if (buffer.length < 100) {
+          console.warn(`[Scheduler] 이미지 크기 비정상 (${buffer.length}B): ${img.path}`);
+          continue;
+        }
+        const ext = path.extname(img.fileName || 'image.png') || '.png';
+        const localPath = path.join(IMAGE_TEMP_DIR, `img_${Date.now()}_${i}${ext}`);
+        fs.writeFileSync(localPath, buffer);
+        downloaded.push({ path: localPath, prompt: img.prompt });
+        console.log(`[Scheduler] 이미지 다운로드 완료 (${i + 1}/${generatedImages.length}): ${img.fileName || img.path} (${(buffer.length / 1024).toFixed(1)}KB)`);
+        success = true;
+      } catch (error) {
+        console.warn(`[Scheduler] 이미지 다운로드 오류 (시도 ${retry + 1}): ${error instanceof Error ? error.message : error}`);
       }
-      const buffer = Buffer.from(await response.arrayBuffer());
-      const ext = path.extname(img.fileName || 'image.png') || '.png';
-      const localPath = path.join(IMAGE_TEMP_DIR, `img_${Date.now()}_${i}${ext}`);
-      fs.writeFileSync(localPath, buffer);
-      downloaded.push({ path: localPath, prompt: img.prompt });
-      console.log(`[Scheduler] 이미지 다운로드 완료 (${i + 1}/${generatedImages.length}): ${img.fileName || img.path}`);
-    } catch (error) {
-      console.warn(`[Scheduler] 이미지 다운로드 오류: ${error instanceof Error ? error.message : error}`);
+    }
+
+    if (!success) {
+      console.error(`[Scheduler] 이미지 다운로드 최종 실패: ${img.fileName || img.path}`);
     }
   }
 
