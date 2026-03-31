@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 // 세션(글)별 비용 목록
-// GET /api/marketing/costs/sessions?page=1&limit=20
+// GET /api/marketing/costs/sessions?page=1&limit=20&clinicId=xxx
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
     const offset = (page - 1) * limit;
+    const clinicFilter = searchParams.get('clinicId');
 
     // 환율 조회
     const { data: exchangeRateRow } = await supabase
@@ -40,17 +41,37 @@ export async function GET(request: NextRequest) {
 
     const exchangeRate = exchangeRateRow?.usd_to_krw ?? 1380;
 
-    // master_admin은 모든 클리닉 데이터 조회
-    const { data: rows, error: queryError } = await supabase
+    // master_admin은 모든 클리닉 데이터 조회 (치과별 필터 가능)
+    let query = supabase
       .from('marketing_api_usage')
-      .select('generation_session_id, cost_usd, call_type, generation_options, success, created_at')
+      .select('generation_session_id, clinic_id, cost_usd, call_type, generation_options, success, created_at')
       .order('created_at', { ascending: false });
 
+    if (clinicFilter) {
+      query = query.eq('clinic_id', clinicFilter);
+    }
+
+    const { data: rows, error: queryError } = await query;
     if (queryError) throw queryError;
+
+    // clinic_id → clinic_name 매핑
+    const clinicIds = [...new Set((rows ?? []).map(r => r.clinic_id).filter(Boolean))];
+    const clinicNameMap = new Map<string, string>();
+    if (clinicIds.length > 0) {
+      const { data: clinics } = await supabase
+        .from('clinics')
+        .select('id, name')
+        .in('id', clinicIds);
+      for (const c of clinics ?? []) {
+        clinicNameMap.set(c.id, c.name);
+      }
+    }
 
     // generation_session_id 기준으로 집계
     const sessionMap = new Map<string, {
       generation_session_id: string;
+      clinic_id: string;
+      clinic_name: string;
       generation_options: Record<string, unknown> | null;
       total_cost_usd: number;
       text_cost_usd: number;
@@ -72,6 +93,8 @@ export async function GET(request: NextRequest) {
       if (!sessionMap.has(sessionId)) {
         sessionMap.set(sessionId, {
           generation_session_id: sessionId,
+          clinic_id: row.clinic_id,
+          clinic_name: clinicNameMap.get(row.clinic_id) || '-',
           generation_options: row.generation_options ?? null,
           total_cost_usd: 0,
           text_cost_usd: 0,
@@ -88,12 +111,9 @@ export async function GET(request: NextRequest) {
       if (isImageCall) session.image_cost_usd += costUsd;
       session.call_count += 1;
       if (!row.success) session.success = false;
-      // generation_options가 null인 경우, null이 아닌 값으로 업데이트
       if (!session.generation_options && row.generation_options) {
         session.generation_options = row.generation_options;
       }
-      // created_at은 MIN (첫 번째 호출 시각) — rows는 DESC 정렬이므로 마지막 값이 가장 이름
-      // 실제로는 세션 내 가장 이른 시각을 사용
       if (row.created_at < session.created_at) {
         session.created_at = row.created_at;
       }
@@ -111,12 +131,16 @@ export async function GET(request: NextRequest) {
       image_cost_krw: s.image_cost_usd * exchangeRate,
     }));
 
+    // 치과 목록 (필터 UI용)
+    const clinics = Array.from(clinicNameMap.entries()).map(([id, name]) => ({ id, name }));
+
     return NextResponse.json({
       sessions,
       totalCount,
       page,
       limit,
       exchangeRate,
+      clinics,
     });
   } catch (error) {
     console.error('[API] marketing/costs/sessions GET:', error);

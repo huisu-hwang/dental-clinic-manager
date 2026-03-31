@@ -5,6 +5,8 @@ import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
 interface SessionData {
   generation_session_id: string
+  clinic_id: string
+  clinic_name: string
   generation_options: {
     topic?: string
     keyword?: string
@@ -21,6 +23,11 @@ interface SessionData {
   call_count: number
   created_at: string
   success: boolean
+}
+
+interface ClinicOption {
+  id: string
+  name: string
 }
 
 interface SessionDetail {
@@ -138,8 +145,13 @@ function SessionRow({ session }: { session: SessionData }) {
             <span className="text-slate-600">{formatDate(session.created_at)}</span>
           </div>
         </td>
+        <td className="px-3 py-3 text-xs">
+          <span className="bg-violet-50 text-violet-700 px-1.5 py-0.5 rounded font-medium">
+            {session.clinic_name}
+          </span>
+        </td>
         <td className="px-3 py-3 text-sm">
-          <div className="max-w-[200px] truncate text-slate-800 font-medium">
+          <div className="max-w-[180px] truncate text-slate-800 font-medium">
             {opts?.topic || '-'}
           </div>
           <div className="text-xs text-slate-400">{opts?.keyword || ''}</div>
@@ -170,7 +182,7 @@ function SessionRow({ session }: { session: SessionData }) {
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={8} className="p-0">
+          <td colSpan={9} className="p-0">
             <div className="bg-slate-50 border-y border-slate-200 px-6 py-3">
               <div className="text-xs font-medium text-slate-500 mb-2">API 호출 상세 ({session.call_count}건)</div>
               {loadingDetails ? (
@@ -204,6 +216,8 @@ function SessionRow({ session }: { session: SessionData }) {
 
 export default function CostTable() {
   const [sessions, setSessions] = useState<SessionData[]>([])
+  const [clinics, setClinics] = useState<ClinicOption[]>([])
+  const [selectedClinic, setSelectedClinic] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
@@ -215,10 +229,14 @@ export default function CostTable() {
       setLoading(true)
       setError(null)
       try {
-        const res = await fetch(`/api/marketing/costs/sessions?page=${page}&limit=${limit}`)
+        const clinicParam = selectedClinic ? `&clinicId=${selectedClinic}` : ''
+        const res = await fetch(`/api/marketing/costs/sessions?page=${page}&limit=${limit}${clinicParam}`)
         const json = await res.json()
         setSessions(json?.sessions ?? [])
         setTotalCount(json?.totalCount ?? 0)
+        if (json?.clinics && clinics.length === 0) {
+          setClinics(json.clinics)
+        }
       } catch (err) {
         console.error('세션 비용 로딩 실패:', err)
         setError('데이터를 불러오지 못했습니다.')
@@ -228,15 +246,36 @@ export default function CostTable() {
     }
 
     fetchSessions()
-  }, [page])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, selectedClinic])
 
   const totalPages = Math.ceil(totalCount / limit)
 
+  const handleClinicChange = (clinicId: string) => {
+    setSelectedClinic(clinicId)
+    setPage(1)
+  }
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div className="px-5 py-4 border-b border-slate-100">
-        <h2 className="text-base font-semibold text-slate-800">글별 비용</h2>
-        <p className="text-xs text-slate-400 mt-0.5">총 {totalCount}건</p>
+      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-slate-800">글별 비용</h2>
+          <p className="text-xs text-slate-400 mt-0.5">총 {totalCount}건</p>
+        </div>
+        {/* 치과 필터 */}
+        {clinics.length > 0 && (
+          <select
+            value={selectedClinic}
+            onChange={(e) => handleClinicChange(e.target.value)}
+            className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          >
+            <option value="">전체 치과</option>
+            {clinics.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {loading ? (
@@ -255,13 +294,14 @@ export default function CostTable() {
               <thead>
                 <tr className="bg-slate-50 text-xs text-slate-500 border-b border-slate-200">
                   <th className="text-left px-3 py-2.5 font-medium w-28">날짜</th>
+                  <th className="text-left px-3 py-2.5 font-medium w-20">치과</th>
                   <th className="text-left px-3 py-2.5 font-medium">주제 / 키워드</th>
-                  <th className="text-center px-3 py-2.5 font-medium w-16">어투</th>
-                  <th className="text-center px-3 py-2.5 font-medium w-16">유형</th>
-                  <th className="text-center px-3 py-2.5 font-medium w-14">이미지</th>
+                  <th className="text-center px-3 py-2.5 font-medium w-14">어투</th>
+                  <th className="text-center px-3 py-2.5 font-medium w-14">유형</th>
+                  <th className="text-center px-3 py-2.5 font-medium w-12">이미지</th>
                   <th className="text-right px-3 py-2.5 font-medium w-20">텍스트</th>
                   <th className="text-right px-3 py-2.5 font-medium w-20">이미지</th>
-                  <th className="text-right px-3 py-2.5 font-medium w-28">총 비용</th>
+                  <th className="text-right px-3 py-2.5 font-medium w-24">총 비용</th>
                 </tr>
               </thead>
               <tbody>
