@@ -26,20 +26,20 @@ export async function POST(request: NextRequest) {
     const zipArrayBuffer = await zipFile.arrayBuffer()
     const zip = await JSZip.loadAsync(zipArrayBuffer)
 
-    const pdfFileNames: string[] = []
+    const pdfFiles: { name: string; path: string }[] = []
 
     zip.forEach((relativePath, zipEntry) => {
       if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.pdf')) {
-        // 경로에서 파일명만 추출 (디렉토리 구조 제거)
+        // 파일명 (표시용)과 전체 경로 (ZIP 내부 조회용) 모두 반환
         const fileName = relativePath.split('/').pop() || relativePath
-        pdfFileNames.push(fileName)
+        pdfFiles.push({ name: fileName, path: relativePath })
       }
     })
 
     return NextResponse.json({
       success: true,
-      data: pdfFileNames,
-      total: pdfFileNames.length
+      data: pdfFiles,
+      total: pdfFiles.length
     })
 
   } catch (error) {
