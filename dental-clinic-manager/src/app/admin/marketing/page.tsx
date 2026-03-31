@@ -749,8 +749,8 @@ function PostEditModal({
           {/* 발행 액션 */}
           {canPublish && (
             <div className="space-y-3 pt-2 border-t border-slate-200">
-              {workerStatus.checked && !workerStatus.online && (
-                <WorkerInstallBanner />
+              {workerStatus.checked && (
+                <WorkerInstallBanner isOnline={workerStatus.online} />
               )}
 
               <div className="flex gap-3">
@@ -794,7 +794,7 @@ function PostEditModal({
 }
 
 // ─── 워커 설치 안내 배너 (발행 시 표시) ───
-function WorkerInstallBanner() {
+function WorkerInstallBanner({ isOnline }: { isOnline: boolean }) {
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloaded, setDownloaded] = useState(false)
 
@@ -810,11 +810,9 @@ function WorkerInstallBanner() {
     try {
       const os = detectOS()
       if (os === 'windows') {
-        // Windows: GitHub Release .exe 인스톨러 직접 다운로드
         window.open(`/api/marketing/worker-api/download?os=windows`, '_blank')
         setDownloaded(true)
       } else {
-        // macOS/Linux: 스크립트 파일 다운로드
         const res = await fetch(`/api/marketing/worker-api/download?os=${os}`)
         if (!res.ok) throw new Error('다운로드 실패')
         const blob = await res.blob()
@@ -836,6 +834,19 @@ function WorkerInstallBanner() {
     }
   }
 
+  // 워커가 온라인일 때
+  if (isOnline) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs">
+        <div className="flex items-center gap-2">
+          <CheckCircleIcon className="w-4 h-4 text-green-500 flex-shrink-0" />
+          <p className="text-green-700 font-medium">발행 워커가 실행 중입니다 — 발행 준비 완료</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 워커가 오프라인일 때
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 text-xs space-y-2.5">
       <div className="flex items-start gap-2">
@@ -844,7 +855,7 @@ function WorkerInstallBanner() {
           <p className="font-semibold text-amber-800 text-sm">발행 워커가 실행 중이 아닙니다</p>
           <p className="text-amber-700 mt-1 leading-relaxed">
             블로그 발행은 PC에서 브라우저를 열어 자동으로 글을 작성합니다.
-            아래 파일을 다운로드하고 실행하면 발행이 가능해집니다.
+            아래 프로그램을 설치하고 실행하면 발행이 가능해집니다.
           </p>
         </div>
       </div>
@@ -854,11 +865,11 @@ function WorkerInstallBanner() {
           disabled={isDownloading}
           className="w-full py-2 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 disabled:bg-amber-300 transition-colors flex items-center justify-center gap-1.5"
         >
-          {isDownloading ? '다운로드 중...' : '발행 워커 설치 파일 다운로드'}
+          {isDownloading ? '다운로드 중...' : '발행 워커 설치 프로그램 다운로드'}
         </button>
       ) : (
         <div className="text-amber-700 bg-amber-100/50 rounded-lg px-3 py-2">
-          <p className="font-medium">다운로드 완료 - 파일을 더블클릭하여 실행하세요.</p>
+          <p className="font-medium">다운로드 완료 — 설치 후 실행하세요.</p>
           <p className="mt-0.5">실행 후 이 화면이 자동으로 연결을 감지합니다.</p>
         </div>
       )}
