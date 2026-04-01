@@ -1,8 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// GitHub Release URL for Windows installer
-const INSTALLER_URL = 'https://github.com/huisu-hwang/dental-clinic-manager/releases/download/marketing-worker-v1.0.0/clinic-manager-worker-1.0.0-setup.exe';
+// GitHub Release URL for Windows installer (fallback)
+const FALLBACK_INSTALLER_URL = 'https://github.com/huisu-hwang/dental-clinic-manager/releases/download/marketing-worker-v1.0.0/clinic-manager-worker-1.0.0-setup.exe';
+
+async function getLatestInstallerUrl(): Promise<string> {
+  try {
+    const res = await fetch('https://api.github.com/repos/huisu-hwang/dental-clinic-manager/releases', {
+      headers: { 'Accept': 'application/vnd.github.v3+json' },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+    const releases = await res.json();
+
+    // worker-v로 시작하는 최신 release 찾기
+    const workerRelease = releases.find((r: any) =>
+      r.tag_name?.startsWith('worker-v') && r.assets?.length > 0
+    );
+
+    if (workerRelease) {
+      const exe = workerRelease.assets.find((a: any) => a.name.endsWith('.exe'));
+      if (exe) return exe.browser_download_url;
+    }
+  } catch {
+    // 폴백
+  }
+  return FALLBACK_INSTALLER_URL;
+}
 
 // 안정적인 대시보드 URL (프로덕션 도메인)
 const PRODUCTION_URL = 'https://www.hi-clinic.co.kr';
@@ -18,7 +42,8 @@ export async function GET(request: NextRequest) {
 
     // Windows: GitHub Release의 .exe 인스톨러로 리다이렉트
     if (os === 'windows') {
-      return NextResponse.redirect(INSTALLER_URL);
+      const installerUrl = await getLatestInstallerUrl();
+      return NextResponse.redirect(installerUrl);
     }
 
     // macOS/Linux: 기존 스크립트 방식 유지

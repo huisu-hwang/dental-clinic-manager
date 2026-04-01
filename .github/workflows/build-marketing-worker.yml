@@ -74,24 +74,35 @@ jobs:
             exit 1
           fi
 
+          # latest.yml도 함께 업로드 (electron-updater가 필요)
+          LATEST_YML=$(ls release/latest.yml 2>/dev/null || echo "")
+
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="worker-v${VERSION}"
           FILE_NAME=$(basename "$EXE_FILE")
-          TAG="marketing-worker-v1.0.0"
 
           echo "Uploading ${FILE_NAME} to GitHub Release ${TAG}..."
 
-          # Release 생성 (이미 있으면 무시)
           gh release create "${TAG}" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "마케팅 워커 인스톨러 v1.0.0" \
-            --notes "하얀치과 마케팅 워커 Windows 인스톨러" \
+            --title "클리닉 매니저 워커 v${VERSION}" \
+            --notes "클리닉 매니저 워커 v${VERSION} 업데이트" \
             --prerelease 2>/dev/null || true
 
-          # 기존 asset 삭제 후 재업로드
           gh release delete-asset "${TAG}" "${FILE_NAME}" \
             --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
 
           gh release upload "${TAG}" "${EXE_FILE}" \
             --repo "$GITHUB_REPOSITORY" --clobber
+
+          # latest.yml 업로드 (자동 업데이트에 필수)
+          if [ -n "$LATEST_YML" ]; then
+            gh release delete-asset "${TAG}" "latest.yml" \
+              --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
+            gh release upload "${TAG}" "${LATEST_YML}" \
+              --repo "$GITHUB_REPOSITORY" --clobber
+            echo "Uploaded latest.yml"
+          fi
 
           echo "Upload complete!"
           echo "Download URL: https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${FILE_NAME}"

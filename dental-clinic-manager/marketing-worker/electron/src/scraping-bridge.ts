@@ -4,8 +4,10 @@ import { getConfig } from './config-store';
 import { log } from './logger';
 
 // ============================================
-// 스크래핑 Job 처리 브리지
+// 스크래핑 Job 처리 브리지 (속도 최적화 적용)
 // ============================================
+
+const HOMETAX_MAIN = 'https://www.hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml';
 
 export type ScrapingStatus = 'idle' | 'polling' | 'scraping' | 'error';
 
@@ -17,8 +19,8 @@ let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let currentStatus: ScrapingStatus = 'idle';
 const statusCallbacks: StatusCallback[] = [];
 
-const POLL_INTERVAL = 10000;      // 10초마다 Job 폴링
-const HEARTBEAT_INTERVAL = 30000; // 30초마다 heartbeat
+const POLL_INTERVAL = 10000;
+const HEARTBEAT_INTERVAL = 30000;
 
 export function startScraping(): void {
   const cfg = getConfig();
@@ -84,9 +86,12 @@ async function processJob(job: ScrapingJob): Promise<void> {
   const page = await context.newPage();
 
   try {
+    // 로그인 (한 번만)
     await loginToHometax(page, credentials);
 
-    for (const dataType of job.data_types) {
+    // 단일 페이지에서 모든 데이터 타입 순차 처리 (메인 페이지 재로딩 없음)
+    for (let i = 0; i < job.data_types.length; i++) {
+      const dataType = job.data_types[i];
       try {
         const data = await scrapeDataType(page, dataType, job.date_from, job.date_to);
 
@@ -101,8 +106,19 @@ async function processJob(job: ScrapingJob): Promise<void> {
         });
 
         log('info', `[Scraping] ${dataType} 수집 완료: ${data.length}건`);
+
+        // 다음 데이터 타입이 있으면 메인 페이지로 복귀 (경량 로드)
+        if (i < job.data_types.length - 1) {
+          await page.goto(HOMETAX_MAIN, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          await page.waitForTimeout(1000);
+        }
       } catch (err) {
         log('error', `[Scraping] ${dataType} 수집 실패: ${err}`);
+        // 실패 시에도 메인 페이지로 복귀하여 다음 타입 계속 진행
+        try {
+          await page.goto(HOMETAX_MAIN, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          await page.waitForTimeout(1000);
+        } catch { /* ignore */ }
       }
     }
 
@@ -123,10 +139,8 @@ async function loginToHometax(page: any, credentials: HometaxCredentials): Promi
   if (credentials.session_data?.cookies) {
     try {
       await page.context().addCookies(credentials.session_data.cookies);
-      await page.goto(
-        'https://www.hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml'
-      );
-      await page.waitForTimeout(3000);
+      await page.goto(HOMETAX_MAIN, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.waitForTimeout(1500);
       const logoutCount = await page.locator('text=로그아웃').count();
       if (logoutCount > 0) {
         log('info', '[Scraping] 세션 쿠키로 로그인 성공');
@@ -138,26 +152,28 @@ async function loginToHometax(page: any, credentials: HometaxCredentials): Promi
   }
 
   // ID/PW 로그인
-  await page.goto(
-    'https://www.hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml'
-  );
-  await page.waitForTimeout(3000);
+  await page.goto(HOMETAX_MAIN, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.waitForTimeout(1500);
 
+  // 아이디 로그인 탭
   await page.click('#anchor2');
-  await page.waitForTimeout(1000);
-
-  await page.fill('#iptUserId', credentials.hometax_user_id);
-  await page.fill('#iptUserPw', credentials.password);
   await page.waitForTimeout(500);
 
-  await page.click('#anchor_login_btn02');
-  await page.waitForTimeout(5000);
+  // 입력
+  await page.fill('#iptUserId', credentials.hometax_user_id);
+  await page.fill('#iptUserPw', credentials.password);
+  await page.waitForTimeout(300);
 
-  const logoutCount = await page.locator('text=로그아웃').count();
-  if (logoutCount === 0) {
-    throw new Error('홈택스 로그인 실패');
+  // 로그인 버튼
+  await page.click('#anchor_login_btn02');
+
+  // 로그인 결과 대기 — 이벤트 기반 (최대 15초)
+  try {
+    await page.waitForSelector('text=로그아웃', { timeout: 15000 });
+    log('info', '[Scraping] ID/PW 로그인 성공');
+  } catch {
+    throw new Error('홈택스 로그인 실패 — 로그아웃 버튼을 찾을 수 없음');
   }
-  log('info', '[Scraping] ID/PW 로그인 성공');
 }
 
 async function scrapeDataType(
@@ -166,9 +182,8 @@ async function scrapeDataType(
   dateFrom: string,
   dateTo: string
 ): Promise<any[]> {
-  // TODO: 기존 scraping-worker/src/hometax/scrapers/ 로직을 import하여 사용
-  // 현재는 기본 구조만 제공 (placeholder)
   log('info', `[Scraping] ${dataType} 수집 시작 (${dateFrom} ~ ${dateTo})`);
+  // TODO: 기존 scraping-worker/src/hometax/scrapers/ 로직을 import하여 사용
   return [];
 }
 

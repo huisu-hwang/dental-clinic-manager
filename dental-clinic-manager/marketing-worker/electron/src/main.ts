@@ -5,6 +5,7 @@ import { start as startWorker, stop as stopWorker, onStatusChange, onPublishResu
 import { startScraping, stopScraping, onScrapingStatusChange } from './scraping-bridge';
 import { startSeoWorker, stopSeoWorker, onSeoStatusChange } from './seo-bridge';
 import { log } from './logger';
+import { initAutoUpdater, stopAutoUpdater } from './updater';
 
 // ============================================
 // Electron 메인 프로세스 진입점
@@ -57,6 +58,7 @@ async function onAppReady(): Promise<void> {
   log('info', '[Main] App ready');
 
   createTray();
+  initAutoUpdater();
 
   onStatusChange((status, message) => {
     updateTrayStatus(status, message);
@@ -132,6 +134,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', async () => {
   log('info', '[Main] 앱 종료 중...');
+  stopAutoUpdater();
   stopScraping();
   stopSeoWorker();
   await stopWorker();
