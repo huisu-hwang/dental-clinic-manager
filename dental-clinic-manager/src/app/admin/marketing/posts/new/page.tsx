@@ -35,6 +35,7 @@ import TabNavigation from '@/components/Layout/TabNavigation'
 import { getTabRoute } from '@/utils/tabRouting'
 import dynamic from 'next/dynamic'
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
+import { requireWorker } from '@/hooks/useWorkerGuard'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 
@@ -184,7 +185,8 @@ export default function NewMarketingPostPage() {
   }, [aiGen.generatedResult, generatedResult, handleResult])
 
   // ── AI 글 생성 (컨텍스트 통해 SSE 스트리밍) ──
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    if (!await requireWorker('marketing', 'AI 글 생성')) return
     if (!topic || !keyword) {
       setError('주제와 키워드를 입력해주세요.')
       return
@@ -230,6 +232,7 @@ export default function NewMarketingPostPage() {
   // ── 발행 처리 (공통) ──
   const handlePublish = async (targetDate: string, targetTime: string, isImmediate: boolean) => {
     if (!generatedResult) return
+    if (!await requireWorker('marketing', '글 발행')) return
     setIsScheduling(true)
     try {
       const updatedContent: GeneratedResultType = {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { MagnifyingGlassIcon, ArrowPathIcon, ChartBarIcon } from '@heroicons/react/24/outline'
+import { requireWorker } from '@/hooks/useWorkerGuard'
 
 interface AnalysisListItem {
   id: string
@@ -134,6 +135,7 @@ export default function KeywordAnalysis() {
   // 분석 시작
   const startAnalysis = async () => {
     if (!keyword.trim()) return
+    if (!await requireWorker('marketing', 'SEO 키워드 분석')) return
 
     setLoading(true)
     try {

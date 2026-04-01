@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useHometaxSync } from '@/contexts/HometaxSyncContext'
+import { requireWorker } from '@/hooks/useWorkerGuard'
 import {
   Building2,
   Loader2,
@@ -217,6 +218,7 @@ export default function HometaxSyncPanel({
 
   // 수동 동기화 요청 - delegates to context
   const handleSync = async () => {
+    if (!await requireWorker('scraping', '홈택스 데이터 동기화')) return
     await startSync({ clinicId, year, month, dataTypes: selectedDataTypes })
   }
 
