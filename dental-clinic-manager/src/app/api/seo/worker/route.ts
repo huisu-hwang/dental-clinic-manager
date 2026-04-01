@@ -2,16 +2,10 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
-async function checkMasterAuth() {
+async function checkAuth() {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return null;
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-  if (!userData || !['master_admin', 'admin'].includes(userData.role)) return null;
   return user;
 }
 
@@ -25,7 +19,7 @@ function isWorkerOnline(w: any): boolean {
 // GET: SEO 워커 상태 조회
 export async function GET() {
   try {
-    const user = await checkMasterAuth();
+    const user = await checkAuth();
     if (!user) return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
 
     const admin = getSupabaseAdmin();
@@ -67,7 +61,7 @@ export async function GET() {
 // POST: 워커 제어 (중지 요청)
 export async function POST() {
   try {
-    const user = await checkMasterAuth();
+    const user = await checkAuth();
     if (!user) return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
 
     const admin = getSupabaseAdmin();
