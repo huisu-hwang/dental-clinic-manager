@@ -197,7 +197,7 @@ export default function NewMarketingPostPage() {
     setHasUnsavedChanges(false)
 
     aiGen.startGeneration({
-      topic, keyword, postType, tone, useResearch, factCheck, platforms,
+      topic, keyword, postType, tone, useResearch, factCheck, useSeoAnalysis: false, platforms,
       imageStyle, imageVisualStyle, imageCount,
       referenceImageBase64: imageStyle === 'use_own_image' ? referenceImageBase64 : undefined,
     })

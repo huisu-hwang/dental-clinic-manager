@@ -16,6 +16,7 @@ interface GenerationOptions {
   tone: string
   useResearch: boolean
   factCheck: boolean
+  useSeoAnalysis: boolean
   platforms: PlatformOptions
   imageStyle: string
   imageVisualStyle: string
@@ -89,6 +90,7 @@ export function AIGenerationProvider({ children }: { children: ReactNode }) {
             tone: options.tone,
             useResearch: options.useResearch,
             factCheck: options.factCheck,
+            useSeoAnalysis: options.useSeoAnalysis,
             platforms: options.platforms,
             imageStyle: options.imageStyle,
             imageVisualStyle: options.imageVisualStyle,

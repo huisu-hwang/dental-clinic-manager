@@ -185,6 +185,7 @@ export interface ContentGenerateOptions {
   tone: ToneType;
   useResearch: boolean;
   factCheck: boolean;
+  useSeoAnalysis?: boolean;
   platforms: PlatformOptions;
   imageStyle?: ImageStyleOption;
   imageVisualStyle?: ImageVisualStyle;
@@ -306,6 +307,19 @@ export interface SEOValidationResult {
   keywordCountPassed: boolean;
   forbiddenKeywordsFound: string[];
   passed: boolean;
+}
+
+// ─── SEO 텍스트 마이닝 결과 ───
+
+export interface SeoKeywordMiningResult {
+  competitorKeywords: { keyword: string; frequency: number; postCount: number }[];
+  recommendedKeywords: string[];
+  avgBodyLength: number;
+  avgImageCount: number;
+  avgHeadingCount: number;
+  avgKeywordCount: number;
+  commonTags: string[];
+  titlePatterns: string[];
 }
 
 // ─── 주간 리포트 ───

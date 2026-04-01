@@ -10,6 +10,7 @@ import {
   SEOValidationResult,
   MarketingPrompt,
   FORBIDDEN_COMMERCIAL_KEYWORDS,
+  SeoKeywordMiningResult,
 } from '@/types/marketing';
 
 // ============================================
@@ -27,7 +28,8 @@ export async function generateContent(
   options: ContentGenerateOptions,
   clinicId: string,
   customSystemPrompt?: string,
-  generationSessionId?: string
+  generationSessionId?: string,
+  seoKeywordData?: SeoKeywordMiningResult
 ): Promise<GeneratedContent> {
   // 1. 프롬프트 로딩 (customSystemPrompt 제공 시 DB 조회 생략)
   let promptTemplate: string;
@@ -65,6 +67,15 @@ export async function generateContent(
     imageStyleInstruction = `\n\n## 이미지 마커 지침 (필수)\n${countNote}${styleNote}`;
   }
 
+  // SEO 키워드 분석 결과를 프롬프트에 주입
+  let seoSection = '';
+  if (seoKeywordData && seoKeywordData.recommendedKeywords.length > 0) {
+    const top5 = seoKeywordData.recommendedKeywords.slice(0, 5);
+    const rest = seoKeywordData.recommendedKeywords.slice(5);
+
+    seoSection = `\n\n## SEO 키워드 분석 결과 (경쟁 글 기반)\n\n상위 노출 경쟁 글에서 추출된 핵심 키워드입니다. 아래 키워드들을 자연스럽게 본문에 포함해주세요.\n\n### 필수 포함 키워드 (본문에 각 2-3회 자연스럽게 배치):\n${top5.map(k => `- ${k}`).join('\n')}\n\n${rest.length > 0 ? `### 권장 포함 키워드 (1-2회 자연스럽게 언급):\n${rest.map(k => `- ${k}`).join('\n')}\n\n` : ''}### 경쟁 글 통계 (참고용):\n- 평균 본문 길이: ${seoKeywordData.avgBodyLength}자\n- 평균 이미지 수: ${seoKeywordData.avgImageCount}개\n- 평균 소제목 수: ${seoKeywordData.avgHeadingCount}개\n${seoKeywordData.commonTags.length > 0 ? `- 자주 사용되는 태그: ${seoKeywordData.commonTags.slice(0, 10).join(', ')}\n` : ''}\n### 키워드 배치 주의사항:\n- 키워드를 억지로 나열하지 말고 문맥에 맞게 자연스럽게 녹여주세요\n- 하나의 문단에 키워드를 몰아넣지 말고 글 전체에 고르게 분포시켜주세요\n- 키워드 밀도가 과도하면 스팸으로 분류될 수 있으니 주의하세요`;
+  }
+
   // 3. 변수 치환
   const systemPrompt = substituteVariables(promptTemplate, {
     keyword: options.keyword,
@@ -82,7 +93,7 @@ export async function generateContent(
     chief_complaint: options.clinical?.chiefComplaint || '',
     // 공지글 변수
     ...options.notice?.templateData,
-  }) + imageStyleInstruction;
+  }) + imageStyleInstruction + seoSection;
 
   // 4. Claude API 호출
   const callStart = Date.now();
