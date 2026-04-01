@@ -81,6 +81,7 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres  # Transaction Mo
 - CLI 명령 실패 → 옵션/인자 확인 → 수정 후 재실행
 - 설치 실패 → 경로/권한 확인 → 대안 방법으로 재시도
 - 절대 실패한 상태로 방치하지 않음
+- **실행 중 멈추거나 중단된 경우**: 멈춘 원인을 즉시 파악하고, 해결 방법을 찾아 중단된 지점부터 작업을 이어서 계속 진행한다. 사용자에게 되묻지 않고 자동으로 재개한다.
 
 ### 5. Chrome DevTools MCP 필수 사용 (모든 오류 수정 시)
 - **모든 버그/오류 수정 시 Chrome DevTools MCP로 오류 재현 및 검증 필수**
