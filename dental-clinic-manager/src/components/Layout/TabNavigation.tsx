@@ -342,7 +342,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
         fixedPosition: menu.fixedPosition,
         isPremiumLocked: MENU_PREMIUM_MAP[menu.id] && !hasPremiumFeature(menu.id),
       }))
-  }, [localMenuSettings])
+  }, [localMenuSettings, hasPremiumFeature])
 
   // 권한에 따른 보이는 탭 필터링
   // owner가 아닌 사용자: ownerOnly 메뉴 숨김
