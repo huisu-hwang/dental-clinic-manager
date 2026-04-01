@@ -26,13 +26,25 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    // Step 1: 해당 클리닉의 캘린더 ID 목록 조회
+    const { data: calendars, error: calError } = await supabase
+      .from('content_calendars')
+      .select('id')
+      .eq('clinic_id', userData.clinic_id);
+
+    if (calError) throw calError;
+
+    if (!calendars || calendars.length === 0) {
+      return NextResponse.json({ data: [] });
+    }
+
+    const calendarIds = calendars.map((c: { id: string }) => c.id);
+
+    // Step 2: 캘린더 ID 기반으로 글 목록 조회
     let query = supabase
       .from('content_calendar_items')
-      .select(`
-        *,
-        content_calendars!inner(clinic_id)
-      `)
-      .eq('content_calendars.clinic_id', userData.clinic_id)
+      .select('*')
+      .in('calendar_id', calendarIds)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

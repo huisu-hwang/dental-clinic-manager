@@ -263,20 +263,24 @@ const POST_TYPE_BADGE: Record<PostType, { label: string; color: string }> = {
 function PostsContent() {
   const [posts, setPosts] = useState<ContentCalendarItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [selectedPost, setSelectedPost] = useState<ContentCalendarItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   const loadPosts = useCallback(async () => {
+    setLoadError(null)
     try {
       const res = await fetch('/api/marketing/posts?limit=50')
       const json = await res.json()
       if (res.ok) {
         setPosts(json.data || [])
+      } else {
+        setLoadError(json.error || '글 목록을 불러올 수 없습니다.')
       }
     } catch {
-      console.error('글 목록 로딩 실패')
+      setLoadError('네트워크 오류가 발생했습니다.')
     } finally {
       setIsLoading(false)
     }
@@ -360,6 +364,23 @@ function PostsContent() {
     return (
       <div className="flex items-center justify-center py-12">
         <ArrowPathIcon className="h-6 w-6 text-slate-400 animate-spin" />
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="text-center py-12">
+        <ExclamationTriangleIcon className="h-12 w-12 mx-auto mb-3 text-red-400" />
+        <p className="text-lg font-medium text-red-600">글 목록 로딩 실패</p>
+        <p className="text-sm mt-1 text-slate-500">{loadError}</p>
+        <button
+          onClick={() => { setIsLoading(true); loadPosts() }}
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+        >
+          <ArrowPathIcon className="h-4 w-4" />
+          다시 시도
+        </button>
       </div>
     )
   }
