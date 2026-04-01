@@ -13,6 +13,7 @@ import {
   CloudArrowUpIcon,
   ArrowLeftIcon,
   CalendarDaysIcon,
+  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline'
 import {
   TONE_LABELS,
@@ -49,6 +50,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [tone, setTone] = useState<ToneType>('friendly')
   const [useResearch, setUseResearch] = useState(false)
   const [factCheck, setFactCheck] = useState(false)
+  const [useSeoAnalysis, setUseSeoAnalysis] = useState(false)
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
   const [imageStyle, setImageStyle] = useState<ImageStyleOption>('infographic_only')
   const [imageVisualStyle, setImageVisualStyle] = useState<ImageVisualStyle>('realistic')
@@ -143,7 +145,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     setHasUnsavedChanges(false)
 
     aiGen.startGeneration({
-      topic, keyword, postType, tone, useResearch, factCheck, platforms,
+      topic, keyword, postType, tone, useResearch, factCheck, useSeoAnalysis, platforms,
       imageStyle, imageVisualStyle, imageCount,
       referenceImageBase64: imageStyle === 'use_own_image' ? referenceImageBase64 : undefined,
     })
@@ -369,6 +371,18 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             <span className="text-xs text-slate-400 ml-2">생성된 글의 사실 여부를 검증</span>
           </div>
         </label>
+        <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+          <input
+            type="checkbox"
+            checked={useSeoAnalysis}
+            onChange={(e) => setUseSeoAnalysis(e.target.checked)}
+            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 disabled:cursor-not-allowed"
+          />
+          <div>
+            <span className="text-sm font-medium text-slate-700">SEO 키워드 분석</span>
+            <span className="text-xs text-slate-400 ml-2">통합 워커로 경쟁 글 분석 후 핵심 키워드 자동 반영</span>
+          </div>
+        </label>
       </fieldset>
 
       {/* 이미지 스타일 옵션 */}
@@ -553,6 +567,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
           </div>
           <div className="flex justify-between text-xs">
             {[
+              ...(useSeoAnalysis ? [{ label: 'SEO 분석', threshold: 1 }] : []),
               { label: '글 작성', threshold: 5 },
               { label: '이미지 생성', threshold: 55 },
               { label: '저장', threshold: 95 },

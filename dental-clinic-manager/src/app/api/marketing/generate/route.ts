@@ -2,11 +2,12 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { generateContent } from '@/lib/marketing/content-generator';
+import { extractKeywordsFromPosts } from '@/lib/marketing/seo-text-miner';
 import { generateBlogImage, generatePlatformImage } from '@/lib/marketing/image-generator';
 import { transformToInstagram } from '@/lib/marketing/platform-adapters/instagram';
 import { transformToFacebook } from '@/lib/marketing/platform-adapters/facebook';
 import { transformToThreads } from '@/lib/marketing/platform-adapters/threads';
-import type { ContentGenerateOptions, PlatformContent } from '@/types/marketing';
+import type { ContentGenerateOptions, PlatformContent, SeoKeywordMiningResult } from '@/types/marketing';
 
 // Vercel 서버리스 함수 타임아웃 확장 (Claude + Gemini API 호출 소요 시간 대응)
 export const maxDuration = 120;
@@ -76,6 +77,8 @@ export async function POST(request: NextRequest) {
           notice: body.notice,
         };
 
+        const useSeoAnalysis = body.useSeoAnalysis || false;
+
         if (!options.topic || !options.keyword) {
           sendEvent(controller, { error: '주제와 키워드는 필수입니다.' });
           controller.close();
@@ -85,13 +88,112 @@ export async function POST(request: NextRequest) {
         // 글 생성 세션 ID 발급 (비용 추적용)
         const generationSessionId = crypto.randomUUID();
 
+        let seoKeywordData: SeoKeywordMiningResult | undefined;
+
+        if (useSeoAnalysis) {
+          sendEvent(controller, { progress: 1, step: 'SEO 키워드 분석을 시작합니다...' });
+
+          try {
+            const admin = getSupabaseAdmin();
+            if (admin) {
+              // 1. Check 24h cache in seo_keyword_analyses
+              const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+              const { data: cached } = await admin
+                .from('seo_keyword_analyses')
+                .select('id, status')
+                .eq('keyword', options.keyword.trim())
+                .gte('created_at', oneDayAgo)
+                .eq('status', 'completed')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+              let analysisId: string | null = cached?.[0]?.id || null;
+
+              if (!analysisId) {
+                // 2. Check if already in progress
+                const { data: inProgress } = await admin
+                  .from('seo_keyword_analyses')
+                  .select('id, status')
+                  .eq('keyword', options.keyword.trim())
+                  .gte('created_at', oneDayAgo)
+                  .in('status', ['pending', 'collecting', 'analyzing_quantitative', 'analyzing_qualitative'])
+                  .order('created_at', { ascending: false })
+                  .limit(1);
+
+                if (inProgress?.[0]) {
+                  analysisId = inProgress[0].id;
+                } else {
+                  // 3. Create new seo_jobs entry
+                  sendEvent(controller, { progress: 2, step: 'SEO 워커에 분석을 요청합니다...' });
+                  const { data: job } = await admin
+                    .from('seo_jobs')
+                    .insert({
+                      job_type: 'keyword_analysis',
+                      status: 'pending',
+                      params: { keyword: options.keyword.trim() },
+                      created_by: user.id,
+                    })
+                    .select('id')
+                    .single();
+
+                  if (job) {
+                    // Poll for the analysis to be created by the worker
+                    for (let i = 0; i < 15; i++) {
+                      await new Promise(r => setTimeout(r, 3000));
+                      const { data: check } = await admin
+                        .from('seo_keyword_analyses')
+                        .select('id, status')
+                        .eq('keyword', options.keyword.trim())
+                        .gte('created_at', oneDayAgo)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+
+                      if (check?.[0]) {
+                        if (check[0].status === 'completed') {
+                          analysisId = check[0].id;
+                          break;
+                        }
+                        if (check[0].status === 'failed') break;
+                      }
+                      sendEvent(controller, { heartbeat: true });
+                    }
+                  }
+                }
+              }
+
+              // 4. Fetch analyzed posts body_text for text mining
+              if (analysisId) {
+                sendEvent(controller, { progress: 3, step: '경쟁 글 텍스트 마이닝 중...' });
+                const { data: posts } = await admin
+                  .from('seo_analyzed_posts')
+                  .select('body_text, title, tags, body_length, image_count, heading_count, keyword_count')
+                  .eq('analysis_id', analysisId)
+                  .order('rank', { ascending: true });
+
+                if (posts && posts.length > 0) {
+                  seoKeywordData = extractKeywordsFromPosts(posts, options.keyword);
+                  sendEvent(controller, {
+                    progress: 4,
+                    step: `핵심 키워드 ${seoKeywordData.recommendedKeywords.length}개 추출 완료`,
+                  });
+                }
+              } else {
+                sendEvent(controller, { progress: 4, step: 'SEO 분석 결과 없음 - 기본 모드로 진행합니다' });
+              }
+            }
+          } catch (seoErr) {
+            console.error('[API] SEO 분석 오류:', seoErr);
+            sendEvent(controller, { progress: 4, step: 'SEO 분석 건너뜀 - 기본 모드로 진행합니다' });
+          }
+        }
+
         // 1단계: 텍스트 생성 (Claude)
         sendEvent(controller, {
           progress: 5,
           step: 'AI가 글을 작성하고 있습니다...',
         });
 
-        const result = await generateContent(options, userData.clinic_id, undefined, generationSessionId);
+        const result = await generateContent(options, userData.clinic_id, undefined, generationSessionId, seoKeywordData);
 
         sendEvent(controller, {
           progress: 55,
