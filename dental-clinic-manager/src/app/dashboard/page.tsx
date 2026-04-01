@@ -29,6 +29,7 @@ import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
 import { PayrollManagement } from '@/components/Payroll'
 import { RecallManagement } from '@/components/Recall'
 import AIChat from '@/components/AIAnalysis/AIChat'
+import PremiumGate from '@/components/Premium/PremiumGate'
 import TaskChecklistManagement from '@/components/TaskChecklist/TaskChecklistManagement'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { dataService } from '@/lib/dataService'
@@ -806,9 +807,11 @@ export default function DashboardPage() {
 
           {/* AI 데이터 분석 */}
           {activeTab === 'ai-analysis' && user?.clinic_id && (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-[calc(100vh-180px)]">
-              <AIChat clinicId={user.clinic_id} />
-            </div>
+            <PremiumGate featureId="ai-analysis">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-[calc(100vh-180px)]">
+                <AIChat clinicId={user.clinic_id} />
+              </div>
+            </PremiumGate>
           )}
 
           {/* 설정 */}

@@ -4672,5 +4672,92 @@ export const dataService = {
       console.error('[getClinicOwnerIds] Error:', error)
       return { data: [], error: extractErrorMessage(error) }
     }
+  },
+
+  // ============================================
+  // 프리미엄 기능 관리
+  // ============================================
+
+  // 클리닉의 활성 프리미엄 기능 조회
+  async getClinicPremiumFeatures(clinicId: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await supabase
+        .from('clinic_premium_features')
+        .select('feature_id, enabled, expires_at')
+        .eq('clinic_id', clinicId)
+        .eq('enabled', true)
+
+      if (error) throw error
+
+      // 만료된 기능 필터링
+      const activeFeatures = (data || []).filter(
+        (f: { feature_id: string; enabled: boolean; expires_at: string | null }) =>
+          !f.expires_at || new Date(f.expires_at) > new Date()
+      )
+
+      return { data: activeFeatures, error: null }
+    } catch (error: unknown) {
+      console.error('[getClinicPremiumFeatures] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  // 마스터: 클리닉 프리미엄 기능 토글
+  async setClinicPremiumFeature(clinicId: string, featureId: string, enabled: boolean, grantedBy: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      if (enabled) {
+        const { data, error } = await supabase
+          .from('clinic_premium_features')
+          .upsert({
+            clinic_id: clinicId,
+            feature_id: featureId,
+            enabled: true,
+            granted_by: grantedBy,
+            granted_at: new Date().toISOString(),
+          }, { onConflict: 'clinic_id,feature_id' })
+          .select()
+
+        if (error) throw error
+        return { data, error: null }
+      } else {
+        const { data, error } = await supabase
+          .from('clinic_premium_features')
+          .update({ enabled: false, updated_at: new Date().toISOString() })
+          .eq('clinic_id', clinicId)
+          .eq('feature_id', featureId)
+          .select()
+
+        if (error) throw error
+        return { data, error: null }
+      }
+    } catch (error: unknown) {
+      console.error('[setClinicPremiumFeature] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 마스터: 특정 클리닉의 프리미엄 기능 전체 조회 (enabled/disabled 모두)
+  async getClinicPremiumFeaturesAll(clinicId: string) {
+    const supabase = await ensureConnection()
+    if (!supabase) throw new Error('Supabase client not available')
+
+    try {
+      const { data, error } = await supabase
+        .from('clinic_premium_features')
+        .select('*')
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+      return { data: data || [], error: null }
+    } catch (error: unknown) {
+      console.error('[getClinicPremiumFeaturesAll] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
   }
 }

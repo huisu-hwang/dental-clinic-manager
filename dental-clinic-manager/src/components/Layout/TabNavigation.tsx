@@ -27,7 +27,8 @@ import { saveUserMenuSettings } from '@/lib/menuSettingsService'
 import type { Permission } from '@/types/permissions'
 import type { MenuItemSetting, MenuCategorySetting } from '@/types/menuSettings'
 import { createNewCategory } from '@/types/menuSettings'
-import { MENU_CONFIG, MENU_ICON_MAP, MENU_PERMISSIONS_MAP, MENU_OWNER_ONLY_MAP } from '@/config/menuConfig'
+import { MENU_CONFIG, MENU_ICON_MAP, MENU_PERMISSIONS_MAP, MENU_OWNER_ONLY_MAP, MENU_PREMIUM_MAP } from '@/config/menuConfig'
+import { usePremiumFeatures } from '@/hooks/usePremiumFeatures'
 import {
   Home,
   ClipboardList,
@@ -82,7 +83,8 @@ import {
   Check,
   Plus,
   Trash2,
-  X
+  X,
+  Lock
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -99,6 +101,7 @@ interface Tab {
   requiredPermissions?: Permission[]
   categoryId?: string
   fixedPosition?: 'top' | 'bottom'
+  isPremiumLocked?: boolean
 }
 
 // 아이콘 이름 -> 컴포넌트 매핑 (중앙 설정에서 사용)
@@ -246,6 +249,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   const { menuSettings, categorySettings, isLoading } = useMenuSettings()
   const { user } = useAuth()
   const isOwner = user?.role === 'owner'
+  const { hasPremiumFeature } = usePremiumFeatures()
 
   // 편집 모드 상태
   const [isEditMode, setIsEditMode] = useState(false)
@@ -335,11 +339,14 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
         icon: getIconForMenu(menu.id),
         requiredPermissions: MENU_PERMISSIONS_MAP[menu.id] || [],
         categoryId: menu.categoryId,
-        fixedPosition: menu.fixedPosition
+        fixedPosition: menu.fixedPosition,
+        isPremiumLocked: MENU_PREMIUM_MAP[menu.id] && !hasPremiumFeature(menu.id),
       }))
   }, [localMenuSettings])
 
   // 권한에 따른 보이는 탭 필터링
+  // owner가 아닌 사용자: ownerOnly 메뉴 숨김
+  // owner: 프리미엄 잠금 상태여도 보임 (회색 표시)
   const visibleTabs = useMemo(() =>
     tabs.filter(tab => {
       if (MENU_OWNER_ONLY_MAP[tab.id] && !isOwner) {
@@ -413,8 +420,12 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     }
   }, [activeTab, visibleTabs, onTabChange, skipAutoRedirect])
 
-  const handleTabClick = (tabId: string) => {
+  const handleTabClick = (tabId: string, isPremiumLocked?: boolean) => {
     if (isEditMode) return
+    if (isPremiumLocked) {
+      alert('프리미엄 기능입니다. 이용을 원하시면 관리자에게 문의해주세요.')
+      return
+    }
     onTabChange(tabId)
     if (onItemClick) {
       onItemClick()
@@ -1012,17 +1023,20 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
               return (
                 <button
                   key={tab.id}
-                  onClick={() => handleTabClick(tab.id)}
+                  onClick={() => handleTabClick(tab.id, tab.isPremiumLocked)}
                   className={`
                     group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
-                    ${isActive
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                    ${tab.isPremiumLocked
+                      ? 'text-slate-300 cursor-not-allowed opacity-50'
+                      : isActive
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
                   <span className="truncate">{tab.label}</span>
+                  {tab.isPremiumLocked && <Lock className="w-3.5 h-3.5 ml-auto text-slate-300 flex-shrink-0" />}
                 </button>
               )
             })}
@@ -1035,17 +1049,20 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
               return (
                 <button
                   key={tab.id}
-                  onClick={() => handleTabClick(tab.id)}
+                  onClick={() => handleTabClick(tab.id, tab.isPremiumLocked)}
                   className={`
                     group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
-                    ${isActive
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                    ${tab.isPremiumLocked
+                      ? 'text-slate-300 cursor-not-allowed opacity-50'
+                      : isActive
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
                   <span className="truncate">{tab.label}</span>
+                  {tab.isPremiumLocked && <Lock className="w-3.5 h-3.5 ml-auto text-slate-300 flex-shrink-0" />}
                 </button>
               )
             })}
@@ -1106,17 +1123,20 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                         return (
                           <button
                             key={tab.id}
-                            onClick={() => handleTabClick(tab.id)}
+                            onClick={() => handleTabClick(tab.id, tab.isPremiumLocked)}
                             className={`
                               group flex items-center space-x-2.5 py-1.5 px-3 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
-                              ${isActive
-                                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/20'
-                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                              ${tab.isPremiumLocked
+                                ? 'text-slate-300 cursor-not-allowed opacity-50'
+                                : isActive
+                                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/20'
+                                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
                               }
                             `}
                           >
-                            <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-500'}`} />
+                            <Icon className={`w-4 h-4 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-500'}`} />
                             <span className="truncate">{tab.label}</span>
+                            {tab.isPremiumLocked && <Lock className="w-3 h-3 ml-auto text-slate-300 flex-shrink-0" />}
                           </button>
                         )
                       })}

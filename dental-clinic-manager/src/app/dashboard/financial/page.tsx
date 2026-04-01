@@ -1,7 +1,12 @@
 'use client'
 
 import FinancialDashboard from '@/components/Financial/FinancialDashboard'
+import PremiumGate from '@/components/Premium/PremiumGate'
 
 export default function FinancialPage() {
-  return <FinancialDashboard />
+  return (
+    <PremiumGate featureId="financial">
+      <FinancialDashboard />
+    </PremiumGate>
+  )
 }

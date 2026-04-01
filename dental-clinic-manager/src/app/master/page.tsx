@@ -15,6 +15,7 @@ const SeoAnalysisTab = dynamic(() => import('@/components/SEO/SeoAnalysisTab'), 
 import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
 import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
+import PremiumFeatureModal from '@/components/Master/PremiumFeatureModal'
 
 type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping' | 'prompts' | 'api-costs' | 'seo-analysis'
 type CommunitySubTab = 'categories' | 'telegram'
@@ -49,6 +50,10 @@ export default function MasterAdminPage() {
 
   // 로그인 기록 확장 상태
   const [expandedLoginUsers, setExpandedLoginUsers] = useState<Set<string>>(new Set())
+
+  // 프리미엄 기능 관련 상태
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
+  const [selectedClinicForPremium, setSelectedClinicForPremium] = useState<any>(null)
 
   // 사용자 편집 관련 상태
   const [showEditModal, setShowEditModal] = useState(false)
@@ -837,6 +842,7 @@ export default function MasterAdminPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">전화번호</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">공개 여부</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">프리미엄</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
                   </tr>
                 </thead>
@@ -862,6 +868,14 @@ export default function MasterAdminPage() {
                         }`}>
                           {clinic.is_public ? '공개' : '비공개'}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => { setSelectedClinicForPremium(clinic); setShowPremiumModal(true) }}
+                          className="px-2.5 py-1 text-xs font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                        >
+                          관리
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex space-x-2">
@@ -1434,6 +1448,15 @@ export default function MasterAdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 프리미엄 기능 관리 모달 */}
+      {showPremiumModal && selectedClinicForPremium && user && (
+        <PremiumFeatureModal
+          clinic={selectedClinicForPremium}
+          grantedBy={user.id}
+          onClose={() => { setShowPremiumModal(false); setSelectedClinicForPremium(null) }}
+        />
       )}
     </div>
   )
@@ -2257,6 +2280,7 @@ function WorkerPanel() {
           </div>
         </div>
       )}
+
     </div>
   )
 }

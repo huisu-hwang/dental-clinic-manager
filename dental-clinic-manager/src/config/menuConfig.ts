@@ -11,6 +11,17 @@
 
 import type { Permission } from '@/types/permissions'
 
+// 프리미엄 기능 ID 상수
+export const PREMIUM_FEATURE_IDS = ['ai-analysis', 'financial', 'marketing'] as const
+export type PremiumFeatureId = typeof PREMIUM_FEATURE_IDS[number]
+
+// 프리미엄 기능 라벨 맵
+export const PREMIUM_FEATURE_LABELS: Record<PremiumFeatureId, string> = {
+  'ai-analysis': 'AI 데이터 분석',
+  'financial': '경영 현황',
+  'marketing': '마케팅 자동화',
+}
+
 // 메뉴 설정 타입
 export interface MenuConfigItem {
   id: string
@@ -23,6 +34,7 @@ export interface MenuConfigItem {
   visible: boolean
   fixedPosition?: 'top' | 'bottom'
   ownerOnly?: boolean  // 대표 원장 전용 메뉴
+  premiumFeature?: boolean  // 프리미엄 기능 (마스터가 활성화한 클리닉만 사용 가능)
 }
 
 /**
@@ -105,6 +117,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     order: 6,
     visible: true,
     ownerOnly: true,  // 대표 원장 전용
+    premiumFeature: true,  // 프리미엄 기능
   },
 
   {
@@ -233,6 +246,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     order: 15,
     visible: true,
     ownerOnly: true,  // 대표 원장 전용
+    premiumFeature: true,  // 프리미엄 기능
   },
   {
     id: 'marketing',
@@ -244,6 +258,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     order: 16,
     visible: true,
     ownerOnly: true,  // 대표 원장 전용
+    premiumFeature: true,  // 프리미엄 기능
   },
 
   // === 하단 고정 메뉴 ===
@@ -315,6 +330,13 @@ export const MENU_PERMISSIONS_MAP: Record<string, Permission[]> = Object.fromEnt
  */
 export const MENU_OWNER_ONLY_MAP: Record<string, boolean> = Object.fromEntries(
   MENU_CONFIG.filter(item => item.ownerOnly).map(item => [item.id, true])
+)
+
+/**
+ * 프리미엄 기능 메뉴 맵 (TabNavigation.tsx에서 사용)
+ */
+export const MENU_PREMIUM_MAP: Record<string, boolean> = Object.fromEntries(
+  MENU_CONFIG.filter(item => item.premiumFeature).map(item => [item.id, true])
 )
 
 /**

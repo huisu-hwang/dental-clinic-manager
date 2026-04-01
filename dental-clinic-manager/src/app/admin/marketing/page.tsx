@@ -16,9 +16,11 @@ import {
 } from '@heroicons/react/24/outline'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
+import PremiumGate from '@/components/Premium/PremiumGate'
 import { getTabRoute } from '@/utils/tabRouting'
+import NewPostForm from '@/components/marketing/NewPostForm'
 
-type MarketingTab = 'dashboard' | 'posts' | 'calendar' | 'settings'
+type MarketingTab = 'newpost' | 'dashboard' | 'posts' | 'calendar' | 'settings'
 
 export default function MarketingPage() {
   const { user, logout, loading } = useAuth()
@@ -60,6 +62,7 @@ export default function MarketingPage() {
   }
 
   const tabs = [
+    { id: 'newpost' as const, label: 'AI 글쓰기', icon: PencilSquareIcon },
     { id: 'dashboard' as const, label: '대시보드', icon: ChartBarIcon },
     { id: 'posts' as const, label: '글 관리', icon: DocumentTextIcon },
     { id: 'calendar' as const, label: '캘린더', icon: CalendarDaysIcon },
@@ -67,7 +70,8 @@ export default function MarketingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <PremiumGate featureId="marketing">
+      <div className="min-h-screen bg-slate-100">
       {/* Header - 상단 고정 */}
       <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200">
         <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
@@ -123,13 +127,6 @@ export default function MarketingPage() {
             {/* 서브 탭 */}
             <div className="bg-white border-b border-slate-200 px-4 sm:px-6">
               <nav className="flex gap-1 -mb-px">
-                <button
-                  onClick={() => router.push('/admin/marketing/posts/new')}
-                  className="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-blue-600 hover:text-blue-700 hover:border-blue-300 transition-colors"
-                >
-                  <PencilSquareIcon className="h-4 w-4" />
-                  AI 글쓰기
-                </button>
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
@@ -149,6 +146,7 @@ export default function MarketingPage() {
 
             {/* 콘텐츠 */}
             <div className="bg-white rounded-b-xl border border-t-0 border-slate-200 p-4 sm:p-6">
+              {activeTab === 'newpost' && <NewPostForm onClose={() => setActiveTab('dashboard')} />}
               {activeTab === 'dashboard' && <DashboardContent />}
               {activeTab === 'posts' && <PostsContent />}
               {activeTab === 'calendar' && <CalendarContent />}
@@ -157,7 +155,8 @@ export default function MarketingPage() {
           </div>
         </main>
       </div>
-    </div>
+      </div>
+    </PremiumGate>
   )
 }
 
