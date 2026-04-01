@@ -5,6 +5,7 @@ import { start as startWorker, stop as stopWorker, getStatus } from './worker-br
 import { getScrapingStatus } from './scraping-bridge';
 import { getSeoStatus } from './seo-bridge';
 import { log } from './logger';
+import { autoUpdater } from 'electron-updater';
 
 // ============================================
 // 시스템 트레이 관리
@@ -89,6 +90,13 @@ function rebuildMenu(): void {
           args: ['--hidden'],
         });
         log('info', `[Tray] 자동 실행: ${menuItem.checked}`);
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '업데이트 확인',
+      click: () => {
+        autoUpdater.checkForUpdates().catch(() => {});
       },
     },
     { type: 'separator' },
