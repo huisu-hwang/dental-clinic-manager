@@ -548,168 +548,71 @@ export default function MasterAdminPage() {
 
       {/* 헤더 */}
       <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold">마스터 관리자 대시보드</h1>
-              <p className="text-purple-100">시스템 전체 관리</p>
+              <h1 className="text-lg sm:text-2xl font-bold">마스터 관리자</h1>
+              <p className="text-purple-100 text-xs sm:text-base">시스템 전체 관리</p>
             </div>
             <button
               onClick={() => router.push('/dashboard')}
-              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors"
+              className="bg-white/20 hover:bg-white/30 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm"
             >
-              일반 대시보드로
+              대시보드
             </button>
           </div>
         </div>
       </div>
 
-      {/* 탭 메뉴 */}
+      {/* 탭 메뉴 - 모바일: 가로 스크롤 + 컴팩트 */}
       <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('pending')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors relative ${
-                activeTab === 'pending'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <UserIcon className="w-5 h-5 inline-block mr-2" />
-              승인 대기
-              {pendingUsers.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {pendingUsers.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'overview'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <ChartBarIcon className="w-5 h-5 inline-block mr-2" />
-              개요
-            </button>
-            <button
-              onClick={() => setActiveTab('clinics')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'clinics'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <BuildingOffice2Icon className="w-5 h-5 inline-block mr-2" />
-              병원 관리
-            </button>
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'users'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <UsersIcon className="w-5 h-5 inline-block mr-2" />
-              사용자 관리
-            </button>
-            <button
-              onClick={() => setActiveTab('statistics')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'statistics'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <ChartBarIcon className="w-5 h-5 inline-block mr-2" />
-              통계
-            </button>
-            <button
-              onClick={() => setActiveTab('community')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'community'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
-              </svg>
-              커뮤니티 관리
-            </button>
-            <button
-              onClick={() => setActiveTab('worker')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'worker'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <SparklesIcon className="w-5 h-5 inline-block mr-2" />
-              마케팅 워커
-            </button>
-            <button
-              onClick={() => setActiveTab('scraping')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'scraping'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 6 0m-6 0H3m16.5 0a3 3 0 0 0 3-3m-3 3a3 3 0 1 1-6 0m6 0h1.5m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.065M17.032 15.32l1.15-.065M6.938 4.503l.351.208m9.925 5.729.351.208M3.988 8.087l1.41.513m14.095 5.13 1.41.513M5.106 6.215l1.15.065M17.032 8.68l1.15.065" />
-              </svg>
-              스크래핑 워커
-            </button>
-            <button
-              onClick={() => setActiveTab('prompts')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'prompts'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <SparklesIcon className="w-5 h-5 inline-block mr-2" />
-              프롬프트 관리
-            </button>
-            <button
-              onClick={() => setActiveTab('api-costs')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'api-costs'
-                  ? 'border-emerald-600 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <CurrencyDollarIcon className="w-5 h-5 inline-block mr-2" />
-              API 비용
-            </button>
-            <button
-              onClick={() => setActiveTab('seo-analysis')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'seo-analysis'
-                  ? 'border-teal-600 text-teal-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <ChartBarIcon className="w-5 h-5 inline-block mr-2" />
-              SEO 분석
-            </button>
+        <div className="max-w-7xl mx-auto px-2 sm:px-4">
+          <div className="flex overflow-x-auto -mb-px" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+            {([
+              { key: 'pending' as TabType, icon: <UserIcon className="w-5 h-5 flex-shrink-0" />, label: '승인 대기', mobileLabel: '승인', badge: pendingUsers.length > 0 ? pendingUsers.length : undefined },
+              { key: 'overview' as TabType, icon: <ChartBarIcon className="w-5 h-5 flex-shrink-0" />, label: '개요', mobileLabel: '개요' },
+              { key: 'clinics' as TabType, icon: <BuildingOffice2Icon className="w-5 h-5 flex-shrink-0" />, label: '병원 관리', mobileLabel: '병원' },
+              { key: 'users' as TabType, icon: <UsersIcon className="w-5 h-5 flex-shrink-0" />, label: '사용자 관리', mobileLabel: '사용자' },
+              { key: 'statistics' as TabType, icon: <ChartBarIcon className="w-5 h-5 flex-shrink-0" />, label: '통계', mobileLabel: '통계' },
+              { key: 'community' as TabType, icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>, label: '커뮤니티', mobileLabel: '커뮤니티' },
+              { key: 'worker' as TabType, icon: <SparklesIcon className="w-5 h-5 flex-shrink-0" />, label: '마케팅 워커', mobileLabel: '워커' },
+              { key: 'scraping' as TabType, icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 6 0m-6 0H3m16.5 0a3 3 0 0 0 3-3m-3 3a3 3 0 1 1-6 0m6 0h1.5m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.065M17.032 15.32l1.15-.065M6.938 4.503l.351.208m9.925 5.729.351.208M3.988 8.087l1.41.513m14.095 5.13 1.41.513M5.106 6.215l1.15.065M17.032 8.68l1.15.065" /></svg>, label: '스크래핑', mobileLabel: '스크래핑' },
+              { key: 'prompts' as TabType, icon: <SparklesIcon className="w-5 h-5 flex-shrink-0" />, label: '프롬프트 관리', mobileLabel: '프롬프트' },
+              { key: 'api-costs' as TabType, icon: <CurrencyDollarIcon className="w-5 h-5 flex-shrink-0" />, label: 'API 비용', mobileLabel: 'API' },
+              { key: 'seo-analysis' as TabType, icon: <ChartBarIcon className="w-5 h-5 flex-shrink-0" />, label: 'SEO 분석', mobileLabel: 'SEO' },
+            ]).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`relative flex-shrink-0 flex items-center gap-1 sm:gap-1.5 py-3 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+                  activeTab === tab.key
+                    ? tab.key === 'api-costs' ? 'border-emerald-600 text-emerald-600'
+                      : tab.key === 'seo-analysis' ? 'border-teal-600 text-teal-600'
+                      : 'border-purple-600 text-purple-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.icon}
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.mobileLabel}</span>
+                {tab.badge && (
+                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* 컨텐츠 영역 */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {activeTab === 'pending' && (
           <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold">승인 대기 중인 사용자</h2>
-              <p className="text-sm text-gray-500 mt-1">새로 가입한 사용자를 승인하거나 거절할 수 있습니다.</p>
+            <div className="p-4 sm:p-6 border-b">
+              <h2 className="text-lg sm:text-xl font-semibold">승인 대기 중인 사용자</h2>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">새로 가입한 사용자를 승인하거나 거절할 수 있습니다.</p>
             </div>
             {dataError ? (
               <div className="p-8">
@@ -740,7 +643,48 @@ export default function MasterAdminPage() {
                 승인 대기 중인 사용자가 없습니다.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              {/* 모바일: 카드 레이아웃 */}
+              <div className="sm:hidden divide-y divide-gray-200">
+                {pendingUsers.map((pendingUser) => (
+                  <div key={pendingUser.id} className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-900">{pendingUser.name}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${
+                        pendingUser.email_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {pendingUser.email_verified ? 'V 인증' : '미인증'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 truncate">{pendingUser.email}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                      <span>{pendingUser.clinic?.name || '소속 없음'}</span>
+                      <span className={`px-1.5 py-0.5 rounded-full ${
+                        pendingUser.role === 'owner' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {pendingUser.role === 'owner' ? '대표원장' : pendingUser.role}
+                      </span>
+                      <span>{new Date(pendingUser.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => handleApproveUser(pendingUser.id, pendingUser.clinic_id)}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium"
+                      >
+                        승인
+                      </button>
+                      <button
+                        onClick={() => handleRejectUser(pendingUser.id, pendingUser.clinic_id)}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-sm font-medium"
+                      >
+                        거절
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* 데스크톱: 테이블 */}
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
@@ -801,6 +745,7 @@ export default function MasterAdminPage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         )}
@@ -828,11 +773,52 @@ export default function MasterAdminPage() {
 
         {activeTab === 'clinics' && (
           <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold">병원 목록</h2>
-              <p className="text-sm text-gray-500 mt-1">병원 계정을 관리하고 상태를 변경할 수 있습니다.</p>
+            <div className="p-4 sm:p-6 border-b">
+              <h2 className="text-lg sm:text-xl font-semibold">병원 목록</h2>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">병원 계정을 관리하고 상태를 변경할 수 있습니다.</p>
             </div>
-            <div className="overflow-x-auto">
+            {/* 모바일: 카드 레이아웃 */}
+            <div className="sm:hidden divide-y divide-gray-200">
+              {clinics.map((clinic) => (
+                <div key={clinic.id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900 text-sm">{clinic.name}</span>
+                    <span className={`px-2 py-0.5 text-xs rounded-full ${
+                      clinic.status === 'suspended' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {clinic.status === 'suspended' ? '중지' : '활성'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                    <span>{clinic.owner_name}</span>
+                    <span>{clinic.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={`px-1.5 py-0.5 rounded-full ${clinic.is_public ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                      {clinic.is_public ? '공개' : '비공개'}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedClinicForPremium(clinic); setShowPremiumModal(true) }}
+                      className="px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200"
+                    >
+                      프리미엄
+                    </button>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => handleViewClinicUsers(clinic)} className="flex-1 text-blue-600 border border-blue-200 py-1.5 rounded-lg text-xs font-medium">회원</button>
+                    <button
+                      onClick={() => handleToggleClinicStatus(clinic.id, clinic.status || 'active')}
+                      className={`flex-1 border py-1.5 rounded-lg text-xs font-medium ${clinic.status === 'suspended' ? 'text-green-600 border-green-200' : 'text-orange-600 border-orange-200'}`}
+                    >
+                      {clinic.status === 'suspended' ? '활성화' : '중지'}
+                    </button>
+                    <button onClick={() => handleDeleteClinic(clinic.id)} className="flex-1 text-red-600 border border-red-200 py-1.5 rounded-lg text-xs font-medium">삭제</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* 데스크톱: 테이블 */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -916,11 +902,52 @@ export default function MasterAdminPage() {
 
         {activeTab === 'users' && (
           <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold">사용자 목록</h2>
-              <p className="text-sm text-gray-500 mt-1">각 사용자의 최근 로그인 및 활동 기록을 확인할 수 있습니다.</p>
+            <div className="p-4 sm:p-6 border-b">
+              <h2 className="text-lg sm:text-xl font-semibold">사용자 목록</h2>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">각 사용자의 최근 로그인 및 활동 기록을 확인할 수 있습니다.</p>
             </div>
-            <div className="overflow-x-auto">
+            {/* 모바일: 카드 레이아웃 */}
+            <div className="sm:hidden divide-y divide-gray-200">
+              {users.map((u) => (
+                <div key={u.id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900 text-sm">{u.name}</span>
+                    <span className={`px-2 py-0.5 text-xs rounded-full ${
+                      u.status === 'active' ? 'bg-green-100 text-green-800' :
+                      u.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      u.status === 'suspended' ? 'bg-orange-100 text-orange-800' :
+                      u.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {getStatusLabel(u.status)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                    <span className={`px-1.5 py-0.5 rounded-full ${
+                      u.role === 'master_admin' ? 'bg-purple-100 text-purple-800' :
+                      u.role === 'owner' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {getRoleLabel(u.role)}
+                    </span>
+                    <span>{u.clinic?.name || '소속 없음'}</span>
+                    <span>{formatRelativeTime(u.last_login_at)}</span>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => handleViewActivity(u)} className="flex-1 text-blue-600 border border-blue-200 py-1.5 rounded-lg text-xs font-medium">활동</button>
+                    {u.role !== 'master_admin' && (
+                      <>
+                        <button onClick={() => handleEditUser(u)} className="flex-1 text-indigo-600 border border-indigo-200 py-1.5 rounded-lg text-xs font-medium">수정</button>
+                        <button onClick={() => handleDeleteUser(u.id)} className="flex-1 text-red-600 border border-red-200 py-1.5 rounded-lg text-xs font-medium">삭제</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* 데스크톱: 테이블 */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -1137,7 +1164,7 @@ export default function MasterAdminPage() {
       {/* 병원 회원 목록 모달 */}
       {showUsersModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold">{selectedClinic?.name} - 회원 목록</h2>
@@ -1244,7 +1271,7 @@ export default function MasterAdminPage() {
       {/* 사용자 편집 모달 */}
       {showEditModal && editingUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[95vh] overflow-y-auto">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold">사용자 정보 수정</h2>
@@ -1344,7 +1371,7 @@ export default function MasterAdminPage() {
       {/* 사용자 활동 기록 모달 */}
       {showActivityModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold">사용자 활동 기록</h2>
