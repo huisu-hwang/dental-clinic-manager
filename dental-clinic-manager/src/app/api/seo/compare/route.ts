@@ -2,23 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
-async function checkMasterAuth() {
+async function checkAuth() {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return null;
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-  if (!userData || !['master_admin', 'admin'].includes(userData.role)) return null;
   return user;
 }
 
 // POST: 경쟁 비교 잡 생성
 export async function POST(request: NextRequest) {
   try {
-    const user = await checkMasterAuth();
+    const user = await checkAuth();
     if (!user) return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
 
     const body = await request.json();
@@ -66,7 +60,7 @@ export async function POST(request: NextRequest) {
 // GET: 비교 결과 조회
 export async function GET(request: NextRequest) {
   try {
-    const user = await checkMasterAuth();
+    const user = await checkAuth();
     if (!user) return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
 
     const admin = getSupabaseAdmin();

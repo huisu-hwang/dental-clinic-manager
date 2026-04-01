@@ -3,6 +3,7 @@ import { isFirstRun, getConfig, setConfig } from './config-store';
 import { createTray, updateTrayStatus } from './tray';
 import { start as startWorker, stop as stopWorker, onStatusChange, onPublishResult } from './worker-bridge';
 import { startScraping, stopScraping, onScrapingStatusChange } from './scraping-bridge';
+import { startSeoWorker, stopSeoWorker, onSeoStatusChange } from './seo-bridge';
 import { log } from './logger';
 
 // ============================================
@@ -98,9 +99,16 @@ async function onAppReady(): Promise<void> {
     }
   });
 
+  onSeoStatusChange((status, message) => {
+    if (status === 'analyzing') {
+      log('info', `[Main] SEO 분석: ${message || '진행 중'}`);
+    }
+  });
+
   applyAutoStart();
   await startWorker();
   startScraping();
+  startSeoWorker();
 }
 
 function applyAutoStart(): void {
@@ -125,5 +133,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async () => {
   log('info', '[Main] 앱 종료 중...');
   stopScraping();
+  stopSeoWorker();
   await stopWorker();
 });

@@ -33,8 +33,12 @@ import ScheduleModal from '@/components/marketing/ScheduleModal'
 import dynamic from 'next/dynamic'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
+const SeoAnalysisTab = dynamic(
+  () => import('@/components/SEO/SeoAnalysisTab'),
+  { ssr: false, loading: () => <div className="p-8 text-center text-slate-400">SEO 분석 로딩 중...</div> }
+)
 
-type MarketingTab = 'dashboard' | 'posts' | 'calendar' | 'settings'
+type MarketingTab = 'dashboard' | 'posts' | 'calendar' | 'settings' | 'seo'
 
 export default function MarketingPage() {
   const { user, logout, loading } = useAuth()
@@ -81,6 +85,7 @@ export default function MarketingPage() {
     { id: 'posts' as const, label: '글 관리', icon: DocumentTextIcon },
     { id: 'calendar' as const, label: '캘린더', icon: CalendarDaysIcon },
     { id: 'settings' as const, label: '설정', icon: Cog6ToothIcon },
+    { id: 'seo' as const, label: 'SEO 분석', icon: ChartBarIcon },
   ]
 
   return (
@@ -190,6 +195,7 @@ export default function MarketingPage() {
                   {activeTab === 'posts' && <PostsContent />}
                   {activeTab === 'calendar' && <CalendarContent />}
                   {activeTab === 'settings' && <SettingsContent />}
+                  {activeTab === 'seo' && <SeoAnalysisTab />}
                 </div>
               </>
             )}
