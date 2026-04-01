@@ -1,13 +1,13 @@
 import { ScrapingJob, completeJob, failJob } from '../queue/jobConsumer.js';
 import { loginToHometax, logoutFromHometax } from './loginService.js';
-import { runScraper, DataType, getScrapingMode } from './scrapers/index.js';
+import { runScraper, runScraperWithPage, DataType, getScrapingMode } from './scrapers/index.js';
 import type { ScrapeResult } from './scrapers/index.js';
 import { getSupabaseClient } from '../db/supabaseClient.js';
 import { createChildLogger } from '../utils/logger.js';
 import { notifySyncComplete, notifySyncFailed, notifySettlementComplete } from '../scheduler/notifier.js';
 import { aggregateSettlement } from '../scheduler/monthlySettlement.js';
 import { loginViaProtocol, logoutViaProtocol } from '../protocol/loginProtocol.js';
-import { ScrapingSession } from '../types/scrapingContext.js';
+import { ScrapingSession, getBrowserContext } from '../types/scrapingContext.js';
 
 const log = createChildLogger('jobProcessor');
 
@@ -148,27 +148,81 @@ export async function processScrapingJob(job: ScrapingJob): Promise<void> {
   // 2. 각 데이터 타입별 스크래핑
   const results: Record<string, { success: boolean; count: number; error?: string }> = {};
 
+  const HOMETAX_MAIN = 'https://www.hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml';
+
   try {
-    for (const dataType of dataTypes) {
+    if (session.type === 'playwright') {
+      // Playwright 모드: 페이지 한 번 생성 후 모든 스크래퍼에 공유
+      const browserContext = getBrowserContext(session);
+      const sharedPage = await browserContext.newPage();
+
       try {
-        const label = DATA_TYPE_LABELS[dataType] || dataType;
-        await updateProgress(jobId, `${label} 자료 수집 중...`);
-        log.info({ jobId, dataType, year, month, mode }, '스크래핑 실행');
+        // 메인 페이지 한 번만 로드
+        log.info({ jobId }, '공유 페이지 메인 페이지 최초 로드');
+        await sharedPage.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
+        await sharedPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
-        const result = await runScraper(session, dataType as DataType, year, month, clinicId);
+        for (const dataType of dataTypes) {
+          try {
+            const label = DATA_TYPE_LABELS[dataType] || dataType;
+            await updateProgress(jobId, `${label} 자료 수집 중...`);
+            log.info({ jobId, dataType, year, month, mode }, '스크래핑 실행 (공유 페이지)');
 
-        // 결과 저장
-        await saveRawData(clinicId, result);
-        await logSync(clinicId, jobId, dataType, 'success', result.totalCount);
+            const result = await runScraperWithPage(sharedPage, session, dataType as DataType, year, month, clinicId);
 
-        results[dataType] = { success: true, count: result.totalCount };
-        log.info({ jobId, dataType, count: result.totalCount }, '스크래핑 성공');
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        log.error({ jobId, dataType, err }, '스크래핑 실패');
+            // 결과 저장
+            await saveRawData(clinicId, result);
+            await logSync(clinicId, jobId, dataType, 'success', result.totalCount);
 
-        await logSync(clinicId, jobId, dataType, 'failed', 0, message);
-        results[dataType] = { success: false, count: 0, error: message };
+            results[dataType] = { success: true, count: result.totalCount };
+            log.info({ jobId, dataType, count: result.totalCount }, '스크래핑 성공');
+
+            // 다음 스크래퍼를 위해 메인 페이지 복귀 (마지막 타입 제외)
+            if (dataType !== dataTypes[dataTypes.length - 1]) {
+              log.info({ jobId, dataType }, '다음 스크래퍼를 위한 메인 페이지 복귀');
+              await sharedPage.goto(HOMETAX_MAIN, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
+              await sharedPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+            }
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            log.error({ jobId, dataType, err }, '스크래핑 실패');
+
+            await logSync(clinicId, jobId, dataType, 'failed', 0, message);
+            results[dataType] = { success: false, count: 0, error: message };
+
+            // 오류 후 메인 페이지 복귀 시도 (다음 스크래퍼를 위해)
+            if (dataType !== dataTypes[dataTypes.length - 1]) {
+              await sharedPage.goto(HOMETAX_MAIN, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
+              await sharedPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+            }
+          }
+        }
+      } finally {
+        await sharedPage.close().catch(() => {});
+      }
+    } else {
+      // Protocol 모드 (또는 기타): 기존 방식 유지
+      for (const dataType of dataTypes) {
+        try {
+          const label = DATA_TYPE_LABELS[dataType] || dataType;
+          await updateProgress(jobId, `${label} 자료 수집 중...`);
+          log.info({ jobId, dataType, year, month, mode }, '스크래핑 실행');
+
+          const result = await runScraper(session, dataType as DataType, year, month, clinicId);
+
+          // 결과 저장
+          await saveRawData(clinicId, result);
+          await logSync(clinicId, jobId, dataType, 'success', result.totalCount);
+
+          results[dataType] = { success: true, count: result.totalCount };
+          log.info({ jobId, dataType, count: result.totalCount }, '스크래핑 성공');
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          log.error({ jobId, dataType, err }, '스크래핑 실패');
+
+          await logSync(clinicId, jobId, dataType, 'failed', 0, message);
+          results[dataType] = { success: false, count: 0, error: message };
+        }
       }
     }
   } finally {

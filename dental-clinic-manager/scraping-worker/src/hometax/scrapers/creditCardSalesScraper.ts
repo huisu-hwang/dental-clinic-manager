@@ -6,8 +6,7 @@ const log = createChildLogger('creditCardSalesScraper');
 
 const HOMETAX_MAIN = 'https://www.hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml';
 
-// 메뉴 ID: 신용카드·판매(결제)대행 매출자료 조회
-const MENU_ID = 'menuAtag_4607010000';
+// 메뉴 ID: 신용카드·판매(결제)대행 매출자료 조회 — menuAtag_4607010000
 
 // ── 헬퍼 ──
 
@@ -55,30 +54,36 @@ export async function scrapeCreditCardSales(
   context: BrowserContext,
   year: number,
   month: number,
+  _clinicId?: string,
+  sharedPage?: Page,
 ): Promise<ScrapeResult> {
   // 사용자 설정 월 기준 분기 계산
   const quarter = Math.ceil((month || 1) / 3);
   log.info({ year, month, quarter }, '신용카드 매출 스크래핑 시작');
 
-  const records = await withPage(context, async (page) => {
-    // ── Step 1: 메인 페이지 접속 + 로그인 확인 ──
-    log.info('메인 페이지 접속');
-    await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-    await page.waitForTimeout(2000);
+  const doScrape = async (page: Page) => {
+    if (!sharedPage) {
+      // ── Step 1: 메인 페이지 접속 + 로그인 확인 (단독 실행 시) ──
+      log.info('메인 페이지 접속');
+      await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+      await page.waitForTimeout(2000);
 
-    const isLoggedIn = await page.locator('a:has-text("로그아웃")')
-      .or(page.locator('button:has-text("로그아웃")'))
-      .or(page.locator('text=로그아웃'))
-      .first()
-      .waitFor({ state: 'visible', timeout: 10000 })
-      .then(() => true)
-      .catch(() => false);
+      const isLoggedIn = await page.locator('a:has-text("로그아웃")')
+        .or(page.locator('button:has-text("로그아웃")'))
+        .or(page.locator('text=로그아웃'))
+        .first()
+        .waitFor({ state: 'visible', timeout: 10000 })
+        .then(() => true)
+        .catch(() => false);
 
-    if (!isLoggedIn) {
-      throw new Error('홈택스 세션이 만료되었습니다.');
+      if (!isLoggedIn) {
+        throw new Error('홈택스 세션이 만료되었습니다.');
+      }
+      await screenshot(page, '1-logged-in');
+    } else {
+      log.info('공유 페이지 사용 — 메인 페이지 로딩 및 로그인 확인 생략');
     }
-    await screenshot(page, '1-logged-in');
 
     // ── Step 2.1~2.2: 신용카드·판매(결제)대행 매출자료 조회 메뉴 이동 ──
     log.info('Step 2.1~2.2: 신용카드 매출자료 조회 메뉴 이동');
@@ -344,7 +349,11 @@ export async function scrapeCreditCardSales(
     }
 
     return data;
-  });
+  };
+
+  const records = sharedPage
+    ? await doScrape(sharedPage)
+    : await withPage(context, doScrape);
 
   log.info({ year, month, count: records.length }, '신용카드 매출 스크래핑 완료');
 

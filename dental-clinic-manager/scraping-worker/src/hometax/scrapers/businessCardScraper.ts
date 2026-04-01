@@ -6,8 +6,7 @@ const log = createChildLogger('businessCardScraper');
 
 const HOMETAX_MAIN = 'https://www.hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml';
 
-// 메뉴 ID: 매입내역 누계 조회 (사업용 신용카드 사용내역 하위)
-const MENU_ID = 'menuAtag_4608020300';
+// 메뉴 ID: 매입내역 누계 조회 (사업용 신용카드 사용내역 하위) — menuAtag_4608020300
 
 async function screenshot(page: Page, label: string): Promise<string> {
   const path = `/tmp/hometax-bizcard-${label}-${Date.now()}.png`;
@@ -31,24 +30,30 @@ export async function scrapeBusinessCardPurchase(
   context: BrowserContext,
   year: number,
   month: number,
+  _clinicId?: string,
+  sharedPage?: Page,
 ): Promise<ScrapeResult> {
   log.info({ year, month }, '사업용 신용카드 매입내역 누계 스크래핑 시작');
 
-  const records = await withPage(context, async (page) => {
-    // ── Step 1: 메인 페이지 + 로그인 확인 ──
-    await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-    await page.waitForTimeout(2000);
+  const doScrape = async (page: Page) => {
+    if (!sharedPage) {
+      // ── Step 1: 메인 페이지 + 로그인 확인 (단독 실행 시) ──
+      await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+      await page.waitForTimeout(2000);
 
-    const isLoggedIn = await page.locator('a:has-text("로그아웃")')
-      .or(page.locator('button:has-text("로그아웃")'))
-      .or(page.locator('text=로그아웃'))
-      .first()
-      .waitFor({ state: 'visible', timeout: 10000 })
-      .then(() => true)
-      .catch(() => false);
+      const isLoggedIn = await page.locator('a:has-text("로그아웃")')
+        .or(page.locator('button:has-text("로그아웃")'))
+        .or(page.locator('text=로그아웃'))
+        .first()
+        .waitFor({ state: 'visible', timeout: 10000 })
+        .then(() => true)
+        .catch(() => false);
 
-    if (!isLoggedIn) throw new Error('홈택스 세션이 만료되었습니다.');
+      if (!isLoggedIn) throw new Error('홈택스 세션이 만료되었습니다.');
+    } else {
+      log.info('공유 페이지 사용 — 메인 페이지 로딩 및 로그인 확인 생략');
+    }
 
     // ── Step 2.1~2.3: 매입내역 누계 조회 메뉴 이동 ──
     log.info('Step 2.1~2.3: 매입내역 누계 조회 메뉴 이동');
@@ -256,7 +261,11 @@ export async function scrapeBusinessCardPurchase(
     }
 
     return data;
-  });
+  };
+
+  const records = sharedPage
+    ? await doScrape(sharedPage)
+    : await withPage(context, doScrape);
 
   log.info({ year, month, count: records.length }, '사업용 신용카드 매입내역 누계 스크래핑 완료');
 

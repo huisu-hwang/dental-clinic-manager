@@ -53,24 +53,30 @@ export async function scrapeCashReceiptSales(
   context: BrowserContext,
   year: number,
   month: number,
+  _clinicId?: string,
+  sharedPage?: Page,
 ): Promise<ScrapeResult> {
   log.info({ year, month }, '현금영수증 매출내역 누계조회 스크래핑 시작');
 
-  const records = await withPage(context, async (page) => {
-    // ── Step 1: 메인 페이지 + 로그인 확인 ──
-    await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-    await page.waitForTimeout(2000);
+  const doScrape = async (page: Page) => {
+    if (!sharedPage) {
+      // ── Step 1: 메인 페이지 + 로그인 확인 (단독 실행 시) ──
+      await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+      await page.waitForTimeout(2000);
 
-    const isLoggedIn = await page.locator('a:has-text("로그아웃")')
-      .or(page.locator('button:has-text("로그아웃")'))
-      .or(page.locator('text=로그아웃'))
-      .first()
-      .waitFor({ state: 'visible', timeout: 10000 })
-      .then(() => true)
-      .catch(() => false);
+      const isLoggedIn = await page.locator('a:has-text("로그아웃")')
+        .or(page.locator('button:has-text("로그아웃")'))
+        .or(page.locator('text=로그아웃'))
+        .first()
+        .waitFor({ state: 'visible', timeout: 10000 })
+        .then(() => true)
+        .catch(() => false);
 
-    if (!isLoggedIn) throw new Error('홈택스 세션이 만료되었습니다.');
+      if (!isLoggedIn) throw new Error('홈택스 세션이 만료되었습니다.');
+    } else {
+      log.info('공유 페이지 사용 — 메인 페이지 로딩 및 로그인 확인 생략');
+    }
 
     // ── Step 2.1~2.3: 현금영수증 매출내역 누계조회 메뉴 이동 ──
     log.info({ menuId: SALES_MENU_ID }, 'Step 2.1~2.3: 현금영수증 매출내역 누계조회 메뉴 이동');
@@ -257,7 +263,11 @@ export async function scrapeCashReceiptSales(
     }
 
     return data;
-  });
+  };
+
+  const records = sharedPage
+    ? await doScrape(sharedPage)
+    : await withPage(context, doScrape);
 
   log.info({ year, month, count: records.length }, '현금영수증 매출내역 누계조회 스크래핑 완료');
 
@@ -285,26 +295,32 @@ export async function scrapeCashReceiptPurchase(
   context: BrowserContext,
   year: number,
   month: number,
+  _clinicId?: string,
+  sharedPage?: Page,
 ): Promise<ScrapeResult> {
   // 사용자 설정 월 기준으로 분기 계산
   const quarter = getQuarter(month || 1);
   log.info({ year, month, quarter }, '현금영수증 매입 지출증빙 스크래핑 시작');
 
-  const records = await withPage(context, async (page) => {
-    // ── Step 1: 메인 페이지 + 로그인 확인 ──
-    await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-    await page.waitForTimeout(2000);
+  const doScrape = async (page: Page) => {
+    if (!sharedPage) {
+      // ── Step 1: 메인 페이지 + 로그인 확인 (단독 실행 시) ──
+      await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+      await page.waitForTimeout(2000);
 
-    const isLoggedIn = await page.locator('a:has-text("로그아웃")')
-      .or(page.locator('button:has-text("로그아웃")'))
-      .or(page.locator('text=로그아웃'))
-      .first()
-      .waitFor({ state: 'visible', timeout: 10000 })
-      .then(() => true)
-      .catch(() => false);
+      const isLoggedIn = await page.locator('a:has-text("로그아웃")')
+        .or(page.locator('button:has-text("로그아웃")'))
+        .or(page.locator('text=로그아웃'))
+        .first()
+        .waitFor({ state: 'visible', timeout: 10000 })
+        .then(() => true)
+        .catch(() => false);
 
-    if (!isLoggedIn) throw new Error('홈택스 세션이 만료되었습니다.');
+      if (!isLoggedIn) throw new Error('홈택스 세션이 만료되었습니다.');
+    } else {
+      log.info('공유 페이지 사용 — 메인 페이지 로딩 및 로그인 확인 생략');
+    }
 
     // ── Step 2.1~2.2: 현금영수증 매입내역 지출증빙 조회 메뉴 이동 ──
     log.info({ menuId: MENU_ID }, 'Step 2.1~2.2: 현금영수증 매입내역(지출증빙) 조회 메뉴 이동');
@@ -644,7 +660,11 @@ export async function scrapeCashReceiptPurchase(
     }
 
     return data;
-  });
+  };
+
+  const records = sharedPage
+    ? await doScrape(sharedPage)
+    : await withPage(context, doScrape);
 
   log.info({ year, month, quarter, count: records.length }, '현금영수증 매입 지출증빙 스크래핑 완료');
 

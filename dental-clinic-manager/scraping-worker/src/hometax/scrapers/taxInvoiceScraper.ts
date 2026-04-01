@@ -460,13 +460,12 @@ async function scrapeStatisticsData(page: Page): Promise<Record<string, unknown>
 
 // ── 공개 API ──
 
-function parseAmount(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    return parseInt(value.replace(/[,원\s]/g, ''), 10) || 0;
-  }
-  return 0;
-}
+// parseAmount: 세금계산서 스크래퍼 구현 시 사용 예정
+// function parseAmount(value: unknown): number {
+//   if (typeof value === 'number') return value;
+//   if (typeof value === 'string') return parseInt(value.replace(/[,원\s]/g, ''), 10) || 0;
+//   return 0;
+// }
 
 /** 세금계산서 매출 스크래핑 — 전체 흐름 (2.1 ~ 2.9) */
 export async function scrapeTaxInvoiceSales(

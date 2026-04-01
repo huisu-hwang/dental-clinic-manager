@@ -48,7 +48,7 @@ export async function navigateToMenu(page: Page, menuPath: string): Promise<void
   log.info({ menuPath }, 'WebSquare 메뉴 네비게이션 시도');
 
   // 3-1. "조회" 관련 메뉴 ID 탐색
-  const menuExploreResult = await page.evaluate((targetMenuPath: string) => {
+  const menuExploreResult = await page.evaluate(() => {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const doc = (globalThis as any).document;
 
@@ -136,7 +136,7 @@ export async function navigateToMenu(page: Page, menuPath: string): Promise<void
     await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(5000);
   } else {
-    log.warn({ menuPath, keywords }, '매칭되는 메뉴 ID를 찾지 못함 — 전체 메뉴 목록 로깅');
+    log.warn({ menuPath }, '매칭되는 메뉴 ID를 찾지 못함 — 전체 메뉴 목록 로깅');
     // 발견된 모든 메뉴 로깅 (디버그용)
     for (const m of menuExploreResult.allMenus.slice(0, 50)) {
       log.debug({ id: m.id, text: m.text }, '메뉴 항목');
