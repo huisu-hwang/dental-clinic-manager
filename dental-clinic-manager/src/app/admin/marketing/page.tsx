@@ -13,39 +13,18 @@ import {
   XMarkIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  TrashIcon,
-  ArrowPathIcon,
-  PhotoIcon,
 } from '@heroicons/react/24/outline'
-import type {
-  ContentCalendarItem,
-  CalendarItemStatus,
-  PostType,
-  GeneratedContent,
-} from '@/types/marketing'
 import Header from '@/components/Layout/Header'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import { getTabRoute } from '@/utils/tabRouting'
-import NewPostForm from '@/components/marketing/NewPostForm'
-import ScheduleModal from '@/components/marketing/ScheduleModal'
-import dynamic from 'next/dynamic'
 
-const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
-const SeoAnalysisTab = dynamic(
-  () => import('@/components/SEO/SeoAnalysisTab'),
-  { ssr: false, loading: () => <div className="p-8 text-center text-slate-400">SEO 분석 로딩 중...</div> }
-)
-
-type MarketingTab = 'dashboard' | 'posts' | 'calendar' | 'settings' | 'seo'
+type MarketingTab = 'dashboard' | 'posts' | 'calendar' | 'settings'
 
 export default function MarketingPage() {
   const { user, logout, loading } = useAuth()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<MarketingTab>('dashboard')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [showNewPost, setShowNewPost] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -85,7 +64,6 @@ export default function MarketingPage() {
     { id: 'posts' as const, label: '글 관리', icon: DocumentTextIcon },
     { id: 'calendar' as const, label: '캘린더', icon: CalendarDaysIcon },
     { id: 'settings' as const, label: '설정', icon: Cog6ToothIcon },
-    { id: 'seo' as const, label: 'SEO 분석', icon: ChartBarIcon },
   ]
 
   return (
@@ -134,25 +112,30 @@ export default function MarketingPage() {
           <div className="max-w-6xl">
             {/* 페이지 헤더 */}
             <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <SparklesIcon className="h-5 w-5 text-white" />
-                  </div>
-                  <h1 className="text-lg sm:text-xl font-bold text-white">마케팅 자동화</h1>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <SparklesIcon className="h-5 w-5 text-white" />
                 </div>
+                <h1 className="text-lg sm:text-xl font-bold text-white">마케팅 자동화</h1>
               </div>
             </div>
 
-            {/* 서브 탭 + 새 글 작성 버튼 */}
-            <div className="bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between">
+            {/* 서브 탭 */}
+            <div className="bg-white border-b border-slate-200 px-4 sm:px-6">
               <nav className="flex gap-1 -mb-px">
+                <button
+                  onClick={() => router.push('/admin/marketing/posts/new')}
+                  className="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-blue-600 hover:text-blue-700 hover:border-blue-300 transition-colors"
+                >
+                  <PencilSquareIcon className="h-4 w-4" />
+                  AI 글쓰기
+                </button>
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => { setActiveTab(tab.id); setShowNewPost(false) }}
+                    onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                      !showNewPost && activeTab === tab.id
+                      activeTab === tab.id
                         ? 'border-blue-600 text-blue-600'
                         : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                     }`}
@@ -162,43 +145,15 @@ export default function MarketingPage() {
                   </button>
                 ))}
               </nav>
-              <button
-                onClick={() => setShowNewPost(true)}
-                className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors text-sm font-medium ${
-                  showNewPost
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                }`}
-              >
-                <PencilSquareIcon className="h-4 w-4" />
-                <span className="hidden sm:inline">새 글 작성</span>
-              </button>
             </div>
 
-            {showNewPost ? (
-              /* 새 글 작성 폼 (인라인) */
-              <div className="bg-white rounded-b-xl border border-t-0 border-slate-200 p-4 sm:p-6">
-                <NewPostForm
-                  onClose={() => setShowNewPost(false)}
-                  onComplete={() => {
-                    setShowNewPost(false)
-                    setActiveTab('posts')
-                  }}
-                />
-              </div>
-            ) : (
-              <>
-
-                {/* 콘텐츠 */}
-                <div className="bg-white rounded-b-xl border border-t-0 border-slate-200 p-4 sm:p-6">
-                  {activeTab === 'dashboard' && <DashboardContent />}
-                  {activeTab === 'posts' && <PostsContent />}
-                  {activeTab === 'calendar' && <CalendarContent />}
-                  {activeTab === 'settings' && <SettingsContent />}
-                  {activeTab === 'seo' && <SeoAnalysisTab />}
-                </div>
-              </>
-            )}
+            {/* 콘텐츠 */}
+            <div className="bg-white rounded-b-xl border border-t-0 border-slate-200 p-4 sm:p-6">
+              {activeTab === 'dashboard' && <DashboardContent />}
+              {activeTab === 'posts' && <PostsContent />}
+              {activeTab === 'calendar' && <CalendarContent />}
+              {activeTab === 'settings' && <SettingsContent />}
+            </div>
           </div>
         </main>
       </div>
@@ -239,796 +194,14 @@ function DashboardContent() {
 }
 
 // ─── 글 관리 ───
-
-const STATUS_LABELS: Record<CalendarItemStatus, { label: string; color: string }> = {
-  proposed: { label: '제안됨', color: 'bg-slate-100 text-slate-600' },
-  approved: { label: '승인됨', color: 'bg-blue-50 text-blue-600' },
-  rejected: { label: '반려', color: 'bg-red-50 text-red-600' },
-  modified: { label: '수정됨', color: 'bg-amber-50 text-amber-600' },
-  generating: { label: '생성 중', color: 'bg-purple-50 text-purple-600' },
-  review: { label: '검토 대기', color: 'bg-indigo-50 text-indigo-600' },
-  scheduled: { label: '예약됨', color: 'bg-cyan-50 text-cyan-600' },
-  publishing: { label: '발행 중', color: 'bg-yellow-50 text-yellow-700' },
-  published: { label: '발행 완료', color: 'bg-green-50 text-green-600' },
-  failed: { label: '실패', color: 'bg-red-50 text-red-600' },
-}
-
-const POST_TYPE_BADGE: Record<PostType, { label: string; color: string }> = {
-  informational: { label: '정보', color: 'bg-blue-50 text-blue-600' },
-  promotional: { label: '홍보', color: 'bg-orange-50 text-orange-600' },
-  notice: { label: '공지', color: 'bg-slate-100 text-slate-600' },
-  clinical: { label: '임상', color: 'bg-emerald-50 text-emerald-600' },
-}
-
 function PostsContent() {
-  const [posts, setPosts] = useState<ContentCalendarItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedPost, setSelectedPost] = useState<ContentCalendarItem | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
-
-  const loadPosts = useCallback(async () => {
-    try {
-      const res = await fetch('/api/marketing/posts?limit=50')
-      const json = await res.json()
-      if (res.ok) {
-        setPosts(json.data || [])
-      }
-    } catch {
-      console.error('글 목록 로딩 실패')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadPosts()
-  }, [loadPosts])
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('이 글을 삭제하시겠습니까?')) return
-    setDeletingId(id)
-    try {
-      const res = await fetch(`/api/marketing/posts/${id}`, { method: 'DELETE' })
-      if (res.ok) {
-        setPosts((prev) => prev.filter((p) => p.id !== id))
-        if (selectedPost?.id === id) setSelectedPost(null)
-        setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next })
-      }
-    } catch {
-      console.error('삭제 실패')
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
-  const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return
-    if (!confirm(`선택한 ${selectedIds.size}개의 글을 삭제하시겠습니까?`)) return
-    setIsBulkDeleting(true)
-    const idsToDelete = Array.from(selectedIds)
-    const failed: string[] = []
-    for (const id of idsToDelete) {
-      try {
-        const res = await fetch(`/api/marketing/posts/${id}`, { method: 'DELETE' })
-        if (!res.ok) failed.push(id)
-      } catch {
-        failed.push(id)
-      }
-    }
-    setPosts((prev) => prev.filter((p) => failed.includes(p.id) || !selectedIds.has(p.id)))
-    if (selectedPost && selectedIds.has(selectedPost.id) && !failed.includes(selectedPost.id)) {
-      setSelectedPost(null)
-    }
-    setSelectedIds(new Set(failed))
-    setIsBulkDeleting(false)
-    if (failed.length > 0) {
-      alert(`${failed.length}개의 글 삭제에 실패했습니다.`)
-    }
-  }
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === posts.length) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(posts.map((p) => p.id)))
-    }
-  }
-
-  const parseContent = (item: ContentCalendarItem): (GeneratedContent & { generatedImages?: { fileName: string; prompt: string; path?: string }[] }) | null => {
-    if (!item.generated_content) return null
-    try {
-      return typeof item.generated_content === 'string'
-        ? JSON.parse(item.generated_content)
-        : item.generated_content as unknown as GeneratedContent
-    } catch {
-      return null
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <ArrowPathIcon className="h-6 w-6 text-slate-400 animate-spin" />
-      </div>
-    )
-  }
-
-  if (posts.length === 0) {
-    return (
-      <div className="text-center py-12 text-slate-400">
-        <DocumentTextIcon className="h-12 w-12 mx-auto mb-3" />
-        <p className="text-lg font-medium">아직 작성된 글이 없습니다</p>
-        <p className="text-sm mt-1">&apos;새 글 작성&apos; 버튼을 눌러 첫 글을 만들어보세요</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={posts.length > 0 && selectedIds.size === posts.length}
-              onChange={toggleSelectAll}
-              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-slate-500">전체 선택</span>
-          </label>
-          <h2 className="text-lg font-semibold text-slate-800">생성된 글 ({posts.length})</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
-            <button
-              onClick={handleBulkDelete}
-              disabled={isBulkDeleting}
-              className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-            >
-              <TrashIcon className="h-4 w-4" />
-              {isBulkDeleting ? '삭제 중...' : `선택 삭제 (${selectedIds.size})`}
-            </button>
-          )}
-          <button
-            onClick={() => { setIsLoading(true); loadPosts() }}
-            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-          >
-            <ArrowPathIcon className="h-4 w-4" />
-            새로고침
-          </button>
-        </div>
-      </div>
-
-      {/* 글 목록 */}
-      <div className="space-y-3">
-        {posts.map((post) => {
-          const content = parseContent(post)
-          const statusInfo = STATUS_LABELS[post.status] || STATUS_LABELS.review
-          const typeInfo = POST_TYPE_BADGE[post.post_type] || POST_TYPE_BADGE.informational
-
-          return (
-            <div
-              key={post.id}
-              onClick={() => setSelectedPost(post)}
-              className={`bg-slate-50 rounded-xl border p-4 transition-colors cursor-pointer ${
-                selectedIds.has(post.id) ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  {/* 체크박스 */}
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(post.id)}
-                    onChange={() => toggleSelect(post.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
-                  />
-                  <div className="flex-1 min-w-0">
-                  {/* 제목 */}
-                  <h3 className="font-medium text-slate-800 truncate">{post.title || '(제목 없음)'}</h3>
-
-                  {/* 메타 정보 */}
-                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                    <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full ${typeInfo.color}`}>
-                      {typeInfo.label}
-                    </span>
-                    <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full ${statusInfo.color}`}>
-                      {statusInfo.label}
-                    </span>
-                    {post.keyword && (
-                      <span className="text-xs text-slate-400">#{post.keyword}</span>
-                    )}
-                    <span className="text-xs text-slate-400">
-                      {new Date(post.created_at).toLocaleDateString('ko-KR', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}{' '}
-                      {new Date(post.created_at).toLocaleTimeString('ko-KR', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                    {content && (
-                      <span className="text-xs text-slate-400">{content.wordCount}자</span>
-                    )}
-                  </div>
-
-                  {/* 본문 미리보기 */}
-                  {content?.body && (
-                    <p className="text-sm text-slate-500 mt-2 line-clamp-2 leading-relaxed">
-                      {content.body.replace(/\[IMAGE:[^\]]*\]/g, '').replace(/#{1,3}\s/g, '').replace(/\*\*/g, '').slice(0, 150)}
-                    </p>
-                  )}
-                  </div>
-                </div>
-
-                {/* 액션 버튼 */}
-                <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => setSelectedPost(post)}
-                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                    title="상세보기"
-                  >
-                    <EyeIcon className="h-4.5 w-4.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(post.id)}
-                    disabled={deletingId === post.id}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                    title="삭제"
-                  >
-                    <TrashIcon className="h-4.5 w-4.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* 상세보기/편집 모달 */}
-      {selectedPost && (
-        <PostEditModal
-          post={selectedPost}
-          content={parseContent(selectedPost)}
-          onClose={() => setSelectedPost(null)}
-          onSaved={(updatedPost) => {
-            setPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p))
-            setSelectedPost(null)
-          }}
-        />
-      )}
+    <div className="text-center py-12 text-slate-400">
+      <DocumentTextIcon className="h-12 w-12 mx-auto mb-3" />
+      <p className="text-lg font-medium">아직 작성된 글이 없습니다</p>
+      <p className="text-sm mt-1">&apos;새 글 작성&apos; 버튼을 눌러 첫 글을 만들어보세요</p>
     </div>
   )
-}
-
-// ─── 글 편집 모달 ───
-function PostEditModal({
-  post,
-  content,
-  onClose,
-  onSaved,
-}: {
-  post: ContentCalendarItem
-  content: (GeneratedContent & { generatedImages?: { fileName: string; prompt: string; path?: string }[] }) | null
-  onClose: () => void
-  onSaved: (updatedPost: ContentCalendarItem) => void
-}) {
-  const [editedTitle, setEditedTitle] = useState(post.title || content?.title || '')
-  const [editedBody, setEditedBody] = useState(content?.body || '')
-  const [editedHashtags, setEditedHashtags] = useState<string[]>(content?.hashtags || [])
-  const [saving, setSaving] = useState(false)
-  const [saveMsg, setSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [hasChanges, setHasChanges] = useState(false)
-  const [isPublishing, setIsPublishing] = useState(false)
-  const [showScheduleModal, setShowScheduleModal] = useState(false)
-  const [workerStatus, setWorkerStatus] = useState<{ online: boolean; checked: boolean }>({ online: false, checked: false })
-  const statusInfo = STATUS_LABELS[post.status] || STATUS_LABELS.review
-  const canPublish = content?.body && !['published', 'publishing'].includes(post.status)
-
-  // 워커 상태 확인 (발행 가능한 글일 때만)
-  useEffect(() => {
-    if (!canPublish) return
-    const checkWorker = async () => {
-      try {
-        const res = await fetch('/api/master/worker')
-        if (res.ok) {
-          const data = await res.json()
-          setWorkerStatus({ online: data.supervisorOnline || data.workerOnline, checked: true })
-        } else {
-          setWorkerStatus({ online: false, checked: true })
-        }
-      } catch {
-        setWorkerStatus({ online: false, checked: true })
-      }
-    }
-    checkWorker()
-    const interval = setInterval(checkWorker, 15000)
-    return () => clearInterval(interval)
-  }, [canPublish])
-
-  const handleSave = async () => {
-    setSaving(true)
-    setSaveMsg(null)
-    try {
-      const updatedContent = {
-        ...content,
-        title: editedTitle,
-        body: editedBody,
-        hashtags: editedHashtags,
-        wordCount: editedBody.length,
-      }
-      const res = await fetch(`/api/marketing/posts/${post.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: editedTitle, generatedContent: updatedContent }),
-      })
-      if (!res.ok) throw new Error('저장 실패')
-      const { data } = await res.json()
-      setSaveMsg({ type: 'success', text: '저장되었습니다.' })
-      setHasChanges(false)
-      setTimeout(() => onSaved(data), 500)
-    } catch (err) {
-      setSaveMsg({ type: 'error', text: err instanceof Error ? err.message : '저장 실패' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const [showWorkerRequired, setShowWorkerRequired] = useState(false)
-
-  const handlePublish = async (targetDate: string, targetTime: string, isImmediate: boolean) => {
-    setIsPublishing(true)
-    setSaveMsg(null)
-    try {
-      const updatedContent = {
-        ...content,
-        title: editedTitle,
-        body: editedBody,
-        hashtags: editedHashtags,
-        wordCount: editedBody.length,
-      }
-      const res = await fetch(`/api/marketing/posts/${post.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: editedTitle,
-          generatedContent: updatedContent,
-          status: 'scheduled',
-          publishDate: targetDate,
-          publishTime: targetTime,
-        }),
-      })
-      if (!res.ok) throw new Error('저장 실패')
-      const { data } = await res.json()
-
-      if (isImmediate) {
-        // 즉시 발행: 사용자 PC 워커(localhost:4001)에 직접 트리거
-        try {
-          const localRes = await fetch('http://localhost:4001/trigger', { method: 'POST', signal: AbortSignal.timeout(5000) })
-          if (!localRes.ok) throw new Error('local worker error')
-          setSaveMsg({ type: 'success', text: '바로 발행이 시작됩니다!' })
-        } catch {
-          // 로컬 워커 미실행 → 설치 안내 팝업
-          setShowWorkerRequired(true)
-          setSaveMsg({ type: 'success', text: '발행이 예약되었습니다. 워커를 설치/실행하면 자동 발행됩니다.' })
-        }
-      } else {
-        // 예약 발행
-        setSaveMsg({
-          type: 'success',
-          text: `${targetDate} ${targetTime}에 발행이 예약되었습니다.\n예약 시간에 컴퓨터가 켜져 있어야 합니다.\n꺼져 있었다면 워커 실행 후 5분 내 자동 발행됩니다.`
-        })
-      }
-
-      setHasChanges(false)
-      if (!showWorkerRequired) {
-        setTimeout(() => onSaved(data), 2000)
-      }
-    } catch (err) {
-      setSaveMsg({ type: 'error', text: err instanceof Error ? err.message : '발행 실패' })
-    } finally {
-      setIsPublishing(false)
-    }
-  }
-
-  const handlePublishNow = () => {
-    const today = new Date().toISOString().split('T')[0]
-    const now = new Date().toTimeString().slice(0, 5)
-    handlePublish(today, now, true)
-  }
-
-  const handleScheduleConfirm = (date: string, time: string) => {
-    setShowScheduleModal(false)
-    handlePublish(date, time, false)
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 모달 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <h3 className="text-lg font-semibold text-slate-800">글 편집</h3>
-            <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full flex-shrink-0 ${statusInfo.color}`}>
-              {statusInfo.label}
-            </span>
-            {hasChanges && (
-              <span className="inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-50 text-amber-600">
-                미저장
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-            <button
-              onClick={handleSave}
-              disabled={saving || !hasChanges}
-              className="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
-            >
-              {saving ? '저장 중...' : '저장'}
-            </button>
-            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
-              <XMarkIcon className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* 저장 메시지 */}
-        {saveMsg && (
-          <div className={`mx-6 mt-3 flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-            saveMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-          }`}>
-            {saveMsg.type === 'success' ? <CheckCircleIcon className="h-4 w-4" /> : <ExclamationTriangleIcon className="h-4 w-4" />}
-            {saveMsg.text}
-          </div>
-        )}
-
-        {/* 모달 본문 */}
-        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-          {/* 메타 정보 */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: '키워드', value: post.keyword || '-' },
-              { label: '유형', value: POST_TYPE_BADGE[post.post_type]?.label || post.post_type },
-              { label: '생성일', value: new Date(post.created_at).toLocaleDateString('ko-KR') },
-              { label: '글자수', value: `${editedBody.length}자` },
-            ].map((item) => (
-              <div key={item.label} className="bg-slate-50 rounded-lg px-3 py-2">
-                <div className="text-[11px] text-slate-400 mb-0.5">{item.label}</div>
-                <div className="text-sm font-medium text-slate-700">{item.value}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* 제목 */}
-          <div>
-            <label className="block text-sm font-medium text-slate-500 mb-1.5">제목</label>
-            <input
-              type="text"
-              value={editedTitle}
-              onChange={(e) => { setEditedTitle(e.target.value); setHasChanges(true) }}
-              className="w-full text-lg font-bold text-slate-800 border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50"
-            />
-          </div>
-
-          {/* 본문 - WYSIWYG 에디터 */}
-          {content?.body ? (
-            <div>
-              <label className="block text-sm font-medium text-slate-500 mb-2">본문</label>
-              <ContentEditor
-                body={editedBody}
-                images={content.generatedImages}
-                onChange={(newBody) => { setEditedBody(newBody); setHasChanges(true) }}
-              />
-            </div>
-          ) : (
-            <div className="text-center py-8 text-slate-400">
-              <DocumentTextIcon className="h-10 w-10 mx-auto mb-2" />
-              <p className="text-sm">생성된 콘텐츠가 없습니다</p>
-            </div>
-          )}
-
-          {/* 해시태그 */}
-          {editedHashtags.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-slate-500 mb-2">해시태그</label>
-              <div className="flex flex-wrap gap-2 items-center">
-                {editedHashtags.map((tag, i) => (
-                  <span key={i} className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium">
-                    #{tag}
-                    <button
-                      onClick={() => {
-                        setEditedHashtags(prev => prev.filter((_, idx) => idx !== i))
-                        setHasChanges(true)
-                      }}
-                      className="text-indigo-400 hover:text-indigo-600"
-                    >
-                      <XMarkIcon className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 발행 액션 */}
-          {canPublish && (
-            <div className="space-y-3 pt-2 border-t border-slate-200">
-              {workerStatus.checked && (
-                <WorkerInstallBanner isOnline={workerStatus.online} />
-              )}
-
-              <div className="flex gap-3">
-                <button
-                  onClick={handlePublishNow}
-                  disabled={isPublishing || saving}
-                  className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  {isPublishing ? (
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  ) : (
-                    <CheckCircleIcon className="h-4 w-4" />
-                  )}
-                  바로 발행
-                </button>
-                <button
-                  onClick={() => setShowScheduleModal(true)}
-                  disabled={isPublishing || saving}
-                  className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  <CalendarDaysIcon className="h-4 w-4" />
-                  예약 발행
-                </button>
-              </div>
-
-              <ScheduleModal
-                isOpen={showScheduleModal}
-                onClose={() => setShowScheduleModal(false)}
-                onConfirm={handleScheduleConfirm}
-                isLoading={isPublishing}
-              />
-
-              {/* 워커 미실행 안내 팝업 */}
-              {showWorkerRequired && (
-                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setShowWorkerRequired(false)}>
-                  <div className="bg-white rounded-xl p-6 max-w-sm w-full space-y-4" onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center gap-2">
-                      <ExclamationTriangleIcon className="w-6 h-6 text-amber-500" />
-                      <h3 className="text-lg font-bold text-slate-800">발행 워커가 필요합니다</h3>
-                    </div>
-                    <div className="text-sm text-slate-600 space-y-2">
-                      <p>블로그 발행을 위해서는 이 컴퓨터에 발행 워커가 설치되어 실행 중이어야 합니다.</p>
-                      <p>워커를 설치하고 실행하면 예약된 글이 자동으로 발행됩니다.</p>
-                    </div>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => {
-                          const ua = navigator.userAgent.toLowerCase()
-                          const os = ua.includes('win') ? 'windows' : 'mac'
-                          if (os === 'windows') {
-                            window.open('/api/marketing/worker-api/download?os=windows', '_blank')
-                          } else {
-                            window.open('/api/marketing/worker-api/download?os=mac', '_blank')
-                          }
-                        }}
-                        className="w-full py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors"
-                      >
-                        발행 워커 설치 프로그램 다운로드
-                      </button>
-                      <p className="text-slate-400 text-[11px] text-center leading-relaxed">
-                        Windows 보호 화면이 나타나면 &apos;추가 정보&apos; &rarr; &apos;실행&apos;을 클릭하세요.<br />
-                        하얀치과에서 제공하는 안전한 프로그램입니다.
-                      </p>
-                      <button
-                        onClick={() => setShowWorkerRequired(false)}
-                        className="w-full py-2 text-slate-500 text-sm hover:text-slate-700 transition-colors"
-                      >
-                        닫기
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── 워커 설치 안내 배너 (발행 시 표시) ───
-function WorkerInstallBanner({ isOnline }: { isOnline: boolean }) {
-  const [isDownloading, setIsDownloading] = useState(false)
-  const [downloaded, setDownloaded] = useState(false)
-
-  const detectOS = (): 'mac' | 'windows' | 'linux' => {
-    const ua = navigator.userAgent.toLowerCase()
-    if (ua.includes('win')) return 'windows'
-    if (ua.includes('linux')) return 'linux'
-    return 'mac'
-  }
-
-  const handleDownload = async () => {
-    setIsDownloading(true)
-    try {
-      const os = detectOS()
-      if (os === 'windows') {
-        window.open(`/api/marketing/worker-api/download?os=windows`, '_blank')
-        setDownloaded(true)
-      } else {
-        const res = await fetch(`/api/marketing/worker-api/download?os=${os}`)
-        if (!res.ok) throw new Error('다운로드 실패')
-        const blob = await res.blob()
-        const disposition = res.headers.get('Content-Disposition') || ''
-        const match = disposition.match(/filename="(.+)"/)
-        const filename = match ? match[1] : 'marketing-worker-setup.command'
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = filename
-        a.click()
-        URL.revokeObjectURL(url)
-        setDownloaded(true)
-      }
-    } catch {
-      alert('다운로드에 실패했습니다.')
-    } finally {
-      setIsDownloading(false)
-    }
-  }
-
-  // 워커가 온라인일 때
-  if (isOnline) {
-    return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs">
-        <div className="flex items-center gap-2">
-          <CheckCircleIcon className="w-4 h-4 text-green-500 flex-shrink-0" />
-          <p className="text-green-700 font-medium">발행 워커가 실행 중입니다 — 발행 준비 완료</p>
-        </div>
-      </div>
-    )
-  }
-
-  // 워커가 오프라인일 때
-  return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 text-xs space-y-2.5">
-      <div className="flex items-start gap-2">
-        <ExclamationTriangleIcon className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="font-semibold text-amber-800 text-sm">발행 워커가 실행 중이 아닙니다</p>
-          <p className="text-amber-700 mt-1 leading-relaxed">
-            블로그 발행은 PC에서 브라우저를 열어 자동으로 글을 작성합니다.
-            아래 프로그램을 설치하고 실행하면 발행이 가능해집니다.
-          </p>
-        </div>
-      </div>
-      {!downloaded ? (
-        <>
-          <button
-            onClick={handleDownload}
-            disabled={isDownloading}
-            className="w-full py-2 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 disabled:bg-amber-300 transition-colors flex items-center justify-center gap-1.5"
-          >
-            {isDownloading ? '다운로드 중...' : '발행 워커 설치 프로그램 다운로드'}
-          </button>
-          <p className="text-amber-600/70 text-[10px] leading-relaxed">
-            Windows 보호 화면이 나타나면 &apos;추가 정보&apos; &rarr; &apos;실행&apos;을 클릭하세요. 하얀치과에서 제공하는 안전한 프로그램입니다.
-          </p>
-        </>
-      ) : (
-        <div className="text-amber-700 bg-amber-100/50 rounded-lg px-3 py-2">
-          <p className="font-medium">다운로드 완료 — 설치 후 실행하세요.</p>
-          <p className="mt-0.5">실행 후 이 화면이 자동으로 연결을 감지합니다.</p>
-          <p className="mt-1 text-[10px] text-amber-600/70">
-            Windows 보호 화면이 나타나면 &apos;추가 정보&apos; &rarr; &apos;실행&apos;을 클릭하세요.
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── 본문 렌더러 (간소화) ───
-function PostBodyRenderer({
-  body,
-  images,
-}: {
-  body: string
-  images?: { fileName: string; prompt: string; path?: string }[]
-}) {
-  const lines = body.split('\n')
-  const elements: React.ReactNode[] = []
-  let paragraphBuffer: string[] = []
-  let key = 0
-  let fallbackIndex = 0
-  const usedImageIndices = new Set<number>()
-
-  const findImage = (prompt: string) => {
-    if (!images || images.length === 0) return undefined
-    const exactIdx = images.findIndex((img, i) => !usedImageIndices.has(i) && img.prompt === prompt)
-    if (exactIdx >= 0) { usedImageIndices.add(exactIdx); return images[exactIdx] }
-    while (fallbackIndex < images.length && usedImageIndices.has(fallbackIndex)) fallbackIndex++
-    if (fallbackIndex < images.length) { usedImageIndices.add(fallbackIndex); return images[fallbackIndex++] }
-    return undefined
-  }
-
-  const flushParagraph = () => {
-    if (paragraphBuffer.length > 0) {
-      const text = paragraphBuffer.join('\n').trim()
-      if (text) {
-        elements.push(
-          <p key={key++} className="text-sm leading-7 text-slate-700 mb-3">
-            {renderBold(text)}
-          </p>
-        )
-      }
-      paragraphBuffer = []
-    }
-  }
-
-  for (const line of lines) {
-    const trimmed = line.trim()
-
-    if (/\[IMAGE:\s*.+?\]/.test(trimmed)) {
-      flushParagraph()
-      const match = trimmed.match(/\[IMAGE:\s*(.+?)\]/)
-      const prompt = match ? match[1] : ''
-      const img = findImage(prompt)
-      if (img?.path) {
-        elements.push(
-          <div key={key++} className="my-3">
-            <img src={img.path} alt={img.prompt || prompt} className="w-full rounded-lg border border-slate-200" />
-          </div>
-        )
-      }
-      continue
-    }
-    if (trimmed.startsWith('## ')) {
-      flushParagraph()
-      elements.push(<h3 key={key++} className="text-base font-bold text-slate-800 mt-5 mb-2">{trimmed.replace(/^##\s+/, '')}</h3>)
-      continue
-    }
-    if (trimmed.startsWith('### ')) {
-      flushParagraph()
-      elements.push(<h4 key={key++} className="text-sm font-semibold text-slate-800 mt-4 mb-1.5">{trimmed.replace(/^###\s+/, '')}</h4>)
-      continue
-    }
-    if (!trimmed) { flushParagraph(); continue }
-    paragraphBuffer.push(line)
-  }
-  flushParagraph()
-
-  return <div>{elements}</div>
-}
-
-function renderBold(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g)
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="font-semibold text-slate-800">{part.slice(2, -2)}</strong>
-    }
-    return part
-  })
 }
 
 // ─── 캘린더 ───
@@ -1102,7 +275,6 @@ function SettingsContent() {
   const [editEnabled, setEditEnabled] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({})
 
   const loadSettings = useCallback(async () => {
     try {
@@ -1239,29 +411,13 @@ function SettingsContent() {
                       className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
                     />
                   ) : (
-                    <div className={field.type === 'password' ? 'relative' : ''}>
-                      <input
-                        type={field.type === 'password' && visiblePasswords[field.key] ? 'text' : field.type}
-                        value={editConfig[field.key] || ''}
-                        onChange={(e) => setEditConfig({ ...editConfig, [field.key]: e.target.value })}
-                        placeholder={field.placeholder}
-                        className={`w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500${field.type === 'password' ? ' pr-10' : ''}`}
-                      />
-                      {field.type === 'password' && (
-                        <button
-                          type="button"
-                          onClick={() => setVisiblePasswords(prev => ({ ...prev, [field.key]: !prev[field.key] }))}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
-                          title={visiblePasswords[field.key] ? '비밀번호 숨기기' : '비밀번호 보기'}
-                        >
-                          {visiblePasswords[field.key] ? (
-                            <EyeSlashIcon className="h-4.5 w-4.5" />
-                          ) : (
-                            <EyeIcon className="h-4.5 w-4.5" />
-                          )}
-                        </button>
-                      )}
-                    </div>
+                    <input
+                      type={field.type}
+                      value={editConfig[field.key] || ''}
+                      onChange={(e) => setEditConfig({ ...editConfig, [field.key]: e.target.value })}
+                      placeholder={field.placeholder}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
                   )}
                 </div>
               ))}

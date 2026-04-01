@@ -108,18 +108,19 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres  # Transaction Mo
    - 데이터 저장/조회가 올바른지 확인
    - 에러 콘솔에 오류가 없는지 확인
    - 문제 발견 시 → 수정 → 2번부터 다시 반복
-4. **정상 작동 확인 완료** → Git commit & push to GitHub
+4. **정상 작동 확인 완료** → Git commit & push to `develop` branch
 5. **푸시 실패 시**: 원인 파악 → 해결(pull --rebase 등) → 다시 push (성공할 때까지 반복, 사용자에게 되묻지 않고 자동 처리)
 
 > **주의**: 빌드만 통과하는 것은 충분하지 않다. 반드시 실제 기능이 정상 작동하는지까지 확인해야 한다.
 > **주의**: git push가 실패하면 반드시 원인을 파악하고 해결한 후 재시도하여 푸시를 완료해야 한다. 실패한 채로 두지 않는다.
 > **주의**: 작업 중 실패나 오류가 발생하면 멈추지 말고 원인을 파악하여 해결한 후 이어서 계속 작업한다. 사용자에게 되묻지 않고 자동으로 처리한다.
+> **주의**: 모든 작업 완료 후 반드시 `develop` 브랜치에 푸시한다. (`git push origin develop`)
 
 ### 일반 기능 개발
 1. 계획 수립
 2. 코드 구현
 3. **구현-테스트-수정-푸시 사이클 실행 (정상 작동까지 반복)**
-4. 정상 작동 확인 후 Git commit & push to GitHub
+4. 정상 작동 확인 후 Git commit & push to `develop` branch
 
 ### 버그 수정
 1. **Chrome DevTools MCP로 오류 재현** (콘솔 에러, 네트워크 요청 확인)
@@ -127,7 +128,7 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres  # Transaction Mo
 3. 코드 수정
 4. **Chrome DevTools MCP로 수정 검증** (동일 시나리오 재실행)
 5. **구현-테스트-수정-푸시 사이클 실행 (정상 작동까지 반복)**
-6. 정상 작동 확인 후 Git commit & push to GitHub
+6. 정상 작동 확인 후 Git commit & push to `develop` branch
 
 ---
 
