@@ -20,7 +20,9 @@ import {
   TrendingUp,
   BarChart3,
   AlertCircle,
-  Flame
+  Flame,
+  Download,
+  Monitor,
 } from 'lucide-react'
 
 // 날씨 아이콘 매핑
@@ -327,6 +329,43 @@ export default function DashboardHome() {
     return () => clearInterval(timer)
   }, [])
 
+  // 워커 설치 상태 체크
+  const [workerInstalled, setWorkerInstalled] = useState<boolean | null>(null)
+  useEffect(() => {
+    const checkWorker = async () => {
+      try {
+        const res = await fetch('http://localhost:4001/api/health', { signal: AbortSignal.timeout(2000) })
+        setWorkerInstalled(res.ok)
+      } catch {
+        setWorkerInstalled(false)
+      }
+    }
+    checkWorker()
+    const interval = setInterval(checkWorker, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const [workerDownloading, setWorkerDownloading] = useState(false)
+  const handleWorkerDownload = async () => {
+    setWorkerDownloading(true)
+    try {
+      const response = await fetch(`/api/marketing/worker-api/download?os=${navigator.platform.includes('Win') ? 'windows' : 'mac'}`)
+      if (!response.ok) throw new Error('다운로드 실패')
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = navigator.platform.includes('Win') ? '클리닉매니저워커-설치.exe' : '클리닉매니저워커-설치.command'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      // GitHub Release에서 직접 다운로드
+      window.open('https://github.com/huisu-hwang/dental-clinic-manager/releases/latest', '_blank')
+    } finally {
+      setWorkerDownloading(false)
+    }
+  }
+
   const handleRefresh = () => {
     loadTeamStatus()
     loadWeather()
@@ -361,6 +400,34 @@ export default function DashboardHome() {
           </button>
         </div>
       </div>
+
+      {/* 워커 미설치 배너 */}
+      {workerInstalled === false && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Monitor className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <div>
+                <span className="text-sm font-medium text-blue-800">클리닉 매니저 워커가 설치되지 않았습니다</span>
+                <p className="text-xs text-blue-600 mt-0.5">
+                  블로그 발행, 홈택스 연동, SEO 분석 등의 기능을 사용하려면 워커를 설치해주세요.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleWorkerDownload}
+              disabled={workerDownloading}
+              className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap ml-4"
+            >
+              <Download className="w-3.5 h-3.5 mr-1.5" />
+              {workerDownloading ? '다운로드 중...' : '워커 설치'}
+            </button>
+          </div>
+          <p className="text-xs text-blue-500 mt-1.5">
+            * Windows 보호 화면이 나타나면 &apos;추가 정보&apos; → &apos;실행&apos;을 클릭하세요.
+          </p>
+        </div>
+      )}
 
       {/* 보고서 미작성 알림 */}
       {!dataLoading && !todaySummary.hasReport && (
