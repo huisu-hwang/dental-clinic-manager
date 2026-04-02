@@ -227,12 +227,13 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                       const totalSavedUsage = baseUsageByGift[row.gift_type] || 0
                       const currentDateUsage = currentDateSavedUsage[row.gift_type] || 0
                       const actualStock = totalStock - totalSavedUsage + currentDateUsage
-                      const usedByOthers = giftRows.reduce((total, r, idx) => {
-                        if (idx === index || r.gift_type !== row.gift_type) return total
+                      // 자기보다 위에 있는 행들의 사용량만 차감 (자기 행 index 미만)
+                      const usedByPriorRows = giftRows.reduce((total, r, idx) => {
+                        if (idx >= index || r.gift_type !== row.gift_type) return total
                         if (!r.patient_name?.trim()) return total
                         return total + (r.quantity || 1)
                       }, 0)
-                      const remaining = actualStock - usedByOthers - (row.quantity || 1)
+                      const remaining = actualStock - usedByPriorRows
                       const displayRemaining = remaining >= 0 ? remaining : 0
                       return (
                         <span className={`font-medium ${displayRemaining <= 0 ? 'text-red-500' : displayRemaining <= 3 ? 'text-amber-500' : 'text-slate-700'}`}>
@@ -379,12 +380,13 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                         const totalSavedUsage = baseUsageByGift[row.gift_type] || 0
                         const currentDateUsage = currentDateSavedUsage[row.gift_type] || 0
                         const actualStock = totalStock - totalSavedUsage + currentDateUsage
-                        const usedByOthers = giftRows.reduce((total, r, idx) => {
-                          if (idx === index || r.gift_type !== row.gift_type) return total
+                        // 자기보다 위에 있는 행들의 사용량만 차감 (자기 행 index 미만)
+                        const usedByPriorRows = giftRows.reduce((total, r, idx) => {
+                          if (idx >= index || r.gift_type !== row.gift_type) return total
                           if (!r.patient_name?.trim()) return total
                           return total + (r.quantity || 1)
                         }, 0)
-                        const remaining = actualStock - usedByOthers - (row.quantity || 1)
+                        const remaining = actualStock - usedByPriorRows
                         const displayRemaining = remaining >= 0 ? remaining : 0
                         return (
                           <span className={`font-medium ${displayRemaining <= 0 ? 'text-red-500' : displayRemaining <= 3 ? 'text-amber-500' : 'text-slate-700'}`}>
