@@ -32,7 +32,6 @@ import ScheduleModal from '@/components/marketing/ScheduleModal'
 import dynamic from 'next/dynamic'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
-const EmailIntegrationSettings = dynamic(() => import('@/components/marketing/EmailIntegrationSettings'), { ssr: false })
 
 type MarketingTab = 'newpost' | 'dashboard' | 'posts' | 'calendar' | 'settings'
 
@@ -889,12 +888,6 @@ function SettingsContent() {
         })
       )}
 
-      {/* 이메일 연동 설정 */}
-      <div>
-        <div className="border-t border-slate-200 pt-6">
-          <EmailIntegrationSettings />
-        </div>
-      </div>
 
       {/* 설정 모달 */}
       {editingPlatform && editingDef && (

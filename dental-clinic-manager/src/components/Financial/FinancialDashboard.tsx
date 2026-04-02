@@ -29,7 +29,13 @@ import {
   Building2,
   BarChart3,
   Building,
+  Mail,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const EmailIntegrationSettings = dynamic(() => import('@/components/marketing/EmailIntegrationSettings'), { ssr: false })
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 export default function FinancialDashboard() {
@@ -476,6 +482,18 @@ export default function FinancialDashboard() {
           </div>
         </div>
       )}
+
+      {/* 이메일 연동 설정 */}
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+        <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <Mail className="w-5 h-5 text-blue-500" />
+          이메일 자동 연동
+        </h2>
+        <p className="text-sm text-slate-500 mb-4">
+          병원 이메일을 연동하면 기공료·급여명세서를 자동으로 처리합니다.
+        </p>
+        <EmailIntegrationSettings />
+      </div>
 
       {/* 지출 입력 모달 */}
       {showExpenseForm && (
