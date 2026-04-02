@@ -4,6 +4,7 @@ import { createTray, updateTrayStatus } from './tray';
 import { start as startWorker, stop as stopWorker, onStatusChange, onPublishResult } from './worker-bridge';
 import { startScraping, stopScraping, onScrapingStatusChange } from './scraping-bridge';
 import { startSeoWorker, stopSeoWorker, onSeoStatusChange } from './seo-bridge';
+import { startEmailMonitor, stopEmailMonitor, onEmailStatusChange } from './email-bridge';
 import { log } from './logger';
 import { initAutoUpdater, stopAutoUpdater } from './updater';
 
@@ -107,10 +108,17 @@ async function onAppReady(): Promise<void> {
     }
   });
 
+  onEmailStatusChange((status, message) => {
+    if (status === 'processing') {
+      log('info', `[Main] 이메일: ${message || '처리 중'}`);
+    }
+  });
+
   applyAutoStart();
   await startWorker();
   startScraping();
   startSeoWorker();
+  startEmailMonitor();
 }
 
 function applyAutoStart(): void {
@@ -137,5 +145,6 @@ app.on('before-quit', async () => {
   stopAutoUpdater();
   stopScraping();
   stopSeoWorker();
+  stopEmailMonitor();
   await stopWorker();
 });

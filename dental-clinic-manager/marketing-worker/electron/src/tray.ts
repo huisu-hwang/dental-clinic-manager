@@ -4,6 +4,7 @@ import { getConfig, setConfig } from './config-store';
 import { start as startWorker, stop as stopWorker, getStatus } from './worker-bridge';
 import { getScrapingStatus } from './scraping-bridge';
 import { getSeoStatus } from './seo-bridge';
+import { getEmailMonitorStatus } from './email-bridge';
 import { log } from './logger';
 import { autoUpdater } from 'electron-updater';
 
@@ -51,6 +52,13 @@ function rebuildMenu(): void {
     error: '오류',
   };
 
+  const emailLabels: Record<string, string> = {
+    idle: '중지됨',
+    polling: '대기 중',
+    processing: '처리 중',
+    error: '오류',
+  };
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: `상태: ${currentStatusLabel}`,
@@ -62,6 +70,10 @@ function rebuildMenu(): void {
     },
     {
       label: `SEO: ${seoLabels[getSeoStatus()] ?? '알 수 없음'}`,
+      enabled: false,
+    },
+    {
+      label: `이메일: ${emailLabels[getEmailMonitorStatus()] ?? '알 수 없음'}`,
       enabled: false,
     },
     { type: 'separator' },
