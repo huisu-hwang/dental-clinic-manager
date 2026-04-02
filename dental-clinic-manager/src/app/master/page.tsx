@@ -1871,17 +1871,32 @@ function WorkerInstallGuide() {
       const res = await fetch(`/api/marketing/worker-api/download?os=${os}`)
       if (!res.ok) throw new Error('다운로드 실패')
 
-      const blob = await res.blob()
-      const disposition = res.headers.get('Content-Disposition') || ''
-      const filenameMatch = disposition.match(/filename="(.+)"/)
-      const filename = filenameMatch ? filenameMatch[1] : `marketing-worker-setup.${os === 'windows' ? 'bat' : 'command'}`
+      const contentType = res.headers.get('Content-Type') || ''
 
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(url)
+      if (contentType.includes('application/json')) {
+        // Windows: JSON으로 반환된 URL을 통해 직접 다운로드
+        const { downloadUrl } = await res.json()
+        const a = document.createElement('a')
+        a.href = downloadUrl
+        a.style.display = 'none'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      } else {
+        // Mac/Linux: 스크립트 파일 직접 다운로드
+        const blob = await res.blob()
+        const disposition = res.headers.get('Content-Disposition') || ''
+        const filenameMatch = disposition.match(/filename="(.+)"/)
+        const filename = filenameMatch ? filenameMatch[1] : 'marketing-worker-setup.command'
+
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+
       setDownloadDone(true)
     } catch (err) {
       console.error('워커 다운로드 실패:', err)
