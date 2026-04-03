@@ -141,6 +141,11 @@ export default function DashboardHome() {
     }
   }, [dailyReports, consultLogs, giftLogs, today])
 
+  // JSX 확장 패널용 — useMemo 밖에 선언 (todaySummary 내부 스코프는 JSX에서 접근 불가)
+  const todayReport = dailyReports.find(r => r.date === today)
+  const todayConsults = consultLogs.filter(c => c.date === today)
+  const todayGifts = giftLogs.filter(g => g.date === today)
+
   // 주간 통계 계산 (이번 주 월요일부터 오늘까지)
   const weeklySummary = useMemo(() => {
     const now = new Date()
@@ -585,22 +590,124 @@ export default function DashboardHome() {
             <div>
               <h3 className="text-sm font-semibold text-slate-700 mb-3">오늘의 현황</h3>
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                <button
+                  onClick={() => togglePanel(todayActivePanel, 'consult', setTodayActivePanel)}
+                  className={`rounded-lg p-3 text-center w-full transition-all ${todayActivePanel === 'consult' ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-slate-50 hover:bg-slate-100'}`}
+                >
                   <TrendingUp className="w-5 h-5 text-green-500 mx-auto mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-green-600">{todaySummary.consultProceed}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.consultCount}</span></p>
                   <p className="text-xs text-slate-500">성공/상담</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-slate-400 mt-0.5">{todayActivePanel === 'consult' ? '▲ 닫기' : '▼ 목록 보기'}</p>
+                </button>
+                <button
+                  onClick={() => togglePanel(todayActivePanel, 'recall', setTodayActivePanel)}
+                  className={`rounded-lg p-3 text-center w-full transition-all ${todayActivePanel === 'recall' ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-slate-50 hover:bg-slate-100'}`}
+                >
                   <Calendar className="w-5 h-5 text-orange-500 mx-auto mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-orange-600">{todaySummary.recallBookingCount}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.recallCount}</span></p>
                   <p className="text-xs text-slate-500">예약/리콜</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-slate-400 mt-0.5">{todayActivePanel === 'recall' ? '▲ 닫기' : '▼ 현황 보기'}</p>
+                </button>
+                <button
+                  onClick={() => togglePanel(todayActivePanel, 'gift', setTodayActivePanel)}
+                  className={`rounded-lg p-3 text-center w-full transition-all ${todayActivePanel === 'gift' ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-slate-50 hover:bg-slate-100'}`}
+                >
                   <BarChart3 className="w-5 h-5 text-purple-500 mx-auto mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-purple-600">{todaySummary.naverReviewCount}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.giftCount}</span></p>
                   <p className="text-xs text-slate-500">리뷰/선물</p>
-                </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{todayActivePanel === 'gift' ? '▲ 닫기' : '▼ 목록 보기'}</p>
+                </button>
               </div>
+
+              {/* 상담 확장 패널 */}
+              {todayActivePanel === 'consult' && (
+                <div className="mt-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
+                    <span className="text-xs font-semibold text-slate-600">📋 오늘 상담 목록</span>
+                    <span className="text-xs text-slate-400">총 {todayConsults.length}건</span>
+                  </div>
+                  {todayConsults.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                  ) : (
+                    <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+                      {todayConsults.map((c, i) => (
+                        <div key={c.id ?? i} className="flex items-center gap-2 px-4 py-2 text-sm">
+                          <span className="font-medium text-slate-800 w-16 truncate">{c.patient_name}</span>
+                          <span className="text-slate-500 flex-1 truncate">{c.consult_content}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.consult_status === 'O' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                            {c.consult_status === 'O' ? '✓ 성공' : '✗ 보류'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 리콜 확장 패널 */}
+              {todayActivePanel === 'recall' && (() => {
+                const bookedNames = todayReport?.recall_booking_names
+                  ? todayReport.recall_booking_names.split(',').map(n => n.trim()).filter(Boolean)
+                  : []
+                const unbookedCount = Math.max(0, (todayReport?.recall_count || 0) - bookedNames.length)
+                return (
+                  <div className="mt-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
+                      <span className="text-xs font-semibold text-slate-600">📞 오늘 리콜 현황</span>
+                      <span className="text-xs text-slate-400">예약 {bookedNames.length} / 리콜 {todayReport?.recall_count || 0}건</span>
+                    </div>
+                    {(todayReport?.recall_count || 0) === 0 ? (
+                      <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                    ) : (
+                      <div className="px-4 py-3 space-y-2 max-h-[300px] overflow-y-auto">
+                        {bookedNames.length > 0 && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs text-slate-500 w-14 pt-0.5">예약완료</span>
+                            <div className="flex flex-wrap gap-1.5 flex-1">
+                              {bookedNames.map((name, i) => (
+                                <span key={i} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{name}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {unbookedCount > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-500 w-14">미예약</span>
+                            <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{unbookedCount}명</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* 선물 확장 패널 */}
+              {todayActivePanel === 'gift' && (
+                <div className="mt-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
+                    <span className="text-xs font-semibold text-slate-600">🎁 오늘 선물/리뷰 목록</span>
+                    <span className="text-xs text-slate-400">총 {todayGifts.length}건</span>
+                  </div>
+                  {todayGifts.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                  ) : (
+                    <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+                      {todayGifts.map((g, i) => (
+                        <div key={g.id ?? i} className="flex items-center gap-2 px-4 py-2 text-sm">
+                          <span className="font-medium text-slate-800 w-16 truncate">{g.patient_name}</span>
+                          <span className="text-slate-500 flex-1 truncate">{g.gift_type} × {g.quantity}</span>
+                          {g.naver_review === 'O' ? (
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">리뷰 ✓</span>
+                          ) : (
+                            <span className="text-xs text-slate-400">리뷰 없음</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 팀 출퇴근 현황 */}
