@@ -26,13 +26,25 @@ export async function GET(request: NextRequest) {
   // 1. PKCE Code Flow 처리
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
     if (!error) {
+      // PKCE 플로우에서는 type 파라미터가 없을 수 있으므로, 세션의 AMR로 recovery 감지
+      if (next !== '/update-password' && data?.session?.user) {
+        const amr = data.session.user.factors || data.session.user.app_metadata?.providers
+        // recovery 세션은 user_metadata에 recovery 관련 정보가 있거나,
+        // 이메일의 aal이 recovery인 경우
+        const isRecovery = data.session.user.recovery_sent_at != null
+        if (isRecovery) {
+          console.log('[Auth Callback] Recovery session detected via AMR, forcing /update-password')
+          next = '/update-password'
+        }
+      }
+
       console.log('[Auth Callback] Code exchange successful, redirecting to:', next)
       return NextResponse.redirect(new URL(next, request.url))
     }
-    
+
     console.error('[Auth Callback] Code exchange failed:', error)
     return NextResponse.redirect(new URL('/auth/auth-code-error', request.url))
   }
