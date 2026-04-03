@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { attendanceService } from '@/lib/attendanceService'
@@ -329,6 +329,20 @@ export default function DashboardHome() {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
+
+  // 인라인 확장 패널 상태
+  const [todayActivePanel, setTodayActivePanel] = useState<'consult' | 'recall' | 'gift' | null>(null)
+  const [attendanceActivePanel, setAttendanceActivePanel] = useState<'checkin' | 'checkout' | 'absent' | 'late' | 'early' | 'overtime' | null>(null)
+  const [weeklyActivePanel, setWeeklyActivePanel] = useState<'consult' | 'recall' | 'gift' | null>(null)
+
+  // 아코디언 토글 헬퍼 (같은 값 클릭 시 닫힘)
+  function togglePanel<T extends string>(
+    current: T | null,
+    next: T,
+    setter: React.Dispatch<React.SetStateAction<T | null>>
+  ) {
+    setter(current === next ? null : next)
+  }
 
   // 워커 설치 상태 체크
   const [workerInstalled, setWorkerInstalled] = useState<boolean | null>(null)
