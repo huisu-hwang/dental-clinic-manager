@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>클리닉 매니저 워커</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8f8f8;
+      color: #09090b;
+      font-size: 14px;
+      line-height: 1.5;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .header {
+      background: #18181b;
+      color: #fff;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+    .header .last-updated { font-size: 11px; color: #a1a1aa; }
+
+    .body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .status-card {
+      background: #fff;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: background 0.2s;
+      background: #d4d4d8;
+    }
+
+    .status-dot.running   { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+    .status-dot.polling   { background: #3b82f6; box-shadow: 0 0 6px #3b82f688; }
+    .status-dot.scraping  { background: #a855f7; box-shadow: 0 0 6px #a855f788; }
+    .status-dot.analyzing { background: #a855f7; box-shadow: 0 0 6px #a855f788; }
+    .status-dot.processing{ background: #f59e0b; box-shadow: 0 0 6px #f59e0b88; }
+    .status-dot.error     { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
+
+    .status-card-info { min-width: 0; }
+    .status-card-name { font-size: 12px; color: #71717a; margin-bottom: 2px; }
+    .status-card-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: #18181b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .control-section {
+      background: #fff;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .control-label { font-size: 13px; color: #52525b; }
+    .control-label strong { display: block; font-size: 14px; color: #09090b; margin-bottom: 2px; }
+
+    button {
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-start { background: #18181b; color: #fff; }
+    .btn-start:hover:not(:disabled) { background: #27272a; }
+
+    .btn-stop { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .btn-stop:hover:not(:disabled) { background: #fee2e2; }
+
+    .log-section {
+      background: #fff;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      overflow: hidden;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 160px;
+    }
+
+    .log-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f4f4f5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .log-header span {
+      font-size: 12px;
+      font-weight: 600;
+      color: #52525b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-clear {
+      font-size: 11px;
+      color: #a1a1aa;
+      background: none;
+      border: none;
+      padding: 2px 6px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .btn-clear:hover { background: #f4f4f5; color: #71717a; }
+
+    .log-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 14px;
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .log-line { padding: 1px 0; color: #52525b; word-break: break-all; }
+    .log-line.error  { color: #dc2626; }
+    .log-line.warn   { color: #d97706; }
+    .log-line.info   { color: #0369a1; }
+    .log-line.debug  { color: #a1a1aa; }
+    .log-empty { color: #a1a1aa; font-size: 12px; padding: 20px 0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>클리닉 매니저 워커</h1>
+    <span class="last-updated" id="lastUpdated">불러오는 중...</span>
+  </div>
+
+  <div class="body">
+    <div class="status-grid">
+      <div class="status-card">
+        <div class="status-dot" id="dotWorker"></div>
+        <div class="status-card-info">
+          <div class="status-card-name">마케팅 워커</div>
+          <div class="status-card-value" id="lblWorker">중지됨</div>
+        </div>
+      </div>
+      <div class="status-card">
+        <div class="status-dot" id="dotScraping"></div>
+        <div class="status-card-info">
+          <div class="status-card-name">홈택스 스크래핑</div>
+          <div class="status-card-value" id="lblScraping">중지됨</div>
+        </div>
+      </div>
+      <div class="status-card">
+        <div class="status-dot" id="dotSeo"></div>
+        <div class="status-card-info">
+          <div class="status-card-name">SEO 분석</div>
+          <div class="status-card-value" id="lblSeo">중지됨</div>
+        </div>
+      </div>
+      <div class="status-card">
+        <div class="status-dot" id="dotEmail"></div>
+        <div class="status-card-info">
+          <div class="status-card-name">이메일 모니터링</div>
+          <div class="status-card-value" id="lblEmail">중지됨</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="control-section">
+      <div class="control-label">
+        <strong>워커 제어</strong>
+        워커를 수동으로 시작하거나 중지합니다.
+      </div>
+      <button class="btn-start" id="btnToggle" disabled>불러오는 중...</button>
+    </div>
+
+    <div class="log-section">
+      <div class="log-header">
+        <span>최근 활동 로그</span>
+        <button class="btn-clear" id="btnClearLog">지우기</button>
+      </div>
+      <div class="log-body" id="logBody">
+        <p class="log-empty">로그를 불러오는 중...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var api = window.electronAPI;
+
+    var WORKER_LABELS   = { running: '실행 중', stopped: '중지됨', error: '오류' };
+    var SCRAPING_LABELS = { idle: '중지됨', polling: '대기 중', scraping: '수집 중', error: '오류' };
+    var SEO_LABELS      = { idle: '중지됨', polling: '대기 중', analyzing: '분석 중', error: '오류' };
+    var EMAIL_LABELS    = { idle: '중지됨', polling: '대기 중', processing: '처리 중', error: '오류' };
+
+    function updateDot(id, status) {
+      var el = document.getElementById(id);
+      el.className = 'status-dot ' + status;
+    }
+
+    function setLabel(id, text) {
+      document.getElementById(id).textContent = text;
+    }
+
+    function formatTime(date) {
+      return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    var isToggling = false;
+
+    function refreshStatus() {
+      if (!api || !api.getWorkerStatus) return;
+      api.getWorkerStatus().then(function(s) {
+        updateDot('dotWorker',   s.worker);
+        setLabel('lblWorker',   WORKER_LABELS[s.worker]   || s.worker);
+
+        updateDot('dotScraping', s.scraping);
+        setLabel('lblScraping', SCRAPING_LABELS[s.scraping] || s.scraping);
+
+        updateDot('dotSeo',      s.seo);
+        setLabel('lblSeo',      SEO_LABELS[s.seo]          || s.seo);
+
+        updateDot('dotEmail',    s.email);
+        setLabel('lblEmail',    EMAIL_LABELS[s.email]       || s.email);
+
+        if (!isToggling) {
+          var btn = document.getElementById('btnToggle');
+          if (s.worker === 'running') {
+            btn.textContent = '워커 중지';
+            btn.className = 'btn-stop';
+          } else {
+            btn.textContent = '워커 시작';
+            btn.className = 'btn-start';
+          }
+          btn.disabled = false;
+        }
+
+        document.getElementById('lastUpdated').textContent = '갱신: ' + formatTime(new Date());
+      }).catch(function() {
+        document.getElementById('lastUpdated').textContent = '상태 조회 실패';
+      });
+    }
+
+    function refreshLogs() {
+      if (!api || !api.getLogs) return;
+      api.getLogs().then(function(lines) {
+        var logBody = document.getElementById('logBody');
+
+        // 기존 노드 제거
+        while (logBody.firstChild) {
+          logBody.removeChild(logBody.firstChild);
+        }
+
+        if (!lines || lines.length === 0) {
+          var empty = document.createElement('p');
+          empty.className = 'log-empty';
+          empty.textContent = '로그가 없습니다.';
+          logBody.appendChild(empty);
+          return;
+        }
+
+        var fragment = document.createDocumentFragment();
+        lines.forEach(function(line) {
+          var div = document.createElement('div');
+          div.className = 'log-line';
+          if (line.indexOf('[ERROR]') !== -1)      div.classList.add('error');
+          else if (line.indexOf('[WARN]') !== -1)  div.classList.add('warn');
+          else if (line.indexOf('[INFO]') !== -1)  div.classList.add('info');
+          else if (line.indexOf('[DEBUG]') !== -1) div.classList.add('debug');
+          div.textContent = line;
+          fragment.appendChild(div);
+        });
+
+        logBody.appendChild(fragment);
+        logBody.scrollTop = logBody.scrollHeight;
+      }).catch(function() {
+        // 무시
+      });
+    }
+
+    document.getElementById('btnToggle').addEventListener('click', function() {
+      if (!api || !api.toggleWorker || isToggling) return;
+      isToggling = true;
+      var btn = document.getElementById('btnToggle');
+      btn.disabled = true;
+      btn.textContent = '처리 중...';
+      api.toggleWorker().then(function() {
+        return refreshStatus();
+      }).then(function() {
+        return refreshLogs();
+      }).catch(function() {
+        // 무시
+      }).finally(function() {
+        isToggling = false;
+      });
+    });
+
+    document.getElementById('btnClearLog').addEventListener('click', function() {
+      var logBody = document.getElementById('logBody');
+      while (logBody.firstChild) {
+        logBody.removeChild(logBody.firstChild);
+      }
+      var msg = document.createElement('p');
+      msg.className = 'log-empty';
+      msg.textContent = '로그가 지워졌습니다.';
+      logBody.appendChild(msg);
+    });
+
+    refreshStatus();
+    refreshLogs();
+
+    setInterval(function() {
+      refreshStatus();
+      refreshLogs();
+    }, 5000);
+  </script>
+</body>
+</html>

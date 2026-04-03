@@ -6,7 +6,8 @@ import { getScrapingStatus } from './scraping-bridge';
 import { getSeoStatus } from './seo-bridge';
 import { getEmailMonitorStatus } from './email-bridge';
 import { log } from './logger';
-import { autoUpdater } from 'electron-updater';
+import { checkForUpdatesManually } from './updater';
+import { createStatusWindow } from './status-window';
 
 // ============================================
 // 시스템 트레이 관리
@@ -27,6 +28,11 @@ export function createTray(): void {
   tray = new Tray(icon);
   tray.setToolTip('클리닉 매니저 워커 - 중지됨');
   rebuildMenu();
+
+  tray.on('double-click', () => {
+    createStatusWindow();
+  });
+
   log('info', '[Tray] 트레이 생성 완료');
 }
 
@@ -108,7 +114,7 @@ function rebuildMenu(): void {
     {
       label: '업데이트 확인',
       click: () => {
-        autoUpdater.checkForUpdates().catch(() => {});
+        checkForUpdatesManually();
       },
     },
     { type: 'separator' },

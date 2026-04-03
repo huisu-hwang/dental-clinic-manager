@@ -63,6 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
+        // PASSWORD_RECOVERY 모드에서는 프로필 로드를 건너뛰고 로딩만 해제
+        if (sessionStorage.getItem('supabase_password_recovery') === 'true') {
+          console.log('[AuthContext] PASSWORD_RECOVERY 모드 - 프로필 로드 건너뛰기')
+          setLoading(false)
+          return
+        }
+
         // 로그아웃 중이면 세션 체크 스킵
         const loggingOut = safeLocalStorage.getItem('dental_logging_out')
         if (isLoggingOut || loggingOut === 'true') {
@@ -244,14 +251,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (event === 'PASSWORD_RECOVERY') {
                 console.log('PASSWORD_RECOVERY 이벤트 감지 - /update-password로 리다이렉트')
 
-                // 현재 페이지가 update-password가 아니면 리다이렉트 (URL 해시 포함)
-                if (typeof window !== 'undefined' && window.location.pathname !== '/update-password') {
-                  window.location.href = '/update-password' + window.location.hash
+                // recovery 플래그 설정 (다른 컴포넌트에서 대시보드 리다이렉트 방지용)
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem('supabase_password_recovery', 'true')
+
+                  if (window.location.pathname !== '/update-password') {
+                    window.location.href = '/update-password' + window.location.hash
+                  }
                 }
                 return
               }
 
               if (event === 'SIGNED_IN' && session?.user) {
+                // PASSWORD_RECOVERY 모드에서는 프로필 로드/대시보드 리다이렉트 건너뛰기
+                if (typeof window !== 'undefined' && sessionStorage.getItem('supabase_password_recovery') === 'true') {
+                  console.log('[AuthContext] SIGNED_IN 무시 - PASSWORD_RECOVERY 모드')
+                  return
+                }
                 // 주의: onAuthStateChange 콜백은 Supabase 내부 세션 잠금(lock)이
                 // 유지된 상태에서 실행됩니다. 콜백 내에서 Supabase DB 쿼리나
                 // getUserProfileById() 등을 직접 await하면, 해당 쿼리가 내부적으로

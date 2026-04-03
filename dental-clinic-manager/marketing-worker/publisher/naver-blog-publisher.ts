@@ -369,11 +369,11 @@ export class NaverBlogPublisher {
   }
 
   /**
-   * 이미지 삽입 - 클립보드 복사-붙여넣기 방식
-   * UI 버튼/fileChooser 의존 없이 직접 클립보드에 이미지를 넣고 Ctrl+V
+   * 이미지 삽입 - fileChooser 방식
+   * 에디터의 이미지 추가 버튼을 클릭하고 fileChooser로 파일을 직접 업로드
    */
   private async insertImage(page: Page, imagePath: string): Promise<void> {
-    const MAX_RETRIES = 2;
+    const MAX_RETRIES = 3;
     const fs = await import('fs');
 
     if (!fs.existsSync(imagePath)) {
@@ -382,13 +382,7 @@ export class NaverBlogPublisher {
     }
 
     const fileSize = (fs.statSync(imagePath).size / 1024).toFixed(1);
-    console.log(`[NaverBlog] 이미지 삽입 시도 (클립보드 방식): ${imagePath} (${fileSize}KB)`);
-
-    // 이미지를 base64로 읽기
-    const imageBuffer = fs.readFileSync(imagePath);
-    const base64 = imageBuffer.toString('base64');
-    const ext = imagePath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
-    const mimeType = `image/${ext}`;
+    console.log(`[NaverBlog] 이미지 삽입 시도 (fileChooser 방식): ${imagePath} (${fileSize}KB)`);
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
@@ -400,38 +394,47 @@ export class NaverBlogPublisher {
         // 삽입 전 이미지 개수 확인
         const beforeCount = await page.locator('.se-image-resource, .se-component-image img').count();
 
-        // 에디터 본문에 포커스
-        const editorBody = page.locator('.se-component-content .se-text-paragraph').last();
-        await editorBody.click({ timeout: 5000 });
-        await page.waitForTimeout(300);
+        // fileChooser 이벤트를 먼저 등록한 뒤 버튼 클릭
+        const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 10000 });
 
-        // 클립보드에 이미지를 넣고 paste 이벤트 발생
-        await page.evaluate(async ({ base64Data, mime }: { base64Data: string; mime: string }) => {
-          const byteChars = atob(base64Data);
-          const byteArray = new Uint8Array(byteChars.length);
-          for (let i = 0; i < byteChars.length; i++) {
-            byteArray[i] = byteChars.charCodeAt(i);
+        // 네이버 스마트에디터 이미지 삽입 버튼 클릭
+        const imageBtn = page.locator(
+          'button.se-image-toolbar-button, ' +
+          'button[data-name="image"], ' +
+          'button[class*="image"]:not([class*="caption"]):not([class*="resize"]), ' +
+          '.se-toolbar button[title*="사진"], ' +
+          '.se-toolbar button[aria-label*="사진"], ' +
+          '.se-toolbar button[aria-label*="이미지"]'
+        ).first();
+
+        await imageBtn.click({ timeout: 10000 });
+        console.log('[NaverBlog] 이미지 버튼 클릭');
+
+        // fileChooser 수신 대기
+        let fileChooser;
+        try {
+          fileChooser = await fileChooserPromise;
+        } catch {
+          // fileChooser가 뜨지 않은 경우 — 팝업이 열렸을 수 있으니 내부 업로드 버튼 재시도
+          console.warn('[NaverBlog] fileChooser 미감지, 내부 업로드 버튼 재시도');
+          const uploadBtn = page.locator(
+            '[class*="se-image"] input[type="file"], ' +
+            'input[type="file"][accept*="image"], ' +
+            '.se-popup input[type="file"]'
+          ).first();
+          if (await uploadBtn.isVisible({ timeout: 3000 })) {
+            const fileChooserPromise2 = page.waitForEvent('filechooser', { timeout: 10000 });
+            await uploadBtn.click();
+            fileChooser = await fileChooserPromise2;
+          } else {
+            console.warn('[NaverBlog] 업로드 입력 찾기 실패, 재시도');
+            continue;
           }
-          const blob = new Blob([byteArray], { type: mime });
-          const file = new File([blob], `image.${mime.split('/')[1]}`, { type: mime });
+        }
 
-          const clipboardData = new DataTransfer();
-          clipboardData.items.add(file);
-
-          const pasteEvent = new ClipboardEvent('paste', {
-            bubbles: true,
-            cancelable: true,
-            clipboardData: clipboardData,
-          });
-
-          const editor = document.querySelector('.se-component-content [contenteditable="true"]')
-            || document.querySelector('.se-text-paragraph');
-          if (editor) {
-            editor.dispatchEvent(pasteEvent);
-          }
-        }, { base64Data: base64, mime: mimeType });
-
-        console.log('[NaverBlog] 클립보드 paste 이벤트 발생');
+        // 파일 설정
+        await fileChooser.setFiles(imagePath);
+        console.log('[NaverBlog] fileChooser에 파일 설정 완료');
 
         // 이미지 업로드 완료 대기
         try {
@@ -443,9 +446,11 @@ export class NaverBlogPublisher {
             beforeCount,
             { timeout: 30000 }
           );
-          console.log('[NaverBlog] 이미지 삽입 완료 (클립보드 방식)');
+          console.log('[NaverBlog] 이미지 삽입 완료 (fileChooser 방식)');
         } catch {
           console.warn('[NaverBlog] 이미지 업로드 대기 타임아웃 — 재시도');
+          // 팝업 닫기 시도
+          try { await page.keyboard.press('Escape'); } catch { /* ignore */ }
           continue;
         }
 
@@ -457,6 +462,8 @@ export class NaverBlogPublisher {
         return; // 성공
       } catch (error) {
         console.warn(`[NaverBlog] 이미지 삽입 실패 (시도 ${attempt + 1}): ${error instanceof Error ? error.message : error}`);
+        // 열린 팝업 닫기 시도
+        try { await page.keyboard.press('Escape'); } catch { /* ignore */ }
       }
     }
     console.error(`[NaverBlog] 이미지 삽입 최종 실패: ${imagePath}`);

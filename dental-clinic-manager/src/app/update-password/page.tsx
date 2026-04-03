@@ -29,6 +29,14 @@ export default function UpdatePasswordPage() {
 
     let recoveryDetected = false;
 
+    // 0. sessionStorage 플래그 확인 (AuthContext에서 설정됨)
+    if (sessionStorage.getItem('supabase_password_recovery') === 'true') {
+      console.log('[PasswordReset] sessionStorage recovery 플래그 감지');
+      recoveryDetected = true;
+      setIsRecoveryMode(true);
+      setCheckingAuth(false);
+    }
+
     // 1. URL 해시에서 토큰 확인
     const hash = window.location.hash;
     if (hash) {
@@ -38,6 +46,7 @@ export default function UpdatePasswordPage() {
 
       if (accessToken && type === 'recovery') {
         console.log('[PasswordReset] Recovery 토큰 감지');
+        sessionStorage.setItem('supabase_password_recovery', 'true');
         recoveryDetected = true;
         setIsRecoveryMode(true);
         setCheckingAuth(false);
@@ -129,8 +138,11 @@ export default function UpdatePasswordPage() {
     } else {
       setMessage('비밀번호가 성공적으로 변경되었습니다. 잠시 후 대시보드로 이동합니다.')
 
+      // recovery 플래그 클리어 (대시보드 리다이렉트 차단 해제)
+      sessionStorage.removeItem('supabase_password_recovery')
+
       setTimeout(() => {
-        router.push('/dashboard') // 대시보드 페이지로 리디렉션
+        window.location.href = '/dashboard' // 대시보드 페이지로 리디렉션 (full reload로 AuthContext 재초기화)
       }, 2000)
     }
 
