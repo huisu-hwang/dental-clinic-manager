@@ -23,6 +23,7 @@ import {
   Flame,
   Download,
   Monitor,
+  ArrowUpCircle,
 } from 'lucide-react'
 
 // 날씨 아이콘 매핑
@@ -331,6 +332,9 @@ export default function DashboardHome() {
 
   // 워커 설치 상태 체크
   const [workerInstalled, setWorkerInstalled] = useState<boolean | null>(null)
+  const [workerUpdateAvailable, setWorkerUpdateAvailable] = useState(false)
+  const [workerVersions, setWorkerVersions] = useState<{ current: string | null; latest: string | null }>({ current: null, latest: null })
+  const [workerUpdating, setWorkerUpdating] = useState(false)
   useEffect(() => {
     const checkWorker = async () => {
       try {
@@ -338,6 +342,11 @@ export default function DashboardHome() {
         if (res.ok) {
           const data = await res.json()
           setWorkerInstalled(data.marketing?.installed ?? false)
+          setWorkerUpdateAvailable(data.marketing?.updateAvailable ?? false)
+          setWorkerVersions({
+            current: data.marketing?.currentVersion ?? null,
+            latest: data.marketing?.latestVersion ?? null,
+          })
         } else {
           setWorkerInstalled(false)
         }
@@ -349,6 +358,21 @@ export default function DashboardHome() {
     const interval = setInterval(checkWorker, 30000)
     return () => clearInterval(interval)
   }, [])
+
+  const handleWorkerUpdate = async () => {
+    setWorkerUpdating(true)
+    try {
+      await fetch('/api/master/worker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update' }),
+      })
+    } catch {
+      // 에러 무시 — 워커가 10초 내 시그널 감지
+    } finally {
+      setTimeout(() => setWorkerUpdating(false), 5000)
+    }
+  }
 
   const [workerDownloading, setWorkerDownloading] = useState(false)
   const handleWorkerDownload = async () => {
@@ -431,6 +455,31 @@ export default function DashboardHome() {
           <p className="text-xs text-blue-500 mt-1.5">
             * Windows 보호 화면이 나타나면 &apos;추가 정보&apos; → &apos;실행&apos;을 클릭하세요.
           </p>
+        </div>
+      )}
+
+      {/* 워커 업데이트 배너 */}
+      {workerInstalled && workerUpdateAvailable && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <ArrowUpCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <div>
+                <span className="text-sm font-medium text-amber-800">워커 업데이트가 있습니다</span>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  v{workerVersions.current} → v{workerVersions.latest}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleWorkerUpdate}
+              disabled={workerUpdating}
+              className="inline-flex items-center px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap ml-4"
+            >
+              <ArrowUpCircle className="w-3.5 h-3.5 mr-1.5" />
+              {workerUpdating ? '요청 중...' : '업데이트'}
+            </button>
+          </div>
         </div>
       )}
 

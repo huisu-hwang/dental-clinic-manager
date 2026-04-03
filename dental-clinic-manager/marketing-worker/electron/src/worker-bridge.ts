@@ -1,6 +1,8 @@
+import { app } from 'electron';
 import { getConfig, getWorkerEnvVars } from './config-store';
 import { log } from './logger';
 import { notifyPublishSuccess, notifyPublishError } from './tray';
+import { checkForUpdatesManually } from './updater';
 
 // ============================================
 // 워커 연결 어댑터 + Supervisor 통합
@@ -91,9 +93,10 @@ async function registerWorkerOnline(): Promise<void> {
       body: JSON.stringify({
         watchdog_online: true,
         worker_running: true,
+        worker_version: app.getVersion(),
       }),
     });
-    log('info', '[WorkerBridge] 워커 온라인 상태 등록 완료');
+    log('info', `[WorkerBridge] 워커 온라인 상태 등록 완료 (v${app.getVersion()})`);
   } catch (err) {
     log('warn', `[WorkerBridge] 온라인 등록 실패: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -130,16 +133,18 @@ async function pollControlSignals(): Promise<void> {
         start_requested: boolean;
         stop_requested: boolean;
         headless: boolean;
+        update_requested: boolean;
       };
       nextItem: unknown;
     }>('/poll');
 
-    // watchdog 상태 갱신 (heartbeat)
+    // watchdog 상태 갱신 (heartbeat + 버전)
     await apiRequest('/control', {
       method: 'PATCH',
       body: JSON.stringify({
         watchdog_online: true,
         worker_running: currentStatus === 'running',
+        worker_version: app.getVersion(),
       }),
     });
 
@@ -169,6 +174,16 @@ async function pollControlSignals(): Promise<void> {
         body: JSON.stringify({ clear_stop_requested: true }),
       });
       stop();
+    }
+
+    // update_requested 감지 → 업데이트 확인
+    if (result.control.update_requested) {
+      log('info', '[WorkerBridge] update_requested 신호 감지 → 업데이트 확인');
+      await apiRequest('/control', {
+        method: 'PATCH',
+        body: JSON.stringify({ clear_update_requested: true }),
+      });
+      checkForUpdatesManually();
     }
   } catch (err) {
     log('warn', `[WorkerBridge] 제어 폴링 오류: ${err instanceof Error ? err.message : String(err)}`);
