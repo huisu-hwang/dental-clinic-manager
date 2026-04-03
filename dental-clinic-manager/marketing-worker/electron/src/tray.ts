@@ -6,7 +6,7 @@ import { getScrapingStatus } from './scraping-bridge';
 import { getSeoStatus } from './seo-bridge';
 import { getEmailMonitorStatus } from './email-bridge';
 import { log } from './logger';
-import { autoUpdater } from 'electron-updater';
+import { checkForUpdatesManually } from './updater';
 
 // ============================================
 // 시스템 트레이 관리
@@ -108,7 +108,7 @@ function rebuildMenu(): void {
     {
       label: '업데이트 확인',
       click: () => {
-        autoUpdater.checkForUpdates().catch(() => {});
+        checkForUpdatesManually();
       },
     },
     { type: 'separator' },
