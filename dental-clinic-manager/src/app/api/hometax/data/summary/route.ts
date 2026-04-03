@@ -57,7 +57,7 @@ function findMonthRows(
 
 /**
  * raw_data 레코드 배열에서 해당 월의 금액 추출
- * 해당 월 행이 없으면 0 반환 (데이터 미존재)
+ * 해당 월 행이 없으면 전체 행 사용 (폴백 — 예: 신용카드 분기 데이터에서 해당월 미집계 시)
  */
 function extractMonthAmount(
   records: Record<string, unknown>[],
@@ -66,9 +66,9 @@ function extractMonthAmount(
 ): number {
   if (!Array.isArray(records) || records.length === 0) return 0;
 
-  // 해당 월 행만 필터링
+  // 해당 월 행만 필터링; 없으면 전체 행 폴백 (신용카드처럼 분기 데이터에서 해당월 데이터가 아직 없는 경우)
   const monthRows = findMonthRows(records, year, targetMonth);
-  if (monthRows.length === 0) return 0;
+  const rowsToSum = monthRows.length > 0 ? monthRows : records;
 
   const amountKeys = [
     // 실제 DB에서 확인된 금액 필드 (우선순위 순)
@@ -83,7 +83,7 @@ function extractMonthAmount(
   ];
 
   let total = 0;
-  for (const record of monthRows) {
+  for (const record of rowsToSum) {
     for (const key of amountKeys) {
       if (record[key] !== undefined && record[key] !== '') {
         const val = String(record[key]).replace(/[,원\s]/g, '');
