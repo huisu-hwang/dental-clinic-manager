@@ -720,30 +720,36 @@ export default function DashboardHome() {
               ) : teamStatus ? (
                 <div className="bg-slate-50 rounded-lg p-4">
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
-                    <div>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'checkin', setAttendanceActivePanel)}
+                      className={`rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'checkin' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-green-600">{teamStatus.checked_in}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{teamStatus.total_employees}</span></p>
                       <p className="text-xs text-green-600">출근/전체</p>
-                    </div>
-                    <div>
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'checkout', setAttendanceActivePanel)}
+                      className={`rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'checkout' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-blue-600">{teamStatus.checked_out || 0}</p>
                       <p className="text-xs text-blue-600">퇴근</p>
-                    </div>
-                    <div>
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'absent', setAttendanceActivePanel)}
+                      className={`rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'absent' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-orange-600">{teamStatus.not_checked_in}</p>
                       <p className="text-xs text-orange-600">결근</p>
-                    </div>
-                    <div className="hidden sm:block">
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'late', setAttendanceActivePanel)}
+                      className={`hidden sm:block rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'late' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-yellow-600">{teamStatus.late_count}</p>
                       <p className="text-xs text-yellow-600">지각</p>
-                    </div>
-                    <div className="hidden sm:block">
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'early', setAttendanceActivePanel)}
+                      className={`hidden sm:block rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'early' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-red-600">{teamStatus.early_leave_count || 0}</p>
                       <p className="text-xs text-red-600">조퇴</p>
-                    </div>
-                    <div className="hidden sm:block">
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'overtime', setAttendanceActivePanel)}
+                      className={`hidden sm:block rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'overtime' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-purple-600">{teamStatus.overtime_count || 0}</p>
                       <p className="text-xs text-purple-600">초과</p>
-                    </div>
+                    </button>
                   </div>
                   {teamStatus.total_employees > 0 && (
                     <div className="mt-3 pt-3 border-t border-slate-200">
@@ -759,6 +765,58 @@ export default function DashboardHome() {
                       </div>
                     </div>
                   )}
+
+                  {/* 출퇴근 확장 패널 — teamStatus ? 블록 안 */}
+                  {attendanceActivePanel && (() => {
+                    type Emp = TeamAttendanceStatus['employees'][number]
+                    const filterMap: Record<NonNullable<typeof attendanceActivePanel>, (e: Emp) => boolean> = {
+                      checkin:  (e) => e.check_in_time != null,
+                      checkout: (e) => e.check_out_time != null,
+                      absent:   (e) => e.status === 'absent',
+                      late:     (e) => e.late_minutes > 0,
+                      early:    (e) => e.early_leave_minutes > 0,
+                      overtime: (e) => e.overtime_minutes > 0,
+                    }
+                    const labelMap: Record<NonNullable<typeof attendanceActivePanel>, string> = {
+                      checkin: '🟢 출근 직원', checkout: '🔵 퇴근 직원', absent: '🔴 결근 직원',
+                      late: '🟡 지각 직원', early: '🟠 조퇴 직원', overtime: '🟣 초과근무 직원',
+                    }
+                    const filtered = (teamStatus.employees || []).filter(filterMap[attendanceActivePanel])
+                    const formatTime = (iso: string | null | undefined) =>
+                      iso ? new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-'
+                    const statusTag = (e: Emp) => {
+                      if (attendanceActivePanel === 'late') return `지각 ${e.late_minutes}분`
+                      if (attendanceActivePanel === 'early') return `조퇴 ${e.early_leave_minutes}분`
+                      if (attendanceActivePanel === 'overtime') return `초과 ${e.overtime_minutes}분`
+                      if (e.status === 'absent') return '결근'
+                      if (e.check_out_time) return '퇴근완료'
+                      return '출근중'
+                    }
+                    return (
+                      <div className="mt-3 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                        <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
+                          <span className="text-xs font-semibold text-slate-600">{labelMap[attendanceActivePanel]}</span>
+                          <span className="text-xs text-slate-400">{filtered.length}명</span>
+                        </div>
+                        {filtered.length === 0 ? (
+                          <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                        ) : (
+                          <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+                            {filtered.map(emp => (
+                              <div key={emp.user_id} className="flex items-center gap-2 px-4 py-2 text-sm">
+                                <span className="font-medium text-slate-800 w-16 truncate">{emp.user_name}</span>
+                                <span className="text-slate-500 flex-1 text-xs">
+                                  {emp.check_in_time ? `${formatTime(emp.check_in_time)} 출근` : ''}
+                                  {emp.check_out_time ? ` → ${formatTime(emp.check_out_time)} 퇴근` : ''}
+                                </span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{statusTag(emp)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               ) : (
                 <div className="text-center py-6 text-slate-500 bg-slate-50 rounded-lg">
