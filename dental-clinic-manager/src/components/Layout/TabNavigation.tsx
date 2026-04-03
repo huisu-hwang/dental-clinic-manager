@@ -84,7 +84,8 @@ import {
   Plus,
   Trash2,
   X,
-  Lock
+  Lock,
+  Download
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -429,6 +430,41 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
     onTabChange(tabId)
     if (onItemClick) {
       onItemClick()
+    }
+  }
+
+  const [isDownloadingWorker, setIsDownloadingWorker] = useState(false)
+
+  const handleWorkerDownload = async () => {
+    if (isDownloadingWorker) return
+    setIsDownloadingWorker(true)
+    try {
+      const isMac = navigator.userAgent.toLowerCase().includes('mac')
+      const os = isMac ? 'mac' : 'windows'
+      const res = await fetch(`/api/marketing/worker-api/download?os=${os}`)
+      if (!res.ok) throw new Error('다운로드 실패')
+      const contentDisposition = res.headers.get('Content-Disposition')
+      if (contentDisposition) {
+        // shell script 직접 다운로드
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        const filename = isMac ? 'marketing-worker-setup.command' : 'marketing-worker-setup.sh'
+        a.download = filename
+        a.click()
+        URL.revokeObjectURL(url)
+      } else {
+        // JSON 응답 (GitHub Release URL)
+        const data = await res.json()
+        if (data.downloadUrl) {
+          window.open(data.downloadUrl, '_blank')
+        }
+      }
+    } catch {
+      alert('워커 다운로드에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setIsDownloadingWorker(false)
     }
   }
 
@@ -1149,33 +1185,40 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
         )}
       </div>
 
-      {/* 하단 영역: 하단 고정 메뉴들 */}
-      {bottomFixedMenus.length > 0 && (
-        <div className="pt-2 border-t border-slate-200 mt-2 space-y-1">
-          {bottomFixedMenus.map(tab => {
-            const isActive = activeTab === tab.id
-            const Icon = tab.icon
+      {/* 하단 영역: 워커 다운로드 + 하단 고정 메뉴들 */}
+      <div className="pt-2 border-t border-slate-200 mt-2 space-y-1">
+        {/* 워커 다운로드 버튼 */}
+        <button
+          onClick={handleWorkerDownload}
+          disabled={isDownloadingWorker}
+          className="group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full text-slate-500 hover:bg-green-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download className={`w-5 h-5 flex-shrink-0 text-slate-400 group-hover:text-green-600 ${isDownloadingWorker ? 'animate-bounce' : ''}`} />
+          <span className="truncate">{isDownloadingWorker ? '다운로드 중...' : '워커 다운로드'}</span>
+        </button>
+        {bottomFixedMenus.map(tab => {
+          const isActive = activeTab === tab.id
+          const Icon = tab.icon
 
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabClick(tab.id)}
-                className={`
-                  group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
-                  ${isActive
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
-                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
-                  }
-                  ${isEditMode ? 'opacity-60 cursor-default' : ''}
-                `}
-              >
-                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                <span className="truncate">{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab.id)}
+              className={`
+                group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
+                ${isActive
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                }
+                ${isEditMode ? 'opacity-60 cursor-default' : ''}
+              `}
+            >
+              <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+              <span className="truncate">{tab.label}</span>
+            </button>
+          )
+        })}
+      </div>
     </nav>
   )
 }
