@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const os = searchParams.get('os') || 'mac';
 
-    // Windows: GitHub Release의 .exe 인스톨러로 리다이렉트
+    // Windows: GitHub Release의 .exe 인스톨러 URL 반환 (클라이언트에서 직접 다운로드)
     if (os === 'windows') {
       const installerUrl = await getLatestInstallerUrl();
-      return NextResponse.redirect(installerUrl);
+      return NextResponse.json({ downloadUrl: installerUrl });
     }
 
     // macOS/Linux: 기존 스크립트 방식 유지
