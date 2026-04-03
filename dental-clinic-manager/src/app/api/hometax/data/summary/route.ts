@@ -9,52 +9,81 @@ function getServiceClient() {
 }
 
 /**
- * raw_data 배열에서 특정 월에 해당하는 레코드만 필터링
- * 홈택스 누계 조회는 연간/분기 전체 데이터를 반환하므로 해당 월 행만 추출
+ * raw_data 배열에서 특정 연월에 해당하는 레코드만 필터링
+ * 홈택스 누계 조회는 연간/반기 전체 데이터를 반환하므로 해당 월 행만 추출
+ *
+ * 실제 DB 데이터 구조:
+ * - cash_receipt_sales: 거래년월 = "2026-01" 형식
+ * - business_card_purchase: 거래년월 = "2026-01" 형식
+ * - credit_card_sales: 승인년월 = "2026-01" 형식
  */
-function findMonthRows(records: Record<string, unknown>[], targetMonth: number): Record<string, unknown>[] {
+function findMonthRows(
+  records: Record<string, unknown>[],
+  year: number,
+  targetMonth: number,
+): Record<string, unknown>[] {
+  // YYYY-MM 형식 (예: "2026-04")
+  const yearMonthStr = `${year}-${String(targetMonth).padStart(2, '0')}`;
+
+  // YYYY-MM 형식을 담는 필드명 목록
+  const yearMonthFields = ['거래년월', '승인년월', '발행년월', '귀속년월', '거래일자'];
+
+  // "N월" 형식 폴백 (혹시 다른 스크래퍼에서 다른 형식 사용 시)
   const monthPatterns = [
     `${targetMonth}월`,
     `${String(targetMonth).padStart(2, '0')}월`,
-    String(targetMonth),
-    String(targetMonth).padStart(2, '0'),
   ];
-  const monthFieldKeys = ['월', '기간', '거래월', '월별', '구분', '조회월'];
+  const monthOnlyFields = ['월', '기간', '거래월', '월별', '조회월'];
 
   return records.filter(record => {
-    for (const key of monthFieldKeys) {
+    // YYYY-MM 형식 필드 확인
+    for (const key of yearMonthFields) {
+      const val = record[key];
+      if (val !== undefined && val !== null && val !== '') {
+        if (String(val).trim() === yearMonthStr) return true;
+      }
+    }
+    // "N월" 형식 필드 확인 (폴백)
+    for (const key of monthOnlyFields) {
       const val = record[key];
       if (val !== undefined && val !== null && val !== '') {
         const strVal = String(val).replace(/\s/g, '');
-        for (const pattern of monthPatterns) {
-          if (strVal === pattern) return true;
-        }
+        if (monthPatterns.some(p => strVal === p)) return true;
       }
     }
     return false;
   });
 }
 
-/** raw_data 레코드 배열에서 총 금액 추출 (해당 월만 필터링) */
-function extractTotalAmount(records: Record<string, unknown>[], targetMonth?: number): number {
+/**
+ * raw_data 레코드 배열에서 해당 월의 금액 추출
+ * 해당 월 행이 없으면 0 반환 (데이터 미존재)
+ */
+function extractMonthAmount(
+  records: Record<string, unknown>[],
+  year: number,
+  targetMonth: number,
+): number {
   if (!Array.isArray(records) || records.length === 0) return 0;
 
-  // 월별 행이 포함된 누계 데이터인 경우 해당 월만 추출
-  const recordsToProcess = targetMonth
-    ? (() => {
-        const monthRows = findMonthRows(records, targetMonth);
-        return monthRows.length > 0 ? monthRows : records;
-      })()
-    : records;
+  // 해당 월 행만 필터링
+  const monthRows = findMonthRows(records, year, targetMonth);
+  if (monthRows.length === 0) return 0;
 
-  let total = 0;
   const amountKeys = [
-    '합계(①+②)', '합계(③+④)', '합계', '총금액', '매입금액',
+    // 실제 DB에서 확인된 금액 필드 (우선순위 순)
+    '총금액',        // cash_receipt_sales
+    '매출액계',      // credit_card_sales
+    '합계(①+②)',   // business_card_purchase
+    // 범용 폴백
+    '합계(③+④)', '합계', '매입금액',
     '거래금액', '매출금액',
     '공급가액(①)', '공급가액(③)', '공급가액', '전체',
     'total_amount', 'supply_amount',
   ];
-  for (const record of recordsToProcess) {
+
+  let total = 0;
+  for (const record of monthRows) {
     for (const key of amountKeys) {
       if (record[key] !== undefined && record[key] !== '') {
         const val = String(record[key]).replace(/[,원\s]/g, '');
@@ -82,13 +111,14 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getServiceClient();
+    const targetYear = parseInt(year, 10);
     const targetMonth = parseInt(month, 10);
 
     const { data, error } = await supabase
       .from('hometax_raw_data')
       .select('data_type, record_count, raw_data, scraped_at')
       .eq('clinic_id', clinicId)
-      .eq('year', parseInt(year, 10))
+      .eq('year', targetYear)
       .eq('month', targetMonth);
 
     if (error) {
@@ -107,13 +137,17 @@ export async function GET(request: NextRequest) {
 
     for (const row of (data || [])) {
       if (summary[row.data_type]) {
-        const rawRecords = Array.isArray(row.raw_data) ? row.raw_data as Record<string, unknown>[] : [];
-        // 해당 월 데이터만 추출 (연간/분기 누계 데이터에서 월별 필터링)
+        const rawRecords = Array.isArray(row.raw_data)
+          ? row.raw_data as Record<string, unknown>[]
+          : [];
+
         summary[row.data_type] = {
           count: row.record_count || 0,
-          totalAmount: extractTotalAmount(rawRecords, targetMonth),
+          // 해당 월 데이터만 추출 (연간/반기 누계에서 선택 월 행만 사용)
+          totalAmount: extractMonthAmount(rawRecords, targetYear, targetMonth),
           scrapedAt: row.scraped_at,
         };
+
         if (!lastSyncedAt || (row.scraped_at && row.scraped_at > lastSyncedAt)) {
           lastSyncedAt = row.scraped_at;
         }
@@ -124,7 +158,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         clinicId,
-        year: parseInt(year, 10),
+        year: targetYear,
         month: targetMonth,
         summary,
         lastSyncedAt,
