@@ -29,7 +29,13 @@ export default function AIGenerationFloating() {
   if (!isGenerating && !generatedResult && !generationError) return null
 
   const handleGoToResult = () => {
-    router.push('/admin/marketing')
+    const postId = generatedResult?.savedItemId
+    if (postId) {
+      router.push(`/admin/marketing?viewPost=${postId}`)
+    } else {
+      router.push('/admin/marketing')
+    }
+    clearGeneration()
   }
 
   const handleDismiss = () => {

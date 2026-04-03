@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   PencilSquareIcon,
   CalendarDaysIcon,
@@ -38,8 +38,21 @@ type MarketingTab = 'newpost' | 'dashboard' | 'posts' | 'calendar' | 'settings'
 export default function MarketingPage() {
   const { user, logout, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<MarketingTab>('dashboard')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [viewPostId, setViewPostId] = useState<string | null>(null)
+
+  // viewPost 쿼리 파라미터가 있으면 '글 관리' 탭으로 전환하고 해당 글 열기
+  useEffect(() => {
+    const postId = searchParams.get('viewPost')
+    if (postId) {
+      setActiveTab('posts')
+      setViewPostId(postId)
+      // URL에서 쿼리 파라미터 제거 (뒤로가기 시 재트리거 방지)
+      router.replace('/admin/marketing', { scroll: false })
+    }
+  }, [searchParams, router])
 
   useEffect(() => {
     if (!loading && !user) {
@@ -161,7 +174,7 @@ export default function MarketingPage() {
             <div className="bg-white rounded-b-xl border border-t-0 border-slate-200 p-4 sm:p-6">
               {activeTab === 'newpost' && <NewPostForm onClose={() => setActiveTab('dashboard')} />}
               {activeTab === 'dashboard' && <DashboardContent />}
-              {activeTab === 'posts' && <PostsContent />}
+              {activeTab === 'posts' && <PostsContent viewPostId={viewPostId} onViewPostHandled={() => setViewPostId(null)} />}
               {activeTab === 'calendar' && <CalendarContent />}
               {activeTab === 'settings' && <SettingsContent />}
             </div>
@@ -227,7 +240,7 @@ const POST_TYPE_BADGE: Record<PostType, { label: string; color: string }> = {
   clinical: { label: '임상', color: 'bg-emerald-50 text-emerald-600' },
 }
 
-function PostsContent() {
+function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string | null; onViewPostHandled?: () => void }) {
   const [posts, setPosts] = useState<ContentCalendarItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -235,6 +248,17 @@ function PostsContent() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
+  // viewPostId가 전달되면 해당 글을 자동으로 열기
+  useEffect(() => {
+    if (viewPostId && posts.length > 0) {
+      const targetPost = posts.find(p => p.id === viewPostId)
+      if (targetPost) {
+        setSelectedPost(targetPost)
+      }
+      onViewPostHandled?.()
+    }
+  }, [viewPostId, posts, onViewPostHandled])
 
   const loadPosts = useCallback(async () => {
     setLoadError(null)
