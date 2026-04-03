@@ -434,37 +434,61 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   }
 
   const [isDownloadingWorker, setIsDownloadingWorker] = useState(false)
+  const [showWorkerModal, setShowWorkerModal] = useState(false)
+  const [workerInstallCommand, setWorkerInstallCommand] = useState('')
+  const [copiedWorkerCmd, setCopiedWorkerCmd] = useState(false)
 
   const handleWorkerDownload = async () => {
     if (isDownloadingWorker) return
     setIsDownloadingWorker(true)
     try {
       const isMac = navigator.userAgent.toLowerCase().includes('mac')
-      const os = isMac ? 'mac' : 'windows'
-      const res = await fetch(`/api/marketing/worker-api/download?os=${os}`)
-      if (!res.ok) throw new Error('다운로드 실패')
-      const contentDisposition = res.headers.get('Content-Disposition')
-      if (contentDisposition) {
-        // shell script 직접 다운로드
-        const blob = await res.blob()
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        const filename = isMac ? 'marketing-worker-setup.command' : 'marketing-worker-setup.sh'
-        a.download = filename
-        a.click()
-        URL.revokeObjectURL(url)
-      } else {
-        // JSON 응답 (GitHub Release URL)
-        const data = await res.json()
-        if (data.downloadUrl) {
-          window.open(data.downloadUrl, '_blank')
+
+      if (isMac) {
+        // Mac: 스크립트 내용을 fetch 후 Terminal heredoc 명령어로 모달에 표시
+        const res = await fetch('/api/marketing/worker-api/download?os=mac')
+        if (!res.ok) throw new Error('다운로드 실패')
+        const contentDisposition = res.headers.get('Content-Disposition')
+        if (contentDisposition) {
+          // shell script → heredoc 명령어 생성
+          const scriptText = await res.text()
+          const command = `bash << 'WORKER_INSTALL_EOF'\n${scriptText}\nWORKER_INSTALL_EOF`
+          setWorkerInstallCommand(command)
+          setShowWorkerModal(true)
+        } else {
+          // dmg URL
+          const data = await res.json()
+          if (data.downloadUrl) window.open(data.downloadUrl, '_blank')
         }
+      } else {
+        // Windows: 기존 .exe 다운로드
+        const res = await fetch('/api/marketing/worker-api/download?os=windows')
+        if (!res.ok) throw new Error('다운로드 실패')
+        const data = await res.json()
+        if (data.downloadUrl) window.open(data.downloadUrl, '_blank')
       }
     } catch {
       alert('워커 다운로드에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setIsDownloadingWorker(false)
+    }
+  }
+
+  const handleCopyWorkerCmd = async () => {
+    try {
+      await navigator.clipboard.writeText(workerInstallCommand)
+      setCopiedWorkerCmd(true)
+      setTimeout(() => setCopiedWorkerCmd(false), 2000)
+    } catch {
+      // clipboard API 실패 시 fallback
+      const el = document.createElement('textarea')
+      el.value = workerInstallCommand
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      setCopiedWorkerCmd(true)
+      setTimeout(() => setCopiedWorkerCmd(false), 2000)
     }
   }
 
@@ -1219,6 +1243,56 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
           )
         })}
       </div>
+
+      {/* Mac 워커 설치 모달 */}
+      {showWorkerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowWorkerModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Monitor className="w-5 h-5 text-slate-600" />
+                <h2 className="text-base font-semibold text-slate-800">통합 워커 설치 (Mac)</h2>
+              </div>
+              <button onClick={() => setShowWorkerModal(false)} className="p-1 rounded-lg hover:bg-slate-100">
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+
+            <ol className="text-sm text-slate-600 space-y-1.5 mb-4">
+              <li><span className="font-medium text-slate-700">1.</span> <kbd className="px-1.5 py-0.5 rounded bg-slate-100 text-xs font-mono">Cmd + Space</kbd> → <span className="font-medium">Terminal</span> 검색 후 실행</li>
+              <li><span className="font-medium text-slate-700">2.</span> 아래 명령어를 복사하여 Terminal에 붙여넣고 <kbd className="px-1.5 py-0.5 rounded bg-slate-100 text-xs font-mono">Enter</kbd></li>
+            </ol>
+
+            <div className="relative">
+              <pre className="bg-slate-900 text-green-400 text-xs rounded-xl p-4 overflow-x-auto max-h-32 font-mono leading-relaxed select-all whitespace-pre-wrap break-all">
+                {workerInstallCommand}
+              </pre>
+              <button
+                onClick={handleCopyWorkerCmd}
+                className={`absolute top-2 right-2 flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                  copiedWorkerCmd
+                    ? 'bg-green-500 text-white'
+                    : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                }`}
+              >
+                {copiedWorkerCmd ? <Check className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
+                <span>{copiedWorkerCmd ? '복사됨!' : '복사'}</span>
+              </button>
+            </div>
+            <button
+              onClick={handleCopyWorkerCmd}
+              className={`mt-3 w-full py-2.5 rounded-xl text-sm font-medium transition-all ${
+                copiedWorkerCmd
+                  ? 'bg-green-500 text-white'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
+            >
+              {copiedWorkerCmd ? '✓ 명령어 복사 완료' : '명령어 복사하기'}
+            </button>
+            <p className="mt-2 text-xs text-slate-400 text-center">Terminal에 붙여넣기하면 Gatekeeper 경고 없이 설치됩니다</p>
+          </div>
+        </div>
+      )}
     </nav>
   )
 }
