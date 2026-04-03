@@ -36,6 +36,22 @@ nsis:
   deleteAppDataOnUninstall: true
   language: 0x0412
 
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: assets/icon.png
+  category: public.app-category.productivity
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  identity: null
+
+dmg:
+  title: 클리닉 매니저 워커
+  sign: false
+
 extraResources:
   - from: playwright-browsers
     to: browsers

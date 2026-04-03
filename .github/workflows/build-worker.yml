@@ -1,0 +1,88 @@
+name: Build & Release Worker
+
+on:
+  push:
+    tags:
+      - 'worker-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build marketing-worker
+        working-directory: dental-clinic-manager/marketing-worker
+        run: |
+          npm install
+          npm run build
+
+      - name: Install dependencies (electron)
+        working-directory: dental-clinic-manager/marketing-worker/electron
+        run: npm install
+
+      - name: Install Playwright Chromium for bundling
+        working-directory: dental-clinic-manager/marketing-worker/electron
+        run: npx playwright install chromium
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ./playwright-browsers
+
+      - name: Build macOS DMG
+        working-directory: dental-clinic-manager/marketing-worker/electron
+        run: npm run build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS DMG to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dental-clinic-manager/marketing-worker/electron/release/*.dmg
+          fail_on_unmatched_files: false
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build marketing-worker
+        working-directory: dental-clinic-manager/marketing-worker
+        run: |
+          npm install
+          npm run build
+
+      - name: Install dependencies (electron)
+        working-directory: dental-clinic-manager/marketing-worker/electron
+        run: npm install
+
+      - name: Install Playwright Chromium for bundling
+        working-directory: dental-clinic-manager/marketing-worker/electron
+        run: npx playwright install chromium
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: .\playwright-browsers
+
+      - name: Build Windows installer
+        working-directory: dental-clinic-manager/marketing-worker/electron
+        run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows EXE to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dental-clinic-manager/marketing-worker/electron/release/*.exe
+          fail_on_unmatched_files: false

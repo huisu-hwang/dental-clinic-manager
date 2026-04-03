@@ -378,15 +378,31 @@ export default function DashboardHome() {
   const handleWorkerDownload = async () => {
     setWorkerDownloading(true)
     try {
-      const response = await fetch(`/api/marketing/worker-api/download?os=${navigator.platform.includes('Win') ? 'windows' : 'mac'}`)
+      const isWindows = navigator.platform.includes('Win')
+      const os = isWindows ? 'windows' : 'mac'
+      const response = await fetch(`/api/marketing/worker-api/download?os=${os}`)
       if (!response.ok) throw new Error('다운로드 실패')
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = navigator.platform.includes('Win') ? '클리닉매니저워커-설치.exe' : '클리닉매니저워커-설치.command'
-      a.click()
-      URL.revokeObjectURL(url)
+
+      const contentType = response.headers.get('Content-Type') || ''
+      if (contentType.includes('application/json')) {
+        // Windows(.exe) / macOS(.dmg): GitHub Release URL로 직접 이동
+        const data = await response.json()
+        const a = document.createElement('a')
+        a.href = data.downloadUrl
+        a.target = '_blank'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      } else {
+        // shell script fallback (macOS DMG 없는 경우)
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = isWindows ? '클리닉매니저워커-설치.exe' : '클리닉매니저워커-설치.command'
+        a.click()
+        URL.revokeObjectURL(url)
+      }
     } catch {
       // GitHub Release에서 직접 다운로드
       window.open('https://github.com/huisu-hwang/dental-clinic-manager/releases/latest', '_blank')

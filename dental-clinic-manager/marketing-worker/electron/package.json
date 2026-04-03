@@ -14,6 +14,7 @@
     "dev": "tsc && electron dist/main.js",
     "build": "tsc",
     "build:win": "tsc && electron-builder --win",
+    "build:mac": "tsc && electron-builder --mac",
     "start": "electron dist/main.js"
   },
   "dependencies": {
