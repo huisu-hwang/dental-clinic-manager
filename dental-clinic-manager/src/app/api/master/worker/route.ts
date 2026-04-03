@@ -210,6 +210,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, message: '시작 요청에 실패했습니다.' });
     }
 
+    if (action === 'update') {
+      // DB 시그널로 업데이트 요청 (Electron 워커가 10초 내 감지)
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        await admin
+          .from('marketing_worker_control')
+          .update({ update_requested: true })
+          .eq('id', 'main');
+        return NextResponse.json({ ok: true, message: '업데이트 요청을 보냈습니다. 워커가 곧 업데이트를 확인합니다.' });
+      }
+      return NextResponse.json({ ok: false, message: '업데이트 요청에 실패했습니다.' });
+    }
+
     if (action === 'updateSettings') {
       const admin = getSupabaseAdmin();
       if (admin) {
