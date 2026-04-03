@@ -835,19 +835,54 @@ export default function DashboardHome() {
               </div>
               <div className="bg-slate-50 rounded-lg p-4">
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold text-green-600">{weeklySummary.consultSuccess}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.consultTotal}</span></p>
-                    <p className="text-xs text-slate-500">성공/상담 ({weeklySummary.successRate}%)</p>
-                  </div>
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold text-orange-600">{weeklySummary.recallBookingTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.recallTotal}</span></p>
-                    <p className="text-xs text-slate-500">예약/리콜</p>
-                  </div>
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold text-purple-600">{weeklySummary.giftTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.reviewTotal}</span></p>
-                    <p className="text-xs text-slate-500">선물/리뷰</p>
-                  </div>
+                  <button
+                    onClick={() => togglePanel(weeklyActivePanel, 'consult', setWeeklyActivePanel)}
+                    className={`rounded-lg p-2 transition-all text-left ${weeklyActivePanel === 'consult' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
+                  >
+                    <p className="text-lg sm:text-xl font-bold text-green-600 text-center">{weeklySummary.consultSuccess}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.consultTotal}</span></p>
+                    <p className="text-xs text-slate-500 text-center">성공/상담 ({weeklySummary.successRate}%)</p>
+                  </button>
+                  <button
+                    onClick={() => togglePanel(weeklyActivePanel, 'recall', setWeeklyActivePanel)}
+                    className={`rounded-lg p-2 transition-all text-left ${weeklyActivePanel === 'recall' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
+                  >
+                    <p className="text-lg sm:text-xl font-bold text-orange-600 text-center">{weeklySummary.recallBookingTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.recallTotal}</span></p>
+                    <p className="text-xs text-slate-500 text-center">예약/리콜</p>
+                  </button>
+                  <button
+                    onClick={() => togglePanel(weeklyActivePanel, 'gift', setWeeklyActivePanel)}
+                    className={`rounded-lg p-2 transition-all text-left ${weeklyActivePanel === 'gift' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
+                  >
+                    <p className="text-lg sm:text-xl font-bold text-purple-600 text-center">{weeklySummary.giftTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.reviewTotal}</span></p>
+                    <p className="text-xs text-slate-500 text-center">선물/리뷰</p>
+                  </button>
                 </div>
+                {weeklyActivePanel && (
+                  <div className="mt-3 border-t border-slate-200 pt-3 max-h-[300px] overflow-y-auto animate-slideDown">
+                    {weeklySummary.dailyBreakdown.length === 0 ? (
+                      <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {weeklySummary.dailyBreakdown.map(day => {
+                          const numerator = weeklyActivePanel === 'consult' ? day.consultSuccess : weeklyActivePanel === 'recall' ? day.recallBookingCount : day.giftCount
+                          const denominator = weeklyActivePanel === 'consult' ? day.consultCount : weeklyActivePanel === 'recall' ? day.recallCount : day.reviewCount
+                          const pct = denominator > 0 ? Math.round((numerator / denominator) * 100) : 0
+                          return (
+                            <div key={day.date} className={`flex items-center gap-2 px-2 py-1.5 rounded ${day.isToday ? 'bg-blue-50' : ''}`}>
+                              <span className={`text-xs font-medium w-6 ${day.isToday ? 'text-blue-600' : 'text-slate-500'}`}>{day.dayLabel}</span>
+                              <span className={`text-xs w-20 ${day.isToday ? 'text-blue-600' : 'text-slate-400'}`}>{day.date.slice(5).replace('-', '/')}{day.isToday ? ' 진행중' : ''}</span>
+                              <span className={`text-xs font-medium w-12 text-right ${day.isToday ? 'text-blue-700' : 'text-slate-700'}`}>{numerator}/{denominator}</span>
+                              <div className="flex-1 bg-slate-200 rounded-full h-[5px]">
+                                <div className="bg-green-500 h-[5px] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs text-slate-400 w-8 text-right">{pct}%</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
