@@ -1194,7 +1194,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
           className="group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full text-slate-500 hover:bg-green-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Download className={`w-5 h-5 flex-shrink-0 text-slate-400 group-hover:text-green-600 ${isDownloadingWorker ? 'animate-bounce' : ''}`} />
-          <span className="truncate">{isDownloadingWorker ? '다운로드 중...' : '워커 다운로드'}</span>
+          <span className="truncate">{isDownloadingWorker ? '다운로드 중...' : '통합 워커 다운로드'}</span>
         </button>
         {bottomFixedMenus.map(tab => {
           const isActive = activeTab === tab.id
