@@ -131,6 +131,11 @@ function applyAutoStart(): void {
   });
 }
 
+// macOS: 트레이 전용 앱 — Dock 아이콘 숨기기
+if (process.platform === 'darwin' && app.dock) {
+  app.dock.hide();
+}
+
 app.whenReady().then(onAppReady).catch((err) => {
   log('error', `[Main] 치명적 오류: ${err instanceof Error ? err.message : String(err)}`);
   app.quit();

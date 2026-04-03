@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 // GitHub Release URL for Windows installer (fallback)
-const FALLBACK_INSTALLER_URL = 'https://github.com/huisu-hwang/dental-clinic-manager/releases/download/marketing-worker-v1.0.0/clinic-manager-worker-1.0.0-setup.exe';
+const FALLBACK_INSTALLER_URL_WIN = 'https://github.com/huisu-hwang/dental-clinic-manager/releases/download/marketing-worker-v1.0.0/clinic-manager-worker-1.0.0-setup.exe';
 
-async function getLatestInstallerUrl(): Promise<string> {
+async function getLatestInstallerUrl(platform: 'windows' | 'mac'): Promise<string | null> {
   try {
     const res = await fetch('https://api.github.com/repos/huisu-hwang/dental-clinic-manager/releases', {
       headers: { 'Accept': 'application/vnd.github.v3+json' },
@@ -19,13 +19,14 @@ async function getLatestInstallerUrl(): Promise<string> {
     );
 
     if (workerRelease) {
-      const exe = workerRelease.assets.find((a: any) => a.name.endsWith('.exe'));
-      if (exe) return exe.browser_download_url;
+      const ext = platform === 'mac' ? '.dmg' : '.exe';
+      const asset = workerRelease.assets.find((a: any) => a.name.endsWith(ext));
+      if (asset) return asset.browser_download_url;
     }
   } catch {
     // 폴백
   }
-  return FALLBACK_INSTALLER_URL;
+  return null;
 }
 
 // 안정적인 대시보드 URL (프로덕션 도메인)
@@ -40,13 +41,22 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const os = searchParams.get('os') || 'mac';
 
-    // Windows: GitHub Release의 .exe 인스톨러 URL 반환 (클라이언트에서 직접 다운로드)
+    // Windows: GitHub Release의 .exe 인스톨러 URL 반환
     if (os === 'windows') {
-      const installerUrl = await getLatestInstallerUrl();
-      return NextResponse.json({ downloadUrl: installerUrl });
+      const installerUrl = await getLatestInstallerUrl('windows');
+      return NextResponse.json({ downloadUrl: installerUrl || FALLBACK_INSTALLER_URL_WIN });
     }
 
-    // macOS/Linux: 기존 스크립트 방식 유지
+    // macOS: GitHub Release의 .dmg 인스톨러 URL 반환 (없으면 shell script fallback)
+    if (os === 'mac') {
+      const installerUrl = await getLatestInstallerUrl('mac');
+      if (installerUrl) {
+        return NextResponse.json({ downloadUrl: installerUrl });
+      }
+      // DMG가 없는 경우 shell script 방식으로 fallback (아래 코드 계속 실행)
+    }
+
+    // macOS/Linux shell script 방식
     const { data } = await supabase
       .from('marketing_worker_control')
       .select('worker_api_key')

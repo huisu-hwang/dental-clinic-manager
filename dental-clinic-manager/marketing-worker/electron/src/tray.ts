@@ -17,12 +17,19 @@ let tray: Tray | null = null;
 let currentStatusLabel = '중지됨';
 
 export function createTray(): void {
-  const iconPath = path.join(__dirname, '..', 'assets', 'icon.ico');
+  // macOS는 PNG, Windows는 ICO 사용
+  const iconFileName = process.platform === 'darwin' ? 'icon.png' : 'icon.ico';
+  const iconPath = path.join(__dirname, '..', 'assets', iconFileName);
   let icon = nativeImage.createFromPath(iconPath);
 
-  // ico 파일이 없으면 빈 이미지 사용 (개발 중 fallback)
+  // 아이콘 파일이 없으면 빈 이미지 사용 (개발 중 fallback)
   if (icon.isEmpty()) {
     icon = nativeImage.createEmpty();
+  }
+
+  // macOS: 시스템 테마에 맞게 자동 조정되는 template 이미지로 설정
+  if (process.platform === 'darwin') {
+    icon.setTemplateImage(true);
   }
 
   tray = new Tray(icon);
