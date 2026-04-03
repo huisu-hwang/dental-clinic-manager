@@ -334,8 +334,13 @@ export default function DashboardHome() {
   useEffect(() => {
     const checkWorker = async () => {
       try {
-        const res = await fetch('http://localhost:4001/api/health', { signal: AbortSignal.timeout(2000) })
-        setWorkerInstalled(res.ok)
+        const res = await fetch('/api/workers/status?type=marketing', { signal: AbortSignal.timeout(10000) })
+        if (res.ok) {
+          const data = await res.json()
+          setWorkerInstalled(data.marketing?.installed ?? false)
+        } else {
+          setWorkerInstalled(false)
+        }
       } catch {
         setWorkerInstalled(false)
       }

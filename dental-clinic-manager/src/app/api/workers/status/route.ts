@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
-const WORKER_URL = process.env.MARKETING_WORKER_URL || 'http://localhost:3001';
-
 // GET: 워커 상태 조회 (마케팅 워커, 스크래핑 워커)
 // ?type=marketing | scraping | all (기본값: all)
 export async function GET(request: NextRequest) {
@@ -19,22 +17,32 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'all';
 
     const result: {
-      marketing?: { online: boolean };
+      marketing?: { installed: boolean; online: boolean };
       scraping?: { online: boolean; workerCount: number };
     } = {};
 
-    // 마케팅 워커 상태
+    // 마케팅 워커 상태 (DB 기반 - Electron 워커가 heartbeat 업데이트)
     if (type === 'marketing' || type === 'all') {
+      let installed = false;
       let online = false;
-      try {
-        const res = await fetch(`${WORKER_URL}/health`, {
-          signal: AbortSignal.timeout(3000),
-        });
-        online = res.ok;
-      } catch {
-        online = false;
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        const { data: controlData } = await admin
+          .from('marketing_worker_control')
+          .select('watchdog_online, worker_running, last_updated')
+          .eq('id', 'main')
+          .single();
+
+        if (controlData) {
+          // 레코드가 존재하면 워커가 한 번이라도 등록된 것 (설치됨)
+          installed = true;
+          // last_updated가 60초 이내이고 watchdog_online이면 온라인
+          const lastUpdated = controlData.last_updated ? new Date(controlData.last_updated) : null;
+          const isRecent = lastUpdated && (Date.now() - lastUpdated.getTime() < 60_000);
+          online = !!(controlData.watchdog_online && isRecent);
+        }
       }
-      result.marketing = { online };
+      result.marketing = { installed, online };
     }
 
     // 스크래핑 워커 상태
