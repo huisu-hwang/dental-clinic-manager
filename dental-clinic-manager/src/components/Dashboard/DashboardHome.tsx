@@ -78,6 +78,19 @@ interface WeatherData {
   tomorrow: TomorrowWeather
 }
 
+// 일별 상세 데이터 타입 (주간 통계 확장 패널용)
+interface DailyBreakdownItem {
+  date: string           // 'YYYY-MM-DD'
+  dayLabel: string       // '월', '화', '수', '목', '금'
+  consultCount: number
+  consultSuccess: number
+  recallCount: number
+  recallBookingCount: number
+  giftCount: number
+  reviewCount: number
+  isToday: boolean
+}
+
 // 크롤링된 뉴스 기사 타입
 interface CrawledArticle {
   id: number
@@ -175,6 +188,45 @@ export default function DashboardHome() {
     // 성공률 계산
     const successRate = consultTotal > 0 ? ((consultSuccess / consultTotal) * 100).toFixed(0) : '0'
 
+    // 일별 상세 데이터 생성 (로컬 날짜 기준, UTC 경계 문제 방지)
+    const dailyBreakdown: DailyBreakdownItem[] = []
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토']
+
+    for (let d = new Date(monday); d <= now; d.setDate(d.getDate() + 1)) {
+      const y = d.getFullYear()
+      const mo = String(d.getMonth() + 1).padStart(2, '0')
+      const dy = String(d.getDate()).padStart(2, '0')
+      const dateStr = `${y}-${mo}-${dy}`
+
+      const dayReport = dailyReports.find(r => r.date === dateStr)
+      const dayConsults = consultLogs.filter(c => c.date === dateStr)
+      const dayGifts = giftLogs.filter(g => g.date === dateStr)
+
+      let dayConsultCount = 0
+      let dayConsultSuccess = 0
+      if (dayReport) {
+        dayConsultCount = (dayReport.consult_proceed || 0) + (dayReport.consult_hold || 0)
+        dayConsultSuccess = dayReport.consult_proceed || 0
+      } else {
+        dayConsultCount = dayConsults.length
+        dayConsultSuccess = dayConsults.filter(c => c.consult_status === 'O').length
+      }
+
+      const dayOfWeek = new Date(`${dateStr}T12:00:00`).getDay()
+
+      dailyBreakdown.push({
+        date: dateStr,
+        dayLabel: dayNames[dayOfWeek],
+        consultCount: dayConsultCount,
+        consultSuccess: dayConsultSuccess,
+        recallCount: dayReport?.recall_count || 0,
+        recallBookingCount: dayReport?.recall_booking_count || 0,
+        giftCount: dayGifts.reduce((sum, g) => sum + (g.quantity || 1), 0),
+        reviewCount: dayReport?.naver_review_count || 0,
+        isToday: dateStr === today,
+      })
+    }
+
     return {
       weekStart: weekStartStr,
       consultTotal,
@@ -184,6 +236,7 @@ export default function DashboardHome() {
       recallBookingTotal,
       giftTotal,
       reviewTotal,
+      dailyBreakdown,
     }
   }, [dailyReports, consultLogs, giftLogs, today])
 
