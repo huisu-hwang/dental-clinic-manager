@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
-const WORKER_URL = process.env.MARKETING_WORKER_URL || 'http://localhost:4001';
+// Electron 워커는 DB 상태로 관리 (HTTP 직접 연결 불필요)
+const WORKER_URL = process.env.MARKETING_WORKER_URL || '';
 
 // 마스터 권한 확인
 async function checkMasterAuth() {
@@ -24,19 +25,9 @@ export async function GET() {
     const user = await checkMasterAuth();
     if (!user) return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
 
-    // 1. 워커 헬스 체크 (HTTP 직접 + DB 상태 병행)
-    let workerOnline = false;
-    try {
-      const res = await fetch(`${WORKER_URL}/health`, {
-        signal: AbortSignal.timeout(3000),
-      });
-      workerOnline = res.ok;
-    } catch {
-      workerOnline = false;
-    }
-
-    // 2. DB에서 supervisor/워커 상태 조회
+    // 1. DB에서 워커 상태 조회 (Electron 워커는 DB 상태가 기준)
     const admin = getSupabaseAdmin();
+    let workerOnline = false;
     let supervisorOnline = false;
     let headless = false;
     let pendingCount = 0;
@@ -53,7 +44,7 @@ export async function GET() {
     }[] = [];
 
     if (admin) {
-      // supervisor 상태 확인
+      // 워커 상태 확인 (DB 기반 - Electron 워커가 10초마다 업데이트)
       const { data: controlData } = await admin
         .from('marketing_worker_control')
         .select('watchdog_online, worker_running, last_updated, headless')
@@ -61,16 +52,23 @@ export async function GET() {
         .single();
 
       if (controlData) {
-        supervisorOnline = controlData.watchdog_online || false;
         headless = controlData.headless || false;
-        // HTTP 헬스체크 실패 시 DB 상태도 참고
-        if (!workerOnline && controlData.worker_running) {
-          // DB에서는 실행 중이라고 하지만 HTTP 응답 없음 → 시작 중이거나 포트 미응답
-          // last_updated가 30초 이내면 실행 중으로 간주
-          const lastUpdated = new Date(controlData.last_updated);
-          if (Date.now() - lastUpdated.getTime() < 30_000) {
-            workerOnline = true;
-          }
+        // last_updated가 60초 이내이고 watchdog_online이면 온라인
+        const lastUpdated = controlData.last_updated ? new Date(controlData.last_updated) : null;
+        const isRecent = lastUpdated && (Date.now() - lastUpdated.getTime() < 60_000);
+        supervisorOnline = !!(controlData.watchdog_online && isRecent);
+        workerOnline = !!(controlData.worker_running && isRecent);
+      }
+
+      // HTTP 헬스체크는 WORKER_URL이 설정된 경우에만 보조적으로 사용
+      if (!workerOnline && WORKER_URL) {
+        try {
+          const res = await fetch(`${WORKER_URL}/health`, {
+            signal: AbortSignal.timeout(3000),
+          });
+          if (res.ok) workerOnline = true;
+        } catch {
+          // HTTP 실패 → DB 상태만 사용
         }
       }
 
@@ -123,26 +121,32 @@ export async function POST(request: NextRequest) {
     const action = body.action || 'trigger';
 
     if (action === 'trigger') {
-      // 1차: DB 시그널로 워커 시작 요청 (유저 PC/서버 어디서든 동작)
+      // DB 시그널로 워커 시작 요청 (Electron 워커가 10초 내 감지)
       const admin = getSupabaseAdmin();
       if (admin) {
         await admin
           .from('marketing_worker_control')
           .update({ start_requested: true })
           .eq('id', 'main');
-      }
 
-      // 2차: HTTP 직접 트리거 시도 (같은 서버에서 실행 중인 경우)
-      try {
-        const res = await fetch(`${WORKER_URL}/trigger`, {
-          method: 'POST',
-          signal: AbortSignal.timeout(5000),
+        // 워커 온라인 상태 확인
+        const { data: controlData } = await admin
+          .from('marketing_worker_control')
+          .select('watchdog_online, last_updated')
+          .eq('id', 'main')
+          .single();
+
+        const isOnline = controlData?.watchdog_online &&
+          controlData?.last_updated &&
+          (Date.now() - new Date(controlData.last_updated).getTime() < 60_000);
+
+        return NextResponse.json({
+          ok: true,
+          workerOnline: isOnline || false,
+          message: isOnline
+            ? '발행 요청을 보냈습니다. 워커가 곧 처리합니다.'
+            : '발행 요청을 보냈습니다. 워커가 오프라인 상태입니다.',
         });
-        if (res.ok) {
-          return NextResponse.json({ ok: true, workerOnline: true, message: '즉시 처리를 시작했습니다.' });
-        }
-      } catch {
-        // 워커가 같은 서버에 없는 경우 (유저 PC에서 실행 중) - 정상
       }
 
       return NextResponse.json({
@@ -153,20 +157,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'stop') {
-      // 1차: HTTP로 직접 중지 시도
-      try {
-        const res = await fetch(`${WORKER_URL}/stop`, {
-          method: 'POST',
-          signal: AbortSignal.timeout(5000),
-        });
-        if (res.ok) {
-          return NextResponse.json({ ok: true, message: '워커를 중지했습니다.' });
-        }
-      } catch {
-        // HTTP 실패 → DB 시그널링으로 폴백
-      }
-
-      // 2차: DB 시그널링으로 중지 요청
+      // DB 시그널로 중지 요청 (Electron 워커가 10초 내 감지)
       const admin = getSupabaseAdmin();
       if (admin) {
         await admin
@@ -180,37 +171,28 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'start') {
-      // 이미 실행 중인지 헬스체크로 확인
-      try {
-        const healthRes = await fetch(`${WORKER_URL}/health`, {
-          signal: AbortSignal.timeout(3000),
-        });
-        if (healthRes.ok) {
-          return NextResponse.json({ ok: true, message: '워커가 이미 실행 중입니다.' });
-        }
-      } catch {
-        // 워커 미실행 → 시작 진행
-      }
-
-      // DB 시그널링으로 시작 요청 (Vercel/로컬 모두 동작)
+      // DB 시그널로 시작 요청 (Electron 워커가 감지)
       const admin = getSupabaseAdmin();
       if (admin) {
-        // supervisor가 온라인인지 확인
+        // 워커가 온라인인지 확인
         const { data: controlData } = await admin
           .from('marketing_worker_control')
-          .select('watchdog_online, last_updated')
+          .select('watchdog_online, worker_running, last_updated')
           .eq('id', 'main')
           .single();
 
-        const supervisorOnline = controlData?.watchdog_online &&
-          controlData?.last_updated &&
+        const isRecent = controlData?.last_updated &&
           (Date.now() - new Date(controlData.last_updated).getTime() < 60_000);
+        const isOnline = controlData?.watchdog_online && isRecent;
 
-        if (!supervisorOnline) {
+        if (controlData?.worker_running && isRecent) {
+          return NextResponse.json({ ok: true, message: '워커가 이미 실행 중입니다.' });
+        }
+
+        if (!isOnline) {
           return NextResponse.json({
             ok: false,
-            message: 'Supervisor가 실행 중이 아닙니다. 로컬 PC에서 supervisor를 시작해주세요.',
-            manualCommand: 'cd marketing-worker && npm run supervisor',
+            message: '워커가 오프라인 상태입니다. PC에서 클리닉 매니저 워커 앱을 실행해주세요.',
           });
         }
 

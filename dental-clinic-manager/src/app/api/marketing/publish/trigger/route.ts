@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 // 마케팅 워커 즉시 발행 트리거
-// DB 시그널 방식 (유저 PC/서버 어디서든 동작) + HTTP 폴백
+// DB 시그널 방식으로 Electron 워커에 발행 요청
 export async function POST() {
   try {
     const supabase = await createClient();
@@ -12,35 +12,34 @@ export async function POST() {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    // 1차: DB 시그널로 워커 시작 요청 (유저 PC에서도 동작)
     const admin = getSupabaseAdmin();
-    if (admin) {
-      await admin
-        .from('marketing_worker_control')
-        .update({ start_requested: true })
-        .eq('id', 'main');
+    if (!admin) {
+      return NextResponse.json({ error: 'DB 연결 오류' }, { status: 500 });
     }
 
-    // 2차: HTTP 직접 트리거 시도 (같은 서버에서 실행 중인 경우)
-    const workerUrl = process.env.MARKETING_WORKER_URL;
-    if (workerUrl) {
-      try {
-        const res = await fetch(`${workerUrl}/trigger`, {
-          method: 'POST',
-          signal: AbortSignal.timeout(5000),
-        });
-        if (res.ok) {
-          return NextResponse.json({ ok: true, workerOnline: true });
-        }
-      } catch {
-        // 워커가 같은 서버에 없는 경우 (유저 PC에서 실행 중) - 정상
-      }
-    }
+    // DB 시그널로 워커 시작 요청 (Electron 워커가 10초 내 감지)
+    await admin
+      .from('marketing_worker_control')
+      .update({ start_requested: true })
+      .eq('id', 'main');
+
+    // 워커 온라인 상태 확인
+    const { data: controlData } = await admin
+      .from('marketing_worker_control')
+      .select('watchdog_online, worker_running, last_updated')
+      .eq('id', 'main')
+      .single();
+
+    const isOnline = controlData?.watchdog_online &&
+      controlData?.last_updated &&
+      (Date.now() - new Date(controlData.last_updated).getTime() < 60_000);
 
     return NextResponse.json({
       ok: true,
-      workerOnline: false,
-      message: '발행 요청 완료. 워커가 실행 중이면 곧 발행됩니다.',
+      workerOnline: isOnline || false,
+      message: isOnline
+        ? '발행 요청 완료. 워커가 곧 처리합니다.'
+        : '발행 요청 완료. 워커가 오프라인 상태입니다. Electron 워커를 실행해주세요.',
     });
   } catch (error) {
     console.error('[API] publish/trigger:', error);
