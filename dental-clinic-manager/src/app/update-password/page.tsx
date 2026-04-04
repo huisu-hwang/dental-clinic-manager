@@ -29,8 +29,19 @@ export default function UpdatePasswordPage() {
 
     let recoveryDetected = false;
 
-    // 0. sessionStorage 플래그 확인 (AuthContext에서 설정됨)
-    if (sessionStorage.getItem('supabase_password_recovery') === 'true') {
+    // 0-1. URL 쿼리 파라미터 확인 (auth/callback에서 mode=recovery로 리다이렉트됨)
+    const urlParams = new URLSearchParams(window.location.search)
+    const mode = urlParams.get('mode')
+    if (mode === 'recovery') {
+      console.log('[PasswordReset] mode=recovery 쿼리 파라미터 감지');
+      sessionStorage.setItem('supabase_password_recovery', 'true');
+      recoveryDetected = true;
+      setIsRecoveryMode(true);
+      setCheckingAuth(false);
+    }
+
+    // 0-2. sessionStorage 플래그 확인 (AuthContext에서 설정됨)
+    if (!recoveryDetected && sessionStorage.getItem('supabase_password_recovery') === 'true') {
       console.log('[PasswordReset] sessionStorage recovery 플래그 감지');
       recoveryDetected = true;
       setIsRecoveryMode(true);
