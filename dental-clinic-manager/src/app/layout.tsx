@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AIGenerationProvider } from "@/contexts/AIGenerationContext";
-import PasswordResetHandler from "@/components/PasswordResetHandler";
 import { AppDialogRoot } from "@/components/ui/AppDialog";
 import ServiceWorkerRegistrar from "@/components/PWA/ServiceWorkerRegistrar";
 import AIGenerationFloating from "@/components/marketing/AIGenerationFloating";
@@ -69,7 +68,6 @@ export default function RootLayout({
           <AIGenerationProvider>
             <ServiceWorkerRegistrar />
             <UpdatePrompt autoReloadDelay={30000} />
-            <PasswordResetHandler />
             {children}
             <AIGenerationFloating />
             <AppDialogRoot />
