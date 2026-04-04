@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { attendanceService } from '@/lib/attendanceService'
@@ -78,6 +78,19 @@ interface WeatherData {
   tomorrow: TomorrowWeather
 }
 
+// 일별 상세 데이터 타입 (주간 통계 확장 패널용)
+interface DailyBreakdownItem {
+  date: string           // 'YYYY-MM-DD'
+  dayLabel: string       // '월', '화', '수', '목', '금'
+  consultCount: number
+  consultSuccess: number
+  recallCount: number
+  recallBookingCount: number
+  giftCount: number
+  reviewCount: number
+  isToday: boolean
+}
+
 // 크롤링된 뉴스 기사 타입
 interface CrawledArticle {
   id: number
@@ -128,6 +141,11 @@ export default function DashboardHome() {
     }
   }, [dailyReports, consultLogs, giftLogs, today])
 
+  // JSX 확장 패널용 — useMemo 밖에 선언 (todaySummary 내부 스코프는 JSX에서 접근 불가)
+  const todayReport = dailyReports.find(r => r.date === today)
+  const todayConsults = consultLogs.filter(c => c.date === today)
+  const todayGifts = giftLogs.filter(g => g.date === today)
+
   // 주간 통계 계산 (이번 주 월요일부터 오늘까지)
   const weeklySummary = useMemo(() => {
     const now = new Date()
@@ -175,6 +193,45 @@ export default function DashboardHome() {
     // 성공률 계산
     const successRate = consultTotal > 0 ? ((consultSuccess / consultTotal) * 100).toFixed(0) : '0'
 
+    // 일별 상세 데이터 생성 (로컬 날짜 기준, UTC 경계 문제 방지)
+    const dailyBreakdown: DailyBreakdownItem[] = []
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토']
+
+    for (let d = new Date(monday); d <= now; d.setDate(d.getDate() + 1)) {
+      const y = d.getFullYear()
+      const mo = String(d.getMonth() + 1).padStart(2, '0')
+      const dy = String(d.getDate()).padStart(2, '0')
+      const dateStr = `${y}-${mo}-${dy}`
+
+      const dayReport = dailyReports.find(r => r.date === dateStr)
+      const dayConsults = consultLogs.filter(c => c.date === dateStr)
+      const dayGifts = giftLogs.filter(g => g.date === dateStr)
+
+      let dayConsultCount = 0
+      let dayConsultSuccess = 0
+      if (dayReport) {
+        dayConsultCount = (dayReport.consult_proceed || 0) + (dayReport.consult_hold || 0)
+        dayConsultSuccess = dayReport.consult_proceed || 0
+      } else {
+        dayConsultCount = dayConsults.length
+        dayConsultSuccess = dayConsults.filter(c => c.consult_status === 'O').length
+      }
+
+      const dayOfWeek = new Date(`${dateStr}T12:00:00`).getDay()
+
+      dailyBreakdown.push({
+        date: dateStr,
+        dayLabel: dayNames[dayOfWeek],
+        consultCount: dayConsultCount,
+        consultSuccess: dayConsultSuccess,
+        recallCount: dayReport?.recall_count || 0,
+        recallBookingCount: dayReport?.recall_booking_count || 0,
+        giftCount: dayGifts.reduce((sum, g) => sum + (g.quantity || 1), 0),
+        reviewCount: dayReport?.naver_review_count || 0,
+        isToday: dateStr === today,
+      })
+    }
+
     return {
       weekStart: weekStartStr,
       consultTotal,
@@ -184,6 +241,7 @@ export default function DashboardHome() {
       recallBookingTotal,
       giftTotal,
       reviewTotal,
+      dailyBreakdown,
     }
   }, [dailyReports, consultLogs, giftLogs, today])
 
@@ -329,6 +387,20 @@ export default function DashboardHome() {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
+
+  // 인라인 확장 패널 상태
+  const [todayActivePanel, setTodayActivePanel] = useState<'consult' | 'recall' | 'gift' | null>(null)
+  const [attendanceActivePanel, setAttendanceActivePanel] = useState<'checkin' | 'checkout' | 'absent' | 'late' | 'early' | 'overtime' | null>(null)
+  const [weeklyActivePanel, setWeeklyActivePanel] = useState<'consult' | 'recall' | 'gift' | null>(null)
+
+  // 아코디언 토글 헬퍼 (같은 값 클릭 시 닫힘)
+  function togglePanel<T extends string>(
+    current: T | null,
+    next: T,
+    setter: React.Dispatch<React.SetStateAction<T | null>>
+  ) {
+    setter(current === next ? null : next)
+  }
 
   // 워커 설치 상태 체크
   const [workerInstalled, setWorkerInstalled] = useState<boolean | null>(null)
@@ -518,22 +590,124 @@ export default function DashboardHome() {
             <div>
               <h3 className="text-sm font-semibold text-slate-700 mb-3">오늘의 현황</h3>
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                <button
+                  onClick={() => togglePanel(todayActivePanel, 'consult', setTodayActivePanel)}
+                  className={`rounded-lg p-3 text-center w-full transition-all ${todayActivePanel === 'consult' ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-slate-50 hover:bg-slate-100'}`}
+                >
                   <TrendingUp className="w-5 h-5 text-green-500 mx-auto mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-green-600">{todaySummary.consultProceed}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.consultCount}</span></p>
                   <p className="text-xs text-slate-500">성공/상담</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-slate-400 mt-0.5">{todayActivePanel === 'consult' ? '▲ 닫기' : '▼ 목록 보기'}</p>
+                </button>
+                <button
+                  onClick={() => togglePanel(todayActivePanel, 'recall', setTodayActivePanel)}
+                  className={`rounded-lg p-3 text-center w-full transition-all ${todayActivePanel === 'recall' ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-slate-50 hover:bg-slate-100'}`}
+                >
                   <Calendar className="w-5 h-5 text-orange-500 mx-auto mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-orange-600">{todaySummary.recallBookingCount}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.recallCount}</span></p>
                   <p className="text-xs text-slate-500">예약/리콜</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-slate-400 mt-0.5">{todayActivePanel === 'recall' ? '▲ 닫기' : '▼ 현황 보기'}</p>
+                </button>
+                <button
+                  onClick={() => togglePanel(todayActivePanel, 'gift', setTodayActivePanel)}
+                  className={`rounded-lg p-3 text-center w-full transition-all ${todayActivePanel === 'gift' ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-slate-50 hover:bg-slate-100'}`}
+                >
                   <BarChart3 className="w-5 h-5 text-purple-500 mx-auto mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-purple-600">{todaySummary.naverReviewCount}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.giftCount}</span></p>
                   <p className="text-xs text-slate-500">리뷰/선물</p>
-                </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{todayActivePanel === 'gift' ? '▲ 닫기' : '▼ 목록 보기'}</p>
+                </button>
               </div>
+
+              {/* 상담 확장 패널 */}
+              {todayActivePanel === 'consult' && (
+                <div className="mt-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
+                    <span className="text-xs font-semibold text-slate-600">📋 오늘 상담 목록</span>
+                    <span className="text-xs text-slate-400">총 {todayConsults.length}건</span>
+                  </div>
+                  {todayConsults.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                  ) : (
+                    <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+                      {todayConsults.map((c, i) => (
+                        <div key={c.id ?? i} className="flex items-center gap-2 px-4 py-2 text-sm">
+                          <span className="font-medium text-slate-800 w-16 truncate">{c.patient_name}</span>
+                          <span className="text-slate-500 flex-1 truncate">{c.consult_content}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.consult_status === 'O' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                            {c.consult_status === 'O' ? '✓ 성공' : '✗ 보류'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 리콜 확장 패널 */}
+              {todayActivePanel === 'recall' && (() => {
+                const bookedNames = todayReport?.recall_booking_names
+                  ? todayReport.recall_booking_names.split(',').map(n => n.trim()).filter(Boolean)
+                  : []
+                const unbookedCount = Math.max(0, (todayReport?.recall_count || 0) - bookedNames.length)
+                return (
+                  <div className="mt-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
+                      <span className="text-xs font-semibold text-slate-600">📞 오늘 리콜 현황</span>
+                      <span className="text-xs text-slate-400">예약 {bookedNames.length} / 리콜 {todayReport?.recall_count || 0}건</span>
+                    </div>
+                    {(todayReport?.recall_count || 0) === 0 ? (
+                      <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                    ) : (
+                      <div className="px-4 py-3 space-y-2 max-h-[300px] overflow-y-auto">
+                        {bookedNames.length > 0 && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs text-slate-500 w-14 pt-0.5">예약완료</span>
+                            <div className="flex flex-wrap gap-1.5 flex-1">
+                              {bookedNames.map((name, i) => (
+                                <span key={i} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{name}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {unbookedCount > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-500 w-14">미예약</span>
+                            <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{unbookedCount}명</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* 선물 확장 패널 */}
+              {todayActivePanel === 'gift' && (
+                <div className="mt-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
+                    <span className="text-xs font-semibold text-slate-600">🎁 오늘 선물/리뷰 목록</span>
+                    <span className="text-xs text-slate-400">총 {todayGifts.length}건</span>
+                  </div>
+                  {todayGifts.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                  ) : (
+                    <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+                      {todayGifts.map((g, i) => (
+                        <div key={g.id ?? i} className="flex items-center gap-2 px-4 py-2 text-sm">
+                          <span className="font-medium text-slate-800 w-16 truncate">{g.patient_name}</span>
+                          <span className="text-slate-500 flex-1 truncate">{g.gift_type} × {g.quantity}</span>
+                          {g.naver_review === 'O' ? (
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">리뷰 ✓</span>
+                          ) : (
+                            <span className="text-xs text-slate-400">리뷰 없음</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 팀 출퇴근 현황 */}
@@ -546,30 +720,36 @@ export default function DashboardHome() {
               ) : teamStatus ? (
                 <div className="bg-slate-50 rounded-lg p-4">
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
-                    <div>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'checkin', setAttendanceActivePanel)}
+                      className={`rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'checkin' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-green-600">{teamStatus.checked_in}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{teamStatus.total_employees}</span></p>
                       <p className="text-xs text-green-600">출근/전체</p>
-                    </div>
-                    <div>
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'checkout', setAttendanceActivePanel)}
+                      className={`rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'checkout' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-blue-600">{teamStatus.checked_out || 0}</p>
                       <p className="text-xs text-blue-600">퇴근</p>
-                    </div>
-                    <div>
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'absent', setAttendanceActivePanel)}
+                      className={`rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'absent' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-orange-600">{teamStatus.not_checked_in}</p>
                       <p className="text-xs text-orange-600">결근</p>
-                    </div>
-                    <div className="hidden sm:block">
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'late', setAttendanceActivePanel)}
+                      className={`hidden sm:block rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'late' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-yellow-600">{teamStatus.late_count}</p>
                       <p className="text-xs text-yellow-600">지각</p>
-                    </div>
-                    <div className="hidden sm:block">
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'early', setAttendanceActivePanel)}
+                      className={`hidden sm:block rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'early' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-red-600">{teamStatus.early_leave_count || 0}</p>
                       <p className="text-xs text-red-600">조퇴</p>
-                    </div>
-                    <div className="hidden sm:block">
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'overtime', setAttendanceActivePanel)}
+                      className={`hidden sm:block rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'overtime' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
                       <p className="text-lg font-bold text-purple-600">{teamStatus.overtime_count || 0}</p>
                       <p className="text-xs text-purple-600">초과</p>
-                    </div>
+                    </button>
                   </div>
                   {teamStatus.total_employees > 0 && (
                     <div className="mt-3 pt-3 border-t border-slate-200">
@@ -585,6 +765,58 @@ export default function DashboardHome() {
                       </div>
                     </div>
                   )}
+
+                  {/* 출퇴근 확장 패널 — teamStatus ? 블록 안 */}
+                  {attendanceActivePanel && (() => {
+                    type Emp = TeamAttendanceStatus['employees'][number]
+                    const filterMap: Record<NonNullable<typeof attendanceActivePanel>, (e: Emp) => boolean> = {
+                      checkin:  (e) => e.check_in_time != null,
+                      checkout: (e) => e.check_out_time != null,
+                      absent:   (e) => e.status === 'absent',
+                      late:     (e) => e.late_minutes > 0,
+                      early:    (e) => e.early_leave_minutes > 0,
+                      overtime: (e) => e.overtime_minutes > 0,
+                    }
+                    const labelMap: Record<NonNullable<typeof attendanceActivePanel>, string> = {
+                      checkin: '🟢 출근 직원', checkout: '🔵 퇴근 직원', absent: '🔴 결근 직원',
+                      late: '🟡 지각 직원', early: '🟠 조퇴 직원', overtime: '🟣 초과근무 직원',
+                    }
+                    const filtered = (teamStatus.employees || []).filter(filterMap[attendanceActivePanel])
+                    const formatTime = (iso: string | null | undefined) =>
+                      iso ? new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-'
+                    const statusTag = (e: Emp) => {
+                      if (attendanceActivePanel === 'late') return `지각 ${e.late_minutes}분`
+                      if (attendanceActivePanel === 'early') return `조퇴 ${e.early_leave_minutes}분`
+                      if (attendanceActivePanel === 'overtime') return `초과 ${e.overtime_minutes}분`
+                      if (e.status === 'absent') return '결근'
+                      if (e.check_out_time) return '퇴근완료'
+                      return '출근중'
+                    }
+                    return (
+                      <div className="mt-3 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                        <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
+                          <span className="text-xs font-semibold text-slate-600">{labelMap[attendanceActivePanel]}</span>
+                          <span className="text-xs text-slate-400">{filtered.length}명</span>
+                        </div>
+                        {filtered.length === 0 ? (
+                          <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                        ) : (
+                          <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+                            {filtered.map(emp => (
+                              <div key={emp.user_id} className="flex items-center gap-2 px-4 py-2 text-sm">
+                                <span className="font-medium text-slate-800 w-16 truncate">{emp.user_name}</span>
+                                <span className="text-slate-500 flex-1 text-xs">
+                                  {emp.check_in_time ? `${formatTime(emp.check_in_time)} 출근` : ''}
+                                  {emp.check_out_time ? ` → ${formatTime(emp.check_out_time)} 퇴근` : ''}
+                                </span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{statusTag(emp)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               ) : (
                 <div className="text-center py-6 text-slate-500 bg-slate-50 rounded-lg">
@@ -603,19 +835,54 @@ export default function DashboardHome() {
               </div>
               <div className="bg-slate-50 rounded-lg p-4">
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold text-green-600">{weeklySummary.consultSuccess}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.consultTotal}</span></p>
-                    <p className="text-xs text-slate-500">성공/상담 ({weeklySummary.successRate}%)</p>
-                  </div>
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold text-orange-600">{weeklySummary.recallBookingTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.recallTotal}</span></p>
-                    <p className="text-xs text-slate-500">예약/리콜</p>
-                  </div>
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold text-purple-600">{weeklySummary.giftTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.reviewTotal}</span></p>
-                    <p className="text-xs text-slate-500">선물/리뷰</p>
-                  </div>
+                  <button
+                    onClick={() => togglePanel(weeklyActivePanel, 'consult', setWeeklyActivePanel)}
+                    className={`rounded-lg p-2 transition-all text-left ${weeklyActivePanel === 'consult' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
+                  >
+                    <p className="text-lg sm:text-xl font-bold text-green-600 text-center">{weeklySummary.consultSuccess}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.consultTotal}</span></p>
+                    <p className="text-xs text-slate-500 text-center">성공/상담 ({weeklySummary.successRate}%)</p>
+                  </button>
+                  <button
+                    onClick={() => togglePanel(weeklyActivePanel, 'recall', setWeeklyActivePanel)}
+                    className={`rounded-lg p-2 transition-all text-left ${weeklyActivePanel === 'recall' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
+                  >
+                    <p className="text-lg sm:text-xl font-bold text-orange-600 text-center">{weeklySummary.recallBookingTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.recallTotal}</span></p>
+                    <p className="text-xs text-slate-500 text-center">예약/리콜</p>
+                  </button>
+                  <button
+                    onClick={() => togglePanel(weeklyActivePanel, 'gift', setWeeklyActivePanel)}
+                    className={`rounded-lg p-2 transition-all text-left ${weeklyActivePanel === 'gift' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
+                  >
+                    <p className="text-lg sm:text-xl font-bold text-purple-600 text-center">{weeklySummary.giftTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.reviewTotal}</span></p>
+                    <p className="text-xs text-slate-500 text-center">선물/리뷰</p>
+                  </button>
                 </div>
+                {weeklyActivePanel && (
+                  <div className="mt-3 border-t border-slate-200 pt-3 max-h-[300px] overflow-y-auto animate-slideDown">
+                    {weeklySummary.dailyBreakdown.length === 0 ? (
+                      <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {weeklySummary.dailyBreakdown.map(day => {
+                          const numerator = weeklyActivePanel === 'consult' ? day.consultSuccess : weeklyActivePanel === 'recall' ? day.recallBookingCount : day.giftCount
+                          const denominator = weeklyActivePanel === 'consult' ? day.consultCount : weeklyActivePanel === 'recall' ? day.recallCount : day.reviewCount
+                          const pct = denominator > 0 ? Math.round((numerator / denominator) * 100) : 0
+                          return (
+                            <div key={day.date} className={`flex items-center gap-2 px-2 py-1.5 rounded ${day.isToday ? 'bg-blue-50' : ''}`}>
+                              <span className={`text-xs font-medium w-6 ${day.isToday ? 'text-blue-600' : 'text-slate-500'}`}>{day.dayLabel}</span>
+                              <span className={`text-xs w-20 ${day.isToday ? 'text-blue-600' : 'text-slate-400'}`}>{day.date.slice(5).replace('-', '/')}{day.isToday ? ' 진행중' : ''}</span>
+                              <span className={`text-xs font-medium w-12 text-right ${day.isToday ? 'text-blue-700' : 'text-slate-700'}`}>{numerator}/{denominator}</span>
+                              <div className="flex-1 bg-slate-200 rounded-full h-[5px]">
+                                <div className="bg-green-500 h-[5px] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs text-slate-400 w-8 text-right">{pct}%</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
