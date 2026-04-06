@@ -9,6 +9,7 @@ interface StoreSchema {
   dashboardUrl: string;
   workerApiKey: string;
   autoStart: boolean;
+  autoUpdate: boolean;
   headless: boolean;
   isConfigured: boolean;
 }
@@ -17,6 +18,7 @@ export interface AppConfig {
   dashboardUrl: string;
   workerApiKey: string;
   autoStart: boolean;
+  autoUpdate: boolean;
   headless: boolean;
 }
 
@@ -26,6 +28,7 @@ const store = new Store<StoreSchema>({
     dashboardUrl: 'https://www.hi-clinic.co.kr',
     workerApiKey: '',
     autoStart: true,
+    autoUpdate: true,
     headless: true,
     isConfigured: false,
   },
@@ -46,6 +49,7 @@ export function getConfig(): AppConfig {
     dashboardUrl: store.get('dashboardUrl'),
     workerApiKey: store.get('workerApiKey'),
     autoStart: store.get('autoStart'),
+    autoUpdate: store.get('autoUpdate'),
     headless: store.get('headless'),
   };
 }
@@ -57,6 +61,7 @@ export function setConfig(partial: Partial<AppConfig>): void {
   if (partial.dashboardUrl !== undefined) store.set('dashboardUrl', partial.dashboardUrl);
   if (partial.workerApiKey !== undefined) store.set('workerApiKey', partial.workerApiKey);
   if (partial.autoStart !== undefined) store.set('autoStart', partial.autoStart);
+  if (partial.autoUpdate !== undefined) store.set('autoUpdate', partial.autoUpdate);
   if (partial.headless !== undefined) store.set('headless', partial.headless);
   store.set('isConfigured', true);
 }

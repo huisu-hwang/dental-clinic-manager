@@ -1,6 +1,7 @@
 import { autoUpdater } from 'electron-updater';
 import { Notification } from 'electron';
 import { log } from './logger';
+import { getConfig } from './config-store';
 
 const CHECK_INTERVAL = 60 * 60 * 1000; // 1시간마다 체크
 let checkTimer: ReturnType<typeof setInterval> | null = null;
@@ -63,8 +64,31 @@ export function initAutoUpdater(): void {
     }
   });
 
+  // 자동 업데이트 설정에 따라 자동 체크 시작
+  startAutoCheckIfEnabled();
+}
+
+/**
+ * 자동 업데이트 설정에 따라 주기적 체크 시작/중지
+ */
+export function startAutoCheckIfEnabled(): void {
+  // 기존 타이머 정리
+  if (checkTimer) {
+    clearInterval(checkTimer);
+    checkTimer = null;
+  }
+
+  const cfg = getConfig();
+  if (!cfg.autoUpdate) {
+    log('info', '[Updater] 자동 업데이트 비활성화 상태');
+    return;
+  }
+
+  log('info', '[Updater] 자동 업데이트 활성화');
+
   // 첫 체크 (앱 시작 30초 후)
   setTimeout(() => {
+    if (!getConfig().autoUpdate) return;
     autoUpdater.checkForUpdates().catch((err) => {
       log('error', `[Updater] 첫 체크 실패: ${err.message}`);
     });
@@ -72,6 +96,7 @@ export function initAutoUpdater(): void {
 
   // 주기적 체크 (1시간마다)
   checkTimer = setInterval(() => {
+    if (!getConfig().autoUpdate) return;
     autoUpdater.checkForUpdates().catch((err) => {
       log('error', `[Updater] 주기적 체크 실패: ${err.message}`);
     });
