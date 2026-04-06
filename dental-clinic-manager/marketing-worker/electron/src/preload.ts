@@ -14,5 +14,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 상태 창 IPC
   getWorkerStatus: () => ipcRenderer.invoke('get-worker-status'),
   toggleWorker: () => ipcRenderer.invoke('toggle-worker'),
+  getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
   getLogs: () => ipcRenderer.invoke('get-logs'),
 });

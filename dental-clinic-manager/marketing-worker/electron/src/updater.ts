@@ -1,7 +1,7 @@
 import { autoUpdater } from 'electron-updater';
-import { Notification } from 'electron';
+import { app, Notification } from 'electron';
 import { log } from './logger';
-import { getConfig } from './config-store';
+import { getConfig, getGithubToken, setUpdateMeta } from './config-store';
 
 const CHECK_INTERVAL = 60 * 60 * 1000; // 1시간마다 체크
 let checkTimer: ReturnType<typeof setInterval> | null = null;
@@ -17,29 +17,50 @@ function notify(title: string, body: string): void {
 export function initAutoUpdater(): void {
   // 로그 설정
   autoUpdater.logger = {
-    info: (msg: any) => log('info', `[Updater] ${msg}`),
-    warn: (msg: any) => log('warn', `[Updater] ${msg}`),
-    error: (msg: any) => log('error', `[Updater] ${msg}`),
-    debug: (msg: any) => log('info', `[Updater:debug] ${msg}`),
+    info: (msg: unknown) => log('info', `[Updater] ${msg}`),
+    warn: (msg: unknown) => log('warn', `[Updater] ${msg}`),
+    error: (msg: unknown) => log('error', `[Updater] ${msg}`),
+    debug: (msg: unknown) => log('info', `[Updater:debug] ${msg}`),
   };
 
   // 자동 다운로드 활성화
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
+  // Private repo 토큰 설정
+  const ghToken = getGithubToken();
+  if (ghToken) {
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'huisu-hwang',
+      repo: 'dental-clinic-manager',
+      token: ghToken,
+    });
+    log('info', '[Updater] GitHub 토큰 설정 완료 (private repo 지원)');
+  }
+
   // 이벤트 핸들러
   autoUpdater.on('checking-for-update', () => {
     log('info', '[Updater] 업데이트 확인 중...');
+    setUpdateMeta({ lastUpdateCheck: new Date().toISOString() });
   });
 
   autoUpdater.on('update-available', (info) => {
     log('info', `[Updater] 새 버전 발견: v${info.version}`);
+    setUpdateMeta({
+      latestVersion: info.version,
+      updateStatus: 'downloading',
+    });
     notify('클리닉 매니저 워커', `새 버전 v${info.version}을 다운로드 중입니다.`);
     isManualCheck = false;
   });
 
-  autoUpdater.on('update-not-available', () => {
+  autoUpdater.on('update-not-available', (info) => {
     log('info', '[Updater] 최신 버전 사용 중');
+    setUpdateMeta({
+      latestVersion: info.version,
+      updateStatus: 'up-to-date',
+    });
     if (isManualCheck) {
       notify('클리닉 매니저 워커', '현재 최신 버전을 사용 중입니다.');
       isManualCheck = false;
@@ -52,12 +73,18 @@ export function initAutoUpdater(): void {
 
   autoUpdater.on('update-downloaded', (info) => {
     log('info', `[Updater] 업데이트 다운로드 완료: v${info.version}`);
+    setUpdateMeta({
+      latestVersion: info.version,
+      updateStatus: 'downloaded',
+      lastUpdatedAt: new Date().toISOString(),
+    });
     notify('클리닉 매니저 워커 업데이트', `v${info.version} 다운로드 완료. 다음 재시작 시 자동 설치됩니다.`);
     isManualCheck = false;
   });
 
   autoUpdater.on('error', (err) => {
     log('error', `[Updater] 오류: ${err.message}`);
+    setUpdateMeta({ updateStatus: 'up-to-date' });
     if (isManualCheck) {
       notify('클리닉 매니저 워커', '업데이트 확인에 실패했습니다. 네트워크를 확인해주세요.');
       isManualCheck = false;
@@ -115,6 +142,15 @@ export function checkForUpdatesManually(): void {
     notify('클리닉 매니저 워커', '업데이트 확인에 실패했습니다. 네트워크를 확인해주세요.');
     isManualCheck = false;
   });
+}
+
+/**
+ * 버전 정보 반환 (상태 창에서 사용)
+ */
+export function getVersionInfo() {
+  return {
+    currentVersion: app.getVersion(),
+  };
 }
 
 export function stopAutoUpdater(): void {

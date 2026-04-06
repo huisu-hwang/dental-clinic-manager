@@ -5,6 +5,8 @@ import { getScrapingStatus } from './scraping-bridge';
 import { getSeoStatus } from './seo-bridge';
 import { getEmailMonitorStatus } from './email-bridge';
 import { Logger } from './logger';
+import { getVersionInfo } from './updater';
+import { getUpdateMeta } from './config-store';
 
 // ============================================
 // 상태 창 관리
@@ -73,6 +75,14 @@ function registerIpcHandlers(): void {
     }
   });
 
+  // 버전 정보 반환
+  ipcMain.removeHandler('get-version-info');
+  ipcMain.handle('get-version-info', () => {
+    const versionInfo = getVersionInfo();
+    const updateMeta = getUpdateMeta();
+    return { ...versionInfo, ...updateMeta };
+  });
+
   // 최근 로그 반환
   ipcMain.removeHandler('get-logs');
   ipcMain.handle('get-logs', () => {
@@ -83,6 +93,7 @@ function registerIpcHandlers(): void {
 function unregisterIpcHandlers(): void {
   ipcMain.removeHandler('get-worker-status');
   ipcMain.removeHandler('toggle-worker');
+  ipcMain.removeHandler('get-version-info');
   ipcMain.removeHandler('get-logs');
 }
 

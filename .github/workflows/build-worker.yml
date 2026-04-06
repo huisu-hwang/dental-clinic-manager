@@ -42,10 +42,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload macOS DMG to Release
+      - name: Upload macOS artifacts to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dental-clinic-manager/marketing-worker/electron/release/*.dmg
+          files: |
+            dental-clinic-manager/marketing-worker/electron/release/*.dmg
+            dental-clinic-manager/marketing-worker/electron/release/*.zip
+            dental-clinic-manager/marketing-worker/electron/release/latest-mac.yml
           fail_on_unmatched_files: false
 
   build-windows:
@@ -81,8 +84,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Windows EXE to Release
+      - name: Upload Windows artifacts to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dental-clinic-manager/marketing-worker/electron/release/*.exe
+          files: |
+            dental-clinic-manager/marketing-worker/electron/release/*.exe
+            dental-clinic-manager/marketing-worker/electron/release/latest.yml
           fail_on_unmatched_files: false
