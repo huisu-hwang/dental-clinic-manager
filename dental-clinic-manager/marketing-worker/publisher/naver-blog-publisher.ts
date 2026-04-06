@@ -75,15 +75,18 @@ export class NaverBlogPublisher {
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     });
 
-    // 저장된 쿠키 파일 로드
+    // 저장된 쿠키 파일 로드 (앱 데이터 디렉토리에 저장)
     try {
       const fs = await import('fs');
       const path = await import('path');
-      const cookiePath = path.join(import.meta.dirname, '..', 'naver-cookies.json');
+      const os = await import('os');
+      const cookieDir = path.join(os.homedir(), '.hayan-worker');
+      if (!fs.existsSync(cookieDir)) fs.mkdirSync(cookieDir, { recursive: true });
+      const cookiePath = path.join(cookieDir, 'naver-cookies.json');
       if (fs.existsSync(cookiePath)) {
         const cookies = JSON.parse(fs.readFileSync(cookiePath, 'utf-8'));
         await this.context.addCookies(cookies);
-        console.log(`[NaverBlog] 저장된 쿠키 로드 (${cookies.length}개)`);
+        console.log(`[NaverBlog] 저장된 쿠키 로드 (${cookies.length}개): ${cookiePath}`);
       }
     } catch { /* 쿠키 파일 없으면 무시 */ }
 
@@ -107,11 +110,42 @@ export class NaverBlogPublisher {
   }
 
   /**
+   * 브라우저 컨텍스트가 살아있는지 확인
+   */
+  private async isContextAlive(): Promise<boolean> {
+    if (!this.context || !this.browser) return false;
+    try {
+      // 브라우저가 살아있는지 간단한 조작으로 확인
+      await this.browser.version();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 브라우저를 안전하게 정리하고 null로 설정
+   */
+  private async cleanupBrowser(): Promise<void> {
+    try { if (this.context) await this.context.close(); } catch { /* 이미 죽은 상태 */ }
+    try { if (this.browser) await this.browser.close(); } catch { /* 이미 죽은 상태 */ }
+    this.context = null;
+    this.browser = null;
+  }
+
+  /**
    * 블로그 글 발행
    */
   async publish(postData: BlogPostData): Promise<PublishResult> {
     const startTime = Date.now();
-    if (!this.context) await this.init();
+
+    // 브라우저가 없거나 죽었으면 재초기화
+    if (!this.context || !await this.isContextAlive()) {
+      console.log('[NaverBlog] 브라우저 컨텍스트 재초기화 필요');
+      await this.cleanupBrowser();
+      await this.init(this.blogConfig || undefined, { headless: this.headless });
+    }
+
     const page = await this.context!.newPage();
 
     try {
@@ -244,11 +278,12 @@ export class NaverBlogPublisher {
         const cookies = await this.context.cookies();
         const fs = await import('fs');
         const path = await import('path');
-        fs.writeFileSync(
-          path.join(import.meta.dirname, '..', 'naver-cookies.json'),
-          JSON.stringify(cookies, null, 2)
-        );
-        console.log(`[NaverBlog] 쿠키 저장 (${cookies.length}개)`);
+        const os = await import('os');
+        const cookieDir = path.join(os.homedir(), '.hayan-worker');
+        if (!fs.existsSync(cookieDir)) fs.mkdirSync(cookieDir, { recursive: true });
+        const cookieSavePath = path.join(cookieDir, 'naver-cookies.json');
+        fs.writeFileSync(cookieSavePath, JSON.stringify(cookies, null, 2));
+        console.log(`[NaverBlog] 쿠키 저장 (${cookies.length}개): ${cookieSavePath}`);
       } catch { /* ignore */ }
     }
   }
