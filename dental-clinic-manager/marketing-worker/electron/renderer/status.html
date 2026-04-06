@@ -172,6 +172,47 @@
     .log-line.info   { color: #0369a1; }
     .log-line.debug  { color: #a1a1aa; }
     .log-empty { color: #a1a1aa; font-size: 12px; padding: 20px 0; text-align: center; }
+
+    .version-section {
+      background: #fff;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .version-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f4f4f5;
+      font-size: 12px;
+      font-weight: 600;
+      color: #52525b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .version-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .version-item {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f4f4f5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .version-item:nth-child(odd) { border-right: 1px solid #f4f4f5; }
+    .version-item:nth-last-child(-n+2) { border-bottom: none; }
+
+    .version-label { font-size: 12px; color: #71717a; }
+    .version-value { font-size: 13px; font-weight: 600; color: #18181b; }
+    .version-value.up-to-date { color: #16a34a; }
+    .version-value.available { color: #d97706; }
+    .version-value.downloading { color: #2563eb; }
+    .version-value.downloaded { color: #7c3aed; }
   </style>
 </head>
 <body>
@@ -208,6 +249,28 @@
         <div class="status-card-info">
           <div class="status-card-name">이메일 모니터링</div>
           <div class="status-card-value" id="lblEmail">중지됨</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="version-section">
+      <div class="version-header">버전 정보</div>
+      <div class="version-grid">
+        <div class="version-item">
+          <span class="version-label">현재 버전</span>
+          <span class="version-value" id="currentVersion">-</span>
+        </div>
+        <div class="version-item">
+          <span class="version-label">최신 버전</span>
+          <span class="version-value" id="latestVersion">-</span>
+        </div>
+        <div class="version-item">
+          <span class="version-label">마지막 확인</span>
+          <span class="version-value" id="lastUpdateCheck">-</span>
+        </div>
+        <div class="version-item">
+          <span class="version-label">업데이트 상태</span>
+          <span class="version-value" id="updateStatus">-</span>
         </div>
       </div>
     </div>
@@ -352,12 +415,48 @@
       logBody.appendChild(msg);
     });
 
+    var UPDATE_STATUS_LABELS = {
+      'up-to-date': '최신 버전',
+      'available': '업데이트 가능',
+      'downloading': '다운로드 중',
+      'downloaded': '재시작 시 설치'
+    };
+
+    function formatDate(isoStr) {
+      if (!isoStr) return '-';
+      var d = new Date(isoStr);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleString('ko-KR', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function refreshVersionInfo() {
+      if (!api || !api.getVersionInfo) return;
+      api.getVersionInfo().then(function(info) {
+        document.getElementById('currentVersion').textContent = 'v' + (info.currentVersion || '-');
+
+        var latestEl = document.getElementById('latestVersion');
+        latestEl.textContent = info.latestVersion ? 'v' + info.latestVersion : '-';
+
+        document.getElementById('lastUpdateCheck').textContent = formatDate(info.lastUpdateCheck);
+
+        var statusEl = document.getElementById('updateStatus');
+        var statusKey = info.updateStatus || 'up-to-date';
+        statusEl.textContent = UPDATE_STATUS_LABELS[statusKey] || statusKey;
+        statusEl.className = 'version-value ' + statusKey;
+      }).catch(function() {});
+    }
+
     refreshStatus();
     refreshLogs();
+    refreshVersionInfo();
 
     setInterval(function() {
       refreshStatus();
       refreshLogs();
+      refreshVersionInfo();
     }, 5000);
   </script>
 </body>

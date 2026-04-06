@@ -98,7 +98,14 @@ export async function middleware(request: NextRequest) {
         redirectUrl.searchParams.delete('code')
         redirectUrl.searchParams.delete('type')
         redirectUrl.searchParams.set('mode', 'recovery')
-        return NextResponse.redirect(redirectUrl)
+        // supabaseResponse에 설정된 세션 쿠키를 리다이렉트 응답에 복사
+        const redirectResponse = NextResponse.redirect(redirectUrl)
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
+          redirectResponse.cookies.set(cookie.name, cookie.value, {
+            ...defaultCookieOptions,
+          })
+        })
+        return redirectResponse
       }
       console.error('[Middleware] Code 교환 실패:', error.message)
     }

@@ -129,6 +129,10 @@ function rebuildMenu(): void {
     },
     { type: 'separator' },
     {
+      label: `버전: v${app.getVersion()}`,
+      enabled: false,
+    },
+    {
       label: '업데이트 확인',
       click: () => {
         checkForUpdatesManually();

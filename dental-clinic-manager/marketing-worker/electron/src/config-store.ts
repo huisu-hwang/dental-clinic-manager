@@ -12,6 +12,12 @@ interface StoreSchema {
   autoUpdate: boolean;
   headless: boolean;
   isConfigured: boolean;
+  // 업데이트 메타데이터
+  lastUpdateCheck: string;   // 마지막 업데이트 확인 시각 (ISO)
+  lastUpdatedAt: string;     // 마지막 업데이트 설치 시각 (ISO)
+  latestVersion: string;     // 확인된 최신 버전
+  updateStatus: string;      // 업데이트 상태 (up-to-date, available, downloading, downloaded)
+  githubToken: string;       // GitHub PAT (private repo 업데이트용)
 }
 
 export interface AppConfig {
@@ -20,6 +26,13 @@ export interface AppConfig {
   autoStart: boolean;
   autoUpdate: boolean;
   headless: boolean;
+}
+
+export interface UpdateMeta {
+  lastUpdateCheck: string;
+  lastUpdatedAt: string;
+  latestVersion: string;
+  updateStatus: string;
 }
 
 const store = new Store<StoreSchema>({
@@ -31,6 +44,11 @@ const store = new Store<StoreSchema>({
     autoUpdate: true,
     headless: true,
     isConfigured: false,
+    lastUpdateCheck: '',
+    lastUpdatedAt: '',
+    latestVersion: '',
+    updateStatus: 'up-to-date',
+    githubToken: '',
   },
 });
 
@@ -64,6 +82,39 @@ export function setConfig(partial: Partial<AppConfig>): void {
   if (partial.autoUpdate !== undefined) store.set('autoUpdate', partial.autoUpdate);
   if (partial.headless !== undefined) store.set('headless', partial.headless);
   store.set('isConfigured', true);
+}
+
+/**
+ * 업데이트 메타데이터 조회
+ */
+export function getUpdateMeta(): UpdateMeta {
+  return {
+    lastUpdateCheck: store.get('lastUpdateCheck'),
+    lastUpdatedAt: store.get('lastUpdatedAt'),
+    latestVersion: store.get('latestVersion'),
+    updateStatus: store.get('updateStatus'),
+  };
+}
+
+/**
+ * 업데이트 메타데이터 저장
+ */
+export function setUpdateMeta(partial: Partial<UpdateMeta>): void {
+  if (partial.lastUpdateCheck !== undefined) store.set('lastUpdateCheck', partial.lastUpdateCheck);
+  if (partial.lastUpdatedAt !== undefined) store.set('lastUpdatedAt', partial.lastUpdatedAt);
+  if (partial.latestVersion !== undefined) store.set('latestVersion', partial.latestVersion);
+  if (partial.updateStatus !== undefined) store.set('updateStatus', partial.updateStatus);
+}
+
+/**
+ * GitHub 토큰 조회/설정 (private repo 업데이트용)
+ */
+export function getGithubToken(): string {
+  return store.get('githubToken');
+}
+
+export function setGithubToken(token: string): void {
+  store.set('githubToken', token);
 }
 
 /**
