@@ -299,6 +299,18 @@ export default function TaskDetail({
                     </Button>
                   </>
                 )}
+                {/* 대표 원장: 어떤 상태에서든 완료 처리 가능 (review 상태 제외 - 위에서 처리) */}
+                {isOwner && task.status !== 'review' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onStatusUpdate('completed')}
+                    className="text-green-600"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-1" />
+                    완료 처리
+                  </Button>
+                )}
 
                 {/* === 관리자 추가 옵션 === */}
                 {onEdit && (
