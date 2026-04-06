@@ -200,8 +200,8 @@ interface SchedulerModule {
 
 /**
  * 스케줄러 1회 실행
- * 기존 marketing-worker/scheduler.ts의 processScheduledItemsOnce 호출
- * (Electron main은 CommonJS로 빌드, marketing-worker는 별도 ESM 번들)
+ * esbuild로 CJS 번들된 scheduler-bundle.js를 로드
+ * (marketing-worker는 ESM이므로 require로 직접 로드 불가 → esbuild CJS 번들 사용)
  */
 async function runSchedulerOnce(): Promise<void> {
   if (isPublishing) {
@@ -211,7 +211,7 @@ async function runSchedulerOnce(): Promise<void> {
   isPublishing = true;
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const scheduler = require('../../dist/scheduler.js') as SchedulerModule;
+    const scheduler = require('./scheduler-bundle.js') as SchedulerModule;
     await scheduler.processScheduledItemsOnce();
     notifyResult({ success: true });
   } catch (err) {
