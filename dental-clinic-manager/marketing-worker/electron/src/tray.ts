@@ -6,7 +6,7 @@ import { getScrapingStatus } from './scraping-bridge';
 import { getSeoStatus } from './seo-bridge';
 import { getEmailMonitorStatus } from './email-bridge';
 import { log } from './logger';
-import { checkForUpdatesManually } from './updater';
+import { checkForUpdatesManually, startAutoCheckIfEnabled } from './updater';
 import { createStatusWindow } from './status-window';
 
 // ============================================
@@ -115,6 +115,16 @@ function rebuildMenu(): void {
           args: ['--hidden'],
         });
         log('info', `[Tray] 자동 실행: ${menuItem.checked}`);
+      },
+    },
+    {
+      label: '자동 업데이트',
+      type: 'checkbox',
+      checked: cfg.autoUpdate,
+      click: (menuItem) => {
+        setConfig({ autoUpdate: menuItem.checked });
+        startAutoCheckIfEnabled();
+        log('info', `[Tray] 자동 업데이트: ${menuItem.checked ? '활성화' : '비활성화'}`);
       },
     },
     { type: 'separator' },
