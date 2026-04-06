@@ -85,7 +85,26 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  // 3. getUser() 호출로 토큰 재검증 및 갱신 트리거
+  // 3. /update-password에 code 파라미터가 있으면 PKCE code 교환 처리
+  // (비밀번호 재설정 이메일 링크에서 직접 도착)
+  if (request.nextUrl.pathname === '/update-password') {
+    const code = request.nextUrl.searchParams.get('code')
+    if (code) {
+      console.log('[Middleware] /update-password code 교환 시작')
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
+      if (!error) {
+        console.log('[Middleware] Code 교환 성공 → /update-password?mode=recovery')
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.searchParams.delete('code')
+        redirectUrl.searchParams.delete('type')
+        redirectUrl.searchParams.set('mode', 'recovery')
+        return NextResponse.redirect(redirectUrl)
+      }
+      console.error('[Middleware] Code 교환 실패:', error.message)
+    }
+  }
+
+  // 4. getUser() 호출로 토큰 재검증 및 갱신 트리거
   // 만료된 토큰이 있으면 자동으로 refresh되고 setAll이 호출됨
   const {
     data: { user },

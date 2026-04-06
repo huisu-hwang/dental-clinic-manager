@@ -12,6 +12,15 @@ import { WorkerApiClient, type ScheduledItem } from './api-client.js';
 // 레거시 모드: Supabase 직접 접속 (하위 호환)
 // ============================================
 
+/** 스케줄러 실행 결과 */
+export interface SchedulerResult {
+  attempted: boolean;   // 발행 시도 여부
+  success?: boolean;    // 발행 성공 여부
+  title?: string;       // 발행 항목 제목
+  url?: string;         // 발행된 URL
+  error?: string;       // 에러 메시지
+}
+
 const IMAGE_TEMP_DIR = path.join(os.tmpdir(), 'marketing-images-publish');
 
 let apiClient: WorkerApiClient | null = null;
@@ -127,7 +136,7 @@ export function startScheduler(): void {
 /**
  * 예약된 발행 항목 처리
  */
-async function processScheduledItems(): Promise<void> {
+async function processScheduledItems(): Promise<SchedulerResult> {
   const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const today = nowKst.toISOString().split('T')[0];
   const timeKst = nowKst.toISOString().split('T')[1].slice(0, 5);
@@ -142,20 +151,20 @@ async function processScheduledItems(): Promise<void> {
 
   if (dailyPublishCount >= CONFIG.publishing.maxPostsPerDay) {
     console.log(`[Scheduler] 하루 최대 발행 수(${CONFIG.publishing.maxPostsPerDay}건) 도달 - 대기`);
-    return;
+    return { attempted: false };
   }
 
   if (isApiMode()) {
-    await processViaApi();
+    return await processViaApi();
   } else {
-    await processViaSupabase();
+    return await processViaSupabase();
   }
 }
 
 /**
  * API 모드: 대시보드 API를 통해 발행 대상 조회 및 발행
  */
-async function processViaApi(): Promise<void> {
+async function processViaApi(): Promise<SchedulerResult> {
   const client = getApiClient();
 
   console.log(`[Scheduler] API 폴링: ${CONFIG.api.dashboardUrl}/api/marketing/worker-api/poll`);
@@ -164,17 +173,17 @@ async function processViaApi(): Promise<void> {
 
   if (!nextItem) {
     console.log('[Scheduler] 발행 대상 없음 - 다음 폴링까지 대기');
-    return;
+    return { attempted: false };
   }
 
   console.log(`[Scheduler] 발행 대상: "${nextItem.title}" (${nextItem.publish_date} ${nextItem.publish_time})`);
-  await publishItemApi(nextItem, control.headless);
+  return await publishItemApi(nextItem, control.headless);
 }
 
 /**
  * API 모드: 개별 항목 발행
  */
-async function publishItemApi(item: ScheduledItem, headless = false): Promise<void> {
+async function publishItemApi(item: ScheduledItem, headless = false): Promise<SchedulerResult> {
   const client = getApiClient();
   let downloadedImages: { path: string; prompt: string }[] = [];
 
@@ -184,7 +193,7 @@ async function publishItemApi(item: ScheduledItem, headless = false): Promise<vo
     if (!item.generated_content) {
       console.warn(`[Scheduler] "${item.title}" - 생성된 콘텐츠 없음, 건너뜀`);
       await client.updateItemStatus(item.id, 'failed', { fail_reason: '생성된 콘텐츠가 없습니다.' });
-      return;
+      return { attempted: true, success: false, title: item.title, error: '생성된 콘텐츠가 없습니다.' };
     }
 
     let parsedContent: { title: string; body: string; hashtags?: string[] };
@@ -239,7 +248,9 @@ async function publishItemApi(item: ScheduledItem, headless = false): Promise<vo
       if (result.success && result.blogUrl) {
         publishedUrls.naverBlog = result.blogUrl;
       } else if (!result.success) {
-        throw new Error(`네이버 블로그 발행 실패: ${result.error}`);
+        const errMsg = `네이버 블로그 발행 실패: ${result.error}`;
+        await client.updateItemStatus(item.id, 'failed', { fail_reason: errMsg });
+        return { attempted: true, success: false, title: item.title, error: errMsg };
       }
     }
 
@@ -247,10 +258,12 @@ async function publishItemApi(item: ScheduledItem, headless = false): Promise<vo
 
     dailyPublishCount++;
     console.log(`[Scheduler] 발행 완료: "${item.title}" (오늘 ${dailyPublishCount}건)`);
+    return { attempted: true, success: true, title: item.title, url: publishedUrls.naverBlog };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Scheduler] 발행 실패: "${item.title}"`, errorMessage);
     await client.updateItemStatus(item.id, 'failed', { fail_reason: errorMessage });
+    return { attempted: true, success: false, title: item.title, error: errorMessage };
   } finally {
     if (downloadedImages.length > 0) cleanupTempImages(downloadedImages);
   }
@@ -258,7 +271,7 @@ async function publishItemApi(item: ScheduledItem, headless = false): Promise<vo
 
 // ─── 레거시 모드 (Supabase 직접 접속 - 하위 호환) ───
 
-async function processViaSupabase(): Promise<void> {
+async function processViaSupabase(): Promise<SchedulerResult> {
   const sb = await getSupabase();
 
   const now = new Date();
@@ -294,21 +307,22 @@ async function processViaSupabase(): Promise<void> {
 
   if (error) {
     console.error('[Scheduler] 조회 오류:', error.message);
-    return;
+    return { attempted: false, error: error.message };
   }
   if (!items?.length) {
     console.log('[Scheduler] 발행 대상 없음 - 다음 폴링까지 대기');
-    return;
+    return { attempted: false };
   }
 
   const item = items[0];
   console.log(`[Scheduler] 발행 대상: "${item.title}" (${item.publish_date} ${item.publish_time})`);
-  await publishItemSupabase(item);
+  return await publishItemSupabase(item);
 }
 
-async function publishItemSupabase(item: Record<string, unknown>): Promise<void> {
+async function publishItemSupabase(item: Record<string, unknown>): Promise<SchedulerResult> {
   const sb = await getSupabase();
   const itemId = item.id as string;
+  const itemTitle = item.title as string;
   let downloadedImages: { path: string; prompt: string }[] = [];
 
   try {
@@ -317,11 +331,11 @@ async function publishItemSupabase(item: Record<string, unknown>): Promise<void>
     const content = item.generated_content as string | null;
     if (!content) {
       await sb.from('content_calendar_items').update({ status: 'failed', fail_reason: '생성된 콘텐츠가 없습니다.' }).eq('id', itemId);
-      return;
+      return { attempted: true, success: false, title: itemTitle, error: '생성된 콘텐츠가 없습니다.' };
     }
 
     let parsedContent: { title: string; body: string; hashtags?: string[] };
-    try { parsedContent = JSON.parse(content); } catch { parsedContent = { title: item.title as string, body: content }; }
+    try { parsedContent = JSON.parse(content); } catch { parsedContent = { title: itemTitle, body: content }; }
 
     const generatedImages = item.generated_images as { path: string; prompt: string; fileName?: string }[] | null;
     if (generatedImages && generatedImages.length > 0) {
@@ -375,7 +389,9 @@ async function publishItemSupabase(item: Record<string, unknown>): Promise<void>
       if (result.success && result.blogUrl) {
         publishedUrls.naverBlog = result.blogUrl;
       } else if (!result.success) {
-        throw new Error(`네이버 블로그 발행 실패: ${result.error}`);
+        const errMsg = `네이버 블로그 발행 실패: ${result.error}`;
+        await sb.from('content_calendar_items').update({ status: 'failed', fail_reason: errMsg }).eq('id', itemId);
+        return { attempted: true, success: false, title: itemTitle, error: errMsg };
       }
     }
 
@@ -392,11 +408,13 @@ async function publishItemSupabase(item: Record<string, unknown>): Promise<void>
     }
 
     dailyPublishCount++;
-    console.log(`[Scheduler] 발행 완료: "${item.title}" (오늘 ${dailyPublishCount}건)`);
+    console.log(`[Scheduler] 발행 완료: "${itemTitle}" (오늘 ${dailyPublishCount}건)`);
+    return { attempted: true, success: true, title: itemTitle, url: publishedUrls.naverBlog };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`[Scheduler] 발행 실패: "${item.title}"`, errorMessage);
+    console.error(`[Scheduler] 발행 실패: "${itemTitle}"`, errorMessage);
     await sb.from('content_calendar_items').update({ status: 'failed', fail_reason: errorMessage }).eq('id', itemId);
+    return { attempted: true, success: false, title: itemTitle, error: errorMessage };
   } finally {
     if (downloadedImages.length > 0) cleanupTempImages(downloadedImages);
   }
@@ -404,12 +422,15 @@ async function publishItemSupabase(item: Record<string, unknown>): Promise<void>
 
 /**
  * 즉시 발행 처리 (HTTP 트리거에서 호출)
+ * 발행 결과를 반환하여 호출자가 성공/실패를 정확히 판단할 수 있도록 함
  */
-export async function processScheduledItemsOnce(): Promise<void> {
+export async function processScheduledItemsOnce(): Promise<SchedulerResult> {
   try {
-    await processScheduledItems();
+    return await processScheduledItems();
   } catch (error) {
-    console.error('[Scheduler] 즉시 처리 오류:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[Scheduler] 즉시 처리 오류:', errorMessage);
+    return { attempted: false, error: errorMessage };
   }
 }
 
