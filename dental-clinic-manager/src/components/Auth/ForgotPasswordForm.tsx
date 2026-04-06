@@ -29,20 +29,21 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
       // 보안상 이메일 존재 여부와 관계없이 항상 성공 응답 (이메일 enumeration 공격 방지)
 
       // 환경에 따라 동적으로 Redirect URL 결정
-      // PKCE 플로우: /auth/callback을 경유하여 code 교환 후 /update-password로 리다이렉트
+      // /update-password로 직접 리다이렉트 (middleware에서 code 교환 처리)
+      // PWA가 /auth/callback을 가로채는 문제를 방지
       const getRedirectUrl = () => {
         // Vercel 배포 환경 (preview/production)
         if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-          return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/auth/callback?type=recovery`;
+          return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/update-password`;
         }
 
         // 프로덕션 환경 (명시적 Site URL 설정)
         if (process.env.NEXT_PUBLIC_SITE_URL) {
-          return `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=recovery`;
+          return `${process.env.NEXT_PUBLIC_SITE_URL}/update-password`;
         }
 
         // 개발 환경 (localhost) - 현재 접속한 도메인 사용
-        return `${window.location.origin}/auth/callback?type=recovery`;
+        return `${window.location.origin}/update-password`;
       };
 
       const redirectUrl = getRedirectUrl();
