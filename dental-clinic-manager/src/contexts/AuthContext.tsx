@@ -63,9 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        // PASSWORD_RECOVERY 모드에서는 프로필 로드를 건너뛰고 로딩만 해제
-        if (sessionStorage.getItem('supabase_password_recovery') === 'true') {
-          console.log('[AuthContext] PASSWORD_RECOVERY 모드 - 프로필 로드 건너뛰기')
+        // /update-password 페이지에서는 프로필 로드를 건너뛰고 로딩만 해제
+        // (비밀번호 재설정 플로우에서 대시보드 리다이렉트 방지)
+        if (window.location.pathname === '/update-password') {
+          console.log('[AuthContext] /update-password 페이지 - 프로필 로드 건너뛰기')
           setLoading(false)
           return
         }
@@ -250,22 +251,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // PASSWORD_RECOVERY 이벤트: update-password 페이지로 리다이렉트
               if (event === 'PASSWORD_RECOVERY') {
                 console.log('PASSWORD_RECOVERY 이벤트 감지 - /update-password로 리다이렉트')
-
-                // recovery 플래그 설정 (다른 컴포넌트에서 대시보드 리다이렉트 방지용)
-                if (typeof window !== 'undefined') {
-                  sessionStorage.setItem('supabase_password_recovery', 'true')
-
-                  if (window.location.pathname !== '/update-password') {
-                    window.location.href = '/update-password' + window.location.hash
-                  }
+                if (typeof window !== 'undefined' && window.location.pathname !== '/update-password') {
+                  window.location.href = '/update-password?mode=recovery'
                 }
                 return
               }
 
               if (event === 'SIGNED_IN' && session?.user) {
-                // PASSWORD_RECOVERY 모드에서는 프로필 로드/대시보드 리다이렉트 건너뛰기
-                if (typeof window !== 'undefined' && sessionStorage.getItem('supabase_password_recovery') === 'true') {
-                  console.log('[AuthContext] SIGNED_IN 무시 - PASSWORD_RECOVERY 모드')
+                // /update-password 페이지에서는 프로필 로드/대시보드 리다이렉트 건너뛰기
+                if (typeof window !== 'undefined' && window.location.pathname === '/update-password') {
+                  console.log('[AuthContext] SIGNED_IN 무시 - /update-password 페이지')
                   return
                 }
                 // 주의: onAuthStateChange 콜백은 Supabase 내부 세션 잠금(lock)이

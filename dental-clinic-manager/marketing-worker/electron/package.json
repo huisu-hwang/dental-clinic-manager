@@ -1,6 +1,6 @@
 {
   "name": "hayan-marketing-worker",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "하얀치과 마케팅 워커 - Electron 데스크탑 앱",
   "productName": "클리닉 매니저 워커",
   "private": true,
@@ -11,10 +11,11 @@
   "author": "하얀치과",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "tsc && electron dist/main.js",
-    "build": "tsc",
-    "build:win": "tsc && electron-builder --win",
-    "build:mac": "tsc && electron-builder --mac",
+    "dev": "tsc && npm run bundle:scheduler && electron dist/main.js",
+    "build": "tsc && npm run bundle:scheduler",
+    "build:win": "tsc && npm run bundle:scheduler && electron-builder --win",
+    "build:mac": "tsc && npm run bundle:scheduler && electron-builder --mac",
+    "bundle:scheduler": "node scripts/bundle-scheduler.js",
     "start": "electron dist/main.js"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "@types/node": "^22.0.0",
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
+    "esbuild": "^0.28.0",
     "typescript": "^5.7.0"
   }
 }
