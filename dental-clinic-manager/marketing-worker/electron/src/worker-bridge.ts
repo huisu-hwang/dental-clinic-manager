@@ -191,10 +191,21 @@ async function pollControlSignals(): Promise<void> {
 }
 
 /**
+ * 스케줄러 실행 결과 타입
+ */
+interface SchedulerResult {
+  attempted: boolean;
+  success?: boolean;
+  title?: string;
+  url?: string;
+  error?: string;
+}
+
+/**
  * 스케줄러 모듈 타입 (기존 marketing-worker/scheduler.ts의 내보내기)
  */
 interface SchedulerModule {
-  processScheduledItemsOnce(): Promise<void>;
+  processScheduledItemsOnce(): Promise<SchedulerResult>;
   stopScheduler(): Promise<void>;
 }
 
@@ -202,6 +213,8 @@ interface SchedulerModule {
  * 스케줄러 1회 실행
  * esbuild로 CJS 번들된 scheduler-bundle.js를 로드
  * (marketing-worker는 ESM이므로 require로 직접 로드 불가 → esbuild CJS 번들 사용)
+ *
+ * 수정: 발행 시도가 있었을 때만 알림 발송 (기존: 무조건 success 알림)
  */
 async function runSchedulerOnce(): Promise<void> {
   if (isPublishing) {
@@ -212,8 +225,17 @@ async function runSchedulerOnce(): Promise<void> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const scheduler = require('./scheduler-bundle.js') as SchedulerModule;
-    await scheduler.processScheduledItemsOnce();
-    notifyResult({ success: true });
+    const result = await scheduler.processScheduledItemsOnce();
+
+    // 발행 시도가 있었을 때만 알림 (발행 대상 없으면 무시)
+    if (result.attempted) {
+      notifyResult({
+        success: result.success || false,
+        title: result.title,
+        url: result.url,
+        error: result.error,
+      });
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log('error', `[WorkerBridge] 스케줄러 실행 오류: ${msg}`);
