@@ -41,7 +41,14 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [showPasswordChange, setShowPasswordChange] = useState(false)
+  // Password change dialog state
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [pwCurrentPassword, setPwCurrentPassword] = useState('')
+  const [pwNewPassword, setPwNewPassword] = useState('')
+  const [pwConfirmPassword, setPwConfirmPassword] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const [pwSuccess, setPwSuccess] = useState('')
 
   // Security verification state
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -59,11 +66,6 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
   const [showResidentNumber, setShowResidentNumber] = useState(false)
   const [loadingDecryption, setLoadingDecryption] = useState(false)
 
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  })
 
   // Check security session on mount
   useEffect(() => {
@@ -186,14 +188,6 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
     resident_registration_number: formData.resident_registration_number
   })
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setPasswordData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -263,75 +257,6 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
     } catch (err) {
       console.error('Error:', err)
       setError('프로필 업데이트 중 오류가 발생했습니다.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('새 비밀번호가 일치하지 않습니다.')
-      return
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      setError('비밀번호는 최소 6자 이상이어야 합니다.')
-      return
-    }
-
-    setError('')
-    setSuccess('')
-    setSaving(true)
-
-    try {
-      console.log('[PasswordChange] 비밀번호 변경 시작')
-
-      if (!currentUser.email) {
-        setError('계정에 등록된 이메일이 없어 비밀번호를 변경할 수 없습니다.')
-        setSaving(false)
-        return
-      }
-
-      // 1. 현재 비밀번호로 재인증 (보안 확인)
-      const result = await dataService.verifyPassword(
-        currentUser.email,
-        passwordData.currentPassword
-      )
-
-      if (result.error || !result.success) {
-        setError('현재 비밀번호가 올바르지 않습니다.')
-        setSaving(false)
-        return
-      }
-
-      console.log('[PasswordChange] 현재 비밀번호 확인 완료')
-
-      // 2. 새 비밀번호로 업데이트
-      const updateResult = await dataService.updatePassword(passwordData.newPassword)
-
-      if (updateResult.error) {
-        throw new Error(updateResult.error)
-      }
-
-      console.log('[PasswordChange] 비밀번호 변경 성공')
-
-      setSuccess('비밀번호가 성공적으로 변경되었습니다.')
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      })
-      setShowPasswordChange(false)
-
-      setTimeout(() => {
-        setSuccess('')
-      }, 3000)
-    } catch (err) {
-      console.error('[PasswordChange] 오류:', err)
-      const errorMessage = err instanceof Error ? err.message : '비밀번호 변경 중 오류가 발생했습니다.'
-      setError(errorMessage)
     } finally {
       setSaving(false)
     }
@@ -564,7 +489,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
               <div className="flex justify-between">
                 <button
                   type="button"
-                  onClick={() => setShowPasswordChange(!showPasswordChange)}
+                  onClick={() => { setShowPasswordDialog(true); setPwError(''); setPwSuccess(''); setPwCurrentPassword(''); setPwNewPassword(''); setPwConfirmPassword(''); }}
                   className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                 >
                   비밀번호 변경
@@ -579,89 +504,77 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
               </div>
             </form>
 
-            {/* Password Change Form */}
-            {showPasswordChange && (
-              <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-6 border-t border-slate-200">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">비밀번호 변경</h3>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    현재 비밀번호
-                  </label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type="password"
-                      name="currentPassword"
-                      value={passwordData.currentPassword}
-                      onChange={handlePasswordChange}
-                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      required
-                      disabled={saving}
-                    />
+            {/* Password Change Dialog */}
+            {showPasswordDialog && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60]" onClick={() => setShowPasswordDialog(false)}>
+                <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-slate-800">비밀번호 변경</h3>
+                    <button onClick={() => setShowPasswordDialog(false)} className="text-slate-400 hover:text-slate-600">
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    새 비밀번호
-                  </label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type="password"
-                      name="newPassword"
-                      value={passwordData.newPassword}
-                      onChange={handlePasswordChange}
-                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      required
-                      disabled={saving}
-                    />
-                  </div>
-                </div>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault()
+                    setPwError('')
+                    setPwSuccess('')
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    새 비밀번호 확인
-                  </label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={passwordData.confirmPassword}
-                      onChange={handlePasswordChange}
-                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      required
-                      disabled={saving}
-                    />
-                  </div>
-                </div>
+                    if (pwNewPassword.length < 6) { setPwError('비밀번호는 6자 이상이어야 합니다.'); return }
+                    if (pwNewPassword !== pwConfirmPassword) { setPwError('새 비밀번호가 일치하지 않습니다.'); return }
+                    if (!currentUser.email) { setPwError('계정에 등록된 이메일이 없습니다.'); return }
 
-                <div className="flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPasswordChange(false)
-                      setPasswordData({
-                        currentPassword: '',
-                        newPassword: '',
-                        confirmPassword: ''
-                      })
-                    }}
-                    className="px-4 py-2 text-slate-700 hover:text-slate-900 font-medium"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                  >
-                    {saving ? '변경 중...' : '비밀번호 변경'}
-                  </button>
+                    setPwSaving(true)
+                    try {
+                      const verifyResult = await dataService.verifyPassword(currentUser.email, pwCurrentPassword)
+                      if (verifyResult.error || !verifyResult.success) { setPwError('현재 비밀번호가 올바르지 않습니다.'); setPwSaving(false); return }
+
+                      const updateResult = await dataService.updatePassword(pwNewPassword)
+                      if (updateResult.error) { throw new Error(updateResult.error) }
+
+                      setPwSuccess('비밀번호가 성공적으로 변경되었습니다.')
+                      setTimeout(() => setShowPasswordDialog(false), 1500)
+                    } catch (err) {
+                      setPwError(err instanceof Error ? err.message : '비밀번호 변경 중 오류가 발생했습니다.')
+                    } finally {
+                      setPwSaving(false)
+                    }
+                  }} className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">현재 비밀번호</label>
+                      <input type="password" value={pwCurrentPassword} onChange={(e) => setPwCurrentPassword(e.target.value)}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        required disabled={pwSaving || !!pwSuccess} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">새 비밀번호</label>
+                      <input type="password" value={pwNewPassword} onChange={(e) => setPwNewPassword(e.target.value)}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        placeholder="6자 이상" required disabled={pwSaving || !!pwSuccess} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">새 비밀번호 확인</label>
+                      <input type="password" value={pwConfirmPassword} onChange={(e) => setPwConfirmPassword(e.target.value)}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        required disabled={pwSaving || !!pwSuccess} />
+                    </div>
+
+                    {pwError && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{pwError}</p>}
+                    {pwSuccess && <p className="text-sm text-green-600 bg-green-50 p-2 rounded">{pwSuccess}</p>}
+
+                    <div className="flex gap-2 pt-1">
+                      <button type="button" onClick={() => setShowPasswordDialog(false)}
+                        className="flex-1 px-4 py-2 text-sm text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50">
+                        취소
+                      </button>
+                      <button type="submit" disabled={pwSaving || !!pwSuccess}
+                        className="flex-1 px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-300">
+                        {pwSaving ? '변경 중...' : '변경'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
+              </div>
             )}
           </div>
 

@@ -31,9 +31,9 @@ export default function AIGenerationFloating() {
   const handleGoToResult = () => {
     const postId = generatedResult?.savedItemId
     if (postId) {
-      router.push(`/admin/marketing?viewPost=${postId}`)
+      router.push(`/dashboard/marketing?viewPost=${postId}`)
     } else {
-      router.push('/admin/marketing')
+      router.push('/dashboard/marketing')
     }
     clearGeneration()
   }

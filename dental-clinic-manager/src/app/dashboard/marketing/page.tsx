@@ -23,10 +23,7 @@ import type {
   PostType,
   GeneratedContent,
 } from '@/types/marketing'
-import Header from '@/components/Layout/Header'
-import TabNavigation from '@/components/Layout/TabNavigation'
 import PremiumGate from '@/components/Premium/PremiumGate'
-import { getTabRoute } from '@/utils/tabRouting'
 import NewPostForm from '@/components/marketing/NewPostForm'
 import ScheduleModal from '@/components/marketing/ScheduleModal'
 import dynamic from 'next/dynamic'
@@ -36,11 +33,10 @@ const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor
 type MarketingTab = 'newpost' | 'dashboard' | 'posts' | 'calendar' | 'settings'
 
 export default function MarketingPage() {
-  const { user, logout, loading } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<MarketingTab>('dashboard')
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [viewPostId, setViewPostId] = useState<string | null>(null)
 
   // viewPost 쿼리 파라미터가 있으면 '글 관리' 탭으로 전환하고 해당 글 열기
@@ -49,42 +45,12 @@ export default function MarketingPage() {
     if (postId) {
       setActiveTab('posts')
       setViewPostId(postId)
-      // URL에서 쿼리 파라미터 제거 (뒤로가기 시 재트리거 방지)
-      router.replace('/admin/marketing', { scroll: false })
+      router.replace('/dashboard/marketing', { scroll: false })
     }
   }, [searchParams, router])
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth')
-    }
-  }, [user, loading, router])
-
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [isMobileMenuOpen])
-
-  const handleMainTabChange = (tab: string) => {
-    if (tab === 'marketing') return
-    router.push(getTabRoute(tab))
-  }
-
   if (loading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">로딩 중...</p>
-        </div>
-      </div>
-    )
+    return null
   }
 
   const tabs = [
@@ -97,49 +63,6 @@ export default function MarketingPage() {
 
   return (
     <PremiumGate featureId="marketing">
-      <div className="min-h-screen bg-slate-100">
-      {/* Header - 상단 고정 */}
-      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200">
-        <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
-          <Header
-            dbStatus="connected"
-            user={user}
-            onLogout={() => logout()}
-            onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            isMenuOpen={isMobileMenuOpen}
-          />
-        </div>
-      </div>
-
-      {/* 모바일 메뉴 오버레이 */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* 좌측 사이드바 */}
-      <aside
-        className={`
-          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3
-          transition-transform duration-300 ease-in-out
-          lg:left-[max(0px,calc(50%-700px))]
-          ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
-        `}
-      >
-        <TabNavigation
-          activeTab="marketing"
-          onTabChange={handleMainTabChange}
-          onItemClick={() => setIsMobileMenuOpen(false)}
-          skipAutoRedirect={true}
-        />
-      </aside>
-
-      {/* 메인 콘텐츠 */}
-      <div className="pt-14">
-        <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
-          <div className="max-w-6xl">
             {/* 페이지 헤더 */}
             <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
               <div className="flex items-center gap-3">
@@ -178,10 +101,6 @@ export default function MarketingPage() {
               {activeTab === 'calendar' && <CalendarContent />}
               {activeTab === 'settings' && <SettingsContent />}
             </div>
-          </div>
-        </main>
-      </div>
-      </div>
     </PremiumGate>
   )
 }

@@ -18,6 +18,7 @@ import {
   ChatBubbleLeftRightIcon,
   ClipboardDocumentListIcon,
   ClipboardDocumentCheckIcon,
+  ChevronRightIcon,
 } from '@heroicons/react/24/outline'
 import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid'
 import type { UserNotification, UserNotificationType } from '@/types/notification'
@@ -48,6 +49,35 @@ const NotificationTypeIcons: Record<UserNotificationType, React.ComponentType<{ 
   protocol_review_requested: ClipboardDocumentCheckIcon,
   protocol_review_approved: CheckCircleIcon,
   protocol_review_rejected: XCircleIcon,
+}
+
+// 알림 타입별 기본 링크 매핑 (link가 없는 경우 fallback)
+const DEFAULT_NOTIFICATION_LINKS: Partial<Record<UserNotificationType, string>> = {
+  leave_approval_pending: '/management?tab=leave&subtab=approval',
+  leave_approved: '/management?tab=leave',
+  leave_rejected: '/management?tab=leave',
+  leave_forwarded: '/management?tab=leave',
+  contract_signature_required: '/dashboard?tab=documents',
+  contract_signed: '/dashboard?tab=documents',
+  contract_completed: '/dashboard?tab=documents',
+  contract_cancelled: '/dashboard?tab=documents',
+  document_resignation: '/dashboard?tab=documents',
+  document_approved: '/dashboard?tab=documents',
+  document_rejected: '/dashboard?tab=documents',
+  document: '/dashboard?tab=documents',
+  telegram_board_approved: '/dashboard/community/telegram',
+  telegram_board_rejected: '/dashboard/community/telegram',
+  telegram_board_pending: '/dashboard/community/admin?tab=telegram',
+  task_assigned: '/dashboard/bulletin?tab=tasks',
+  task_completed: '/dashboard/bulletin?tab=tasks',
+  protocol_review_requested: '/management?tab=protocols',
+  protocol_review_approved: '/management?tab=protocols',
+  protocol_review_rejected: '/management?tab=protocols',
+}
+
+// 알림의 이동 링크 결정 (명시적 link > 타입별 기본 link)
+function getNotificationLink(notification: UserNotification): string | null {
+  return notification.link || DEFAULT_NOTIFICATION_LINKS[notification.type] || null
 }
 
 // 상대 시간 계산
@@ -100,9 +130,10 @@ export default function UserNotificationDropdown() {
       await markAsRead(notification.id)
     }
 
-    if (notification.link) {
+    const link = getNotificationLink(notification)
+    if (link) {
       setIsOpen(false)
-      router.push(notification.link)
+      router.push(link)
     }
   }
 
@@ -175,6 +206,7 @@ export default function UserNotificationDropdown() {
                 {notifications.map((notification) => {
                   const IconComponent = NotificationTypeIcons[notification.type] || BellIcon
                   const colors = USER_NOTIFICATION_TYPE_COLORS[notification.type] || USER_NOTIFICATION_TYPE_COLORS.system
+                  const hasLink = !!getNotificationLink(notification)
 
                   return (
                     <div
@@ -182,7 +214,7 @@ export default function UserNotificationDropdown() {
                       onClick={() => handleNotificationClick(notification)}
                       className={`
                         flex items-start gap-3 px-4 py-3 cursor-pointer
-                        hover:bg-slate-50 transition-colors
+                        hover:bg-slate-50 transition-colors group
                         ${!notification.is_read ? 'bg-blue-50/50' : ''}
                       `}
                     >
@@ -207,9 +239,16 @@ export default function UserNotificationDropdown() {
                             {notification.content}
                           </p>
                         )}
-                        <p className="text-xs text-slate-400 mt-1">
-                          {getRelativeTime(notification.created_at)}
-                        </p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <p className="text-xs text-slate-400">
+                            {getRelativeTime(notification.created_at)}
+                          </p>
+                          {hasLink && (
+                            <span className="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                              · 바로가기 <ChevronRightIcon className="w-3 h-3" />
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* 삭제 버튼 */}

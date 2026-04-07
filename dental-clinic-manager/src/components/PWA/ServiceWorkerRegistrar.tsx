@@ -4,9 +4,9 @@ import { useEffect } from 'react'
 
 // 플랫폼별 업데이트 체크 간격
 const UPDATE_INTERVALS = {
-  PERIODIC: 30 * 60 * 1000,    // 30분마다 주기적 확인
+  PERIODIC: 5 * 60 * 1000,     // 5분마다 주기적 확인
   IOS_RESUME: 5 * 60 * 1000,   // iOS: 앱 복귀 시 최소 5분 경과 후 확인
-  VERSION_POLL: 10 * 60 * 1000, // 10분마다 버전 API 폴링
+  VERSION_POLL: 2 * 60 * 1000, // 2분마다 버전 API 폴링
 } as const
 
 // 플랫폼 감지 유틸리티

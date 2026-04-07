@@ -265,7 +265,7 @@ export default function QRAttendancePage() {
     window.close()
     // window.close()가 작동하지 않으면 메인 페이지로 이동
     setTimeout(() => {
-      router.push('/attendance')
+      router.push('/dashboard/attendance')
     }, 100)
   }
 
@@ -681,7 +681,7 @@ function SuccessScreen({ message, actionType }: { message: string; actionType: s
           window.close()
           // window.close()가 작동하지 않으면 메인 페이지로 이동
           setTimeout(() => {
-            router.push('/attendance')
+            router.push('/dashboard/attendance')
           }, 100)
           return 0
         }
@@ -760,7 +760,7 @@ function ErrorScreen({ message, canRetry, onRetry }: { message: string; canRetry
           window.close()
           // window.close()가 작동하지 않으면 메인 페이지로 이동
           setTimeout(() => {
-            router.push('/attendance')
+            router.push('/dashboard/attendance')
           }, 100)
           return 0
         }

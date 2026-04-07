@@ -67,7 +67,7 @@ export default function RootLayout({
         <AuthProvider>
           <AIGenerationProvider>
             <ServiceWorkerRegistrar />
-            <UpdatePrompt autoReloadDelay={30000} />
+            <UpdatePrompt autoReloadDelay={5000} />
             {children}
             <AIGenerationFloating />
             <AppDialogRoot />

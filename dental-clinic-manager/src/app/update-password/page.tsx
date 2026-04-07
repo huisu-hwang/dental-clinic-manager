@@ -4,67 +4,71 @@ import { useState, useEffect } from 'react'
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 
+type PageMode = 'loading' | 'change' | 'recovery' | 'invalid'
+
 export default function UpdatePasswordPage() {
+  const [currentPassword, setCurrentPassword] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const [isRecoveryMode, setIsRecoveryMode] = useState(false)
-  const [checkingAuth, setCheckingAuth] = useState(true)
+  const [pageMode, setPageMode] = useState<PageMode>('loading')
 
   useEffect(() => {
-    const supabase = createClient();
+    const supabase = createClient()
     if (!supabase) {
-      setError('데이터베이스 연결에 실패했습니다.');
-      setCheckingAuth(false);
-      return;
+      setError('데이터베이스 연결에 실패했습니다.')
+      setPageMode('invalid')
+      return
     }
 
-    console.log('[PasswordReset] 페이지 로드됨');
-    console.log('[PasswordReset] URL:', window.location.href);
-
-    // 1. URL 쿼리 파라미터 확인 (auth/callback에서 mode=recovery로 리다이렉트됨)
     const urlParams = new URLSearchParams(window.location.search)
     const mode = urlParams.get('mode')
 
-    if (mode === 'recovery') {
-      console.log('[PasswordReset] mode=recovery 감지 - recovery 모드 활성화');
-      setIsRecoveryMode(true);
-      setCheckingAuth(false);
-      return; // 이미 auth/callback에서 code 교환 완료, 세션 존재
+    // mode=change: 로그인 상태에서 비밀번호 변경 (계정 정보에서 진입)
+    if (mode === 'change') {
+      supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
+        if (session) {
+          setPageMode('change')
+        } else {
+          setError('로그인이 필요합니다.')
+          setPageMode('invalid')
+        }
+      })
+      return
     }
 
-    // 2. 현재 세션 확인 (직접 URL 접근 시)
+    // mode=recovery: 이메일 링크에서 비밀번호 재설정 (middleware에서 code 교환 완료)
+    if (mode === 'recovery') {
+      setPageMode('recovery')
+      return
+    }
+
+    // mode 없이 직접 접근: 세션 있으면 change, 없으면 invalid
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session) {
-        console.log('[PasswordReset] 활성 세션 감지');
-        setIsRecoveryMode(true);
+        setPageMode('change')
+      } else {
+        setPageMode('invalid')
       }
-      setCheckingAuth(false);
-    });
+    })
 
-    // 3. Auth 상태 변경 감지 (PASSWORD_RECOVERY 이벤트)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
-      console.log('[PasswordReset] Auth 이벤트:', event);
-
+    // PASSWORD_RECOVERY 이벤트 감지
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent) => {
       if (event === 'PASSWORD_RECOVERY') {
-        console.log('[PasswordReset] PASSWORD_RECOVERY 이벤트 - recovery 모드 활성화');
-        setIsRecoveryMode(true);
-        setCheckingAuth(false);
+        setPageMode('recovery')
       }
-    });
+    })
 
-    // 4. 타임아웃: 5초 후에도 감지 안되면 체크 종료
     const timeout = setTimeout(() => {
-      console.log('[PasswordReset] 토큰 감지 타임아웃');
-      setCheckingAuth(false);
-    }, 5000);
+      setPageMode(prev => prev === 'loading' ? 'invalid' : prev)
+    }, 5000)
 
     return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,52 +96,79 @@ export default function UpdatePasswordPage() {
       return
     }
 
-    // 세션 확인 (필수)
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      console.error('[PasswordReset] 세션 없음 - updateUser 호출 불가')
-      setError('세션이 만료되었거나 유효하지 않습니다. 비밀번호 재설정 이메일을 다시 요청해주세요.')
-      setLoading(false)
-      return
+    // change 모드: 현재 비밀번호 검증
+    if (pageMode === 'change') {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user?.email) {
+        setError('세션이 만료되었습니다. 다시 로그인해주세요.')
+        setLoading(false)
+        return
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: session.user.email,
+        password: currentPassword,
+      })
+
+      if (signInError) {
+        setError('현재 비밀번호가 올바르지 않습니다.')
+        setLoading(false)
+        return
+      }
     }
 
-    console.log('[PasswordReset] 세션 확인됨, 비밀번호 업데이트 시도:', session.user.id)
+    // recovery 모드: 세션 확인
+    if (pageMode === 'recovery') {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setError('세션이 만료되었거나 유효하지 않습니다. 비밀번호 재설정 이메일을 다시 요청해주세요.')
+        setLoading(false)
+        return
+      }
+    }
 
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
-      console.error('비밀번호 업데이트 오류:', updateError)
       if (updateError.message.includes('should be different')) {
         setError('새 비밀번호는 이전 비밀번호와 달라야 합니다.')
       } else {
         setError(`비밀번호 업데이트 실패: ${updateError.message}`)
       }
     } else {
-      setMessage('비밀번호가 성공적으로 변경되었습니다. 잠시 후 대시보드로 이동합니다.')
+      setMessage('비밀번호가 성공적으로 변경되었습니다.')
 
-      setTimeout(() => {
-        window.location.href = '/dashboard'
-      }, 2000)
+      if (pageMode === 'recovery') {
+        setMessage('비밀번호가 성공적으로 변경되었습니다. 잠시 후 로그인 페이지로 이동합니다.')
+        setTimeout(() => {
+          window.location.href = '/?show=login'
+        }, 2000)
+      }
     }
 
     setLoading(false)
   }
 
+  const title = pageMode === 'change' ? '비밀번호 변경' : '새 비밀번호 설정'
+  const subtitle = pageMode === 'change'
+    ? '현재 비밀번호를 확인한 후 새 비밀번호를 설정합니다.'
+    : '새로운 비밀번호를 입력하세요.'
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">새 비밀번호 설정</h2>
-          <p className="text-slate-600">새로운 비밀번호를 입력하세요.</p>
+          <h2 className="text-3xl font-bold text-slate-800 mb-2">{title}</h2>
+          <p className="text-slate-600">{subtitle}</p>
         </div>
 
         <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
-          {checkingAuth ? (
+          {pageMode === 'loading' ? (
             <div className="text-center space-y-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-slate-600">비밀번호 재설정 토큰을 확인하는 중...</p>
+              <p className="text-slate-600">확인 중...</p>
             </div>
-          ) : !isRecoveryMode ? (
+          ) : pageMode === 'invalid' ? (
             <div className="text-center space-y-4">
               <div className="p-4 bg-red-50 border border-red-200 rounded-md text-left">
                 <p className="text-sm text-red-800 font-medium mb-2">유효한 재설정 토큰이 없습니다</p>
@@ -147,7 +178,6 @@ export default function UpdatePasswordPage() {
                 <ul className="text-sm text-red-700 mt-2 ml-4 list-disc space-y-1">
                   <li>받은 편지함에서 비밀번호 재설정 이메일을 확인하세요</li>
                   <li>이메일의 <strong>&quot;비밀번호 재설정&quot;</strong> 버튼을 클릭하세요</li>
-                  <li>브라우저 주소창에 직접 입력하면 작동하지 않습니다</li>
                   <li>링크가 만료되었을 수 있습니다 (24시간 유효)</li>
                 </ul>
                 <button
@@ -160,6 +190,24 @@ export default function UpdatePasswordPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {pageMode === 'change' && (
+                <div>
+                  <label htmlFor="currentPassword" className="block text-sm font-medium text-slate-700 mb-1">
+                    현재 비밀번호
+                  </label>
+                  <input
+                    type="password"
+                    id="currentPassword"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="현재 비밀번호를 입력하세요"
+                    required
+                    disabled={loading || !!message}
+                  />
+                </div>
+              )}
+
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
                   새 비밀번호
@@ -167,7 +215,6 @@ export default function UpdatePasswordPage() {
                 <input
                   type="password"
                   id="password"
-                  name="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -184,7 +231,6 @@ export default function UpdatePasswordPage() {
                 <input
                   type="password"
                   id="confirmPassword"
-                  name="confirmPassword"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -208,11 +254,21 @@ export default function UpdatePasswordPage() {
 
               <button
                 type="submit"
-                disabled={loading || !!message || !isRecoveryMode}
+                disabled={loading || !!message}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
               >
                 {loading ? '변경 중...' : '비밀번호 변경'}
               </button>
+
+              {pageMode === 'change' && !message && (
+                <button
+                  type="button"
+                  onClick={() => window.close()}
+                  className="w-full text-slate-600 hover:text-slate-800 font-medium py-2 px-4 transition-colors text-sm"
+                >
+                  취소
+                </button>
+              )}
             </form>
           )}
         </div>
