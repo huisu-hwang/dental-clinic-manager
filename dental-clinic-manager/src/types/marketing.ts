@@ -312,7 +312,7 @@ export interface SEOValidationResult {
 // ─── SEO 텍스트 마이닝 결과 ───
 
 export interface SeoKeywordMiningResult {
-  competitorKeywords: { keyword: string; frequency: number; postCount: number }[];
+  competitorKeywords: { keyword: string; frequency: number; postCount: number; perPostFrequency?: number[] }[];
   recommendedKeywords: string[];
   avgBodyLength: number;
   avgImageCount: number;

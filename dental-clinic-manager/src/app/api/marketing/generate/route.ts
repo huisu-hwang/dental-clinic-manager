@@ -164,18 +164,36 @@ export async function POST(request: NextRequest) {
               // 4. Fetch analyzed posts body_text for text mining
               if (analysisId) {
                 sendEvent(controller, { progress: 3, step: '경쟁 글 텍스트 마이닝 중...' });
-                const { data: posts } = await admin
-                  .from('seo_analyzed_posts')
-                  .select('body_text, title, tags, body_length, image_count, heading_count, keyword_count')
-                  .eq('analysis_id', analysisId)
-                  .order('rank', { ascending: true });
 
-                if (posts && posts.length > 0) {
-                  seoKeywordData = extractKeywordsFromPosts(posts, options.keyword);
+                // 먼저 캐시된 텍스트 마이닝 결과 확인
+                const { data: analysis } = await admin
+                  .from('seo_keyword_analyses')
+                  .select('summary')
+                  .eq('id', analysisId)
+                  .single();
+
+                if ((analysis?.summary as { textMining?: SeoKeywordMiningResult })?.textMining) {
+                  // 캐시된 결과 사용
+                  seoKeywordData = (analysis!.summary as { textMining: SeoKeywordMiningResult }).textMining;
                   sendEvent(controller, {
                     progress: 4,
-                    step: `핵심 키워드 ${seoKeywordData.recommendedKeywords.length}개 추출 완료`,
+                    step: `핵심 키워드 ${seoKeywordData.recommendedKeywords.length}개 추출 완료 (캐시)`,
                   });
+                } else {
+                  // 폴백: on-the-fly 계산
+                  const { data: posts } = await admin
+                    .from('seo_analyzed_posts')
+                    .select('body_text, title, tags, body_length, image_count, heading_count, keyword_count')
+                    .eq('analysis_id', analysisId)
+                    .order('rank', { ascending: true });
+
+                  if (posts && posts.length > 0) {
+                    seoKeywordData = extractKeywordsFromPosts(posts, options.keyword);
+                    sendEvent(controller, {
+                      progress: 4,
+                      step: `핵심 키워드 ${seoKeywordData.recommendedKeywords.length}개 추출 완료`,
+                    });
+                  }
                 }
               } else {
                 sendEvent(controller, { progress: 4, step: 'SEO 분석 결과 없음 - 기본 모드로 진행합니다' });

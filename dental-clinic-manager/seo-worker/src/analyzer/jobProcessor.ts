@@ -3,6 +3,7 @@ import { createChildLogger } from '../utils/logger.js';
 import { searchNaverBlog, scrapePostDetail } from './naverScraper.js';
 import { analyzeQuantitative, calculateQuantitativeSummary } from './quantitativeAnalyzer.js';
 import { analyzeQualitative } from './qualitativeAnalyzer.js';
+import { mineKeywordsFromResults } from './textMiner.js';
 import { completeJob } from '../queue/jobConsumer.js';
 import type { SeoJob } from '../queue/jobConsumer.js';
 import type { QuantitativeResult } from './quantitativeAnalyzer.js';
@@ -160,11 +161,15 @@ async function processKeywordAnalysis(jobId: string, keyword: string, userId: st
       multimediaDistribution: countDistribution(qualResults.map((r) => r.multimediaLevel)),
     };
 
+    // 8.5 텍스트 마이닝 (공통 반복 단어 분석)
+    const textMiningResult = mineKeywordsFromResults(quantResults, keyword);
+
     const summary = {
       quantitative: quantSummary,
       keywordPositionDistribution: keywordPositionDist,
       videoRate,
       qualitative: qualSummary,
+      textMining: textMiningResult,
     };
 
     // 9. 분석 완료 업데이트

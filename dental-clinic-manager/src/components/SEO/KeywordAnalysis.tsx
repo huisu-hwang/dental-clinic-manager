@@ -386,6 +386,14 @@ export default function KeywordAnalysis() {
                 </table>
               </div>
 
+              {/* 텍스트 마이닝 - 공통 반복 키워드 */}
+              {selectedAnalysis.summary && (selectedAnalysis.summary as Record<string, unknown>).textMining && (
+                <TextMiningSection
+                  textMining={(selectedAnalysis.summary as Record<string, unknown>).textMining as TextMiningData}
+                  posts={posts}
+                />
+              )}
+
               {/* 통계 요약 */}
               {selectedAnalysis.summary && (
                 <div className="bg-white rounded-lg border p-4">
@@ -400,6 +408,168 @@ export default function KeywordAnalysis() {
     </div>
   )
 }
+
+// ─── 텍스트 마이닝 타입 ───
+
+interface TextMiningKeyword {
+  keyword: string
+  frequency: number
+  postCount: number
+  perPostFrequency?: number[]
+}
+
+interface TextMiningData {
+  competitorKeywords: TextMiningKeyword[]
+  recommendedKeywords: string[]
+  avgBodyLength: number
+  avgImageCount: number
+  avgHeadingCount: number
+  avgKeywordCount: number
+  commonTags: string[]
+  titlePatterns: string[]
+}
+
+// ─── 텍스트 마이닝 섹션 ───
+
+function TextMiningSection({ textMining, posts }: { textMining: TextMiningData; posts: AnalyzedPost[] }) {
+  const keywords = textMining.competitorKeywords || []
+  if (keywords.length === 0) return null
+
+  const maxFreq = keywords[0]?.frequency || 1
+
+  return (
+    <div className="bg-white rounded-lg border p-4 space-y-6">
+      <h4 className="font-semibold text-lg">텍스트 마이닝 - 공통 반복 키워드</h4>
+
+      {/* 키워드 히트맵 테이블 */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-gray-50">
+              <th className="text-left p-2 w-8">#</th>
+              <th className="text-left p-2">키워드</th>
+              <th className="text-center p-2">총 빈도</th>
+              <th className="text-center p-2">출현 글 수</th>
+              {posts.map((p) => (
+                <th key={p.id} className="text-center p-2 min-w-[50px]">#{p.rank}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {keywords.map((kw, idx) => (
+              <tr key={kw.keyword} className="border-b hover:bg-gray-50">
+                <td className="p-2 text-gray-400">{idx + 1}</td>
+                <td className="p-2 font-medium">{kw.keyword}</td>
+                <td className="text-center p-2 font-semibold text-blue-700">{kw.frequency}</td>
+                <td className="text-center p-2">
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-medium">
+                    {kw.postCount}/{posts.length}
+                  </span>
+                </td>
+                {(kw.perPostFrequency || []).map((freq, i) => (
+                  <td key={i} className="text-center p-2">
+                    <span className={`inline-block min-w-[28px] px-1.5 py-0.5 rounded text-xs font-medium ${
+                      freq === 0 ? 'bg-gray-100 text-gray-400' :
+                      freq <= 3 ? 'bg-blue-100 text-blue-700' :
+                      freq <= 7 ? 'bg-blue-200 text-blue-800' :
+                      freq <= 15 ? 'bg-blue-300 text-blue-900' :
+                      'bg-blue-500 text-white'
+                    }`}>
+                      {freq}
+                    </span>
+                  </td>
+                ))}
+                {/* perPostFrequency가 없는 경우 빈 셀 */}
+                {(!kw.perPostFrequency || kw.perPostFrequency.length === 0) && posts.map((p) => (
+                  <td key={p.id} className="text-center p-2 text-gray-300">-</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 키워드 빈도 막대 그래프 (상위 10개) */}
+      <div>
+        <h5 className="text-sm font-semibold text-gray-600 mb-3">키워드 빈도 분포 (상위 10개)</h5>
+        <div className="space-y-2">
+          {keywords.slice(0, 10).map((kw) => {
+            const widthPercent = Math.max((kw.frequency / maxFreq) * 100, 2)
+            return (
+              <div key={kw.keyword} className="flex items-center gap-2">
+                <span className="w-28 text-sm truncate text-right text-gray-700">{kw.keyword}</span>
+                <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-blue-400 to-blue-600 rounded-full h-5 flex items-center justify-end pr-2 transition-all"
+                    style={{ width: `${widthPercent}%` }}
+                  >
+                    {widthPercent > 15 && (
+                      <span className="text-white text-xs font-medium">{kw.frequency}</span>
+                    )}
+                  </div>
+                </div>
+                {widthPercent <= 15 && (
+                  <span className="text-xs text-gray-500 w-8">{kw.frequency}</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 공통 태그 */}
+      {textMining.commonTags && textMining.commonTags.length > 0 && (
+        <div>
+          <h5 className="text-sm font-semibold text-gray-600 mb-2">공통 태그</h5>
+          <div className="flex flex-wrap gap-1.5">
+            {textMining.commonTags.map((tag) => (
+              <span key={tag} className="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                #{tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 제목 패턴 */}
+      {textMining.titlePatterns && textMining.titlePatterns.length > 0 && (
+        <div>
+          <h5 className="text-sm font-semibold text-gray-600 mb-2">상위 글 제목 패턴</h5>
+          <div className="space-y-1">
+            {textMining.titlePatterns.map((title, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className="text-gray-400 w-6 text-right">#{i + 1}</span>
+                <span className="text-gray-700">{title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 경쟁 글 통계 요약 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-blue-50 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-blue-700">{textMining.avgBodyLength.toLocaleString()}</div>
+          <div className="text-xs text-blue-600">평균 본문 길이(자)</div>
+        </div>
+        <div className="bg-indigo-50 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-indigo-700">{textMining.avgImageCount}</div>
+          <div className="text-xs text-indigo-600">평균 이미지 수</div>
+        </div>
+        <div className="bg-purple-50 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-purple-700">{textMining.avgHeadingCount}</div>
+          <div className="text-xs text-purple-600">평균 소제목 수</div>
+        </div>
+        <div className="bg-violet-50 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-violet-700">{textMining.avgKeywordCount}</div>
+          <div className="text-xs text-violet-600">평균 키워드 반복</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── 통계 요약 뷰 ───
 
 function AnalysisSummaryView({ summary }: { summary: Record<string, unknown> }) {
   const quant = summary.quantitative as Record<string, { avg: number; median: number; min: number; max: number }> | undefined
