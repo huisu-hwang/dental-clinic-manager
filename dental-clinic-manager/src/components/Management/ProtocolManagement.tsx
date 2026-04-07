@@ -651,7 +651,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
     return (
       <div
-        className={`border rounded-lg transition-all relative ${
+        className={`border rounded-lg transition-all relative group ${
           !accessible
             ? 'bg-gray-50/80 border-gray-200'
             : isExpanded ? 'bg-white border-slate-300 shadow-md' : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
@@ -671,9 +671,14 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
             {!accessible && (
               <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
             )}
-            <h4 className={`text-sm font-semibold leading-tight truncate ${
-              !accessible ? 'text-gray-400' : 'text-slate-800'
-            }`}>
+            <h4
+              className={`text-sm font-semibold leading-tight ${
+                isExpanded ? '' : 'truncate'
+              } ${
+                !accessible ? 'text-gray-400 group-hover:text-gray-600' : 'text-slate-800'
+              }`}
+              title={protocol.title}
+            >
               {protocol.title}
             </h4>
             <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${

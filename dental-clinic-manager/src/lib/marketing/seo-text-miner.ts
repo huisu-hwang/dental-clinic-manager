@@ -16,6 +16,10 @@ const STOP_WORDS = new Set([
   '하고', '에서', '으로', '까지', '부터', '에게', '처럼', '같은', '통해', '대한',
   '위한', '것은', '것이', '것을', '수도', '때문', '하면', '해서', '그리고', '하지만',
   '또한', '그런', '이런', '저런', '어떤',
+  '있습니다', '없습니다', '됩니다', '입니다', '합니다', '해서', '그래서', '때문에',
+  '있어요', '없어요', '해요', '거예요', '이에요', '이것', '그것', '저것',
+  '여기', '거기', '저기', '정말', '진짜', '아주', '매우', '정도',
+  '이번', '다음', '모든', '많은',
 ]);
 
 const PUNCTUATION_REGEX = /[.,!?;:'"()\[\]{}<>\/\\@#$%^&*~`|+=\-_\s]+/;
@@ -39,18 +43,34 @@ function generateNgrams(token: string): string[] {
   return ngrams;
 }
 
+const CONTAINS_KOREAN = /[\uAC00-\uD7A3\u3131-\u314E]/;
+
 function isValidKeyword(ngram: string): boolean {
   if (PURELY_NUMERIC_OR_PUNCT.test(ngram)) return false;
   if (STOP_WORDS.has(ngram)) return false;
+  if (!CONTAINS_KOREAN.test(ngram)) return false; // 한국어 없는 키워드 제외
   return true;
+}
+
+function generateWordBigrams(tokens: string[]): string[] {
+  const bigrams: string[] = [];
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const t1 = tokens[i], t2 = tokens[i + 1];
+    if (t1.length >= 2 && t2.length >= 2
+        && !STOP_WORDS.has(t1) && !STOP_WORDS.has(t2)
+        && CONTAINS_KOREAN.test(`${t1}${t2}`)) {
+      bigrams.push(`${t1} ${t2}`);
+    }
+  }
+  return bigrams;
 }
 
 export function extractKeywordsFromPosts(
   posts: AnalyzedPostRow[],
   mainKeyword: string
 ): SeoKeywordMiningResult {
-  // Track keyword -> { total frequency, set of post indices }
-  const keywordStats = new Map<string, { frequency: number; postIndices: Set<number> }>();
+  // Track keyword -> { total frequency, set of post indices, per-post frequency }
+  const keywordStats = new Map<string, { frequency: number; postIndices: Set<number>; perPost: number[] }>();
 
   for (let postIdx = 0; postIdx < posts.length; postIdx++) {
     const post = posts[postIdx];
@@ -69,22 +89,49 @@ export function extractKeywordsFromPosts(
         const stats = keywordStats.get(ngram);
         if (stats) {
           stats.frequency++;
+          stats.perPost[postIdx]++;
         } else {
-          keywordStats.set(ngram, { frequency: 1, postIndices: new Set() });
+          const perPost = new Array(posts.length).fill(0);
+          perPost[postIdx] = 1;
+          keywordStats.set(ngram, { frequency: 1, postIndices: new Set(), perPost });
         }
 
         postNgramSet.add(ngram);
       }
     }
 
+    // Generate word bigrams and add to same keywordStats
+    const bigrams = generateWordBigrams(tokens);
+    const postBigramSet = new Set<string>();
+    for (const bigram of bigrams) {
+      if (bigram === mainKeyword) continue;
+
+      const stats = keywordStats.get(bigram);
+      if (stats) {
+        stats.frequency++;
+        stats.perPost[postIdx]++;
+      } else {
+        const perPost = new Array(posts.length).fill(0);
+        perPost[postIdx] = 1;
+        keywordStats.set(bigram, { frequency: 1, postIndices: new Set(), perPost });
+      }
+
+      postBigramSet.add(bigram);
+    }
+
     // Record which post each ngram appeared in
     for (const ngram of postNgramSet) {
       keywordStats.get(ngram)!.postIndices.add(postIdx);
     }
+
+    // Record which post each bigram appeared in
+    for (const bigram of postBigramSet) {
+      keywordStats.get(bigram)!.postIndices.add(postIdx);
+    }
   }
 
   // Filter: must appear in 2+ posts
-  const competitorKeywords: { keyword: string; frequency: number; postCount: number; score: number }[] = [];
+  const competitorKeywords: { keyword: string; frequency: number; postCount: number; score: number; perPost: number[] }[] = [];
 
   for (const [keyword, stats] of keywordStats) {
     const postCount = stats.postIndices.size;
@@ -95,6 +142,7 @@ export function extractKeywordsFromPosts(
       frequency: stats.frequency,
       postCount,
       score: stats.frequency * postCount,
+      perPost: stats.perPost,
     });
   }
 
@@ -127,10 +175,11 @@ export function extractKeywordsFromPosts(
   const titlePatterns = posts.map((p) => p.title);
 
   return {
-    competitorKeywords: top15.map(({ keyword, frequency, postCount }) => ({
+    competitorKeywords: top15.map(({ keyword, frequency, postCount, perPost }) => ({
       keyword,
       frequency,
       postCount,
+      perPostFrequency: perPost,
     })),
     recommendedKeywords: top15.map((k) => k.keyword),
     avgBodyLength: Math.round(avgBodyLength),
