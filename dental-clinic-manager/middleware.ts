@@ -85,16 +85,23 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  // 3. /update-password에 code 파라미터가 있으면 PKCE code 교환 처리
-  // (비밀번호 재설정 이메일 링크에서 직접 도착)
-  if (request.nextUrl.pathname === '/update-password') {
-    const code = request.nextUrl.searchParams.get('code')
-    if (code) {
-      console.log('[Middleware] /update-password code 교환 시작')
+  // 3. 비밀번호 재설정 PKCE code 교환 처리
+  // 이메일 링크: /update-password?code=XXX (정상 도착)
+  // PWA 가로챌 경우: /?code=XXX (start_url로 리다이렉트됨)
+  // 어느 경로든 code 파라미터가 있으면 code 교환 후 /update-password로 리다이렉트
+  const code = request.nextUrl.searchParams.get('code')
+  if (code) {
+    const type = request.nextUrl.searchParams.get('type')
+    // recovery 타입이거나, /update-password 경로에서 code가 있는 경우
+    if (type === 'recovery' || request.nextUrl.pathname === '/update-password') {
+      console.log('[Middleware] Recovery code 교환 시작 (경로:', request.nextUrl.pathname, ')')
+      // 기존 세션 로그아웃 (recovery 세션으로 교체)
+      await supabase.auth.signOut()
       const { error } = await supabase.auth.exchangeCodeForSession(code)
       if (!error) {
         console.log('[Middleware] Code 교환 성공 → /update-password?mode=recovery')
         const redirectUrl = request.nextUrl.clone()
+        redirectUrl.pathname = '/update-password'
         redirectUrl.searchParams.delete('code')
         redirectUrl.searchParams.delete('type')
         redirectUrl.searchParams.set('mode', 'recovery')

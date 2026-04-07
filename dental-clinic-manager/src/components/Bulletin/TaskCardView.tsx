@@ -119,10 +119,11 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
             </div>
 
             {/* 테이블 헤더 */}
-            <div className="hidden sm:grid sm:grid-cols-[1fr_120px_120px_100px] gap-4 px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <div className={`hidden sm:grid ${status === 'completed' ? 'sm:grid-cols-[1fr_120px_120px_120px_100px]' : 'sm:grid-cols-[1fr_120px_120px_100px]'} gap-4 px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider`}>
               <span>업무명</span>
               <span>담당자</span>
               <span>마감일</span>
+              {status === 'completed' && <span>완료일</span>}
               <span>우선순위</span>
             </div>
 
@@ -157,13 +158,19 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                             <Flag className="w-3 h-3" />
                             {TASK_PRIORITY_LABELS[task.priority]}
                           </span>
+                          {task.status === 'completed' && task.completed_at && (
+                            <span className="flex items-center gap-1 text-green-600">
+                              <CheckCircle2 className="w-3 h-3" />
+                              {formatDate(task.completed_at)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* 데스크탑 레이아웃 (테이블 형태) */}
-                  <div className="hidden sm:grid sm:grid-cols-[1fr_120px_120px_100px] gap-4 items-center">
+                  <div className={`hidden sm:grid ${status === 'completed' ? 'sm:grid-cols-[1fr_120px_120px_120px_100px]' : 'sm:grid-cols-[1fr_120px_120px_100px]'} gap-4 items-center`}>
                     {/* 업무명 */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={`flex-shrink-0 ${style.text}`}>
@@ -206,6 +213,19 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                         <span className="text-sm text-gray-300">—</span>
                       )}
                     </div>
+
+                    {/* 완료일 (완료 상태일 때만 표시) */}
+                    {status === 'completed' && (
+                      <div>
+                        {task.completed_at ? (
+                          <span className="text-sm text-green-600">
+                            {formatDate(task.completed_at)}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-300">—</span>
+                        )}
+                      </div>
+                    )}
 
                     {/* 우선순위 */}
                     <div>

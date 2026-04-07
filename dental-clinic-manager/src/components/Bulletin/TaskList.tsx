@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   ClipboardList,
   LayoutGrid,
+  CalendarDays,
+  Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -25,6 +27,27 @@ import TaskCardView from './TaskCardView'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 type ViewTab = 'active' | 'completed'
+type CompletedPeriod = 'all' | '1w' | '1m' | '3m' | '6m'
+
+const COMPLETED_PERIOD_LABELS: Record<CompletedPeriod, string> = {
+  all: '전체 기간',
+  '1w': '최근 1주',
+  '1m': '최근 1개월',
+  '3m': '최근 3개월',
+  '6m': '최근 6개월',
+}
+
+const getDateThreshold = (period: CompletedPeriod): Date | null => {
+  if (period === 'all') return null
+  const now = new Date()
+  switch (period) {
+    case '1w': now.setDate(now.getDate() - 7); break
+    case '1m': now.setMonth(now.getMonth() - 1); break
+    case '3m': now.setMonth(now.getMonth() - 3); break
+    case '6m': now.setMonth(now.getMonth() - 6); break
+  }
+  return now
+}
 
 interface TaskListProps {
   canCreate?: boolean
@@ -56,6 +79,9 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [activeTab, setActiveTab] = useState<ViewTab>('active')
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'overdue' | ''>('')
+  const [completedPeriod, setCompletedPeriod] = useState<CompletedPeriod>('all')
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('')
+  const [completedSearchQuery, setCompletedSearchQuery] = useState('')
   const [stats, setStats] = useState<{
     total: number
     pending: number
@@ -182,18 +208,67 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     [allTasks]
   )
 
+  // 완료된 업무의 고유 담당자 목록
+  const completedAssignees = useMemo(() => {
+    const map = new Map<string, string>()
+    completedTasks.forEach(t => {
+      if (t.assignee_id && t.assignee_name) {
+        map.set(t.assignee_id, t.assignee_name)
+      }
+    })
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]))
+  }, [completedTasks])
+
+  // 완료 탭 전용 필터 적용 (기간 + 담당자 + 검색)
+  const filteredCompletedTasks = useMemo(() => {
+    let filtered = completedTasks
+
+    // 기간 필터
+    const threshold = getDateThreshold(completedPeriod)
+    if (threshold) {
+      filtered = filtered.filter(t => {
+        const completedDate = t.completed_at ? new Date(t.completed_at) : new Date(t.updated_at)
+        return completedDate >= threshold
+      })
+    }
+
+    // 담당자 필터
+    if (assigneeFilter) {
+      filtered = filtered.filter(t => t.assignee_id === assigneeFilter)
+    }
+
+    // 완료 탭 전용 검색
+    if (completedSearchQuery.trim()) {
+      const q = completedSearchQuery.trim().toLowerCase()
+      filtered = filtered.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        (t.assignee_name && t.assignee_name.toLowerCase().includes(q)) ||
+        (t.assigner_name && t.assigner_name.toLowerCase().includes(q))
+      )
+    }
+
+    // 완료일 기준 최신순 정렬
+    filtered.sort((a, b) => {
+      const dateA = a.completed_at || a.updated_at
+      const dateB = b.completed_at || b.updated_at
+      return new Date(dateB).getTime() - new Date(dateA).getTime()
+    })
+
+    return filtered
+  }, [completedTasks, completedPeriod, assigneeFilter, completedSearchQuery])
+
   // 상태 필터 적용
   const displayedTasks = useMemo(() => {
     if (statusFilter === 'overdue') {
       return allTasks.filter(t => isOverdue(t))
     } else if (statusFilter === 'completed') {
-      return completedTasks
+      return filteredCompletedTasks
     } else if (statusFilter) {
       return allTasks.filter(t => t.status === statusFilter)
     } else {
-      return activeTab === 'active' ? activeTasks : completedTasks
+      return activeTab === 'active' ? activeTasks : filteredCompletedTasks
     }
-  }, [allTasks, activeTasks, completedTasks, statusFilter, activeTab])
+  }, [allTasks, activeTasks, filteredCompletedTasks, statusFilter, activeTab])
 
   // TaskForm 표시
   if (showForm) {
@@ -326,35 +401,140 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </button>
       </div>
 
-      {/* 검색 및 우선순위 필터 */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <select
-            value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value as TaskPriority | '')}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">전체 우선순위</option>
-            {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
-        </div>
-        <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="업무명 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+      {/* 진행 업무 탭: 검색 및 우선순위 필터 */}
+      {activeTab === 'active' && !statusFilter && (
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-gray-500" />
+            <select
+              value={selectedPriority}
+              onChange={(e) => setSelectedPriority(e.target.value as TaskPriority | '')}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">전체 우선순위</option>
+              {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
           </div>
-          <Button type="submit" variant="outline">검색</Button>
-        </form>
-      </div>
+          <form onSubmit={handleSearch} className="flex-1 flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="업무명 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button type="submit" variant="outline">검색</Button>
+          </form>
+        </div>
+      )}
+
+      {/* 상태 필터 활성 시 필터 표시 */}
+      {statusFilter && statusFilter !== 'completed' && (
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-gray-500" />
+            <select
+              value={selectedPriority}
+              onChange={(e) => setSelectedPriority(e.target.value as TaskPriority | '')}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">전체 우선순위</option>
+              {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <form onSubmit={handleSearch} className="flex-1 flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="업무명 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button type="submit" variant="outline">검색</Button>
+          </form>
+        </div>
+      )}
+
+      {/* 완료 탭 전용 필터 */}
+      {(activeTab === 'completed' || statusFilter === 'completed') && (
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* 기간 필터 */}
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-gray-500" />
+              <select
+                value={completedPeriod}
+                onChange={(e) => setCompletedPeriod(e.target.value as CompletedPeriod)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                {Object.entries(COMPLETED_PERIOD_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 담당자 필터 */}
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-gray-500" />
+              <select
+                value={assigneeFilter}
+                onChange={(e) => setAssigneeFilter(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">전체 담당자</option>
+                {completedAssignees.map(([id, name]) => (
+                  <option key={id} value={id}>{name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 검색 */}
+            <div className="flex-1 flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="업무명, 담당자, 지시자 검색..."
+                  value={completedSearchQuery}
+                  onChange={(e) => setCompletedSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 필터 결과 요약 */}
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>
+              {filteredCompletedTasks.length === completedTasks.length
+                ? `완료된 업무 ${completedTasks.length}건`
+                : `완료된 업무 ${completedTasks.length}건 중 ${filteredCompletedTasks.length}건 표시`}
+            </span>
+            {(completedPeriod !== 'all' || assigneeFilter || completedSearchQuery) && (
+              <button
+                onClick={() => {
+                  setCompletedPeriod('all')
+                  setAssigneeFilter('')
+                  setCompletedSearchQuery('')
+                }}
+                className="text-green-600 hover:text-green-700 font-medium underline underline-offset-2"
+              >
+                필터 초기화
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 에러 표시 */}
       {error && (
