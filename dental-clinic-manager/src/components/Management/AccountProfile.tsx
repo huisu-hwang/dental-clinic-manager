@@ -41,6 +41,15 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  // Password change dialog state
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [pwCurrentPassword, setPwCurrentPassword] = useState('')
+  const [pwNewPassword, setPwNewPassword] = useState('')
+  const [pwConfirmPassword, setPwConfirmPassword] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const [pwSuccess, setPwSuccess] = useState('')
+
   // Security verification state
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
@@ -480,7 +489,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
               <div className="flex justify-between">
                 <button
                   type="button"
-                  onClick={() => window.open('/update-password?mode=change', '_blank')}
+                  onClick={() => { setShowPasswordDialog(true); setPwError(''); setPwSuccess(''); setPwCurrentPassword(''); setPwNewPassword(''); setPwConfirmPassword(''); }}
                   className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                 >
                   비밀번호 변경
@@ -494,6 +503,79 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                 </button>
               </div>
             </form>
+
+            {/* Password Change Dialog */}
+            {showPasswordDialog && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60]" onClick={() => setShowPasswordDialog(false)}>
+                <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-slate-800">비밀번호 변경</h3>
+                    <button onClick={() => setShowPasswordDialog(false)} className="text-slate-400 hover:text-slate-600">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={async (e) => {
+                    e.preventDefault()
+                    setPwError('')
+                    setPwSuccess('')
+
+                    if (pwNewPassword.length < 6) { setPwError('비밀번호는 6자 이상이어야 합니다.'); return }
+                    if (pwNewPassword !== pwConfirmPassword) { setPwError('새 비밀번호가 일치하지 않습니다.'); return }
+                    if (!currentUser.email) { setPwError('계정에 등록된 이메일이 없습니다.'); return }
+
+                    setPwSaving(true)
+                    try {
+                      const verifyResult = await dataService.verifyPassword(currentUser.email, pwCurrentPassword)
+                      if (verifyResult.error || !verifyResult.success) { setPwError('현재 비밀번호가 올바르지 않습니다.'); setPwSaving(false); return }
+
+                      const updateResult = await dataService.updatePassword(pwNewPassword)
+                      if (updateResult.error) { throw new Error(updateResult.error) }
+
+                      setPwSuccess('비밀번호가 성공적으로 변경되었습니다.')
+                      setTimeout(() => setShowPasswordDialog(false), 1500)
+                    } catch (err) {
+                      setPwError(err instanceof Error ? err.message : '비밀번호 변경 중 오류가 발생했습니다.')
+                    } finally {
+                      setPwSaving(false)
+                    }
+                  }} className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">현재 비밀번호</label>
+                      <input type="password" value={pwCurrentPassword} onChange={(e) => setPwCurrentPassword(e.target.value)}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        required disabled={pwSaving || !!pwSuccess} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">새 비밀번호</label>
+                      <input type="password" value={pwNewPassword} onChange={(e) => setPwNewPassword(e.target.value)}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        placeholder="6자 이상" required disabled={pwSaving || !!pwSuccess} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">새 비밀번호 확인</label>
+                      <input type="password" value={pwConfirmPassword} onChange={(e) => setPwConfirmPassword(e.target.value)}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        required disabled={pwSaving || !!pwSuccess} />
+                    </div>
+
+                    {pwError && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{pwError}</p>}
+                    {pwSuccess && <p className="text-sm text-green-600 bg-green-50 p-2 rounded">{pwSuccess}</p>}
+
+                    <div className="flex gap-2 pt-1">
+                      <button type="button" onClick={() => setShowPasswordDialog(false)}
+                        className="flex-1 px-4 py-2 text-sm text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50">
+                        취소
+                      </button>
+                      <button type="submit" disabled={pwSaving || !!pwSuccess}
+                        className="flex-1 px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-300">
+                        {pwSaving ? '변경 중...' : '변경'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Account Details */}
