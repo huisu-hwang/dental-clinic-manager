@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { TONE_INSTRUCTIONS } from './default-prompts';
 import { seedDefaultPromptsIfNeeded } from './seed-prompts';
 import { logApiUsage } from './api-usage-logger';
@@ -199,12 +200,29 @@ export async function generateContent(
   return parsed;
 }
 
-// ─── 프롬프트 로딩 ───
+// ─── 프롬프트 로딩 (마스터 프롬프트 전역 적용) ───
 
 async function loadActivePrompt(
   clinicId: string,
   promptKey: string
 ): Promise<MarketingPrompt | null> {
+  // 1. Admin 클라이언트로 마스터 프롬프트 로딩 (RLS 우회, 모든 클리닉 대상)
+  //    마스터가 설정한 최신 버전이 모든 클리닉에 적용됨
+  const admin = getSupabaseAdmin();
+  if (admin) {
+    const { data: masterData } = await admin
+      .from('marketing_prompts')
+      .select('*')
+      .eq('prompt_key', promptKey)
+      .eq('is_active', true)
+      .order('version', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (masterData) return masterData as MarketingPrompt;
+  }
+
+  // 2. 폴백: 사용자 클리닉의 프롬프트 (admin 클라이언트 불가 시)
   const supabase = await createClient();
 
   const { data, error } = await supabase

@@ -24,9 +24,25 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
     try {
       console.log('[ForgotPassword] 비밀번호 재설정 요청:', email);
 
-      // 비밀번호 재설정 링크 전송
-      // Supabase Auth가 자동으로 이메일 존재 여부 확인
-      // 보안상 이메일 존재 여부와 관계없이 항상 성공 응답 (이메일 enumeration 공격 방지)
+      // 이메일 존재 여부 확인
+      const checkRes = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+      const checkData = await checkRes.json()
+
+      if (!checkRes.ok) {
+        setError(checkData.error || '이메일 확인 중 오류가 발생했습니다.')
+        setLoading(false)
+        return
+      }
+
+      if (!checkData.exists) {
+        setError('입력하신 이메일 주소로 가입된 계정이 없습니다. 이메일 주소를 다시 확인해주세요.')
+        setLoading(false)
+        return
+      }
 
       // 환경에 따라 동적으로 Redirect URL 결정
       // /update-password로 직접 리다이렉트 (middleware에서 code 교환 처리)

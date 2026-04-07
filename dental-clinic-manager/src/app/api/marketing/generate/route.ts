@@ -328,7 +328,7 @@ export async function POST(request: NextRequest) {
                 if (maxImages > 0) {
                   try {
                     const { imageBase64, fileName } = await generatePlatformImage(
-                      firstImagePrompt, 'instagram', options.imageStyle, options.referenceImageBase64, undefined, generationSessionId, userData.clinic_id
+                      firstImagePrompt, 'instagram', options.imageStyle, options.referenceImageBase64, options.imageVisualStyle, generationSessionId, userData.clinic_id
                     );
                     let imagePath = '';
                     if (admin) {
@@ -362,7 +362,7 @@ export async function POST(request: NextRequest) {
                 if (maxImages > 0) {
                   try {
                     const { imageBase64, fileName } = await generatePlatformImage(
-                      firstImagePrompt, 'facebook', options.imageStyle, options.referenceImageBase64, undefined, generationSessionId, userData.clinic_id
+                      firstImagePrompt, 'facebook', options.imageStyle, options.referenceImageBase64, options.imageVisualStyle, generationSessionId, userData.clinic_id
                     );
                     let imagePath = '';
                     if (admin) {
@@ -396,7 +396,7 @@ export async function POST(request: NextRequest) {
                 if (maxImages > 0) {
                   try {
                     const { imageBase64, fileName } = await generatePlatformImage(
-                      firstImagePrompt, 'threads', options.imageStyle, options.referenceImageBase64, undefined, generationSessionId, userData.clinic_id
+                      firstImagePrompt, 'threads', options.imageStyle, options.referenceImageBase64, options.imageVisualStyle, generationSessionId, userData.clinic_id
                     );
                     let imagePath = '';
                     if (admin) {
