@@ -92,8 +92,10 @@ export async function middleware(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')
   if (code) {
     const type = request.nextUrl.searchParams.get('type')
-    // recovery 타입이거나, /update-password 경로에서 code가 있는 경우
-    if (type === 'recovery' || request.nextUrl.pathname === '/update-password') {
+    const intent = request.nextUrl.searchParams.get('intent')
+    // recovery 타입이거나, intent=recovery이거나, /update-password 경로에서 code가 있는 경우
+    // PWA가 start_url('/')로 fallback해도 intent=recovery로 감지 가능
+    if (type === 'recovery' || intent === 'recovery' || request.nextUrl.pathname === '/update-password') {
       console.log('[Middleware] Recovery code 교환 시작 (경로:', request.nextUrl.pathname, ')')
       // 기존 세션 로그아웃 (recovery 세션으로 교체)
       await supabase.auth.signOut()
@@ -104,6 +106,7 @@ export async function middleware(request: NextRequest) {
         redirectUrl.pathname = '/update-password'
         redirectUrl.searchParams.delete('code')
         redirectUrl.searchParams.delete('type')
+        redirectUrl.searchParams.delete('intent')
         redirectUrl.searchParams.set('mode', 'recovery')
         // supabaseResponse에 설정된 세션 쿠키를 리다이렉트 응답에 복사
         const redirectResponse = NextResponse.redirect(redirectUrl)
