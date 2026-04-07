@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { seedDefaultPromptsIfNeeded } from './seed-prompts';
 import { logApiUsage } from './api-usage-logger';
 import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyle } from '@/types/marketing';
@@ -51,21 +52,41 @@ function getVisualStyleInstruction(visualStyle?: ImageVisualStyle): string {
   }
 }
 
-// ─── 마스터가 설정한 이미지 프롬프트 로딩 ───
+// ─── 마스터가 설정한 이미지 프롬프트 로딩 (전역 적용) ───
 
-async function loadImagePromptTemplate(clinicId: string): Promise<string | null> {
+async function loadImagePromptTemplate(clinicId: string, promptKey: string = 'image.blog'): Promise<string | null> {
+  // 1. Admin 클라이언트로 마스터 프롬프트 로딩 (RLS 우회, 모든 클리닉 대상)
+  //    마스터가 설정한 최신 버전이 모든 클리닉에 적용됨
+  const admin = getSupabaseAdmin();
+  if (admin) {
+    const { data: masterData } = await admin
+      .from('marketing_prompts')
+      .select('system_prompt')
+      .eq('prompt_key', promptKey)
+      .eq('is_active', true)
+      .order('version', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (masterData) return masterData.system_prompt;
+  }
+
+  // 2. 폴백: 사용자 클리닉의 프롬프트 (admin 클라이언트 불가 시)
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('marketing_prompts')
     .select('system_prompt')
     .eq('clinic_id', clinicId)
-    .eq('prompt_key', 'image.blog')
+    .eq('prompt_key', promptKey)
     .eq('is_active', true)
     .order('version', { ascending: false })
     .limit(1)
     .single();
 
-  if (!data) {
+  if (error || !data) {
+    if (error) {
+      console.warn('[ImageGen] 이미지 프롬프트 로딩 실패:', error.message, '(clinic:', clinicId, ')');
+    }
     // 기본 프롬프트 시드 후 재시도
     const seeded = await seedDefaultPromptsIfNeeded(clinicId);
     if (seeded) {
@@ -73,7 +94,7 @@ async function loadImagePromptTemplate(clinicId: string): Promise<string | null>
         .from('marketing_prompts')
         .select('system_prompt')
         .eq('clinic_id', clinicId)
-        .eq('prompt_key', 'image.blog')
+        .eq('prompt_key', promptKey)
         .eq('is_active', true)
         .order('version', { ascending: false })
         .limit(1)
@@ -176,7 +197,21 @@ export async function generatePlatformImage(
   const platformStyle = PLATFORM_IMAGE_STYLES[platform];
   const styleInstruction = getImageStyleInstruction(imageStyle);
   const visualInstruction = getVisualStyleInstruction(imageVisualStyle);
-  const fullPrompt = `${platformStyle}\n\n치과 블로그 주제: ${prompt}${styleInstruction}${visualInstruction}`;
+
+  // 마스터 프롬프트 템플릿 적용 (플랫폼 이미지에도 마스터 스타일 가이드 반영)
+  let fullPrompt: string;
+  if (generationClinicId) {
+    const template = await loadImagePromptTemplate(generationClinicId);
+    if (template) {
+      // 마스터 템플릿의 {{image_prompt}}에 플랫폼별 스타일 + 주제를 주입
+      fullPrompt = template.replaceAll('{{image_prompt}}', `${platformStyle}\n\n치과 블로그 주제: ${prompt}`);
+    } else {
+      fullPrompt = `${platformStyle}\n\n치과 블로그 주제: ${prompt}`;
+    }
+  } else {
+    fullPrompt = `${platformStyle}\n\n치과 블로그 주제: ${prompt}`;
+  }
+  fullPrompt += styleInstruction + visualInstruction;
 
   const geminiStart = Date.now();
   const { imageBase64, usageMetadata } = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
