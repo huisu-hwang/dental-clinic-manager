@@ -213,6 +213,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
 
                 setUser(result.data)
+                // storage에도 저장하여 bulletinService 등에서 접근 가능하게 함
+                safeLocalStorage.setItem('dental_auth', 'true')
+                safeLocalStorage.setItem('dental_user', JSON.stringify(result.data))
                 if (result.data.clinic_id) {
                   dataService.setCachedClinicId(result.data.clinic_id)
                 }
@@ -302,6 +305,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         }
 
                         setUser(result.data)
+                        safeLocalStorage.setItem('dental_auth', 'true')
+                        safeLocalStorage.setItem('dental_user', JSON.stringify(result.data))
                         if (result.data.clinic_id) {
                           dataService.setCachedClinicId(result.data.clinic_id)
                         }
@@ -329,6 +334,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                       const result = await dataService.getUserProfileById(userId)
                       if (result.success && result.data) {
                         setUser(result.data)
+                        safeLocalStorage.setItem('dental_user', JSON.stringify(result.data))
                       }
                     } catch (err) {
                       console.warn('[AuthContext] Failed to refresh user profile after token refresh:', err)
