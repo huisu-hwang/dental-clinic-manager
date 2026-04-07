@@ -276,6 +276,19 @@ export default function TaskDetail({
                   </Button>
                 )}
 
+                {/* 담당자: 검토 요청 취소 (검토 요청 → 진행 중) */}
+                {isAssignee && task.status === 'review' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onStatusUpdate('in_progress')}
+                    className="text-orange-600"
+                  >
+                    <XCircle className="w-4 h-4 mr-1" />
+                    검토 요청 취소
+                  </Button>
+                )}
+
                 {/* === 결재자(할당자/원장) 워크플로우 === */}
                 {/* 할당자: 검토 완료 승인 (검토 요청 → 완료) */}
                 {(isAssigner || isOwner) && task.status === 'review' && (
