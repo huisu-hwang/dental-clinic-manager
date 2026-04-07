@@ -41,14 +41,22 @@ export default function CommunityPage() {
     }
   }, [authLoading, user])
 
-  const loadProfile = async () => {
+  const loadProfile = async (retryCount = 0) => {
     setProfileLoading(true)
-    const { data } = await communityProfileService.getMyProfile()
+    const { data, error } = await communityProfileService.getMyProfile()
     if (data) {
       setProfile(data)
-    } else {
+      setShowNicknameSetup(false)
+    } else if (!error) {
+      // 에러 없이 data가 null → 프로필이 실제로 없음 → 닉네임 설정
       setShowNicknameSetup(true)
+    } else if (retryCount < 2) {
+      // 에러 발생 (세션/네트워크 등) → 재시도 (닉네임 모달 표시하지 않음)
+      console.warn('[CommunityPage] loadProfile error, retrying...', error)
+      setTimeout(() => loadProfile(retryCount + 1), 1000)
+      return
     }
+    // 재시도 초과 시에도 닉네임 모달은 표시하지 않음 (에러 상태)
     setProfileLoading(false)
   }
 

@@ -24,11 +24,17 @@ export default function TelegramBoardListPage() {
 
   useEffect(() => {
     if (user) {
-      const fetchGroups = async () => {
+      const fetchGroups = async (retryCount = 0) => {
         const [myRes, publicRes] = await Promise.all([
           telegramGroupService.getMyGroups(),
           telegramGroupService.getPublicGroups(),
         ])
+        // 에러 발생 시 재시도 (빈 배열로 덮어쓰지 않음)
+        if (myRes.error && retryCount < 2) {
+          console.warn('[TelegramPage] getMyGroups error, retrying...', myRes.error)
+          setTimeout(() => fetchGroups(retryCount + 1), 1000)
+          return
+        }
         const myGroups = myRes.data || []
         setGroups(myGroups)
         // 공개 그룹 중 내가 멤버가 아닌 것만 표시
