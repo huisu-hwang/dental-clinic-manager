@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   FileText,
   Plus,
@@ -25,6 +25,7 @@ import {
   useDroppable, useDraggable,
   type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core'
+import { useSearchParams } from 'next/navigation'
 import { dataService } from '@/lib/dataService'
 import { usePermissions } from '@/hooks/usePermissions'
 import ProtocolForm from '../Protocol/ProtocolForm'
@@ -81,7 +82,9 @@ interface ProtocolManagementProps {
 }
 
 export default function ProtocolManagement({ currentUser, hideHeader = false }: ProtocolManagementProps) {
+  const searchParams = useSearchParams()
   const { hasPermission } = usePermissions()
+  const autoOpenedRef = useRef(false)
   const [activeSubTab, setActiveSubTab] = useState<'list' | 'categories' | 'permissions'>('list')
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [protocols, setProtocols] = useState<Protocol[]>([])
@@ -199,6 +202,20 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
       console.log('[ProtocolManagement] Cleanup: component unmounted')
     }
   }, [])
+
+  // URL의 review/view 파라미터로 해당 프로토콜 상세 자동 오픈
+  useEffect(() => {
+    const protocolId = searchParams.get('review') || searchParams.get('view')
+    if (protocolId && initialLoadDone && !autoOpenedRef.current) {
+      autoOpenedRef.current = true
+      dataService.getProtocolById(protocolId).then((result) => {
+        if (result.data) {
+          setSelectedProtocol(result.data as Protocol)
+          setShowDetail(true)
+        }
+      })
+    }
+  }, [searchParams, initialLoadDone])
 
   const fetchProtocols = async () => {
     try {
@@ -492,7 +509,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 type: 'protocol_review_requested',
                 title: '프로토콜 검토 요청',
                 content: `${userName}님이 "${editingProtocol.title}" 프로토콜의 검토를 요청했습니다`,
-                link: `/management?tab=protocol&review=${editingProtocol.id}`,
+                link: `/management?tab=protocols&review=${editingProtocol.id}`,
                 reference_type: 'protocol_review',
                 reference_id: reviewResult.data.id,
               }))

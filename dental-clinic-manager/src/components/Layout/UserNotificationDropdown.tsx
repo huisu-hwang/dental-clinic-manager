@@ -70,9 +70,9 @@ const DEFAULT_NOTIFICATION_LINKS: Partial<Record<UserNotificationType, string>> 
   telegram_board_pending: '/dashboard/community/admin?tab=telegram',
   task_assigned: '/dashboard/bulletin?tab=tasks',
   task_completed: '/dashboard/bulletin?tab=tasks',
-  protocol_review_requested: '/management?tab=protocol',
-  protocol_review_approved: '/management?tab=protocol',
-  protocol_review_rejected: '/management?tab=protocol',
+  protocol_review_requested: '/management?tab=protocols',
+  protocol_review_approved: '/management?tab=protocols',
+  protocol_review_rejected: '/management?tab=protocols',
 }
 
 // 알림의 이동 링크 결정 (명시적 link > 타입별 기본 link)

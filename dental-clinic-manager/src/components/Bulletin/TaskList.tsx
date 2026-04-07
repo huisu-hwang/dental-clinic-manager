@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   ListTodo,
   Plus,
@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Users,
 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { taskService } from '@/lib/bulletinService'
@@ -68,10 +69,12 @@ const getCurrentUserId = (): string | null => {
 }
 
 export default function TaskList({ canCreate = false, showMyTasksOnly = false }: TaskListProps) {
+  const searchParams = useSearchParams()
   const [allTasks, setAllTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const currentUserId = getCurrentUserId()
+  const autoOpenedRef = useRef(false)
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority | ''>('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -119,6 +122,17 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     fetchTasks()
     fetchStats()
   }, [fetchTasks, fetchStats])
+
+  // URL의 taskId 파라미터로 해당 업무 상세 자동 오픈
+  useEffect(() => {
+    const taskId = searchParams.get('taskId')
+    if (taskId && !autoOpenedRef.current && !loading) {
+      autoOpenedRef.current = true
+      taskService.getTask(taskId).then(({ data }) => {
+        if (data) setSelectedTask(data)
+      })
+    }
+  }, [searchParams, loading])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()

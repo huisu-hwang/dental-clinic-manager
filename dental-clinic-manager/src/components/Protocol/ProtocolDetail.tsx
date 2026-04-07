@@ -158,7 +158,7 @@ export default function ProtocolDetail({
             type: 'protocol_review_requested',
             title: '프로토콜 검토 요청',
             content: `${userName}님이 "${protocol.title}" 프로토콜의 검토를 요청했습니다`,
-            link: `/management?tab=protocol&review=${protocolId}`,
+            link: `/management?tab=protocols&review=${protocolId}`,
             reference_type: 'protocol_review',
             reference_id: result.data.id,
           }))
@@ -196,7 +196,7 @@ export default function ProtocolDetail({
             type: 'protocol_review_approved',
             title: '프로토콜 검토 승인',
             content: `"${protocol.title}" 프로토콜이 승인되어 활성화되었습니다`,
-            link: `/management?tab=protocol&view=${protocolId}`,
+            link: `/management?tab=protocols&view=${protocolId}`,
             reference_type: 'protocol_review',
             reference_id: pendingReview.id,
           }]
@@ -234,7 +234,7 @@ export default function ProtocolDetail({
             type: 'protocol_review_rejected',
             title: '프로토콜 검토 반려',
             content: rejectContent,
-            link: `/management?tab=protocol&view=${protocolId}`,
+            link: `/management?tab=protocols&view=${protocolId}`,
             reference_type: 'protocol_review',
             reference_id: pendingReview.id,
           }]
