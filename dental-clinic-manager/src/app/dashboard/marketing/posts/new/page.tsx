@@ -30,9 +30,6 @@ import {
   type ImageStyleOption,
   type ImageVisualStyle,
 } from '@/types/marketing'
-import Header from '@/components/Layout/Header'
-import TabNavigation from '@/components/Layout/TabNavigation'
-import { getTabRoute } from '@/utils/tabRouting'
 import dynamic from 'next/dynamic'
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 import { requireWorker } from '@/hooks/useWorkerGuard'
@@ -40,10 +37,9 @@ import { requireWorker } from '@/hooks/useWorkerGuard'
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 
 export default function NewMarketingPostPage() {
-  const { user, logout, loading } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
   const aiGen = useAIGeneration()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // ── 입력 폼 상태 ──
   const [topic, setTopic] = useState('')
@@ -83,17 +79,6 @@ export default function NewMarketingPostPage() {
   const [isAddingHashtag, setIsAddingHashtag] = useState(false)
   const hashtagInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth')
-    }
-  }, [user, loading, router])
-
-  useEffect(() => {
-    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [isMobileMenuOpen])
-
   // 저장 메시지 3초 후 자동 제거
   useEffect(() => {
     if (!saveMessage) return
@@ -107,11 +92,6 @@ export default function NewMarketingPostPage() {
       hashtagInputRef.current?.focus()
     }
   }, [isAddingHashtag])
-
-  const handleMainTabChange = (tab: string) => {
-    if (tab === 'marketing') return
-    router.push(getTabRoute(tab))
-  }
 
   const handlePostTypeChange = (type: PostType) => {
     setPostType(type)
@@ -294,7 +274,7 @@ export default function NewMarketingPostPage() {
         ? '바로 발행이 시작됩니다! 마케팅 워커가 곧 발행합니다.'
         : `${targetDate} ${targetTime}에 발행이 예약되었습니다.`
       setSaveMessage({ type: 'success', text: msg })
-      setTimeout(() => router.push('/admin/marketing'), 1500)
+      setTimeout(() => router.push('/dashboard/marketing'), 1500)
     } catch (err) {
       setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : '발행에 실패했습니다.' })
       setIsScheduling(false)
@@ -332,63 +312,23 @@ export default function NewMarketingPostPage() {
   }
 
   if (loading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">로딩 중...</p>
-        </div>
-      </div>
-    )
+    return null
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200">
-        <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
-          <Header
-            dbStatus="connected"
-            user={user}
-            onLogout={() => logout()}
-            onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            isMenuOpen={isMobileMenuOpen}
-          />
-        </div>
+    <>
+      {/* 페이지 헤더 */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => router.push('/dashboard/marketing')}
+          className="p-2 text-slate-400 hover:text-slate-600 transition-colors rounded-lg hover:bg-white"
+        >
+          <ArrowLeftIcon className="h-5 w-5" />
+        </button>
+        <h1 className="text-xl font-bold text-slate-800">새 글 작성</h1>
       </div>
 
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      <aside
-        className={`
-          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3
-          transition-transform duration-300 ease-in-out
-          lg:left-[max(0px,calc(50%-700px))]
-          ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
-        `}
-      >
-        <TabNavigation activeTab="marketing" onTabChange={handleMainTabChange} />
-      </aside>
-
-      <div className="pt-14">
-        <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
-          {/* 페이지 헤더 */}
-          <div className="flex items-center gap-3 mb-6">
-            <button
-              onClick={() => router.push('/admin/marketing')}
-              className="p-2 text-slate-400 hover:text-slate-600 transition-colors rounded-lg hover:bg-white"
-            >
-              <ArrowLeftIcon className="h-5 w-5" />
-            </button>
-            <h1 className="text-xl font-bold text-slate-800">새 글 작성</h1>
-          </div>
-
-          <div className="max-w-4xl space-y-6">
+      <div className="max-w-4xl space-y-6">
             {/* 기본 정보 */}
             <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-4 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
               <h2 className="text-lg font-semibold text-slate-800">기본 정보</h2>
@@ -907,9 +847,7 @@ export default function NewMarketingPostPage() {
               </div>
             )}
           </div>
-        </main>
-      </div>
-    </div>
+    </>
   )
 }
 

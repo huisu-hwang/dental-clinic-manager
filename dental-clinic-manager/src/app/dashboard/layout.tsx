@@ -28,8 +28,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // 활성 탭 상태 관리 (클릭 즉시 UI 반영을 위해 로컬 상태 사용)
   const getInitialTab = (): string => {
+    if (pathname.startsWith('/dashboard/marketing')) return 'marketing'
     if (pathname.startsWith('/dashboard/contracts')) return 'contracts'
-    if (pathname.startsWith('/attendance')) return 'attendance'
+    if (pathname.startsWith('/dashboard/attendance')) return 'attendance'
+    if (pathname.startsWith('/dashboard/bulletin')) return 'bulletin'
+    if (pathname.startsWith('/dashboard/community/telegram')) return 'community-groups'
+    if (pathname.startsWith('/dashboard/community')) return 'community-board'
+    if (pathname.startsWith('/dashboard/financial')) return 'financial'
     return searchParams.get('tab') || 'home'
   }
   const [activeTab, setActiveTab] = useState<string>(getInitialTab)
@@ -58,9 +63,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user, loading, router])
 
-  // 페이지 변경 시 모바일 메뉴 닫기
+  // 페이지 변경 시 모바일 메뉴 닫기 및 activeTab 동기화
   useEffect(() => {
     setIsMobileMenuOpen(false)
+    setActiveTab(getInitialTab())
   }, [pathname, searchParams])
 
   // 모바일 메뉴가 열려 있을 때 스크롤 방지

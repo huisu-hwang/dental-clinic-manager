@@ -7,7 +7,7 @@ import { encrypt } from '@/lib/email/encryption';
  * Google OAuth2 콜백 - code를 토큰으로 교환하고 DB에 저장
  */
 export async function GET(request: NextRequest) {
-  const baseRedirect = '/admin/marketing?tab=settings';
+  const baseRedirect = '/dashboard/marketing?tab=settings';
 
   try {
     const { searchParams } = new URL(request.url);

@@ -38,7 +38,7 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
         if (!res.ok) {
           if (data.alreadyMember) {
             // 이미 멤버 → 게시판으로 리다이렉트
-            router.replace(`/community/telegram/${data.boardSlug}`)
+            router.replace(`/dashboard/community/telegram/${data.boardSlug}`)
             return
           }
           setError(data.error || '유효하지 않은 초대 링크입니다')
@@ -71,7 +71,7 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
       } else {
         setJoined(true)
         setTimeout(() => {
-          router.push(`/community/telegram/${data.boardSlug}`)
+          router.push(`/dashboard/community/telegram/${data.boardSlug}`)
         }, 1500)
       }
     } catch {
@@ -109,7 +109,7 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
           </div>
           <h2 className="text-lg font-semibold text-gray-900 mb-2">초대 링크 오류</h2>
           <p className="text-sm text-gray-500 mb-6">{error}</p>
-          <Button variant="outline" onClick={() => router.push('/community/telegram')}>
+          <Button variant="outline" onClick={() => router.push('/dashboard/community/telegram')}>
             게시판 목록으로
           </Button>
         </div>
@@ -168,7 +168,7 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
             <div className="space-y-3">
               <Button
                 onClick={() => {
-                  const redirectUrl = `/community/telegram/join/${inviteCode}${autoJoin ? '?autoJoin=1' : ''}`
+                  const redirectUrl = `/dashboard/community/telegram/join/${inviteCode}${autoJoin ? '?autoJoin=1' : ''}`
                   router.push(`/?redirect=${encodeURIComponent(redirectUrl)}`)
                 }}
                 className="w-full bg-sky-500 hover:bg-sky-600 text-white"
@@ -179,7 +179,7 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
               <Button
                 variant="outline"
                 onClick={() => {
-                  const redirectUrl = `/community/telegram/join/${inviteCode}${autoJoin ? '?autoJoin=1' : ''}`
+                  const redirectUrl = `/dashboard/community/telegram/join/${inviteCode}${autoJoin ? '?autoJoin=1' : ''}`
                   router.push(`/?show=signup&redirect=${encodeURIComponent(redirectUrl)}`)
                 }}
                 className="w-full"
