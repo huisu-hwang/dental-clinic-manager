@@ -48,18 +48,20 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
       // /update-password로 직접 리다이렉트 (middleware에서 code 교환 처리)
       // PWA가 /auth/callback을 가로채는 문제를 방지
       const getRedirectUrl = () => {
+        // intent=recovery를 추가하여 PWA가 start_url로 fallback해도
+        // middleware에서 recovery 의도를 감지할 수 있도록 함
         // Vercel 배포 환경 (preview/production)
         if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-          return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/update-password`;
+          return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/update-password?intent=recovery`;
         }
 
         // 프로덕션 환경 (명시적 Site URL 설정)
         if (process.env.NEXT_PUBLIC_SITE_URL) {
-          return `${process.env.NEXT_PUBLIC_SITE_URL}/update-password`;
+          return `${process.env.NEXT_PUBLIC_SITE_URL}/update-password?intent=recovery`;
         }
 
         // 개발 환경 (localhost) - 현재 접속한 도메인 사용
-        return `${window.location.origin}/update-password`;
+        return `${window.location.origin}/update-password?intent=recovery`;
       };
 
       const redirectUrl = getRedirectUrl();
