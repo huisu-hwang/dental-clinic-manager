@@ -21,9 +21,25 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { safeErrorMessage } from '@/lib/utils/safeError'
+import { requireMasterAdmin } from '@/lib/auth/requireMasterAdmin'
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
 
 export async function POST(request: Request) {
   try {
+    // 마스터 관리자 권한 검증
+    const auth = await requireMasterAdmin()
+    if (auth.error) {
+      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
+    }
+
     // 환경 변수 확인
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -116,8 +132,8 @@ export async function POST(request: Request) {
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #2563eb;">회원가입 승인 완료</h2>
-              <p>안녕하세요, <strong>${userData.name}</strong>님!</p>
-              <p><strong>${clinicName}</strong>의 회원가입이 승인되었습니다.</p>
+              <p>안녕하세요, <strong>${escapeHtml(userData.name)}</strong>님!</p>
+              <p><strong>${escapeHtml(clinicName)}</strong>의 회원가입이 승인되었습니다.</p>
               <p>이제 클리닉 매니저의 모든 기능을 사용하실 수 있습니다.</p>
               <div style="margin: 30px 0;">
                 <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://hi-clinic.co.kr'}"

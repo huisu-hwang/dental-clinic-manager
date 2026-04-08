@@ -3,13 +3,15 @@
  * 텔레그램 봇 username 조회 (딥 링크 생성용)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getBotUsername } from '@/lib/telegramBotService'
+import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
-    if (!userId) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
       return NextResponse.json({ data: null, error: '로그인이 필요합니다.' }, { status: 401 })
     }
 

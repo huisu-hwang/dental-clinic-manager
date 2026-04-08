@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 // 사용자 정보 조회 헬퍼
 async function getUserInfo(userId: string | null): Promise<{ role: string; clinic_id: string; name: string } | null> {
@@ -34,7 +35,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ data: null, error: '로그인이 필요합니다.' }, { status: 401 })
+    }
+    const userId = user.id
     const statusFilter = new URL(request.url).searchParams.get('status')
 
     const userInfo = await getUserInfo(userId)
@@ -84,11 +90,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userId, ...dto } = body
+    const { ...dto } = body
 
-    if (!userId) {
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
       return NextResponse.json({ data: null, error: '로그인이 필요합니다.' }, { status: 401 })
     }
+    const userId = user.id
 
     const userInfo = await getUserInfo(userId)
     if (!userInfo) {

@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 // 랜덤 12자리 alphanumeric 코드 생성
 function generateInviteCode(length = 12): string {
@@ -43,7 +44,12 @@ export async function GET(
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
+    }
+    const userId = user.id
 
     const isAdmin = await checkMasterAdmin(userId)
     if (!isAdmin) {
@@ -83,7 +89,14 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { userId, expires_at, max_uses } = body
+    const { expires_at, max_uses } = body
+
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
+    }
+    const userId = user.id
 
     const isAdmin = await checkMasterAdmin(userId)
     if (!isAdmin) {

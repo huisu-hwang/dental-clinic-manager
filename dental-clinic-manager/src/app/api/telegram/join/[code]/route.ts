@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +20,9 @@ export async function GET(
     }
 
     // userId는 선택적 — 비로그인도 그룹 정보 조회 가능
-    const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    const userId = user?.id ?? null
 
     // 초대 링크 조회 (그룹 정보 포함)
     const { data: link, error: linkError } = await supabase
@@ -100,11 +103,13 @@ export async function POST(
     } catch {
       // body가 없는 경우 무시
     }
-    const userId = body.userId || request.headers.get('x-user-id')
 
-    if (!userId) {
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
       return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
     }
+    const userId = user.id
 
     // 초대 링크 유효성 검사
     const { data: link, error: linkError } = await supabase
