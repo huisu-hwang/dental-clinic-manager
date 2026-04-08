@@ -26,6 +26,7 @@ import {
   TASK_PRIORITY_COLORS
 } from '@/types/bulletin'
 import { appConfirm } from '@/components/ui/AppDialog'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface TaskDetailProps {
   task: Task
@@ -364,7 +365,7 @@ export default function TaskDetail({
             <h3 className="text-sm font-medium text-gray-700 mb-2">상세 내용</h3>
             <div
               className="text-gray-600 prose prose-sm max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1"
-              dangerouslySetInnerHTML={{ __html: task.description }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(task.description) }}
             />
           </div>
         )}

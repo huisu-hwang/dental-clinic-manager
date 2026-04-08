@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button'
 import type { Announcement } from '@/types/bulletin'
 import { ANNOUNCEMENT_CATEGORY_LABELS } from '@/types/bulletin'
 import ShareDialog from '@/components/shared/ShareDialog'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface AnnouncementDetailProps {
   announcement: Announcement
@@ -129,7 +130,7 @@ export default function AnnouncementDetail({
         <div className="p-4 sm:p-6">
           <div
             className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap"
-            dangerouslySetInnerHTML={{ __html: announcement.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(announcement.content) }}
           />
         </div>
       </div>

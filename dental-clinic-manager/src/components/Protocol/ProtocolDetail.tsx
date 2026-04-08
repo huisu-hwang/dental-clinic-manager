@@ -11,6 +11,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Protocol, ProtocolVersion, ProtocolReview } from '@/types'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 // API를 통해 알림 생성 (service_role로 RLS 우회)
 async function sendNotificationViaApi(
@@ -553,7 +554,7 @@ export default function ProtocolDetail({
                       <summary className="cursor-pointer text-sm font-semibold text-slate-700">
                         통합 본문 보기
                       </summary>
-                      <div className="prose prose-sm max-w-none pt-3" dangerouslySetInnerHTML={{ __html: protocol.currentVersion.content }} />
+                      <div className="prose prose-sm max-w-none pt-3" dangerouslySetInnerHTML={{ __html: sanitizeHtml(protocol.currentVersion.content) }} />
                     </details>
                   )}
                 </div>

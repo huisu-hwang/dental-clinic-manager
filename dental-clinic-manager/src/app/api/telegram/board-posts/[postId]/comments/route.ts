@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { getAuthenticatedUser } from '@/lib/apiAuth'
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +21,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('telegram_board_comments')
-      .select('*, user:users(name, email)')
+      .select('*, user:users(name)')
       .eq('post_id', postId)
       .order('created_at', { ascending: true })
 
@@ -49,11 +50,21 @@ export async function POST(
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const body = await request.json()
-    const { userId, content } = body
+    const authUser = await getAuthenticatedUser()
+    if (!authUser) {
+      return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
+    }
+    const userId = authUser.id
 
-    if (!userId || !content) {
+    const body = await request.json()
+    const { content } = body
+
+    if (!content) {
       return NextResponse.json({ data: null, error: '필수 항목이 누락되었습니다.' }, { status: 400 })
+    }
+
+    if (content.length > 5000) {
+      return NextResponse.json({ data: null, error: '댓글은 5000자를 초과할 수 없습니다.' }, { status: 400 })
     }
 
     // 게시글 존재 확인
@@ -75,7 +86,7 @@ export async function POST(
         user_id: userId,
         content,
       })
-      .select('*, user:users(name, email)')
+      .select('*, user:users(name)')
       .single()
 
     if (commentError) {

@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button'
 import type { Document } from '@/types/bulletin'
 import { DOCUMENT_CATEGORY_LABELS } from '@/types/bulletin'
 import ShareDialog from '@/components/shared/ShareDialog'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface DocumentDetailProps {
   document: Document
@@ -243,7 +244,7 @@ export default function DocumentDetail({
           <div className="p-4 sm:p-6">
             <div
               className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: document.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(document.content) }}
             />
           </div>
         )}

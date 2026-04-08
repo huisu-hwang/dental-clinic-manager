@@ -193,9 +193,26 @@ export const mediaService = {
         return { error: '파일 크기는 50MB를 초과할 수 없습니다.' }
       }
 
+      // 허용 파일 확장자 검증
+      const allowedExtensions = [
+        // 문서
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'hwp', 'hwpx', 'txt', 'csv', 'rtf',
+        // 이미지
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico',
+        // 영상
+        'mp4', 'mov', 'avi', 'webm', 'mkv',
+        // 오디오
+        'mp3', 'wav', 'ogg', 'aac',
+        // 압축
+        'zip', 'rar', '7z', 'tar', 'gz',
+      ]
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || ''
+      if (!allowedExtensions.includes(fileExt)) {
+        return { error: `허용되지 않는 파일 형식입니다. (${fileExt})` }
+      }
+
       const timestamp = Date.now()
       const randomString = Math.random().toString(36).substring(2, 15)
-      const fileExt = file.name.split('.').pop()
       const fileName = `telegram-board-files/${timestamp}_${randomString}.${fileExt}`
 
       const { data, error } = await supabase.storage

@@ -15,6 +15,7 @@ import PollDisplay from './PollDisplay'
 import ReportModal from './ReportModal'
 import ShareDialog from '@/components/shared/ShareDialog'
 import { appConfirm } from '@/components/ui/AppDialog'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface CommunityPostDetailProps {
   postId: string
@@ -154,7 +155,7 @@ export default function CommunityPostDetail({
               <WatermarkOverlay nickname={nickname} />
               <div
                 className="prose max-w-none relative z-0 community-print-block"
-                dangerouslySetInnerHTML={{ __html: post.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
               />
             </div>
           </ContentProtectionWrapper>

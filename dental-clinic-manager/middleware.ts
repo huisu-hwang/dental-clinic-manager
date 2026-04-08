@@ -136,7 +136,14 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === '/update-password' ||
     request.nextUrl.pathname.startsWith('/test') ||
     request.nextUrl.pathname.startsWith('/auth') ||
-    request.nextUrl.pathname.startsWith('/api') ||
+    request.nextUrl.pathname.startsWith('/api/auth') ||
+    request.nextUrl.pathname.startsWith('/api/webhook') ||
+    request.nextUrl.pathname.startsWith('/api/webhooks') ||
+    request.nextUrl.pathname.startsWith('/api/cron') ||
+    request.nextUrl.pathname.startsWith('/api/share') ||
+    request.nextUrl.pathname.startsWith('/api/public') ||
+    request.nextUrl.pathname.startsWith('/api/telegram/webhook') ||
+    request.nextUrl.pathname.startsWith('/api/dentweb') ||
     request.nextUrl.pathname.startsWith('/qr') ||
     request.nextUrl.pathname.startsWith('/share')
 
