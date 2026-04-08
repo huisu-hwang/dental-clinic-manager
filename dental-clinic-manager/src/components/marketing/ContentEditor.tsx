@@ -391,12 +391,10 @@ export default function ContentEditor({ body, images, onChange, onImageEdit }: C
         .ProseMirror img.content-editor-image {
           cursor: pointer;
           transition: all 0.2s ease;
-          position: relative;
         }
         .ProseMirror img.content-editor-image:hover {
-          ring: 2px;
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
-          opacity: 0.9;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
+          opacity: 0.92;
         }
         .ProseMirror ul, .ProseMirror ol {
           padding-left: 1.5rem;
