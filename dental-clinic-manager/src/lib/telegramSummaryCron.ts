@@ -21,7 +21,7 @@ function kstDateToUtcRange(kstDate: string): { start: string; end: string } {
   }
 }
 
-/** 텔레그램 요약 실행 — 미요약 메시지를 날짜별로 처리 (최대 7일) */
+/** 텔레그램 요약 실행 — 어제까지의 미요약 메시지를 날짜별로 처리 (최대 7일, 하루가 완전히 끝난 날짜만) */
 export async function runTelegramSummary(supabase: SupabaseClient): Promise<SummaryResult[]> {
   const results: SummaryResult[] = []
   const kstOffsetMs = 9 * 60 * 60 * 1000
@@ -36,10 +36,13 @@ export async function runTelegramSummary(supabase: SupabaseClient): Promise<Summ
   if (groupsError) throw new Error(groupsError.message)
   if (!groups || groups.length === 0) return results
 
-  // KST 오늘 날짜
+  // KST 오늘/어제 날짜
   const nowKst = new Date(Date.now() + kstOffsetMs)
   const todayKst = nowKst.toISOString().slice(0, 10)
-  const todayRange = kstDateToUtcRange(todayKst)
+  // 어제까지만 요약 (하루가 완전히 끝난 날짜만 처리하여 메시지 누락 방지)
+  const yesterdayKst = new Date(nowKst.getTime() - 24 * 60 * 60 * 1000)
+    .toISOString().slice(0, 10)
+  const yesterdayRange = kstDateToUtcRange(yesterdayKst)
 
   // 최대 7일 전까지 미요약 메시지 처리
   const sevenDaysAgo = new Date(Date.now() + kstOffsetMs - 7 * 24 * 60 * 60 * 1000)
@@ -54,24 +57,25 @@ export async function runTelegramSummary(supabase: SupabaseClient): Promise<Summ
         .eq('telegram_group_id', group.id)
         .eq('is_summarized', false)
         .gte('telegram_date', minRange.start)
-        .lte('telegram_date', todayRange.end)
+        .lte('telegram_date', yesterdayRange.end)
         .order('telegram_date', { ascending: true })
 
       if (messagesError) {
-        results.push({ group_id: group.id, group_title: group.chat_title, date: todayKst, status: 'error', reason: messagesError.message })
+        results.push({ group_id: group.id, group_title: group.chat_title, date: yesterdayKst, status: 'error', reason: messagesError.message })
         continue
       }
 
       if (!allMessages || allMessages.length === 0) {
-        results.push({ group_id: group.id, group_title: group.chat_title, date: todayKst, status: 'skipped', reason: '미요약 메시지 없음' })
+        results.push({ group_id: group.id, group_title: group.chat_title, date: yesterdayKst, status: 'skipped', reason: '미요약 메시지 없음' })
         continue
       }
 
-      // KST 날짜별 그룹핑
+      // KST 날짜별 그룹핑 (오늘 날짜는 제외 — 하루가 끝나지 않았으므로)
       const byDate = new Map<string, typeof allMessages>()
       for (const msg of allMessages) {
         const msgKst = new Date(new Date(msg.telegram_date).getTime() + kstOffsetMs)
         const dateKey = msgKst.toISOString().slice(0, 10)
+        if (dateKey >= todayKst) continue
         if (!byDate.has(dateKey)) byDate.set(dateKey, [])
         byDate.get(dateKey)!.push(msg)
       }
@@ -89,6 +93,24 @@ export async function runTelegramSummary(supabase: SupabaseClient): Promise<Summ
             .from('telegram_messages')
             .update({ is_summarized: true })
             .in('id', messages.map(m => m.id))
+          continue
+        }
+
+        // 중복 요약 방지: 같은 그룹+날짜에 이미 요약이 존재하면 메시지만 처리
+        const { data: existingSummary } = await supabase
+          .from('telegram_board_posts')
+          .select('id')
+          .eq('telegram_group_id', group.id)
+          .eq('post_type', 'summary')
+          .eq('summary_date', dateKey)
+          .maybeSingle()
+
+        if (existingSummary) {
+          await supabase
+            .from('telegram_messages')
+            .update({ is_summarized: true })
+            .in('id', messages.map(m => m.id))
+          results.push({ group_id: group.id, group_title: group.chat_title, date: dateKey, status: 'skipped', reason: '이미 요약 존재' })
           continue
         }
 
@@ -138,8 +160,8 @@ export async function runTelegramSummary(supabase: SupabaseClient): Promise<Summ
           .update({ last_sync_at: new Date().toISOString() })
           .eq('id', group.id)
 
-        // 텔레그램 알림 (오늘 요약만)
-        if (dateKey === todayKst && group.telegram_chat_id && group.board_slug) {
+        // 텔레그램 알림 (어제 요약 = 가장 최근 완료된 날짜)
+        if (dateKey === yesterdayKst && group.telegram_chat_id && group.board_slug) {
           try {
             await sendSummaryNotification(group.telegram_chat_id, group.chat_title, dateKey, group.board_slug)
           } catch (notifyError) {
@@ -160,7 +182,7 @@ export async function runTelegramSummary(supabase: SupabaseClient): Promise<Summ
       results.push({
         group_id: group.id,
         group_title: group.chat_title,
-        date: todayKst,
+        date: yesterdayKst,
         status: 'error',
         reason: groupError instanceof Error ? groupError.message : 'Unknown error',
       })

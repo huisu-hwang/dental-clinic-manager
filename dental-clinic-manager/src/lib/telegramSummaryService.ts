@@ -18,11 +18,12 @@ export async function generateDailySummary(
     new Date(a.telegram_date).getTime() - new Date(b.telegram_date).getTime()
   )
 
-  // 2. 대화 텍스트 구성: [HH:MM] senderName: text or [messageType]
+  // 2. 대화 텍스트 구성: [HH:MM] senderName: text or [messageType] (KST 시간)
+  const kstOffsetMs = 9 * 60 * 60 * 1000
   const conversationLines = sorted.map(msg => {
-    const date = new Date(msg.telegram_date)
-    const hh = String(date.getUTCHours()).padStart(2, '0')
-    const mm = String(date.getUTCMinutes()).padStart(2, '0')
+    const kstDate = new Date(new Date(msg.telegram_date).getTime() + kstOffsetMs)
+    const hh = String(kstDate.getUTCHours()).padStart(2, '0')
+    const mm = String(kstDate.getUTCMinutes()).padStart(2, '0')
     const timeStr = `[${hh}:${mm}]`
     const body = msg.message_text ? msg.message_text : `[${msg.message_type}]`
     return `${timeStr} ${msg.sender_name}: ${body}`
