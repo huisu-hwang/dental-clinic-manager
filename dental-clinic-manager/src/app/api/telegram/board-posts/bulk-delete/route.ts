@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { getAuthenticatedUser } from '@/lib/apiAuth'
 
 async function getUserRole(supabase: any, userId: string): Promise<string | null> {
   const { data, error } = await supabase
@@ -23,12 +24,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const body = await request.json()
-    const { userId, postIds } = body
-
-    if (!userId) {
+    const authUser = await getAuthenticatedUser()
+    if (!authUser) {
       return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
     }
+    const userId = authUser.id
+
+    const body = await request.json()
+    const { postIds } = body
 
     if (!Array.isArray(postIds) || postIds.length === 0) {
       return NextResponse.json({ data: null, error: '삭제할 게시글을 선택해주세요.' }, { status: 400 })

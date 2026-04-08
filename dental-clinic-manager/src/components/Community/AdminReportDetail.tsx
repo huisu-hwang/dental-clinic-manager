@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { communityAdminService } from '@/lib/communityService'
 import type { CommunityReport } from '@/types/community'
 import { REPORT_REASON_LABELS, REPORT_STATUS_LABELS } from '@/types/community'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface AdminReportDetailProps {
   report: CommunityReport
@@ -95,7 +96,7 @@ export default function AdminReportDetail({ report, onBack }: AdminReportDetailP
           {report.post && (
             <div>
               <p className="font-medium text-gray-900">{report.post.title}</p>
-              <div className="text-sm text-gray-600 mt-1 max-h-40 overflow-y-auto" dangerouslySetInnerHTML={{ __html: report.post.content }} />
+              <div className="text-sm text-gray-600 mt-1 max-h-40 overflow-y-auto" dangerouslySetInnerHTML={{ __html: sanitizeHtml(report.post.content) }} />
             </div>
           )}
           {report.comment && (

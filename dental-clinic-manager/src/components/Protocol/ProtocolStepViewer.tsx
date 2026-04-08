@@ -1,6 +1,7 @@
 'use client'
 
 import type { ProtocolStep } from '@/types'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface ProtocolStepViewerProps {
   steps: ProtocolStep[]
@@ -29,7 +30,7 @@ export default function ProtocolStepViewer({ steps }: ProtocolStepViewerProps) {
               </span>
             )}
           </div>
-          <div className="prose prose-sm max-w-none px-4 py-4" dangerouslySetInnerHTML={{ __html: step.content || '<p></p>' }} />
+          <div className="prose prose-sm max-w-none px-4 py-4" dangerouslySetInnerHTML={{ __html: sanitizeHtml(step.content || '<p></p>') }} />
           {step.reference_materials && step.reference_materials.length > 0 && (
             <div className="border-t border-slate-100 bg-slate-50 px-4 py-3">
               <p className="text-xs font-medium text-slate-600">참고 자료</p>

@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { getAuthenticatedUser } from '@/lib/apiAuth'
 
 async function getUserRole(supabase: any, userId: string): Promise<string | null> {
   const { data, error } = await supabase
@@ -28,11 +29,20 @@ export async function PATCH(
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const body = await request.json()
-    const { userId, title, content, fileUrls, categoryId } = body
-
-    if (!userId) {
+    const authUser = await getAuthenticatedUser()
+    if (!authUser) {
       return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
+    }
+    const userId = authUser.id
+
+    const body = await request.json()
+    const { title, content, fileUrls, categoryId } = body
+
+    if (title !== undefined && title.length > 200) {
+      return NextResponse.json({ data: null, error: '제목은 200자를 초과할 수 없습니다.' }, { status: 400 })
+    }
+    if (content !== undefined && content.length > 100000) {
+      return NextResponse.json({ data: null, error: '내용은 100000자를 초과할 수 없습니다.' }, { status: 400 })
     }
 
     // 게시글 조회
@@ -96,12 +106,11 @@ export async function DELETE(
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
+    const authUser = await getAuthenticatedUser()
+    if (!authUser) {
       return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
     }
+    const userId = authUser.id
 
     // 게시글 조회
     const { data: post, error: postError } = await supabase

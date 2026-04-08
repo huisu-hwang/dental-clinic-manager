@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { SharedPostData } from '@/types/sharedLink'
 import { SOURCE_TYPE_LABELS } from '@/types/sharedLink'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface SharedPostViewProps {
   loginRequired?: boolean
@@ -377,7 +378,7 @@ export default function SharedPostView({ loginRequired, postData }: SharedPostVi
                   <div className="p-4 sm:p-6">
                     <div
                       className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap"
-                      dangerouslySetInnerHTML={{ __html: postData.content }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(postData.content) }}
                     />
                   </div>
 

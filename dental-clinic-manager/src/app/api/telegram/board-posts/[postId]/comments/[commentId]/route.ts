@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { getAuthenticatedUser } from '@/lib/apiAuth'
 
 async function getUserRole(supabase: any, userId: string): Promise<string | null> {
   const { data, error } = await supabase
@@ -28,11 +29,21 @@ export async function PATCH(
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const body = await request.json()
-    const { userId, content } = body
+    const authUser = await getAuthenticatedUser()
+    if (!authUser) {
+      return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
+    }
+    const userId = authUser.id
 
-    if (!userId || !content) {
+    const body = await request.json()
+    const { content } = body
+
+    if (!content) {
       return NextResponse.json({ data: null, error: '필수 항목이 누락되었습니다.' }, { status: 400 })
+    }
+
+    if (content.length > 5000) {
+      return NextResponse.json({ data: null, error: '댓글은 5000자를 초과할 수 없습니다.' }, { status: 400 })
     }
 
     // 댓글 조회
@@ -56,7 +67,7 @@ export async function PATCH(
       .from('telegram_board_comments')
       .update({ content, updated_at: new Date().toISOString() })
       .eq('id', commentId)
-      .select('*, user:users(name, email)')
+      .select('*, user:users(name)')
       .single()
 
     if (updateError) {
@@ -84,12 +95,11 @@ export async function DELETE(
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
+    const authUser = await getAuthenticatedUser()
+    if (!authUser) {
       return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
     }
+    const userId = authUser.id
 
     // 댓글 조회
     const { data: comment, error: commentError } = await supabase

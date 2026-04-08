@@ -10,6 +10,7 @@ import TelegramBoardPostActions from './TelegramBoardPostActions'
 import ContributionVoteDisplay from './ContributionVoteDisplay'
 import LinkPreviewCard from './LinkPreviewCard'
 import { telegramBoardPostService } from '@/lib/telegramService'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface TelegramBoardPostDetailProps {
   post: TelegramBoardPost
@@ -237,7 +238,7 @@ export default function TelegramBoardPostDetail({
                 prose-ul:my-2 prose-li:my-0.5
                 prose-p:my-2 prose-a:text-blue-600
                 [&_video]:rounded-lg [&_video]:max-w-full [&_video]:my-4"
-              dangerouslySetInnerHTML={{ __html: post.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
             />
           )}
 
