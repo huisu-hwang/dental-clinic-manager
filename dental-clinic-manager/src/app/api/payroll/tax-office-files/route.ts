@@ -62,6 +62,14 @@ export async function POST(request: NextRequest) {
     const uploadedBy = formData.get('uploadedBy') as string | null
     const matchesJson = formData.get('matches') as string | null
 
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+    if (zipFile && zipFile.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: '파일 크기는 10MB 이하여야 합니다.' },
+        { status: 413 }
+      )
+    }
+
     if (!zipFile || !year || !month || !clinicId || !uploadedBy || !matchesJson) {
       return NextResponse.json(
         { ...result, errors: ['필수 정보가 누락되었습니다. (zipFile, year, month, clinicId, uploadedBy, matches)'] },

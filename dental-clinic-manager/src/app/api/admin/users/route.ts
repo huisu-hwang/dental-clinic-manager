@@ -14,9 +14,16 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireMasterAdmin } from '@/lib/auth/requireMasterAdmin'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // 마스터 관리자 권한 검증
+    const auth = await requireMasterAdmin()
+    if (auth.error) {
+      return NextResponse.json({ data: null, error: auth.error }, { status: auth.status })
+    }
+
     // 환경 변수 확인
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY

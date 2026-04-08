@@ -4,11 +4,12 @@
  * - name 또는 email로 ILIKE 검색
  * - groupId 전달 시 해당 그룹 멤버는 결과에서 제외
  * - 최대 10명, 최소 2글자 이상
- * - 인증 필수 (x-user-id 헤더)
+ * - 인증 필수 (서버 세션)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,10 +18,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Database connection failed' }, { status: 500 })
     }
 
-    const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
-    if (!userId) {
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
     }
+    const userId = user.id
 
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q')?.trim() ?? ''

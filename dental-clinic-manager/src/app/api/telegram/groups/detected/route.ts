@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,10 +16,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
-    if (!userId) {
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
       return NextResponse.json({ data: null, error: '로그인이 필요합니다.' }, { status: 401 })
     }
+    const userId = user.id
 
     const token = new URL(request.url).searchParams.get('token')
 

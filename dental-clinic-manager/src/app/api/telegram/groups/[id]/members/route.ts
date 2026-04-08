@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 async function checkMasterAdmin(userId: string | null): Promise<boolean> {
   if (!userId) return false
@@ -48,11 +49,12 @@ export async function GET(
       return NextResponse.json({ data: null, error: 'Database connection failed' }, { status: 500 })
     }
 
-    const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
-
-    if (!userId) {
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
       return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
     }
+    const userId = user.id
 
     // 권한 확인: master_admin, 그룹 생성자, 또는 그룹 멤버
     const isAdmin = await checkMasterAdmin(userId)
@@ -112,11 +114,14 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { userId, targetUserId, joinedVia } = body
+    const { targetUserId, joinedVia } = body
 
-    if (!userId) {
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
       return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
     }
+    const userId = user.id
 
     // 권한 확인: master_admin 또는 그룹 생성자
     const isAdmin = await checkMasterAdmin(userId)
@@ -176,15 +181,18 @@ export async function DELETE(
 
     const { searchParams } = new URL(request.url)
     const targetUserId = searchParams.get('userId')
-    const requestUserId = request.headers.get('x-user-id') || searchParams.get('requestUserId')
 
-    const body = await request.json().catch(() => ({}))
-    const adminUserId = body.userId || requestUserId
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
+    }
+    const adminUserId = user.id
 
     // 권한 확인: master_admin 또는 그룹 생성자
     const isAdmin = await checkMasterAdmin(adminUserId)
     let isGroupCreator = false
-    if (!isAdmin && adminUserId) {
+    if (!isAdmin) {
       const { data: group } = await supabase
         .from('telegram_groups')
         .select('created_by')

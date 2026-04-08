@@ -211,6 +211,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '파일이 필요합니다.' }, { status: 400 });
     }
 
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: '파일 크기는 10MB 이하여야 합니다.' },
+        { status: 413 }
+      )
+    }
+
     const fileType = file.type;
     const fileName = file.name.toLowerCase();
 
