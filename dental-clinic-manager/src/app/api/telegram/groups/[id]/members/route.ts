@@ -80,7 +80,7 @@ export async function GET(
       .from('telegram_group_members')
       .select(`
         *,
-        user:users(name, email)
+        user:users(name)
       `)
       .eq('telegram_group_id', groupId)
       .order('created_at', { ascending: false })
