@@ -428,14 +428,15 @@ export async function POST(request: NextRequest) {
           (result as any).platformContent = platformContent;
         }
 
-        // 4단계: 자동 저장
+        // 4단계: 자동 저장 (admin 클라이언트 사용 - ReadableStream 내에서 anon 클라이언트의 쿠키 인증이 유실될 수 있음)
         sendEvent(controller, { progress: 95, step: '저장 중...' });
 
         let savedItemId: string | null = body.itemId || null;
+        const saveClient = admin || supabase;
 
         if (savedItemId) {
           // 기존 항목 업데이트
-          await supabase
+          const { error: updateError } = await saveClient
             .from('content_calendar_items')
             .update({
               generated_content: JSON.stringify(result),
@@ -444,10 +445,14 @@ export async function POST(request: NextRequest) {
               status: 'review',
             })
             .eq('id', savedItemId);
+
+          if (updateError) {
+            console.error('[API] 자동 저장 업데이트 실패:', updateError);
+          }
         } else {
           // 신규 항목 자동 생성 (캘린더 + 항목)
           const today = new Date().toISOString().split('T')[0];
-          const { data: calendar } = await supabase
+          const { data: calendar, error: calInsertError } = await saveClient
             .from('content_calendars')
             .insert({
               clinic_id: userData.clinic_id,
@@ -461,8 +466,12 @@ export async function POST(request: NextRequest) {
             .select()
             .single();
 
+          if (calInsertError) {
+            console.error('[API] 캘린더 생성 실패:', calInsertError);
+          }
+
           if (calendar) {
-            const { data: item } = await supabase
+            const { data: item, error: itemInsertError } = await saveClient
               .from('content_calendar_items')
               .insert({
                 calendar_id: calendar.id,
@@ -483,6 +492,10 @@ export async function POST(request: NextRequest) {
               })
               .select('id')
               .single();
+
+            if (itemInsertError) {
+              console.error('[API] 캘린더 항목 생성 실패:', itemInsertError);
+            }
 
             if (item) {
               savedItemId = item.id;
