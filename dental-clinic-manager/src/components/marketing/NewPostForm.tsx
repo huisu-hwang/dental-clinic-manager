@@ -31,6 +31,7 @@ import {
 } from '@/types/marketing'
 import dynamic from 'next/dynamic'
 import ScheduleModal from '@/components/marketing/ScheduleModal'
+import ImageEditModal from '@/components/marketing/ImageEditModal'
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
@@ -79,6 +80,10 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [newHashtagInput, setNewHashtagInput] = useState('')
   const [isAddingHashtag, setIsAddingHashtag] = useState(false)
   const hashtagInputRef = useRef<HTMLInputElement>(null)
+
+  // ── 이미지 편집 상태 ──
+  const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null)
+  const [editingImage, setEditingImage] = useState<{ fileName: string; prompt: string; path: string } | null>(null)
 
   // 저장 메시지 3초 후 자동 제거
   useEffect(() => {
@@ -275,6 +280,44 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     setNewHashtagInput('')
     setIsAddingHashtag(false)
   }
+
+  // ── 이미지 편집 ──
+  const handleImageEdit = useCallback((imageIndex: number, currentImage: { fileName: string; prompt: string; path: string }) => {
+    setEditingImageIndex(imageIndex)
+    setEditingImage(currentImage)
+  }, [])
+
+  const handleImageUpdated = useCallback((newImage: { fileName: string; prompt: string; path: string }) => {
+    if (editingImageIndex === null || !generatedResult) return
+
+    // generatedImages 배열 업데이트
+    const updatedImages = [...(generatedResult.generatedImages || [])]
+    updatedImages[editingImageIndex] = {
+      fileName: newImage.fileName,
+      prompt: newImage.prompt,
+      path: newImage.path,
+    }
+
+    // generatedResult 업데이트
+    setGeneratedResult({
+      ...generatedResult,
+      generatedImages: updatedImages,
+    })
+
+    // 본문의 [IMAGE:] 마커에서 프롬프트가 변경된 경우 업데이트
+    const oldPrompt = editingImage?.prompt
+    if (oldPrompt && oldPrompt !== newImage.prompt) {
+      const updatedBody = editedBody.replace(
+        `[IMAGE: ${oldPrompt}]`,
+        `[IMAGE: ${newImage.prompt}]`
+      )
+      setEditedBody(updatedBody)
+    }
+
+    setHasUnsavedChanges(true)
+    setEditingImageIndex(null)
+    setEditingImage(null)
+  }, [editingImageIndex, editingImage, generatedResult, editedBody])
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -664,6 +707,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                 setEditedBody(newBody)
                 setHasUnsavedChanges(true)
               }}
+              onImageEdit={handleImageEdit}
             />
           </div>
 
@@ -838,6 +882,19 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               onConfirm={handleScheduleConfirm}
               isLoading={isScheduling}
             />
+
+            {/* 이미지 편집 모달 */}
+            {editingImage && (
+              <ImageEditModal
+                isOpen={editingImage !== null}
+                onClose={() => {
+                  setEditingImageIndex(null)
+                  setEditingImage(null)
+                }}
+                image={editingImage}
+                onImageUpdated={handleImageUpdated}
+              />
+            )}
           </div>
         </div>
       )}

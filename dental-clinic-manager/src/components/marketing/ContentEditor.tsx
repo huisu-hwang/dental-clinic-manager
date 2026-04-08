@@ -1,7 +1,7 @@
 'use client'
 
 import { useEditor, EditorContent } from '@tiptap/react'
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -208,9 +208,16 @@ interface ContentEditorProps {
   body: string
   images?: { fileName: string; prompt: string; path?: string }[]
   onChange: (body: string) => void
+  onImageEdit?: (imageIndex: number, currentImage: { fileName: string; prompt: string; path: string }) => void
 }
 
-export default function ContentEditor({ body, images, onChange }: ContentEditorProps) {
+export default function ContentEditor({ body, images, onChange, onImageEdit }: ContentEditorProps) {
+  // refs를 사용하여 클릭 핸들러에서 최신 값 참조
+  const imagesRef = useRef(images)
+  const onImageEditRef = useRef(onImageEdit)
+  useEffect(() => { imagesRef.current = images }, [images])
+  useEffect(() => { onImageEditRef.current = onImageEdit }, [onImageEdit])
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -220,7 +227,7 @@ export default function ContentEditor({ body, images, onChange }: ContentEditorP
         inline: false,
         allowBase64: true,
         HTMLAttributes: {
-          class: 'w-full rounded-xl border border-slate-200 shadow-sm my-2',
+          class: 'w-full rounded-xl border border-slate-200 shadow-sm my-2 content-editor-image',
         },
       }),
       Placeholder.configure({
@@ -239,6 +246,38 @@ export default function ContentEditor({ body, images, onChange }: ContentEditorP
       onChange(md)
     },
   })
+
+  // 이미지 클릭 이벤트 핸들러 (DOM 이벤트 사용)
+  useEffect(() => {
+    if (!editor) return
+
+    const editorDom = editor.view.dom
+
+    const handleClick = (e: Event) => {
+      const target = e.target as HTMLElement
+      if (target.tagName !== 'IMG') return
+
+      const currentImages = imagesRef.current
+      const callback = onImageEditRef.current
+      if (!currentImages || !callback) return
+
+      // 에디터 내 모든 이미지를 순서대로 찾아 클릭된 이미지의 인덱스 결정
+      const allImgs = editorDom.querySelectorAll('img')
+      const clickedIndex = Array.from(allImgs).indexOf(target as HTMLImageElement)
+
+      if (clickedIndex >= 0 && clickedIndex < currentImages.length) {
+        const img = currentImages[clickedIndex]
+        callback(clickedIndex, {
+          fileName: img.fileName,
+          prompt: img.prompt,
+          path: img.path || target.getAttribute('src') || '',
+        })
+      }
+    }
+
+    editorDom.addEventListener('click', handleClick)
+    return () => editorDom.removeEventListener('click', handleClick)
+  }, [editor])
 
   // body 또는 images가 변경되면 에디터 내용 업데이트
   const updateContent = useCallback(() => {
@@ -348,6 +387,16 @@ export default function ContentEditor({ body, images, onChange }: ContentEditorP
         }
         .ProseMirror img {
           margin: 1rem 0;
+        }
+        .ProseMirror img.content-editor-image {
+          cursor: pointer;
+          transition: all 0.2s ease;
+          position: relative;
+        }
+        .ProseMirror img.content-editor-image:hover {
+          ring: 2px;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+          opacity: 0.9;
         }
         .ProseMirror ul, .ProseMirror ol {
           padding-left: 1.5rem;
