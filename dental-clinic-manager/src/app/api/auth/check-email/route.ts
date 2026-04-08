@@ -1,9 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { rateLimit, getClientIp } from '@/lib/utils/rateLimit'
 
 export async function POST(request: NextRequest) {
   try {
+    const clientIp = getClientIp(request)
+    const rateLimitResult = rateLimit(`check-email:${clientIp}`, { windowMs: 15 * 60 * 1000, max: 10 })
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      )
+    }
+
     const { email } = await request.json()
 
     if (!email) {

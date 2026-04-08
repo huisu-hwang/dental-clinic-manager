@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { rateLimit, getClientIp } from '@/lib/utils/rateLimit'
 
 /**
  * 비밀번호 재설정 콜백 API
@@ -18,6 +19,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const clientIp = getClientIp(request)
+    const rateLimitResult = rateLimit(`reset-callback:${clientIp}`, { windowMs: 15 * 60 * 1000, max: 5 })
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      )
+    }
+
     const supabase = await createClient()
 
     // 기존 세션 로그아웃 후 recovery code 교환

@@ -20,6 +20,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { safeErrorMessage } from '@/lib/utils/safeError'
 
 export async function POST(request: Request) {
   try {
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
     if (error) {
       console.error('[Admin API - Approve User] Database error:', error)
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, error: safeErrorMessage(error, 'Admin API - approve user') },
         { status: 500 }
       )
     }
@@ -148,7 +149,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: safeErrorMessage(error, 'Admin API - approve user')
       },
       { status: 500 }
     )

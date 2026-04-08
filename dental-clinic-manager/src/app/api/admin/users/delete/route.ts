@@ -18,6 +18,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { safeErrorMessage } from '@/lib/utils/safeError'
 
 export async function DELETE(request: Request) {
   try {
@@ -105,7 +106,7 @@ export async function DELETE(request: Request) {
         if (clinicUsersError) {
           console.error('[Admin API - Delete User] Error fetching clinic users:', clinicUsersError)
           return NextResponse.json(
-            { success: false, error: 'Failed to fetch clinic users: ' + clinicUsersError.message },
+            { success: false, error: safeErrorMessage(clinicUsersError, 'Admin API - fetch clinic users') },
             { status: 500 }
           )
         }
@@ -149,7 +150,7 @@ export async function DELETE(request: Request) {
         if (clinicDeleteError) {
           console.error('[Admin API - Delete User] Error deleting clinic:', clinicDeleteError)
           return NextResponse.json(
-            { success: false, error: 'Failed to delete clinic: ' + clinicDeleteError.message },
+            { success: false, error: safeErrorMessage(clinicDeleteError, 'Admin API - delete clinic') },
             { status: 500 }
           )
         }
@@ -187,7 +188,7 @@ export async function DELETE(request: Request) {
     if (error) {
       console.error('[Admin API - Delete User] Error deleting public user:', error)
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, error: safeErrorMessage(error, 'Admin API - delete public user') },
         { status: 500 }
       )
     }
@@ -200,7 +201,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: safeErrorMessage(error, 'Admin API - delete user')
       },
       { status: 500 }
     )

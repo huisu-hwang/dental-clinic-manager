@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 async function checkMasterAdmin(userId: string | null): Promise<boolean> {
   if (!userId) return false
@@ -23,13 +24,19 @@ async function checkMasterAdmin(userId: string | null): Promise<boolean> {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { userId, botToken } = body
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 })
+    }
 
-    const isAdmin = await checkMasterAdmin(userId)
+    const isAdmin = await checkMasterAdmin(user.id)
     if (!isAdmin) {
       return NextResponse.json({ data: null, error: '권한이 없습니다.' }, { status: 403 })
     }
+
+    const body = await request.json()
+    const { botToken } = body
 
     if (!botToken) {
       return NextResponse.json({ data: null, error: 'botToken은 필수입니다.' }, { status: 400 })
@@ -52,8 +59,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Supabase Edge Function URL + secret
-    const webhookUrl = `${supabaseUrl}/functions/v1/telegram-webhook?secret=${webhookSecret}`
+    // Supabase Edge Function URL (secret은 secret_token으로 전달)
+    const webhookUrl = `${supabaseUrl}/functions/v1/telegram-webhook`
 
     // Telegram setWebhook API 호출
     const telegramApiUrl = `https://api.telegram.org/bot${botToken}/setWebhook`
@@ -62,6 +69,7 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         url: webhookUrl,
+        secret_token: webhookSecret,
         allowed_updates: ['message', 'edited_message', 'channel_post', 'my_chat_member'],
       }),
     })
@@ -76,13 +84,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[POST /api/telegram/setup-webhook] Webhook registered:', webhookUrl)
+    console.log('[POST /api/telegram/setup-webhook] Webhook registered successfully')
 
     return NextResponse.json({
       data: {
         ok: true,
-        webhookUrl,
-        telegramResult,
+        message: 'Webhook이 성공적으로 등록되었습니다.',
       },
       error: null,
     })

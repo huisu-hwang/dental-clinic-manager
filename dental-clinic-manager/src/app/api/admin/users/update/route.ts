@@ -8,6 +8,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { safeErrorMessage } from '@/lib/utils/safeError'
 
 export async function PUT(request: Request) {
   try {
@@ -74,7 +75,7 @@ export async function PUT(request: Request) {
     if (error) {
       console.error('[Admin API - Update User] Database error:', error)
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, error: safeErrorMessage(error, 'Admin API - update user') },
         { status: 500 }
       )
     }
@@ -88,7 +89,7 @@ export async function PUT(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: safeErrorMessage(error, 'Admin API - update user')
       },
       { status: 500 }
     )

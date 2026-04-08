@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { encrypt } from '@/lib/email/encryption';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/integrations/gmail/callback
@@ -38,6 +39,30 @@ export async function GET(request: NextRequest) {
       const url = new URL(baseRedirect, request.url);
       url.searchParams.set('gmail_error', 'invalid_state');
       return NextResponse.redirect(url.toString());
+    }
+
+    // 세션 인증 및 clinic 소유권 검증
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      const url = new URL(baseRedirect, request.url);
+      url.searchParams.set('gmail_error', 'unauthorized');
+      return NextResponse.redirect(url.toString());
+    }
+
+    const adminClient = getSupabaseAdmin();
+    if (adminClient) {
+      const { data: userData } = await adminClient
+        .from('users')
+        .select('clinic_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!userData || userData.clinic_id !== clinicId) {
+        const url = new URL(baseRedirect, request.url);
+        url.searchParams.set('gmail_error', 'forbidden');
+        return NextResponse.redirect(url.toString());
+      }
     }
 
     const clientId = process.env.GOOGLE_CLIENT_ID;

@@ -14,6 +14,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { safeErrorMessage } from '@/lib/utils/safeError'
 
 export async function GET() {
   try {
@@ -71,7 +72,7 @@ export async function GET() {
     if (publicError) {
       console.error('[Admin API] Error fetching public users:', publicError)
       return NextResponse.json(
-        { data: null, error: publicError.message },
+        { data: null, error: safeErrorMessage(publicError, 'Admin API - fetch public users') },
         { status: 500 }
       )
     }
@@ -86,7 +87,7 @@ export async function GET() {
     if (authError) {
       console.error('[Admin API] Error fetching auth users:', authError)
       return NextResponse.json(
-        { data: null, error: authError.message },
+        { data: null, error: safeErrorMessage(authError, 'Admin API - fetch auth users') },
         { status: 500 }
       )
     }
@@ -141,7 +142,7 @@ export async function GET() {
     return NextResponse.json(
       {
         data: null,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: safeErrorMessage(error, 'Admin API - users')
       },
       { status: 500 }
     )
