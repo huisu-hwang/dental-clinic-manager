@@ -32,6 +32,7 @@ import {
   Mail,
   ChevronDown,
   ChevronUp,
+  Settings,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
@@ -55,6 +56,9 @@ export default function FinancialDashboard() {
   // 모달 상태
   const [showRevenueForm, setShowRevenueForm] = useState(false)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
+
+  // 탭 상태
+  const [activeTab, setActiveTab] = useState<'status' | 'settings'>('status')
 
   // 데이터 로드
   const loadData = async () => {
@@ -141,40 +145,79 @@ export default function FinancialDashboard() {
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-8 bg-slate-50 min-h-screen">
-      {/* 헤더 */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">경영 현황</h1>
-          <p className="text-sm text-slate-500 mt-1">월별 수입, 지출, 손익을 한눈에 파악하고 관리하세요.</p>
-        </div>
-
-        {/* Date Selector with sleek UI */}
-        <div className="flex items-center gap-1 bg-white p-1 rounded-2xl shadow-sm border border-slate-200">
-          <button
-            onClick={goToPreviousMonth}
-            className="p-2.5 hover:bg-slate-100 rounded-xl transition-all duration-200 text-slate-600"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold tracking-wide min-w-[150px] text-center shadow-md">
-            {selectedYear}년 {selectedMonth}월
+    <div className="space-y-0 relative">
+      {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
+      <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-white">경영 현황</h2>
+              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Financial Dashboard</p>
+            </div>
           </div>
-          <button
-            onClick={goToNextMonth}
-            className="p-2.5 hover:bg-slate-100 rounded-xl transition-all duration-200 text-slate-600"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+          
+          {/* Date Selector with sleek UI */}
+          {activeTab === 'status' && (
+            <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl shadow-sm border border-white/20 self-start sm:self-auto">
+              <button
+                onClick={goToPreviousMonth}
+                className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg transition-all duration-200 text-white"
+              >
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-white font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm shadow-sm backdrop-blur-sm bg-white/5 rounded-lg">
+                {selectedYear}년 {selectedMonth}월
+              </div>
+              <button
+                onClick={goToNextMonth}
+                className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg transition-all duration-200 text-white"
+              >
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
+      <div className="sticky top-[calc(3.5rem+60px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50 shadow-sm">
+        <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
+          <button
+            onClick={() => setActiveTab('status')}
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+              activeTab === 'status'
+                ? 'bg-white text-blue-600 shadow-sm border border-slate-100'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            현황 조회
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+              activeTab === 'settings'
+                ? 'bg-white text-blue-600 shadow-sm border border-slate-100'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            설정
+          </button>
+        </nav>
+      </div>
+
+      {/* 탭 콘텐츠 */}
+      <div className="bg-slate-50/50 border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6 min-h-[calc(100vh-250px)]">
       {loading ? (
         <div className="flex flex-col items-center justify-center py-32 space-y-4">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-          <p className="text-slate-500 font-medium animate-pulse">경영 데이터를 불러오는 중...</p>
+          <p className="text-slate-500 font-medium animate-pulse">데이터를 불러오는 중...</p>
         </div>
-      ) : (
+      ) : activeTab === 'status' ? (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
           {/* Executive Summary Cards */}
@@ -454,7 +497,21 @@ export default function FinancialDashboard() {
             </div>
           </div>
         </div>
-      )}
+      ) : activeTab === 'settings' ? (
+        <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <Mail className="w-5 h-5 text-blue-500" />
+              이메일 자동 연동
+            </h2>
+            <p className="text-sm text-slate-500 mb-6">
+              병원 이메일을 연동하면 기공료·급여명세서를 자동으로 처리합니다.
+            </p>
+            <EmailIntegrationSettings />
+          </div>
+        </div>
+      ) : null}
+      </div>
 
       {/* 수입 입력 모달 */}
       {showRevenueForm && (
@@ -482,18 +539,6 @@ export default function FinancialDashboard() {
           </div>
         </div>
       )}
-
-      {/* 이메일 연동 설정 */}
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-        <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Mail className="w-5 h-5 text-blue-500" />
-          이메일 자동 연동
-        </h2>
-        <p className="text-sm text-slate-500 mb-4">
-          병원 이메일을 연동하면 기공료·급여명세서를 자동으로 처리합니다.
-        </p>
-        <EmailIntegrationSettings />
-      </div>
 
       {/* 지출 입력 모달 */}
       {showExpenseForm && (
