@@ -5,6 +5,7 @@ import { start as startWorker, stop as stopWorker, onStatusChange, onPublishResu
 import { startScraping, stopScraping, onScrapingStatusChange } from './scraping-bridge';
 import { startSeoWorker, stopSeoWorker, onSeoStatusChange } from './seo-bridge';
 import { startEmailMonitor, stopEmailMonitor, onEmailStatusChange } from './email-bridge';
+import { startDentweb, stopDentweb, onDentwebStatusChange } from './dentweb-bridge';
 import { log } from './logger';
 import { initAutoUpdater, stopAutoUpdater } from './updater';
 
@@ -114,11 +115,26 @@ async function onAppReady(): Promise<void> {
     }
   });
 
+  onDentwebStatusChange((status, message) => {
+    if (status === 'syncing') {
+      log('info', `[Main] 덴트웹: ${message || '동기화 중'}`);
+    } else if (status === 'db-unavailable') {
+      log('warn', `[Main] 덴트웹: DB 연결 불가 - ${message || ''}`);
+    } else if (status === 'error') {
+      log('error', `[Main] 덴트웹: ${message || '오류'}`);
+    }
+  });
+
   applyAutoStart();
   await startWorker();
   startScraping();
   startSeoWorker();
   startEmailMonitor();
+  // 덴트웹 브릿지는 비동기 초기화 (대시보드 설정 조회 → DB 연결 테스트)
+  // 실패해도 다른 브릿지에 영향 없음
+  startDentweb().catch((err) => {
+    log('error', `[Main] 덴트웹 브릿지 시작 오류: ${err instanceof Error ? err.message : String(err)}`);
+  });
 }
 
 function applyAutoStart(): void {
@@ -151,5 +167,6 @@ app.on('before-quit', async () => {
   stopScraping();
   stopSeoWorker();
   stopEmailMonitor();
+  await stopDentweb();
   await stopWorker();
 });

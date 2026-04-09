@@ -5,6 +5,7 @@ import { start as startWorker, stop as stopWorker, getStatus } from './worker-br
 import { getScrapingStatus } from './scraping-bridge';
 import { getSeoStatus } from './seo-bridge';
 import { getEmailMonitorStatus } from './email-bridge';
+import { getDentwebBridgeStatus } from './dentweb-bridge';
 import { log } from './logger';
 import { checkForUpdatesManually, startAutoCheckIfEnabled } from './updater';
 import { createStatusWindow } from './status-window';
@@ -72,6 +73,17 @@ function rebuildMenu(): void {
     error: '오류',
   };
 
+  const dentwebLabels: Record<string, string> = {
+    idle: '중지됨',
+    polling: '대기 중',
+    syncing: '동기화 중',
+    error: '오류',
+    'db-unavailable': 'DB 연결 불가',
+    'not-configured': '미설정',
+  };
+  const dentwebState = getDentwebBridgeStatus();
+  const dentwebLabel = dentwebLabels[dentwebState.status] ?? '알 수 없음';
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: `상태: ${currentStatusLabel}`,
@@ -87,6 +99,10 @@ function rebuildMenu(): void {
     },
     {
       label: `이메일: ${emailLabels[getEmailMonitorStatus()] ?? '알 수 없음'}`,
+      enabled: false,
+    },
+    {
+      label: `덴트웹: ${dentwebLabel}`,
       enabled: false,
     },
     { type: 'separator' },
