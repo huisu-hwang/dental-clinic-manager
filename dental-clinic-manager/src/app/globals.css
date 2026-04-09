@@ -1,5 +1,70 @@
 @import "tailwindcss";
 
+/* =========================================
+   StyleSeed + Toss Skin Tokens
+   ========================================= */
+:root {
+  /* --- Toss Brand --- */
+  --primary: 217 89% 52%;            /* #3182F6 Toss 시그니처 */
+  --primary-foreground: 0 0% 100%;
+  --brand-tint: 217 100% 97%;        /* #F0F6FF selected bg */
+
+  /* --- Grayscale 5-Level (StyleSeed Rule 3) --- */
+  --gray-strong:    222 20% 16%;     /* #1F2937 / Toss #191F28 ≈ */
+  --gray-primary:   215 14% 24%;     /* #333D4B */
+  --gray-secondary: 212 11% 40%;     /* #4E5968 / #6A6A6A 역할 */
+  --gray-tertiary:  215 11% 55%;     /* #6B7684 */
+  --gray-disabled:  216 14% 72%;     /* #B0B8C1 */
+
+  /* --- shadcn semantic tokens (Tailwind consume) --- */
+  --background: 0 0% 100%;
+  --foreground: 222 20% 16%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 20% 16%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 20% 16%;
+  --muted: 210 17% 97%;              /* page bg #FAFAFA 대안 */
+  --muted-foreground: 215 11% 44%;
+  --accent: 217 100% 96%;
+  --accent-foreground: 217 89% 40%;
+  --secondary: 210 17% 95%;
+  --secondary-foreground: 222 20% 16%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 151 55% 42%;            /* Toss green */
+  --warning: 38 92% 50%;
+  --info: 217 89% 52%;
+  --border: 214 15% 91%;
+  --input: 214 15% 91%;
+  --ring: 217 89% 52%;
+
+  /* --- Surfaces (StyleSeed Rule 4) --- */
+  --surface-page: 210 17% 98%;       /* #FAFAFA (not pure white) */
+  --surface-card: 0 0% 100%;
+  --surface-muted: 214 12% 93%;      /* #E8E6E1 역할 */
+
+  /* --- Radius (Toss: 둥글둥글) --- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius: 14px;
+
+  /* --- Shadow (StyleSeed Rule 12: 4~12% only) --- */
+  --shadow-card:     0 1px 3px rgba(17,24,39,0.04);
+  --shadow-button:   0 1px 3px rgba(17,24,39,0.06);
+  --shadow-hover:    0 2px 4px rgba(17,24,39,0.08);
+  --shadow-elevated: 0 4px 12px rgba(17,24,39,0.08);
+  --shadow-modal:    0 8px 24px rgba(17,24,39,0.12);
+
+  /* --- Motion (StyleSeed Rule 59) --- */
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-moderate: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* 스크롤바 유무에 따른 레이아웃 이동 방지 */
 html {
   overflow-y: scroll;

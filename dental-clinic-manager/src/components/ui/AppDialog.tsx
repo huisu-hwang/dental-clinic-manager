@@ -222,7 +222,7 @@ export function AppDialogRoot() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* 백드롭 */}
       <div
-        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200 ${
+        className={`absolute inset-0 bg-foreground/40 backdrop-blur-sm transition-opacity duration-200 ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={() => {
@@ -235,7 +235,7 @@ export function AppDialogRoot() {
       {/* 다이얼로그 */}
       <div
         className={`
-          relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden
+          relative bg-background rounded-2xl shadow-modal w-full max-w-sm overflow-hidden
           transition-all duration-200
           ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
         `}

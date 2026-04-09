@@ -97,25 +97,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // 퇴사자/승인대기/거절된 사용자는 대시보드를 렌더링하지 않음
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-muted flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   if (!user || user.status === 'resigned' || user.status === 'pending' || user.status === 'rejected') {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-muted flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   return (
     <HometaxSyncProvider>
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-[hsl(var(--surface-page))]">
       {/* Header - 상단 고정, 중앙 정렬 */}
-      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200 fixed-header-safe">
+      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-background border-b border-border fixed-header-safe">
         <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
           <Header
             user={user}
@@ -132,7 +132,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* 모바일 메뉴 오버레이 */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-20 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -140,7 +140,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* 좌측 사이드바 - 모바일에서는 슬라이드 메뉴 */}
       <aside
         className={`
-          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3 fixed-sidebar-safe
+          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-background border-r border-border z-20 overflow-y-auto py-3 px-3 fixed-sidebar-safe
           transition-transform duration-300 ease-in-out
           lg:left-[max(0px,calc(50%-700px))]
           ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
@@ -166,11 +166,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Profile Modal */}
       {showProfile && user && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+          className="fixed inset-0 bg-foreground/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={() => setShowProfile(false)}
         >
           <div
-            className="max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-lg"
+            className="max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <AccountProfile
