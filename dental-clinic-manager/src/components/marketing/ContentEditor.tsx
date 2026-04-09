@@ -51,17 +51,37 @@ function EditableImageNodeView({ node, editor, getPos }: any) {
   }
 
   return (
-    <NodeViewWrapper as="figure" className="relative group my-2">
+    <NodeViewWrapper
+      as="figure"
+      className="relative group my-2"
+      contentEditable={false}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={node.attrs.src}
         alt={node.attrs.alt || ''}
-        className="w-full rounded-xl border border-slate-200 shadow-sm cursor-pointer"
+        className="w-full rounded-xl border border-slate-200 shadow-sm cursor-pointer block"
+        draggable={false}
+        onMouseDown={(e) => {
+          // ProseMirror 노드 선택/드래그 방지
+          e.preventDefault()
+          e.stopPropagation()
+        }}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          handleEdit(e)
+        }}
       />
       <button
         type="button"
+        onMouseDown={(e) => {
+          // 버튼 클릭이 ProseMirror의 포커스 이동/선택에 가로채지지 않도록
+          e.preventDefault()
+          e.stopPropagation()
+        }}
         onClick={handleEdit}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-lg shadow-md px-3 py-1.5 text-xs font-medium border border-slate-200 flex items-center gap-1.5 backdrop-blur-sm"
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-lg shadow-md px-3 py-1.5 text-xs font-medium border border-slate-200 flex items-center gap-1.5 backdrop-blur-sm z-10"
         title="이미지 프롬프트 편집"
       >
         <PencilSquareIcon className="w-3.5 h-3.5" />
