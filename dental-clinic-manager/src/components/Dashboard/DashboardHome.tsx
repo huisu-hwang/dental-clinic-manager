@@ -515,17 +515,17 @@ export default function DashboardHome() {
   // ── JSX ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-0 pb-8">
+    <div className="space-y-10 pb-8">
 
       {/* ═══════════════════════════════════════════════════════════════════
           ZONE A — 오늘의 성과
       ═══════════════════════════════════════════════════════════════════ */}
-      <div className="pt-2 pb-2">
+      <section>
         {/* Zone header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-baseline justify-between mb-5">
           <div>
             <h2 className="text-[15px] font-bold text-foreground">오늘의 성과</h2>
-            <p className="text-[11px] text-muted-foreground/70 uppercase tracking-widest mt-0.5">TODAY&apos;S PERFORMANCE</p>
+            <p className="text-[11px] text-muted-foreground/70 uppercase tracking-[0.1em] mt-0.5">TODAY&apos;S PERFORMANCE</p>
           </div>
           <button
             onClick={handleRefresh}
@@ -536,234 +536,120 @@ export default function DashboardHome() {
           </button>
         </div>
 
-        {/* Hero row: progress ring + clock tile */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-          {/* Hero card — 출근률 ring */}
-          <div className="lg:col-span-2 rounded-2xl bg-card shadow-card p-6 hover:shadow-hover transition-shadow duration-fast">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+        {/* Zone A grid — 4-col on lg, ring spans 2×2 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-min">
+
+          {/* Card A1 — 팀 출근률 (hero, 2×2) */}
+          <article className="lg:col-span-2 lg:row-span-2 rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col min-h-[340px]">
+            <header className="flex items-center gap-2 mb-4">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Home className="size-4" strokeWidth={2.5} />
               </div>
-              <span className="text-label uppercase tracking-[0.05em] text-muted-foreground">팀 출근률</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">팀 출근률 · TEAM ATTENDANCE</span>
               {!dataLoading && !todaySummary.hasReport && (
                 <div className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-yellow-50 border border-yellow-200">
                   <AlertCircle className="size-3.5 text-yellow-600 flex-shrink-0" strokeWidth={2} />
                   <span className="text-[11px] text-yellow-900 break-keep">일일보고서 미작성</span>
                 </div>
               )}
-            </div>
-            <div className="flex items-center gap-8 flex-wrap">
-              {/* SVG Progress Ring */}
-              <div className="relative flex-shrink-0">
-                {attendanceLoading ? (
-                  <div className="w-[120px] h-[120px] rounded-full animate-pulse bg-muted" />
-                ) : (
-                  <div className="relative">
-                    <ProgressRing value={Number(attendanceRate)} size={120} stroke={10} />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-[28px] font-bold leading-none text-foreground">{attendanceRate}</span>
-                      <span className="text-[13px] text-muted-foreground">%</span>
-                    </div>
+            </header>
+            <div className="flex-1 flex flex-col items-center justify-center gap-5">
+              {/* SVG Progress Ring — large centered */}
+              {attendanceLoading ? (
+                <div className="w-[160px] h-[160px] rounded-full animate-pulse bg-muted" />
+              ) : (
+                <div className="relative">
+                  <ProgressRing value={Number(attendanceRate)} size={160} stroke={12} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[38px] font-bold leading-none text-foreground">{attendanceRate}</span>
+                    <span className="text-[14px] text-muted-foreground">%</span>
                   </div>
-                )}
-              </div>
-              {/* Stats beside ring */}
-              <div className="flex-1 min-w-0 space-y-3">
-                {teamStatus && teamStatus.total_employees > 0 ? (
-                  <>
-                    <div>
-                      <p className="text-[12px] text-muted-foreground mb-1">출근 인원</p>
-                      <p className="text-[22px] font-bold text-foreground leading-none">
-                        {teamStatus.checked_in}
-                        <span className="text-[14px] font-normal text-muted-foreground ml-1">/ {teamStatus.total_employees}명</span>
-                      </p>
-                    </div>
-                    <div className="flex gap-3 flex-wrap">
-                      {teamStatus.late_count > 0 && (
-                        <span className="text-[12px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                          지각 {teamStatus.late_count}명
-                        </span>
-                      )}
-                      {teamStatus.not_checked_in > 0 && (
-                        <span className="text-[12px] px-2 py-0.5 rounded-full bg-red-50 text-destructive border border-red-200">
-                          결근 {teamStatus.not_checked_in}명
-                        </span>
-                      )}
-                      {(teamStatus.overtime_count || 0) > 0 && (
-                        <span className="text-[12px] px-2 py-0.5 rounded-full bg-primary/5 text-primary border border-primary/20">
-                          초과 {teamStatus.overtime_count}명
-                        </span>
-                      )}
-                    </div>
-                    {/* Mini progress bar */}
-                    <div>
-                      <div className="w-full bg-muted rounded-full h-1.5">
-                        <div
-                          className="bg-primary h-1.5 rounded-full transition-all duration-[600ms] ease-out"
-                          style={{ width: `${attendanceRate}%` }}
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-[13px] text-muted-foreground">출퇴근 데이터를 불러오는 중...</p>
-                )}
-              </div>
+                </div>
+              )}
+              {/* Stats below ring */}
+              {teamStatus && teamStatus.total_employees > 0 ? (
+                <div className="text-center space-y-3 w-full">
+                  <p className="text-[22px] font-bold text-foreground leading-none">
+                    {teamStatus.checked_in}
+                    <span className="text-[15px] font-normal text-muted-foreground ml-1">/ {teamStatus.total_employees}명 출근</span>
+                  </p>
+                  <div className="flex justify-center gap-2 flex-wrap">
+                    {teamStatus.late_count > 0 && (
+                      <span className="text-[12px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">지각 {teamStatus.late_count}명</span>
+                    )}
+                    {teamStatus.not_checked_in > 0 && (
+                      <span className="text-[12px] px-2 py-0.5 rounded-full bg-red-50 text-destructive border border-red-200">결근 {teamStatus.not_checked_in}명</span>
+                    )}
+                    {(teamStatus.overtime_count || 0) > 0 && (
+                      <span className="text-[12px] px-2 py-0.5 rounded-full bg-primary/5 text-primary border border-primary/20">초과 {teamStatus.overtime_count}명</span>
+                    )}
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-1.5">
+                    <div className="bg-primary h-1.5 rounded-full transition-all duration-[600ms] ease-out" style={{ width: `${attendanceRate}%` }} />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[13px] text-muted-foreground">출퇴근 데이터를 불러오는 중...</p>
+              )}
             </div>
-          </div>
+          </article>
 
-          {/* Clock + date tile */}
-          <div className="rounded-2xl bg-card shadow-card p-6 hover:shadow-hover transition-shadow duration-fast flex flex-col justify-between">
-            <div>
-              <p className="text-label uppercase tracking-[0.05em] text-muted-foreground mb-3">현재 시각</p>
-              <p className="text-[40px] font-bold leading-none text-foreground tabular-nums">
+          {/* Card A2 — 현재 시각 */}
+          <article className="rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col min-h-[160px]">
+            <header className="flex items-center gap-2 mb-3">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Calendar className="size-4" strokeWidth={2} />
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">현재 시각 · NOW</span>
+            </header>
+            <div className="flex-1 flex flex-col justify-center">
+              <p className="text-[42px] font-bold leading-none text-foreground tabular-nums">
                 {currentTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
               </p>
             </div>
-            <div className="mt-4 pt-4 border-t border-border/60">
+            <footer className="mt-3 pt-3 border-t border-border/50">
               <p className="text-[13px] text-muted-foreground leading-relaxed">
                 {currentTime.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
               <p className="text-[12px] text-muted-foreground/70">
                 {currentTime.toLocaleDateString('ko-KR', { weekday: 'long' })}
               </p>
-            </div>
-          </div>
-        </div>
+            </footer>
+          </article>
 
-        {/* KPI strip — 4 cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-          {/* KPI 1 — 상담 성공률 + progress bar spark */}
-          <button
-            onClick={() => togglePanel(todayActivePanel, 'consult', setTodayActivePanel)}
-            className={`rounded-2xl bg-card shadow-card p-5 overflow-hidden text-left hover:shadow-hover transition-shadow duration-fast ${todayActivePanel === 'consult' ? 'ring-2 ring-primary/30' : ''}`}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+          {/* Card A3 — 상담 성공률 */}
+          <article className={`rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col min-h-[160px] ${todayActivePanel === 'consult' ? 'ring-2 ring-primary/30' : ''}`}>
+            <header className="flex items-center gap-2 mb-3">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <TrendingUp className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-label uppercase tracking-[0.05em] text-muted-foreground">상담 성공률</span>
-            </div>
-            {dataLoading ? (
-              <Skeleton className="h-10 w-24 mb-3" />
-            ) : (
-              <div className="mb-3 whitespace-nowrap">
-                <span className="text-[36px] font-bold leading-none text-foreground">{consultSuccessRate}</span>
-                <span className="text-[18px] ms-0.5 text-muted-foreground">%</span>
-              </div>
-            )}
-            {/* Inline horizontal progress bar spark */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>성공 {todaySummary.consultProceed}건</span>
-                <span>전체 {todaySummary.consultCount}건</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-1.5">
-                <div
-                  className="bg-primary h-1.5 rounded-full transition-all duration-[600ms] ease-out"
-                  style={{ width: `${consultSuccessRate}%` }}
-                />
-              </div>
-            </div>
-          </button>
-
-          {/* KPI 2 — 예약·리콜 + segmented dot indicator */}
-          <button
-            onClick={() => togglePanel(todayActivePanel, 'recall', setTodayActivePanel)}
-            className={`rounded-2xl bg-card shadow-card p-5 overflow-hidden text-left hover:shadow-hover transition-shadow duration-fast ${todayActivePanel === 'recall' ? 'ring-2 ring-primary/30' : ''}`}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                <Calendar className="size-4" strokeWidth={2} />
-              </div>
-              <span className="text-label uppercase tracking-[0.05em] text-muted-foreground">예약·리콜</span>
-            </div>
-            {dataLoading ? (
-              <Skeleton className="h-10 w-20 mb-3" />
-            ) : (
-              <div className="mb-3 whitespace-nowrap">
-                <span className="text-[36px] font-bold leading-none text-foreground">{todaySummary.recallBookingCount}</span>
-                <span className="text-[18px] ms-0.5 text-muted-foreground">건</span>
-              </div>
-            )}
-            {/* Segmented dot indicator */}
-            <div className="space-y-1.5">
-              <p className="text-[11px] text-muted-foreground">리콜 {todaySummary.recallCount}건 중 예약</p>
-              <SegmentedDots filled={todaySummary.recallBookingCount} total={Math.max(todaySummary.recallCount, todaySummary.recallBookingCount, 1)} />
-            </div>
-          </button>
-
-          {/* KPI 3 — 리뷰·선물 + two stacked mini bars */}
-          <button
-            onClick={() => togglePanel(todayActivePanel, 'gift', setTodayActivePanel)}
-            className={`rounded-2xl bg-card shadow-card p-5 overflow-hidden text-left hover:shadow-hover transition-shadow duration-fast ${todayActivePanel === 'gift' ? 'ring-2 ring-primary/30' : ''}`}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                <BarChart3 className="size-4" strokeWidth={2} />
-              </div>
-              <span className="text-label uppercase tracking-[0.05em] text-muted-foreground">리뷰·선물</span>
-            </div>
-            {dataLoading ? (
-              <Skeleton className="h-10 w-20 mb-3" />
-            ) : (
-              <div className="mb-3 whitespace-nowrap">
-                <span className="text-[36px] font-bold leading-none text-foreground">{todaySummary.naverReviewCount}</span>
-                <span className="text-[18px] ms-0.5 text-muted-foreground">건</span>
-              </div>
-            )}
-            {/* Two stacked mini bars */}
-            <TwoBarComparison
-              labelA="리뷰"
-              valueA={todaySummary.naverReviewCount}
-              labelB="선물"
-              valueB={todaySummary.giftCount}
-            />
-          </button>
-
-          {/* KPI 4 — 주간 상담 + 7-day sparkline */}
-          <button
-            onClick={() => togglePanel(weeklyActivePanel, 'consult', setWeeklyActivePanel)}
-            className={`rounded-2xl bg-card shadow-card p-5 overflow-hidden text-left hover:shadow-hover transition-shadow duration-fast ${weeklyActivePanel === 'consult' ? 'ring-2 ring-primary/30' : ''}`}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                <Flame className="size-4" strokeWidth={2} />
-              </div>
-              <span className="text-label uppercase tracking-[0.05em] text-muted-foreground">주간 상담</span>
-            </div>
-            {dataLoading ? (
-              <Skeleton className="h-10 w-20 mb-3" />
-            ) : (
-              <div className="mb-3 whitespace-nowrap">
-                <span className="text-[36px] font-bold leading-none text-foreground">{weeklySummary.successRate}</span>
-                <span className="text-[18px] ms-0.5 text-muted-foreground">%</span>
-              </div>
-            )}
-            {/* 7-day sparkline area chart */}
-            <div className="space-y-1">
-              <Sparkline
-                data={weeklySummary.dailyBreakdown.map(d => d.consultCount)}
-                width={120}
-                height={28}
-              />
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <TrendingUp className="size-3 text-emerald-600" strokeWidth={2.5} />
-                <span className="font-semibold text-foreground">{weeklySummary.consultSuccess}</span>
-                <span>/ {weeklySummary.consultTotal}건</span>
-              </div>
-            </div>
-          </button>
-
-        </div>
-
-        {/* KPI accordion panels — appear below the grid, full-width */}
-        {(todayActivePanel || weeklyActivePanel) && (
-          <div className="mt-4 rounded-2xl bg-card shadow-card p-5">
-            {/* 오늘 상담 패널 */}
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">상담 성공률</span>
+            </header>
+            <button
+              onClick={() => togglePanel(todayActivePanel, 'consult', setTodayActivePanel)}
+              className="flex-1 flex flex-col justify-center text-left w-full"
+            >
+              {dataLoading ? (
+                <Skeleton className="h-10 w-24 mb-3" />
+              ) : (
+                <div className="mb-3 whitespace-nowrap">
+                  <span className="text-[36px] font-bold leading-none text-foreground">{consultSuccessRate}</span>
+                  <span className="text-[18px] ms-0.5 text-muted-foreground">%</span>
+                </div>
+              )}
+              <footer className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>성공 {todaySummary.consultProceed}건</span>
+                  <span>전체 {todaySummary.consultCount}건</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5">
+                  <div className="bg-primary h-1.5 rounded-full transition-all duration-[600ms] ease-out" style={{ width: `${consultSuccessRate}%` }} />
+                </div>
+              </footer>
+            </button>
+            {/* Accordion panel inside card */}
             {todayActivePanel === 'consult' && (
-              <>
+              <div className="border-t border-border pt-4 mt-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[14px] font-semibold text-foreground">오늘 상담 목록</span>
                   <span className="text-xs text-muted-foreground">총 {todayConsults.length}건</span>
@@ -788,17 +674,43 @@ export default function DashboardHome() {
                     ))}
                   </div>
                 )}
-              </>
+              </div>
             )}
+          </article>
 
-            {/* 오늘 리콜 패널 */}
+          {/* Card A4 — 예약·리콜 */}
+          <article className={`rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col min-h-[160px] ${todayActivePanel === 'recall' ? 'ring-2 ring-primary/30' : ''}`}>
+            <header className="flex items-center gap-2 mb-3">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Calendar className="size-4" strokeWidth={2} />
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">예약·리콜</span>
+            </header>
+            <button
+              onClick={() => togglePanel(todayActivePanel, 'recall', setTodayActivePanel)}
+              className="flex-1 flex flex-col justify-center text-left w-full"
+            >
+              {dataLoading ? (
+                <Skeleton className="h-10 w-20 mb-3" />
+              ) : (
+                <div className="mb-3 whitespace-nowrap">
+                  <span className="text-[36px] font-bold leading-none text-foreground">{todaySummary.recallBookingCount}</span>
+                  <span className="text-[18px] ms-0.5 text-muted-foreground">건</span>
+                </div>
+              )}
+              <footer className="space-y-1.5">
+                <p className="text-[11px] text-muted-foreground">리콜 {todaySummary.recallCount}건 중 예약</p>
+                <SegmentedDots filled={todaySummary.recallBookingCount} total={Math.max(todaySummary.recallCount, todaySummary.recallBookingCount, 1)} />
+              </footer>
+            </button>
+            {/* Accordion panel inside card */}
             {todayActivePanel === 'recall' && (() => {
               const bookedNames = todayReport?.recall_booking_names
                 ? todayReport.recall_booking_names.split(',').map((n: string) => n.trim()).filter(Boolean)
                 : []
               const unbookedCount = Math.max(0, (todayReport?.recall_count || 0) - bookedNames.length)
               return (
-                <>
+                <div className="border-t border-border pt-4 mt-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-[14px] font-semibold text-foreground">오늘 리콜 현황</span>
                     <span className="text-xs text-muted-foreground">예약 {bookedNames.length} / 리콜 {todayReport?.recall_count || 0}건</span>
@@ -830,13 +742,43 @@ export default function DashboardHome() {
                       )}
                     </div>
                   )}
-                </>
+                </div>
               )
             })()}
+          </article>
 
-            {/* 오늘 선물 패널 */}
+          {/* Card A5 — 리뷰·선물 */}
+          <article className={`rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col min-h-[160px] ${todayActivePanel === 'gift' ? 'ring-2 ring-primary/30' : ''}`}>
+            <header className="flex items-center gap-2 mb-3">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <BarChart3 className="size-4" strokeWidth={2} />
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">리뷰·선물</span>
+            </header>
+            <button
+              onClick={() => togglePanel(todayActivePanel, 'gift', setTodayActivePanel)}
+              className="flex-1 flex flex-col justify-center text-left w-full"
+            >
+              {dataLoading ? (
+                <Skeleton className="h-10 w-20 mb-3" />
+              ) : (
+                <div className="mb-3 whitespace-nowrap">
+                  <span className="text-[36px] font-bold leading-none text-foreground">{todaySummary.naverReviewCount}</span>
+                  <span className="text-[18px] ms-0.5 text-muted-foreground">건</span>
+                </div>
+              )}
+              <footer>
+                <TwoBarComparison
+                  labelA="리뷰"
+                  valueA={todaySummary.naverReviewCount}
+                  labelB="선물"
+                  valueB={todaySummary.giftCount}
+                />
+              </footer>
+            </button>
+            {/* Accordion panel inside card */}
             {todayActivePanel === 'gift' && (
-              <>
+              <div className="border-t border-border pt-4 mt-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[14px] font-semibold text-foreground">오늘 선물·리뷰 목록</span>
                   <span className="text-xs text-muted-foreground">총 {todayGifts.length}건</span>
@@ -863,12 +805,42 @@ export default function DashboardHome() {
                     ))}
                   </div>
                 )}
-              </>
+              </div>
             )}
+          </article>
 
-            {/* 주간 상담 일별 패널 */}
-            {weeklyActivePanel === 'consult' && !todayActivePanel && (
-              <>
+          {/* Card A6 — 주간 상담 sparkline */}
+          <article className={`rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col min-h-[160px] ${weeklyActivePanel === 'consult' ? 'ring-2 ring-primary/30' : ''}`}>
+            <header className="flex items-center gap-2 mb-3">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Flame className="size-4" strokeWidth={2} />
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">주간 상담</span>
+            </header>
+            <button
+              onClick={() => togglePanel(weeklyActivePanel, 'consult', setWeeklyActivePanel)}
+              className="flex-1 flex flex-col justify-center text-left w-full"
+            >
+              {dataLoading ? (
+                <Skeleton className="h-10 w-20 mb-3" />
+              ) : (
+                <div className="mb-3 whitespace-nowrap">
+                  <span className="text-[36px] font-bold leading-none text-foreground">{weeklySummary.successRate}</span>
+                  <span className="text-[18px] ms-0.5 text-muted-foreground">%</span>
+                </div>
+              )}
+              <footer className="space-y-1">
+                <Sparkline data={weeklySummary.dailyBreakdown.map(d => d.consultCount)} width={120} height={28} />
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <TrendingUp className="size-3 text-emerald-600" strokeWidth={2.5} />
+                  <span className="font-semibold text-foreground">{weeklySummary.consultSuccess}</span>
+                  <span>/ {weeklySummary.consultTotal}건</span>
+                </div>
+              </footer>
+            </button>
+            {/* Accordion panel inside card */}
+            {weeklyActivePanel === 'consult' && (
+              <div className="border-t border-border pt-4 mt-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[14px] font-semibold text-foreground">주간 일별 상담</span>
                   <span className="text-xs text-muted-foreground">{weeklySummary.weekStart.replace(/-/g, '.')} ~ {today.replace(/-/g, '.')}</span>
@@ -893,51 +865,49 @@ export default function DashboardHome() {
                     })}
                   </div>
                 )}
-              </>
+              </div>
             )}
-          </div>
-        )}
-      </div>
+          </article>
+
+        </div>
+      </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
           ZONE B — 팀 & 주간 흐름
       ═══════════════════════════════════════════════════════════════════ */}
-      <div className="mt-10 pt-2 pb-2">
+      <section>
         {/* Zone header */}
         <div className="mb-5">
           <h2 className="text-[15px] font-bold text-foreground">팀 &amp; 주간 흐름</h2>
-          <p className="text-[11px] text-muted-foreground/70 uppercase tracking-widest mt-0.5">TEAM &amp; WEEKLY FLOW</p>
+          <p className="text-[11px] text-muted-foreground/70 uppercase tracking-[0.1em] mt-0.5">TEAM &amp; WEEKLY FLOW</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 auto-rows-min">
 
-          {/* Left (lg:col-span-2) — 주간 통계 with bar chart */}
-          <div className={`lg:col-span-2 rounded-2xl bg-card shadow-card p-5 hover:shadow-hover transition-shadow duration-fast ${weeklyActivePanel && weeklyActivePanel !== 'consult' ? 'ring-2 ring-primary/30' : ''}`}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <BarChart3 className="size-4" strokeWidth={2} />
-                </div>
-                <span className="text-[18px] font-bold text-foreground">주간 통계</span>
+          {/* Card B1 — 주간 통계 바 차트 (lg:col-span-7) */}
+          <article className={`lg:col-span-7 rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col ${weeklyActivePanel && weeklyActivePanel !== 'consult' ? 'ring-2 ring-primary/30' : ''}`}>
+            <header className="flex items-center gap-2 mb-5">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <BarChart3 className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">주간 통계 · WEEKLY STATS</span>
+              <span className="ml-auto text-xs text-muted-foreground">
                 {weeklySummary.weekStart.replace(/-/g, '.')} ~ {today.replace(/-/g, '.')}
               </span>
+            </header>
+            <div className="flex-1">
+              {dataLoading ? (
+                <Skeleton className="h-40 w-full mb-4" />
+              ) : (
+                <WeekBarChart
+                  data={weeklySummary.dailyBreakdown.map(d => d.consultCount)}
+                  labels={weeklySummary.dailyBreakdown.map(d => d.dayLabel)}
+                  todayIndex={weeklySummary.dailyBreakdown.findIndex(d => d.isToday)}
+                />
+              )}
             </div>
-
-            {/* SVG Bar chart */}
-            {dataLoading ? (
-              <Skeleton className="h-40 w-full mb-4" />
-            ) : (
-              <WeekBarChart
-                data={weeklySummary.dailyBreakdown.map(d => d.consultCount)}
-                labels={weeklySummary.dailyBreakdown.map(d => d.dayLabel)}
-                todayIndex={weeklySummary.dailyBreakdown.findIndex(d => d.isToday)}
-              />
-            )}
-
-            {/* Footer: 3 mini stats as clickable tiles */}
-            <div className="border-t border-border pt-5 mt-2">
+            {/* Footer: 3 mini stat tiles */}
+            <footer className="border-t border-border pt-5 mt-6">
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={() => togglePanel(weeklyActivePanel, 'recall', setWeeklyActivePanel)}
@@ -950,7 +920,6 @@ export default function DashboardHome() {
                   </p>
                   <p className="text-label uppercase text-muted-foreground">상담 {weeklySummary.successRate}%</p>
                 </button>
-
                 <button
                   onClick={() => togglePanel(weeklyActivePanel, 'recall', setWeeklyActivePanel)}
                   className={`rounded-xl p-3 text-center transition-colors duration-fast ${weeklyActivePanel === 'recall' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}
@@ -962,7 +931,6 @@ export default function DashboardHome() {
                   </p>
                   <p className="text-label uppercase text-muted-foreground">예약·리콜</p>
                 </button>
-
                 <button
                   onClick={() => togglePanel(weeklyActivePanel, 'gift', setWeeklyActivePanel)}
                   className={`rounded-xl p-3 text-center transition-colors duration-fast ${weeklyActivePanel === 'gift' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}
@@ -975,9 +943,8 @@ export default function DashboardHome() {
                   <p className="text-label uppercase text-muted-foreground">선물·리뷰</p>
                 </button>
               </div>
-            </div>
-
-            {/* Weekly accordion — recall / gift daily breakdown */}
+            </footer>
+            {/* Weekly accordion inside card */}
             {(weeklyActivePanel === 'recall' || weeklyActivePanel === 'gift') && (
               <AccordionPanel>
                 {weeklySummary.dailyBreakdown.length === 0 ? (
@@ -1004,275 +971,283 @@ export default function DashboardHome() {
                 )}
               </AccordionPanel>
             )}
-          </div>
+          </article>
 
-          {/* Right (lg:col-span-1) — 팀 출퇴근 with donut ring */}
-          <div className={`rounded-2xl bg-card shadow-card p-5 hover:shadow-hover transition-shadow duration-fast ${attendanceActivePanel ? 'ring-2 ring-primary/30' : ''}`}>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+          {/* Card B2 — 팀 출퇴근 도넛 (lg:col-span-5) */}
+          <article className={`lg:col-span-5 rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col ${attendanceActivePanel ? 'ring-2 ring-primary/30' : ''}`}>
+            <header className="flex items-center gap-2 mb-4">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Calendar className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[18px] font-bold text-foreground">팀 출퇴근</span>
-            </div>
-
-            {attendanceLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-24 w-24 rounded-full mx-auto" />
-                <div className="grid grid-cols-2 gap-2">
-                  {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
-                </div>
-              </div>
-            ) : teamStatus ? (
-              <>
-                {/* Donut ring centered */}
-                <div className="flex justify-center mb-4">
-                  <div className="relative">
-                    <DonutMini
-                      percent={teamStatus.total_employees > 0 ? Math.round((teamStatus.checked_in / teamStatus.total_employees) * 100) : 0}
-                      size={96}
-                      stroke={10}
-                    />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-[18px] font-bold text-foreground leading-none">{attendanceRate}%</span>
-                      <span className="text-[10px] text-muted-foreground">출근</span>
-                    </div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">팀 출퇴근 · TEAM ATTENDANCE</span>
+            </header>
+            <div className="flex-1 flex flex-col">
+              {attendanceLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-24 w-24 rounded-full mx-auto" />
+                  <div className="grid grid-cols-2 gap-2">
+                    {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
                   </div>
                 </div>
-
-                {/* 2x3 status grid */}
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => togglePanel(attendanceActivePanel, 'checkin', setAttendanceActivePanel)}
-                    className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'checkin' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
-                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                      <span className="size-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                      <span className="text-[11px] text-muted-foreground">출근</span>
-                    </div>
-                    <p className="text-base font-bold text-emerald-600">{teamStatus.checked_in}<span className="text-[11px] text-muted-foreground font-normal">/{teamStatus.total_employees}</span></p>
-                  </button>
-
-                  <button onClick={() => togglePanel(attendanceActivePanel, 'checkout', setAttendanceActivePanel)}
-                    className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'checkout' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
-                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                      <span className="size-1.5 rounded-full bg-muted-foreground/40 flex-shrink-0" />
-                      <span className="text-[11px] text-muted-foreground">퇴근</span>
-                    </div>
-                    <p className="text-base font-bold text-foreground">{teamStatus.checked_out || 0}</p>
-                  </button>
-
-                  <button onClick={() => togglePanel(attendanceActivePanel, 'absent', setAttendanceActivePanel)}
-                    className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'absent' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
-                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                      <span className="size-1.5 rounded-full bg-destructive flex-shrink-0" />
-                      <span className="text-[11px] text-muted-foreground">결근</span>
-                    </div>
-                    <p className="text-base font-bold text-destructive">{teamStatus.not_checked_in}</p>
-                  </button>
-
-                  <button onClick={() => togglePanel(attendanceActivePanel, 'late', setAttendanceActivePanel)}
-                    className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'late' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
-                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                      <span className="size-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                      <span className="text-[11px] text-muted-foreground">지각</span>
-                    </div>
-                    <p className="text-base font-bold text-amber-500">{teamStatus.late_count}</p>
-                  </button>
-
-                  <button onClick={() => togglePanel(attendanceActivePanel, 'early', setAttendanceActivePanel)}
-                    className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'early' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
-                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                      <span className="size-1.5 rounded-full bg-rose-400 flex-shrink-0" />
-                      <span className="text-[11px] text-muted-foreground">조퇴</span>
-                    </div>
-                    <p className="text-base font-bold text-rose-400">{teamStatus.early_leave_count || 0}</p>
-                  </button>
-
-                  <button onClick={() => togglePanel(attendanceActivePanel, 'overtime', setAttendanceActivePanel)}
-                    className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'overtime' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
-                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                      <span className="size-1.5 rounded-full bg-primary flex-shrink-0" />
-                      <span className="text-[11px] text-muted-foreground">초과</span>
-                    </div>
-                    <p className="text-base font-bold text-primary">{teamStatus.overtime_count || 0}</p>
-                  </button>
-                </div>
-
-                {/* Attendance accordion */}
-                {attendanceActivePanel && (() => {
-                  type Emp = TeamAttendanceStatus['employees'][number]
-                  const filterMap: Record<NonNullable<typeof attendanceActivePanel>, (e: Emp) => boolean> = {
-                    checkin:  (e) => e.check_in_time != null,
-                    checkout: (e) => e.check_out_time != null,
-                    absent:   (e) => e.status === 'absent',
-                    late:     (e) => e.late_minutes > 0,
-                    early:    (e) => e.early_leave_minutes > 0,
-                    overtime: (e) => e.overtime_minutes > 0,
-                  }
-                  const labelMap: Record<NonNullable<typeof attendanceActivePanel>, string> = {
-                    checkin: '출근 직원', checkout: '퇴근 직원', absent: '결근 직원',
-                    late: '지각 직원', early: '조퇴 직원', overtime: '초과근무 직원',
-                  }
-                  const filtered = (teamStatus.employees || []).filter(filterMap[attendanceActivePanel])
-                  const formatTime = (iso: string | null | undefined) =>
-                    iso ? new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-'
-                  const statusTag = (e: Emp) => {
-                    if (attendanceActivePanel === 'late') return `지각 ${e.late_minutes}분`
-                    if (attendanceActivePanel === 'early') return `조퇴 ${e.early_leave_minutes}분`
-                    if (attendanceActivePanel === 'overtime') return `초과 ${e.overtime_minutes}분`
-                    if (e.status === 'absent') return '결근'
-                    if (e.check_out_time) return '퇴근완료'
-                    return '출근중'
-                  }
-                  return (
-                    <AccordionPanel>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[14px] font-semibold text-foreground">{labelMap[attendanceActivePanel]}</span>
-                        <span className="text-xs text-muted-foreground">{filtered.length}명</span>
+              ) : teamStatus ? (
+                <>
+                  {/* Donut ring centered */}
+                  <div className="flex justify-center mb-4">
+                    <div className="relative">
+                      <DonutMini
+                        percent={teamStatus.total_employees > 0 ? Math.round((teamStatus.checked_in / teamStatus.total_employees) * 100) : 0}
+                        size={96}
+                        stroke={10}
+                      />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-[18px] font-bold text-foreground leading-none">{attendanceRate}%</span>
+                        <span className="text-[10px] text-muted-foreground">출근</span>
                       </div>
-                      {filtered.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-6 gap-2">
-                          <div className="size-8 rounded-xl bg-muted flex items-center justify-center">
-                            <Calendar className="size-4 text-muted-foreground" strokeWidth={2} />
-                          </div>
-                          <p className="text-[14px] text-muted-foreground">데이터가 없습니다</p>
+                    </div>
+                  </div>
+                  {/* 2×3 status grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'checkin', setAttendanceActivePanel)}
+                      className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'checkin' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
+                      <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                        <span className="size-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                        <span className="text-[11px] text-muted-foreground">출근</span>
+                      </div>
+                      <p className="text-base font-bold text-emerald-600">{teamStatus.checked_in}<span className="text-[11px] text-muted-foreground font-normal">/{teamStatus.total_employees}</span></p>
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'checkout', setAttendanceActivePanel)}
+                      className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'checkout' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
+                      <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                        <span className="size-1.5 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+                        <span className="text-[11px] text-muted-foreground">퇴근</span>
+                      </div>
+                      <p className="text-base font-bold text-foreground">{teamStatus.checked_out || 0}</p>
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'absent', setAttendanceActivePanel)}
+                      className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'absent' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
+                      <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                        <span className="size-1.5 rounded-full bg-destructive flex-shrink-0" />
+                        <span className="text-[11px] text-muted-foreground">결근</span>
+                      </div>
+                      <p className="text-base font-bold text-destructive">{teamStatus.not_checked_in}</p>
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'late', setAttendanceActivePanel)}
+                      className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'late' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
+                      <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                        <span className="size-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                        <span className="text-[11px] text-muted-foreground">지각</span>
+                      </div>
+                      <p className="text-base font-bold text-amber-500">{teamStatus.late_count}</p>
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'early', setAttendanceActivePanel)}
+                      className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'early' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
+                      <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                        <span className="size-1.5 rounded-full bg-rose-400 flex-shrink-0" />
+                        <span className="text-[11px] text-muted-foreground">조퇴</span>
+                      </div>
+                      <p className="text-base font-bold text-rose-400">{teamStatus.early_leave_count || 0}</p>
+                    </button>
+                    <button onClick={() => togglePanel(attendanceActivePanel, 'overtime', setAttendanceActivePanel)}
+                      className={`rounded-xl p-2.5 text-center transition-colors duration-fast ${attendanceActivePanel === 'overtime' ? 'bg-accent ring-2 ring-primary/30' : 'bg-muted hover:bg-muted/70'}`}>
+                      <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                        <span className="size-1.5 rounded-full bg-primary flex-shrink-0" />
+                        <span className="text-[11px] text-muted-foreground">초과</span>
+                      </div>
+                      <p className="text-base font-bold text-primary">{teamStatus.overtime_count || 0}</p>
+                    </button>
+                  </div>
+                  {/* Attendance accordion inside card */}
+                  {attendanceActivePanel && (() => {
+                    type Emp = TeamAttendanceStatus['employees'][number]
+                    const filterMap: Record<NonNullable<typeof attendanceActivePanel>, (e: Emp) => boolean> = {
+                      checkin:  (e) => e.check_in_time != null,
+                      checkout: (e) => e.check_out_time != null,
+                      absent:   (e) => e.status === 'absent',
+                      late:     (e) => e.late_minutes > 0,
+                      early:    (e) => e.early_leave_minutes > 0,
+                      overtime: (e) => e.overtime_minutes > 0,
+                    }
+                    const labelMap: Record<NonNullable<typeof attendanceActivePanel>, string> = {
+                      checkin: '출근 직원', checkout: '퇴근 직원', absent: '결근 직원',
+                      late: '지각 직원', early: '조퇴 직원', overtime: '초과근무 직원',
+                    }
+                    const filtered = (teamStatus.employees || []).filter(filterMap[attendanceActivePanel])
+                    const formatTime = (iso: string | null | undefined) =>
+                      iso ? new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-'
+                    const statusTag = (e: Emp) => {
+                      if (attendanceActivePanel === 'late') return `지각 ${e.late_minutes}분`
+                      if (attendanceActivePanel === 'early') return `조퇴 ${e.early_leave_minutes}분`
+                      if (attendanceActivePanel === 'overtime') return `초과 ${e.overtime_minutes}분`
+                      if (e.status === 'absent') return '결근'
+                      if (e.check_out_time) return '퇴근완료'
+                      return '출근중'
+                    }
+                    return (
+                      <AccordionPanel>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[14px] font-semibold text-foreground">{labelMap[attendanceActivePanel]}</span>
+                          <span className="text-xs text-muted-foreground">{filtered.length}명</span>
                         </div>
-                      ) : (
-                        <div className="divide-y divide-border/60 max-h-[300px] overflow-y-auto">
-                          {filtered.map(emp => (
-                            <div key={emp.user_id} className="flex items-center gap-2 py-2 text-sm">
-                              <span className="font-medium text-foreground w-16 truncate">{emp.user_name}</span>
-                              <span className="text-muted-foreground flex-1 text-xs">
-                                {emp.check_in_time ? `${formatTime(emp.check_in_time)} 출근` : ''}
-                                {emp.check_out_time ? ` → ${formatTime(emp.check_out_time)} 퇴근` : ''}
-                              </span>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{statusTag(emp)}</span>
+                        {filtered.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-6 gap-2">
+                            <div className="size-8 rounded-xl bg-muted flex items-center justify-center">
+                              <Calendar className="size-4 text-muted-foreground" strokeWidth={2} />
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </AccordionPanel>
-                  )
-                })()}
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-10 gap-2">
-                <div className="size-8 rounded-xl bg-muted flex items-center justify-center">
-                  <Calendar className="size-4 text-muted-foreground" strokeWidth={2} />
+                            <p className="text-[14px] text-muted-foreground">데이터가 없습니다</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-border/60 max-h-[300px] overflow-y-auto">
+                            {filtered.map(emp => (
+                              <div key={emp.user_id} className="flex items-center gap-2 py-2 text-sm">
+                                <span className="font-medium text-foreground w-16 truncate">{emp.user_name}</span>
+                                <span className="text-muted-foreground flex-1 text-xs">
+                                  {emp.check_in_time ? `${formatTime(emp.check_in_time)} 출근` : ''}
+                                  {emp.check_out_time ? ` → ${formatTime(emp.check_out_time)} 퇴근` : ''}
+                                </span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{statusTag(emp)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </AccordionPanel>
+                    )
+                  })()}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 gap-2">
+                  <div className="size-8 rounded-xl bg-muted flex items-center justify-center">
+                    <Calendar className="size-4 text-muted-foreground" strokeWidth={2} />
+                  </div>
+                  <p className="text-[14px] text-muted-foreground">출퇴근 현황을 불러올 수 없습니다</p>
                 </div>
-                <p className="text-[14px] text-muted-foreground">출퇴근 현황을 불러올 수 없습니다</p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </article>
 
         </div>
-      </div>
+      </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
           ZONE C — 병원 밖 컨텍스트
       ═══════════════════════════════════════════════════════════════════ */}
-      <div className="mt-10 pt-2 pb-2">
+      <section>
         {/* Zone header */}
         <div className="mb-5">
           <h2 className="text-[15px] font-bold text-foreground">병원 밖 컨텍스트</h2>
-          <p className="text-[11px] text-muted-foreground/70 uppercase tracking-widest mt-0.5">EXTERNAL CONTEXT</p>
+          <p className="text-[11px] text-muted-foreground/70 uppercase tracking-[0.1em] mt-0.5">EXTERNAL CONTEXT</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
-          {/* Card 1 — 날씨 */}
-          <div className="rounded-2xl bg-card shadow-card p-5 hover:shadow-hover transition-shadow duration-fast">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="text-label uppercase tracking-[0.05em] text-muted-foreground mb-1">날씨</p>
-                {weatherLoading ? (
-                  <Skeleton className="h-12 w-24" />
-                ) : weather ? (
-                  <p className="text-[48px] font-bold leading-none text-foreground">
-                    {weather.current.temp}°
-                  </p>
-                ) : null}
+          {/* Card C1 — 현재 날씨 */}
+          <article className="rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col min-h-[160px]">
+            <header className="flex items-center gap-2 mb-3">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Sun className="size-4" strokeWidth={2} />
               </div>
-              {weather && !weatherLoading && (
-                <div className="text-muted-foreground">
-                  {weatherIcons[weather.current.main] || <Cloud className="w-10 h-10 text-muted-foreground" />}
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">현재 날씨 · NOW</span>
+            </header>
+            <div className="flex-1 flex flex-col justify-center">
+              {weatherLoading ? (
+                <Skeleton className="h-12 w-24" />
+              ) : weather ? (
+                <>
+                  <div className="flex items-start justify-between mb-3">
+                    <p className="text-[48px] font-bold leading-none text-foreground">{weather.current.temp}°</p>
+                    <div className="text-muted-foreground mt-1">
+                      {weatherIcons[weather.current.main] || <Cloud className="w-10 h-10 text-muted-foreground" />}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <MapPin className="w-3 h-3 flex-shrink-0" />
+                      <span>{weather.current.location}</span>
+                      <span className="text-muted-foreground/60">{weather.current.description}</span>
+                    </div>
+                    <p className="text-[12px] text-muted-foreground">체감 {weather.current.feels_like}°</p>
+                    <p className="text-[12px] text-muted-foreground">습도 {weather.current.humidity}%</p>
+                    <p className="text-[12px] text-muted-foreground">바람 {weather.current.wind_speed}m/s</p>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 gap-2">
+                  <Sun className="size-8 text-muted-foreground" strokeWidth={1.5} />
+                  <p className="text-[14px] text-muted-foreground">날씨 정보를 불러올 수 없습니다</p>
                 </div>
               )}
             </div>
+          </article>
 
-            {weather && !weatherLoading && (
-              <>
-                <div className="space-y-1 mb-4">
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <MapPin className="w-3 h-3 flex-shrink-0" />
-                    <span>{weather.current.location}</span>
-                    <span className="text-muted-foreground/60">{weather.current.description}</span>
-                  </div>
-                  <p className="text-[12px] text-muted-foreground">체감 {weather.current.feels_like}°</p>
-                  <p className="text-[12px] text-muted-foreground">습도 {weather.current.humidity}%</p>
-                  <p className="text-[12px] text-muted-foreground">바람 {weather.current.wind_speed}m/s</p>
-                </div>
-
-                <div className="border-t border-border/60 pt-4">
-                  <div className="flex items-center gap-3">
-                    <div className="opacity-70">
-                      {weatherIconsSmall[weather.tomorrow.main] || <Cloud className="w-6 h-6 text-muted-foreground" />}
-                    </div>
+          {/* Card C2 — 내일 날씨 */}
+          <article className="rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col min-h-[160px]">
+            <header className="flex items-center gap-2 mb-3">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Cloud className="size-4" strokeWidth={2} />
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">내일 예보 · TOMORROW</span>
+            </header>
+            <div className="flex-1 flex flex-col justify-center">
+              {weatherLoading ? (
+                <Skeleton className="h-12 w-24" />
+              ) : weather ? (
+                <>
+                  <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="text-[11px] text-muted-foreground mb-0.5">내일 ({weather.tomorrow.date})</p>
-                      <p className="text-[13px] font-semibold text-foreground">
-                        {weather.tomorrow.tempMax}° <span className="text-muted-foreground font-normal text-[12px]">/ {weather.tomorrow.tempMin}°</span>
-                        <span className="text-muted-foreground font-normal text-[12px] ml-1.5">{weather.tomorrow.description}</span>
+                      <p className="text-[13px] text-muted-foreground mb-1">{weather.tomorrow.date}</p>
+                      <p className="text-[32px] font-bold leading-none text-foreground">
+                        {weather.tomorrow.tempMax}°
+                        <span className="text-[18px] text-muted-foreground font-normal ml-1">/ {weather.tomorrow.tempMin}°</span>
                       </p>
                     </div>
+                    <div className="opacity-70 mt-1">
+                      {weatherIconsSmall[weather.tomorrow.main] || <Cloud className="w-8 h-8 text-muted-foreground" />}
+                    </div>
                   </div>
+                  <p className="text-[13px] text-muted-foreground">{weather.tomorrow.description}</p>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 gap-2">
+                  <Cloud className="size-8 text-muted-foreground" strokeWidth={1.5} />
+                  <p className="text-[14px] text-muted-foreground">날씨 정보를 불러올 수 없습니다</p>
                 </div>
-              </>
-            )}
+              )}
+            </div>
+          </article>
 
-            {!weather && !weatherLoading && (
-              <div className="flex flex-col items-center justify-center py-6 gap-2">
-                <Sun className="size-8 text-muted-foreground" strokeWidth={1.5} />
-                <p className="text-[14px] text-muted-foreground">날씨 정보를 불러올 수 없습니다</p>
+          {/* Card C3 — 치의신보 뉴스 (md:col-span-2 lg:col-span-2) */}
+          <article className="md:col-span-2 lg:col-span-2 rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col min-h-[160px]">
+            <header className="flex items-center gap-2 mb-4">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Newspaper className="size-4" strokeWidth={2} />
               </div>
-            )}
-          </div>
-
-          {/* Card 2 — 치의신보 뉴스 */}
-          <div className="rounded-2xl bg-card shadow-card overflow-hidden hover:shadow-hover transition-shadow duration-fast">
-            <div className="px-5 py-4">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <Newspaper className="size-4" strokeWidth={2} />
-                </div>
-                <span className="text-[15px] font-bold text-foreground">치의신보</span>
-              </div>
-
-              {/* Pill-toggle tab segment */}
-              <div className="flex bg-muted rounded-full p-1 gap-1 mb-4">
-                <button
-                  onClick={() => setActiveNewsTab('popular')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all duration-fast min-h-[36px] ${
-                    activeNewsTab === 'popular'
-                      ? 'bg-card shadow-card text-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Flame className="size-3" strokeWidth={2} />
-                  인기
-                </button>
-                <button
-                  onClick={() => setActiveNewsTab('latest')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all duration-fast min-h-[36px] ${
-                    activeNewsTab === 'latest'
-                      ? 'bg-card shadow-card text-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Newspaper className="size-3" strokeWidth={2} />
-                  최신
-                </button>
-              </div>
-
-              {/* News list */}
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">치의신보 · DENTAL NEWS</span>
+            </header>
+            {/* Pill-toggle tab segment */}
+            <div className="flex bg-muted rounded-full p-1 gap-1 mb-4">
+              <button
+                onClick={() => setActiveNewsTab('popular')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all duration-fast min-h-[36px] ${
+                  activeNewsTab === 'popular'
+                    ? 'bg-card shadow-card text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Flame className="size-3" strokeWidth={2} />
+                인기
+              </button>
+              <button
+                onClick={() => setActiveNewsTab('latest')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all duration-fast min-h-[36px] ${
+                  activeNewsTab === 'latest'
+                    ? 'bg-card shadow-card text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Newspaper className="size-3" strokeWidth={2} />
+                최신
+              </button>
+            </div>
+            <div className="flex-1">
               {newsLoading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
@@ -1304,93 +1279,91 @@ export default function DashboardHome() {
                 </div>
               )}
             </div>
-          </div>
+          </article>
 
-          {/* Card 3 — 시스템 상태 (워커) */}
-          <div className="rounded-2xl bg-card shadow-card p-5 hover:shadow-hover transition-shadow duration-fast">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+          {/* Card C4 — 시스템 상태 (전체 4-col에서 마지막 col, lg에서는 별도 행에 4개 배치이므로 실제로는 lg:col-span-4에서 4번째 아이템이 다음 행으로 wrapping됨 — 뉴스가 2칸이므로 시스템 상태는 4번째이고 md에서는 새 행) */}
+          <article className="rounded-2xl bg-card border border-border/50 shadow-card p-5 transition-shadow duration-fast hover:shadow-hover flex flex-col min-h-[160px]">
+            <header className="flex items-center gap-2 mb-4">
+              <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Monitor className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[15px] font-bold text-foreground">시스템 상태</span>
-            </div>
-
-            {workerInstalled === null ? (
-              <Skeleton className="h-16 w-full" />
-            ) : workerInstalled === false ? (
-              <div className="space-y-3">
-                {/* Status indicator */}
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-destructive flex-shrink-0" />
-                  <span className="text-[13px] font-semibold text-foreground">워커 미설치</span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <AlertCircle className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" strokeWidth={2} />
-                  <p className="text-[12px] text-muted-foreground break-keep">블로그 발행, 홈택스 연동, SEO 분석 기능을 사용하려면 설치해주세요.</p>
-                </div>
-                <button
-                  onClick={handleWorkerDownload}
-                  disabled={workerDownloading}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium rounded-xl transition-colors duration-fast min-h-[44px]"
-                >
-                  <Download className="size-4" strokeWidth={2} />
-                  {workerDownloading ? '다운로드 중...' : '워커 설치'}
-                </button>
-                <p className="text-[11px] text-muted-foreground break-keep">
-                  Windows 보호 화면이 나타나면 &apos;추가 정보&apos; → &apos;실행&apos;을 클릭하세요.
-                </p>
-              </div>
-            ) : workerUpdateAvailable ? (
-              <div className="space-y-3">
-                {/* Status indicator */}
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-amber-500 flex-shrink-0" />
-                  <span className="text-[13px] font-semibold text-foreground">업데이트 있음</span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <ArrowUpCircle className="size-4 text-amber-500 flex-shrink-0 mt-0.5" strokeWidth={2} />
-                  <p className="text-[12px] text-muted-foreground">
-                    v{workerVersions.current} → v{workerVersions.latest}
+              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">시스템 상태 · SYSTEM</span>
+            </header>
+            <div className="flex-1 flex flex-col justify-center">
+              {workerInstalled === null ? (
+                <Skeleton className="h-16 w-full" />
+              ) : workerInstalled === false ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-destructive flex-shrink-0" />
+                    <span className="text-[13px] font-semibold text-foreground">워커 미설치</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" strokeWidth={2} />
+                    <p className="text-[12px] text-muted-foreground break-keep">블로그 발행, 홈택스 연동, SEO 분석 기능을 사용하려면 설치해주세요.</p>
+                  </div>
+                  <button
+                    onClick={handleWorkerDownload}
+                    disabled={workerDownloading}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium rounded-xl transition-colors duration-fast min-h-[44px]"
+                  >
+                    <Download className="size-4" strokeWidth={2} />
+                    {workerDownloading ? '다운로드 중...' : '워커 설치'}
+                  </button>
+                  <p className="text-[11px] text-muted-foreground break-keep">
+                    Windows 보호 화면이 나타나면 &apos;추가 정보&apos; → &apos;실행&apos;을 클릭하세요.
                   </p>
                 </div>
-                {workerVersions.current && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-[11px] text-muted-foreground">
-                    현재 v{workerVersions.current}
-                  </span>
-                )}
-                <button
-                  onClick={handleWorkerUpdate}
-                  disabled={workerUpdating}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium rounded-xl transition-colors duration-fast min-h-[44px]"
-                >
-                  <ArrowUpCircle className="size-4" strokeWidth={2} />
-                  {workerUpdating ? '업데이트 중...' : '업데이트'}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Running status with ping animation */}
-                <div className="flex items-center gap-2.5">
-                  <div className="relative flex-shrink-0">
-                    <span className="absolute inline-flex size-2 rounded-full bg-emerald-500 opacity-75 animate-ping" />
-                    <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+              ) : workerUpdateAvailable ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-amber-500 flex-shrink-0" />
+                    <span className="text-[13px] font-semibold text-foreground">업데이트 있음</span>
                   </div>
-                  <span className="text-[13px] font-semibold text-foreground">워커 실행 중</span>
+                  <div className="flex items-start gap-2.5">
+                    <ArrowUpCircle className="size-4 text-amber-500 flex-shrink-0 mt-0.5" strokeWidth={2} />
+                    <p className="text-[12px] text-muted-foreground">
+                      v{workerVersions.current} → v{workerVersions.latest}
+                    </p>
+                  </div>
+                  {workerVersions.current && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-[11px] text-muted-foreground">
+                      현재 v{workerVersions.current}
+                    </span>
+                  )}
+                  <button
+                    onClick={handleWorkerUpdate}
+                    disabled={workerUpdating}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium rounded-xl transition-colors duration-fast min-h-[44px]"
+                  >
+                    <ArrowUpCircle className="size-4" strokeWidth={2} />
+                    {workerUpdating ? '업데이트 중...' : '업데이트'}
+                  </button>
                 </div>
-                {workerVersions.current && (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-muted text-[12px] text-muted-foreground">
-                    v{workerVersions.current}
-                  </span>
-                )}
-                <div className="pt-2 border-t border-border/60">
-                  <p className="text-[11px] text-muted-foreground">블로그 발행 · 홈택스 연동 · SEO 분석 활성화</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative flex-shrink-0">
+                      <span className="absolute inline-flex size-2 rounded-full bg-emerald-500 opacity-75 animate-ping" />
+                      <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+                    </div>
+                    <span className="text-[13px] font-semibold text-foreground">워커 실행 중</span>
+                  </div>
+                  {workerVersions.current && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-muted text-[12px] text-muted-foreground">
+                      v{workerVersions.current}
+                    </span>
+                  )}
+                  <div className="pt-2 border-t border-border/60">
+                    <p className="text-[11px] text-muted-foreground">블로그 발행 · 홈택스 연동 · SEO 분석 활성화</p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </article>
 
         </div>
-      </div>
+      </section>
 
     </div>
   )
