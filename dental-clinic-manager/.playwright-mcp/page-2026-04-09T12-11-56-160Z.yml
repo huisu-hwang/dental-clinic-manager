@@ -1,0 +1,193 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - banner [ref=e13]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - img [ref=e18]
+          - generic [ref=e20]: 클리닉 매니저
+        - generic [ref=e21]:
+          - button "로그인" [ref=e22]
+          - button "시작하기" [ref=e23]
+    - generic [ref=e24]:
+      - generic [ref=e28]:
+        - generic [ref=e30]:
+          - img [ref=e31]
+          - text: 병원 경영의 본질
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: "\"좋은 시스템 없이"
+          - heading "지속적인 성장은 없다\"" [level=1] [ref=e35]:
+            - generic [ref=e36]: 지속적인 성장은
+            - generic [ref=e37]: 없다"
+        - paragraph [ref=e38]: 반복되는 업무에서 벗어나, 본질에 집중하는 병원 운영
+        - generic [ref=e39]:
+          - button "지금 시작하기" [ref=e40]:
+            - text: 지금 시작하기
+            - img [ref=e41]
+          - button "자세히 알아보기" [ref=e43]:
+            - text: 자세히 알아보기
+            - img [ref=e44]
+        - generic [ref=e46]:
+          - generic [ref=e49]: 현직 원장 개발
+          - generic [ref=e52]: 실제 병원 운영 중
+      - button "Scroll" [ref=e54]:
+        - generic [ref=e55]: Scroll
+        - img [ref=e56]
+    - generic [ref=e60]:
+      - generic [ref=e61]:
+        - img [ref=e63]
+        - generic [ref=e65]:
+          - text: The Problem
+          - heading "에너지의 한계" [level=2] [ref=e66]
+      - paragraph [ref=e67]:
+        - text: 사람이 하루에 쓸 수 있는
+        - text: 정신적 에너지는 한정되어 있습니다.
+      - paragraph [ref=e69]:
+        - text: 매일 반복되는 수기 기록, 엑셀 통계, 연차 계산, 스케줄 관리...
+        - text: 이런 반복 업무에 에너지를 쏟다 보면,
+        - text: 정작 환자 진료와 병원 성장에 집중할 에너지가 남지 않습니다.
+    - generic [ref=e72]:
+      - generic [ref=e73]:
+        - img [ref=e75]
+        - generic [ref=e77]:
+          - text: The Solution
+          - heading "본질에 집중하세요" [level=2] [ref=e78]
+      - paragraph [ref=e79]:
+        - text: 좋은 시스템은
+        - text: 반복 업무의 에너지를 줄여줍니다.
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - paragraph [ref=e82]: Before
+          - paragraph [ref=e83]:
+            - text: 반복 업무에 70%의 에너지 소모
+            - text: 본질적 업무에 30%만 집중
+        - generic [ref=e84]:
+          - paragraph [ref=e85]: After
+          - paragraph [ref=e86]:
+            - text: 반복 업무를 시스템이 처리
+            - text: 본질에 집중할 에너지 확보
+      - paragraph [ref=e88]: 그래야 병원의 지속적인 성장을 도모할 수 있습니다.
+    - generic [ref=e91]:
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - img [ref=e94]
+          - text: Why Dental Manager?
+        - heading "실제로 이러한 필요성을 느낀 치과 원장이 직접 개발했습니다" [level=2] [ref=e96]:
+          - text: 실제로 이러한 필요성을 느낀
+          - text: 치과 원장이 직접 개발했습니다
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - img [ref=e100]
+          - generic [ref=e102]:
+            - paragraph [ref=e103]: 개발자이자 사용자
+            - paragraph [ref=e104]: 현직 치과 원장
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - img [ref=e107]
+            - paragraph [ref=e109]: 현장의 불편함을 직접 경험하고 해결한 솔루션
+          - generic [ref=e110]:
+            - img [ref=e111]
+            - paragraph [ref=e113]: 본인 병원에서 매일 사용하며 지속적으로 개선 중
+          - generic [ref=e114]:
+            - img [ref=e115]
+            - paragraph [ref=e117]: 치과 업무 흐름을 정확히 이해한 맞춤형 설계
+        - paragraph [ref=e119]:
+          - text: "\"직접 쓰면서 불편한 건 바로바로 고칩니다."
+          - text: 제가 매일 쓰니까요."
+    - generic [ref=e121]:
+      - generic [ref=e122]:
+        - generic [ref=e123]: Features
+        - heading "반복 업무를 효율적으로 처리하세요" [level=2] [ref=e124]
+        - paragraph [ref=e125]: 치과 운영에 필요한 핵심 기능들을 하나의 플랫폼에서
+      - generic [ref=e126]:
+        - generic [ref=e127]:
+          - img [ref=e129]
+          - heading "일일 업무 보고서" [level=3] [ref=e131]
+          - paragraph [ref=e132]: 상담, 선물, 해피콜, 리콜 현황을 자동으로 기록하고 통계로 분석
+        - generic [ref=e133]:
+          - img [ref=e135]
+          - heading "출퇴근 관리" [level=3] [ref=e137]
+          - paragraph [ref=e138]: QR 코드 체크인과 실시간 근태 현황 파악
+        - generic [ref=e139]:
+          - img [ref=e141]
+          - heading "근로계약서 관리" [level=3] [ref=e143]
+          - paragraph [ref=e144]: 전자서명으로 간편하게 계약서 생성과 관리
+        - generic [ref=e145]:
+          - img [ref=e147]
+          - heading "연차 관리" [level=3] [ref=e149]
+          - paragraph [ref=e150]: 연차 신청부터 승인, 정책 설정까지 체계적으로
+        - generic [ref=e151]:
+          - img [ref=e153]
+          - heading "직원 관리" [level=3] [ref=e155]
+          - paragraph [ref=e156]: 승인, 권한 설정, 활동 로그까지 한 번에
+        - generic [ref=e157]:
+          - img [ref=e159]
+          - heading "프로토콜 관리" [level=3] [ref=e161]
+          - paragraph [ref=e162]: 업무 프로토콜 문서화와 버전 관리
+      - paragraph [ref=e164]: + 급여 명세서 관리, 병원 설정, PDF 내보내기 등 더 많은 기능
+    - generic [ref=e167]:
+      - generic [ref=e168]:
+        - img [ref=e170]
+        - generic [ref=e173]: 0%
+        - generic [ref=e174]: 업무 시간 단축
+      - generic [ref=e175]:
+        - img [ref=e177]
+        - generic [ref=e180]: 0가지
+        - generic [ref=e181]: 핵심 기능 통합
+      - generic [ref=e182]:
+        - img [ref=e184]
+        - generic [ref=e187]: 0원
+        - generic [ref=e188]: 설치 비용
+      - generic [ref=e189]:
+        - img [ref=e191]
+        - generic [ref=e194]: 0/7
+        - generic [ref=e195]: 언제든 접근
+    - generic [ref=e197]:
+      - generic [ref=e198]:
+        - generic [ref=e199]: FAQ
+        - heading "자주 묻는 질문" [level=2] [ref=e200]
+      - generic [ref=e201]:
+        - generic [ref=e202]:
+          - button "설치가 필요한가요?" [ref=e203]:
+            - generic [ref=e204]: 설치가 필요한가요?
+            - img [ref=e205]
+          - paragraph [ref=e208]: 아니요. 웹 기반 서비스로, 별도의 설치 없이 인터넷 브라우저에서 바로 사용하실 수 있습니다. PC, 태블릿, 스마트폰 어디서든 접속 가능합니다.
+        - generic [ref=e209]:
+          - button "데이터는 안전한가요?" [ref=e210]:
+            - generic [ref=e211]: 데이터는 안전한가요?
+            - img [ref=e212]
+          - paragraph [ref=e215]: 글로벌 클라우드 서비스를 통해 데이터를 암호화하여 안전하게 보관합니다. 자동 백업 기능으로 데이터 손실 걱정 없이 사용하실 수 있습니다.
+        - generic [ref=e216]:
+          - button "직원 권한 설정이 가능한가요?" [ref=e217]:
+            - generic [ref=e218]: 직원 권한 설정이 가능한가요?
+            - img [ref=e219]
+          - paragraph [ref=e222]: 원장, 부원장, 실장, 팀장, 일반 직원 등 세분화된 역할 기반 권한 시스템을 제공합니다.
+        - generic [ref=e223]:
+          - button "기존 데이터 이전이 가능한가요?" [ref=e224]:
+            - generic [ref=e225]: 기존 데이터 이전이 가능한가요?
+            - img [ref=e226]
+          - paragraph [ref=e229]: Excel 파일 등을 통한 데이터 이전을 지원합니다.
+    - generic [ref=e232]:
+      - generic [ref=e233]: 시작하기
+      - heading "본질에 집중하는 병원 운영, 지금 시작하세요" [level=2] [ref=e234]:
+        - text: 본질에 집중하는 병원 운영,
+        - text: 지금 시작하세요
+      - paragraph [ref=e235]: 복잡한 설치 없이, 웹 브라우저만 있으면 바로 시작할 수 있습니다.
+      - generic [ref=e236]:
+        - button "무료로 시작하기" [ref=e237]:
+          - text: 무료로 시작하기
+          - img [ref=e238]
+        - button "로그인" [ref=e240]
+    - contentinfo [ref=e241]:
+      - generic [ref=e243]:
+        - generic [ref=e244]:
+          - img [ref=e246]
+          - generic [ref=e248]: 클리닉 매니저
+        - generic [ref=e249]:
+          - generic [ref=e250]:
+            - img [ref=e251]
+            - generic [ref=e253]: 안전한 데이터 보호
+          - generic [ref=e254]: "|"
+          - generic [ref=e255]: © 2024 클리닉 매니저

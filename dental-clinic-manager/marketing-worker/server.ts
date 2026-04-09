@@ -8,6 +8,18 @@ import { processScheduledItemsOnce, stopScheduler } from './scheduler.js';
 
 export function startHttpServer(port: number): void {
   const server = http.createServer(async (req, res) => {
+    // CORS 설정 추가
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    // OPTIONS 요청에 대한 204 No Content 처리 (Preflight)
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     res.setHeader('Content-Type', 'application/json');
 
     // POST /trigger → 즉시 발행 처리

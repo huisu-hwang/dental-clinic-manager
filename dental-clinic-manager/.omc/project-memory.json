@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1774833745840,
+  "lastScanned": 1775719472008,
   "projectRoot": "/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager",
   "techStack": {
     "languages": [
@@ -81,7 +81,7 @@
       "path": "codef참고문서",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1774833745775,
+      "lastAccessed": 1775719471951,
       "keyFiles": [
         "신용카드 매출자료 조회_20260225.pdf",
         "전자세금계산서 상세_20260225.pdf",
@@ -94,7 +94,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 3,
-      "lastAccessed": 1774833745785,
+      "lastAccessed": 1775719471962,
       "keyFiles": [
         "marketing-automation-plan.md",
         "marketing-implementation-plan.md",
@@ -105,7 +105,7 @@
       "path": "marketing-worker",
       "purpose": null,
       "fileCount": 14,
-      "lastAccessed": 1774833745786,
+      "lastAccessed": 1775719471966,
       "keyFiles": [
         "api-client.ts",
         "config.ts",
@@ -118,7 +118,7 @@
       "path": "public",
       "purpose": "Public files",
       "fileCount": 6,
-      "lastAccessed": 1774833745788,
+      "lastAccessed": 1775719471968,
       "keyFiles": [
         "file.svg",
         "globe.svg",
@@ -130,21 +130,21 @@
     "scraping-worker": {
       "path": "scraping-worker",
       "purpose": null,
-      "fileCount": 9,
-      "lastAccessed": 1774833745789,
+      "fileCount": 8,
+      "lastAccessed": 1775719471969,
       "keyFiles": [
         "Dockerfile",
         "docker-compose.yml",
-        "ecosystem.config.cjs",
         "package-lock.json",
-        "package.json"
+        "package.json",
+        "tsconfig.json"
       ]
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 60,
-      "lastAccessed": 1774833745791,
+      "lastAccessed": 1775719471981,
       "keyFiles": [
         "LOGIN_SYSTEM_TEST_REPORT.md",
         "apply-clinic-branches-rls.js",
@@ -156,10 +156,9 @@
     "seo-worker": {
       "path": "seo-worker",
       "purpose": null,
-      "fileCount": 5,
-      "lastAccessed": 1774833745792,
+      "fileCount": 4,
+      "lastAccessed": 1775719471982,
       "keyFiles": [
-        "package-lock.json",
         "package.json",
         "tsconfig.json"
       ]
@@ -168,14 +167,14 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1774833745795,
+      "lastAccessed": 1775719471983,
       "keyFiles": []
     },
     "supabase": {
       "path": "supabase",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1774833745798,
+      "lastAccessed": 1775719471985,
       "keyFiles": [
         "DEPLOYMENT_GUIDE.md",
         "SETUP_CONTRACT_TABLES.sql",
@@ -183,29 +182,18 @@
         "patient-recall-schema.sql"
       ]
     },
-    "marketing-worker/dist": {
-      "path": "marketing-worker/dist",
-      "purpose": "Distribution/build output",
-      "fileCount": 19,
-      "lastAccessed": 1774833745801,
-      "keyFiles": [
-        "api-client.d.ts",
-        "api-client.js",
-        "config.d.ts"
-      ]
-    },
     "marketing-worker/node_modules": {
       "path": "marketing-worker/node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1774833745802,
+      "lastAccessed": 1775719471986,
       "keyFiles": []
     },
     "scraping-worker/dist": {
       "path": "scraping-worker/dist",
       "purpose": "Distribution/build output",
       "fileCount": 12,
-      "lastAccessed": 1774833745803,
+      "lastAccessed": 1775719471987,
       "keyFiles": [
         "config.d.ts",
         "config.d.ts.map",
@@ -216,21 +204,21 @@
       "path": "scraping-worker/node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1774833745805,
+      "lastAccessed": 1775719471988,
       "keyFiles": []
     },
     "seo-worker/node_modules": {
       "path": "seo-worker/node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1774833745807,
+      "lastAccessed": 1775719471989,
       "keyFiles": []
     },
     "seo-worker/src": {
       "path": "seo-worker/src",
       "purpose": "Source code",
       "fileCount": 2,
-      "lastAccessed": 1774833745808,
+      "lastAccessed": 1775719471989,
       "keyFiles": [
         "config.ts",
         "index.ts"
@@ -240,7 +228,7 @@
       "path": "src/app",
       "purpose": "Application code",
       "fileCount": 8,
-      "lastAccessed": 1774833745809,
+      "lastAccessed": 1775719471989,
       "keyFiles": [
         "AuthApp.tsx",
         "favicon.ico",
@@ -250,10 +238,9 @@
     "src/components": {
       "path": "src/components",
       "purpose": "UI components",
-      "fileCount": 2,
-      "lastAccessed": 1774833745811,
+      "fileCount": 1,
+      "lastAccessed": 1775719471990,
       "keyFiles": [
-        "PasswordResetHandler.tsx",
         "WorkerStatusBanner.tsx"
       ]
     },
@@ -261,7 +248,7 @@
       "path": "src/config",
       "purpose": "Configuration files",
       "fileCount": 1,
-      "lastAccessed": 1774833745811,
+      "lastAccessed": 1775719471990,
       "keyFiles": [
         "menuConfig.ts"
       ]
@@ -269,8 +256,8 @@
     "src/lib": {
       "path": "src/lib",
       "purpose": "Library code",
-      "fileCount": 41,
-      "lastAccessed": 1774833745815,
+      "fileCount": 43,
+      "lastAccessed": 1775719471990,
       "keyFiles": [
         "aiAnalysisService.ts",
         "aiAnalysisServiceV2.ts",
@@ -281,7 +268,7 @@
       "path": "src/types",
       "purpose": "Type definitions",
       "fileCount": 27,
-      "lastAccessed": 1774833745817,
+      "lastAccessed": 1775719471991,
       "keyFiles": [
         "aiAnalysis.ts",
         "attendance.ts",
@@ -292,7 +279,7 @@
       "path": "src/utils",
       "purpose": "Utility functions",
       "fileCount": 13,
-      "lastAccessed": 1774833745819,
+      "lastAccessed": 1775719471991,
       "keyFiles": [
         "dataValidator.ts",
         "dateUtils.ts",
@@ -302,8 +289,8 @@
     "supabase/migrations": {
       "path": "supabase/migrations",
       "purpose": "Database migrations",
-      "fileCount": 103,
-      "lastAccessed": 1774833745823,
+      "fileCount": 107,
+      "lastAccessed": 1775719471992,
       "keyFiles": [
         "001_multi_tenant_schema.sql",
         "002_clinic_join_requests.sql",
@@ -313,64 +300,148 @@
   },
   "hotPaths": [
     {
-      "path": "marketing-worker/electron/src/tray.ts",
+      "path": "src/components/Dashboard/DashboardHome.tsx",
+      "accessCount": 45,
+      "lastAccessed": 1775743761589,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Landing/LandingPage.tsx",
+      "accessCount": 9,
+      "lastAccessed": 1775736841280,
+      "type": "file"
+    },
+    {
+      "path": "src/components/ui/Button.tsx",
       "accessCount": 5,
-      "lastAccessed": 1775199125002,
+      "lastAccessed": 1775734526432,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/worker-bridge.ts",
+      "path": "src/components/ui/badge.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1775734558813,
+      "type": "file"
+    },
+    {
+      "path": "src/components/ui/AppDialog.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1775734574459,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 5,
+      "lastAccessed": 1775739290991,
+      "type": "directory"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775739293283,
+      "type": "file"
+    },
+    {
+      "path": "src/app/globals.css",
+      "accessCount": 5,
+      "lastAccessed": 1775739294250,
+      "type": "file"
+    },
+    {
+      "path": "src/components/ui/Input.tsx",
       "accessCount": 4,
-      "lastAccessed": 1774833913163,
+      "lastAccessed": 1775734526645,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/config-store.ts",
+      "path": "src/components/ui/card.tsx",
       "accessCount": 4,
-      "lastAccessed": 1774833933261,
+      "lastAccessed": 1775734529407,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/logger.ts",
+      "path": "src/components/ui/dialog.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775734529803,
+      "type": "file"
+    },
+    {
+      "path": "src/components/ui/table.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775734531522,
+      "type": "file"
+    },
+    {
+      "path": "src/app/dashboard/page.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775735857109,
+      "type": "file"
+    },
+    {
+      "path": "src/app/dashboard/layout.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775739286211,
+      "type": "file"
+    },
+    {
+      "path": "src/components/ui/Toast.tsx",
       "accessCount": 3,
-      "lastAccessed": 1774833790420,
+      "lastAccessed": 1775734532271,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/main.ts",
+      "path": "src/app/AuthApp.tsx",
       "accessCount": 3,
-      "lastAccessed": 1774833908565,
+      "lastAccessed": 1775735955961,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/setup-window.ts",
+      "path": "src/components/ui/switch.tsx",
       "accessCount": 2,
-      "lastAccessed": 1774833807717,
+      "lastAccessed": 1775734531156,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/renderer/setup.html",
+      "path": "package.json",
       "accessCount": 1,
-      "lastAccessed": 1774833868778,
+      "lastAccessed": 1775721787110,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/src/preload.ts",
+      "path": "src/app/layout.tsx",
       "accessCount": 1,
-      "lastAccessed": 1774833879882,
+      "lastAccessed": 1775721790960,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/package.json",
+      "path": "src/app/page.tsx",
       "accessCount": 1,
-      "lastAccessed": 1774833908073,
+      "lastAccessed": 1775721791065,
       "type": "file"
     },
     {
-      "path": "marketing-worker/electron/tsconfig.json",
+      "path": "postcss.config.mjs",
       "accessCount": 1,
-      "lastAccessed": 1774833908302,
+      "lastAccessed": 1775721821260,
       "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 1,
+      "lastAccessed": 1775732540017,
+      "type": "directory"
+    },
+    {
+      "path": "src/components/ui",
+      "accessCount": 1,
+      "lastAccessed": 1775734578804,
+      "type": "directory"
+    },
+    {
+      "path": "src/app",
+      "accessCount": 1,
+      "lastAccessed": 1775739290465,
+      "type": "directory"
     }
   ],
   "userDirectives": []

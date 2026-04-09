@@ -77,7 +77,8 @@
       "Bash(curl -s http://localhost:3001/health)",
       "Bash(npx tsc:*)",
       "Bash(chmod +x /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/marketing-worker/setup.sh)",
-      "mcp__supabase__execute_sql"
+      "mcp__supabase__execute_sql",
+      "mcp__plugin_oh-my-claudecode_t__lsp_diagnostics"
     ],
     "deny": [],
     "ask": []
