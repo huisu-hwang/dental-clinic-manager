@@ -524,8 +524,8 @@ export default function DashboardHome() {
         {/* Zone header */}
         <div className="flex items-baseline justify-between mb-5">
           <div>
-            <h2 className="text-[15px] font-bold text-foreground">오늘의 성과</h2>
-            <p className="text-[11px] text-muted-foreground/70 uppercase tracking-[0.1em] mt-0.5">TODAY&apos;S PERFORMANCE</p>
+            <h2 className="text-[22px] font-bold text-foreground tracking-tight">오늘의 성과</h2>
+            <p className="text-[12px] font-semibold text-muted-foreground/80 uppercase tracking-[0.1em] mt-1">TODAY&apos;S PERFORMANCE</p>
           </div>
           <button
             onClick={handleRefresh}
@@ -545,7 +545,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Home className="size-4" strokeWidth={2.5} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">팀 출근률 · TEAM ATTENDANCE</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">팀 출근률 · TEAM ATTENDANCE</span>
               {!dataLoading && !todaySummary.hasReport && (
                 <div className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-yellow-50 border border-yellow-200">
                   <AlertCircle className="size-3.5 text-yellow-600 flex-shrink-0" strokeWidth={2} />
@@ -600,7 +600,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Calendar className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">현재 시각 · NOW</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">현재 시각 · NOW</span>
             </header>
             <div className="flex-1 flex flex-col justify-center">
               <p className="text-[42px] font-bold leading-none text-foreground tabular-nums">
@@ -623,7 +623,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <TrendingUp className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">상담 성공률</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">상담 성공률</span>
             </header>
             <button
               onClick={() => togglePanel(todayActivePanel, 'consult', setTodayActivePanel)}
@@ -684,7 +684,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Calendar className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">예약·리콜</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">예약·리콜</span>
             </header>
             <button
               onClick={() => togglePanel(todayActivePanel, 'recall', setTodayActivePanel)}
@@ -753,7 +753,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <BarChart3 className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">리뷰·선물</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">리뷰·선물</span>
             </header>
             <button
               onClick={() => togglePanel(todayActivePanel, 'gift', setTodayActivePanel)}
@@ -815,7 +815,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Flame className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">주간 상담</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">주간 상담</span>
             </header>
             <button
               onClick={() => togglePanel(weeklyActivePanel, 'consult', setWeeklyActivePanel)}
@@ -878,8 +878,8 @@ export default function DashboardHome() {
       <section>
         {/* Zone header */}
         <div className="mb-5">
-          <h2 className="text-[15px] font-bold text-foreground">팀 &amp; 주간 흐름</h2>
-          <p className="text-[11px] text-muted-foreground/70 uppercase tracking-[0.1em] mt-0.5">TEAM &amp; WEEKLY FLOW</p>
+          <h2 className="text-[22px] font-bold text-foreground tracking-tight">팀 &amp; 주간 흐름</h2>
+          <p className="text-[12px] font-semibold text-muted-foreground/80 uppercase tracking-[0.1em] mt-1">TEAM &amp; WEEKLY FLOW</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 auto-rows-min">
@@ -890,7 +890,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <BarChart3 className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">주간 통계 · WEEKLY STATS</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">주간 통계 · WEEKLY STATS</span>
               <span className="ml-auto text-xs text-muted-foreground">
                 {weeklySummary.weekStart.replace(/-/g, '.')} ~ {today.replace(/-/g, '.')}
               </span>
@@ -979,7 +979,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Calendar className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">팀 출퇴근 · TEAM ATTENDANCE</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">팀 출퇴근 · TEAM ATTENDANCE</span>
             </header>
             <div className="flex-1 flex flex-col">
               {attendanceLoading ? (
@@ -1133,8 +1133,8 @@ export default function DashboardHome() {
       <section>
         {/* Zone header */}
         <div className="mb-5">
-          <h2 className="text-[15px] font-bold text-foreground">병원 밖 컨텍스트</h2>
-          <p className="text-[11px] text-muted-foreground/70 uppercase tracking-[0.1em] mt-0.5">EXTERNAL CONTEXT</p>
+          <h2 className="text-[22px] font-bold text-foreground tracking-tight">병원 밖 컨텍스트</h2>
+          <p className="text-[12px] font-semibold text-muted-foreground/80 uppercase tracking-[0.1em] mt-1">EXTERNAL CONTEXT</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1145,7 +1145,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Sun className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">현재 날씨 · NOW</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">현재 날씨 · NOW</span>
             </header>
             <div className="flex-1 flex flex-col justify-center">
               {weatherLoading ? (
@@ -1184,7 +1184,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Cloud className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">내일 예보 · TOMORROW</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">내일 예보 · TOMORROW</span>
             </header>
             <div className="flex-1 flex flex-col justify-center">
               {weatherLoading ? (
@@ -1220,7 +1220,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Newspaper className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">치의신보 · DENTAL NEWS</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">치의신보 · DENTAL NEWS</span>
             </header>
             {/* Pill-toggle tab segment */}
             <div className="flex bg-muted rounded-full p-1 gap-1 mb-4">
@@ -1287,7 +1287,7 @@ export default function DashboardHome() {
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Monitor className="size-4" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">시스템 상태 · SYSTEM</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">시스템 상태 · SYSTEM</span>
             </header>
             <div className="flex-1 flex flex-col justify-center">
               {workerInstalled === null ? (
