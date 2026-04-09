@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const clinicId = searchParams.get('clinicId');
+    const loginHint = searchParams.get('loginHint');
 
     if (!clinicId) {
       return NextResponse.json({ error: 'clinicId가 필요합니다.' }, { status: 400 });
@@ -40,6 +41,9 @@ export async function GET(request: NextRequest) {
     authUrl.searchParams.set('access_type', 'offline');
     authUrl.searchParams.set('prompt', 'consent');
     authUrl.searchParams.set('state', stateEncoded);
+    if (loginHint) {
+      authUrl.searchParams.set('login_hint', loginHint);
+    }
 
     return NextResponse.redirect(authUrl.toString());
   } catch (error) {

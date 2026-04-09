@@ -38,8 +38,9 @@ export default function EmailIntegrationSettings() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // Naver mail form state
+  // Provider form state
   const [selectedProvider, setSelectedProvider] = useState<EmailProvider>('gmail')
+  const [gmailEmail, setGmailEmail] = useState('')
   const [naverEmail, setNaverEmail] = useState('')
   const [naverPassword, setNaverPassword] = useState('')
 
@@ -65,6 +66,12 @@ export default function EmailIntegrationSettings() {
         setLabEmails(d.labSenderEmails ?? [])
         setTaxEmails(d.taxOfficeSenderEmails ?? [])
         setMonitoringActive(d.isActive ?? false)
+        if (d.provider === 'gmail' && d.emailAddress) {
+          setGmailEmail(d.emailAddress)
+        }
+        if (d.provider === 'naver' && d.emailAddress) {
+          setNaverEmail(d.emailAddress)
+        }
       }
     } catch {
       // silent
@@ -84,7 +91,15 @@ export default function EmailIntegrationSettings() {
 
   const handleGmailConnect = () => {
     if (!clinicId) return
-    window.location.href = `/api/integrations/gmail/auth?clinicId=${clinicId}`
+    if (!gmailEmail.trim()) {
+      showMsg('error', '병원 Gmail 주소를 입력해주세요.')
+      return
+    }
+    const params = new URLSearchParams({
+      clinicId,
+      loginHint: gmailEmail.trim(),
+    })
+    window.location.href = `/api/integrations/gmail/auth?${params.toString()}`
   }
 
   const handleNaverConnect = async () => {
@@ -236,12 +251,27 @@ export default function EmailIntegrationSettings() {
             </div>
           </div>
         ) : selectedProvider === 'gmail' ? (
-          <button
-            onClick={handleGmailConnect}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Gmail 연동하기
-          </button>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">병원 Gmail 주소</label>
+              <input
+                type="email"
+                value={gmailEmail}
+                onChange={(e) => setGmailEmail(e.target.value)}
+                placeholder="clinic@gmail.com"
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Google 로그인 화면에서 자동 선택됩니다.
+              </p>
+            </div>
+            <button
+              onClick={handleGmailConnect}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Gmail 연동하기
+            </button>
+          </div>
         ) : (
           <div className="space-y-3">
             <div>

@@ -337,13 +337,6 @@ export default function FinancialDashboard() {
                   </h2>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setShowExpenseForm(true)}
-                      className="flex items-center justify-center w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors"
-                      title="지출 추가"
-                    >
-                      <Plus className="w-5 h-5" />
-                    </button>
-                    <button
                       onClick={() => setShowRevenueForm(true)}
                       className="flex items-center justify-center w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors"
                       title="수입 추가"
@@ -359,14 +352,7 @@ export default function FinancialDashboard() {
                       <FileText className="w-10 h-10 text-slate-300" />
                     </div>
                     <p className="font-medium text-slate-600 text-lg">이번 달 지출 내역이 없습니다</p>
-                    <p className="text-sm mt-1 mb-6">수동으로 내역을 추가하거나 홈택스 연동을 진행하세요.</p>
-                    <button
-                      onClick={() => setShowExpenseForm(true)}
-                      className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl shadow-sm hover:bg-indigo-700 transition"
-                    >
-                      <Plus className="w-5 h-5" />
-                      지출 추가하기
-                    </button>
+                    <p className="text-sm mt-1">설정 탭에서 지출을 추가하거나 홈택스 연동을 진행하세요.</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -500,6 +486,31 @@ export default function FinancialDashboard() {
         </div>
       ) : activeTab === 'settings' ? (
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          {/* 지출 입력 */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Receipt className="w-5 h-5 text-indigo-500" />
+                  지출 입력
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  {selectedYear}년 {selectedMonth}월 지출 내역을 수동으로 추가합니다.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowExpenseForm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl shadow-sm hover:bg-indigo-700 transition whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" />
+                지출 추가
+              </button>
+            </div>
+            <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3">
+              현황 조회 탭에서 선택한 월({selectedYear}년 {selectedMonth}월)에 추가됩니다. 다른 월에 입력하려면 현황 조회 탭에서 월을 변경한 뒤 다시 시도하세요.
+            </div>
+          </div>
+
           {/* 홈택스 인증정보 설정 */}
           <HometaxCredentialsSettings clinicId={clinicId} />
 
