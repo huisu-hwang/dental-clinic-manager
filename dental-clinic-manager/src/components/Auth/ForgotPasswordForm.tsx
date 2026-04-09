@@ -50,16 +50,16 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
       const getRedirectUrl = () => {
         // Vercel 배포 환경 (preview/production)
         if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-          return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/auth/reset-callback`;
+          return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/auth/reset-callback?intent=recovery`;
         }
 
         // 프로덕션 환경 (명시적 Site URL 설정)
         if (process.env.NEXT_PUBLIC_SITE_URL) {
-          return `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/reset-callback`;
+          return `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/reset-callback?intent=recovery`;
         }
 
         // 개발 환경 (localhost) - 현재 접속한 도메인 사용
-        return `${window.location.origin}/api/auth/reset-callback`;
+        return `${window.location.origin}/api/auth/reset-callback?intent=recovery`;
       };
 
       const redirectUrl = getRedirectUrl();
