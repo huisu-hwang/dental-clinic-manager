@@ -33,6 +33,7 @@ import {
 import dynamic from 'next/dynamic'
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 import { requireWorker } from '@/hooks/useWorkerGuard'
+import { usePremiumFeatures } from '@/hooks/usePremiumFeatures'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 
@@ -40,6 +41,8 @@ export default function NewMarketingPostPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const aiGen = useAIGeneration()
+  // 마케팅 프리미엄 활성화 여부 — 비활성화 사용자는 워커 체크 수행하지 않음
+  const { hasPremiumFeature } = usePremiumFeatures()
 
   // ── 입력 폼 상태 ──
   const [topic, setTopic] = useState('')
@@ -166,6 +169,10 @@ export default function NewMarketingPostPage() {
 
   // ── AI 글 생성 (컨텍스트 통해 SSE 스트리밍) ──
   const handleGenerate = async () => {
+    if (!hasPremiumFeature('marketing')) {
+      setError('마케팅 자동화 프리미엄 기능이 활성화되어 있지 않습니다.')
+      return
+    }
     if (!await requireWorker('marketing', 'AI 글 생성')) return
     if (!topic || !keyword) {
       setError('주제와 키워드를 입력해주세요.')
@@ -212,6 +219,10 @@ export default function NewMarketingPostPage() {
   // ── 발행 처리 (공통) ──
   const handlePublish = async (targetDate: string, targetTime: string, isImmediate: boolean) => {
     if (!generatedResult) return
+    if (!hasPremiumFeature('marketing')) {
+      setError('마케팅 자동화 프리미엄 기능이 활성화되어 있지 않습니다.')
+      return
+    }
     if (!await requireWorker('marketing', '글 발행')) return
     setIsScheduling(true)
     try {

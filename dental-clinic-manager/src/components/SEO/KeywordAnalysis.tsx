@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { MagnifyingGlassIcon, ArrowPathIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 import { requireWorker } from '@/hooks/useWorkerGuard'
+import { usePremiumFeatures } from '@/hooks/usePremiumFeatures'
 
 interface AnalysisListItem {
   id: string
@@ -64,6 +65,8 @@ const LEVEL_LABELS: Record<string, string> = {
 }
 
 export default function KeywordAnalysis() {
+  // 마케팅 프리미엄 활성화 여부 — 비활성화 사용자는 워커 체크 수행하지 않음
+  const { hasPremiumFeature } = usePremiumFeatures()
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(false)
   const [analyses, setAnalyses] = useState<AnalysisListItem[]>([])
@@ -135,6 +138,10 @@ export default function KeywordAnalysis() {
   // 분석 시작
   const startAnalysis = async () => {
     if (!keyword.trim()) return
+    if (!hasPremiumFeature('marketing')) {
+      alert('마케팅 자동화 프리미엄 기능이 활성화되어 있지 않습니다.')
+      return
+    }
     if (!await requireWorker('marketing', 'SEO 키워드 분석')) return
 
     setLoading(true)

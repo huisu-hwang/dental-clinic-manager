@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
         latestVersion: string | null;
         updateAvailable: boolean;
       };
-      scraping?: { online: boolean; workerCount: number };
+      scraping?: { installed: boolean; online: boolean; workerCount: number };
     } = {};
 
     // 마케팅 워커 상태 (DB 기반 - Electron 워커가 heartbeat 업데이트)
@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
 
     // 스크래핑 워커 상태
     if (type === 'scraping' || type === 'all') {
+      let installed = false;
       let online = false;
       let workerCount = 0;
       const admin = getSupabaseAdmin();
@@ -96,7 +97,9 @@ export async function GET(request: NextRequest) {
           .select('status, last_heartbeat')
           .order('last_heartbeat', { ascending: false });
 
-        if (workers) {
+        if (workers && workers.length > 0) {
+          // 워커 레코드가 존재하면 과거에 한 번이라도 설치/등록된 것으로 간주
+          installed = true;
           const onlineWorkers = workers.filter((w) => {
             if (w.status === 'offline') return false;
             const lastBeat = new Date(w.last_heartbeat);
@@ -106,7 +109,7 @@ export async function GET(request: NextRequest) {
           online = workerCount > 0;
         }
       }
-      result.scraping = { online, workerCount };
+      result.scraping = { installed, online, workerCount };
     }
 
     return NextResponse.json(result);

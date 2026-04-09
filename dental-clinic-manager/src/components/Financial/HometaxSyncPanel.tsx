@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useHometaxSync } from '@/contexts/HometaxSyncContext'
 import { requireWorker } from '@/hooks/useWorkerGuard'
+import { usePremiumFeatures } from '@/hooks/usePremiumFeatures'
 import {
   Building2,
   Loader2,
@@ -74,6 +75,10 @@ export default function HometaxSyncPanel({
     clearMessages,
     onSyncComplete: onSyncCompleteRef,
   } = useHometaxSync()
+
+  // 프리미엄 기능 활성화 여부 (경영 현황 = 'financial')
+  // 비활성화된 사용자에게는 워커 체크를 수행하지 않음
+  const { hasPremiumFeature } = usePremiumFeatures()
 
   // 인증정보 상태
   const [credentials, setCredentials] = useState<Credentials | null>(null)
@@ -245,6 +250,11 @@ export default function HometaxSyncPanel({
 
   // 수동 동기화 요청 - delegates to context
   const handleSync = async () => {
+    // 경영 현황 프리미엄이 활성화된 사용자만 워커 체크 수행
+    if (!hasPremiumFeature('financial')) {
+      setLocalError('경영 현황 프리미엄 기능이 활성화되어 있지 않습니다.')
+      return
+    }
     if (!await requireWorker('scraping', '홈택스 데이터 동기화')) return
     await startSync({ clinicId, year, month, dataTypes: selectedDataTypes })
   }

@@ -29,6 +29,7 @@ import type { MenuItemSetting, MenuCategorySetting } from '@/types/menuSettings'
 import { createNewCategory } from '@/types/menuSettings'
 import { MENU_CONFIG, MENU_ICON_MAP, MENU_PERMISSIONS_MAP, MENU_OWNER_ONLY_MAP, MENU_PREMIUM_MAP } from '@/config/menuConfig'
 import { usePremiumFeatures } from '@/hooks/usePremiumFeatures'
+import WorkerStatusMenuItem from '@/components/Layout/WorkerStatusMenuItem'
 import {
   Home,
   ClipboardList,
@@ -1209,8 +1210,10 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
         )}
       </div>
 
-      {/* 하단 영역: 워커 다운로드 + 하단 고정 메뉴들 */}
+      {/* 하단 영역: 워커 상태 + 워커 다운로드 + 하단 고정 메뉴들 */}
       <div className="pt-2 border-t border-slate-200 mt-2 space-y-1">
+        {/* 워커 상태 (프리미엄 기능 활성화된 사용자만 표시) */}
+        <WorkerStatusMenuItem />
         {/* 워커 다운로드 버튼 */}
         <button
           onClick={handleWorkerDownload}
