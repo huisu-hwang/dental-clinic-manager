@@ -33,19 +33,52 @@ export function useWorkerStatus(options?: {
   const checkWorkerStatus = useCallback(async (type: WorkerType): Promise<boolean> => {
     setChecking(true)
     try {
+      // 1. 공통 DB 기반 상태 조회 (Heartbeat 확인)
       const res = await fetch(`/api/workers/status?type=${type}`, {
         signal: AbortSignal.timeout(5000),
       })
       if (!res.ok) return false
 
       const data: WorkerStatusResult = await res.json()
+      let isDbOnline = false
 
       if (type === 'marketing') {
-        return data.marketing?.online ?? false
+        isDbOnline = data.marketing?.online ?? false
+        
+        // 마케팅 워커인 경우: 로컬 호스트 API Ping(이중 확인)
+        try {
+          // 로컬 워커가 응답하는지 (워커가 켜져있는지) 확인
+          const localRes = await fetch('http://localhost:4001/health', {
+            signal: AbortSignal.timeout(2000), // 로컬이므로 짧은 타임아웃
+            mode: 'cors'
+          })
+          if (localRes.ok) {
+            const localData = await localRes.json()
+            // 로컬 연결도 성공하고, 실행 중이면 true
+            if (localData.running) {
+              return true
+            }
+          }
+        } catch (localError) {
+          // 로컬 호스트 연결 실패 
+          // (앱이 켜지지 않았거나, 설치되지 않았음)
+          console.warn('[useWorkerStatus] Marketing worker local ping failed:', localError);
+        }
+
+        // 로컬 핑에 실패했지만 DB가 살아있다고 리포트하면, 
+        // 외부 워커 서버가 돌고 있을 수도 있으니 설정에 따라 DB 상태로 fallback 가능
+        // 단, 클라이언트가 직접 설치-로컬 확인하는 "통합 워커" 정책상 
+        // 로컬 응답을 기준으로 하는게 확실함. 
+        // 여기서는 DB상태만 통과해도 어느 하나라도 켜져있다고 판단하도록 보수적 처리할지,
+        // (현재는 DB 상태가 온라인이면 임시로 온라인이라 쳐줌. 원격/분산 워커 대비)
+        return isDbOnline
       }
+      
       if (type === 'scraping') {
-        return data.scraping?.online ?? false
+        isDbOnline = data.scraping?.online ?? false
+        return isDbOnline
       }
+
       return false
     } catch {
       return false
