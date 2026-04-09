@@ -1,10 +1,87 @@
 'use client'
 
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { useEffect, useCallback, useRef } from 'react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
+import { PencilSquareIcon } from '@heroicons/react/24/outline'
+
+// ─── 편집 가능한 이미지 NodeView ───
+
+type ImageMeta = { fileName: string; prompt: string; path?: string }
+type OnImageEditFn = (
+  index: number,
+  img: { fileName: string; prompt: string; path: string }
+) => void
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function EditableImageNodeView({ node, editor, getPos }: any) {
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const storage = (editor.storage as unknown as Record<string, unknown>).image as {
+      images?: ImageMeta[] | null
+      onImageEdit?: OnImageEditFn | null
+    } | undefined
+    const images = storage?.images
+    const callback = storage?.onImageEdit
+    if (!images || !callback) return
+
+    // 문서 내에서 현재 이미지 노드의 순서(index)를 계산
+    const pos = typeof getPos === 'function' ? getPos() : -1
+    let index = 0
+    if (pos >= 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      editor.state.doc.descendants((n: any, p: number) => {
+        if (p >= pos) return false
+        if (n.type.name === 'image') index++
+        return true
+      })
+    }
+
+    if (index >= 0 && index < images.length) {
+      const img = images[index]
+      callback(index, {
+        fileName: img.fileName,
+        prompt: img.prompt,
+        path: img.path || node.attrs.src || '',
+      })
+    }
+  }
+
+  return (
+    <NodeViewWrapper as="figure" className="relative group my-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={node.attrs.src}
+        alt={node.attrs.alt || ''}
+        className="w-full rounded-xl border border-slate-200 shadow-sm cursor-pointer"
+      />
+      <button
+        type="button"
+        onClick={handleEdit}
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-lg shadow-md px-3 py-1.5 text-xs font-medium border border-slate-200 flex items-center gap-1.5 backdrop-blur-sm"
+        title="이미지 프롬프트 편집"
+      >
+        <PencilSquareIcon className="w-3.5 h-3.5" />
+        편집
+      </button>
+    </NodeViewWrapper>
+  )
+}
+
+const EditableImage = Image.extend({
+  addStorage() {
+    return {
+      images: null as ImageMeta[] | null,
+      onImageEdit: null as OnImageEditFn | null,
+    }
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(EditableImageNodeView)
+  },
+})
 
 // ─── 마크다운 → HTML 변환 ───
 
@@ -218,12 +295,15 @@ export default function ContentEditor({ body, images, onChange, onImageEdit }: C
   useEffect(() => { imagesRef.current = images }, [images])
   useEffect(() => { onImageEditRef.current = onImageEdit }, [onImageEdit])
 
+  // NodeView 버튼이 최신 images/onImageEdit을 참조할 수 있도록 editor.storage에 동기화
+  // (editor 선언 이후에 실제 동기화는 아래 별도 useEffect에서 수행)
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
       }),
-      Image.configure({
+      EditableImage.configure({
         inline: false,
         allowBase64: true,
         HTMLAttributes: {
@@ -246,6 +326,19 @@ export default function ContentEditor({ body, images, onChange, onImageEdit }: C
       onChange(md)
     },
   })
+
+  // NodeView에서 참조할 수 있도록 editor.storage.image에 동기화
+  useEffect(() => {
+    if (!editor) return
+    const storage = (editor.storage as unknown as Record<string, unknown>).image as {
+      images?: ImageMeta[] | null
+      onImageEdit?: OnImageEditFn | null
+    } | undefined
+    if (storage) {
+      storage.images = images || null
+      storage.onImageEdit = onImageEdit || null
+    }
+  }, [editor, images, onImageEdit])
 
   // 이미지 클릭 이벤트 핸들러 (DOM 이벤트 사용)
   useEffect(() => {
