@@ -13,6 +13,7 @@ import RevenueForm from './RevenueForm'
 import ExpenseForm from './ExpenseForm'
 import HometaxSyncPanel from './HometaxSyncPanel'
 import HometaxDataView from './HometaxDataView'
+import HometaxCredentialsSettings from './HometaxCredentialsSettings'
 import {
   TrendingUp,
   TrendingDown,
@@ -498,7 +499,11 @@ export default function FinancialDashboard() {
           </div>
         </div>
       ) : activeTab === 'settings' ? (
-        <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          {/* 홈택스 인증정보 설정 */}
+          <HometaxCredentialsSettings clinicId={clinicId} />
+
+          {/* 이메일 자동 연동 */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
               <Mail className="w-5 h-5 text-blue-500" />
