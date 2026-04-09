@@ -1,0 +1,38 @@
+[     349ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[     399ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[     399ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[     400ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[     400ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[     400ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[     440ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[     440ms] [LOG] [AuthContext] Session check complete: no session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[     440ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[     464ms] [LOG] [SW] 등록 완료, scope: http://localhost:3004/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[     464ms] [LOG] [SW] 등록 완료, scope: http://localhost:3004/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[     464ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[  300467ms] [LOG] [SW] 업데이트 확인 (periodic) @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:75
+[  600464ms] [LOG] [SW] 업데이트 확인 (periodic) @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:75
+[  900463ms] [LOG] [SW] 업데이트 확인 (periodic) @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:75
+[ 1200466ms] [LOG] [SW] 업데이트 확인 (periodic) @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:75
+[ 1403219ms] [LOG] [LoginForm] Starting login process... @ webpack-internal:///(app-pages-browser)/./src/components/Auth/LoginForm.tsx:85
+[ 1403219ms] [LOG] [LoginForm] Using cookie-based session (rememberMe: N/A) @ webpack-internal:///(app-pages-browser)/./src/components/Auth/LoginForm.tsx:90
+[ 1403219ms] [LOG] [LoginForm] Creating Supabase client... @ webpack-internal:///(app-pages-browser)/./src/components/Auth/LoginForm.tsx:92
+[ 1403219ms] [LOG] [LoginForm] Clearing any existing session... @ webpack-internal:///(app-pages-browser)/./src/components/Auth/LoginForm.tsx:95
+[ 1403227ms] [LOG] [Supabase] Auth event: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[ 1403227ms] [LOG] [Supabase] User signed out detected @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:92
+[ 1403227ms] [LOG] Auth state changed: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[ 1403227ms] [LOG] [LoginForm] Previous session cleared @ webpack-internal:///(app-pages-browser)/./src/components/Auth/LoginForm.tsx:103
+[ 1403227ms] [LOG] [LoginForm] Supabase client obtained, attempting login... @ webpack-internal:///(app-pages-browser)/./src/components/Auth/LoginForm.tsx:107
+[ 1403897ms] [LOG] [Supabase] Auth event: SIGNED_IN @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[ 1403897ms] [LOG] [Supabase] User signed in @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:97
+[ 1403897ms] [LOG] Auth state changed: SIGNED_IN @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[ 1403897ms] [LOG] [LoginForm] Auth response received in 670ms: {authData: Object, authError: null} @ webpack-internal:///(app-pages-browser)/./src/components/Auth/LoginForm.tsx:124
+[ 1403898ms] [LOG] [LoginForm] Fetching user profile for ID: eb46c51d-95a1-4be9-9b30-edcdbd9eb8be @ webpack-internal:///(app-pages-browser)/./src/components/Auth/LoginForm.tsx:152
+[ 1403899ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[ 1403899ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[ 1403900ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[ 1403902ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[ 1404119ms] [LOG] [CookieStorage] Session cookies refreshed @ webpack-internal:///(app-pages-browser)/./src/lib/cookieStorageAdapter.ts:258
+[ 1404250ms] [LOG] [LoginForm] Profile fetched in 351ms: {id: eb46c51d-95a1-4be9-9b30-edcdbd9eb8be, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9, email: whitedc0902@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/components/Auth/LoginForm.tsx:156
+[ 1404250ms] [LOG] [LoginForm] Logging in with profile: {id: eb46c51d-95a1-4be9-9b30-edcdbd9eb8be, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9, email: whitedc0902@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/components/Auth/LoginForm.tsx:202
+[ 1404250ms] [LOG] [AuthContext] Login - Cookie-based session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:385

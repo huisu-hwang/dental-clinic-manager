@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useHometaxSync } from '@/contexts/HometaxSyncContext'
 import { requireWorker } from '@/hooks/useWorkerGuard'
 import {
@@ -87,8 +87,10 @@ export default function HometaxSyncPanel({
 
   // 동기화 선택 상태 (local)
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
+  const [logsLoaded, setLogsLoaded] = useState(false)
   const [showLogs, setShowLogs] = useState(false)
   const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>(Object.keys(DATA_TYPE_LABELS))
+  const autoSyncChecked = useRef(false)
 
   // 로컬 메시지 (인증정보 관련)
   const [localError, setLocalError] = useState<string | null>(null)
@@ -127,6 +129,8 @@ export default function HometaxSyncPanel({
       }
     } catch {
       // 조회 실패 무시
+    } finally {
+      setLogsLoaded(true)
     }
   }, [clinicId])
 
@@ -143,6 +147,29 @@ export default function HometaxSyncPanel({
       loadCredentials()
     }
   }, [currentJob?.status, loadSyncLogs, loadCredentials])
+
+  // 매월 말일 자동 동기화 로직
+  useEffect(() => {
+    const isJobRunning = currentJob && ['pending', 'running'].includes(currentJob.status);
+    if (!logsLoaded || !credentials || !credentials.is_active || currentJob || syncing || isJobRunning) return;
+    if (autoSyncChecked.current) return;
+
+    const today = new Date();
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+    if (today.getDate() !== lastDayOfMonth) return;
+
+    autoSyncChecked.current = true;
+
+    const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const hasSyncedToday = syncLogs.some(
+      log => log.status === 'success' && log.synced_at.startsWith(todayStr)
+    );
+
+    if (!hasSyncedToday) {
+      startSync({ clinicId, year, month, dataTypes: selectedDataTypes }).catch(console.error);
+    }
+  }, [logsLoaded, credentials, currentJob, syncing, syncLogs, clinicId, year, month, selectedDataTypes, startSync]);
 
   // 인증정보 저장
   const handleSaveCredentials = async () => {

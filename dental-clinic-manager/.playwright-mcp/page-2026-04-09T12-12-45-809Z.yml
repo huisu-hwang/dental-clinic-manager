@@ -1,0 +1,33 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e257]:
+    - generic [ref=e258]:
+      - button "← 돌아가기" [ref=e259]
+      - generic [ref=e260]:
+        - generic [ref=e262]: 🦷
+        - heading "클리닉 매니저" [level=1] [ref=e263]
+      - heading "로그인" [level=2] [ref=e264]
+      - paragraph [ref=e265]: 계정에 로그인하여 업무를 시작하세요
+    - generic [ref=e266]:
+      - generic [ref=e267]:
+        - generic [ref=e268]:
+          - generic [ref=e269]: 이메일 주소
+          - textbox "이메일 주소" [ref=e270]:
+            - /placeholder: email@example.com
+        - generic [ref=e271]:
+          - generic [ref=e272]: 비밀번호
+          - textbox "비밀번호" [ref=e273]:
+            - /placeholder: 비밀번호를 입력하세요
+          - button [ref=e274]:
+            - img [ref=e275]
+        - generic [ref=e278]:
+          - generic [ref=e279]:
+            - checkbox "로그인 정보 저장" [ref=e280]
+            - generic [ref=e281]: 로그인 정보 저장
+          - button "비밀번호를 잊으셨나요?" [ref=e283]
+        - button "로그인" [ref=e284]
+      - paragraph [ref=e286]:
+        - text: 아직 계정이 없으신가요?
+        - button "회원가입하기" [ref=e287]

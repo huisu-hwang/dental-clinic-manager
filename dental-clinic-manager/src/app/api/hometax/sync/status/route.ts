@@ -46,6 +46,22 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (activeJob) {
+        // 2시간 이상 지연된 작업은 실패 처리 (워커 응답 없음)
+        const jobDate = new Date(activeJob.created_at);
+        const now = new Date();
+        const diffHours = (now.getTime() - jobDate.getTime()) / (1000 * 60 * 60);
+
+        if (diffHours > 2) {
+          await supabase
+            .from('scraping_jobs')
+            .update({
+              status: 'failed',
+              error_message: '시간 초과로 인한 자동 실패 처리 (워커 응답 없음)'
+            })
+            .eq('id', activeJob.id);
+          activeJob.status = 'failed';
+          activeJob.error_message = '시간 초과로 인한 자동 실패 처리 (워커 응답 없음)';
+        }
         job = activeJob;
       } else {
         const { data: recentJob, error } = await supabase
