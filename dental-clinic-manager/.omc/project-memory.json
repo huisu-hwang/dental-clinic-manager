@@ -306,9 +306,63 @@
       "type": "file"
     },
     {
+      "path": "src/components/marketing/NewPostForm.tsx",
+      "accessCount": 28,
+      "lastAccessed": 1775820091687,
+      "type": "file"
+    },
+    {
+      "path": "src/components/marketing/clinical/ClinicalForm.tsx",
+      "accessCount": 24,
+      "lastAccessed": 1775837521616,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 23,
+      "lastAccessed": 1775820075251,
+      "type": "directory"
+    },
+    {
       "path": "src/components/Landing/LandingPage.tsx",
       "accessCount": 9,
       "lastAccessed": 1775736841280,
+      "type": "file"
+    },
+    {
+      "path": "supabase/config.toml",
+      "accessCount": 9,
+      "lastAccessed": 1775819704977,
+      "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 8,
+      "lastAccessed": 1775820075702,
+      "type": "directory"
+    },
+    {
+      "path": "src/app/api/marketing/generate/route.ts",
+      "accessCount": 7,
+      "lastAccessed": 1775815033329,
+      "type": "file"
+    },
+    {
+      "path": "src/contexts/AIGenerationContext.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1775819575548,
+      "type": "file"
+    },
+    {
+      "path": "src/types/marketing.ts",
+      "accessCount": 7,
+      "lastAccessed": 1775820080284,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/marketing/content-generator.ts",
+      "accessCount": 6,
+      "lastAccessed": 1775819523328,
       "type": "file"
     },
     {
@@ -330,12 +384,6 @@
       "type": "file"
     },
     {
-      "path": "",
-      "accessCount": 5,
-      "lastAccessed": 1775739290991,
-      "type": "directory"
-    },
-    {
       "path": "tailwind.config.ts",
       "accessCount": 5,
       "lastAccessed": 1775739293283,
@@ -346,6 +394,12 @@
       "accessCount": 5,
       "lastAccessed": 1775739294250,
       "type": "file"
+    },
+    {
+      "path": "marketing-worker/electron/src/seo-bridge.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775805912011,
+      "type": "directory"
     },
     {
       "path": "src/components/ui/Input.tsx",
@@ -384,15 +438,69 @@
       "type": "file"
     },
     {
+      "path": "src/app/AuthApp.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775805761492,
+      "type": "file"
+    },
+    {
+      "path": "src/app/page.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775805772410,
+      "type": "file"
+    },
+    {
       "path": "src/components/ui/Toast.tsx",
       "accessCount": 3,
       "lastAccessed": 1775734532271,
       "type": "file"
     },
     {
-      "path": "src/app/AuthApp.tsx",
+      "path": "src/app/api/marketing/worker-api/seo/jobs/route.ts",
       "accessCount": 3,
-      "lastAccessed": 1775735955961,
+      "lastAccessed": 1775805881112,
+      "type": "directory"
+    },
+    {
+      "path": "src/app/api/dentweb/sync/route.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775816356878,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/dentweb/download/route.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775816357736,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/dentweb/status/route.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775816392878,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/auth/reset-callback/route.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775819454006,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/marketing/default-prompts.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775819532083,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/marketing/clinical-photos/upload/route.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775820079425,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 3,
+      "lastAccessed": 1775820096761,
       "type": "file"
     },
     {
@@ -402,21 +510,63 @@
       "type": "file"
     },
     {
-      "path": "package.json",
-      "accessCount": 1,
-      "lastAccessed": 1775721787110,
+      "path": "marketing-worker/electron/src/seo-api-client.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775805887836,
       "type": "file"
+    },
+    {
+      "path": "src/app/api/auth/reset-password/route.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775816103069,
+      "type": "file"
+    },
+    {
+      "path": "src/app/update-password/page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775816140050,
+      "type": "file"
+    },
+    {
+      "path": "src/types/dentweb.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775816272425,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/dentwebSyncService.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775816273097,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260306_create_dentweb_integration.sql",
+      "accessCount": 2,
+      "lastAccessed": 1775816276773,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Recall/DentwebSyncSettings.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775816314292,
+      "type": "file"
+    },
+    {
+      "path": "supabase",
+      "accessCount": 2,
+      "lastAccessed": 1775819444417,
+      "type": "directory"
+    },
+    {
+      "path": "src/app",
+      "accessCount": 2,
+      "lastAccessed": 1775836337948,
+      "type": "directory"
     },
     {
       "path": "src/app/layout.tsx",
       "accessCount": 1,
       "lastAccessed": 1775721790960,
-      "type": "file"
-    },
-    {
-      "path": "src/app/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1775721791065,
       "type": "file"
     },
     {
@@ -426,22 +576,28 @@
       "type": "file"
     },
     {
-      "path": "src",
-      "accessCount": 1,
-      "lastAccessed": 1775732540017,
-      "type": "directory"
-    },
-    {
       "path": "src/components/ui",
       "accessCount": 1,
       "lastAccessed": 1775734578804,
       "type": "directory"
     },
     {
-      "path": "src/app",
+      "path": "src/contexts",
       "accessCount": 1,
-      "lastAccessed": 1775739290465,
+      "lastAccessed": 1775805731555,
       "type": "directory"
+    },
+    {
+      "path": "src/app/api/marketing",
+      "accessCount": 1,
+      "lastAccessed": 1775805742190,
+      "type": "directory"
+    },
+    {
+      "path": "supabase/migrations/20260410_add_clinical_photo_sort_order.sql",
+      "accessCount": 1,
+      "lastAccessed": 1775814606963,
+      "type": "file"
     }
   ],
   "userDirectives": []

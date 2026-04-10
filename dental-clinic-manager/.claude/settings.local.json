@@ -78,7 +78,8 @@
       "Bash(npx tsc:*)",
       "Bash(chmod +x /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/marketing-worker/setup.sh)",
       "mcp__supabase__execute_sql",
-      "mcp__plugin_oh-my-claudecode_t__lsp_diagnostics"
+      "mcp__plugin_oh-my-claudecode_t__lsp_diagnostics",
+      "mcp__supabase__apply_migration"
     ],
     "deny": [],
     "ask": []
