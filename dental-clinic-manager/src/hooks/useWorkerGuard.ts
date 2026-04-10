@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { appAlert } from '@/components/ui/AppDialog'
 
-type WorkerType = 'marketing' | 'scraping'
+type WorkerType = 'marketing' | 'scraping' | 'seo'
 
 interface WorkerGuardOptions {
   /** 워커 타입 */
@@ -25,6 +25,10 @@ const WORKER_LABELS: Record<WorkerType, { name: string; defaultFeature: string }
   scraping: {
     name: '스크래핑 워커',
     defaultFeature: '데이터 연동',
+  },
+  seo: {
+    name: 'SEO 분석 워커',
+    defaultFeature: 'SEO 키워드 분석',
   },
 }
 
@@ -49,6 +53,12 @@ async function checkWorkerState(type: WorkerType): Promise<WorkerState> {
       return {
         installed: data.scraping?.installed ?? false,
         online: data.scraping?.online ?? false,
+      }
+    }
+    if (type === 'seo') {
+      return {
+        installed: data.seo?.installed ?? false,
+        online: data.seo?.online ?? false,
       }
     }
     return { installed: false, online: false }

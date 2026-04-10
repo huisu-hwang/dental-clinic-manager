@@ -17,6 +17,15 @@ interface WorkerStatusResponse {
     online: boolean
     workerCount: number
   }
+  seo?: {
+    installed: boolean
+    online: boolean
+    workerCount: number
+  }
+  email?: {
+    installed: boolean
+    online: boolean
+  }
 }
 
 type Status = 'online' | 'offline' | 'not-installed' | 'loading'
@@ -41,19 +50,53 @@ function resolveStatus(installed: boolean | undefined, online: boolean | undefin
   return online ? 'online' : 'offline'
 }
 
+/** 워커 항목 정의 (표시 순서) */
+interface WorkerDef {
+  key: 'marketing' | 'scraping' | 'seo' | 'email'
+  label: string
+  /** 이 워커가 필요한 프리미엄 기능 ID */
+  premiumId: string
+  /** 온라인 시 부가 정보 (예: workerCount) */
+  getExtra?: (status: WorkerStatusResponse) => string
+}
+
+const WORKER_DEFS: WorkerDef[] = [
+  {
+    key: 'marketing',
+    label: '마케팅 (발행)',
+    premiumId: 'marketing',
+  },
+  {
+    key: 'seo',
+    label: 'SEO 분석',
+    premiumId: 'marketing',
+    getExtra: (s) => s.seo?.online && s.seo.workerCount ? ` (${s.seo.workerCount})` : '',
+  },
+  {
+    key: 'email',
+    label: '이메일 모니터',
+    premiumId: 'financial',
+  },
+  {
+    key: 'scraping',
+    label: '홈택스 스크래핑',
+    premiumId: 'financial',
+    getExtra: (s) => s.scraping?.online && s.scraping.workerCount ? ` (${s.scraping.workerCount})` : '',
+  },
+]
+
 /**
  * 좌측 메뉴 하단에 워커 상태를 표시하는 아이템
  *
  * - 통합 워커가 필요한 프리미엄 기능(`financial`, `marketing`)이 활성화된 사용자에게만 표시
  * - 30초마다 자동 갱신, 수동 새로고침 가능
- * - 클릭 시 상세(마케팅/스크래핑 각각) 토글
- * - 상태: 온라인(녹색) / 오프라인(주황) / 미설치(빨강) / 확인 중(회색)
+ * - 클릭 시 4개 워커 각각의 상태 토글
  */
 export default function WorkerStatusMenuItem() {
   const { hasPremiumFeature, isLoading: premiumLoading } = usePremiumFeatures()
   const needsMarketing = hasPremiumFeature('marketing')
-  const needsScraping = hasPremiumFeature('financial')
-  const needsAny = needsMarketing || needsScraping
+  const needsFinancial = hasPremiumFeature('financial')
+  const needsAny = needsMarketing || needsFinancial
 
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -85,20 +128,27 @@ export default function WorkerStatusMenuItem() {
     return () => clearInterval(interval)
   }, [needsAny, fetchStatus])
 
-  // 프리미엄 로딩 중이거나, 워커가 필요한 기능이 없으면 표시하지 않음
+  // 프리미엄 로딩 중이거나 워커가 필요한 기능이 없으면 미노출
   if (premiumLoading || !needsAny) return null
 
-  const marketingStatus = resolveStatus(status.marketing?.installed, status.marketing?.online, loading)
-  const scrapingStatus = resolveStatus(status.scraping?.installed, status.scraping?.online, loading)
+  // 활성화된 프리미엄에 해당하는 워커만 필터
+  const activeWorkers = WORKER_DEFS.filter((w) => hasPremiumFeature(w.premiumId))
 
-  // 통합 상태: 필요한 워커 중 하나라도 문제 있으면 전체 문제로 표기
+  // 개별 상태 계산
+  const workerStatuses = activeWorkers.map((w) => {
+    const s = status[w.key]
+    return {
+      ...w,
+      status: resolveStatus(s?.installed, s?.online, loading),
+    }
+  })
+
+  // 통합 상태
   const overallStatus: Status = (() => {
-    const relevant: Status[] = []
-    if (needsMarketing) relevant.push(marketingStatus)
-    if (needsScraping) relevant.push(scrapingStatus)
-    if (relevant.length === 0 || relevant.includes('loading')) return 'loading'
-    if (relevant.every((s) => s === 'online')) return 'online'
-    if (relevant.some((s) => s === 'not-installed')) return 'not-installed'
+    const statuses = workerStatuses.map((w) => w.status)
+    if (statuses.length === 0 || statuses.includes('loading')) return 'loading'
+    if (statuses.every((s) => s === 'online')) return 'online'
+    if (statuses.some((s) => s === 'not-installed')) return 'not-installed'
     return 'offline'
   })()
 
@@ -153,29 +203,18 @@ export default function WorkerStatusMenuItem() {
 
       {expanded && (
         <div className="ml-3 mr-1 mt-1 mb-2 space-y-1.5 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
-          {needsMarketing && (
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-600">마케팅 워커</span>
+          {workerStatuses.map((w) => (
+            <div key={w.key} className="flex items-center justify-between text-xs">
+              <span className="text-slate-600">{w.label}</span>
               <div className="flex items-center space-x-1.5">
-                <span className={`w-2 h-2 rounded-full ${STATUS_COLOR[marketingStatus]}`} />
-                <span className="text-slate-500">{STATUS_LABEL[marketingStatus]}</span>
-              </div>
-            </div>
-          )}
-          {needsScraping && (
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-600">스크래핑 워커</span>
-              <div className="flex items-center space-x-1.5">
-                <span className={`w-2 h-2 rounded-full ${STATUS_COLOR[scrapingStatus]}`} />
+                <span className={`w-2 h-2 rounded-full ${STATUS_COLOR[w.status]}`} />
                 <span className="text-slate-500">
-                  {STATUS_LABEL[scrapingStatus]}
-                  {scrapingStatus === 'online' && status.scraping?.workerCount
-                    ? ` (${status.scraping.workerCount})`
-                    : ''}
+                  {STATUS_LABEL[w.status]}
+                  {w.status === 'online' && w.getExtra ? w.getExtra(status) : ''}
                 </span>
               </div>
             </div>
-          )}
+          ))}
           {overallStatus !== 'online' && overallStatus !== 'loading' && (
             <div className="pt-1 mt-1 border-t border-slate-200 text-[11px] text-slate-400 leading-snug">
               워커에 문제가 있습니다. 관리자에게 설치/실행을 요청하세요.

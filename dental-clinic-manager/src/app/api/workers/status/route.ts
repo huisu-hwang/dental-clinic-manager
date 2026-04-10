@@ -32,8 +32,8 @@ async function getLatestWorkerVersion(): Promise<string | null> {
   return cachedLatestVersion;
 }
 
-// GET: 워커 상태 조회 (마케팅 워커, 스크래핑 워커)
-// ?type=marketing | scraping | all (기본값: all)
+// GET: 워커 상태 조회 (마케팅, 스크래핑, SEO, 이메일)
+// ?type=marketing | scraping | seo | email | all (기본값: all)
 export async function GET(request: NextRequest) {
   try {
     // 인증 확인 (일반 사용자도 조회 가능)
@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
         updateAvailable: boolean;
       };
       scraping?: { installed: boolean; online: boolean; workerCount: number };
+      seo?: { installed: boolean; online: boolean; workerCount: number };
+      email?: { installed: boolean; online: boolean };
     } = {};
 
     // 마케팅 워커 상태 (DB 기반 - Electron 워커가 heartbeat 업데이트)
@@ -110,6 +112,57 @@ export async function GET(request: NextRequest) {
         }
       }
       result.scraping = { installed, online, workerCount };
+    }
+
+    // SEO 워커 상태 (seo_workers 테이블 heartbeat 기반)
+    if (type === 'seo' || type === 'all') {
+      let installed = false;
+      let online = false;
+      let workerCount = 0;
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        const { data: workers } = await admin
+          .from('seo_workers')
+          .select('status, last_heartbeat')
+          .order('last_heartbeat', { ascending: false });
+
+        if (workers && workers.length > 0) {
+          installed = true;
+          const onlineWorkers = workers.filter((w) => {
+            if (w.status === 'offline') return false;
+            const lastBeat = new Date(w.last_heartbeat);
+            return Date.now() - lastBeat.getTime() < 2 * 60 * 1000;
+          });
+          workerCount = onlineWorkers.length;
+          online = workerCount > 0;
+        }
+      }
+      result.seo = { installed, online, workerCount };
+    }
+
+    // 이메일 모니터 상태 (마케팅 워커의 서브 모듈 — 별도 heartbeat 없이 마케팅 워커 상태로 판단)
+    if (type === 'email' || type === 'all') {
+      // 마케팅 워커가 온라인이면 이메일 모니터도 동작 중으로 판단
+      let marketingOnline = result.marketing?.online ?? false;
+      let marketingInstalled = result.marketing?.installed ?? false;
+      // 마케팅 상태를 아직 조회하지 않은 경우 (type=email 단독 호출)
+      if (!result.marketing) {
+        const admin = getSupabaseAdmin();
+        if (admin) {
+          const { data: controlData } = await admin
+            .from('marketing_worker_control')
+            .select('watchdog_online, last_updated')
+            .eq('id', 'main')
+            .single();
+          if (controlData) {
+            marketingInstalled = true;
+            const lastUpdated = controlData.last_updated ? new Date(controlData.last_updated) : null;
+            const isRecent = lastUpdated && (Date.now() - lastUpdated.getTime() < 60_000);
+            marketingOnline = !!(controlData.watchdog_online && isRecent);
+          }
+        }
+      }
+      result.email = { installed: marketingInstalled, online: marketingOnline };
     }
 
     return NextResponse.json(result);
