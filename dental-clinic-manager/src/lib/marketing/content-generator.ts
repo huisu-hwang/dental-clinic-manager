@@ -12,6 +12,7 @@ import {
   MarketingPrompt,
   FORBIDDEN_COMMERCIAL_KEYWORDS,
   SeoKeywordMiningResult,
+  ClinicalPhotoInput,
 } from '@/types/marketing';
 
 // ============================================
@@ -30,7 +31,8 @@ export async function generateContent(
   clinicId: string,
   customSystemPrompt?: string,
   generationSessionId?: string,
-  seoKeywordData?: SeoKeywordMiningResult
+  seoKeywordData?: SeoKeywordMiningResult,
+  clinicalPhotos?: ClinicalPhotoInput[]
 ): Promise<GeneratedContent> {
   // 1. 프롬프트 로딩 (customSystemPrompt 제공 시 DB 조회 생략)
   let promptTemplate: string;
@@ -96,15 +98,62 @@ export async function generateContent(
     ...options.notice?.templateData,
   }) + imageStyleInstruction + seoSection;
 
-  // 4. Claude API 호출
+  // 4. Claude API 호출 (임상 사진이 있으면 멀티모달)
   const callStart = Date.now();
+
+  // 메시지 컨텐츠 빌드
+  let userContent: Anthropic.Messages.ContentBlockParam[] | string;
+
+  if (clinicalPhotos && clinicalPhotos.length > 0) {
+    // 임상글: 멀티모달 (텍스트 + 이미지)
+    const parts: Anthropic.Messages.ContentBlockParam[] = [];
+
+    parts.push({
+      type: 'text',
+      text: `다음 주제로 임상 사례 블로그 글을 작성해주세요.\n\n주제: ${options.topic}\n키워드: ${options.keyword}\n\n아래는 실제 임상 사진들입니다. 각 사진을 보고 시술 과정과 결과를 구체적으로 설명해주세요.`,
+    });
+
+    // 사진 정렬: before → during → after, 각 카테고리 내 sort_order 순
+    const typeOrder: Record<string, number> = { before: 0, during: 1, after: 2 };
+    const sortedPhotos = [...clinicalPhotos].sort(
+      (a, b) => (typeOrder[a.photo_type] ?? 9) - (typeOrder[b.photo_type] ?? 9) || a.sort_order - b.sort_order
+    );
+
+    const typeLabels: Record<string, string> = { before: '술전', during: '술중', after: '술후' };
+
+    for (const photo of sortedPhotos) {
+      const label = typeLabels[photo.photo_type] || photo.photo_type;
+      parts.push({
+        type: 'text',
+        text: `\n--- ${label} 사진 (${photo.caption || '설명 없음'}) ---`,
+      });
+      parts.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: (photo.media_type || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          data: photo.base64,
+        },
+      });
+    }
+
+    parts.push({
+      type: 'text',
+      text: '\n\n위 사진들을 참고하여 글을 작성해주세요. 사진이 들어갈 위치에 [CLINICAL_PHOTO: before_1], [CLINICAL_PHOTO: during_1], [CLINICAL_PHOTO: after_1] 형식의 마커를 삽입해주세요. 숫자는 해당 카테고리 내 순서입니다.',
+    });
+
+    userContent = parts;
+  } else {
+    userContent = `다음 주제로 블로그 글을 작성해주세요.\n\n주제: ${options.topic}\n키워드: ${options.keyword}`;
+  }
+
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     messages: [
       {
         role: 'user',
-        content: `다음 주제로 블로그 글을 작성해주세요.\n\n주제: ${options.topic}\n키워드: ${options.keyword}`,
+        content: userContent,
       },
     ],
     system: systemPrompt,
@@ -291,15 +340,25 @@ function parseGeneratedContent(
   // 후처리: 구조 정규화
   body = normalizeBodyStructure(body);
 
-  // [IMAGE: ...] 마커 추출
+  // [IMAGE: ...] 및 [CLINICAL_PHOTO: ...] 마커 추출
   const imageMarkers: ImageMarker[] = [];
   const imageRegex = /\[IMAGE:\s*(.+?)\]/g;
-  let match;
-  while ((match = imageRegex.exec(body)) !== null) {
+  let imgMatch;
+  while ((imgMatch = imageRegex.exec(body)) !== null) {
     imageMarkers.push({
-      position: match.index,
-      prompt: match[1].trim(),
+      position: imgMatch.index,
+      prompt: imgMatch[1].trim(),
       sectionTitle: '',
+    });
+  }
+  // 임상 사진 마커도 추출
+  const clinicalPhotoRegex = /\[CLINICAL_PHOTO:\s*(.+?)\]/g;
+  let cpMatch;
+  while ((cpMatch = clinicalPhotoRegex.exec(body)) !== null) {
+    imageMarkers.push({
+      position: cpMatch.index,
+      prompt: cpMatch[1].trim(),
+      sectionTitle: 'clinical',
     });
   }
 

@@ -122,7 +122,7 @@ export const DEFAULT_PROMPTS: DefaultPrompt[] = [
     category: 'content',
     prompt_key: 'content.clinical',
     name: '임상글 생성',
-    system_prompt: `당신은 치과의사 관점에서 시술 사례를 소개하는 글을 작성합니다.
+    system_prompt: `당신은 치과의사 관점에서 실제 임상 사진을 기반으로 시술 사례를 소개하는 글을 작성합니다.
 
 ## 필수 규칙
 1. 환자 정보는 반드시 익명 처리하세요 (나이대, 성별만 표기)
@@ -130,6 +130,7 @@ export const DEFAULT_PROMPTS: DefaultPrompt[] = [
 3. 다음 상업 키워드는 사용하지 마세요: ${FORBIDDEN_LIST}
 4. 시술 결과는 "개인차가 있을 수 있다"는 점을 반드시 언급하세요
 5. 본문 1,000자 이상 작성하세요
+6. 키워드 "{{keyword}}"를 제목에 포함하고, 본문에 3~5회 자연스럽게 배치하세요
 
 ## 어투
 {{tone_instruction}}
@@ -137,14 +138,25 @@ export const DEFAULT_PROMPTS: DefaultPrompt[] = [
 ## 글 구조
 1. 도입부: 환자 고민/증상 공감 (익명)
    "{{patient_age}} {{patient_gender}} 환자분의 사례입니다."
-2. 진단: 상태 설명
-   [IMAGE: X-ray 또는 진단 사진 설명]
-3. 치료 계획: 시술 방법 설명
-4. 시술 과정: 단계별 설명
-   [IMAGE: 시술 전 사진]
-   [IMAGE: 시술 후 사진]
-5. 결과 & 관리법: 사후 관리 안내
-6. 면책 문구 (자동 삽입됨)
+2. 시술 전 상태: 술전 사진을 보고 환자의 구강 상태를 구체적으로 설명
+   [CLINICAL_PHOTO: before_1]
+   (술전 사진이 여러 장이면 [CLINICAL_PHOTO: before_2] 등 순서대로 배치)
+3. 치료 계획: 시술 방법과 선택 이유 설명
+4. 시술 과정: 술중 사진을 참고하여 단계별 과정 설명
+   [CLINICAL_PHOTO: during_1]
+   (술중 사진이 여러 장이면 순서대로 배치)
+5. 시술 결과: 술후 사진과 술전 사진을 비교하며 변화를 구체적으로 설명
+   [CLINICAL_PHOTO: after_1]
+   (술후 사진이 여러 장이면 순서대로 배치)
+6. 사후 관리법: 주의사항 및 관리 안내
+7. 면책 문구: "※ 시술 결과는 개인에 따라 차이가 있을 수 있습니다."
+
+## 중요 지시사항
+- 제공된 실제 임상 사진을 직접 보고, 사진에 보이는 내용을 구체적으로 설명하세요
+- [IMAGE:] 마커를 절대 사용하지 마세요. 반드시 [CLINICAL_PHOTO: type_order] 형식만 사용하세요
+- 사진이 없는 카테고리의 마커는 삽입하지 마세요
+- 제공된 사진의 개수와 종류에 맞춰 유연하게 글 구조를 조정하세요
+- 술전/술후 비교가 핵심이므로, 차이점을 독자가 이해하기 쉽게 설명하세요
 
 ## 시술 정보
 - 시술 종류: {{procedure_type}}
@@ -154,7 +166,7 @@ export const DEFAULT_PROMPTS: DefaultPrompt[] = [
 - 주소: {{chief_complaint}}
 
 {{research_section}}`,
-    variables: ['tone_instruction', 'procedure_type', 'procedure_detail', 'duration', 'patient_age', 'patient_gender', 'chief_complaint', 'research_section'],
+    variables: ['keyword', 'tone_instruction', 'procedure_type', 'procedure_detail', 'duration', 'patient_age', 'patient_gender', 'chief_complaint', 'research_section'],
   },
 
   // ─── 글 생성: 공지글 (6종) ───

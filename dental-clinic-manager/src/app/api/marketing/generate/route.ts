@@ -7,7 +7,7 @@ import { generateBlogImage, generatePlatformImage } from '@/lib/marketing/image-
 import { transformToInstagram } from '@/lib/marketing/platform-adapters/instagram';
 import { transformToFacebook } from '@/lib/marketing/platform-adapters/facebook';
 import { transformToThreads } from '@/lib/marketing/platform-adapters/threads';
-import type { ContentGenerateOptions, PlatformContent, SeoKeywordMiningResult } from '@/types/marketing';
+import type { ContentGenerateOptions, PlatformContent, SeoKeywordMiningResult, ClinicalPhotoInput } from '@/types/marketing';
 
 // Vercel 서버리스 함수 타임아웃 확장 (Claude + Gemini API 호출 소요 시간 대응)
 export const maxDuration = 120;
@@ -211,17 +211,62 @@ export async function POST(request: NextRequest) {
           step: 'AI가 글을 작성하고 있습니다...',
         });
 
-        const result = await generateContent(options, userData.clinic_id, undefined, generationSessionId, seoKeywordData);
+        // 임상 사진 데이터 추출
+        const clinicalPhotos: ClinicalPhotoInput[] = body.clinical?.photos || [];
+
+        const result = await generateContent(options, userData.clinic_id, undefined, generationSessionId, seoKeywordData, clinicalPhotos.length > 0 ? clinicalPhotos : undefined);
 
         sendEvent(controller, {
           progress: 55,
           step: '글 작성이 완료되었습니다.',
         });
 
-        // 2단계: 이미지 병렬 생성 (Gemini) + Storage 업로드
-        const maxImages = options.imageCount ?? 3;
-        const imageMarkers = maxImages > 0 ? (result.imageMarkers || []).slice(0, maxImages) : [];
+        // 2단계: 이미지 처리
         const admin = getSupabaseAdmin();
+
+        // 임상글: 실제 업로드된 사진으로 본문의 [CLINICAL_PHOTO:] 마커 치환
+        if (options.postType === 'clinical' && clinicalPhotos.length > 0) {
+          sendEvent(controller, { progress: 60, step: '임상 사진을 본문에 삽입하고 있습니다...' });
+
+          // 사진 정렬: before → during → after
+          const typeOrder: Record<string, number> = { before: 0, during: 1, after: 2 };
+          const sortedPhotos = [...clinicalPhotos].sort(
+            (a, b) => (typeOrder[a.photo_type] ?? 9) - (typeOrder[b.photo_type] ?? 9) || a.sort_order - b.sort_order
+          );
+
+          // 마커 → URL 매핑 빌드
+          const photoMap: Record<string, string> = {};
+          const counters: Record<string, number> = { before: 0, during: 0, after: 0 };
+          for (const photo of sortedPhotos) {
+            counters[photo.photo_type] = (counters[photo.photo_type] || 0) + 1;
+            photoMap[`${photo.photo_type}_${counters[photo.photo_type]}`] = photo.file_path;
+          }
+
+          // 본문의 [CLINICAL_PHOTO: type_order] 마커를 실제 이미지 마크다운으로 치환
+          result.body = result.body.replace(
+            /\[CLINICAL_PHOTO:\s*(\w+)\]/g,
+            (_match: string, key: string) => {
+              const url = photoMap[key.trim()];
+              return url ? `![임상 사진](${url})` : '';
+            }
+          );
+
+          // generatedImages를 임상 사진으로 구성
+          const clinicalImages = sortedPhotos.map((photo, i) => ({
+            fileName: `clinical_${photo.photo_type}_${i + 1}`,
+            prompt: photo.caption || `${photo.photo_type} photo`,
+            path: photo.file_path,
+          }));
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (result as any).generatedImages = clinicalImages;
+
+          sendEvent(controller, { progress: 90, step: `임상 사진 ${clinicalImages.length}장 삽입 완료` });
+        }
+
+        // 일반 글: AI 이미지 생성 (Gemini)
+        const maxImages = options.imageCount ?? 3;
+        const imageMarkers = (options.postType !== 'clinical' && maxImages > 0) ? (result.imageMarkers || []).slice(0, maxImages) : [];
         if (imageMarkers.length > 0) {
 
           sendEvent(controller, {
@@ -505,6 +550,24 @@ export async function POST(request: NextRequest) {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (result as any).savedItemId = savedItemId;
+
+        // 임상 사진 DB 저장
+        if (savedItemId && options.postType === 'clinical' && clinicalPhotos.length > 0) {
+          try {
+            const photoInserts = clinicalPhotos.map((photo) => ({
+              item_id: savedItemId,
+              photo_type: photo.photo_type,
+              file_path: photo.file_path,
+              caption: photo.caption || null,
+              patient_consent: options.clinical?.patientConsent || false,
+              anonymized: false,
+              sort_order: photo.sort_order,
+            }));
+            await saveClient.from('clinical_photos').insert(photoInserts);
+          } catch (cpErr) {
+            console.error('[API] 임상 사진 DB 저장 실패:', cpErr);
+          }
+        }
 
         // 완료 - 최종 결과 전송
         sendEvent(controller, {
