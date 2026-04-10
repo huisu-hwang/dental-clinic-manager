@@ -26,6 +26,11 @@ interface WorkerStatusResponse {
     installed: boolean
     online: boolean
   }
+  dentweb?: {
+    installed: boolean
+    online: boolean
+    lastSyncStatus: string | null
+  }
 }
 
 type Status = 'online' | 'offline' | 'not-installed' | 'loading'
@@ -52,7 +57,7 @@ function resolveStatus(installed: boolean | undefined, online: boolean | undefin
 
 /** 워커 항목 정의 (표시 순서) */
 interface WorkerDef {
-  key: 'marketing' | 'scraping' | 'seo' | 'email'
+  key: 'marketing' | 'scraping' | 'seo' | 'email' | 'dentweb'
   label: string
   /** 이 워커가 필요한 프리미엄 기능 ID */
   premiumId: string
@@ -82,6 +87,11 @@ const WORKER_DEFS: WorkerDef[] = [
     label: '홈택스 스크래핑',
     premiumId: 'financial',
     getExtra: (s) => s.scraping?.online && s.scraping.workerCount ? ` (${s.scraping.workerCount})` : '',
+  },
+  {
+    key: 'dentweb',
+    label: '덴트웹 동기화',
+    premiumId: 'marketing',
   },
 ]
 

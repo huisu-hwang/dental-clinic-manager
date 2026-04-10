@@ -4,6 +4,7 @@ import { getStatus as getWorkerStatus, start as startWorker, stop as stopWorker 
 import { getScrapingStatus } from './scraping-bridge';
 import { getSeoStatus } from './seo-bridge';
 import { getEmailMonitorStatus } from './email-bridge';
+import { getDentwebStatus } from './dentweb-bridge';
 import { Logger } from './logger';
 import { getVersionInfo } from './updater';
 import { getUpdateMeta } from './config-store';
@@ -57,6 +58,7 @@ function registerIpcHandlers(): void {
       scraping: getScrapingStatus(),
       seo: getSeoStatus(),
       email: getEmailMonitorStatus(),
+      dentweb: getDentwebStatus(),
     };
   });
 

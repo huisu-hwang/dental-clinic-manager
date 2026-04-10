@@ -44,7 +44,7 @@
 
     .status-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 10px;
     }
 
@@ -72,6 +72,7 @@
     .status-dot.scraping  { background: #a855f7; box-shadow: 0 0 6px #a855f788; }
     .status-dot.analyzing { background: #a855f7; box-shadow: 0 0 6px #a855f788; }
     .status-dot.processing{ background: #f59e0b; box-shadow: 0 0 6px #f59e0b88; }
+    .status-dot.syncing  { background: #06b6d4; box-shadow: 0 0 6px #06b6d488; }
     .status-dot.error     { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
 
     .status-card-info { min-width: 0; }
@@ -251,6 +252,13 @@
           <div class="status-card-value" id="lblEmail">중지됨</div>
         </div>
       </div>
+      <div class="status-card">
+        <div class="status-dot" id="dotDentweb"></div>
+        <div class="status-card-info">
+          <div class="status-card-name">덴트웹 동기화</div>
+          <div class="status-card-value" id="lblDentweb">중지됨</div>
+        </div>
+      </div>
     </div>
 
     <div class="version-section">
@@ -301,6 +309,7 @@
     var SCRAPING_LABELS = { idle: '중지됨', polling: '대기 중', scraping: '수집 중', error: '오류' };
     var SEO_LABELS      = { idle: '중지됨', polling: '대기 중', analyzing: '분석 중', error: '오류' };
     var EMAIL_LABELS    = { idle: '중지됨', polling: '대기 중', processing: '처리 중', error: '오류' };
+    var DENTWEB_LABELS  = { idle: '중지됨', polling: '대기 중', syncing: '동기화 중', error: '오류' };
 
     function updateDot(id, status) {
       var el = document.getElementById(id);
@@ -331,6 +340,9 @@
 
         updateDot('dotEmail',    s.email);
         setLabel('lblEmail',    EMAIL_LABELS[s.email]       || s.email);
+
+        updateDot('dotDentweb', s.dentweb);
+        setLabel('lblDentweb', DENTWEB_LABELS[s.dentweb]   || s.dentweb);
 
         if (!isToggling) {
           var btn = document.getElementById('btnToggle');

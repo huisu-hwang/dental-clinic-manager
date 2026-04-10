@@ -18,6 +18,13 @@ interface StoreSchema {
   latestVersion: string;     // 확인된 최신 버전
   updateStatus: string;      // 업데이트 상태 (up-to-date, available, downloading, downloaded)
   githubToken: string;       // GitHub PAT (private repo 업데이트용)
+  // DentWeb DB 설정
+  dentwebDbServer: string;
+  dentwebDbPort: number;
+  dentwebDbDatabase: string;
+  dentwebDbAuth: string;     // 'windows' | 'sql'
+  dentwebDbUser: string;
+  dentwebDbPassword: string;
 }
 
 export interface AppConfig {
@@ -26,6 +33,15 @@ export interface AppConfig {
   autoStart: boolean;
   autoUpdate: boolean;
   headless: boolean;
+}
+
+export interface DentwebDbConfig {
+  server: string;
+  port: number;
+  database: string;
+  auth: 'windows' | 'sql';
+  user: string;
+  password: string;
 }
 
 export interface UpdateMeta {
@@ -49,6 +65,12 @@ const store = new Store<StoreSchema>({
     latestVersion: '',
     updateStatus: 'up-to-date',
     githubToken: '',
+    dentwebDbServer: '',
+    dentwebDbPort: 1433,
+    dentwebDbDatabase: 'DENTWEBDB',
+    dentwebDbAuth: 'windows',
+    dentwebDbUser: '',
+    dentwebDbPassword: '',
   },
 });
 
@@ -126,4 +148,30 @@ export function getWorkerEnvVars(): Record<string, string> {
     WORKER_API_KEY: store.get('workerApiKey'),
     MARKETING_WORKER_PORT: '4001',
   };
+}
+
+/**
+ * DentWeb DB 설정 조회
+ */
+export function getDentwebConfig(): DentwebDbConfig {
+  return {
+    server: store.get('dentwebDbServer'),
+    port: store.get('dentwebDbPort'),
+    database: store.get('dentwebDbDatabase'),
+    auth: (store.get('dentwebDbAuth') as 'windows' | 'sql') || 'windows',
+    user: store.get('dentwebDbUser'),
+    password: store.get('dentwebDbPassword'),
+  };
+}
+
+/**
+ * DentWeb DB 설정 저장
+ */
+export function setDentwebConfig(cfg: Partial<DentwebDbConfig>): void {
+  if (cfg.server !== undefined) store.set('dentwebDbServer', cfg.server);
+  if (cfg.port !== undefined) store.set('dentwebDbPort', cfg.port);
+  if (cfg.database !== undefined) store.set('dentwebDbDatabase', cfg.database);
+  if (cfg.auth !== undefined) store.set('dentwebDbAuth', cfg.auth);
+  if (cfg.user !== undefined) store.set('dentwebDbUser', cfg.user);
+  if (cfg.password !== undefined) store.set('dentwebDbPassword', cfg.password);
 }
