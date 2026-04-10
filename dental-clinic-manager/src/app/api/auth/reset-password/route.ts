@@ -43,28 +43,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // redirectTo를 VERCEL_URL (*.vercel.app)로 설정하여 PWA scope 밖으로
+    // redirectTo를 Vercel 도메인(*.vercel.app)으로 설정하여 PWA scope 밖으로
     // PWA는 hi-clinic.co.kr에 설치되므로 *.vercel.app 링크는 브라우저에서 열림
-    const getRedirectUrl = () => {
-      // VERCEL_URL: Vercel이 서버사이드에서 자동 주입 (*.vercel.app)
-      if (process.env.VERCEL_URL) {
-        return `https://${process.env.VERCEL_URL}/api/auth/reset-callback?intent=recovery`
-      }
-      // NEXT_PUBLIC_VERCEL_URL 도 확인 (빌드 시 주입)
-      if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-        return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/auth/reset-callback?intent=recovery`
-      }
-      // fallback: SITE_URL 사용
-      if (process.env.NEXT_PUBLIC_SITE_URL) {
-        return `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/reset-callback?intent=recovery`
-      }
-      // 개발 환경
-      const host = request.headers.get('host') || 'localhost:3000'
-      const protocol = host.includes('localhost') ? 'http' : 'https'
-      return `${protocol}://${host}/api/auth/reset-callback?intent=recovery`
-    }
-
-    const redirectUrl = getRedirectUrl()
+    // 주의: VERCEL_URL은 런타임 변수라 빌드 시 없고, NEXT_PUBLIC_SITE_URL은
+    // 빌드 시 인라인되어 항상 hi-clinic.co.kr이 되므로 하드코딩으로 해결
+    const isProduction = process.env.NODE_ENV === 'production'
+    const redirectUrl = isProduction
+      ? 'https://dental-clinic-manager-rust.vercel.app/api/auth/reset-callback?intent=recovery'
+      : `http://${request.headers.get('host') || 'localhost:3000'}/api/auth/reset-callback?intent=recovery`
     console.log('[ResetPassword] Redirect URL:', redirectUrl)
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
