@@ -497,22 +497,22 @@ export default function DashboardHome() {
     : '0'
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      {/* 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
+    <div className="bg-white rounded-2xl overflow-hidden border border-[#e0e2e6]" style={{ boxShadow: 'rgba(0,0,0,0.32) 0px 0px 1px, rgba(0,0,0,0.08) 0px 0px 2px, rgba(45,127,249,0.28) 0px 1px 3px, rgba(0,0,0,0.06) 0px 0px 0px 0.5px inset' }}>
+      {/* 헤더 — Airtable Blue */}
+      <div className="bg-[#1b61c9] px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/15 rounded-xl flex items-center justify-center">
               <Home className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">대시보드</h2>
-              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">{formatDate(currentTime)}</p>
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-[0.08px]">대시보드</h2>
+              <p className="text-white/70 text-xs sm:text-sm hidden sm:block tracking-[0.12px]">{formatDate(currentTime)}</p>
             </div>
           </div>
           <button
             onClick={handleRefresh}
-            className="inline-flex items-center px-2 sm:px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-white text-xs sm:text-sm transition-colors"
+            className="inline-flex items-center px-2 sm:px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-white text-xs sm:text-sm transition-colors tracking-[0.08px]"
           >
             <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
             새로고침
@@ -522,13 +522,13 @@ export default function DashboardHome() {
 
       {/* 워커 미설치 배너 */}
       {workerInstalled === false && (
-        <div className="bg-blue-50 border-b border-blue-200 px-4 sm:px-6 py-3">
+        <div className="bg-[#f0f6ff] border-b border-[#e0e2e6] px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Monitor className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <Monitor className="w-4 h-4 text-[#1b61c9] flex-shrink-0" />
               <div>
-                <span className="text-sm font-medium text-blue-800">클리닉 매니저 워커가 설치되지 않았습니다</span>
-                <p className="text-xs text-blue-600 mt-0.5">
+                <span className="text-sm font-medium text-[#181d26] tracking-[0.08px]">클리닉 매니저 워커가 설치되지 않았습니다</span>
+                <p className="text-xs text-[rgba(4,14,32,0.69)] mt-0.5 tracking-[0.07px]">
                   블로그 발행, 홈택스 연동, SEO 분석 등의 기능을 사용하려면 워커를 설치해주세요.
                 </p>
               </div>
@@ -536,13 +536,13 @@ export default function DashboardHome() {
             <button
               onClick={handleWorkerDownload}
               disabled={workerDownloading}
-              className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap ml-4"
+              className="inline-flex items-center px-3 py-1.5 bg-[#1b61c9] hover:bg-[#154ea3] disabled:bg-[#1b61c9]/60 text-white text-xs font-medium rounded-xl transition-colors whitespace-nowrap ml-4 tracking-[0.08px]"
             >
               <Download className="w-3.5 h-3.5 mr-1.5" />
               {workerDownloading ? '다운로드 중...' : '워커 설치'}
             </button>
           </div>
-          <p className="text-xs text-blue-500 mt-1.5">
+          <p className="text-xs text-[rgba(4,14,32,0.5)] mt-1.5 tracking-[0.07px]">
             * Windows 보호 화면이 나타나면 &apos;추가 정보&apos; → &apos;실행&apos;을 클릭하세요.
           </p>
         </div>
@@ -595,10 +595,10 @@ export default function DashboardHome() {
 
       {/* 보고서 미작성 알림 */}
       {!dataLoading && !todaySummary.hasReport && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-2.5">
+        <div className="bg-[#fff8f0] border-b border-[#e0e2e6] px-4 sm:px-6 py-2.5">
           <div className="flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-            <span className="text-sm text-amber-800">오늘의 일일보고서가 아직 작성되지 않았습니다.</span>
+            <AlertCircle className="w-4 h-4 text-[#c4720a] flex-shrink-0" />
+            <span className="text-sm text-[#181d26] tracking-[0.08px]">오늘의 일일보고서가 아직 작성되지 않았습니다.</span>
           </div>
         </div>
       )}
@@ -610,53 +610,56 @@ export default function DashboardHome() {
           <div className="flex-1 space-y-4 sm:space-y-5">
             {/* 오늘의 현황 */}
             <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">오늘의 현황</h3>
+              <h3 className="text-sm font-semibold text-[#181d26] mb-3 tracking-[0.08px]">오늘의 현황</h3>
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <button
                   onClick={() => togglePanel(todayActivePanel, 'consult', setTodayActivePanel)}
-                  className={`rounded-lg p-3 text-center w-full transition-all ${todayActivePanel === 'consult' ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-slate-50 hover:bg-slate-100'}`}
+                  className={`rounded-2xl p-3 text-center w-full transition-all border ${todayActivePanel === 'consult' ? 'bg-[#f0f6ff] border-[#1b61c9] ring-1 ring-[#1b61c9]' : 'bg-[#f8fafc] border-[#e0e2e6] hover:bg-[#f0f4f8]'}`}
+                  style={todayActivePanel === 'consult' ? { boxShadow: 'rgba(45,127,249,0.28) 0px 1px 3px' } : {}}
                 >
-                  <TrendingUp className="w-5 h-5 text-green-500 mx-auto mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-green-600">{todaySummary.consultProceed}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.consultCount}</span></p>
-                  <p className="text-xs text-slate-500">성공/상담</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{todayActivePanel === 'consult' ? '▲ 닫기' : '▼ 목록 보기'}</p>
+                  <TrendingUp className="w-5 h-5 text-[#1b7a3d] mx-auto mb-1" />
+                  <p className="text-lg sm:text-xl font-bold text-[#1b7a3d] tracking-[0.1px]">{todaySummary.consultProceed}<span className="text-[#999] font-normal">/</span><span className="text-[#181d26]">{todaySummary.consultCount}</span></p>
+                  <p className="text-xs text-[rgba(4,14,32,0.69)] tracking-[0.07px]">성공/상담</p>
+                  <p className="text-[10px] text-[rgba(4,14,32,0.5)] mt-0.5">{todayActivePanel === 'consult' ? '▲ 닫기' : '▼ 목록 보기'}</p>
                 </button>
                 <button
                   onClick={() => togglePanel(todayActivePanel, 'recall', setTodayActivePanel)}
-                  className={`rounded-lg p-3 text-center w-full transition-all ${todayActivePanel === 'recall' ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-slate-50 hover:bg-slate-100'}`}
+                  className={`rounded-2xl p-3 text-center w-full transition-all border ${todayActivePanel === 'recall' ? 'bg-[#f0f6ff] border-[#1b61c9] ring-1 ring-[#1b61c9]' : 'bg-[#f8fafc] border-[#e0e2e6] hover:bg-[#f0f4f8]'}`}
+                  style={todayActivePanel === 'recall' ? { boxShadow: 'rgba(45,127,249,0.28) 0px 1px 3px' } : {}}
                 >
-                  <Calendar className="w-5 h-5 text-orange-500 mx-auto mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-orange-600">{todaySummary.recallBookingCount}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.recallCount}</span></p>
-                  <p className="text-xs text-slate-500">예약/리콜</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{todayActivePanel === 'recall' ? '▲ 닫기' : '▼ 현황 보기'}</p>
+                  <Calendar className="w-5 h-5 text-[#c4720a] mx-auto mb-1" />
+                  <p className="text-lg sm:text-xl font-bold text-[#c4720a] tracking-[0.1px]">{todaySummary.recallBookingCount}<span className="text-[#999] font-normal">/</span><span className="text-[#181d26]">{todaySummary.recallCount}</span></p>
+                  <p className="text-xs text-[rgba(4,14,32,0.69)] tracking-[0.07px]">예약/리콜</p>
+                  <p className="text-[10px] text-[rgba(4,14,32,0.5)] mt-0.5">{todayActivePanel === 'recall' ? '▲ 닫기' : '▼ 현황 보기'}</p>
                 </button>
                 <button
                   onClick={() => togglePanel(todayActivePanel, 'gift', setTodayActivePanel)}
-                  className={`rounded-lg p-3 text-center w-full transition-all ${todayActivePanel === 'gift' ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-slate-50 hover:bg-slate-100'}`}
+                  className={`rounded-2xl p-3 text-center w-full transition-all border ${todayActivePanel === 'gift' ? 'bg-[#f0f6ff] border-[#1b61c9] ring-1 ring-[#1b61c9]' : 'bg-[#f8fafc] border-[#e0e2e6] hover:bg-[#f0f4f8]'}`}
+                  style={todayActivePanel === 'gift' ? { boxShadow: 'rgba(45,127,249,0.28) 0px 1px 3px' } : {}}
                 >
-                  <BarChart3 className="w-5 h-5 text-purple-500 mx-auto mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-purple-600">{todaySummary.naverReviewCount}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{todaySummary.giftCount}</span></p>
-                  <p className="text-xs text-slate-500">리뷰/선물</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{todayActivePanel === 'gift' ? '▲ 닫기' : '▼ 목록 보기'}</p>
+                  <BarChart3 className="w-5 h-5 text-[#6b3fa0] mx-auto mb-1" />
+                  <p className="text-lg sm:text-xl font-bold text-[#6b3fa0] tracking-[0.1px]">{todaySummary.naverReviewCount}<span className="text-[#999] font-normal">/</span><span className="text-[#181d26]">{todaySummary.giftCount}</span></p>
+                  <p className="text-xs text-[rgba(4,14,32,0.69)] tracking-[0.07px]">리뷰/선물</p>
+                  <p className="text-[10px] text-[rgba(4,14,32,0.5)] mt-0.5">{todayActivePanel === 'gift' ? '▲ 닫기' : '▼ 목록 보기'}</p>
                 </button>
               </div>
 
               {/* 상담 확장 패널 */}
               {todayActivePanel === 'consult' && (
-                <div className="mt-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
-                  <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
-                    <span className="text-xs font-semibold text-slate-600">📋 오늘 상담 목록</span>
-                    <span className="text-xs text-slate-400">총 {todayConsults.length}건</span>
+                <div className="mt-2 bg-white border border-[#e0e2e6] rounded-2xl overflow-hidden" style={{ boxShadow: 'rgba(15,48,106,0.05) 0px 0px 20px' }}>
+                  <div className="bg-[#f8fafc] px-4 py-2 flex justify-between items-center border-b border-[#e0e2e6]">
+                    <span className="text-xs font-semibold text-[#181d26] tracking-[0.07px]">📋 오늘 상담 목록</span>
+                    <span className="text-xs text-[rgba(4,14,32,0.5)]">총 {todayConsults.length}건</span>
                   </div>
                   {todayConsults.length === 0 ? (
-                    <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                    <p className="text-sm text-[rgba(4,14,32,0.5)] text-center py-4">데이터가 없습니다</p>
                   ) : (
-                    <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+                    <div className="divide-y divide-[#e0e2e6]/50 max-h-[300px] overflow-y-auto">
                       {todayConsults.map((c, i) => (
                         <div key={c.id ?? i} className="flex items-center gap-2 px-4 py-2 text-sm">
-                          <span className="font-medium text-slate-800 w-16 truncate">{c.patient_name}</span>
-                          <span className="text-slate-500 flex-1 truncate">{c.consult_content}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.consult_status === 'O' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                          <span className="font-medium text-[#181d26] w-16 truncate tracking-[0.08px]">{c.patient_name}</span>
+                          <span className="text-[rgba(4,14,32,0.69)] flex-1 truncate tracking-[0.07px]">{c.consult_content}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.consult_status === 'O' ? 'bg-[#e6f4ea] text-[#1b7a3d]' : 'bg-[#fce8e6] text-[#c5221f]'}`}>
                             {c.consult_status === 'O' ? '✓ 성공' : '✗ 보류'}
                           </span>
                         </div>
@@ -673,29 +676,29 @@ export default function DashboardHome() {
                   : []
                 const unbookedCount = Math.max(0, (todayReport?.recall_count || 0) - bookedNames.length)
                 return (
-                  <div className="mt-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
-                    <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
-                      <span className="text-xs font-semibold text-slate-600">📞 오늘 리콜 현황</span>
-                      <span className="text-xs text-slate-400">예약 {bookedNames.length} / 리콜 {todayReport?.recall_count || 0}건</span>
+                  <div className="mt-2 bg-white border border-[#e0e2e6] rounded-2xl overflow-hidden" style={{ boxShadow: 'rgba(15,48,106,0.05) 0px 0px 20px' }}>
+                    <div className="bg-[#f8fafc] px-4 py-2 flex justify-between items-center border-b border-[#e0e2e6]">
+                      <span className="text-xs font-semibold text-[#181d26] tracking-[0.07px]">📞 오늘 리콜 현황</span>
+                      <span className="text-xs text-[rgba(4,14,32,0.5)]">예약 {bookedNames.length} / 리콜 {todayReport?.recall_count || 0}건</span>
                     </div>
                     {(todayReport?.recall_count || 0) === 0 ? (
-                      <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                      <p className="text-sm text-[rgba(4,14,32,0.5)] text-center py-4">데이터가 없습니다</p>
                     ) : (
                       <div className="px-4 py-3 space-y-2 max-h-[300px] overflow-y-auto">
                         {bookedNames.length > 0 && (
                           <div className="flex items-start gap-2">
-                            <span className="text-xs text-slate-500 w-14 pt-0.5">예약완료</span>
+                            <span className="text-xs text-[rgba(4,14,32,0.69)] w-14 pt-0.5">예약완료</span>
                             <div className="flex flex-wrap gap-1.5 flex-1">
                               {bookedNames.map((name, i) => (
-                                <span key={i} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{name}</span>
+                                <span key={i} className="text-xs bg-[#e6f4ea] text-[#1b7a3d] px-2 py-0.5 rounded-full">{name}</span>
                               ))}
                             </div>
                           </div>
                         )}
                         {unbookedCount > 0 && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-500 w-14">미예약</span>
-                            <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{unbookedCount}명</span>
+                            <span className="text-xs text-[rgba(4,14,32,0.69)] w-14">미예약</span>
+                            <span className="text-xs bg-[#fce8e6] text-[#c5221f] px-2 py-0.5 rounded-full">{unbookedCount}명</span>
                           </div>
                         )}
                       </div>
@@ -706,23 +709,23 @@ export default function DashboardHome() {
 
               {/* 선물 확장 패널 */}
               {todayActivePanel === 'gift' && (
-                <div className="mt-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
-                  <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
-                    <span className="text-xs font-semibold text-slate-600">🎁 오늘 선물/리뷰 목록</span>
-                    <span className="text-xs text-slate-400">총 {todayGifts.length}건</span>
+                <div className="mt-2 bg-white border border-[#e0e2e6] rounded-2xl overflow-hidden" style={{ boxShadow: 'rgba(15,48,106,0.05) 0px 0px 20px' }}>
+                  <div className="bg-[#f8fafc] px-4 py-2 flex justify-between items-center border-b border-[#e0e2e6]">
+                    <span className="text-xs font-semibold text-[#181d26] tracking-[0.07px]">🎁 오늘 선물/리뷰 목록</span>
+                    <span className="text-xs text-[rgba(4,14,32,0.5)]">총 {todayGifts.length}건</span>
                   </div>
                   {todayGifts.length === 0 ? (
-                    <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                    <p className="text-sm text-[rgba(4,14,32,0.5)] text-center py-4">데이터가 없습니다</p>
                   ) : (
-                    <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+                    <div className="divide-y divide-[#e0e2e6]/50 max-h-[300px] overflow-y-auto">
                       {todayGifts.map((g, i) => (
                         <div key={g.id ?? i} className="flex items-center gap-2 px-4 py-2 text-sm">
-                          <span className="font-medium text-slate-800 w-16 truncate">{g.patient_name}</span>
-                          <span className="text-slate-500 flex-1 truncate">{g.gift_type} × {g.quantity}</span>
+                          <span className="font-medium text-[#181d26] w-16 truncate tracking-[0.08px]">{g.patient_name}</span>
+                          <span className="text-[rgba(4,14,32,0.69)] flex-1 truncate tracking-[0.07px]">{g.gift_type} × {g.quantity}</span>
                           {g.naver_review === 'O' ? (
-                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">리뷰 ✓</span>
+                            <span className="text-xs bg-[#fef7e0] text-[#c4720a] px-2 py-0.5 rounded-full font-medium">리뷰 ✓</span>
                           ) : (
-                            <span className="text-xs text-slate-400">리뷰 없음</span>
+                            <span className="text-xs text-[rgba(4,14,32,0.5)]">리뷰 없음</span>
                           )}
                         </div>
                       ))}
@@ -734,54 +737,54 @@ export default function DashboardHome() {
 
             {/* 팀 출퇴근 현황 */}
             <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">팀 출퇴근 현황</h3>
+              <h3 className="text-sm font-semibold text-[#181d26] mb-3 tracking-[0.08px]">팀 출퇴근 현황</h3>
               {attendanceLoading ? (
                 <div className="flex justify-center py-6">
-                  <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-6 h-6 border-4 border-[#1b61c9] border-t-transparent rounded-full animate-spin"></div>
                 </div>
               ) : teamStatus ? (
-                <div className="bg-slate-50 rounded-lg p-4">
+                <div className="bg-[#f8fafc] rounded-2xl p-4 border border-[#e0e2e6]">
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
                     <button onClick={() => togglePanel(attendanceActivePanel, 'checkin', setAttendanceActivePanel)}
-                      className={`rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'checkin' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
-                      <p className="text-lg font-bold text-green-600">{teamStatus.checked_in}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{teamStatus.total_employees}</span></p>
-                      <p className="text-xs text-green-600">출근/전체</p>
+                      className={`rounded-xl p-2 text-center transition-all ${attendanceActivePanel === 'checkin' ? 'bg-[#f0f6ff] ring-1 ring-[#1b61c9]' : 'hover:bg-[#f0f4f8]'}`}>
+                      <p className="text-lg font-bold text-[#1b7a3d]">{teamStatus.checked_in}<span className="text-[#999] font-normal">/</span><span className="text-[#181d26]">{teamStatus.total_employees}</span></p>
+                      <p className="text-xs text-[#1b7a3d] tracking-[0.07px]">출근/전체</p>
                     </button>
                     <button onClick={() => togglePanel(attendanceActivePanel, 'checkout', setAttendanceActivePanel)}
-                      className={`rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'checkout' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
-                      <p className="text-lg font-bold text-blue-600">{teamStatus.checked_out || 0}</p>
-                      <p className="text-xs text-blue-600">퇴근</p>
+                      className={`rounded-xl p-2 text-center transition-all ${attendanceActivePanel === 'checkout' ? 'bg-[#f0f6ff] ring-1 ring-[#1b61c9]' : 'hover:bg-[#f0f4f8]'}`}>
+                      <p className="text-lg font-bold text-[#1b61c9]">{teamStatus.checked_out || 0}</p>
+                      <p className="text-xs text-[#1b61c9] tracking-[0.07px]">퇴근</p>
                     </button>
                     <button onClick={() => togglePanel(attendanceActivePanel, 'absent', setAttendanceActivePanel)}
-                      className={`rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'absent' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
-                      <p className="text-lg font-bold text-orange-600">{teamStatus.not_checked_in}</p>
-                      <p className="text-xs text-orange-600">결근</p>
+                      className={`rounded-xl p-2 text-center transition-all ${attendanceActivePanel === 'absent' ? 'bg-[#f0f6ff] ring-1 ring-[#1b61c9]' : 'hover:bg-[#f0f4f8]'}`}>
+                      <p className="text-lg font-bold text-[#c4720a]">{teamStatus.not_checked_in}</p>
+                      <p className="text-xs text-[#c4720a] tracking-[0.07px]">결근</p>
                     </button>
                     <button onClick={() => togglePanel(attendanceActivePanel, 'late', setAttendanceActivePanel)}
-                      className={`hidden sm:block rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'late' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
-                      <p className="text-lg font-bold text-yellow-600">{teamStatus.late_count}</p>
-                      <p className="text-xs text-yellow-600">지각</p>
+                      className={`hidden sm:block rounded-xl p-2 text-center transition-all ${attendanceActivePanel === 'late' ? 'bg-[#f0f6ff] ring-1 ring-[#1b61c9]' : 'hover:bg-[#f0f4f8]'}`}>
+                      <p className="text-lg font-bold text-[#b8860b]">{teamStatus.late_count}</p>
+                      <p className="text-xs text-[#b8860b] tracking-[0.07px]">지각</p>
                     </button>
                     <button onClick={() => togglePanel(attendanceActivePanel, 'early', setAttendanceActivePanel)}
-                      className={`hidden sm:block rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'early' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
-                      <p className="text-lg font-bold text-red-600">{teamStatus.early_leave_count || 0}</p>
-                      <p className="text-xs text-red-600">조퇴</p>
+                      className={`hidden sm:block rounded-xl p-2 text-center transition-all ${attendanceActivePanel === 'early' ? 'bg-[#f0f6ff] ring-1 ring-[#1b61c9]' : 'hover:bg-[#f0f4f8]'}`}>
+                      <p className="text-lg font-bold text-[#c5221f]">{teamStatus.early_leave_count || 0}</p>
+                      <p className="text-xs text-[#c5221f] tracking-[0.07px]">조퇴</p>
                     </button>
                     <button onClick={() => togglePanel(attendanceActivePanel, 'overtime', setAttendanceActivePanel)}
-                      className={`hidden sm:block rounded-lg p-2 text-center transition-all ${attendanceActivePanel === 'overtime' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}>
-                      <p className="text-lg font-bold text-purple-600">{teamStatus.overtime_count || 0}</p>
-                      <p className="text-xs text-purple-600">초과</p>
+                      className={`hidden sm:block rounded-xl p-2 text-center transition-all ${attendanceActivePanel === 'overtime' ? 'bg-[#f0f6ff] ring-1 ring-[#1b61c9]' : 'hover:bg-[#f0f4f8]'}`}>
+                      <p className="text-lg font-bold text-[#6b3fa0]">{teamStatus.overtime_count || 0}</p>
+                      <p className="text-xs text-[#6b3fa0] tracking-[0.07px]">초과</p>
                     </button>
                   </div>
                   {teamStatus.total_employees > 0 && (
-                    <div className="mt-3 pt-3 border-t border-slate-200">
-                      <div className="flex items-center justify-between text-xs text-slate-600 mb-1.5">
+                    <div className="mt-3 pt-3 border-t border-[#e0e2e6]">
+                      <div className="flex items-center justify-between text-xs text-[#181d26] mb-1.5 tracking-[0.07px]">
                         <span>출근률</span>
                         <span className="font-medium">{attendanceRate}%</span>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-1.5">
+                      <div className="w-full bg-[#e0e2e6] rounded-full h-1.5">
                         <div
-                          className="bg-green-500 h-1.5 rounded-full transition-all"
+                          className="bg-[#1b61c9] h-1.5 rounded-full transition-all"
                           style={{ width: `${attendanceRate}%` }}
                         />
                       </div>
@@ -815,23 +818,23 @@ export default function DashboardHome() {
                       return '출근중'
                     }
                     return (
-                      <div className="mt-3 bg-white border border-slate-200 rounded-lg overflow-hidden">
-                        <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
-                          <span className="text-xs font-semibold text-slate-600">{labelMap[attendanceActivePanel]}</span>
-                          <span className="text-xs text-slate-400">{filtered.length}명</span>
+                      <div className="mt-3 bg-white border border-[#e0e2e6] rounded-2xl overflow-hidden" style={{ boxShadow: 'rgba(15,48,106,0.05) 0px 0px 20px' }}>
+                        <div className="bg-[#f8fafc] px-4 py-2 flex justify-between items-center border-b border-[#e0e2e6]">
+                          <span className="text-xs font-semibold text-[#181d26] tracking-[0.07px]">{labelMap[attendanceActivePanel]}</span>
+                          <span className="text-xs text-[rgba(4,14,32,0.5)]">{filtered.length}명</span>
                         </div>
                         {filtered.length === 0 ? (
-                          <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                          <p className="text-sm text-[rgba(4,14,32,0.5)] text-center py-4">데이터가 없습니다</p>
                         ) : (
-                          <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+                          <div className="divide-y divide-[#e0e2e6]/50 max-h-[300px] overflow-y-auto">
                             {filtered.map(emp => (
                               <div key={emp.user_id} className="flex items-center gap-2 px-4 py-2 text-sm">
-                                <span className="font-medium text-slate-800 w-16 truncate">{emp.user_name}</span>
-                                <span className="text-slate-500 flex-1 text-xs">
+                                <span className="font-medium text-[#181d26] w-16 truncate tracking-[0.08px]">{emp.user_name}</span>
+                                <span className="text-[rgba(4,14,32,0.69)] flex-1 text-xs tracking-[0.07px]">
                                   {emp.check_in_time ? `${formatTime(emp.check_in_time)} 출근` : ''}
                                   {emp.check_out_time ? ` → ${formatTime(emp.check_out_time)} 퇴근` : ''}
                                 </span>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{statusTag(emp)}</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-[#f0f4f8] text-[#333] tracking-[0.07px]">{statusTag(emp)}</span>
                               </div>
                             ))}
                           </div>
@@ -841,8 +844,8 @@ export default function DashboardHome() {
                   })()}
                 </div>
               ) : (
-                <div className="text-center py-6 text-slate-500 bg-slate-50 rounded-lg">
-                  <p className="text-sm">출퇴근 현황을 불러올 수 없습니다.</p>
+                <div className="text-center py-6 text-[rgba(4,14,32,0.69)] bg-[#f8fafc] rounded-2xl border border-[#e0e2e6]">
+                  <p className="text-sm tracking-[0.08px]">출퇴근 현황을 불러올 수 없습니다.</p>
                 </div>
               )}
             </div>
@@ -850,39 +853,39 @@ export default function DashboardHome() {
             {/* 주간 통계 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-slate-700">주간 통계</h3>
-                <span className="text-xs text-slate-400">
+                <h3 className="text-sm font-semibold text-[#181d26] tracking-[0.08px]">주간 통계</h3>
+                <span className="text-xs text-[rgba(4,14,32,0.5)] tracking-[0.07px]">
                   {weeklySummary.weekStart.replace(/-/g, '.')} ~ {today.replace(/-/g, '.')}
                 </span>
               </div>
-              <div className="bg-slate-50 rounded-lg p-4">
+              <div className="bg-[#f8fafc] rounded-2xl p-4 border border-[#e0e2e6]">
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <button
                     onClick={() => togglePanel(weeklyActivePanel, 'consult', setWeeklyActivePanel)}
-                    className={`rounded-lg p-2 transition-all text-left ${weeklyActivePanel === 'consult' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
+                    className={`rounded-xl p-2 transition-all text-left ${weeklyActivePanel === 'consult' ? 'bg-[#f0f6ff] ring-1 ring-[#1b61c9]' : 'hover:bg-[#f0f4f8]'}`}
                   >
-                    <p className="text-lg sm:text-xl font-bold text-green-600 text-center">{weeklySummary.consultSuccess}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.consultTotal}</span></p>
-                    <p className="text-xs text-slate-500 text-center">성공/상담 ({weeklySummary.successRate}%)</p>
+                    <p className="text-lg sm:text-xl font-bold text-[#1b7a3d] text-center tracking-[0.1px]">{weeklySummary.consultSuccess}<span className="text-[#999] font-normal">/</span><span className="text-[#181d26]">{weeklySummary.consultTotal}</span></p>
+                    <p className="text-xs text-[rgba(4,14,32,0.69)] text-center tracking-[0.07px]">성공/상담 ({weeklySummary.successRate}%)</p>
                   </button>
                   <button
                     onClick={() => togglePanel(weeklyActivePanel, 'recall', setWeeklyActivePanel)}
-                    className={`rounded-lg p-2 transition-all text-left ${weeklyActivePanel === 'recall' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
+                    className={`rounded-xl p-2 transition-all text-left ${weeklyActivePanel === 'recall' ? 'bg-[#f0f6ff] ring-1 ring-[#1b61c9]' : 'hover:bg-[#f0f4f8]'}`}
                   >
-                    <p className="text-lg sm:text-xl font-bold text-orange-600 text-center">{weeklySummary.recallBookingTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.recallTotal}</span></p>
-                    <p className="text-xs text-slate-500 text-center">예약/리콜</p>
+                    <p className="text-lg sm:text-xl font-bold text-[#c4720a] text-center tracking-[0.1px]">{weeklySummary.recallBookingTotal}<span className="text-[#999] font-normal">/</span><span className="text-[#181d26]">{weeklySummary.recallTotal}</span></p>
+                    <p className="text-xs text-[rgba(4,14,32,0.69)] text-center tracking-[0.07px]">예약/리콜</p>
                   </button>
                   <button
                     onClick={() => togglePanel(weeklyActivePanel, 'gift', setWeeklyActivePanel)}
-                    className={`rounded-lg p-2 transition-all text-left ${weeklyActivePanel === 'gift' ? 'bg-blue-50 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
+                    className={`rounded-xl p-2 transition-all text-left ${weeklyActivePanel === 'gift' ? 'bg-[#f0f6ff] ring-1 ring-[#1b61c9]' : 'hover:bg-[#f0f4f8]'}`}
                   >
-                    <p className="text-lg sm:text-xl font-bold text-purple-600 text-center">{weeklySummary.giftTotal}<span className="text-slate-400 font-normal">/</span><span className="text-slate-600">{weeklySummary.reviewTotal}</span></p>
-                    <p className="text-xs text-slate-500 text-center">선물/리뷰</p>
+                    <p className="text-lg sm:text-xl font-bold text-[#6b3fa0] text-center tracking-[0.1px]">{weeklySummary.giftTotal}<span className="text-[#999] font-normal">/</span><span className="text-[#181d26]">{weeklySummary.reviewTotal}</span></p>
+                    <p className="text-xs text-[rgba(4,14,32,0.69)] text-center tracking-[0.07px]">선물/리뷰</p>
                   </button>
                 </div>
                 {weeklyActivePanel && (
-                  <div className="mt-3 border-t border-slate-200 pt-3 max-h-[300px] overflow-y-auto animate-slideDown">
+                  <div className="mt-3 border-t border-[#e0e2e6] pt-3 max-h-[300px] overflow-y-auto animate-slideDown">
                     {weeklySummary.dailyBreakdown.length === 0 ? (
-                      <p className="text-sm text-slate-400 text-center py-4">데이터가 없습니다</p>
+                      <p className="text-sm text-[rgba(4,14,32,0.5)] text-center py-4">데이터가 없습니다</p>
                     ) : (
                       <div className="space-y-1">
                         {weeklySummary.dailyBreakdown.map(day => {
@@ -890,14 +893,14 @@ export default function DashboardHome() {
                           const denominator = weeklyActivePanel === 'consult' ? day.consultCount : weeklyActivePanel === 'recall' ? day.recallCount : day.reviewCount
                           const pct = denominator > 0 ? Math.round((numerator / denominator) * 100) : 0
                           return (
-                            <div key={day.date} className={`flex items-center gap-2 px-2 py-1.5 rounded ${day.isToday ? 'bg-blue-50' : ''}`}>
-                              <span className={`text-xs font-medium w-6 ${day.isToday ? 'text-blue-600' : 'text-slate-500'}`}>{day.dayLabel}</span>
-                              <span className={`text-xs w-20 ${day.isToday ? 'text-blue-600' : 'text-slate-400'}`}>{day.date.slice(5).replace('-', '/')}{day.isToday ? ' 진행중' : ''}</span>
-                              <span className={`text-xs font-medium w-12 text-right ${day.isToday ? 'text-blue-700' : 'text-slate-700'}`}>{numerator}/{denominator}</span>
-                              <div className="flex-1 bg-slate-200 rounded-full h-[5px]">
-                                <div className="bg-green-500 h-[5px] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                            <div key={day.date} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${day.isToday ? 'bg-[#f0f6ff]' : ''}`}>
+                              <span className={`text-xs font-medium w-6 ${day.isToday ? 'text-[#1b61c9]' : 'text-[rgba(4,14,32,0.69)]'}`}>{day.dayLabel}</span>
+                              <span className={`text-xs w-20 ${day.isToday ? 'text-[#1b61c9]' : 'text-[rgba(4,14,32,0.5)]'} tracking-[0.07px]`}>{day.date.slice(5).replace('-', '/')}{day.isToday ? ' 진행중' : ''}</span>
+                              <span className={`text-xs font-medium w-12 text-right ${day.isToday ? 'text-[#154ea3]' : 'text-[#181d26]'}`}>{numerator}/{denominator}</span>
+                              <div className="flex-1 bg-[#e0e2e6] rounded-full h-[5px]">
+                                <div className="bg-[#1b61c9] h-[5px] rounded-full transition-all" style={{ width: `${pct}%` }} />
                               </div>
-                              <span className="text-xs text-slate-400 w-8 text-right">{pct}%</span>
+                              <span className="text-xs text-[rgba(4,14,32,0.5)] w-8 text-right">{pct}%</span>
                             </div>
                           )
                         })}
@@ -912,14 +915,14 @@ export default function DashboardHome() {
           {/* 오른쪽: 사이드바 (날씨 + 뉴스) */}
           <div className="lg:w-72 space-y-4">
             {/* 날씨 카드 */}
-            <div className="bg-slate-50 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
-                <Sun className="w-4 h-4 text-yellow-500 mr-1.5" />
+            <div className="bg-[#f8fafc] rounded-2xl p-4 border border-[#e0e2e6]">
+              <h3 className="text-sm font-semibold text-[#181d26] mb-3 flex items-center tracking-[0.08px]">
+                <Sun className="w-4 h-4 text-[#c4720a] mr-1.5" />
                 날씨
               </h3>
               {weatherLoading ? (
                 <div className="flex justify-center py-6">
-                  <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-6 h-6 border-4 border-[#1b61c9] border-t-transparent rounded-full animate-spin"></div>
                 </div>
               ) : weather ? (
                 <div className="space-y-3">
@@ -927,31 +930,31 @@ export default function DashboardHome() {
                   <div className="flex items-center gap-3">
                     {weatherIcons[weather.current.main] || <Cloud className="w-10 h-10 text-gray-400" />}
                     <div className="flex-1">
-                      <div className="flex items-center gap-1 text-xs text-slate-500 mb-0.5">
+                      <div className="flex items-center gap-1 text-xs text-[rgba(4,14,32,0.69)] mb-0.5 tracking-[0.07px]">
                         <MapPin className="w-3 h-3" />
                         <span>{weather.current.location}</span>
-                        <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-[10px] font-medium">현재</span>
+                        <span className="ml-1 px-1.5 py-0.5 bg-[#e8f0fe] text-[#1b61c9] rounded text-[10px] font-medium">현재</span>
                       </div>
-                      <p className="text-2xl font-bold text-slate-800">{weather.current.temp}°<span className="text-sm font-normal text-slate-500 ml-1">{weather.current.description}</span></p>
-                      <p className="text-xs text-slate-400 mt-0.5">체감 {weather.current.feels_like}° · 습도 {weather.current.humidity}%</p>
+                      <p className="text-2xl font-bold text-[#181d26]">{weather.current.temp}°<span className="text-sm font-normal text-[rgba(4,14,32,0.69)] ml-1">{weather.current.description}</span></p>
+                      <p className="text-xs text-[rgba(4,14,32,0.5)] mt-0.5 tracking-[0.07px]">체감 {weather.current.feels_like}° · 습도 {weather.current.humidity}%</p>
                     </div>
                   </div>
 
                   {/* 구분선 */}
-                  <div className="border-t border-slate-200"></div>
+                  <div className="border-t border-[#e0e2e6]"></div>
 
                   {/* 내일 날씨 */}
                   <div className="flex items-center gap-3">
                     {weatherIconsSmall[weather.tomorrow.main] || <Cloud className="w-8 h-8 text-gray-400 opacity-70" />}
                     <div className="flex-1">
-                      <div className="flex items-center gap-1 text-xs text-slate-500 mb-0.5">
+                      <div className="flex items-center gap-1 text-xs text-[rgba(4,14,32,0.69)] mb-0.5 tracking-[0.07px]">
                         <Calendar className="w-3 h-3" />
                         <span>내일 ({weather.tomorrow.date})</span>
                       </div>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-bold text-slate-700">{weather.tomorrow.tempMax}°</span>
-                        <span className="text-sm text-slate-400">/ {weather.tomorrow.tempMin}°</span>
-                        <span className="text-sm text-slate-500 ml-1">{weather.tomorrow.description}</span>
+                        <span className="text-lg font-bold text-[#181d26]">{weather.tomorrow.tempMax}°</span>
+                        <span className="text-sm text-[rgba(4,14,32,0.5)]">/ {weather.tomorrow.tempMin}°</span>
+                        <span className="text-sm text-[rgba(4,14,32,0.69)] ml-1">{weather.tomorrow.description}</span>
                       </div>
                     </div>
                   </div>
@@ -960,23 +963,23 @@ export default function DashboardHome() {
             </div>
 
             {/* 치의신보 뉴스 카드 (탭 UI) */}
-            <div className="bg-slate-50 rounded-lg overflow-hidden">
+            <div className="bg-[#f8fafc] rounded-2xl overflow-hidden border border-[#e0e2e6]">
               {/* 헤더 */}
-              <div className="px-4 py-3 border-b border-slate-200">
-                <h3 className="text-sm font-semibold text-slate-700 flex items-center">
-                  <Newspaper className="w-4 h-4 text-blue-500 mr-1.5" />
+              <div className="px-4 py-3 border-b border-[#e0e2e6]">
+                <h3 className="text-sm font-semibold text-[#181d26] flex items-center tracking-[0.08px]">
+                  <Newspaper className="w-4 h-4 text-[#1b61c9] mr-1.5" />
                   치의신보
                 </h3>
               </div>
 
               {/* 탭 버튼 */}
-              <div className="flex border-b border-slate-200">
+              <div className="flex border-b border-[#e0e2e6]">
                 <button
                   onClick={() => setActiveNewsTab('popular')}
-                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 tracking-[0.07px] ${
                     activeNewsTab === 'popular'
-                      ? 'text-orange-600 border-b-2 border-orange-500 bg-white'
-                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                      ? 'text-[#c4720a] border-b-2 border-[#c4720a] bg-white'
+                      : 'text-[rgba(4,14,32,0.69)] hover:text-[#181d26] hover:bg-[#f0f4f8]'
                   }`}
                 >
                   <Flame className="w-3.5 h-3.5" />
@@ -984,10 +987,10 @@ export default function DashboardHome() {
                 </button>
                 <button
                   onClick={() => setActiveNewsTab('latest')}
-                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 tracking-[0.07px] ${
                     activeNewsTab === 'latest'
-                      ? 'text-blue-600 border-b-2 border-blue-500 bg-white'
-                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                      ? 'text-[#1b61c9] border-b-2 border-[#1b61c9] bg-white'
+                      : 'text-[rgba(4,14,32,0.69)] hover:text-[#181d26] hover:bg-[#f0f4f8]'
                   }`}
                 >
                   <Newspaper className="w-3.5 h-3.5" />
@@ -998,10 +1001,10 @@ export default function DashboardHome() {
               {/* 기사 목록 */}
               {newsLoading ? (
                 <div className="flex justify-center py-6">
-                  <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-6 h-6 border-4 border-[#1b61c9] border-t-transparent rounded-full animate-spin"></div>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-200">
+                <div className="divide-y divide-[#e0e2e6]">
                   {(activeNewsTab === 'popular' ? popularArticles : latestArticles).length > 0 ? (
                     (activeNewsTab === 'popular' ? popularArticles : latestArticles).map((article) => (
                       <a
@@ -1009,17 +1012,17 @@ export default function DashboardHome() {
                         href={article.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-start gap-2 px-4 py-2.5 hover:bg-slate-100 transition-colors group"
+                        className="flex items-start gap-2 px-4 py-2.5 hover:bg-[#f0f4f8] transition-colors group"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-slate-700 line-clamp-2 group-hover:text-blue-600">{article.title}</p>
+                          <p className="text-sm text-[#181d26] line-clamp-2 group-hover:text-[#1b61c9] tracking-[0.08px]">{article.title}</p>
                         </div>
-                        <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500 flex-shrink-0 mt-0.5" />
+                        <ExternalLink className="w-3.5 h-3.5 text-[rgba(4,14,32,0.3)] group-hover:text-[#1b61c9] flex-shrink-0 mt-0.5" />
                       </a>
                     ))
                   ) : (
-                    <div className="text-center py-6 text-slate-500">
-                      <p className="text-sm">
+                    <div className="text-center py-6 text-[rgba(4,14,32,0.69)]">
+                      <p className="text-sm tracking-[0.08px]">
                         {activeNewsTab === 'popular' ? '인기 게시물이 없습니다.' : '최신 게시물이 없습니다.'}
                       </p>
                     </div>
