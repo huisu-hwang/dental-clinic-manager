@@ -118,6 +118,14 @@ export async function middleware(request: NextRequest) {
         return redirectResponse
       }
       console.error('[Middleware] Code 교환 실패:', error.message)
+      // PKCE Code 교환 실패(크로스 브라우징, PWA 격리 환경 등) 시 랜딩 페이지 대신 에러 페이지로 리다이렉트
+      const errorUrl = request.nextUrl.clone()
+      errorUrl.pathname = '/update-password'
+      errorUrl.searchParams.delete('code')
+      errorUrl.searchParams.delete('type')
+      errorUrl.searchParams.delete('intent')
+      errorUrl.searchParams.set('mode', 'invalid')
+      return NextResponse.redirect(errorUrl)
     }
   }
 

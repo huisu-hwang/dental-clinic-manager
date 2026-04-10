@@ -179,6 +179,7 @@ export default function UpdatePasswordPage() {
                   <li>받은 편지함에서 비밀번호 재설정 이메일을 확인하세요</li>
                   <li>이메일의 <strong>&quot;비밀번호 재설정&quot;</strong> 버튼을 클릭하세요</li>
                   <li>링크가 만료되었을 수 있습니다 (24시간 유효)</li>
+                  <li><strong>주의:</strong> 앱(PWA)에서 요청한 후 이메일 앱의 내장 브라우저로 열었거나, 사파리 등에서 요청 후 PWA로 앱이 열린 경우 보안 문제로 실패할 수 있습니다. <strong>링크를 복사하여 처음 요청했던 브라우저에 직접 붙여넣어 주세요.</strong></li>
                 </ul>
                 <button
                   onClick={() => { window.location.href = '/' }}
