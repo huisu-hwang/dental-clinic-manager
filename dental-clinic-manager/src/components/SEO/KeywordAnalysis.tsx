@@ -142,7 +142,7 @@ export default function KeywordAnalysis() {
       alert('마케팅 자동화 프리미엄 기능이 활성화되어 있지 않습니다.')
       return
     }
-    if (!await requireWorker('marketing', 'SEO 키워드 분석')) return
+    if (!await requireWorker('seo', 'SEO 키워드 분석')) return
 
     setLoading(true)
     try {

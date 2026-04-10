@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useEffect } from 'react'
 
-type WorkerType = 'marketing' | 'scraping'
+type WorkerType = 'marketing' | 'scraping' | 'seo'
 
 interface WorkerStatusResult {
   marketing?: { online: boolean }
   scraping?: { online: boolean; workerCount: number }
+  seo?: { online: boolean; workerCount: number }
 }
 
 /**
@@ -76,6 +77,11 @@ export function useWorkerStatus(options?: {
       
       if (type === 'scraping') {
         isDbOnline = data.scraping?.online ?? false
+        return isDbOnline
+      }
+
+      if (type === 'seo') {
+        isDbOnline = data.seo?.online ?? false
         return isDbOnline
       }
 

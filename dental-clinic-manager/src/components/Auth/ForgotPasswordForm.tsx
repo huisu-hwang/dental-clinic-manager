@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 
 interface ForgotPasswordFormProps {
   onBackToLogin: () => void
@@ -19,67 +18,20 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
     setMessage('')
     setLoading(true)
 
-    const supabase = createClient()
-
     try {
-      console.log('[ForgotPassword] 비밀번호 재설정 요청:', email);
-
-      // 이메일 존재 여부 확인
-      const checkRes = await fetch('/api/auth/check-email', {
+      // 서버사이드 API로 비밀번호 재설정 이메일 발송
+      // 서버에서 VERCEL_URL(*.vercel.app)을 redirectTo로 사용하여
+      // PWA scope(hi-clinic.co.kr) 밖으로 설정 → 브라우저에서 열림
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
       })
-      const checkData = await checkRes.json()
+      const data = await res.json()
 
-      if (!checkRes.ok) {
-        setError(checkData.error || '이메일 확인 중 오류가 발생했습니다.')
-        setLoading(false)
-        return
-      }
-
-      if (!checkData.exists) {
-        setError('입력하신 이메일 주소로 가입된 계정이 없습니다. 이메일 주소를 다시 확인해주세요.')
-        setLoading(false)
-        return
-      }
-
-      // 환경에 따라 동적으로 Redirect URL 결정
-      // /api/auth/reset-callback API 라우트로 리다이렉트
-      // API 라우트는 서버사이드에서 실행되므로 PWA가 가로채도 정상 작동
-      const getRedirectUrl = () => {
-        // Vercel 배포 환경 (preview/production)
-        if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-          return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/auth/reset-callback?intent=recovery`;
-        }
-
-        // 프로덕션 환경 (명시적 Site URL 설정)
-        if (process.env.NEXT_PUBLIC_SITE_URL) {
-          return `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/reset-callback?intent=recovery`;
-        }
-
-        // 개발 환경 (localhost) - 현재 접속한 도메인 사용
-        return `${window.location.origin}/api/auth/reset-callback?intent=recovery`;
-      };
-
-      const redirectUrl = getRedirectUrl();
-      console.log('[ForgotPassword] Redirect URL:', redirectUrl);
-
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
-      })
-
-      if (resetError) {
-        console.error('[ForgotPassword] 재설정 오류:', resetError)
-
-        // SMTP 설정이 안 되어 있는 경우
-        if (resetError.message.includes('SMTP') || resetError.message.includes('email')) {
-          setError('이메일 서비스가 설정되지 않았습니다. 관리자에게 문의해주세요.')
-        } else {
-          setError(`이메일 전송에 실패했습니다: ${resetError.message}`)
-        }
+      if (!res.ok) {
+        setError(data.error || '비밀번호 재설정 요청 중 오류가 발생했습니다.')
       } else {
-        console.log('[ForgotPassword] 재설정 이메일 전송 성공');
         setMessage('비밀번호 재설정 요청이 처리되었습니다. 이메일을 확인해주세요. (링크는 24시간 동안 유효합니다)')
       }
     } catch (err) {
