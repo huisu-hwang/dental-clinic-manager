@@ -152,6 +152,18 @@ function markdownToHtml(
       continue
     }
 
+    // 마크다운 이미지 ![alt](url) - 임상 사진 등
+    if (/^!\[.*?\]\(.+?\)$/.test(trimmed)) {
+      closeList()
+      const imgMatch = trimmed.match(/^!\[(.+?)\]\((.+?)\)$/)
+      if (imgMatch) {
+        const alt = imgMatch[1]
+        const url = imgMatch[2]
+        htmlParts.push(`<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" />`)
+      }
+      continue
+    }
+
     // ## 소제목
     if (trimmed.startsWith('### ')) {
       closeList()
@@ -238,8 +250,14 @@ function htmlToMarkdown(html: string): string {
         return ''
       }
       case 'img': {
+        const src = el.getAttribute('src') || ''
         const alt = el.getAttribute('alt') || el.getAttribute('title') || ''
-        lines.push(`[IMAGE: ${alt}]`)
+        // 실제 URL이 있는 이미지 (임상 사진 등)는 마크다운 이미지 형식으로 보존
+        if (src && !src.startsWith('data:') && alt !== '') {
+          lines.push(`![${alt}](${src})`)
+        } else {
+          lines.push(`[IMAGE: ${alt}]`)
+        }
         lines.push('')
         return ''
       }
