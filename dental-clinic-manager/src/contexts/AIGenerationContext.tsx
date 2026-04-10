@@ -29,6 +29,7 @@ interface GenerationOptions {
     patientAge?: string
     patientGender?: string
     chiefComplaint?: string
+    selectedTeeth?: number[]
     patientConsent: boolean
     photos: ClinicalPhotoInput[]
   }

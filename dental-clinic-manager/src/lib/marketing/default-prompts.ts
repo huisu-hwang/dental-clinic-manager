@@ -161,12 +161,13 @@ export const DEFAULT_PROMPTS: DefaultPrompt[] = [
 ## 시술 정보
 - 시술 종류: {{procedure_type}}
 - 상세: {{procedure_detail}}
+- 시술 부위 (FDI 치아 번호): {{selected_teeth}}
 - 기간: {{duration}}
 - 환자: {{patient_age}} {{patient_gender}}
 - 주소: {{chief_complaint}}
 
 {{research_section}}`,
-    variables: ['keyword', 'tone_instruction', 'procedure_type', 'procedure_detail', 'duration', 'patient_age', 'patient_gender', 'chief_complaint', 'research_section'],
+    variables: ['keyword', 'tone_instruction', 'procedure_type', 'procedure_detail', 'selected_teeth', 'duration', 'patient_age', 'patient_gender', 'chief_complaint', 'research_section'],
   },
 
   // ─── 글 생성: 공지글 (6종) ───

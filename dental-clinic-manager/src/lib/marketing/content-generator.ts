@@ -94,6 +94,9 @@ export async function generateContent(
     patient_age: options.clinical?.patientAge || '',
     patient_gender: options.clinical?.patientGender || '',
     chief_complaint: options.clinical?.chiefComplaint || '',
+    selected_teeth: options.clinical?.selectedTeeth?.length
+      ? options.clinical.selectedTeeth.sort((a, b) => a - b).map(t => `#${t}`).join(', ')
+      : '',
     // 공지글 변수
     ...options.notice?.templateData,
   }) + imageStyleInstruction + seoSection;

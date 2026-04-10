@@ -15,6 +15,7 @@ import {
   type ToneType,
   type ClinicalPhotoType,
 } from '@/types/marketing'
+import ToothChart from './ToothChart'
 
 // ============================================
 // 임상글 작성 폼
@@ -41,6 +42,7 @@ export interface ClinicalFormData {
   patientAge: string
   patientGender: string
   chiefComplaint: string
+  selectedTeeth: number[]
   tone: ToneType
   useResearch: boolean
   patientConsent: boolean
@@ -108,6 +110,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
   const [tone, setTone] = useState<ToneType>('warm')
   const [useResearch, setUseResearch] = useState(false)
   const [patientConsent, setPatientConsent] = useState(false)
+  const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
   const [photos, setPhotos] = useState<LocalClinicalPhoto[]>([])
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -116,10 +119,10 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
   const emitChange = useCallback(() => {
     onChange({
       procedureType, procedureDetail, duration, patientAge, patientGender,
-      chiefComplaint, tone, useResearch, patientConsent, photos,
+      chiefComplaint, selectedTeeth, tone, useResearch, patientConsent, photos,
     })
   }, [procedureType, procedureDetail, duration, patientAge, patientGender,
-      chiefComplaint, tone, useResearch, patientConsent, photos, onChange])
+      chiefComplaint, selectedTeeth, tone, useResearch, patientConsent, photos, onChange])
 
   useEffect(() => {
     emitChange()
@@ -354,6 +357,13 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
           />
         </div>
+
+        {/* 시술 부위 선택 (치아 차트) */}
+        <ToothChart
+          selectedTeeth={selectedTeeth}
+          onChange={setSelectedTeeth}
+          disabled={isGenerating}
+        />
 
         <label className="flex items-center gap-3 cursor-pointer">
           <input

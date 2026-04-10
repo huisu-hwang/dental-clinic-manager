@@ -206,6 +206,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
           patientAge: clinicalData.patientAge || undefined,
           patientGender: clinicalData.patientGender || undefined,
           chiefComplaint: clinicalData.chiefComplaint || undefined,
+          selectedTeeth: clinicalData.selectedTeeth.length > 0 ? clinicalData.selectedTeeth : undefined,
           patientConsent: clinicalData.patientConsent,
           photos: photosWithBase64,
         },

@@ -218,6 +218,7 @@ export interface ClinicalInput {
   patientAge?: string;
   patientGender?: string;
   chiefComplaint?: string;
+  selectedTeeth?: number[];
   patientConsent: boolean;
   includePrice: boolean;
   photos?: ClinicalPhotoInput[];
