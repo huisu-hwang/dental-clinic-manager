@@ -38,6 +38,17 @@ jobs:
         run: npm ci
         working-directory: dental-clinic-manager/marketing-worker
 
+      - name: Auto-bump worker version
+        shell: bash
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          # MAJOR.MINOR은 package.json에서 유지, PATCH는 GitHub Actions run_number로 자동 증가
+          MAJOR_MINOR=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
+          NEW_VERSION="${MAJOR_MINOR}.${RUN_NUMBER}"
+          npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version
+          echo "Bumped worker version to $NEW_VERSION"
+
       - name: Build TypeScript + Scheduler Bundle
         run: npm run build
 
