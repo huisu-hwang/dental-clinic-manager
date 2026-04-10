@@ -28,10 +28,12 @@ import {
   type ImageStyleOption,
   type ImageVisualStyle,
   type PlatformContent,
+  type ClinicalPhotoInput,
 } from '@/types/marketing'
 import dynamic from 'next/dynamic'
 import ScheduleModal from '@/components/marketing/ScheduleModal'
 import ImageEditModal from '@/components/marketing/ImageEditModal'
+import ClinicalForm, { type ClinicalFormData } from '@/components/marketing/clinical/ClinicalForm'
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
@@ -58,6 +60,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [imageCount, setImageCount] = useState(3)
   const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
   const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
+  const [clinicalData, setClinicalData] = useState<ClinicalFormData | null>(null)
 
   // ── 생성 / 저장 상태 (컨텍스트에서 가져옴) ──
   const isGenerating = aiGen.isGenerating
@@ -138,8 +141,20 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     }
   }, [aiGen.generatedResult, generatedResult, handleResult])
 
+  // File → base64 변환 유틸
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = reader.result as string
+        resolve(result.split(',')[1] || '')
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
   // ── AI 글 생성 (컨텍스트 통해 SSE 스트리밍) ──
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!topic || !keyword) {
       setError('주제와 키워드를 입력해주세요.')
       return
@@ -149,11 +164,60 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     setIsEditingBody(false)
     setHasUnsavedChanges(false)
 
-    aiGen.startGeneration({
-      topic, keyword, postType, tone, useResearch, factCheck, useSeoAnalysis, platforms,
-      imageStyle, imageVisualStyle, imageCount,
-      referenceImageBase64: imageStyle === 'use_own_image' ? referenceImageBase64 : undefined,
-    })
+    if (postType === 'clinical') {
+      // 임상글 검증
+      if (!clinicalData) {
+        setError('임상 정보를 입력해주세요.')
+        return
+      }
+      if (!clinicalData.patientConsent) {
+        setError('환자 동의서 확인이 필요합니다.')
+        return
+      }
+      const uploadedPhotos = clinicalData.photos.filter((p) => p.uploadedUrl)
+      if (uploadedPhotos.length === 0) {
+        setError('최소 1장의 임상 사진을 업로드해주세요.')
+        return
+      }
+
+      // 사진을 base64로 변환
+      const photosWithBase64: ClinicalPhotoInput[] = await Promise.all(
+        uploadedPhotos.map(async (photo) => ({
+          photo_type: photo.type,
+          file_path: photo.uploadedUrl!,
+          base64: await fileToBase64(photo.file),
+          media_type: photo.file.type || 'image/jpeg',
+          caption: photo.caption,
+          sort_order: photo.sort_order,
+        }))
+      )
+
+      aiGen.startGeneration({
+        topic, keyword, postType,
+        tone: clinicalData.tone,
+        useResearch: clinicalData.useResearch,
+        factCheck, useSeoAnalysis, platforms,
+        imageStyle, imageVisualStyle,
+        imageCount: 0, // 임상글은 AI 이미지 생성 스킵
+        clinical: {
+          procedureType: clinicalData.procedureType,
+          procedureDetail: clinicalData.procedureDetail || undefined,
+          duration: clinicalData.duration || undefined,
+          patientAge: clinicalData.patientAge || undefined,
+          patientGender: clinicalData.patientGender || undefined,
+          chiefComplaint: clinicalData.chiefComplaint || undefined,
+          selectedTeeth: clinicalData.selectedTeeth.length > 0 ? clinicalData.selectedTeeth : undefined,
+          patientConsent: clinicalData.patientConsent,
+          photos: photosWithBase64,
+        },
+      })
+    } else {
+      aiGen.startGeneration({
+        topic, keyword, postType, tone, useResearch, factCheck, useSeoAnalysis, platforms,
+        imageStyle, imageVisualStyle, imageCount,
+        referenceImageBase64: imageStyle === 'use_own_image' ? referenceImageBase64 : undefined,
+      })
+    }
   }
 
   // ── 수동 임시 저장 ──
@@ -387,7 +451,18 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         </div>
       </fieldset>
 
-      {/* 품질 옵션 */}
+      {/* 임상글 폼 (postType === 'clinical' 일 때만 표시) */}
+      {postType === 'clinical' && (
+        <fieldset disabled={isGenerating} className={`transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+          <ClinicalForm
+            onChange={setClinicalData}
+            isGenerating={isGenerating}
+          />
+        </fieldset>
+      )}
+
+      {/* 품질 옵션 (임상글이 아닐 때만 - 임상글은 ClinicalForm 내에서 옵션 제공) */}
+      {postType !== 'clinical' && (
       <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
         <h2 className="text-lg font-semibold text-slate-800">품질 옵션</h2>
         <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
@@ -427,8 +502,10 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
           </div>
         </label>
       </fieldset>
+      )}
 
-      {/* 이미지 스타일 옵션 */}
+      {/* 이미지 스타일 옵션 (임상글이 아닐 때만 - 임상글은 실제 사진 사용) */}
+      {postType !== 'clinical' && (
       <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
         <h2 className="text-lg font-semibold text-slate-800">이미지 옵션</h2>
         <p className="text-xs text-slate-400">이미지 개수와 스타일을 설정하세요</p>
@@ -567,6 +644,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
           </>
         )}
       </fieldset>
+      )}
 
       {/* 배포 플랫폼 */}
       <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
@@ -634,11 +712,14 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
       ) : (
         <button
           onClick={handleGenerate}
-          disabled={!topic || !keyword}
+          disabled={!topic || !keyword || (postType === 'clinical' && (!clinicalData?.patientConsent || !clinicalData?.procedureType || !clinicalData?.photos.some(p => p.uploadedUrl)))}
           className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
         >
           <SparklesIcon className="h-5 w-5" />
-          {generatedResult ? '다시 생성' : 'AI 글 생성'}
+          {postType === 'clinical'
+            ? (generatedResult ? '임상글 다시 생성' : '임상글 생성')
+            : (generatedResult ? '다시 생성' : 'AI 글 생성')
+          }
         </button>
       )}
 

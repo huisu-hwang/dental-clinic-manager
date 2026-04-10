@@ -5,6 +5,7 @@ import { start as startWorker, stop as stopWorker, onStatusChange, onPublishResu
 import { startScraping, stopScraping, onScrapingStatusChange } from './scraping-bridge';
 import { startSeoWorker, stopSeoWorker, onSeoStatusChange } from './seo-bridge';
 import { startEmailMonitor, stopEmailMonitor, onEmailStatusChange } from './email-bridge';
+import { startDentwebBridge, stopDentwebBridge, onDentwebStatusChange } from './dentweb-bridge';
 import { log } from './logger';
 import { initAutoUpdater, stopAutoUpdater } from './updater';
 
@@ -114,11 +115,18 @@ async function onAppReady(): Promise<void> {
     }
   });
 
+  onDentwebStatusChange((status, message) => {
+    if (status === 'syncing') {
+      log('info', `[Main] 덴트웹: ${message || '동기화 중'}`);
+    }
+  });
+
   applyAutoStart();
   await startWorker();
   startScraping();
   startSeoWorker();
   startEmailMonitor();
+  startDentwebBridge();
 }
 
 function applyAutoStart(): void {
@@ -151,5 +159,6 @@ app.on('before-quit', async () => {
   stopScraping();
   stopSeoWorker();
   stopEmailMonitor();
+  stopDentwebBridge();
   await stopWorker();
 });

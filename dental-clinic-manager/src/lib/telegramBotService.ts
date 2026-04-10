@@ -92,7 +92,7 @@ export async function sendSummaryNotification(
   boardSlug: string
 ): Promise<SendMessageResult> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hi-clinic.co.kr'
-  const boardUrl = `${appUrl}/community/telegram/${boardSlug}`
+  const boardUrl = `${appUrl}/dashboard/community/telegram/${boardSlug}`
 
   const message = [
     `📋 <b>[일일 요약] ${groupTitle} - ${summaryDate}</b>`,

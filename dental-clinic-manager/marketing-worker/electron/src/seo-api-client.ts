@@ -42,9 +42,9 @@ export class SeoApiClient {
     return res.json();
   }
 
-  async fetchPendingJob(): Promise<SeoJob | null> {
+  async fetchPendingJob(): Promise<{ job: SeoJob | null; runningCount: number }> {
     const data = await this.request('/jobs');
-    return data.job || null;
+    return { job: data.job || null, runningCount: data.runningCount || 0 };
   }
 
   async updateJobStatus(jobId: string, status: 'completed' | 'failed', details?: object): Promise<void> {

@@ -29,6 +29,7 @@ import ScheduleModal from '@/components/marketing/ScheduleModal'
 import dynamic from 'next/dynamic'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
+import ImageEditModal from '@/components/marketing/ImageEditModal'
 
 type MarketingTab = 'newpost' | 'dashboard' | 'posts' | 'calendar' | 'settings'
 
@@ -458,8 +459,38 @@ function PostEditModal({
   const [hasChanges, setHasChanges] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null)
+  const [editingImage, setEditingImage] = useState<{ fileName: string; prompt: string; path: string } | null>(null)
+  const [currentImages, setCurrentImages] = useState(content?.generatedImages || post.generated_images || undefined)
   const statusInfo = STATUS_LABELS[post.status] || STATUS_LABELS.review
   const canPublish = content?.body && !['published', 'publishing'].includes(post.status)
+
+  const handleImageEdit = useCallback((imageIndex: number, currentImage: { fileName: string; prompt: string; path: string }) => {
+    setEditingImageIndex(imageIndex)
+    setEditingImage(currentImage)
+  }, [])
+
+  const handleImageUpdated = useCallback((newImage: { fileName: string; prompt: string; path: string }) => {
+    if (editingImageIndex === null || !currentImages) return
+    const updatedImages = [...currentImages]
+    updatedImages[editingImageIndex] = {
+      fileName: newImage.fileName,
+      prompt: newImage.prompt,
+      path: newImage.path,
+    }
+    setCurrentImages(updatedImages)
+
+    // 본문의 [IMAGE:] 마커에서 프롬프트가 변경된 경우 업데이트
+    const oldPrompt = editingImage?.prompt
+    if (oldPrompt && oldPrompt !== newImage.prompt) {
+      setEditedBody((prev) =>
+        prev.replace(`[IMAGE: ${oldPrompt}]`, `[IMAGE: ${newImage.prompt}]`)
+      )
+    }
+    setHasChanges(true)
+    setEditingImageIndex(null)
+    setEditingImage(null)
+  }, [editingImageIndex, editingImage, currentImages])
 
   const handleSave = async () => {
     setSaving(true)
@@ -471,6 +502,7 @@ function PostEditModal({
         body: editedBody,
         hashtags: editedHashtags,
         wordCount: editedBody.length,
+        generatedImages: currentImages,
       }
       const res = await fetch(`/api/marketing/posts/${post.id}`, {
         method: 'PATCH',
@@ -499,6 +531,7 @@ function PostEditModal({
         body: editedBody,
         hashtags: editedHashtags,
         wordCount: editedBody.length,
+        generatedImages: currentImages,
       }
       const res = await fetch(`/api/marketing/posts/${post.id}`, {
         method: 'PATCH',
@@ -577,8 +610,9 @@ function PostEditModal({
             <label className="block text-sm font-medium text-slate-700 mb-1.5">본문</label>
             <ContentEditor
               body={editedBody}
-              images={content?.generatedImages || post.generated_images || undefined}
+              images={currentImages}
               onChange={(newBody) => { setEditedBody(newBody); setHasChanges(true) }}
+              onImageEdit={handleImageEdit}
             />
           </div>
 
@@ -659,6 +693,16 @@ function PostEditModal({
           onConfirm={(date, time) => handlePublish(date, time, false)}
           isLoading={isPublishing}
         />
+
+        {/* 이미지 편집 모달 */}
+        {editingImage && (
+          <ImageEditModal
+            isOpen={!!editingImage}
+            onClose={() => { setEditingImageIndex(null); setEditingImage(null) }}
+            image={editingImage}
+            onImageUpdated={handleImageUpdated}
+          />
+        )}
       </div>
     </div>
   )

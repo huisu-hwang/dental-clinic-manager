@@ -140,8 +140,12 @@ export default function UpdatePasswordPage() {
 
       if (pageMode === 'recovery') {
         setMessage('비밀번호가 성공적으로 변경되었습니다. 잠시 후 로그인 페이지로 이동합니다.')
+        // Vercel 도메인에서 실행 중일 수 있으므로 프로덕션 도메인으로 이동
+        const loginUrl = window.location.hostname.includes('vercel.app')
+          ? 'https://hi-clinic.co.kr/?show=login'
+          : '/?show=login'
         setTimeout(() => {
-          window.location.href = '/?show=login'
+          window.location.href = loginUrl
         }, 2000)
       }
     }

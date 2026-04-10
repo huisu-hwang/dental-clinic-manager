@@ -146,15 +146,27 @@ export interface ContentCalendarItem {
   updated_at: string;
 }
 
+export type ClinicalPhotoType = 'before' | 'during' | 'after';
+
 export interface ClinicalPhoto {
   id: string;
   item_id: string;
-  photo_type: 'before' | 'after' | 'process' | 'xray';
+  photo_type: ClinicalPhotoType;
   file_path: string;
   caption: string | null;
   patient_consent: boolean;
   anonymized: boolean;
+  sort_order: number;
   uploaded_at: string;
+}
+
+export interface ClinicalPhotoInput {
+  photo_type: ClinicalPhotoType;
+  file_path: string;
+  base64: string;
+  media_type: string;
+  caption: string;
+  sort_order: number;
 }
 
 export interface ContentPublishLog {
@@ -206,8 +218,10 @@ export interface ClinicalInput {
   patientAge?: string;
   patientGender?: string;
   chiefComplaint?: string;
+  selectedTeeth?: number[];
   patientConsent: boolean;
   includePrice: boolean;
+  photos?: ClinicalPhotoInput[];
 }
 
 export interface NoticeInput {
@@ -349,6 +363,12 @@ export const POST_TYPE_LABELS: Record<PostType, string> = {
   promotional: '홍보성',
   notice: '공지글',
   clinical: '임상글',
+};
+
+export const CLINICAL_PHOTO_TYPE_LABELS: Record<ClinicalPhotoType, string> = {
+  before: '술전 (시술 전)',
+  during: '술중 (시술 과정)',
+  after: '술후 (시술 후)',
 };
 
 export const NOTICE_TEMPLATE_LABELS: Record<NoticeTemplate, string> = {

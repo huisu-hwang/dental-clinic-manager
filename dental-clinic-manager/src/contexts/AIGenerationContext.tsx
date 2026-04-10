@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useRef, useCallback, type ReactNode } from 'react'
-import type { GeneratedContent, PlatformContent, PlatformOptions } from '@/types/marketing'
+import type { GeneratedContent, PlatformContent, PlatformOptions, ClinicalPhotoInput } from '@/types/marketing'
 
 export type GeneratedResultType = GeneratedContent & {
   generatedImages?: { fileName: string; prompt: string; path?: string }[]
@@ -22,6 +22,17 @@ interface GenerationOptions {
   imageVisualStyle: string
   imageCount: number
   referenceImageBase64?: string
+  clinical?: {
+    procedureType: string
+    procedureDetail?: string
+    duration?: string
+    patientAge?: string
+    patientGender?: string
+    chiefComplaint?: string
+    selectedTeeth?: number[]
+    patientConsent: boolean
+    photos: ClinicalPhotoInput[]
+  }
 }
 
 interface AIGenerationContextType {
@@ -98,6 +109,7 @@ export function AIGenerationProvider({ children }: { children: ReactNode }) {
             ...(options.imageStyle === 'use_own_image' && options.referenceImageBase64
               ? { referenceImageBase64: options.referenceImageBase64 }
               : {}),
+            ...(options.clinical ? { clinical: options.clinical } : {}),
           }),
           signal: abortController.signal,
         })
