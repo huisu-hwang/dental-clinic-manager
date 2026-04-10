@@ -15,6 +15,7 @@ let client: SeoApiClient | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let currentStatus: SeoStatus = 'idle';
+let isProcessingLocally = false; // 로컬에서 잡 처리 중 여부
 const statusCallbacks: StatusCallback[] = [];
 
 const POLL_INTERVAL = 5000;       // 5초
@@ -56,17 +57,27 @@ export function onSeoStatusChange(cb: StatusCallback): void {
 }
 
 async function pollForJobs(): Promise<void> {
-  if (!client || currentStatus === 'analyzing') return;
+  if (!client || isProcessingLocally) return;
 
   try {
-    const job = await client.fetchPendingJob();
-    if (!job) return;
+    const { job, runningCount } = await client.fetchPendingJob();
 
-    setStatus('analyzing', `키워드 "${job.params.keyword}" 분석 중...`);
-    await processJob(job);
-    setStatus('polling');
+    if (job) {
+      isProcessingLocally = true;
+      setStatus('analyzing', `키워드 "${job.params.keyword}" 분석 중...`);
+      await processJob(job);
+      isProcessingLocally = false;
+      setStatus('polling');
+    } else if (runningCount > 0) {
+      // 로컬 처리 중이 아니지만 DB에 running 잡이 있으면 분석 중 표시
+      setStatus('analyzing', `${runningCount}건 분석 진행 중...`);
+    } else {
+      // running 잡도 없으면 대기 상태
+      setStatus('polling');
+    }
   } catch (err) {
     log('error', `[SEO] 폴링 오류: ${err instanceof Error ? err.message : err}`);
+    if (isProcessingLocally) isProcessingLocally = false;
   }
 }
 
@@ -463,7 +474,7 @@ async function sendHeartbeat(): Promise<void> {
   try {
     await client.sendHeartbeat(
       `electron-seo-${os.hostname()}`,
-      currentStatus === 'analyzing' ? 'busy' : 'online'
+      isProcessingLocally || currentStatus === 'analyzing' ? 'busy' : 'online'
     );
   } catch { /* ignore */ }
 }
