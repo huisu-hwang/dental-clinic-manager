@@ -89,17 +89,35 @@ export default function EmailIntegrationSettings() {
     setTimeout(() => setMessage(null), 4000)
   }
 
-  const handleGmailConnect = () => {
+  const handleGmailConnect = async () => {
     if (!clinicId) return
     if (!gmailEmail.trim()) {
       showMsg('error', '병원 Gmail 주소를 입력해주세요.')
       return
     }
-    const params = new URLSearchParams({
-      clinicId,
-      loginHint: gmailEmail.trim(),
-    })
-    window.location.href = `/api/integrations/gmail/auth?${params.toString()}`
+    setIsConnecting(true)
+    try {
+      const params = new URLSearchParams({
+        clinicId,
+        loginHint: gmailEmail.trim(),
+      })
+      const url = `/api/integrations/gmail/auth?${params.toString()}`
+      const res = await fetch(url, { redirect: 'manual' })
+
+      if (res.type === 'opaqueredirect' || res.status === 0) {
+        // 정상 리다이렉트 → Google OAuth 페이지로 이동
+        window.location.href = url
+      } else if (res.ok || (res.status >= 300 && res.status < 400)) {
+        window.location.href = url
+      } else {
+        const json = await res.json().catch(() => null)
+        showMsg('error', json?.error || 'Gmail 연동 중 오류가 발생했습니다.')
+      }
+    } catch {
+      showMsg('error', 'Gmail 연동 요청에 실패했습니다. 네트워크를 확인해주세요.')
+    } finally {
+      setIsConnecting(false)
+    }
   }
 
   const handleNaverConnect = async () => {
@@ -267,9 +285,10 @@ export default function EmailIntegrationSettings() {
             </div>
             <button
               onClick={handleGmailConnect}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              disabled={isConnecting}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
             >
-              Gmail 연동하기
+              {isConnecting ? '연결 중...' : 'Gmail 연동하기'}
             </button>
           </div>
         ) : (
