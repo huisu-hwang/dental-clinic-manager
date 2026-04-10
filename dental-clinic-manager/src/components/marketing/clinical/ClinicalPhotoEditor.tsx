@@ -10,7 +10,6 @@ import {
   ArrowPathIcon,
   SunIcon,
   AdjustmentsHorizontalIcon,
-  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import {
   type ImageTransforms,
@@ -18,7 +17,6 @@ import {
   loadImageFromFile,
   renderPreview,
   applyImageTransforms,
-  computeBatchNormalization,
 } from './imageUtils'
 
 // ============================================
@@ -34,22 +32,17 @@ interface PhotoLike {
 
 interface ClinicalPhotoEditorProps {
   photo: PhotoLike
-  allPhotos: PhotoLike[]
   onSave: (photoId: string, newFile: File, newPreviewUrl: string) => void
-  onBatchNormalize: (adjustments: Map<string, { brightness: number; contrast: number }>) => void
   onClose: () => void
 }
 
 export default function ClinicalPhotoEditor({
   photo,
-  allPhotos,
   onSave,
-  onBatchNormalize,
   onClose,
 }: ClinicalPhotoEditorProps) {
   const [transforms, setTransforms] = useState<ImageTransforms>({ ...DEFAULT_TRANSFORMS })
   const [isSaving, setIsSaving] = useState(false)
-  const [isNormalizing, setIsNormalizing] = useState(false)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement | null>(null)
@@ -127,30 +120,6 @@ export default function ClinicalPhotoEditor({
       console.error('사진 편집 저장 실패:', err)
     } finally {
       setIsSaving(false)
-    }
-  }
-
-  // 전체 사진 밝기/색조 통일
-  const handleBatchNormalize = async () => {
-    if (allPhotos.length <= 1) return
-
-    setIsNormalizing(true)
-    try {
-      // 모든 사진의 이미지 로드
-      const loaded = await Promise.all(
-        allPhotos.map(async (p) => ({
-          id: p.id,
-          image: await loadImageFromFile(p.file),
-        }))
-      )
-
-      const adjustments = computeBatchNormalization(loaded)
-      onBatchNormalize(adjustments)
-      onClose()
-    } catch (err) {
-      console.error('일괄 정규화 실패:', err)
-    } finally {
-      setIsNormalizing(false)
     }
   }
 
@@ -296,16 +265,7 @@ export default function ClinicalPhotoEditor({
         </div>
 
         {/* 하단 액션 */}
-        <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 bg-slate-50">
-          <button
-            onClick={handleBatchNormalize}
-            disabled={isNormalizing || allPhotos.length <= 1}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <SparklesIcon className="h-4 w-4" />
-            {isNormalizing ? '처리 중...' : '전체 사진 밝기 통일'}
-          </button>
-
+        <div className="flex items-center justify-end px-5 py-3 border-t border-slate-200 bg-slate-50">
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}

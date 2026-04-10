@@ -405,6 +405,7 @@ export default function DashboardHome() {
   // 워커 설치 상태 체크
   const [workerInstalled, setWorkerInstalled] = useState<boolean | null>(null)
   const [workerUpdateAvailable, setWorkerUpdateAvailable] = useState(false)
+  const [workerUpdateStatus, setWorkerUpdateStatus] = useState<string | null>(null)
   const [workerVersions, setWorkerVersions] = useState<{ current: string | null; latest: string | null }>({ current: null, latest: null })
   const [workerUpdating, setWorkerUpdating] = useState(false)
   useEffect(() => {
@@ -415,6 +416,7 @@ export default function DashboardHome() {
           const data = await res.json()
           setWorkerInstalled(data.marketing?.installed ?? false)
           setWorkerUpdateAvailable(data.marketing?.updateAvailable ?? false)
+          setWorkerUpdateStatus(data.marketing?.updateStatus ?? null)
           setWorkerVersions({
             current: data.marketing?.currentVersion ?? null,
             latest: data.marketing?.latestVersion ?? null,
@@ -548,25 +550,45 @@ export default function DashboardHome() {
 
       {/* 워커 업데이트 배너 */}
       {workerInstalled && workerUpdateAvailable && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-3">
+        <div className={`border-b px-4 sm:px-6 py-3 ${workerUpdateStatus === 'downloaded' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <ArrowUpCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <ArrowUpCircle className={`w-4 h-4 flex-shrink-0 ${workerUpdateStatus === 'downloaded' ? 'text-green-600' : 'text-amber-600'}`} />
               <div>
-                <span className="text-sm font-medium text-amber-800">워커 업데이트가 있습니다</span>
-                <p className="text-xs text-amber-600 mt-0.5">
-                  v{workerVersions.current} → v{workerVersions.latest}
-                </p>
+                {workerUpdateStatus === 'downloaded' ? (
+                  <>
+                    <span className="text-sm font-medium text-green-800">업데이트 다운로드 완료</span>
+                    <p className="text-xs text-green-600 mt-0.5">
+                      v{workerVersions.current} → v{workerVersions.latest} · 워커 앱을 재시작하면 최신 버전이 적용됩니다.
+                    </p>
+                  </>
+                ) : workerUpdateStatus === 'downloading' ? (
+                  <>
+                    <span className="text-sm font-medium text-amber-800">업데이트 다운로드 중...</span>
+                    <p className="text-xs text-amber-600 mt-0.5">
+                      v{workerVersions.current} → v{workerVersions.latest}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-medium text-amber-800">워커 업데이트가 있습니다</span>
+                    <p className="text-xs text-amber-600 mt-0.5">
+                      v{workerVersions.current} → v{workerVersions.latest}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
-            <button
-              onClick={handleWorkerUpdate}
-              disabled={workerUpdating}
-              className="inline-flex items-center px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap ml-4"
-            >
-              <ArrowUpCircle className="w-3.5 h-3.5 mr-1.5" />
-              {workerUpdating ? '요청 중...' : '업데이트'}
-            </button>
+            {workerUpdateStatus !== 'downloaded' && workerUpdateStatus !== 'downloading' && (
+              <button
+                onClick={handleWorkerUpdate}
+                disabled={workerUpdating}
+                className="inline-flex items-center px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap ml-4"
+              >
+                <ArrowUpCircle className="w-3.5 h-3.5 mr-1.5" />
+                {workerUpdating ? '요청 중...' : '업데이트'}
+              </button>
+            )}
           </div>
         </div>
       )}

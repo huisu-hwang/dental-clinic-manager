@@ -34,6 +34,7 @@ import dynamic from 'next/dynamic'
 import ScheduleModal from '@/components/marketing/ScheduleModal'
 import ImageEditModal from '@/components/marketing/ImageEditModal'
 import ClinicalForm, { type ClinicalFormData } from '@/components/marketing/clinical/ClinicalForm'
+import ClinicalPhotoEditor from '@/components/marketing/clinical/ClinicalPhotoEditor'
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
@@ -87,6 +88,8 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   // ── 이미지 편집 상태 ──
   const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null)
   const [editingImage, setEditingImage] = useState<{ fileName: string; prompt: string; path: string } | null>(null)
+  // ── 임상 사진 편집 상태 ──
+  const [editingClinicalImage, setEditingClinicalImage] = useState<{ id: string; file: File; previewUrl: string; imageIndex: number } | null>(null)
 
   // 저장 메시지 3초 후 자동 제거
   useEffect(() => {
@@ -347,9 +350,34 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
 
   // ── 이미지 편집 ──
   const handleImageEdit = useCallback((imageIndex: number, currentImage: { fileName: string; prompt: string; path: string }) => {
+    // 임상글: ClinicalPhotoEditor로 편집
+    if (postType === 'clinical' && generatedResult?.generatedImages) {
+      const img = generatedResult.generatedImages[imageIndex]
+      if (img?.path && !img.path.startsWith('data:')) {
+        // 임상 사진 URL에서 File을 fetch하여 편집 모달 열기
+        fetch(img.path)
+          .then((res) => res.blob())
+          .then((blob) => {
+            const file = new File([blob], img.fileName || 'clinical.jpg', { type: blob.type || 'image/jpeg' })
+            setEditingClinicalImage({
+              id: `clinical_${imageIndex}`,
+              file,
+              previewUrl: img.path!,
+              imageIndex,
+            })
+          })
+          .catch(() => {
+            // fetch 실패 시 기존 AI 편집 모달 사용
+            setEditingImageIndex(imageIndex)
+            setEditingImage(currentImage)
+          })
+        return
+      }
+    }
+    // 일반 글: ImageEditModal
     setEditingImageIndex(imageIndex)
     setEditingImage(currentImage)
-  }, [])
+  }, [postType, generatedResult])
 
   const handleImageUpdated = useCallback((newImage: { fileName: string; prompt: string; path: string }) => {
     if (editingImageIndex === null || !generatedResult) return
@@ -964,7 +992,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               isLoading={isScheduling}
             />
 
-            {/* 이미지 편집 모달 */}
+            {/* AI 이미지 편집 모달 (일반 글) */}
             {editingImage && (
               <ImageEditModal
                 isOpen={editingImage !== null}
@@ -974,6 +1002,46 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                 }}
                 image={editingImage}
                 onImageUpdated={handleImageUpdated}
+              />
+            )}
+
+            {/* 임상 사진 편집 모달 */}
+            {editingClinicalImage && (
+              <ClinicalPhotoEditor
+                photo={editingClinicalImage}
+                onSave={async (photoId, newFile, newPreviewUrl) => {
+                  const idx = editingClinicalImage.imageIndex
+                  if (!generatedResult?.generatedImages) return
+
+                  // Storage에 재업로드
+                  const formData = new FormData()
+                  formData.append('file', newFile)
+                  formData.append('photo_type', 'before')
+                  try {
+                    const res = await fetch('/api/marketing/clinical-photos/upload', {
+                      method: 'POST',
+                      body: formData,
+                    })
+                    if (res.ok) {
+                      const { url } = await res.json()
+                      // generatedImages 업데이트
+                      const updatedImages = [...generatedResult.generatedImages!]
+                      const oldPath = updatedImages[idx]?.path
+                      updatedImages[idx] = { ...updatedImages[idx], path: url }
+                      setGeneratedResult({ ...generatedResult, generatedImages: updatedImages })
+
+                      // 본문의 이미지 URL 교체
+                      if (oldPath) {
+                        setEditedBody(editedBody.replace(oldPath, url))
+                      }
+                      setHasUnsavedChanges(true)
+                    }
+                  } catch (err) {
+                    console.error('임상 사진 재업로드 실패:', err)
+                  }
+                  setEditingClinicalImage(null)
+                }}
+                onClose={() => setEditingClinicalImage(null)}
               />
             )}
           </div>

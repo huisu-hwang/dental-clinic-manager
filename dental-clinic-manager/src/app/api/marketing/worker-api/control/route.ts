@@ -16,6 +16,7 @@ export async function PATCH(request: NextRequest) {
     if (body.clear_start_requested) update.start_requested = false;
     if (body.clear_stop_requested) update.stop_requested = false;
     if (body.clear_update_requested) update.update_requested = false;
+    if (body.update_status !== undefined) update.update_status = body.update_status;
 
     await admin
       .from('marketing_worker_control')

@@ -34,6 +34,20 @@ if (typeof window !== 'undefined') {
   const ua = navigator.userAgent
   _isIOS = /iPad|iPhone|iPod/.test(ua) && !('MSStream' in window)
 
+  // Check if installed via getInstalledRelatedApps API (works even in browser mode)
+  if ('getInstalledRelatedApps' in navigator) {
+    ;(navigator as unknown as { getInstalledRelatedApps(): Promise<{ platform: string }[]> })
+      .getInstalledRelatedApps()
+      .then((apps) => {
+        if (apps.length > 0) {
+          _isInstalled = true
+          localStorage.setItem(INSTALLED_KEY, 'true')
+          notifyListeners()
+        }
+      })
+      .catch(() => {})
+  }
+
   // Check dismiss state
   const dismissedAt = localStorage.getItem(DISMISS_KEY)
   if (dismissedAt) {

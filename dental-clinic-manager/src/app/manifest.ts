@@ -15,6 +15,12 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#f1f5f9',
     theme_color: '#3b82f6',
     prefer_related_applications: false,
+    related_applications: [
+      {
+        platform: 'webapp',
+        url: 'https://dental-clinic-manager.vercel.app/manifest.webmanifest',
+      },
+    ],
     categories: ['medical', 'productivity', 'business'],
     icons: [
       {
