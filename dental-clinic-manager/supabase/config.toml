@@ -122,7 +122,7 @@ enabled = true
 # in emails.
 site_url = "http://127.0.0.1:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = ["https://127.0.0.1:3000", "https://dental-clinic-manager-rust.vercel.app/**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
@@ -194,6 +194,11 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# Password recovery email template (token_hash 방식으로 PKCE code_verifier 문제 우회)
+[auth.email.template.recovery]
+subject = "비밀번호 재설정"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
