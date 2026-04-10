@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git pull:*)",
       "Bash(git stash:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(git fetch:*)"
     ]
   }
 }

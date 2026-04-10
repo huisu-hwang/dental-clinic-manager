@@ -1,5 +1,5 @@
 import { app } from 'electron';
-import { getConfig, getWorkerEnvVars } from './config-store';
+import { getConfig, getWorkerEnvVars, getUpdateMeta } from './config-store';
 import { log } from './logger';
 import { notifyPublishSuccess, notifyPublishError } from './tray';
 import { checkForUpdatesManually } from './updater';
@@ -138,13 +138,15 @@ async function pollControlSignals(): Promise<void> {
       nextItem: unknown;
     }>('/poll');
 
-    // watchdog 상태 갱신 (heartbeat + 버전)
+    // watchdog 상태 갱신 (heartbeat + 버전 + 업데이트 상태)
+    const updateMeta = getUpdateMeta();
     await apiRequest('/control', {
       method: 'PATCH',
       body: JSON.stringify({
         watchdog_online: true,
         worker_running: currentStatus === 'running',
         worker_version: app.getVersion(),
+        update_status: updateMeta.updateStatus || 'up-to-date',
       }),
     });
 

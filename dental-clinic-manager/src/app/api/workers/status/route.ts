@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
         currentVersion: string | null;
         latestVersion: string | null;
         updateAvailable: boolean;
+        updateStatus: string | null;
       };
       scraping?: { installed: boolean; online: boolean; workerCount: number };
       seo?: { installed: boolean; online: boolean; workerCount: number };
@@ -65,11 +66,12 @@ export async function GET(request: NextRequest) {
       let installed = false;
       let online = false;
       let currentVersion: string | null = null;
+      let updateStatus: string | null = null;
       const admin = getSupabaseAdmin();
       if (admin) {
         const { data: controlData } = await admin
           .from('marketing_worker_control')
-          .select('watchdog_online, worker_running, last_updated, worker_version')
+          .select('watchdog_online, worker_running, last_updated, worker_version, update_status')
           .eq('id', 'main')
           .single();
 
@@ -79,13 +81,14 @@ export async function GET(request: NextRequest) {
           const isRecent = lastUpdated && (Date.now() - lastUpdated.getTime() < 60_000);
           online = !!(controlData.watchdog_online && isRecent);
           currentVersion = controlData.worker_version || null;
+          updateStatus = controlData.update_status || null;
         }
       }
 
       const latestVersion = await getLatestWorkerVersion();
       const updateAvailable = !!(currentVersion && latestVersion && currentVersion !== latestVersion);
 
-      result.marketing = { installed, online, currentVersion, latestVersion, updateAvailable };
+      result.marketing = { installed, online, currentVersion, latestVersion, updateAvailable, updateStatus };
     }
 
     // 스크래핑 워커 상태

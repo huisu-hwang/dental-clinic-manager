@@ -2,6 +2,23 @@
 
 import { useState } from 'react'
 
+const EMAIL_PROVIDER_MAP: Record<string, { name: string; url: string }> = {
+  'gmail.com': { name: 'Gmail', url: 'https://mail.google.com' },
+  'naver.com': { name: 'Naver 메일', url: 'https://mail.naver.com' },
+  'daum.net': { name: 'Daum 메일', url: 'https://mail.daum.net' },
+  'hanmail.net': { name: 'Daum 메일', url: 'https://mail.daum.net' },
+  'kakao.com': { name: 'Kakao 메일', url: 'https://mail.kakao.com' },
+  'outlook.com': { name: 'Outlook', url: 'https://outlook.live.com' },
+  'hotmail.com': { name: 'Outlook', url: 'https://outlook.live.com' },
+  'live.com': { name: 'Outlook', url: 'https://outlook.live.com' },
+  'yahoo.com': { name: 'Yahoo 메일', url: 'https://mail.yahoo.com' },
+}
+
+function getEmailProvider(email: string) {
+  const domain = email.split('@')[1]?.toLowerCase()
+  return domain ? EMAIL_PROVIDER_MAP[domain] ?? null : null
+}
+
 interface ForgotPasswordFormProps {
   onBackToLogin: () => void
 }
@@ -11,6 +28,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [sentEmail, setSentEmail] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,6 +51,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
         setError(data.error || '비밀번호 재설정 요청 중 오류가 발생했습니다.')
       } else {
         setMessage('비밀번호 재설정 요청이 처리되었습니다. 이메일을 확인해주세요. (링크는 24시간 동안 유효합니다)')
+        setSentEmail(email.trim())
       }
     } catch (err) {
       console.error('[ForgotPassword] 처리 중 오류:', err)
@@ -87,13 +106,24 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading || !!message}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
-            >
-              {loading ? '전송 중...' : '재설정 이메일 받기'}
-            </button>
+            {message && getEmailProvider(sentEmail) ? (
+              <a
+                href={getEmailProvider(sentEmail)!.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition-colors text-center"
+              >
+                {getEmailProvider(sentEmail)!.name}(으)로 바로 이동
+              </a>
+            ) : (
+              <button
+                type="submit"
+                disabled={loading || !!message}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+              >
+                {loading ? '전송 중...' : message ? '이메일을 확인해주세요' : '재설정 이메일 받기'}
+              </button>
+            )}
           </form>
         </div>
       </div>
