@@ -8,6 +8,7 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   XMarkIcon,
+  PencilIcon,
 } from '@heroicons/react/24/outline'
 import {
   TONE_LABELS,
@@ -16,6 +17,8 @@ import {
   type ClinicalPhotoType,
 } from '@/types/marketing'
 import ToothChart from './ToothChart'
+import ClinicalPhotoEditor from './ClinicalPhotoEditor'
+import { loadImageFromFile, applyImageTransforms } from './imageUtils'
 
 // ============================================
 // 임상글 작성 폼
@@ -112,6 +115,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
   const [patientConsent, setPatientConsent] = useState(false)
   const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
   const [photos, setPhotos] = useState<LocalClinicalPhoto[]>([])
+  const [editingPhoto, setEditingPhoto] = useState<LocalClinicalPhoto | null>(null)
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -250,6 +254,72 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
       })
       return newPhotos
     })
+  }
+
+  // 사진 편집 완료 → 재업로드
+  const handlePhotoEdited = async (photoId: string, newFile: File, newPreviewUrl: string) => {
+    // 기존 previewUrl 해제 + 상태 업데이트
+    setPhotos((prev) =>
+      prev.map((p) => {
+        if (p.id !== photoId) return p
+        URL.revokeObjectURL(p.previewUrl)
+        return { ...p, file: newFile, previewUrl: newPreviewUrl, uploadedUrl: undefined, uploading: true, uploadError: undefined }
+      })
+    )
+
+    // 재업로드
+    const url = await uploadPhoto({ id: photoId, file: newFile } as LocalClinicalPhoto)
+    setPhotos((prev) =>
+      prev.map((p) =>
+        p.id === photoId
+          ? { ...p, uploading: false, uploadedUrl: url || undefined, uploadError: url ? undefined : '업로드 실패' }
+          : p
+      )
+    )
+  }
+
+  // 전체 사진 밝기/색조 통일
+  const handleBatchNormalize = async (adjustments: Map<string, { brightness: number; contrast: number }>) => {
+    const entries = Array.from(adjustments.entries())
+    if (entries.length === 0) return
+
+    // 각 사진에 보정값 적용
+    for (const [photoId, adj] of entries) {
+      const photo = photos.find((p) => p.id === photoId)
+      if (!photo || (adj.brightness === 0 && adj.contrast === 0)) continue
+
+      try {
+        const img = await loadImageFromFile(photo.file)
+        const newFile = await applyImageTransforms(img, {
+          brightness: adj.brightness,
+          contrast: adj.contrast,
+          rotation: 0,
+          flipH: false,
+          flipV: false,
+        })
+        const newPreviewUrl = URL.createObjectURL(newFile)
+
+        setPhotos((prev) =>
+          prev.map((p) => {
+            if (p.id !== photoId) return p
+            URL.revokeObjectURL(p.previewUrl)
+            return { ...p, file: newFile, previewUrl: newPreviewUrl, uploadedUrl: undefined, uploading: true, uploadError: undefined }
+          })
+        )
+
+        // 재업로드
+        const url = await uploadPhoto({ id: photoId, file: newFile } as LocalClinicalPhoto)
+        setPhotos((prev) =>
+          prev.map((p) =>
+            p.id === photoId
+              ? { ...p, uploading: false, uploadedUrl: url || undefined, uploadError: url ? undefined : '업로드 실패' }
+              : p
+          )
+        )
+      } catch (err) {
+        console.error(`사진 ${photoId} 정규화 실패:`, err)
+      }
+    }
   }
 
   // 캡션 변경
@@ -464,6 +534,14 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                         )}
                         <button
                           type="button"
+                          onClick={() => setEditingPhoto(photo)}
+                          className="p-1 bg-white/90 rounded shadow-sm hover:bg-indigo-50"
+                          title="편집"
+                        >
+                          <PencilIcon className="h-3 w-3 text-indigo-500" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handlePhotoRemove(photo.id)}
                           className="p-1 bg-red-50/90 rounded shadow-sm hover:bg-red-100"
                         >
@@ -524,6 +602,17 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
           </div>
         </label>
       </div>
+
+      {/* 사진 편집 모달 */}
+      {editingPhoto && (
+        <ClinicalPhotoEditor
+          photo={editingPhoto}
+          allPhotos={photos}
+          onSave={handlePhotoEdited}
+          onBatchNormalize={handleBatchNormalize}
+          onClose={() => setEditingPhoto(null)}
+        />
+      )}
     </div>
   )
 }
