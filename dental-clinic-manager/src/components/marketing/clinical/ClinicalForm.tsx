@@ -9,6 +9,7 @@ import {
   ArrowDownIcon,
   XMarkIcon,
   PencilIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import {
   TONE_LABELS,
@@ -279,46 +280,61 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
   }
 
   // 전체 사진 밝기/색조 통일
-  const handleBatchNormalize = async (adjustments: Map<string, { brightness: number; contrast: number }>) => {
-    const entries = Array.from(adjustments.entries())
-    if (entries.length === 0) return
+  const handleBatchNormalize = async () => {
+    if (photos.length < 2) return
 
-    // 각 사진에 보정값 적용
-    for (const [photoId, adj] of entries) {
-      const photo = photos.find((p) => p.id === photoId)
-      if (!photo || (adj.brightness === 0 && adj.contrast === 0)) continue
+    try {
+      // 모든 사진 이미지 로드
+      const loaded = await Promise.all(
+        photos.map(async (p) => ({
+          id: p.id,
+          image: await loadImageFromFile(p.file),
+        }))
+      )
 
-      try {
-        const img = await loadImageFromFile(photo.file)
-        const newFile = await applyImageTransforms(img, {
-          brightness: adj.brightness,
-          contrast: adj.contrast,
-          rotation: 0,
-          flipH: false,
-          flipV: false,
-        })
-        const newPreviewUrl = URL.createObjectURL(newFile)
+      // 일괄 정규화 계산
+      const { computeBatchNormalization } = await import('./imageUtils')
+      const adjustments = computeBatchNormalization(loaded)
 
-        setPhotos((prev) =>
-          prev.map((p) => {
-            if (p.id !== photoId) return p
-            URL.revokeObjectURL(p.previewUrl)
-            return { ...p, file: newFile, previewUrl: newPreviewUrl, uploadedUrl: undefined, uploading: true, uploadError: undefined }
+      // 각 사진에 보정값 적용
+      for (const [photoId, adj] of adjustments.entries()) {
+        const photo = photos.find((p) => p.id === photoId)
+        if (!photo || (adj.brightness === 0 && adj.contrast === 0)) continue
+
+        try {
+          const img = loaded.find((l) => l.id === photoId)!.image
+          const newFile = await applyImageTransforms(img, {
+            brightness: adj.brightness,
+            contrast: adj.contrast,
+            rotation: 0,
+            flipH: false,
+            flipV: false,
           })
-        )
+          const newPreviewUrl = URL.createObjectURL(newFile)
 
-        // 재업로드
-        const url = await uploadPhoto({ id: photoId, file: newFile } as LocalClinicalPhoto)
-        setPhotos((prev) =>
-          prev.map((p) =>
-            p.id === photoId
-              ? { ...p, uploading: false, uploadedUrl: url || undefined, uploadError: url ? undefined : '업로드 실패' }
-              : p
+          setPhotos((prev) =>
+            prev.map((p) => {
+              if (p.id !== photoId) return p
+              URL.revokeObjectURL(p.previewUrl)
+              return { ...p, file: newFile, previewUrl: newPreviewUrl, uploadedUrl: undefined, uploading: true, uploadError: undefined }
+            })
           )
-        )
-      } catch (err) {
-        console.error(`사진 ${photoId} 정규화 실패:`, err)
+
+          // 재업로드
+          const url = await uploadPhoto({ id: photoId, file: newFile } as LocalClinicalPhoto)
+          setPhotos((prev) =>
+            prev.map((p) =>
+              p.id === photoId
+                ? { ...p, uploading: false, uploadedUrl: url || undefined, uploadError: url ? undefined : '업로드 실패' }
+                : p
+            )
+          )
+        } catch (err) {
+          console.error(`사진 ${photoId} 정규화 실패:`, err)
+        }
       }
+    } catch (err) {
+      console.error('일괄 정규화 실패:', err)
     }
   }
 
@@ -452,9 +468,22 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
           <h3 className="text-lg font-semibold text-slate-800">
             임상 사진 <span className="text-red-500">*</span>
           </h3>
-          <span className="text-xs text-slate-400">
-            {totalPhotos}/{MAX_TOTAL_PHOTOS}장
-          </span>
+          <div className="flex items-center gap-2">
+            {totalPhotos >= 2 && (
+              <button
+                type="button"
+                onClick={() => handleBatchNormalize()}
+                disabled={isGenerating}
+                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors disabled:opacity-40"
+              >
+                <SparklesIcon className="h-3.5 w-3.5" />
+                밝기/색조 통일
+              </button>
+            )}
+            <span className="text-xs text-slate-400">
+              {totalPhotos}/{MAX_TOTAL_PHOTOS}장
+            </span>
+          </div>
         </div>
 
         {PHOTO_CATEGORIES.map((catType) => {
@@ -607,9 +636,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
       {editingPhoto && (
         <ClinicalPhotoEditor
           photo={editingPhoto}
-          allPhotos={photos}
           onSave={handlePhotoEdited}
-          onBatchNormalize={handleBatchNormalize}
           onClose={() => setEditingPhoto(null)}
         />
       )}
