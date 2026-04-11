@@ -12,7 +12,7 @@ export default function ContractsPage() {
 
   if (!user || !user.clinic_id) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="p-4 sm:p-6 bg-white min-h-screen">
         <div className="bg-at-accent-light border border-at-border rounded-lg p-6 text-center">
           <div className="flex items-center justify-center gap-2">
             <svg className="animate-spin h-5 w-5 text-at-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

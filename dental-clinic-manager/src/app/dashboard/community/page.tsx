@@ -111,79 +111,69 @@ export default function CommunityPage() {
   const isBanned = profile?.is_banned === true && (!profile.ban_until || new Date(profile.ban_until) > new Date())
 
   return (
-    <>
+    <div className="p-4 sm:p-6 bg-white min-h-screen">
       {/* 닉네임 설정 모달 */}
       {showNicknameSetup && <NicknameSetupModal onComplete={handleNicknameComplete} />}
 
       <div className="flex gap-6">
         {/* 메인 영역 */}
-        <div className="flex-1 max-w-4xl">
-          {/* 헤더 */}
-          <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-white">자유게시판</h2>
-                  <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Free Board</p>
-                </div>
-              </div>
-              {user?.role === 'master_admin' && (
-                <button
-                  onClick={() => router.push('/dashboard/community/admin')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors"
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">관리</span>
-                </button>
-              )}
+        <div className="flex-1">
+          {/* 페이지 헤더 */}
+          <div className="flex items-center justify-between pb-4 border-b border-at-border mb-4">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-at-accent" />
+              <h1 className="text-xl font-bold text-at-text">자유게시판</h1>
             </div>
+            {user?.role === 'master_admin' && (
+              <button
+                onClick={() => router.push('/dashboard/community/admin')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-at-surface-alt hover:bg-at-border text-at-text-secondary text-xs font-medium transition-colors"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">관리</span>
+              </button>
+            )}
           </div>
 
-          {/* 콘텐츠 영역 */}
-          <div className="bg-white border-x border-b border-at-border rounded-b-xl p-3 sm:p-6">
-            {/* 차단 알림 */}
-            {isBanned && profile && <BanNotice profile={profile} />}
+          {/* 차단 알림 */}
+          {isBanned && profile && <BanNotice profile={profile} />}
 
-            {/* 뷰 전환 */}
-            <div className="tab-content">
-              {viewMode === 'list' && (
-                <CommunityPostList
-                  profileId={profile?.id || null}
-                  isBanned={!!isBanned}
-                  isLoggedIn={!!user}
-                  categories={categories}
-                  labelMap={labelMap}
-                  colorMap={colorMap}
-                  onPostClick={handlePostClick}
-                  onNewPost={handleNewPost}
-                />
-              )}
-              {viewMode === 'detail' && selectedPostId && (
-                <CommunityPostDetail
-                  postId={selectedPostId}
-                  myProfileId={profile?.id || null}
-                  nickname={profile?.nickname || ''}
-                  labelMap={labelMap}
-                  colorMap={colorMap}
-                  onBack={() => setViewMode('list')}
-                  onEdit={handleEditPost}
-                  onDeleted={handlePostDeleted}
-                />
-              )}
-              {viewMode === 'form' && profile && (
-                <CommunityPostForm
-                  profileId={profile.id}
-                  editingPost={editingPost}
-                  categories={categories}
-                  labelMap={labelMap}
-                  onSubmit={handleFormSubmit}
-                  onCancel={() => setViewMode('list')}
-                />
-              )}
-            </div>
+          {/* 뷰 전환 */}
+          <div className="tab-content">
+            {viewMode === 'list' && (
+              <CommunityPostList
+                profileId={profile?.id || null}
+                isBanned={!!isBanned}
+                isLoggedIn={!!user}
+                categories={categories}
+                labelMap={labelMap}
+                colorMap={colorMap}
+                onPostClick={handlePostClick}
+                onNewPost={handleNewPost}
+              />
+            )}
+            {viewMode === 'detail' && selectedPostId && (
+              <CommunityPostDetail
+                postId={selectedPostId}
+                myProfileId={profile?.id || null}
+                nickname={profile?.nickname || ''}
+                labelMap={labelMap}
+                colorMap={colorMap}
+                onBack={() => setViewMode('list')}
+                onEdit={handleEditPost}
+                onDeleted={handlePostDeleted}
+              />
+            )}
+            {viewMode === 'form' && profile && (
+              <CommunityPostForm
+                profileId={profile.id}
+                editingPost={editingPost}
+                categories={categories}
+                labelMap={labelMap}
+                onSubmit={handleFormSubmit}
+                onCancel={() => setViewMode('list')}
+              />
+            )}
           </div>
         </div>
 
@@ -193,6 +183,6 @@ export default function CommunityPage() {
           <PopularPostsSidebar onPostClick={handlePostClick} labelMap={labelMap} />
         </div>
       </div>
-    </>
+    </div>
   )
 }

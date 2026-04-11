@@ -9,7 +9,6 @@ import {
   Cog6ToothIcon,
   ChartBarIcon,
   DocumentTextIcon,
-  SparklesIcon,
   XMarkIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -64,44 +63,34 @@ export default function MarketingPage() {
 
   return (
     <PremiumGate featureId="marketing">
-            {/* 페이지 헤더 */}
-            <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  <SparklesIcon className="h-5 w-5 text-white" />
-                </div>
-                <h1 className="text-lg sm:text-xl font-bold text-white">마케팅 자동화</h1>
-              </div>
-            </div>
+      <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
+        {/* 탭 네비게이션 — 연차관리 스타일 */}
+        <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all ${
+                activeTab === tab.id
+                  ? 'bg-at-accent-light text-at-accent'
+                  : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+              }`}
+            >
+              <tab.icon className="h-4 w-4 mr-2" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-            {/* 서브 탭 */}
-            <div className="bg-white border-b border-at-border px-4 sm:px-6">
-              <nav className="flex gap-1 -mb-px">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-at-accent text-at-accent'
-                        : 'border-transparent text-at-text-weak hover:text-at-text-secondary hover:border-at-border'
-                    }`}
-                  >
-                    <tab.icon className="h-4 w-4" />
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* 콘텐츠 */}
-            <div className="bg-white rounded-b-xl border border-t-0 border-at-border p-4 sm:p-6">
-              {activeTab === 'newpost' && <NewPostForm onClose={() => setActiveTab('dashboard')} />}
-              {activeTab === 'dashboard' && <DashboardContent />}
-              {activeTab === 'posts' && <PostsContent viewPostId={viewPostId} onViewPostHandled={() => setViewPostId(null)} />}
-              {activeTab === 'calendar' && <CalendarContent />}
-              {activeTab === 'settings' && <SettingsContent />}
-            </div>
+        {/* 콘텐츠 */}
+        <div className="tab-content">
+          {activeTab === 'newpost' && <NewPostForm onClose={() => setActiveTab('dashboard')} />}
+          {activeTab === 'dashboard' && <DashboardContent />}
+          {activeTab === 'posts' && <PostsContent viewPostId={viewPostId} onViewPostHandled={() => setViewPostId(null)} />}
+          {activeTab === 'calendar' && <CalendarContent />}
+          {activeTab === 'settings' && <SettingsContent />}
+        </div>
+      </div>
     </PremiumGate>
   )
 }
@@ -548,13 +537,23 @@ function PostEditModal({
       const { data } = await res.json()
 
       if (isImmediate) {
+        let triggered = false
+        // 1차: 로컬 Electron 워커 트리거 시도
         try {
           const localRes = await fetch('http://localhost:4001/trigger', { method: 'POST', signal: AbortSignal.timeout(5000) })
-          if (!localRes.ok) throw new Error('local worker error')
-          setSaveMsg({ type: 'success', text: '바로 발행이 시작됩니다!' })
+          if (localRes.ok) triggered = true
         } catch {
-          setSaveMsg({ type: 'success', text: '예약되었습니다. 워커가 곧 발행합니다.' })
+          // 로컬 워커 없음 - 서버 API 트리거로 fallback
         }
+        // 2차: 서버 API 트리거 (DB 시그널)
+        if (!triggered) {
+          try {
+            await fetch('/api/marketing/publish/trigger', { method: 'POST' })
+          } catch {
+            // 무시
+          }
+        }
+        setSaveMsg({ type: 'success', text: triggered ? '바로 발행이 시작됩니다!' : '발행 요청이 전달되었습니다. 워커가 곧 처리합니다.' })
       } else {
         setSaveMsg({ type: 'success', text: `${targetDate} ${targetTime}에 발행이 예약되었습니다.` })
       }
@@ -568,8 +567,10 @@ function PostEditModal({
   }
 
   const handlePublishNow = () => {
-    const today = new Date().toISOString().split('T')[0]
-    const now = new Date().toTimeString().slice(0, 5)
+    // KST 기준 날짜/시간 계산 (worker-api/poll이 KST로 비교하므로 일치시킴)
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    const today = kst.toISOString().split('T')[0]
+    const now = kst.toISOString().split('T')[1].slice(0, 5)
     handlePublish(today, now, true)
   }
 

@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import AIChat from '@/components/AIAnalysis/AIChat';
-import { AlertCircle, Lock, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 
@@ -14,7 +14,7 @@ export default function AIAnalysisPage() {
   // 로딩 중
   if (authLoading || permLoading) {
     return (
-      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+      <div className="bg-white min-h-screen flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center gap-4">
           <div className="w-12 h-12 bg-blue-200 rounded-full"></div>
           <div className="h-4 w-32 bg-at-border rounded"></div>
@@ -26,7 +26,7 @@ export default function AIAnalysisPage() {
   // 로그인 필요
   if (!user) {
     return (
-      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+      <div className="bg-white min-h-screen flex items-center justify-center">
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
           <div className="w-16 h-16 bg-at-error-bg rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-red-500" />
@@ -46,7 +46,7 @@ export default function AIAnalysisPage() {
   // 클리닉 ID 확인
   if (!user.clinic_id) {
     return (
-      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+      <div className="bg-white min-h-screen flex items-center justify-center">
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
           <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-yellow-500" />
@@ -70,7 +70,7 @@ export default function AIAnalysisPage() {
 
   if (!canViewStats) {
     return (
-      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+      <div className="bg-white min-h-screen flex items-center justify-center">
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
           <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-orange-500" />
@@ -90,33 +90,15 @@ export default function AIAnalysisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-at-surface-alt">
-      {/* 상단 헤더 */}
-      <div className="bg-white border-b border-at-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                대시보드
-              </Button>
-            </Link>
-            <div className="h-6 w-px bg-at-border" />
-            <div>
-              <h1 className="text-xl font-bold text-at-text">AI 데이터 분석</h1>
-              <p className="text-sm text-at-text-weak">
-                자연어로 병원 데이터를 분석하고 인사이트를 얻으세요
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
+      {/* 페이지 제목 */}
+      <div className="pb-4 border-b border-at-border">
+        <h1 className="text-xl font-bold text-at-text">AI 데이터 분석</h1>
+        <p className="text-sm text-at-text-weak mt-1">자연어로 병원 데이터를 분석하고 인사이트를 얻으세요</p>
       </div>
-
       {/* 메인 콘텐츠 */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="h-[calc(100vh-180px)]">
-          <AIChat clinicId={user.clinic_id} />
-        </div>
+      <div className="h-[calc(100vh-200px)]">
+        <AIChat clinicId={user.clinic_id} />
       </div>
     </div>
   );

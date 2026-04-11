@@ -147,34 +147,34 @@ export default function FinancialDashboard() {
 
   return (
     <div className="space-y-0 relative">
-      {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
-      <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
+      {/* 헤더 - 스크롤 시 고정 */}
+      <div className="sticky top-14 z-20 bg-white border-x border-t border-at-border px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-at-accent-light rounded-xl flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-at-accent" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">경영 현황</h2>
-              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Financial Dashboard</p>
+              <h2 className="text-base sm:text-lg font-bold text-at-text">경영 현황</h2>
+              <p className="text-at-text-weak text-xs sm:text-sm hidden sm:block">Financial Dashboard</p>
             </div>
           </div>
-          
-          {/* Date Selector with sleek UI */}
+
+          {/* Date Selector */}
           {activeTab === 'status' && (
-            <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl shadow-sm border border-white/20 self-start sm:self-auto">
+            <div className="flex items-center gap-1 bg-at-surface-alt p-1 rounded-xl border border-at-border self-start sm:self-auto">
               <button
                 onClick={goToPreviousMonth}
-                className="p-1.5 sm:p-2 hover:bg-white/20 rounded-xl transition-all duration-200 text-white"
+                className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
               >
                 <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-white font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm shadow-sm backdrop-blur-sm bg-white/5 rounded-xl">
+              <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-at-text font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm bg-white rounded-xl border border-at-border">
                 {selectedYear}년 {selectedMonth}월
               </div>
               <button
                 onClick={goToNextMonth}
-                className="p-1.5 sm:p-2 hover:bg-white/20 rounded-xl transition-all duration-200 text-white"
+                className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
               >
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
