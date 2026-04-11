@@ -100,7 +100,7 @@ export default function PayrollManagement() {
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
               <Banknote className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -111,7 +111,7 @@ export default function PayrollManagement() {
           {isOwner && (
             <button
               onClick={() => setShowUploadModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-sm font-medium transition-all"
             >
               <Upload className="w-4 h-4" />
               <span className="hidden sm:inline">세무사무실 명세서 업로드</span>
@@ -122,7 +122,7 @@ export default function PayrollManagement() {
       </div>
 
       {/* 서브 탭 */}
-      <div className="border-x border-b border-slate-200 bg-slate-50">
+      <div className="border-x border-b border-at-border bg-at-surface-alt">
         <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
           {subTabs.map(tab => {
             const Icon = tab.icon
@@ -130,10 +130,10 @@ export default function PayrollManagement() {
               <button
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+                className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                   activeSubTab === tab.id
                     ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                    : 'text-at-text hover:text-at-text hover:bg-white/50'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -145,17 +145,17 @@ export default function PayrollManagement() {
       </div>
 
       {/* 콘텐츠 */}
-      <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
+      <div className="bg-white border-x border-b border-at-border rounded-b-xl p-6">
         {activeSubTab === 'view' && <PayrollForm key={uploadKey} />}
 
         {activeSubTab === 'history' && (
-          <div className="text-center py-12 text-slate-500">
-            <History className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+          <div className="text-center py-12 text-at-text">
+            <History className="w-12 h-12 mx-auto mb-4 text-at-text" />
             <p className="text-lg font-medium">발급 이력</p>
             <p className="text-sm mt-2">
               급여 명세서 발급 이력이 여기에 표시됩니다.
             </p>
-            <p className="text-xs text-slate-400 mt-4">
+            <p className="text-xs text-at-text mt-4">
               (향후 구현 예정)
             </p>
           </div>
@@ -165,7 +165,7 @@ export default function PayrollManagement() {
       </div>
 
       {/* 안내 사항 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm">
         <h4 className="font-medium text-blue-800 mb-2">급여 명세서 안내</h4>
         <ul className="list-disc list-inside text-blue-700 space-y-1">
           {isOwner ? (

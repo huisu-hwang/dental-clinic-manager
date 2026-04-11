@@ -249,7 +249,7 @@ export default function TaxOfficeUploadModal({
           </div>
           <button
             onClick={handleClose}
-            className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -267,7 +267,7 @@ export default function TaxOfficeUploadModal({
                   <select
                     value={year}
                     onChange={(e) => setYear(Number(e.target.value))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {yearOptions.map((y) => (
                       <option key={y} value={y}>
@@ -281,7 +281,7 @@ export default function TaxOfficeUploadModal({
                   <select
                     value={month}
                     onChange={(e) => setMonth(Number(e.target.value))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                       <option key={m} value={m}>
@@ -332,7 +332,7 @@ export default function TaxOfficeUploadModal({
               </div>
 
               {parseError && (
-                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>{parseError}</span>
                 </div>
@@ -342,7 +342,7 @@ export default function TaxOfficeUploadModal({
                 <button
                   onClick={handleNext}
                   disabled={!zipFile || isParsing}
-                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isParsing ? (
                     <>
@@ -364,7 +364,7 @@ export default function TaxOfficeUploadModal({
           {step === 2 && (
             <div className="space-y-4">
               {/* Summary */}
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg text-sm">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl text-sm">
                 <span className="text-gray-600">
                   총 <strong>{pdfFiles.length}</strong>개 파일
                 </span>
@@ -381,7 +381,7 @@ export default function TaxOfficeUploadModal({
               </div>
 
               {/* Table */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
@@ -431,14 +431,14 @@ export default function TaxOfficeUploadModal({
               <div className="flex justify-between">
                 <button
                   onClick={() => setStep(1)}
-                  className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   이전
                 </button>
                 <button
                   onClick={handleUpload}
                   disabled={matchedCount === 0}
-                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Upload className="w-4 h-4" />
                   업로드 ({matchedCount}개)
@@ -500,7 +500,7 @@ export default function TaxOfficeUploadModal({
                       onUploadComplete()
                       handleClose()
                     }}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
                     닫기
                   </button>

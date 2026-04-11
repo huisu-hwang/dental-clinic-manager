@@ -240,7 +240,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
 
   if (error || !contract) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+      <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
         <p className="text-red-800">{error || '계약서를 찾을 수 없습니다.'}</p>
         <button onClick={() => router.back()} className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
           돌아가기
@@ -310,7 +310,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           {canSign('employer') && (
             <button
               onClick={() => handleSignClick('employer')}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
             >
               원장 서명
             </button>
@@ -318,7 +318,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           {canSign('employee') && (
             <button
               onClick={() => handleSignClick('employee')}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
             >
               직원 서명
             </button>
@@ -326,7 +326,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           <button
             onClick={handleDownloadPdf}
             disabled={isPdfGenerating}
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`px-4 py-2 rounded-xl transition-colors ${
               isPdfGenerating
                 ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -336,14 +336,14 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           </button>
           <button
             onClick={handlePrint}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
           >
             프린트
           </button>
           {(currentUser.role === 'owner' || currentUser.role === 'manager') && contract.status !== 'cancelled' && (
             <button
               onClick={handleCancel}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
             >
               취소
             </button>
@@ -352,7 +352,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       </div>
 
       {/* Contract Document */}
-      <div ref={contractContentRef} className="contract-print-content bg-white p-8 md:p-12 rounded-lg shadow-lg border border-gray-200">
+      <div ref={contractContentRef} className="contract-print-content bg-white p-8 md:p-12 rounded-xl shadow-lg border border-gray-200">
         {/* Title */}
         <h1 className="text-3xl font-bold text-center mb-8">근로계약서</h1>
 
@@ -613,7 +613,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
 
           <div className="grid grid-cols-2 gap-8">
             {/* Employer Signature */}
-            <div className="border rounded-lg p-4">
+            <div className="border rounded-xl p-4">
               <h3 className="font-bold mb-4 text-center">사용자 (갑)</h3>
               {signatureStatus.hasEmployerSignature ? (
                 <div className="text-center">
@@ -657,7 +657,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
             </div>
 
             {/* Employee Signature */}
-            <div className="border rounded-lg p-4">
+            <div className="border rounded-xl p-4">
               <h3 className="font-bold mb-4 text-center">근로자 (을)</h3>
               {signatureStatus.hasEmployeeSignature ? (
                 <div className="text-center">
@@ -708,7 +708,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
 
           {/* 전자서명 법적 효력 고지 */}
           <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="bg-gray-50 p-4 rounded-lg text-xs text-gray-600">
+            <div className="bg-gray-50 p-4 rounded-xl text-xs text-gray-600">
               <p className="font-medium mb-2">※ 전자 근로계약서 법적 효력 안내</p>
               <ul className="space-y-1 list-disc list-inside">
                 <li>본 전자 근로계약서는 근로기준법 제17조에 따른 근로조건 명시의무를 충족합니다.</li>
@@ -724,7 +724,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       {/* Signature Modal */}
       {showSignatureModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">
               {signerType === 'employer' ? '원장 서명' : '직원 서명'}
             </h2>

@@ -277,7 +277,7 @@ export default function LeaveRequestForm({
       )}
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="mb-4 bg-at-error-bg border border-at-border text-at-error px-4 py-3 rounded-xl text-sm flex items-center">
           <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
           {error}
         </div>

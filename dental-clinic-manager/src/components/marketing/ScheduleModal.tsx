@@ -42,51 +42,51 @@ export default function ScheduleModal({ isOpen, onClose, onConfirm, isLoading }:
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-at-border">
           <div className="flex items-center gap-2">
             <CalendarDaysIcon className="h-5 w-5 text-blue-600" />
-            <h3 className="text-base font-semibold text-slate-900">예약 발행 설정</h3>
+            <h3 className="text-base font-semibold text-at-text">예약 발행 설정</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-1 rounded-xl hover:bg-at-surface-alt transition-colors"
           >
-            <XMarkIcon className="h-5 w-5 text-slate-400" />
+            <XMarkIcon className="h-5 w-5 text-at-text" />
           </button>
         </div>
 
         {/* 본문 */}
         <div className="p-5 space-y-4">
-          <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 rounded-xl px-3 py-2">
             <ClockIcon className="h-4 w-4 flex-shrink-0" />
             발행할 날짜와 시간을 설정해주세요.
           </div>
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">날짜</label>
+              <label className="block text-sm font-medium text-at-text mb-1.5">날짜</label>
               <input
                 type="date"
                 value={scheduleDate}
                 min={today}
                 onChange={(e) => setScheduleDate(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full px-3 py-2.5 text-sm border border-at-border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">시간</label>
+              <label className="block text-sm font-medium text-at-text mb-1.5">시간</label>
               <input
                 type="time"
                 value={scheduleTime}
                 onChange={(e) => setScheduleTime(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full px-3 py-2.5 text-sm border border-at-border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
               />
             </div>
           </div>
 
           {scheduleDate && scheduleTime && (
-            <div className="text-center text-sm text-slate-600 bg-slate-50 rounded-lg py-2">
-              <span className="font-medium text-slate-900">{scheduleDate}</span>
+            <div className="text-center text-sm text-at-text bg-at-surface-alt rounded-xl py-2">
+              <span className="font-medium text-at-text">{scheduleDate}</span>
               {' '}
               <span className="font-medium text-blue-600">{scheduleTime}</span>
               에 발행됩니다.
@@ -95,18 +95,18 @@ export default function ScheduleModal({ isOpen, onClose, onConfirm, isLoading }:
         </div>
 
         {/* 푸터 */}
-        <div className="flex gap-3 px-5 py-4 border-t border-slate-200 bg-slate-50">
+        <div className="flex gap-3 px-5 py-4 border-t border-at-border bg-at-surface-alt">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="flex-1 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 text-sm font-medium text-at-text bg-white border border-at-border rounded-xl hover:bg-at-surface-alt transition-colors disabled:opacity-50"
           >
             취소
           </button>
           <button
             onClick={handleConfirm}
             disabled={isLoading || !scheduleDate || !scheduleTime}
-            className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">

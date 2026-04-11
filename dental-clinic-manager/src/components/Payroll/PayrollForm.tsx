@@ -681,19 +681,19 @@ export default function PayrollForm() {
   return (
     <div className="space-y-6">
       {/* 직원 및 기간 선택 */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">급여 명세서 조회</h3>
+      <div className="bg-white rounded-xl shadow-sm border border-at-border p-6">
+        <h3 className="text-lg font-semibold text-at-text mb-4">급여 명세서 조회</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 직원 선택 */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-at-text mb-1">
               직원 선택 <span className="text-red-500">*</span>
             </label>
             <select
               value={selectedEmployeeId || ''}
               onChange={(e) => setSelectedEmployeeId(e.target.value || null)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             >
               <option value="">직원을 선택하세요</option>
               {employees.map(emp => (
@@ -707,7 +707,7 @@ export default function PayrollForm() {
 
           {/* 연월 선택 */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-at-text mb-1">
               급여 기간 <span className="text-red-500">*</span>
             </label>
             <select
@@ -717,7 +717,7 @@ export default function PayrollForm() {
                 setSelectedYear(year)
                 setSelectedMonth(month)
               }}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             >
               {yearMonthOptions.map(opt => (
                 <option key={`${opt.year}-${opt.month}`} value={`${opt.year}-${opt.month}`}>
@@ -743,7 +743,7 @@ export default function PayrollForm() {
           {taxOfficeFileUrl ? (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-at-text">
                   <FileText className="w-4 h-4 inline mr-1" />
                   {taxOfficeFileName}
                 </p>
@@ -756,7 +756,7 @@ export default function PayrollForm() {
                   새 탭에서 열기
                 </a>
               </div>
-              <div className="border border-slate-200 rounded-lg overflow-hidden" style={{ height: '80vh' }}>
+              <div className="border border-at-border rounded-xl overflow-hidden" style={{ height: '80vh' }}>
                 <iframe
                   src={taxOfficeFileUrl}
                   className="w-full h-full"
@@ -765,8 +765,8 @@ export default function PayrollForm() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-16 text-slate-500">
-              <FileText className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+            <div className="text-center py-16 text-at-text">
+              <FileText className="w-16 h-16 mx-auto mb-4 text-at-text" />
               <p className="text-lg font-medium mb-2">세무사무실 명세서가 없습니다</p>
               <p className="text-sm">
                 {selectedYear}년 {selectedMonth}월 세무사무실 급여명세서가 아직 업로드되지 않았습니다.
@@ -786,21 +786,21 @@ export default function PayrollForm() {
 
       {/* 접근 권한 제한 메시지 */}
       {accessResult && !accessResult.canAccess && selectedEmployeeId && (
-        <div className="bg-slate-100 border border-slate-300 rounded-lg p-6">
+        <div className="bg-at-surface-alt border border-at-border rounded-xl p-6">
           <div className="flex items-start space-x-3">
-            <Lock className="w-6 h-6 text-slate-500 flex-shrink-0 mt-0.5" />
+            <Lock className="w-6 h-6 text-at-text flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-medium text-slate-800 mb-2">급여 명세서 확인 불가</h4>
-              <p className="text-sm text-slate-600 mb-2">
+              <h4 className="font-medium text-at-text mb-2">급여 명세서 확인 불가</h4>
+              <p className="text-sm text-at-text mb-2">
                 {accessResult.reason}
               </p>
               {accessResult.availableDate && (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-at-text">
                   <Calendar className="w-4 h-4 inline-block mr-1" />
                   확인 가능일: {accessResult.availableDate}
                 </p>
               )}
-              <p className="text-xs text-slate-400 mt-3">
+              <p className="text-xs text-at-text mt-3">
                 * 급여 명세서는 급여가 확정된 후(매월 말일) 확인할 수 있습니다.
               </p>
             </div>
@@ -810,7 +810,7 @@ export default function PayrollForm() {
 
       {/* 급여 설정 없음 경고 */}
       {noSettingsWarning && selectedEmployeeId && accessResult?.canAccess && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
           <div className="flex items-start space-x-3">
             <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
@@ -836,7 +836,7 @@ export default function PayrollForm() {
 
       {/* 근태 데이터 로드 실패 경고 */}
       {attendanceLoadError && selectedEmployeeId && accessResult?.canAccess && !noSettingsWarning && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
           <div className="flex items-start space-x-3">
             <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
@@ -854,7 +854,7 @@ export default function PayrollForm() {
 
       {/* 중간 입사자 일할 계산 안내 */}
       {prorataInfo && prorataInfo.isProrated && accessResult?.canAccess && !noSettingsWarning && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
           <div className="flex items-start space-x-3">
             <UserPlus className="w-6 h-6 text-indigo-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -903,9 +903,9 @@ export default function PayrollForm() {
       {/* 근태 정보 요약 (owner 또는 차감이 있는 경우에만 표시) */}
       {attendanceSummary && accessResult?.canAccess && !noSettingsWarning && (
         (isOwner || (attendanceDeduction && attendanceDeduction.totalDeduction > 0)) && (
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-at-border p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-800 flex items-center">
+              <h3 className="text-lg font-semibold text-at-text flex items-center">
                 <Clock className="w-5 h-5 mr-2 text-blue-500" />
                 {selectedYear}년 {selectedMonth}월 근태 현황
               </h3>
@@ -919,7 +919,7 @@ export default function PayrollForm() {
 
             {/* 근태 요약 그리드 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div className="p-3 bg-emerald-50 rounded-lg text-center">
+              <div className="p-3 bg-emerald-50 rounded-xl text-center">
                 <p className="text-xs text-emerald-600 mb-1">출근 일수</p>
                 <p className="text-xl font-bold text-emerald-700">
                   {attendanceSummary.presentDays}일
@@ -929,7 +929,7 @@ export default function PayrollForm() {
                 </p>
               </div>
 
-              <div className="p-3 bg-blue-50 rounded-lg text-center">
+              <div className="p-3 bg-blue-50 rounded-xl text-center">
                 <p className="text-xs text-blue-600 mb-1">연차 사용</p>
                 <p className="text-xl font-bold text-blue-700">
                   {attendanceSummary.leaveDays}일
@@ -939,16 +939,16 @@ export default function PayrollForm() {
                 </p>
               </div>
 
-              <div className={`p-3 rounded-lg text-center ${attendanceSummary.absentDays > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
-                <p className={`text-xs mb-1 ${attendanceSummary.absentDays > 0 ? 'text-red-600' : 'text-slate-600'}`}>결근</p>
-                <p className={`text-xl font-bold ${attendanceSummary.absentDays > 0 ? 'text-red-700' : 'text-slate-700'}`}>
+              <div className={`p-3 rounded-xl text-center ${attendanceSummary.absentDays > 0 ? 'bg-red-50' : 'bg-at-surface-alt'}`}>
+                <p className={`text-xs mb-1 ${attendanceSummary.absentDays > 0 ? 'text-red-600' : 'text-at-text'}`}>결근</p>
+                <p className={`text-xl font-bold ${attendanceSummary.absentDays > 0 ? 'text-red-700' : 'text-at-text'}`}>
                   {attendanceSummary.absentDays}일
                 </p>
               </div>
 
-              <div className={`p-3 rounded-lg text-center ${attendanceSummary.lateCount > 0 ? 'bg-amber-50' : 'bg-slate-50'}`}>
-                <p className={`text-xs mb-1 ${attendanceSummary.lateCount > 0 ? 'text-amber-600' : 'text-slate-600'}`}>지각/조퇴</p>
-                <p className={`text-xl font-bold ${attendanceSummary.lateCount > 0 ? 'text-amber-700' : 'text-slate-700'}`}>
+              <div className={`p-3 rounded-xl text-center ${attendanceSummary.lateCount > 0 ? 'bg-amber-50' : 'bg-at-surface-alt'}`}>
+                <p className={`text-xs mb-1 ${attendanceSummary.lateCount > 0 ? 'text-amber-600' : 'text-at-text'}`}>지각/조퇴</p>
+                <p className={`text-xl font-bold ${attendanceSummary.lateCount > 0 ? 'text-amber-700' : 'text-at-text'}`}>
                   {attendanceSummary.lateCount + attendanceSummary.earlyLeaveCount}회
                 </p>
                 {(attendanceSummary.totalLateMinutes > 0 || attendanceSummary.totalEarlyLeaveMinutes > 0) && (
@@ -961,7 +961,7 @@ export default function PayrollForm() {
 
             {/* 차감 상세 내역 */}
             {attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
-              <div className="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+              <div className="mt-4 p-4 bg-orange-50 rounded-xl border border-orange-200">
                 <h4 className="font-medium text-orange-800 mb-3 flex items-center">
                   <AlertTriangle className="w-4 h-4 mr-2" />
                   근태 관련 급여 차감 내역 (근로기준법 기준)
@@ -986,7 +986,7 @@ export default function PayrollForm() {
 
             {/* 초과근무 정보 */}
             {attendanceSummary.overtimeMinutes > 0 && (
-              <div className="mt-4 p-4 bg-purple-50 rounded-lg">
+              <div className="mt-4 p-4 bg-purple-50 rounded-xl">
                 <h4 className="font-medium text-purple-800 mb-2">초과근무 정보</h4>
                 <p className="text-sm text-purple-700">
                   연장근로: {Math.floor(attendanceSummary.overtimeMinutes / 60)}시간 {attendanceSummary.overtimeMinutes % 60}분
@@ -999,15 +999,15 @@ export default function PayrollForm() {
 
       {/* 현금 상여 입력 (owner만) */}
       {isOwner && calculationResult && selectedEmployeeId && !noSettingsWarning && accessResult?.canAccess && (
-        <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-amber-200 p-6">
           <div className="flex items-center mb-4">
             <Coins className="w-5 h-5 mr-2 text-amber-500" />
-            <h3 className="text-lg font-semibold text-slate-800">현금 상여</h3>
-            <span className="ml-2 text-xs text-slate-500">(매월 변동 가능)</span>
+            <h3 className="text-lg font-semibold text-at-text">현금 상여</h3>
+            <span className="ml-2 text-xs text-at-text">(매월 변동 가능)</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex-1 max-w-xs">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-at-text mb-1">
                 {selectedYear}년 {selectedMonth}월 현금 상여 금액
               </label>
               <div className="relative">
@@ -1019,7 +1019,7 @@ export default function PayrollForm() {
                   placeholder="0"
                   min="0"
                 />
-                <span className="absolute right-3 top-2 text-slate-500">원</span>
+                <span className="absolute right-3 top-2 text-at-text">원</span>
               </div>
             </div>
             {formState.cashBonus > 0 && (
@@ -1030,7 +1030,7 @@ export default function PayrollForm() {
               </div>
             )}
           </div>
-          <p className="text-xs text-slate-500 mt-2">
+          <p className="text-xs text-at-text mt-2">
             * 현금 상여는 이미 중간에 지급한 금액으로, 월말 이체 금액(차인지급액)에서 차감됩니다.
           </p>
         </div>
@@ -1038,13 +1038,13 @@ export default function PayrollForm() {
 
       {/* 연말정산 입력 (owner만, 2월만) */}
       {isOwner && selectedMonth === 2 && calculationResult && selectedEmployeeId && !noSettingsWarning && accessResult?.canAccess && (
-        <div className="bg-white rounded-lg shadow-sm border border-indigo-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-indigo-200 p-6">
           <div className="flex items-center mb-2">
             <Calculator className="w-5 h-5 mr-2 text-indigo-500" />
-            <h3 className="text-lg font-semibold text-slate-800">연말정산</h3>
-            <span className="ml-2 text-xs text-slate-500">({selectedYear}년 2월 급여 반영)</span>
+            <h3 className="text-lg font-semibold text-at-text">연말정산</h3>
+            <span className="ml-2 text-xs text-at-text">({selectedYear}년 2월 급여 반영)</span>
           </div>
-          <p className="text-xs text-slate-500 mb-4">
+          <p className="text-xs text-at-text mb-4">
             * 양수 입력 시 추가 납부(공제 증가), 음수 입력 시 환급(공제 감소)됩니다.
           </p>
 
@@ -1053,29 +1053,29 @@ export default function PayrollForm() {
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-indigo-700 border-b border-indigo-100 pb-1">세금 정산</h4>
               <div>
-                <label className="block text-sm text-slate-600 mb-1">소득세 정산</label>
+                <label className="block text-sm text-at-text mb-1">소득세 정산</label>
                 <div className="relative">
                   <input
                     type="number"
                     value={formState.yearEndIncomeTax || ''}
                     onChange={(e) => handleYearEndSettlementChange('yearEndIncomeTax', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm"
                     placeholder="0"
                   />
-                  <span className="absolute right-3 top-2 text-slate-400 text-sm">원</span>
+                  <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-slate-600 mb-1">지방소득세 정산</label>
+                <label className="block text-sm text-at-text mb-1">지방소득세 정산</label>
                 <div className="relative">
                   <input
                     type="number"
                     value={formState.yearEndLocalTax || ''}
                     onChange={(e) => handleYearEndSettlementChange('yearEndLocalTax', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm"
                     placeholder="0"
                   />
-                  <span className="absolute right-3 top-2 text-slate-400 text-sm">원</span>
+                  <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
                 </div>
               </div>
             </div>
@@ -1084,55 +1084,55 @@ export default function PayrollForm() {
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-indigo-700 border-b border-indigo-100 pb-1">4대보험 정산</h4>
               <div>
-                <label className="block text-sm text-slate-600 mb-1">국민연금 정산</label>
+                <label className="block text-sm text-at-text mb-1">국민연금 정산</label>
                 <div className="relative">
                   <input
                     type="number"
                     value={formState.nationalPensionAdjustment || ''}
                     onChange={(e) => handleYearEndSettlementChange('nationalPensionAdjustment', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm"
                     placeholder="0"
                   />
-                  <span className="absolute right-3 top-2 text-slate-400 text-sm">원</span>
+                  <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-slate-600 mb-1">건강보험료 정산</label>
+                <label className="block text-sm text-at-text mb-1">건강보험료 정산</label>
                 <div className="relative">
                   <input
                     type="number"
                     value={formState.healthInsuranceAdjustment || ''}
                     onChange={(e) => handleYearEndSettlementChange('healthInsuranceAdjustment', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm"
                     placeholder="0"
                   />
-                  <span className="absolute right-3 top-2 text-slate-400 text-sm">원</span>
+                  <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-slate-600 mb-1">장기요양보험료 정산</label>
+                <label className="block text-sm text-at-text mb-1">장기요양보험료 정산</label>
                 <div className="relative">
                   <input
                     type="number"
                     value={formState.longTermCareAdjustment || ''}
                     onChange={(e) => handleYearEndSettlementChange('longTermCareAdjustment', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm"
                     placeholder="0"
                   />
-                  <span className="absolute right-3 top-2 text-slate-400 text-sm">원</span>
+                  <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-slate-600 mb-1">고용보험 정산</label>
+                <label className="block text-sm text-at-text mb-1">고용보험 정산</label>
                 <div className="relative">
                   <input
                     type="number"
                     value={formState.employmentInsuranceAdjustment || ''}
                     onChange={(e) => handleYearEndSettlementChange('employmentInsuranceAdjustment', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm"
                     placeholder="0"
                   />
-                  <span className="absolute right-3 top-2 text-slate-400 text-sm">원</span>
+                  <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
                 </div>
               </div>
             </div>
@@ -1162,9 +1162,9 @@ export default function PayrollForm() {
 
       {/* 계산 결과 표시 */}
       {calculationResult && selectedEmployeeId && !noSettingsWarning && accessResult?.canAccess && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-at-border p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-800">
+            <h3 className="text-lg font-semibold text-at-text">
               {selectedEmployee?.name}님의 {selectedYear}년 {selectedMonth}월 급여 명세서
             </h3>
             {hasSavedPayroll && (
@@ -1178,7 +1178,7 @@ export default function PayrollForm() {
           {/* 요약 카드 */}
           <div className={`grid grid-cols-1 gap-6 mb-6 ${calculationResult.prepaidAmount > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
             {/* 지급액계 */}
-            <div className="p-4 bg-blue-50 rounded-lg">
+            <div className="p-4 bg-blue-50 rounded-xl">
               <p className="text-sm text-blue-600 mb-1">지급액계</p>
               <p className="text-2xl font-bold text-blue-800">
                 {formatCurrency(calculationResult.totalPayment)}원
@@ -1189,7 +1189,7 @@ export default function PayrollForm() {
             </div>
 
             {/* 공제액계 */}
-            <div className="p-4 bg-red-50 rounded-lg">
+            <div className="p-4 bg-red-50 rounded-xl">
               <p className="text-sm text-red-600 mb-1">공제액계</p>
               <p className="text-2xl font-bold text-red-800">
                 {formatCurrency(calculationResult.totalDeduction)}원
@@ -1201,7 +1201,7 @@ export default function PayrollForm() {
 
             {/* 기지급 현금 상여 (있을 때만 표시) */}
             {calculationResult.prepaidAmount > 0 && (
-              <div className="p-4 bg-amber-50 rounded-lg">
+              <div className="p-4 bg-amber-50 rounded-xl">
                 <p className="text-sm text-amber-600 mb-1">기지급 현금 상여</p>
                 <p className="text-2xl font-bold text-amber-800">
                   -{formatCurrency(calculationResult.prepaidAmount)}원
@@ -1213,7 +1213,7 @@ export default function PayrollForm() {
             )}
 
             {/* 차인지급액 (기지급이 있으면) / 실수령액 (없으면) */}
-            <div className="p-4 bg-green-50 rounded-lg border-2 border-green-200">
+            <div className="p-4 bg-green-50 rounded-xl border-2 border-green-200">
               <p className="text-sm text-green-600 mb-1">
                 {calculationResult.prepaidAmount > 0 ? '차인지급액 (월말 이체)' : '실수령액'}
               </p>
@@ -1231,11 +1231,11 @@ export default function PayrollForm() {
           {/* 상세 내역 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
             <div>
-              <h4 className="font-medium text-slate-700 mb-3 border-b pb-2">지급 항목</h4>
+              <h4 className="font-medium text-at-text mb-3 border-b pb-2">지급 항목</h4>
               <table className="w-full">
                 <tbody>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">기본급</td>
+                    <td className="py-2 text-at-text">기본급</td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.payments.baseSalary || 0)}원</td>
                   </tr>
                   {/* 중간 입사자 일할 계산이 적용된 경우 표시 */}
@@ -1268,7 +1268,7 @@ export default function PayrollForm() {
                   )}
                   {calculationResult.payments.bonus && calculationResult.payments.bonus > 0 && (
                     <tr className="border-b">
-                      <td className="py-2 text-slate-600">상여</td>
+                      <td className="py-2 text-at-text">상여</td>
                       <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.payments.bonus)}원</td>
                     </tr>
                   )}
@@ -1282,7 +1282,7 @@ export default function PayrollForm() {
                   )}
                   {calculationResult.payments.mealAllowance && calculationResult.payments.mealAllowance > 0 && (
                     <tr className="border-b">
-                      <td className="py-2 text-slate-600">
+                      <td className="py-2 text-at-text">
                         식대 <span className="text-xs text-green-600">(비과세)</span>
                       </td>
                       <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.payments.mealAllowance)}원</td>
@@ -1290,7 +1290,7 @@ export default function PayrollForm() {
                   )}
                   {calculationResult.payments.vehicleAllowance && calculationResult.payments.vehicleAllowance > 0 && (
                     <tr className="border-b">
-                      <td className="py-2 text-slate-600">
+                      <td className="py-2 text-at-text">
                         자가운전 보조금 <span className="text-xs text-green-600">(비과세)</span>
                       </td>
                       <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.payments.vehicleAllowance)}원</td>
@@ -1298,12 +1298,12 @@ export default function PayrollForm() {
                   )}
                   {calculationResult.payments.overtimePay && calculationResult.payments.overtimePay > 0 && (
                     <tr className="border-b">
-                      <td className="py-2 text-slate-600">초과근무수당</td>
+                      <td className="py-2 text-at-text">초과근무수당</td>
                       <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.payments.overtimePay)}원</td>
                     </tr>
                   )}
-                  <tr className="bg-slate-50">
-                    <td className="py-2 font-medium text-slate-800">합계</td>
+                  <tr className="bg-at-surface-alt">
+                    <td className="py-2 font-medium text-at-text">합계</td>
                     <td className="py-2 text-right font-bold text-blue-600">{formatCurrency(calculationResult.totalPayment)}원</td>
                   </tr>
                 </tbody>
@@ -1311,48 +1311,48 @@ export default function PayrollForm() {
             </div>
 
             <div>
-              <h4 className="font-medium text-slate-700 mb-3 border-b pb-2">공제 항목</h4>
+              <h4 className="font-medium text-at-text mb-3 border-b pb-2">공제 항목</h4>
               <table className="w-full">
                 <tbody>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">
+                    <td className="py-2 text-at-text">
                       국민연금
                       {prorataInfo?.insuranceExempt && <span className="text-xs text-amber-600 ml-1">(면제)</span>}
                     </td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.nationalPension)}원</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">
+                    <td className="py-2 text-at-text">
                       건강보험
                       {prorataInfo?.insuranceExempt && <span className="text-xs text-amber-600 ml-1">(면제)</span>}
                     </td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.healthInsurance)}원</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">
+                    <td className="py-2 text-at-text">
                       장기요양보험료
                       {prorataInfo?.insuranceExempt && <span className="text-xs text-amber-600 ml-1">(면제)</span>}
                     </td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.longTermCare)}원</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">
+                    <td className="py-2 text-at-text">
                       고용보험
                       {prorataInfo?.isProrated && <span className="text-xs text-indigo-600 ml-1">(일할 적용)</span>}
                     </td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.employmentInsurance)}원</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">소득세</td>
+                    <td className="py-2 text-at-text">소득세</td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.incomeTax)}원</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-2 text-slate-600">지방소득세</td>
+                    <td className="py-2 text-at-text">지방소득세</td>
                     <td className="py-2 text-right font-medium">{formatCurrency(calculationResult.deductions.localIncomeTax)}원</td>
                   </tr>
                   {calculationResult.deductions.otherDeductions && calculationResult.deductions.otherDeductions > 0 && (
                     <tr className="border-b">
-                      <td className="py-2 text-slate-600">
+                      <td className="py-2 text-at-text">
                         기타공제
                         {/* 세전 계약에서 근태 차감이 포함된 경우 표시 */}
                         {formState.salaryType === 'gross' && attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
@@ -1413,8 +1413,8 @@ export default function PayrollForm() {
                       </td>
                     </tr>
                   )}
-                  <tr className="bg-slate-50">
-                    <td className="py-2 font-medium text-slate-800">합계</td>
+                  <tr className="bg-at-surface-alt">
+                    <td className="py-2 font-medium text-at-text">합계</td>
                     <td className="py-2 text-right font-bold text-red-600">{formatCurrency(calculationResult.totalDeduction)}원</td>
                   </tr>
                 </tbody>
@@ -1424,11 +1424,11 @@ export default function PayrollForm() {
 
           {/* 기지급 및 차인지급액 */}
           {calculationResult.prepaidAmount > 0 && (
-            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
               <table className="w-full text-sm">
                 <tbody>
                   <tr>
-                    <td className="py-1 text-slate-700">실수령액</td>
+                    <td className="py-1 text-at-text">실수령액</td>
                     <td className="py-1 text-right font-medium">{formatCurrency(calculationResult.netPay)}원</td>
                   </tr>
                   <tr className="border-t border-amber-200">

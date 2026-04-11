@@ -60,7 +60,7 @@ function EditableImageNodeView({ node, editor, getPos }: any) {
       <img
         src={node.attrs.src}
         alt={node.attrs.alt || ''}
-        className="w-full rounded-xl border border-slate-200 shadow-sm cursor-pointer block"
+        className="w-full rounded-xl border border-at-border shadow-sm cursor-pointer block"
         draggable={false}
         onMouseDown={(e) => {
           // ProseMirror 노드 선택/드래그 방지
@@ -81,7 +81,7 @@ function EditableImageNodeView({ node, editor, getPos }: any) {
           e.stopPropagation()
         }}
         onClick={handleEdit}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-lg shadow-md px-3 py-1.5 text-xs font-medium border border-slate-200 flex items-center gap-1.5 backdrop-blur-sm z-10"
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 hover:bg-indigo-50 text-at-text hover:text-indigo-600 rounded-xl shadow-md px-3 py-1.5 text-xs font-medium border border-at-border flex items-center gap-1.5 backdrop-blur-sm z-10"
         title="이미지 프롬프트 편집"
       >
         <PencilSquareIcon className="w-3.5 h-3.5" />
@@ -345,7 +345,7 @@ export default function ContentEditor({ body, images, onChange, onImageEdit }: C
         inline: false,
         allowBase64: true,
         HTMLAttributes: {
-          class: 'w-full rounded-xl border border-slate-200 shadow-sm my-2 content-editor-image',
+          class: 'w-full rounded-xl border border-at-border shadow-sm my-2 content-editor-image',
         },
       }),
       Placeholder.configure({
@@ -430,9 +430,9 @@ export default function ContentEditor({ body, images, onChange, onImageEdit }: C
   if (!editor) return null
 
   return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+    <div className="border border-at-border rounded-xl overflow-hidden bg-white">
       {/* 간단 툴바 */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-slate-100 bg-slate-50/50 flex-wrap">
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-at-border bg-at-surface-alt/50 flex-wrap">
         <ToolButton
           active={editor.isActive('heading', { level: 2 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
@@ -572,7 +572,7 @@ function ToolButton({
       className={`px-2 py-1 text-xs rounded transition-colors ${
         active
           ? 'bg-indigo-100 text-indigo-700 font-medium'
-          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+          : 'text-at-text hover:bg-at-surface-alt hover:text-at-text'
       }`}
     >
       {children}

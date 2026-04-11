@@ -151,7 +151,7 @@ export default function FinancialDashboard() {
       <div className="sticky top-14 z-20 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-xl flex items-center justify-center">
               <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
@@ -165,16 +165,16 @@ export default function FinancialDashboard() {
             <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl shadow-sm border border-white/20 self-start sm:self-auto">
               <button
                 onClick={goToPreviousMonth}
-                className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg transition-all duration-200 text-white"
+                className="p-1.5 sm:p-2 hover:bg-white/20 rounded-xl transition-all duration-200 text-white"
               >
                 <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-white font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm shadow-sm backdrop-blur-sm bg-white/5 rounded-lg">
+              <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-white font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm shadow-sm backdrop-blur-sm bg-white/5 rounded-xl">
                 {selectedYear}년 {selectedMonth}월
               </div>
               <button
                 onClick={goToNextMonth}
-                className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg transition-all duration-200 text-white"
+                className="p-1.5 sm:p-2 hover:bg-white/20 rounded-xl transition-all duration-200 text-white"
               >
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
@@ -184,14 +184,14 @@ export default function FinancialDashboard() {
       </div>
 
       {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
-      <div className="sticky top-[calc(3.5rem+60px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50 shadow-sm">
+      <div className="sticky top-[calc(3.5rem+60px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-at-border bg-at-surface-alt shadow-sm">
         <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('status')}
-            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'status'
-                ? 'bg-white text-blue-600 shadow-sm border border-slate-100'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white text-blue-600 shadow-sm border border-at-border'
+                : 'text-at-text hover:text-at-text hover:bg-white/50'
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -199,10 +199,10 @@ export default function FinancialDashboard() {
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'settings'
-                ? 'bg-white text-blue-600 shadow-sm border border-slate-100'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white text-blue-600 shadow-sm border border-at-border'
+                : 'text-at-text hover:text-at-text hover:bg-white/50'
             }`}
           >
             <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -212,49 +212,49 @@ export default function FinancialDashboard() {
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div className="bg-slate-50/50 border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6 min-h-[calc(100vh-250px)]">
+      <div className="bg-at-surface-alt/50 border-x border-b border-at-border rounded-b-xl p-3 sm:p-6 min-h-[calc(100vh-250px)]">
       {loading ? (
         <div className="flex flex-col items-center justify-center py-32 space-y-4">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-          <p className="text-slate-500 font-medium animate-pulse">데이터를 불러오는 중...</p>
+          <p className="text-at-text font-medium animate-pulse">데이터를 불러오는 중...</p>
         </div>
       ) : activeTab === 'status' ? (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
           {/* Executive Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 overflow-hidden relative group hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-3xl shadow-sm border border-at-border p-6 overflow-hidden relative group hover:shadow-md transition-shadow">
               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                 <TrendingUp className="w-24 h-24 text-emerald-600 transform translate-x-4 -translate-y-4" />
               </div>
-              <p className="text-sm font-semibold tracking-wider text-slate-500 uppercase">총 수입</p>
-              <h3 className="text-3xl font-black text-slate-900 mt-2 mb-4">
+              <p className="text-sm font-semibold tracking-wider text-at-text uppercase">총 수입</p>
+              <h3 className="text-3xl font-black text-at-text mt-2 mb-4">
                 {formatCurrency(summary?.total_revenue || 0)}
               </h3>
-              <div className="flex items-center justify-between text-xs font-medium bg-slate-50 rounded-xl p-3">
+              <div className="flex items-center justify-between text-xs font-medium bg-at-surface-alt rounded-xl p-3">
                 <div className="flex flex-col">
-                  <span className="text-slate-400">보험수입</span>
+                  <span className="text-at-text">보험수입</span>
                   <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.insurance_revenue || 0)}</span>
                 </div>
                 <div className="h-8 w-px bg-slate-200"></div>
                 <div className="flex flex-col items-end">
-                  <span className="text-slate-400">비보험수입</span>
+                  <span className="text-at-text">비보험수입</span>
                   <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.non_insurance_revenue || 0)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 overflow-hidden relative group hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-3xl shadow-sm border border-at-border p-6 overflow-hidden relative group hover:shadow-md transition-shadow">
               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                 <TrendingDown className="w-24 h-24 text-rose-600 transform translate-x-4 -translate-y-4" />
               </div>
-              <p className="text-sm font-semibold tracking-wider text-slate-500 uppercase">총 지출</p>
-              <h3 className="text-3xl font-black text-slate-900 mt-2 mb-4">
+              <p className="text-sm font-semibold tracking-wider text-at-text uppercase">총 지출</p>
+              <h3 className="text-3xl font-black text-at-text mt-2 mb-4">
                 {formatCurrency(summary?.total_expense || 0)}
               </h3>
-              <div className="flex items-center justify-between text-xs font-medium bg-slate-50 rounded-xl p-3">
+              <div className="flex items-center justify-between text-xs font-medium bg-at-surface-alt rounded-xl p-3">
                 <div className="flex flex-col">
-                  <span className="text-slate-400">인건비 비중</span>
+                  <span className="text-at-text">인건비 비중</span>
                   <span className="text-rose-700 text-sm mt-0.5">{formatCurrency(summary?.personnel_expense || 0)}</span>
                 </div>
               </div>
@@ -291,7 +291,7 @@ export default function FinancialDashboard() {
 
           {/* Hometax Integration - Placeholder */}
           <div className="pt-6">
-            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-at-text mb-6 flex items-center gap-2">
               <Building className="w-6 h-6 text-indigo-500" />
               홈택스 매입·매출 통합 현황
               <span className="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full ml-2">연동 준비 중</span>
@@ -299,7 +299,7 @@ export default function FinancialDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Pillar 1-2: Hometax Data Summary (6종 데이터 카드) */}
-              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="lg:col-span-2 bg-white rounded-3xl border border-at-border shadow-sm overflow-hidden">
                 <div className="p-5">
                   <HometaxDataView
                     clinicId={clinicId}
@@ -310,7 +310,7 @@ export default function FinancialDashboard() {
               </div>
 
               {/* Pillar 3: Hometax Sync Manager */}
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+              <div className="bg-white rounded-3xl border border-at-border shadow-sm overflow-hidden flex flex-col">
                 <div className="p-4 flex-1">
                   <HometaxSyncPanel
                     clinicId={clinicId}
@@ -326,12 +326,12 @@ export default function FinancialDashboard() {
           <div className="pt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {/* Detailed Expense Table Section */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <div className="bg-white rounded-3xl shadow-sm border border-at-border overflow-hidden">
+                <div className="p-6 border-b border-at-border flex items-center justify-between bg-at-surface-alt/50">
+                  <h2 className="text-lg font-bold text-at-text flex items-center gap-2">
                     <Receipt className="w-5 h-5 text-indigo-500" />
                     상세 지출 내역
-                    <span className="bg-slate-200 text-slate-600 text-xs px-2 py-0.5 rounded-full ml-2">
+                    <span className="bg-slate-200 text-at-text text-xs px-2 py-0.5 rounded-full ml-2">
                       {expenses.length}건
                     </span>
                   </h2>
@@ -347,41 +347,41 @@ export default function FinancialDashboard() {
                 </div>
 
                 {expenses.length === 0 ? (
-                  <div className="p-16 text-center text-slate-400 flex flex-col items-center">
-                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                      <FileText className="w-10 h-10 text-slate-300" />
+                  <div className="p-16 text-center text-at-text flex flex-col items-center">
+                    <div className="w-20 h-20 bg-at-surface-alt rounded-full flex items-center justify-center mb-4">
+                      <FileText className="w-10 h-10 text-at-text" />
                     </div>
-                    <p className="font-medium text-slate-600 text-lg">이번 달 지출 내역이 없습니다</p>
+                    <p className="font-medium text-at-text text-lg">이번 달 지출 내역이 없습니다</p>
                     <p className="text-sm mt-1">설정 탭에서 지출을 추가하거나 홈택스 연동을 진행하세요.</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-slate-50/80 text-xs uppercase font-semibold text-slate-500 tracking-wider">
-                          <th className="px-6 py-4 border-b border-slate-100">분류</th>
-                          <th className="px-6 py-4 border-b border-slate-100">내역</th>
-                          <th className="px-6 py-4 border-b border-slate-100 text-right">금액</th>
-                          <th className="px-6 py-4 border-b border-slate-100 text-center">증빙</th>
-                          <th className="px-6 py-4 border-b border-slate-100 text-center">작업</th>
+                        <tr className="bg-at-surface-alt/80 text-xs uppercase font-semibold text-at-text tracking-wider">
+                          <th className="px-6 py-4 border-b border-at-border">분류</th>
+                          <th className="px-6 py-4 border-b border-at-border">내역</th>
+                          <th className="px-6 py-4 border-b border-at-border text-right">금액</th>
+                          <th className="px-6 py-4 border-b border-at-border text-center">증빙</th>
+                          <th className="px-6 py-4 border-b border-at-border text-center">작업</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {expenses.map(expense => (
-                          <tr key={expense.id} className="hover:bg-slate-50/80 transition-colors group">
+                          <tr key={expense.id} className="hover:bg-at-surface-alt/80 transition-colors group">
                             <td className="px-6 py-4">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-at-surface-alt text-at-text">
                                 {expense.category?.name ||
                                   EXPENSE_CATEGORY_LABELS[expense.category?.type as ExpenseCategoryType] ||
                                   '기타'}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <p className="font-medium text-slate-800">{expense.description || '-'}</p>
-                              <p className="text-xs text-slate-400 mt-0.5">{expense.vendor_name}</p>
+                              <p className="font-medium text-at-text">{expense.description || '-'}</p>
+                              <p className="text-xs text-at-text mt-0.5">{expense.vendor_name}</p>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <p className="font-bold text-slate-900">{formatCurrency(expense.amount)}</p>
+                              <p className="font-bold text-at-text">{formatCurrency(expense.amount)}</p>
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex justify-center gap-1.5">
@@ -400,7 +400,7 @@ export default function FinancialDashboard() {
                             <td className="px-6 py-4 text-center">
                               <button
                                 onClick={() => handleDeleteExpense(expense.id)}
-                                className="w-8 h-8 inline-flex items-center justify-center text-slate-300 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors"
+                                className="w-8 h-8 inline-flex items-center justify-center text-at-text hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-colors"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -417,8 +417,8 @@ export default function FinancialDashboard() {
             <div className="space-y-6">
               {/* Category Breakdown */}
               {summary && (
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-                  <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <div className="bg-white rounded-3xl shadow-sm border border-at-border p-6">
+                  <h2 className="text-lg font-bold text-at-text mb-6 flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-indigo-500" />
                     지출 카테고리
                   </h2>
@@ -434,10 +434,10 @@ export default function FinancialDashboard() {
                       return (
                         <div key={item.label} className="group">
                           <div className="flex justify-between items-end mb-1">
-                            <span className="text-sm font-semibold text-slate-700">{item.label}</span>
-                            <span className="text-sm font-bold text-slate-900">{formatCurrency(item.value)}</span>
+                            <span className="text-sm font-semibold text-at-text">{item.label}</span>
+                            <span className="text-sm font-bold text-at-text">{formatCurrency(item.value)}</span>
                           </div>
-                          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="w-full h-2.5 bg-at-surface-alt rounded-full overflow-hidden">
                             <div
                               className={`h-full ${item.color} rounded-full transition-all duration-1000 ease-out`}
                               style={{ width: `${percent}%` }}
@@ -452,7 +452,7 @@ export default function FinancialDashboard() {
 
               {/* Tax Information */}
               {summary && (summary.income_tax > 0 || summary.total_tax > 0) && (
-                <div className="bg-slate-800 rounded-3xl shadow-sm border border-slate-700 p-6 text-white relative overflow-hidden">
+                <div className="bg-slate-800 rounded-3xl shadow-sm border border-at-border p-6 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-5">
                     <Calculator className="w-32 h-32" />
                   </div>
@@ -462,12 +462,12 @@ export default function FinancialDashboard() {
                   </h2>
                   <div className="space-y-4 relative z-10">
                     <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
-                      <span className="text-sm text-slate-300">종합소득세</span>
-                      <span className="font-medium text-slate-100">{formatCurrency(summary.income_tax)}</span>
+                      <span className="text-sm text-at-text">종합소득세</span>
+                      <span className="font-medium text-at-text">{formatCurrency(summary.income_tax)}</span>
                     </div>
                     <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
-                      <span className="text-sm text-slate-300">지방소득세</span>
-                      <span className="font-medium text-slate-100">{formatCurrency(summary.local_income_tax)}</span>
+                      <span className="text-sm text-at-text">지방소득세</span>
+                      <span className="font-medium text-at-text">{formatCurrency(summary.local_income_tax)}</span>
                     </div>
                     <div className="flex justify-between items-center bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl">
                       <span className="text-sm text-emerald-300 font-medium">정부 지원</span>
@@ -487,14 +487,14 @@ export default function FinancialDashboard() {
       ) : activeTab === 'settings' ? (
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
           {/* 지출 입력 */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-6">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <h2 className="text-lg font-bold text-at-text flex items-center gap-2">
                   <Receipt className="w-5 h-5 text-indigo-500" />
                   지출 입력
                 </h2>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-at-text mt-1">
                   {selectedYear}년 {selectedMonth}월 지출 내역을 수동으로 추가합니다.
                 </p>
               </div>
@@ -506,7 +506,7 @@ export default function FinancialDashboard() {
                 지출 추가
               </button>
             </div>
-            <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3">
+            <div className="text-xs text-at-text bg-at-surface-alt rounded-xl p-3">
               현황 조회 탭에서 선택한 월({selectedYear}년 {selectedMonth}월)에 추가됩니다. 다른 월에 입력하려면 현황 조회 탭에서 월을 변경한 뒤 다시 시도하세요.
             </div>
           </div>
@@ -515,12 +515,12 @@ export default function FinancialDashboard() {
           <HometaxCredentialsSettings clinicId={clinicId} />
 
           {/* 이메일 자동 연동 */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-6">
+            <h2 className="text-lg font-bold text-at-text mb-4 flex items-center gap-2">
               <Mail className="w-5 h-5 text-blue-500" />
               이메일 자동 연동
             </h2>
-            <p className="text-sm text-slate-500 mb-6">
+            <p className="text-sm text-at-text mb-6">
               병원 이메일을 연동하면 기공료·급여명세서를 자동으로 처리합니다.
             </p>
             <EmailIntegrationSettings />

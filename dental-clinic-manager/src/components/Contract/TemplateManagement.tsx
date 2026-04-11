@@ -164,7 +164,7 @@ export default function TemplateManagement({ currentUser, clinicId }: TemplateMa
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+      <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
         <p className="text-red-800">{error}</p>
         <button onClick={loadTemplates} className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
           다시 시도
@@ -183,7 +183,7 @@ export default function TemplateManagement({ currentUser, clinicId }: TemplateMa
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
         >
           + 새 템플릿 추가
         </button>
@@ -191,13 +191,13 @@ export default function TemplateManagement({ currentUser, clinicId }: TemplateMa
 
       {/* Template List */}
       {templates.length === 0 ? (
-        <div className="bg-white p-12 rounded-lg shadow border border-gray-200 text-center">
+        <div className="bg-white p-12 rounded-xl shadow border border-gray-200 text-center">
           <div className="text-gray-400 text-5xl mb-4">📄</div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">템플릿이 없습니다</h3>
           <p className="text-gray-600 mb-4">새로운 계약서 템플릿을 추가해보세요.</p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
           >
             첫 템플릿 추가하기
           </button>
@@ -205,7 +205,7 @@ export default function TemplateManagement({ currentUser, clinicId }: TemplateMa
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map(template => (
-            <div key={template.id} className="bg-white p-6 rounded-lg shadow border border-gray-200 hover:shadow-lg transition-shadow">
+            <div key={template.id} className="bg-white p-6 rounded-xl shadow border border-gray-200 hover:shadow-lg transition-shadow">
               {editingTemplate?.id === template.id ? (
                 // Edit Mode
                 <div className="space-y-4">
@@ -296,7 +296,7 @@ export default function TemplateManagement({ currentUser, clinicId }: TemplateMa
       {/* Create Template Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
             <h2 className="text-xl font-bold mb-4">새 템플릿 추가</h2>
 
             <div className="space-y-4">
@@ -368,7 +368,7 @@ export default function TemplateManagement({ currentUser, clinicId }: TemplateMa
       )}
 
       {/* Info Box */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <h3 className="font-semibold text-blue-900 mb-2">템플릿 관리 안내</h3>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• 템플릿은 근로계약서 작성 시 사용되는 기본 양식입니다.</li>

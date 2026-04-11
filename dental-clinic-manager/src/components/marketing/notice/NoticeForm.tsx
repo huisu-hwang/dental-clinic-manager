@@ -87,16 +87,16 @@ export default function NoticeForm({ onGenerate, isGenerating }: NoticeFormProps
     <div className="space-y-6">
       {/* 템플릿 선택 */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">공지 유형</label>
+        <label className="block text-sm font-medium text-at-text mb-2">공지 유형</label>
         <div className="grid grid-cols-3 gap-2">
           {(Object.entries(NOTICE_TEMPLATE_LABELS) as [NoticeTemplate, string][]).map(([key, label]) => (
             <button
               key={key}
               onClick={() => handleTemplateChange(key)}
-              className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+              className={`px-3 py-2 text-sm rounded-xl border transition-colors ${
                 selectedTemplate === key
                   ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-medium'
-                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                  : 'bg-white border-at-border text-at-text hover:border-at-border'
               }`}
             >
               {label}
@@ -109,7 +109,7 @@ export default function NoticeForm({ onGenerate, isGenerating }: NoticeFormProps
       <div className="space-y-4">
         {fields.map((field) => (
           <div key={field.key}>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-at-text mb-1">
               {field.label} {field.required && <span className="text-red-500">*</span>}
             </label>
             {field.multiline ? (
@@ -118,7 +118,7 @@ export default function NoticeForm({ onGenerate, isGenerating }: NoticeFormProps
                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
                 rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-y"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm resize-y"
               />
             ) : (
               <input
@@ -126,7 +126,7 @@ export default function NoticeForm({ onGenerate, isGenerating }: NoticeFormProps
                 value={formData[field.key] || ''}
                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm"
               />
             )}
           </div>

@@ -122,11 +122,11 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-yellow-50 text-yellow-600">
+      <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-at-warning-bg text-at-warning">
           <Clock className="w-4 h-4" />
         </div>
-        <h3 className="text-base font-semibold text-slate-800">
+        <h3 className="text-base font-semibold text-at-text">
           승인 대기 목록
           {pendingRequests.length > 0 && (
             <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">
@@ -137,15 +137,15 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-error-bg border border-at-border text-at-error px-4 py-3 rounded-xl text-sm flex items-center">
           <AlertCircle className="w-4 h-4 mr-2" />
           {error}
         </div>
       )}
 
       {pendingRequests.length === 0 ? (
-        <div className="text-center py-12 border border-slate-200 rounded-lg">
-          <Clock className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+        <div className="text-center py-12 border border-at-border rounded-xl">
+          <Clock className="w-12 h-12 text-at-text-weak mx-auto mb-4" />
           <p className="text-slate-500">승인 대기 중인 연차 신청이 없습니다.</p>
         </div>
       ) : (
@@ -159,13 +159,13 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
             return (
               <div
                 key={request.id}
-                className="border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors"
+                className="border border-at-border rounded-xl p-4 hover:border-at-border transition-colors"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     {/* 신청자 정보 */}
                     <div className="flex items-center space-x-3 mb-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <div className="w-10 h-10 bg-at-tag rounded-full flex items-center justify-center">
                         <User className="w-5 h-5 text-blue-600" />
                       </div>
                       <div>
@@ -182,7 +182,7 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
                     {/* 신청 내용 */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                       <div>
-                        <p className="text-slate-500 text-xs mb-1">연차 종류</p>
+                        <p className="text-at-text-weak text-xs mb-1">연차 종류</p>
                         <span
                           className="inline-flex px-2 py-1 text-xs font-medium rounded-full"
                           style={{
@@ -194,7 +194,7 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
                         </span>
                       </div>
                       <div>
-                        <p className="text-slate-500 text-xs mb-1">기간</p>
+                        <p className="text-at-text-weak text-xs mb-1">기간</p>
                         <p className="font-medium">
                           {new Date(request.start_date).toLocaleDateString('ko-KR')}
                           {request.start_date !== request.end_date && (
@@ -203,11 +203,11 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
                         </p>
                       </div>
                       <div>
-                        <p className="text-slate-500 text-xs mb-1">일수</p>
+                        <p className="text-at-text-weak text-xs mb-1">일수</p>
                         <p className="font-medium">{request.total_days}일</p>
                       </div>
                       <div>
-                        <p className="text-slate-500 text-xs mb-1">승인 단계</p>
+                        <p className="text-at-text-weak text-xs mb-1">승인 단계</p>
                         <div className="flex items-center space-x-1">
                           {steps.map((step, idx) => (
                             <div key={idx} className="flex items-center">

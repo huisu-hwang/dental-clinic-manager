@@ -99,14 +99,14 @@ export default function ImageEditModal({
       {/* 모달 본체 */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-at-border">
           <div className="flex items-center gap-2">
             <PhotoIcon className="h-5 w-5 text-indigo-600" />
-            <h3 className="text-lg font-semibold text-slate-800">이미지 편집</h3>
+            <h3 className="text-lg font-semibold text-at-text">이미지 편집</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-1.5 text-at-text hover:text-at-text hover:bg-at-surface-alt rounded-xl transition-colors"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
@@ -117,8 +117,8 @@ export default function ImageEditModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* 현재 이미지 */}
             <div className="space-y-2">
-              <span className="text-xs font-medium text-slate-500">현재 이미지</span>
-              <div className="relative aspect-square rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+              <span className="text-xs font-medium text-at-text">현재 이미지</span>
+              <div className="relative aspect-square rounded-xl border border-at-border overflow-hidden bg-at-surface-alt">
                 {image.path ? (
                   <img
                     src={image.path}
@@ -126,29 +126,29 @@ export default function ImageEditModal({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full text-slate-400">
+                  <div className="flex items-center justify-center h-full text-at-text">
                     <PhotoIcon className="h-12 w-12" />
                   </div>
                 )}
               </div>
-              <p className="text-[11px] text-slate-400 truncate" title={image.fileName}>
+              <p className="text-[11px] text-at-text truncate" title={image.fileName}>
                 {image.fileName}
               </p>
             </div>
 
             {/* 새 이미지 (재생성 후) */}
             <div className="space-y-2">
-              <span className="text-xs font-medium text-slate-500">
+              <span className="text-xs font-medium text-at-text">
                 {newImage ? '새 이미지' : '재생성 미리보기'}
               </span>
-              <div className="relative aspect-square rounded-xl border border-dashed border-slate-300 overflow-hidden bg-slate-50">
+              <div className="relative aspect-square rounded-xl border border-dashed border-at-border overflow-hidden bg-at-surface-alt">
                 {isRegenerating ? (
                   <div className="flex flex-col items-center justify-center h-full gap-3">
                     <div className="relative">
                       <div className="w-10 h-10 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                     </div>
-                    <span className="text-xs text-slate-500">이미지 생성 중...</span>
-                    <span className="text-[10px] text-slate-400">30초 정도 소요됩니다</span>
+                    <span className="text-xs text-at-text">이미지 생성 중...</span>
+                    <span className="text-[10px] text-at-text">30초 정도 소요됩니다</span>
                   </div>
                 ) : newImage ? (
                   <img
@@ -157,7 +157,7 @@ export default function ImageEditModal({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
+                  <div className="flex flex-col items-center justify-center h-full gap-2 text-at-text">
                     <SparklesIcon className="h-10 w-10" />
                     <span className="text-xs">프롬프트를 수정하고</span>
                     <span className="text-xs">재생성 해보세요</span>
@@ -165,7 +165,7 @@ export default function ImageEditModal({
                 )}
               </div>
               {newImage && (
-                <p className="text-[11px] text-slate-400 truncate" title={newImage.fileName}>
+                <p className="text-[11px] text-at-text truncate" title={newImage.fileName}>
                   {newImage.fileName}
                 </p>
               )}
@@ -174,19 +174,19 @@ export default function ImageEditModal({
 
           {/* 프롬프트 편집 */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">이미지 프롬프트</label>
+            <label className="text-sm font-medium text-at-text">이미지 프롬프트</label>
             <textarea
               value={editedPrompt}
               onChange={(e) => setEditedPrompt(e.target.value)}
               rows={3}
               placeholder="생성할 이미지를 설명해주세요..."
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+              className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-indigo-500 resize-none"
             />
           </div>
 
           {/* 시각적 스타일 선택 */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">시각적 스타일</label>
+            <label className="text-sm font-medium text-at-text">시각적 스타일</label>
             <div className="grid grid-cols-3 gap-2">
               {(Object.entries(IMAGE_VISUAL_STYLE_LABELS) as [ImageVisualStyle, { label: string; description: string; emoji: string }][]).map(
                 ([value, { label, emoji }]) => (
@@ -195,14 +195,14 @@ export default function ImageEditModal({
                     type="button"
                     onClick={() => setSelectedVisualStyle(value)}
                     disabled={isRegenerating}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-all text-sm ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all text-sm ${
                       selectedVisualStyle === value
                         ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
-                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                        : 'border-at-border hover:border-at-border hover:bg-at-surface-alt'
                     } ${isRegenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <span>{emoji}</span>
-                    <span className={`font-medium ${selectedVisualStyle === value ? 'text-indigo-700' : 'text-slate-700'}`}>
+                    <span className={`font-medium ${selectedVisualStyle === value ? 'text-indigo-700' : 'text-at-text'}`}>
                       {label}
                     </span>
                   </button>
@@ -213,7 +213,7 @@ export default function ImageEditModal({
 
           {/* 에러 메시지 */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-600">
+            <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-600">
               {error}
             </div>
           )}
@@ -223,7 +223,7 @@ export default function ImageEditModal({
             <button
               onClick={handleRegenerate}
               disabled={isRegenerating || !editedPrompt.trim()}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               {isRegenerating ? (
                 <>
@@ -244,7 +244,7 @@ export default function ImageEditModal({
             {newImage && (
               <button
                 onClick={handleApply}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors text-sm font-medium"
               >
                 <CheckIcon className="h-4 w-4" />
                 적용

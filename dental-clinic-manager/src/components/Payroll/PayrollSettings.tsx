@@ -380,7 +380,7 @@ export default function PayrollSettings() {
   return (
     <div className="space-y-6">
       {/* 안내 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <h4 className="font-medium text-blue-800 mb-2 flex items-center">
           <AlertCircle className="w-4 h-4 mr-2" />
           급여 설정 안내
@@ -393,18 +393,18 @@ export default function PayrollSettings() {
       </div>
 
       {/* 직원 선택 */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">직원 선택</h3>
+      <div className="bg-white rounded-xl shadow-sm border border-at-border p-6">
+        <h3 className="text-lg font-semibold text-at-text mb-4">직원 선택</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-at-text mb-1">
               직원 <span className="text-red-500">*</span>
             </label>
             <select
               value={selectedEmployeeId || ''}
               onChange={(e) => setSelectedEmployeeId(e.target.value || null)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             >
               <option value="">직원을 선택하세요</option>
               {employees.map(emp => (
@@ -442,19 +442,19 @@ export default function PayrollSettings() {
 
       {/* 급여 설정 폼 */}
       {selectedEmployeeId && !loadingEmployee && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-at-border p-6">
+          <h3 className="text-lg font-semibold text-at-text mb-4">
             급여 설정 - {selectedEmployee?.name}
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* 왼쪽: 지급 항목 */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-700 border-b pb-2">지급 항목</h4>
+              <h4 className="font-medium text-at-text border-b pb-2">지급 항목</h4>
 
               {/* 급여 유형 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">급여 유형</label>
+                <label className="block text-sm font-medium text-at-text mb-1">급여 유형</label>
                 <div className="flex space-x-4 mt-2">
                   <label className="flex items-center">
                     <input
@@ -481,7 +481,7 @@ export default function PayrollSettings() {
 
               {/* 목표 금액 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text mb-1">
                   {formState.salaryType === 'net' ? '목표 실수령액' : '기본급'} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -496,31 +496,31 @@ export default function PayrollSettings() {
                         handleFieldChange('baseSalary', value)
                       }
                     }}
-                    className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                     placeholder="금액을 입력하세요"
                   />
-                  <span className="absolute right-3 top-2 text-slate-500">원</span>
+                  <span className="absolute right-3 top-2 text-at-text">원</span>
                 </div>
               </div>
 
               {/* 상여 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">상여 (월정액)</label>
+                <label className="block text-sm font-medium text-at-text mb-1">상여 (월정액)</label>
                 <div className="relative">
                   <input
                     type="number"
                     value={formState.bonus || ''}
                     onChange={(e) => handleFieldChange('bonus', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                     placeholder="0"
                   />
-                  <span className="absolute right-3 top-2 text-slate-500">원</span>
+                  <span className="absolute right-3 top-2 text-at-text">원</span>
                 </div>
               </div>
 
               {/* 식대 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text mb-1">
                   식대 <span className="text-xs text-green-600">(비과세, 최대 20만원)</span>
                 </label>
                 <div className="relative">
@@ -528,16 +528,16 @@ export default function PayrollSettings() {
                     type="number"
                     value={formState.mealAllowance || ''}
                     onChange={(e) => handleFieldChange('mealAllowance', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                     placeholder="200000"
                   />
-                  <span className="absolute right-3 top-2 text-slate-500">원</span>
+                  <span className="absolute right-3 top-2 text-at-text">원</span>
                 </div>
               </div>
 
               {/* 자가운전 보조금 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text mb-1">
                   자가운전 보조금 <span className="text-xs text-green-600">(비과세, 최대 20만원)</span>
                 </label>
                 <div className="relative">
@@ -545,10 +545,10 @@ export default function PayrollSettings() {
                     type="number"
                     value={formState.vehicleAllowance || ''}
                     onChange={(e) => handleFieldChange('vehicleAllowance', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                     placeholder="0"
                   />
-                  <span className="absolute right-3 top-2 text-slate-500">원</span>
+                  <span className="absolute right-3 top-2 text-at-text">원</span>
                 </div>
               </div>
             </div>
@@ -556,7 +556,7 @@ export default function PayrollSettings() {
             {/* 오른쪽: 공제 항목 */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
-                <h4 className="font-medium text-slate-700">공제 항목</h4>
+                <h4 className="font-medium text-at-text">공제 항목</h4>
                 <button
                   type="button"
                   onClick={handleRecalculateInsurance}
@@ -568,64 +568,64 @@ export default function PayrollSettings() {
               </div>
 
               {/* 4대보험 */}
-              <div className="p-3 bg-slate-50 rounded-md space-y-3">
-                <p className="text-xs text-slate-600 mb-2">
+              <div className="p-3 bg-at-surface-alt rounded-md space-y-3">
+                <p className="text-xs text-at-text mb-2">
                   4대보험료는 1월에 결정되어 연말까지 유지됩니다.
                 </p>
 
                 {/* 국민연금 */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">국민연금</label>
+                  <label className="block text-sm font-medium text-at-text mb-1">국민연금</label>
                   <div className="relative">
                     <input
                       type="number"
                       value={formState.nationalPension || ''}
                       onChange={(e) => handleFieldChange('nationalPension', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                     />
-                    <span className="absolute right-3 top-2 text-slate-500">원</span>
+                    <span className="absolute right-3 top-2 text-at-text">원</span>
                   </div>
                 </div>
 
                 {/* 건강보험 */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">건강보험</label>
+                  <label className="block text-sm font-medium text-at-text mb-1">건강보험</label>
                   <div className="relative">
                     <input
                       type="number"
                       value={formState.healthInsurance || ''}
                       onChange={(e) => handleFieldChange('healthInsurance', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                     />
-                    <span className="absolute right-3 top-2 text-slate-500">원</span>
+                    <span className="absolute right-3 top-2 text-at-text">원</span>
                   </div>
                 </div>
 
                 {/* 장기요양보험료 */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">장기요양보험료</label>
+                  <label className="block text-sm font-medium text-at-text mb-1">장기요양보험료</label>
                   <div className="relative">
                     <input
                       type="number"
                       value={formState.longTermCare || ''}
                       onChange={(e) => handleFieldChange('longTermCare', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                     />
-                    <span className="absolute right-3 top-2 text-slate-500">원</span>
+                    <span className="absolute right-3 top-2 text-at-text">원</span>
                   </div>
                 </div>
 
                 {/* 고용보험 */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">고용보험</label>
+                  <label className="block text-sm font-medium text-at-text mb-1">고용보험</label>
                   <div className="relative">
                     <input
                       type="number"
                       value={formState.employmentInsurance || ''}
                       onChange={(e) => handleFieldChange('employmentInsurance', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                     />
-                    <span className="absolute right-3 top-2 text-slate-500">원</span>
+                    <span className="absolute right-3 top-2 text-at-text">원</span>
                   </div>
                 </div>
               </div>
@@ -638,13 +638,13 @@ export default function PayrollSettings() {
 
                 {/* 부양가족 수 */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text mb-1">
                     공제대상 가족 수 (본인 포함)
                   </label>
                   <select
                     value={formState.familyCount}
                     onChange={(e) => handleFieldChange('familyCount', parseInt(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(n => (
                       <option key={n} value={n}>{n}명</option>
@@ -654,13 +654,13 @@ export default function PayrollSettings() {
 
                 {/* 자녀 수 */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text mb-1">
                     8세~20세 자녀 수
                   </label>
                   <select
                     value={formState.childCount}
                     onChange={(e) => handleFieldChange('childCount', parseInt(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                   >
                     {[0, 1, 2, 3, 4, 5].map(n => (
                       <option key={n} value={n}>{n}명</option>
@@ -671,23 +671,23 @@ export default function PayrollSettings() {
 
               {/* 기타 공제 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">기타 공제액 (월정액)</label>
+                <label className="block text-sm font-medium text-at-text mb-1">기타 공제액 (월정액)</label>
                 <div className="relative">
                   <input
                     type="number"
                     value={formState.otherDeductions || ''}
                     onChange={(e) => handleFieldChange('otherDeductions', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
                     placeholder="0"
                   />
-                  <span className="absolute right-3 top-2 text-slate-500">원</span>
+                  <span className="absolute right-3 top-2 text-at-text">원</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* 근태 연동 설정 */}
-          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <h4 className="font-medium text-amber-800 mb-4 flex items-center">
               <AlertCircle className="w-4 h-4 mr-2" />
               근태 연동 설정
@@ -696,8 +696,8 @@ export default function PayrollSettings() {
               {/* 지각 차감 */}
               <label className="flex items-center justify-between">
                 <div>
-                  <span className="text-sm font-medium text-slate-700">지각 시간 급여 차감</span>
-                  <p className="text-xs text-slate-500">지각 시간만큼 급여에서 차감합니다</p>
+                  <span className="text-sm font-medium text-at-text">지각 시간 급여 차감</span>
+                  <p className="text-xs text-at-text">지각 시간만큼 급여에서 차감합니다</p>
                 </div>
                 <button
                   type="button"
@@ -721,8 +721,8 @@ export default function PayrollSettings() {
               {/* 조퇴 차감 */}
               <label className="flex items-center justify-between">
                 <div>
-                  <span className="text-sm font-medium text-slate-700">조퇴 시간 급여 차감</span>
-                  <p className="text-xs text-slate-500">조퇴 시간만큼 급여에서 차감합니다</p>
+                  <span className="text-sm font-medium text-at-text">조퇴 시간 급여 차감</span>
+                  <p className="text-xs text-at-text">조퇴 시간만큼 급여에서 차감합니다</p>
                 </div>
                 <button
                   type="button"
@@ -746,8 +746,8 @@ export default function PayrollSettings() {
               {/* 초과근무 수당 */}
               <label className="flex items-center justify-between">
                 <div>
-                  <span className="text-sm font-medium text-slate-700">초과근무 수당 포함</span>
-                  <p className="text-xs text-slate-500">초과근무 시간에 대한 수당을 급여에 포함합니다</p>
+                  <span className="text-sm font-medium text-at-text">초과근무 수당 포함</span>
+                  <p className="text-xs text-at-text">초과근무 시간에 대한 수당을 급여에 포함합니다</p>
                 </div>
                 <button
                   type="button"
@@ -767,13 +767,13 @@ export default function PayrollSettings() {
           </div>
 
           {/* 적용 범위 선택 */}
-          <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-            <h4 className="font-medium text-slate-800 mb-3">
+          <div className="mt-6 p-4 bg-at-surface-alt border border-at-border rounded-xl">
+            <h4 className="font-medium text-at-text mb-3">
               적용 범위
-              <span className="ml-2 text-xs text-slate-400">(현재: {applyToPast ? '과거 포함' : '앞으로만'})</span>
+              <span className="ml-2 text-xs text-at-text">(현재: {applyToPast ? '과거 포함' : '앞으로만'})</span>
             </h4>
             <div className="space-y-3">
-              <label className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors">
+              <label className="flex items-center cursor-pointer p-2 rounded hover:bg-at-surface-alt transition-colors">
                 <input
                   type="radio"
                   name="applyScope"
@@ -785,11 +785,11 @@ export default function PayrollSettings() {
                   className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
                 />
                 <div>
-                  <span className="text-sm font-medium text-slate-700">앞으로의 급여명세서에만 적용</span>
-                  <p className="text-xs text-slate-500">다음 달부터 생성되는 급여명세서에 적용됩니다.</p>
+                  <span className="text-sm font-medium text-at-text">앞으로의 급여명세서에만 적용</span>
+                  <p className="text-xs text-at-text">다음 달부터 생성되는 급여명세서에 적용됩니다.</p>
                 </div>
               </label>
-              <label className="flex items-center cursor-pointer p-2 rounded hover:bg-slate-100 transition-colors">
+              <label className="flex items-center cursor-pointer p-2 rounded hover:bg-at-surface-alt transition-colors">
                 <input
                   type="radio"
                   name="applyScope"
@@ -801,8 +801,8 @@ export default function PayrollSettings() {
                   className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
                 />
                 <div>
-                  <span className="text-sm font-medium text-slate-700">과거 급여명세서에도 적용</span>
-                  <p className="text-xs text-slate-500">이미 생성된 모든 급여명세서도 함께 수정됩니다.</p>
+                  <span className="text-sm font-medium text-at-text">과거 급여명세서에도 적용</span>
+                  <p className="text-xs text-at-text">이미 생성된 모든 급여명세서도 함께 수정됩니다.</p>
                 </div>
               </label>
             </div>
@@ -840,18 +840,18 @@ export default function PayrollSettings() {
       )}
 
       {/* 직원별 설정 현황 */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">직원별 설정 현황</h3>
+      <div className="bg-white rounded-xl shadow-sm border border-at-border p-6">
+        <h3 className="text-lg font-semibold text-at-text mb-4">직원별 설정 현황</h3>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-2 px-3 font-medium text-slate-700">직원명</th>
-                <th className="text-left py-2 px-3 font-medium text-slate-700">급여 유형</th>
-                <th className="text-right py-2 px-3 font-medium text-slate-700">목표금액/기본급</th>
-                <th className="text-right py-2 px-3 font-medium text-slate-700">4대보험 합계</th>
-                <th className="text-center py-2 px-3 font-medium text-slate-700">상태</th>
+                <th className="text-left py-2 px-3 font-medium text-at-text">직원명</th>
+                <th className="text-left py-2 px-3 font-medium text-at-text">급여 유형</th>
+                <th className="text-right py-2 px-3 font-medium text-at-text">목표금액/기본급</th>
+                <th className="text-right py-2 px-3 font-medium text-at-text">4대보험 합계</th>
+                <th className="text-center py-2 px-3 font-medium text-at-text">상태</th>
               </tr>
             </thead>
             <tbody>
@@ -862,7 +862,7 @@ export default function PayrollSettings() {
                   : 0
 
                 return (
-                  <tr key={emp.id} className="border-b hover:bg-slate-50">
+                  <tr key={emp.id} className="border-b hover:bg-at-surface-alt">
                     <td className="py-2 px-3">{emp.name}</td>
                     <td className="py-2 px-3">
                       {setting ? (setting.salaryType === 'net' ? '세후' : '세전') : '-'}
@@ -883,7 +883,7 @@ export default function PayrollSettings() {
                           설정됨
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-500">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-at-surface-alt text-at-text">
                           미설정
                         </span>
                       )}

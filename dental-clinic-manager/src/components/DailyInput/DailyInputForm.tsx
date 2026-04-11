@@ -746,11 +746,11 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
   // 섹션 헤더 컴포넌트
   const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
-    <div className="flex items-center space-x-2 sm:space-x-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
-      <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
+    <div className="flex items-center space-x-2 sm:space-x-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
+      <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 text-blue-600">
         <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </div>
-      <h3 className="text-sm sm:text-base font-semibold text-slate-800">
+      <h3 className="text-sm sm:text-base font-semibold text-at-text">
         <span className="text-blue-600 mr-1">{number}.</span>
         {title}
       </h3>
@@ -758,12 +758,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   )
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-at-border overflow-hidden">
       {/* 보고서 헤더 */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-xl flex items-center justify-center">
               <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
@@ -814,13 +814,13 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           <SectionHeader number={1} title="기본 정보" icon={Calendar} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="report-date" className="block text-sm font-medium text-slate-600 mb-1.5">
+              <label htmlFor="report-date" className="block text-sm font-medium text-at-text mb-1.5">
                 보고 일자
               </label>
               <input
                 type="date"
                 id="report-date"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 value={reportDate}
                 onChange={(e) => handleDateChange(e.target.value)}
                 disabled={loading || !canCreate}
@@ -831,12 +831,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
         {/* 상담 결과 */}
         <div>
-          <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
+          <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 text-blue-600">
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="text-sm sm:text-base font-semibold text-slate-800">
+              <h3 className="text-sm sm:text-base font-semibold text-at-text">
                 <span className="text-blue-600 mr-1">2.</span>
                 환자 상담 결과
               </h3>
@@ -845,7 +845,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               type="button"
               onClick={handleSaveAndNavigateToLogs}
               disabled={loading}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
               title="현재 보고서를 저장하고 상담 상세 기록 페이지로 이동"
             >
               <span className="hidden sm:inline">상담 상세 기록</span>
@@ -862,12 +862,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
         {/* 리콜 결과 (자동 동기화) */}
         <div>
-          <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
+          <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 text-blue-600">
                 <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="text-sm sm:text-base font-semibold text-slate-800">
+              <h3 className="text-sm sm:text-base font-semibold text-at-text">
                 <span className="text-blue-600 mr-1">3.</span>
                 환자 리콜 결과
               </h3>
@@ -881,7 +881,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               type="button"
               onClick={() => syncRecallData(reportDate)}
               disabled={recallSyncing}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group disabled:opacity-50"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors group disabled:opacity-50"
               title="리콜 데이터 새로고침"
             >
               <RefreshCw className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${recallSyncing ? 'animate-spin' : ''}`} />
@@ -891,25 +891,25 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
           {/* 요약 카드 */}
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-slate-50 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-slate-800">{recallCount}</div>
-              <div className="text-xs text-slate-500 mt-0.5">리콜 처리 건수</div>
+            <div className="bg-at-surface-alt rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-at-text">{recallCount}</div>
+              <div className="text-xs text-at-text mt-0.5">리콜 처리 건수</div>
             </div>
-            <div className="bg-green-50 rounded-lg p-3 text-center">
+            <div className="bg-green-50 rounded-xl p-3 text-center">
               <div className="text-2xl font-bold text-green-600">{recallBookingCount}</div>
-              <div className="text-xs text-slate-500 mt-0.5">예약 성공</div>
+              <div className="text-xs text-at-text mt-0.5">예약 성공</div>
             </div>
-            <div className="bg-blue-50 rounded-lg p-3 text-center">
+            <div className="bg-blue-50 rounded-xl p-3 text-center">
               <div className="text-2xl font-bold text-blue-600">
                 {recallCount > 0 ? Math.round((recallBookingCount / recallCount) * 100) : 0}%
               </div>
-              <div className="text-xs text-slate-500 mt-0.5">예약 성공률</div>
+              <div className="text-xs text-at-text mt-0.5">예약 성공률</div>
             </div>
           </div>
 
           {/* 예약 성공 환자 */}
           {recallBookingNames && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl">
               <div className="text-xs font-medium text-green-700 mb-1">예약 성공 환자</div>
               <div className="text-sm text-green-800">{recallBookingNames}</div>
             </div>
@@ -921,7 +921,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               <button
                 type="button"
                 onClick={() => setShowRecallLog(!showRecallLog)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-at-text bg-at-surface-alt hover:bg-at-surface-alt rounded-xl transition-colors"
               >
                 <span>리콜 상세 기록 ({recallPatients.length}건)</span>
                 <svg
@@ -933,27 +933,27 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               </button>
 
               {showRecallLog && (
-                <div className="mt-2 border border-slate-200 rounded-lg overflow-hidden">
+                <div className="mt-2 border border-at-border rounded-xl overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50">
+                    <thead className="bg-at-surface-alt">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">환자명</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">전화번호</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">상태</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 hidden sm:table-cell">처리시간</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-at-text">환자명</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-at-text">전화번호</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-at-text">상태</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-at-text hidden sm:table-cell">처리시간</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {recallPatients.map((patient, idx) => (
-                        <tr key={patient.id || idx} className="hover:bg-slate-50">
-                          <td className="px-3 py-2 font-medium text-slate-800">{patient.patient_name}</td>
-                          <td className="px-3 py-2 text-slate-600">{patient.phone_number}</td>
+                        <tr key={patient.id || idx} className="hover:bg-at-surface-alt">
+                          <td className="px-3 py-2 font-medium text-at-text">{patient.patient_name}</td>
+                          <td className="px-3 py-2 text-at-text">{patient.phone_number}</td>
                           <td className="px-3 py-2">
                             <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${RECALL_STATUS_COLORS[patient.status] || 'bg-gray-100 text-gray-700'}`}>
                               {RECALL_STATUS_LABELS[patient.status] || patient.status}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-slate-500 text-xs hidden sm:table-cell">
+                          <td className="px-3 py-2 text-at-text text-xs hidden sm:table-cell">
                             {patient.recall_datetime
                               ? new Date(patient.recall_datetime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
                               : '-'}
@@ -968,13 +968,13 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           )}
 
           {recallPatients.length === 0 && !recallSyncing && (
-            <div className="text-center py-4 text-sm text-slate-400">
+            <div className="text-center py-4 text-sm text-at-text">
               이 날짜에 처리된 리콜 기록이 없습니다.
             </div>
           )}
 
           {recallSyncing && (
-            <div className="text-center py-4 text-sm text-slate-400">
+            <div className="text-center py-4 text-sm text-at-text">
               리콜 데이터 불러오는 중...
             </div>
           )}
@@ -982,12 +982,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
         {/* 선물/리뷰 관리 */}
         <div>
-          <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-slate-200">
+          <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 text-blue-600">
                 <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="text-sm sm:text-base font-semibold text-slate-800">
+              <h3 className="text-sm sm:text-base font-semibold text-at-text">
                 <span className="text-blue-600 mr-1">4.</span>
                 선물 및 리뷰 관리
               </h3>
@@ -995,7 +995,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             <button
               type="button"
               onClick={() => router.push('/dashboard?tab=settings')}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors group"
               title="재고 관리 페이지로 이동"
             >
               <Package className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -1057,7 +1057,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             <textarea
               id="special-notes"
               rows={3}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
               placeholder="오늘 업무 중 특이사항이나 기록할 내용을 작성해주세요."
               value={specialNotes}
               onChange={(e) => setSpecialNotes(e.target.value)}
@@ -1069,11 +1069,11 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
       {/* 저장 버튼 영역 */}
       {(canCreate || canEdit) && (
-        <div className="px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 bg-at-surface-alt border-t border-at-border flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
           <button
             type="button"
             onClick={resetForm}
-            className="inline-flex items-center justify-center px-4 py-2.5 sm:py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors disabled:opacity-50 order-2 sm:order-1"
+            className="inline-flex items-center justify-center px-4 py-2.5 sm:py-2 border border-at-border rounded-xl text-sm font-medium text-at-text bg-white hover:bg-at-surface-alt transition-colors disabled:opacity-50 order-2 sm:order-1"
             disabled={isReadOnly}
           >
             <RotateCcw className="w-4 h-4 mr-2" />
@@ -1082,7 +1082,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           <button
             type="button"
             onClick={(e) => handleSave(e)}
-            className="inline-flex items-center justify-center px-5 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
+            className="inline-flex items-center justify-center px-5 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
             disabled={loading || isReadOnly}
           >
             <Save className="w-4 h-4 mr-2" />

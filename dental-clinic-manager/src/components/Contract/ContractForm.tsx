@@ -213,12 +213,12 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg">
       <h2 className="text-2xl font-bold mb-6">근로계약서 작성</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Employee Selection */}
-        <div className="bg-blue-50 p-4 rounded-lg">
+        <div className="bg-blue-50 p-4 rounded-xl">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             직원 선택 <span className="text-red-500">*</span>
           </label>
@@ -226,7 +226,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
             onChange={handleEmployeeSelect}
             value={selectedEmployee?.id || ''}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">-- 직원을 선택하세요 --</option>
             {employees.map(employee => (
@@ -244,7 +244,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
 
         {/* Employee Information (Auto-filled) */}
         {selectedEmployee && (
-          <div className="border border-gray-200 p-4 rounded-lg bg-gray-50">
+          <div className="border border-gray-200 p-4 rounded-xl bg-gray-50">
             <h3 className="text-lg font-semibold mb-3">근로자 정보</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -288,7 +288,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         )}
 
         {/* Contract Period */}
-        <div className="border border-gray-200 p-4 rounded-lg">
+        <div className="border border-gray-200 p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">근로 기간</h3>
           {selectedEmployee?.hire_date && formData.employment_period_start === selectedEmployee.hire_date && (
             <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-md">
@@ -338,7 +338,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         </div>
 
         {/* Salary Information */}
-        <div className="border border-gray-200 p-4 rounded-lg">
+        <div className="border border-gray-200 p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">급여 정보</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -412,7 +412,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         </div>
 
         {/* Work Schedule */}
-        <div className="border border-gray-200 p-4 rounded-lg">
+        <div className="border border-gray-200 p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">근무 스케줄</h3>
           {selectedEmployee && formData.work_hours_detail ? (
             <>
@@ -524,7 +524,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         </div>
 
         {/* Social Insurance */}
-        <div className="border border-gray-200 p-4 rounded-lg">
+        <div className="border border-gray-200 p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">4대보험 가입</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <label className="inline-flex items-center">
@@ -571,7 +571,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         </div>
 
         {/* Additional Notes */}
-        <div className="border border-gray-200 p-4 rounded-lg">
+        <div className="border border-gray-200 p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">특약 사항</h3>
           <textarea
             name="special_terms"
@@ -588,7 +588,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
           <button
             type="submit"
             disabled={loading || !selectedEmployee}
-            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
             {loading ? '생성 중...' : '근로계약서 생성'}
           </button>
@@ -597,7 +597,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               취소
             </button>
@@ -606,7 +606,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       </form>
 
       {/* Info Notice */}
-      <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-2">
+      <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl space-y-2">
         <p className="text-sm text-yellow-800">
           <span className="font-semibold">📝 안내:</span> 근로계약서 생성 후 원장과 근로자가 각각 서명해야 계약이 완료됩니다.
         </p>

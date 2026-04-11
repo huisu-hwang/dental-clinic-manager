@@ -212,19 +212,19 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-3 mb-4 border-b border-at-border">
         <div className="flex items-center space-x-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-50 text-orange-600">
+          <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-orange-50 text-orange-600">
             <Building2 className="w-4 h-4" />
           </div>
-          <h3 className="text-base font-semibold text-slate-800">
+          <h3 className="text-base font-semibold text-at-text">
             병원 휴무일 관리
           </h3>
         </div>
         {isOwner && (
           <button
             onClick={() => setShowForm(!showForm)}
-            className="px-3 py-1.5 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 flex items-center"
+            className="px-3 py-1.5 text-sm font-medium text-white bg-orange-500 rounded-xl hover:bg-orange-600 flex items-center"
           >
             <Plus className="w-4 h-4 mr-1" />
             휴무일 등록
@@ -247,7 +247,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
       )}
 
       {/* 안내 메시지 */}
-      <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
+      <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
         <div className="flex items-start space-x-3">
           <Info className="w-5 h-5 text-orange-500 mt-0.5" />
           <div>
@@ -262,30 +262,30 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
 
       {/* 휴무일 등록 폼 */}
       {showForm && isOwner && (
-        <form onSubmit={handleSubmit} className="border border-slate-200 rounded-lg p-4 space-y-4 bg-slate-50">
-          <h4 className="font-medium text-slate-800">새 휴무일 등록</h4>
+        <form onSubmit={handleSubmit} className="border border-at-border rounded-xl p-4 space-y-4 bg-at-surface-alt">
+          <h4 className="font-medium text-at-text">새 휴무일 등록</h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-at-text mb-1">
                 휴무일 이름 *
               </label>
               <input
                 type="text"
                 value={formData.holiday_name}
                 onChange={(e) => setFormData({ ...formData, holiday_name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                className="w-full px-3 py-2 border border-at-border rounded-xl"
                 placeholder="예: 2024 여름휴가"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-at-text mb-1">
                 휴무일 유형
               </label>
               <select
                 value={formData.holiday_type}
                 onChange={(e) => setFormData({ ...formData, holiday_type: e.target.value as any })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                className="w-full px-3 py-2 border border-at-border rounded-xl"
               >
                 <option value="company">회사지정휴일</option>
                 <option value="public">공휴일</option>
@@ -296,25 +296,25 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-at-text mb-1">
                 시작일 *
               </label>
               <input
                 type="date"
                 value={formData.start_date}
                 onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                className="w-full px-3 py-2 border border-at-border rounded-xl"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-at-text mb-1">
                 종료일 *
               </label>
               <input
                 type="date"
                 value={formData.end_date}
                 onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                className="w-full px-3 py-2 border border-at-border rounded-xl"
               />
             </div>
           </div>
@@ -328,13 +328,13 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                   onChange={(e) => setFormData({ ...formData, deduct_from_annual: e.target.checked })}
                   className="w-4 h-4 text-orange-600 rounded"
                 />
-                <span className="text-sm text-slate-700">직원 연차에서 차감</span>
+                <span className="text-sm text-at-text">직원 연차에서 차감</span>
               </label>
             </div>
 
             {formData.deduct_from_annual && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text mb-1">
                   차감 일수 (비워두면 주말 제외 자동 계산)
                 </label>
                 <input
@@ -343,7 +343,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                   min="0.5"
                   value={formData.deduct_days}
                   onChange={(e) => setFormData({ ...formData, deduct_days: e.target.value })}
-                  className="w-32 px-3 py-2 border border-slate-300 rounded-lg"
+                  className="w-32 px-3 py-2 border border-at-border rounded-xl"
                   placeholder="자동 계산"
                 />
               </div>
@@ -351,7 +351,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-at-text mb-2">
               제외할 직급 (체크한 직급은 연차 차감에서 제외)
             </label>
             <div className="flex flex-wrap gap-2">
@@ -361,7 +361,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                   className={`px-3 py-1.5 text-sm rounded-full cursor-pointer transition-colors ${
                     formData.excluded_roles.includes(role)
                       ? 'bg-orange-100 text-orange-700 border border-orange-300'
-                      : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                      : 'bg-at-surface-alt text-at-text border border-at-border hover:bg-slate-200'
                   }`}
                 >
                   <input
@@ -377,14 +377,14 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-at-text mb-1">
               설명 (선택)
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-at-border rounded-xl"
               placeholder="휴무일에 대한 추가 설명"
             />
           </div>
@@ -393,14 +393,14 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+              className="px-4 py-2 text-sm font-medium text-at-text bg-white border border-at-border rounded-xl hover:bg-at-surface-alt"
             >
               취소
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-xl hover:bg-orange-600 disabled:opacity-50"
             >
               {loading ? '등록 중...' : '등록'}
             </button>
@@ -411,13 +411,13 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
       {/* 휴무일 목록 */}
       <div className="space-y-3">
         {holidays.length === 0 ? (
-          <div className="text-center py-12 border border-slate-200 rounded-lg bg-slate-50">
-            <Calendar className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-            <p className="text-slate-500">등록된 휴무일이 없습니다.</p>
+          <div className="text-center py-12 border border-at-border rounded-xl bg-at-surface-alt">
+            <Calendar className="w-12 h-12 mx-auto mb-3 text-at-text" />
+            <p className="text-at-text">등록된 휴무일이 없습니다.</p>
             {isOwner && (
               <button
                 onClick={() => setShowForm(true)}
-                className="mt-3 px-4 py-2 text-sm font-medium text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100"
+                className="mt-3 px-4 py-2 text-sm font-medium text-orange-600 bg-orange-50 rounded-xl hover:bg-orange-100"
               >
                 휴무일 등록하기
               </button>
@@ -425,15 +425,15 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
           </div>
         ) : (
           holidays.map((holiday) => (
-            <div key={holiday.id} className="border border-slate-200 rounded-lg overflow-hidden">
+            <div key={holiday.id} className="border border-at-border rounded-xl overflow-hidden">
               {/* 휴무일 헤더 */}
               <div
-                className="p-4 bg-white cursor-pointer hover:bg-slate-50 transition-colors"
+                className="p-4 bg-white cursor-pointer hover:bg-at-surface-alt transition-colors"
                 onClick={() => toggleExpand(holiday.id)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                       holiday.is_applied
                         ? 'bg-green-100 text-green-600'
                         : 'bg-orange-100 text-orange-600'
@@ -442,7 +442,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                     </div>
                     <div>
                       <div className="flex items-center space-x-2">
-                        <h4 className="font-medium text-slate-800">{holiday.holiday_name}</h4>
+                        <h4 className="font-medium text-at-text">{holiday.holiday_name}</h4>
                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                           holiday.is_applied
                             ? 'bg-green-100 text-green-700'
@@ -451,7 +451,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                           {holiday.is_applied ? '적용완료' : '미적용'}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-at-text">
                         {new Date(holiday.start_date).toLocaleDateString('ko-KR')} ~ {new Date(holiday.end_date).toLocaleDateString('ko-KR')}
                         <span className="ml-2">({holiday.total_days}일)</span>
                       </p>
@@ -463,13 +463,13 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                         차감 {holiday.deduct_days}일
                       </span>
                     )}
-                    <span className="px-2 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded">
+                    <span className="px-2 py-1 text-xs font-medium bg-at-surface-alt text-at-text rounded">
                       {getHolidayTypeLabel(holiday.holiday_type)}
                     </span>
                     {expandedHoliday === holiday.id ? (
-                      <ChevronUp className="w-5 h-5 text-slate-400" />
+                      <ChevronUp className="w-5 h-5 text-at-text" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-slate-400" />
+                      <ChevronDown className="w-5 h-5 text-at-text" />
                     )}
                   </div>
                 </div>
@@ -477,25 +477,25 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
 
               {/* 확장된 상세 정보 */}
               {expandedHoliday === holiday.id && (
-                <div className="border-t border-slate-200 p-4 bg-slate-50 space-y-4">
+                <div className="border-t border-at-border p-4 bg-at-surface-alt space-y-4">
                   {/* 상세 정보 */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <p className="text-slate-500">등록일</p>
+                      <p className="text-at-text">등록일</p>
                       <p className="font-medium">{new Date(holiday.created_at).toLocaleDateString('ko-KR')}</p>
                     </div>
                     <div>
-                      <p className="text-slate-500">등록자</p>
+                      <p className="text-at-text">등록자</p>
                       <p className="font-medium">{holiday.created_by_user?.name || '-'}</p>
                     </div>
                     {holiday.is_applied && (
                       <>
                         <div>
-                          <p className="text-slate-500">적용일</p>
+                          <p className="text-at-text">적용일</p>
                           <p className="font-medium">{new Date(holiday.applied_at).toLocaleDateString('ko-KR')}</p>
                         </div>
                         <div>
-                          <p className="text-slate-500">적용자</p>
+                          <p className="text-at-text">적용자</p>
                           <p className="font-medium">{holiday.applied_by_user?.name || '-'}</p>
                         </div>
                       </>
@@ -503,18 +503,18 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                   </div>
 
                   {holiday.description && (
-                    <div className="p-3 bg-white rounded-lg border border-slate-200">
-                      <p className="text-sm text-slate-600">{holiday.description}</p>
+                    <div className="p-3 bg-white rounded-xl border border-at-border">
+                      <p className="text-sm text-at-text">{holiday.description}</p>
                     </div>
                   )}
 
                   {/* 제외 역할 표시 */}
                   {holiday.excluded_roles && holiday.excluded_roles.length > 0 && (
                     <div>
-                      <p className="text-sm text-slate-500 mb-1">차감 제외 직급:</p>
+                      <p className="text-sm text-at-text mb-1">차감 제외 직급:</p>
                       <div className="flex flex-wrap gap-1">
                         {holiday.excluded_roles.map((role: string) => (
-                          <span key={role} className="px-2 py-0.5 text-xs bg-slate-200 text-slate-600 rounded-full">
+                          <span key={role} className="px-2 py-0.5 text-xs bg-slate-200 text-at-text rounded-full">
                             {getRoleLabel(role)}
                           </span>
                         ))}
@@ -525,17 +525,17 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                   {/* 적용 기록 */}
                   {holiday.is_applied && applications[holiday.id] && applications[holiday.id].length > 0 && (
                     <div>
-                      <p className="text-sm font-medium text-slate-700 mb-2 flex items-center">
+                      <p className="text-sm font-medium text-at-text mb-2 flex items-center">
                         <Users className="w-4 h-4 mr-1" />
                         적용된 직원 ({applications[holiday.id].length}명)
                       </p>
-                      <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white">
+                      <div className="max-h-40 overflow-y-auto border border-at-border rounded-xl bg-white">
                         <div className="divide-y divide-slate-100">
                           {applications[holiday.id].map((app: any) => (
                             <div key={app.id} className="px-3 py-2 flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
-                                <span className="font-medium text-slate-700">{app.users?.name}</span>
-                                <span className="text-xs text-slate-400">({getRoleLabel(app.users?.role)})</span>
+                                <span className="font-medium text-at-text">{app.users?.name}</span>
+                                <span className="text-xs text-at-text">({getRoleLabel(app.users?.role)})</span>
                               </div>
                               <span className="text-red-600">-{app.deducted_days}일</span>
                             </div>
@@ -555,7 +555,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                               e.stopPropagation()
                               handleDelete(holiday.id)
                             }}
-                            className="px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 flex items-center"
+                            className="px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 flex items-center"
                           >
                             <Trash2 className="w-4 h-4 mr-1" />
                             삭제
@@ -566,7 +566,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                               handleApply(holiday.id)
                             }}
                             disabled={applying === holiday.id}
-                            className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center"
+                            className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 flex items-center"
                           >
                             {applying === holiday.id ? (
                               <>
