@@ -146,52 +146,50 @@ export default function FinancialDashboard() {
   }
 
   return (
-    <div className="space-y-0 relative">
-      {/* 헤더 - 스크롤 시 고정 */}
-      <div className="sticky top-14 z-20 bg-white border-x border-t border-at-border px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-at-accent-light rounded-xl flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-at-accent" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-at-text">경영 현황</h2>
-              <p className="text-at-text-weak text-xs sm:text-sm hidden sm:block">Financial Dashboard</p>
-            </div>
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
+      {/* 헤더 */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-at-accent-light rounded-xl flex items-center justify-center">
+            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-at-accent" />
           </div>
-
-          {/* Date Selector */}
-          {activeTab === 'status' && (
-            <div className="flex items-center gap-1 bg-at-surface-alt p-1 rounded-xl border border-at-border self-start sm:self-auto">
-              <button
-                onClick={goToPreviousMonth}
-                className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
-              >
-                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-              <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-at-text font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm bg-white rounded-xl border border-at-border">
-                {selectedYear}년 {selectedMonth}월
-              </div>
-              <button
-                onClick={goToNextMonth}
-                className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
-              >
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            </div>
-          )}
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-at-text">경영 현황</h2>
+            <p className="text-at-text-weak text-xs sm:text-sm hidden sm:block">Financial Dashboard</p>
+          </div>
         </div>
+
+        {/* Date Selector */}
+        {activeTab === 'status' && (
+          <div className="flex items-center gap-1 bg-at-surface-alt p-1 rounded-xl border border-at-border self-start sm:self-auto">
+            <button
+              onClick={goToPreviousMonth}
+              className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
+            >
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-at-text font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm bg-white rounded-xl border border-at-border">
+              {selectedYear}년 {selectedMonth}월
+            </div>
+            <button
+              onClick={goToNextMonth}
+              className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
+            >
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
-      <div className="sticky top-[calc(3.5rem+60px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-at-border bg-at-surface-alt shadow-sm">
+      {/* 서브 탭 네비게이션 */}
+      <div className="bg-at-surface-alt rounded-xl border border-at-border">
         <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('status')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'status'
-                ? 'bg-white text-at-accent shadow-sm border border-at-border'
-                : 'text-at-text hover:text-at-text hover:bg-white/50'
+                ? 'bg-at-accent-light text-at-accent'
+                : 'text-at-text-weak hover:bg-at-surface-alt'
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -201,8 +199,8 @@ export default function FinancialDashboard() {
             onClick={() => setActiveTab('settings')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'settings'
-                ? 'bg-white text-at-accent shadow-sm border border-at-border'
-                : 'text-at-text hover:text-at-text hover:bg-white/50'
+                ? 'bg-at-accent-light text-at-accent'
+                : 'text-at-text-weak hover:bg-at-surface-alt'
             }`}
           >
             <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -212,7 +210,7 @@ export default function FinancialDashboard() {
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div className="bg-at-surface-alt/50 border-x border-b border-at-border rounded-b-xl p-3 sm:p-6 min-h-[calc(100vh-250px)]">
+      <div>
       {loading ? (
         <div className="flex flex-col items-center justify-center py-32 space-y-4">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
@@ -485,7 +483,7 @@ export default function FinancialDashboard() {
           </div>
         </div>
       ) : activeTab === 'settings' ? (
-        <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
           {/* 지출 입력 */}
           <div className="bg-white rounded-2xl shadow-sm border border-at-border p-6">
             <div className="flex items-start justify-between gap-4 mb-4">

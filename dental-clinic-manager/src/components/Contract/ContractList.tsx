@@ -292,33 +292,31 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
   }
 
   return (
-    <div>
-      {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
-      <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">근로계약서 관리</h2>
-              <p className="text-blue-100 text-sm">Employment Contract Management</p>
-            </div>
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-at-accent-light rounded-xl flex items-center justify-center">
+            <FileText className="w-5 h-5 text-at-accent" />
           </div>
-          {(currentUser.role === 'owner' || currentUser.role === 'manager') && (
-            <button
-              onClick={handleCreateNew}
-              className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-xl transition-colors"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              새 계약서 작성
-            </button>
-          )}
+          <div>
+            <h2 className="text-lg font-bold text-at-text">근로계약서 관리</h2>
+            <p className="text-at-text text-sm">Employment Contract Management</p>
+          </div>
         </div>
+        {(currentUser.role === 'owner' || currentUser.role === 'manager') && (
+          <button
+            onClick={handleCreateNew}
+            className="flex items-center px-4 py-2 bg-at-accent hover:bg-at-accent-hover text-white text-sm font-medium rounded-xl transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            새 계약서 작성
+          </button>
+        )}
       </div>
 
-      {/* 필터 영역 - 스크롤 시 고정 */}
-      <div className="sticky top-[calc(3.5rem+72px)] z-10 border-x border-b border-at-border bg-at-surface-alt p-4">
+      {/* 필터 영역 */}
+      <div className="bg-at-surface-alt rounded-xl p-4">
         <div className="flex flex-col md:flex-row gap-4">
           {/* 검색 */}
           <div className="flex-1 relative">
@@ -361,7 +359,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       </div>
 
       {/* 콘텐츠 영역 */}
-      <div className="bg-white border-x border-b border-at-border rounded-b-xl p-6">
+      <div>
         {/* 계약서 목록 */}
         {contracts.length === 0 ? (
           <div className="text-center py-12 bg-at-surface-alt rounded-xl">
