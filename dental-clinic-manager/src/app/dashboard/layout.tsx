@@ -116,7 +116,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-at-surface">
       {/* Header - 상단 고정, 중앙 정렬 */}
       <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-at-surface border-b border-at-border fixed-header-safe">
-        <div className="max-w-[1400px] mx-auto h-full flex items-center pl-[max(0.75rem,calc(50vw-700px))] pr-3">
+        <div className="max-w-[1400px] mx-auto h-full flex items-center px-3">
           <Header
             user={user}
             onLogout={logout}
@@ -142,7 +142,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         className={`
           fixed top-14 w-64 lg:w-52 h-[calc(100vh-3.5rem)] bg-at-surface border-r border-at-border z-20 overflow-y-auto py-3 px-0 fixed-sidebar-safe
           transition-transform duration-300 ease-in-out
-          lg:left-[max(0px,calc(50%-700px))]
+          lg:left-0
           ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
         `}
       >
@@ -156,7 +156,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* 메인 콘텐츠 */}
       <div className="pt-14 pt-header-safe">
-        <main className="max-w-[1400px] mx-auto lg:pl-56 px-0">
+        <main className="lg:pl-52 px-0">
           {children}
         </main>
       </div>
