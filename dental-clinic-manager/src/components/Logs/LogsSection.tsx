@@ -137,22 +137,19 @@ export default function LogsSection({
   })
 
   return (
-    <div className="bg-white rounded-2xl shadow-at-card border border-at-border overflow-hidden">
-      {/* 블루 그라데이션 헤더 */}
-      <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+    <div className="space-y-4">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between pb-4 border-b border-at-border">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+            <FileText className="w-4 h-4 text-at-accent" />
           </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-white">상세 기록</h2>
-            <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Detailed Logs</p>
-          </div>
+          <h2 className="text-lg font-bold text-at-text">상세 기록</h2>
         </div>
       </div>
 
       {/* 콘텐츠 영역 */}
-      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* 일일 보고 종합 기록 */}
         <div>
           <SectionHeader number={1} title="일일 보고 종합 기록" icon={FileText} />

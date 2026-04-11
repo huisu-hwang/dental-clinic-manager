@@ -209,22 +209,19 @@ export default function InventoryManagement({
   }
 
   return (
-    <div>
-      {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
-      <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-at-card">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-            <Settings className="w-5 h-5 text-white" />
+    <div className="space-y-4">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between pb-4 border-b border-at-border mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+            <Settings className="w-4 h-4 text-at-accent" />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-white">재고 관리</h2>
-            <p className="text-blue-100 text-sm">Inventory Management</p>
-          </div>
+          <h2 className="text-lg font-bold text-at-text">재고 관리</h2>
         </div>
       </div>
 
       {/* 콘텐츠 영역 */}
-      <div className="bg-white border-x border-b border-at-border rounded-b-xl p-6 space-y-8">
+      <div className="space-y-8">
         {/* 선물 카테고리 관리 */}
         <div>
           <SectionHeader number={1} title="선물 카테고리 관리" icon={Tag} />

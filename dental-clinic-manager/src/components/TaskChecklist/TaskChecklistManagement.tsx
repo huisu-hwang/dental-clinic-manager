@@ -44,7 +44,7 @@ export default function TaskChecklistManagement() {
     <div className="space-y-4">
       {/* 서브 탭 네비게이션 */}
       {visibleTabs.length > 1 && (
-        <div className="bg-white rounded-2xl shadow-at-card border border-at-border overflow-hidden">
+        <div className="border-b border-at-border">
           <div className="px-4 sm:px-6">
             <nav className="flex space-x-6 overflow-x-auto" aria-label="Task checklist tabs">
               {visibleTabs.map(tab => {

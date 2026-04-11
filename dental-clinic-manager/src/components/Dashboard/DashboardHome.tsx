@@ -497,27 +497,25 @@ export default function DashboardHome() {
     : '0'
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-at-border shadow-at-card">
-      {/* 헤더 — Airtable Blue */}
-      <div className="bg-at-accent px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/15 rounded-xl flex items-center justify-center">
-              <Home className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-[0.08px]">대시보드</h2>
-              <p className="text-white/70 text-xs sm:text-sm hidden sm:block tracking-[0.12px]">{formatDate(currentTime)}</p>
-            </div>
+    <div className="space-y-4">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between pb-4 border-b border-at-border mb-4">
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-at-accent-light rounded-xl flex items-center justify-center">
+            <Home className="w-4 h-4 sm:w-5 sm:h-5 text-at-accent" />
           </div>
-          <button
-            onClick={handleRefresh}
-            className="inline-flex items-center px-2 sm:px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-white text-xs sm:text-sm transition-colors tracking-[0.08px]"
-          >
-            <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
-            새로고침
-          </button>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-at-text tracking-[0.08px]">대시보드</h2>
+            <p className="text-at-text-secondary text-xs sm:text-sm hidden sm:block tracking-[0.12px]">{formatDate(currentTime)}</p>
+          </div>
         </div>
+        <button
+          onClick={handleRefresh}
+          className="inline-flex items-center px-2 sm:px-3 py-1.5 bg-at-surface-alt hover:bg-at-surface-hover border border-at-border rounded-xl text-at-text text-xs sm:text-sm transition-colors tracking-[0.08px]"
+        >
+          <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+          새로고침
+        </button>
       </div>
 
       {/* 워커 미설치 배너 */}
@@ -604,8 +602,7 @@ export default function DashboardHome() {
       )}
 
       {/* 본문 - 2컬럼 레이아웃 */}
-      <div className="p-3 sm:p-6">
-        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* 왼쪽: 메인 콘텐츠 */}
           <div className="flex-1 space-y-4 sm:space-y-5">
             {/* 오늘의 현황 */}
@@ -1030,7 +1027,6 @@ export default function DashboardHome() {
 
           </div>
         </div>
-      </div>
     </div>
   )
 }

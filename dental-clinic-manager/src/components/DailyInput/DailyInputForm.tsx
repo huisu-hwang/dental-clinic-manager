@@ -758,31 +758,26 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   )
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-at-border overflow-hidden">
+    <div className="space-y-6">
       {/* 보고서 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">일일 업무 보고서</h2>
-              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Daily Report</p>
-            </div>
+      <div className="flex items-center justify-between pb-4 border-b border-at-border">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+            <FileText className="w-4 h-4 text-at-accent" />
           </div>
-          <div className="flex items-center space-x-2">
-            {loading && (
-              <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
-                로딩 중...
-              </span>
-            )}
-            {hasExistingData && !loading && (
-              <span className="px-2 sm:px-3 py-1 bg-green-500/80 rounded-full text-white text-xs">
-                기존 데이터
-              </span>
-            )}
-          </div>
+          <h2 className="text-lg font-bold text-at-text">일일 업무 보고서</h2>
+        </div>
+        <div className="flex items-center space-x-2">
+          {loading && (
+            <span className="px-2 sm:px-3 py-1 bg-at-surface-alt rounded-full text-at-text-weak text-xs">
+              로딩 중...
+            </span>
+          )}
+          {hasExistingData && !loading && (
+            <span className="px-2 sm:px-3 py-1 bg-at-success-bg rounded-full text-at-success text-xs">
+              기존 데이터
+            </span>
+          )}
         </div>
       </div>
 
@@ -808,7 +803,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
       )}
 
       {/* 보고서 본문 */}
-      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* 기본 정보 */}
         <div>
           <SectionHeader number={1} title="기본 정보" icon={Calendar} />

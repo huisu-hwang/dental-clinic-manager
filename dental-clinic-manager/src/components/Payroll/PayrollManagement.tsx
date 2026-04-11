@@ -97,55 +97,48 @@ export default function PayrollManagement() {
   return (
     <div className="space-y-4">
       {/* 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <Banknote className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">급여 명세서</h2>
-              <p className="text-blue-100 text-sm">Payroll Statement</p>
-            </div>
+      <div className="flex items-center justify-between pb-4 border-b border-at-border">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+            <Banknote className="w-4 h-4 text-at-accent" />
           </div>
-          {isOwner && (
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-sm font-medium transition-all"
-            >
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">세무사무실 명세서 업로드</span>
-              <span className="sm:hidden">업로드</span>
-            </button>
-          )}
+          <h2 className="text-lg font-bold text-at-text">급여 명세서</h2>
         </div>
+        {isOwner && (
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-at-accent-light hover:bg-at-tag text-at-accent rounded-xl text-sm font-medium transition-all border border-at-border"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">세무사무실 명세서 업로드</span>
+            <span className="sm:hidden">업로드</span>
+          </button>
+        )}
       </div>
 
       {/* 서브 탭 */}
-      <div className="border-x border-b border-at-border bg-at-surface-alt">
-        <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
-          {subTabs.map(tab => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSubTab(tab.id)}
-                className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
-                  activeSubTab === tab.id
-                    ? 'bg-white text-at-accent shadow-sm'
-                    : 'text-at-text hover:text-at-text hover:bg-white/50'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                {tab.label}
-              </button>
-            )
-          })}
-        </nav>
+      <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
+        {subTabs.map(tab => {
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubTab(tab.id)}
+              className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+                activeSubTab === tab.id
+                  ? 'bg-at-accent-light text-at-accent'
+                  : 'text-at-text-weak hover:bg-at-surface-alt'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+              {tab.label}
+            </button>
+          )
+        })}
       </div>
 
       {/* 콘텐츠 */}
-      <div className="bg-white border-x border-b border-at-border rounded-b-xl p-6">
+      <div>
         {activeSubTab === 'view' && <PayrollForm key={uploadKey} />}
 
         {activeSubTab === 'history' && (

@@ -1275,68 +1275,63 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
   ]
 
   return (
-    <div className="bg-white rounded-xl shadow-at-card border border-at-border overflow-hidden">
+    <div className="space-y-4">
       {/* 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">업체 연락처</h2>
-              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Vendor Contacts</p>
-            </div>
+      <div className="flex items-center justify-between pb-4 border-b border-at-border mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+            <Building2 className="w-4 h-4 text-at-accent" />
           </div>
-          <div className="flex items-center space-x-1.5 sm:space-x-2">
-            {loading && (
-              <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
-                로딩 중...
-              </span>
-            )}
-            <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
-              {contacts.length}개
+          <h2 className="text-lg font-bold text-at-text">업체 연락처</h2>
+        </div>
+        <div className="flex items-center space-x-1.5 sm:space-x-2">
+          {loading && (
+            <span className="px-2 sm:px-3 py-1 bg-at-surface-alt rounded-full text-at-text-weak text-xs">
+              로딩 중...
             </span>
-            {canCreate && (
-              <>
+          )}
+          <span className="px-2 sm:px-3 py-1 bg-at-surface-alt rounded-full text-at-text-weak text-xs">
+            {contacts.length}개
+          </span>
+          {canCreate && (
+            <>
+              <button
+                onClick={() => { resetContactForm(); setShowContactModal(true) }}
+                className="p-2 bg-at-surface-alt hover:bg-at-accent-light rounded-xl transition-colors"
+                title="새 업체 등록"
+              >
+                <Plus className="w-4 h-4 text-at-text-secondary" />
+              </button>
+              <button
+                onClick={() => setShowCategoryModal(true)}
+                className="p-2 bg-at-surface-alt hover:bg-at-accent-light rounded-xl transition-colors"
+                title="카테고리 관리"
+              >
+                <Settings className="w-4 h-4 text-at-text-secondary" />
+              </button>
+              {canImport && (
                 <button
-                  onClick={() => { resetContactForm(); setShowContactModal(true) }}
-                  className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
-                  title="새 업체 등록"
+                  onClick={() => { resetImportModal(); setShowImportModal(true) }}
+                  className="p-2 bg-at-surface-alt hover:bg-at-accent-light rounded-xl transition-colors"
+                  title="파일로 일괄 등록"
                 >
-                  <Plus className="w-4 h-4 text-white" />
+                  <Upload className="w-4 h-4 text-at-text-secondary" />
                 </button>
-                <button
-                  onClick={() => setShowCategoryModal(true)}
-                  className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
-                  title="카테고리 관리"
-                >
-                  <Settings className="w-4 h-4 text-white" />
-                </button>
-                {canImport && (
-                  <button
-                    onClick={() => { resetImportModal(); setShowImportModal(true) }}
-                    className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
-                    title="파일로 일괄 등록"
-                  >
-                    <Upload className="w-4 h-4 text-white" />
-                  </button>
-                )}
-              </>
-            )}
-            <button
-              onClick={() => setShowPhoneSettings(true)}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
-              title="전화 다이얼 설정"
-            >
-              <PhoneCall className="w-4 h-4 text-white" />
-            </button>
-          </div>
+              )}
+            </>
+          )}
+          <button
+            onClick={() => setShowPhoneSettings(true)}
+            className="p-2 bg-at-surface-alt hover:bg-at-accent-light rounded-xl transition-colors"
+            title="전화 다이얼 설정"
+          >
+            <PhoneCall className="w-4 h-4 text-at-text-secondary" />
+          </button>
         </div>
       </div>
 
       {/* 본문 */}
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="space-y-4">
         {/* 검색 바 + 즐겨찾기 토글 */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">

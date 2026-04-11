@@ -398,7 +398,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
   ];
 
   return (
-    <div className="flex h-full bg-at-surface-alt rounded-xl shadow-at-card border border-at-border overflow-hidden">
+    <div className="flex h-full overflow-hidden">
       {/* 사이드바 - 대화 기록 */}
       <div
         className={cn(

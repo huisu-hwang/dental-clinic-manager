@@ -846,27 +846,27 @@ export default function DocumentTemplates() {
       </div>
 
       {/* 탭 네비게이션 */}
-      <div className="flex gap-2 border-b border-at-border print:hidden">
+      <div className="flex gap-1 print:hidden">
         <button
           onClick={() => setActiveTab('form')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 -mb-px ${
+          className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
             activeTab === 'form'
-              ? 'text-at-accent border-at-accent'
-              : 'text-at-text-weak border-transparent hover:text-at-text-secondary'
+              ? 'bg-at-accent-light text-at-accent'
+              : 'text-at-text-weak hover:bg-at-surface-alt'
           }`}
         >
-          <FileText className="w-4 h-4 inline-block mr-2" />
+          <FileText className="w-4 h-4 mr-2" />
           문서 작성
         </button>
         <button
           onClick={() => setActiveTab('sent')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 -mb-px ${
+          className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
             activeTab === 'sent'
-              ? 'text-at-accent border-at-accent'
-              : 'text-at-text-weak border-transparent hover:text-at-text-secondary'
+              ? 'bg-at-accent-light text-at-accent'
+              : 'text-at-text-weak hover:bg-at-surface-alt'
           }`}
         >
-          <Send className="w-4 h-4 inline-block mr-2" />
+          <Send className="w-4 h-4 mr-2" />
           보낸 문서
           {sentDocuments.length > 0 && (
             <span className="ml-2 bg-at-border text-at-text-secondary text-xs px-2 py-0.5 rounded-full">
@@ -876,13 +876,13 @@ export default function DocumentTemplates() {
         </button>
         <button
           onClick={() => setActiveTab('received')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 -mb-px ${
+          className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
             activeTab === 'received'
-              ? 'text-at-accent border-at-accent'
-              : 'text-at-text-weak border-transparent hover:text-at-text-secondary'
+              ? 'bg-at-accent-light text-at-accent'
+              : 'text-at-text-weak hover:bg-at-surface-alt'
           }`}
         >
-          <FileText className="w-4 h-4 inline-block mr-2" />
+          <FileText className="w-4 h-4 mr-2" />
           받은 문서
           {receivedDocuments.filter(d => d.status === 'pending').length > 0 && (
             <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">

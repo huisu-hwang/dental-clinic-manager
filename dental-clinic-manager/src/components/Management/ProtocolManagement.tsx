@@ -849,31 +849,29 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
   return (
     <div>
-      {/* 블루 그라데이션 헤더 - hideHeader가 true면 숨김, 스크롤 시 고정 */}
+      {/* 헤더 - hideHeader가 true면 숨김 */}
       {!hideHeader && (
-        <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">진료 프로토콜</h2>
-              <p className="text-blue-100 text-sm">Protocol Management</p>
-            </div>
+        <div className="flex items-center gap-3 pb-4 border-b border-at-border mb-4">
+          <div className="w-9 h-9 bg-at-accent-light rounded-lg flex items-center justify-center">
+            <FileText className="w-5 h-5 text-at-accent" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-at-text">진료 프로토콜</h2>
+            <p className="text-at-text-weak text-sm">Protocol Management</p>
           </div>
         </div>
       )}
 
-      <div className={hideHeader ? '' : 'bg-white border-x border-b border-at-border rounded-b-xl p-6'}>
+      <div>
         {/* 서브 탭 네비게이션 - 항상 콘텐츠 영역 내부에 표시 */}
-        <div className={`border-b border-at-border bg-at-surface-alt rounded-t-lg mb-6 px-2 pt-2 ${hideHeader ? '' : '-mx-6 -mt-6'}`}>
-          <nav className="flex space-x-1 p-2" aria-label="Tabs">
+        <div className="mb-6">
+          <nav className="flex space-x-1" aria-label="Tabs">
             <button
               onClick={() => setActiveSubTab('list')}
               className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 activeSubTab === 'list'
-                  ? 'bg-white text-at-accent shadow-sm border border-at-border'
-                  : 'text-at-text-secondary hover:text-at-text hover:bg-white/50'
+                  ? 'bg-at-accent-light text-at-accent'
+                  : 'text-at-text-weak hover:bg-at-surface-alt'
               }`}
             >
               <FileText className="w-4 h-4 mr-2" />
@@ -883,8 +881,8 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
               onClick={() => setActiveSubTab('categories')}
               className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 activeSubTab === 'categories'
-                  ? 'bg-white text-at-accent shadow-sm border border-at-border'
-                  : 'text-at-text-secondary hover:text-at-text hover:bg-white/50'
+                  ? 'bg-at-accent-light text-at-accent'
+                  : 'text-at-text-weak hover:bg-at-surface-alt'
               }`}
             >
               <Folder className="w-4 h-4 mr-2" />
@@ -895,8 +893,8 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 onClick={() => setActiveSubTab('permissions')}
                 className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                   activeSubTab === 'permissions'
-                    ? 'bg-white text-purple-700 shadow-sm border border-at-border'
-                    : 'text-at-text-secondary hover:text-at-text hover:bg-white/50'
+                    ? 'bg-at-accent-light text-at-accent'
+                    : 'text-at-text-weak hover:bg-at-surface-alt'
                 }`}
               >
                 <ShieldCheck className="w-4 h-4 mr-2" />
