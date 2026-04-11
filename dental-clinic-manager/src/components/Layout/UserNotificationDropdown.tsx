@@ -231,7 +231,7 @@ export default function UserNotificationDropdown() {
                           </p>
                           {/* 읽지 않음 표시 */}
                           {!notification.is_read && (
-                            <span className="flex-shrink-0 w-2 h-2 mt-1.5 bg-blue-500 rounded-full" />
+                            <span className="flex-shrink-0 w-2 h-2 mt-1.5 bg-at-accent-light0 rounded-full" />
                           )}
                         </div>
                         {notification.content && (

@@ -629,7 +629,7 @@ export default function HometaxSyncPanel({
                     <th className="px-4 py-2 text-right">시간</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-at-border">
                   {syncLogs.map(log => (
                     <tr key={log.id} className="hover:bg-at-surface-alt">
                       <td className="px-4 py-2 text-at-text-secondary">{DATA_TYPE_LABELS[log.data_type] || log.data_type}</td>

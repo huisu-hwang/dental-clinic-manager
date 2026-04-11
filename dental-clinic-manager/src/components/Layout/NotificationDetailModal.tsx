@@ -33,7 +33,7 @@ const CategoryIcons: Record<NotificationCategory, React.ComponentType<{ classNam
 
 // 카테고리별 색상 클래스
 const CategoryColors: Record<NotificationCategory, { icon: string; bg: string; text: string; border: string }> = {
-  general: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-at-border' },
+  general: { icon: 'text-at-accent', bg: 'bg-at-accent-light', text: 'text-at-accent', border: 'border-at-border' },
   insurance: { icon: 'text-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
   event: { icon: 'text-purple-500', bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
   birthday: { icon: 'text-pink-500', bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200' },

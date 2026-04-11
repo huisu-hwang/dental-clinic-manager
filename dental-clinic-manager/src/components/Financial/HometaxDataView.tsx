@@ -183,7 +183,7 @@ export default function HometaxDataView({ clinicId, year, month }: HometaxDataVi
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-at-border">
                     {records.slice(0, 50).map((record, rIdx) => (
                       <tr key={rIdx} className="hover:bg-at-surface-alt">
                         {columns.map(col => {

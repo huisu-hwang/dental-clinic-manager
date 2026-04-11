@@ -336,14 +336,14 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
           <button
             onClick={() => handleStatClick('all')}
-            className={`rounded-xl p-3 text-center transition-all ${statusFilter === '' ? 'bg-at-surface-alt ring-2 ring-gray-400' : 'bg-at-surface-alt hover:bg-at-surface-alt'}`}
+            className={`rounded-xl p-3 text-center transition-all ${statusFilter === '' ? 'bg-at-surface-alt ring-2 ring-at-border' : 'bg-at-surface-alt hover:bg-at-surface-alt'}`}
           >
             <p className="text-2xl font-bold text-at-text">{stats.total}</p>
             <p className="text-xs text-at-text-weak">전체</p>
           </button>
           <button
             onClick={() => handleStatClick('pending')}
-            className={`rounded-xl p-3 text-center transition-all ${statusFilter === 'pending' ? 'bg-at-border ring-2 ring-gray-500' : 'bg-at-surface-alt hover:bg-at-surface-alt'}`}
+            className={`rounded-xl p-3 text-center transition-all ${statusFilter === 'pending' ? 'bg-at-border ring-2 ring-at-border' : 'bg-at-surface-alt hover:bg-at-surface-alt'}`}
           >
             <p className="text-2xl font-bold text-at-text-secondary">{stats.pending}</p>
             <p className="text-xs text-at-text-weak">대기</p>

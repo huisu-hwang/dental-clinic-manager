@@ -521,10 +521,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-at-surface-alt">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-600">로딩 중...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-at-accent mx-auto mb-4"></div>
+          <p className="text-at-text-secondary">로딩 중...</p>
         </div>
       </div>
     )
@@ -544,9 +544,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {isLoggingOut && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
           <div className="bg-white rounded-xl shadow-2xl px-8 py-10 text-center max-w-sm w-full mx-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-6" />
-            <h3 className="text-2xl font-semibold text-slate-900 mb-2">로그아웃 중...</h3>
-            <p className="text-slate-600">조금만 기다려 주세요. 안전하게 로그아웃 처리 중입니다.</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent mx-auto mb-6" />
+            <h3 className="text-2xl font-semibold text-at-text mb-2">로그아웃 중...</h3>
+            <p className="text-at-text-secondary">조금만 기다려 주세요. 안전하게 로그아웃 처리 중입니다.</p>
           </div>
         </div>
       )}
