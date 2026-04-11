@@ -20,6 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const searchParams = useSearchParams()
   const [showProfile, setShowProfile] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -81,6 +82,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isMobileMenuOpen])
 
+  // 사이드바 축소 상태 localStorage에서 복원
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar-collapsed')
+    if (saved === 'true') setIsSidebarCollapsed(true)
+  }, [])
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev
+      localStorage.setItem('sidebar-collapsed', String(next))
+      return next
+    })
+  }
+
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ show: true, message, type })
   }
@@ -140,8 +155,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* 좌측 사이드바 - 모바일에서는 슬라이드 메뉴 */}
       <aside
         className={`
-          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3 fixed-sidebar-safe
-          transition-transform duration-300 ease-in-out
+          fixed top-14 w-64 ${isSidebarCollapsed ? 'lg:w-[68px]' : 'lg:w-56'} h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3 ${isSidebarCollapsed ? 'lg:px-1.5' : ''} fixed-sidebar-safe
+          transition-all duration-300 ease-in-out
           lg:left-[max(0px,calc(50%-700px))]
           ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
         `}
@@ -151,12 +166,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onTabChange={handleTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
           skipAutoRedirect={true}
+          isCollapsed={isSidebarCollapsed && !isMobileMenuOpen}
+          onToggleCollapse={toggleSidebarCollapse}
         />
       </aside>
 
       {/* 메인 콘텐츠 */}
       <div className="pt-14 pt-header-safe">
-        <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
+        <main className={`max-w-[1400px] mx-auto px-3 sm:px-4 ${isSidebarCollapsed ? 'lg:pl-[84px]' : 'lg:pl-60'} lg:pr-6 pt-4 pb-6 transition-[padding] duration-300`}>
           <div className="max-w-6xl">
             {children}
           </div>
