@@ -318,9 +318,9 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <LayoutGrid className="w-5 h-5 text-purple-600" />
-          <h2 className="text-lg font-semibold text-gray-900">업무 지시</h2>
+          <h2 className="text-lg font-semibold text-at-text">업무 지시</h2>
           {!loading && (
-            <span className="text-xs text-gray-400 font-normal ml-1">총 {allTasks.length}건</span>
+            <span className="text-xs text-at-text-weak font-normal ml-1">총 {allTasks.length}건</span>
           )}
         </div>
         {canCreate && (
@@ -336,63 +336,63 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
           <button
             onClick={() => handleStatClick('all')}
-            className={`rounded-lg p-3 text-center transition-all ${statusFilter === '' ? 'bg-gray-100 ring-2 ring-gray-400' : 'bg-gray-50 hover:bg-gray-100'}`}
+            className={`rounded-xl p-3 text-center transition-all ${statusFilter === '' ? 'bg-at-surface-alt ring-2 ring-gray-400' : 'bg-at-surface-alt hover:bg-at-surface-alt'}`}
           >
-            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            <p className="text-xs text-gray-500">전체</p>
+            <p className="text-2xl font-bold text-at-text">{stats.total}</p>
+            <p className="text-xs text-at-text-weak">전체</p>
           </button>
           <button
             onClick={() => handleStatClick('pending')}
-            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'pending' ? 'bg-gray-200 ring-2 ring-gray-500' : 'bg-gray-50 hover:bg-gray-100'}`}
+            className={`rounded-xl p-3 text-center transition-all ${statusFilter === 'pending' ? 'bg-gray-200 ring-2 ring-gray-500' : 'bg-at-surface-alt hover:bg-at-surface-alt'}`}
           >
-            <p className="text-2xl font-bold text-gray-600">{stats.pending}</p>
-            <p className="text-xs text-gray-500">대기</p>
+            <p className="text-2xl font-bold text-at-text-secondary">{stats.pending}</p>
+            <p className="text-xs text-at-text-weak">대기</p>
           </button>
           <button
             onClick={() => handleStatClick('in_progress')}
-            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'in_progress' ? 'bg-blue-100 ring-2 ring-blue-500' : 'bg-blue-50 hover:bg-blue-100'}`}
+            className={`rounded-xl p-3 text-center transition-all ${statusFilter === 'in_progress' ? 'bg-at-tag ring-2 ring-at-accent' : 'bg-at-accent-light hover:bg-at-tag'}`}
           >
-            <p className="text-2xl font-bold text-blue-600">{stats.in_progress}</p>
-            <p className="text-xs text-gray-500">진행 중</p>
+            <p className="text-2xl font-bold text-at-accent">{stats.in_progress}</p>
+            <p className="text-xs text-at-text-weak">진행 중</p>
           </button>
           <button
             onClick={() => handleStatClick('review')}
-            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'review' ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-purple-50 hover:bg-purple-100'}`}
+            className={`rounded-xl p-3 text-center transition-all ${statusFilter === 'review' ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-purple-50 hover:bg-purple-100'}`}
           >
             <p className="text-2xl font-bold text-purple-600">{stats.review}</p>
-            <p className="text-xs text-gray-500">검토 요청</p>
+            <p className="text-xs text-at-text-weak">검토 요청</p>
           </button>
           <button
             onClick={() => handleStatClick('completed')}
-            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'completed' ? 'bg-green-100 ring-2 ring-green-500' : 'bg-green-50 hover:bg-green-100'}`}
+            className={`rounded-xl p-3 text-center transition-all ${statusFilter === 'completed' ? 'bg-at-success-bg ring-2 ring-green-500' : 'bg-at-success-bg hover:bg-at-success-bg'}`}
           >
-            <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-            <p className="text-xs text-gray-500">완료</p>
+            <p className="text-2xl font-bold text-at-success">{stats.completed}</p>
+            <p className="text-xs text-at-text-weak">완료</p>
           </button>
           <button
             onClick={() => handleStatClick('overdue')}
-            className={`rounded-lg p-3 text-center transition-all ${statusFilter === 'overdue' ? 'bg-red-100 ring-2 ring-red-500' : 'bg-red-50 hover:bg-red-100'}`}
+            className={`rounded-xl p-3 text-center transition-all ${statusFilter === 'overdue' ? 'bg-at-error-bg ring-2 ring-red-500' : 'bg-at-error-bg hover:bg-at-error-bg'}`}
           >
-            <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
-            <p className="text-xs text-gray-500">기한 초과</p>
+            <p className="text-2xl font-bold text-at-error">{stats.overdue}</p>
+            <p className="text-xs text-at-text-weak">기한 초과</p>
           </button>
         </div>
       )}
 
       {/* 진행 중 / 완료 탭 */}
-      <div className="flex items-center gap-1 border-b border-gray-200">
+      <div className="flex items-center gap-1 border-b border-at-border">
         <button
           onClick={() => { setActiveTab('active'); setStatusFilter('') }}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'active'
               ? 'border-purple-600 text-purple-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              : 'border-transparent text-at-text-weak hover:text-at-text-secondary'
           }`}
         >
           <ClipboardList className="w-4 h-4" />
           진행 업무
           <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-            activeTab === 'active' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'
+            activeTab === 'active' ? 'bg-purple-100 text-purple-700' : 'bg-at-surface-alt text-at-text-weak'
           }`}>
             {activeTasks.length}
           </span>
@@ -401,14 +401,14 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           onClick={() => { setActiveTab('completed'); setStatusFilter('') }}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'completed'
-              ? 'border-green-600 text-green-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-green-600 text-at-success'
+              : 'border-transparent text-at-text-weak hover:text-at-text-secondary'
           }`}
         >
           <CheckCircle2 className="w-4 h-4" />
           완료된 업무
           <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-            activeTab === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+            activeTab === 'completed' ? 'bg-at-success-bg text-at-success' : 'bg-at-surface-alt text-at-text-weak'
           }`}>
             {completedTasks.length}
           </span>
@@ -419,11 +419,11 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
       {activeTab === 'active' && !statusFilter && (
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-500" />
+            <Filter className="w-4 h-4 text-at-text-weak" />
             <select
               value={selectedPriority}
               onChange={(e) => setSelectedPriority(e.target.value as TaskPriority | '')}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent"
             >
               <option value="">전체 우선순위</option>
               {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
@@ -433,7 +433,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           </div>
           <form onSubmit={handleSearch} className="flex-1 flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
               <Input
                 type="text"
                 placeholder="업무명 검색..."
@@ -451,11 +451,11 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
       {statusFilter && statusFilter !== 'completed' && (
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-500" />
+            <Filter className="w-4 h-4 text-at-text-weak" />
             <select
               value={selectedPriority}
               onChange={(e) => setSelectedPriority(e.target.value as TaskPriority | '')}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent"
             >
               <option value="">전체 우선순위</option>
               {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
@@ -465,7 +465,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           </div>
           <form onSubmit={handleSearch} className="flex-1 flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
               <Input
                 type="text"
                 placeholder="업무명 검색..."
@@ -485,11 +485,11 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           <div className="flex flex-col sm:flex-row gap-3">
             {/* 기간 필터 */}
             <div className="flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-gray-500" />
+              <CalendarDays className="w-4 h-4 text-at-text-weak" />
               <select
                 value={completedPeriod}
                 onChange={(e) => setCompletedPeriod(e.target.value as CompletedPeriod)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 {Object.entries(COMPLETED_PERIOD_LABELS).map(([key, label]) => (
                   <option key={key} value={key}>{label}</option>
@@ -499,11 +499,11 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
 
             {/* 담당자 필터 */}
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-500" />
+              <Users className="w-4 h-4 text-at-text-weak" />
               <select
                 value={assigneeFilter}
                 onChange={(e) => setAssigneeFilter(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">전체 담당자</option>
                 {completedAssignees.map(([id, name]) => (
@@ -515,7 +515,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
             {/* 검색 */}
             <div className="flex-1 flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
                 <Input
                   type="text"
                   placeholder="업무명, 담당자, 지시자 검색..."
@@ -528,7 +528,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           </div>
 
           {/* 필터 결과 요약 */}
-          <div className="flex items-center gap-2 text-sm text-gray-500">
+          <div className="flex items-center gap-2 text-sm text-at-text-weak">
             <span>
               {filteredCompletedTasks.length === completedTasks.length
                 ? `완료된 업무 ${completedTasks.length}건`
@@ -541,7 +541,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
                   setAssigneeFilter('')
                   setCompletedSearchQuery('')
                 }}
-                className="text-green-600 hover:text-green-700 font-medium underline underline-offset-2"
+                className="text-at-success hover:text-at-success font-medium underline underline-offset-2"
               >
                 필터 초기화
               </button>
@@ -552,7 +552,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
 
       {/* 에러 표시 */}
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 text-red-700 rounded-lg">
+        <div className="flex items-center gap-2 p-4 bg-at-error-bg text-at-error rounded-xl">
           <AlertCircle className="w-5 h-5" />
           <span>{error}</span>
         </div>
@@ -564,7 +564,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500" />
         </div>
       ) : displayedTasks.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
+        <div className="text-center py-16 text-at-text-weak">
           <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mx-auto mb-4">
             {activeTab === 'active' ? (
               <ListTodo className="w-8 h-8 text-sky-300" />
@@ -572,14 +572,14 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
               <CheckCircle2 className="w-8 h-8 text-green-300" />
             )}
           </div>
-          <p className="font-medium text-gray-600 mb-1">
+          <p className="font-medium text-at-text-secondary mb-1">
             {statusFilter && statusFilter !== 'overdue'
               ? `${TASK_STATUS_LABELS[statusFilter as TaskStatus]} 상태의 업무가 없습니다`
               : statusFilter === 'overdue'
                 ? '기한 초과된 업무가 없습니다'
                 : activeTab === 'active' ? '진행 중인 업무가 없습니다' : '완료된 업무가 없습니다'}
           </p>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-at-text-weak">
             {statusFilter
               ? '다른 상태를 선택하거나 전체 보기를 눌러주세요.'
               : activeTab === 'active' ? '새로운 업무가 할당되면 여기에 표시됩니다.' : '업무가 완료되면 여기에 표시됩니다.'}

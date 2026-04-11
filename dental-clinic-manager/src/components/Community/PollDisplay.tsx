@@ -41,10 +41,10 @@ export default function PollDisplay({ poll, profileId, onVoted }: PollDisplayPro
   const totalVotes = poll.total_votes || 0
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4">
+    <div className="border border-at-border rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
-        <BarChart3 className="w-4 h-4 text-indigo-500" />
-        <h4 className="text-sm font-semibold text-gray-900">{poll.question}</h4>
+        <BarChart3 className="w-4 h-4 text-at-accent" />
+        <h4 className="text-sm font-semibold text-at-text">{poll.question}</h4>
       </div>
 
       <div className="space-y-2">
@@ -57,30 +57,30 @@ export default function PollDisplay({ poll, profileId, onVoted }: PollDisplayPro
               key={option.id}
               onClick={() => handleOptionToggle(option.id)}
               disabled={showResults}
-              className={`w-full text-left rounded-lg border transition-colors ${
+              className={`w-full text-left rounded-xl border transition-colors ${
                 isSelected
-                  ? 'border-indigo-300 bg-indigo-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-at-accent bg-at-accent-light'
+                  : 'border-at-border hover:border-at-border'
               } ${showResults ? 'cursor-default' : 'cursor-pointer'}`}
             >
               <div className="relative px-3 py-2">
                 {showResults && (
                   <div
-                    className="absolute inset-0 bg-indigo-100 rounded-lg transition-all"
+                    className="absolute inset-0 bg-at-tag rounded-xl transition-all"
                     style={{ width: `${percentage}%` }}
                   />
                 )}
                 <div className="relative flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {!showResults && (
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'}`}>
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-at-accent bg-at-accent' : 'border-at-border'}`}>
                         {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                       </div>
                     )}
-                    <span className="text-sm text-gray-700">{option.option_text}</span>
+                    <span className="text-sm text-at-text-secondary">{option.option_text}</span>
                   </div>
                   {showResults && (
-                    <span className="text-xs font-medium text-gray-500">{percentage}% ({option.vote_count}표)</span>
+                    <span className="text-xs font-medium text-at-text-weak">{percentage}% ({option.vote_count}표)</span>
                   )}
                 </div>
               </div>
@@ -96,7 +96,7 @@ export default function PollDisplay({ poll, profileId, onVoted }: PollDisplayPro
         </Button>
       )}
 
-      <p className="text-xs text-gray-400 mt-2 text-center">
+      <p className="text-xs text-at-text-weak mt-2 text-center">
         {totalVotes}명 참여
         {poll.is_multiple_choice && ' · 복수 선택 가능'}
         {poll.ends_at && ` · ${isExpired ? '투표 종료' : `${new Date(poll.ends_at).toLocaleDateString('ko-KR')}까지`}`}

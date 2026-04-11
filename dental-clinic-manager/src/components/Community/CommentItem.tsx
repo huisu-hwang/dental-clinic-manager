@@ -63,24 +63,24 @@ export default function CommentItem({ comment, profileId, postId, onReply, onDel
   }
 
   return (
-    <div className={`${depth > 0 ? 'ml-8 border-l-2 border-gray-100 pl-4' : ''}`}>
+    <div className={`${depth > 0 ? 'ml-8 border-l-2 border-at-border pl-4' : ''}`}>
       <div className="py-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
             {comment.profile && <ProfileCard profile={comment.profile} compact />}
-            <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
+            <span className="text-xs text-at-text-weak">{formatDate(comment.created_at)}</span>
           </div>
           {isOwner && (
             <div className="relative">
-              <button onClick={() => setShowMenu(!showMenu)} className="p-1 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowMenu(!showMenu)} className="p-1 text-at-text-weak hover:text-at-text-secondary">
                 <MoreVertical className="w-3.5 h-3.5" />
               </button>
               {showMenu && (
-                <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-20 w-24">
-                  <button onClick={() => { setEditing(true); setShowMenu(false) }} className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50">
+                <div className="absolute right-0 mt-1 bg-white border border-at-border rounded-xl shadow-at-card py-1 z-20 w-24">
+                  <button onClick={() => { setEditing(true); setShowMenu(false) }} className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-at-text-secondary hover:bg-at-surface-hover">
                     <Edit3 className="w-3 h-3" />수정
                   </button>
-                  <button onClick={() => { onDelete(comment.id); setShowMenu(false) }} className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">
+                  <button onClick={() => { onDelete(comment.id); setShowMenu(false) }} className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-at-error hover:bg-at-error-bg">
                     <Trash2 className="w-3 h-3" />삭제
                   </button>
                 </div>
@@ -95,26 +95,26 @@ export default function CommentItem({ comment, profileId, postId, onReply, onDel
               type="text"
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 border border-at-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent"
             />
             <Button size="sm" onClick={handleEdit}>저장</Button>
             <Button size="sm" variant="outline" onClick={() => setEditing(false)}>취소</Button>
           </div>
         ) : (
-          <p className="text-sm text-gray-700 mt-1">{comment.content}</p>
+          <p className="text-sm text-at-text-secondary mt-1">{comment.content}</p>
         )}
 
         <div className="flex items-center gap-3 mt-2">
-          <button onClick={handleLike} className={`flex items-center gap-1 text-xs ${localIsLiked ? 'text-red-500' : 'text-gray-400 hover:text-gray-600'}`}>
+          <button onClick={handleLike} className={`flex items-center gap-1 text-xs ${localIsLiked ? 'text-red-500' : 'text-at-text-weak hover:text-at-text-secondary'}`}>
             <Heart className={`w-3 h-3 ${localIsLiked ? 'fill-red-500' : ''}`} />{localLikeCount > 0 && localLikeCount}
           </button>
           {profileId && depth === 0 && (
-            <button onClick={() => setShowReply(!showReply)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+            <button onClick={() => setShowReply(!showReply)} className="flex items-center gap-1 text-xs text-at-text-weak hover:text-at-text-secondary">
               <MessageSquare className="w-3 h-3" />답글
             </button>
           )}
           {profileId && !isOwner && (
-            <button onClick={() => onReport(comment.id)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+            <button onClick={() => onReport(comment.id)} className="flex items-center gap-1 text-xs text-at-text-weak hover:text-at-text-secondary">
               <Flag className="w-3 h-3" />신고
             </button>
           )}

@@ -167,11 +167,11 @@ export default function TaskDetail({
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <nav className="flex items-center text-sm">
-          <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+          <button onClick={onBack} className="text-at-accent hover:text-at-accent font-medium transition-colors">
             업무 지시
           </button>
-          <span className="mx-2 text-gray-400">&rsaquo;</span>
-          <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{task.title}</span>
+          <span className="mx-2 text-at-text-weak">&rsaquo;</span>
+          <span className="text-at-text-weak truncate max-w-[200px] sm:max-w-[400px]">{task.title}</span>
         </nav>
         {(onEdit || onDelete) && (
           <div className="flex items-center gap-2">
@@ -185,7 +185,7 @@ export default function TaskDetail({
               <Button
                 variant="outline"
                 onClick={onDelete}
-                className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="flex items-center gap-2 text-at-error hover:text-at-error hover:bg-at-error-bg"
               >
                 <Trash2 className="w-4 h-4" />
                 삭제
@@ -196,9 +196,9 @@ export default function TaskDetail({
       </div>
 
       {/* 업무 내용 */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-at-border overflow-hidden">
         {/* 제목 영역 */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-at-border">
           <div className="flex items-center gap-2 mb-3">
             <span className={`text-xs px-2 py-0.5 rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
               {TASK_PRIORITY_LABELS[task.priority]}
@@ -208,38 +208,38 @@ export default function TaskDetail({
               {TASK_STATUS_LABELS[task.status]}
             </span>
             {isOverdue() && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-at-error-bg text-at-error">
                 기한 초과
               </span>
             )}
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-4">{task.title}</h1>
+          <h1 className="text-xl font-bold text-at-text mb-4">{task.title}</h1>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-gray-500">담당자</span>
-              <p className="flex items-center gap-1 font-medium text-gray-900 mt-1">
+              <span className="text-at-text-weak">담당자</span>
+              <p className="flex items-center gap-1 font-medium text-at-text mt-1">
                 <User className="w-4 h-4" />
                 {task.assignee_name}
               </p>
             </div>
             <div>
-              <span className="text-gray-500">할당자</span>
-              <p className="flex items-center gap-1 font-medium text-gray-900 mt-1">
+              <span className="text-at-text-weak">할당자</span>
+              <p className="flex items-center gap-1 font-medium text-at-text mt-1">
                 <User className="w-4 h-4" />
                 {task.assigner_name}
               </p>
             </div>
             <div>
-              <span className="text-gray-500">생성일</span>
-              <p className="flex items-center gap-1 font-medium text-gray-900 mt-1">
+              <span className="text-at-text-weak">생성일</span>
+              <p className="flex items-center gap-1 font-medium text-at-text mt-1">
                 <Clock className="w-4 h-4" />
                 {formatShortDate(task.created_at)}
               </p>
             </div>
             <div>
-              <span className="text-gray-500">마감일</span>
-              <p className={`flex items-center gap-1 font-medium mt-1 ${isOverdue() ? 'text-red-600' : 'text-gray-900'}`}>
+              <span className="text-at-text-weak">마감일</span>
+              <p className={`flex items-center gap-1 font-medium mt-1 ${isOverdue() ? 'text-at-error' : 'text-at-text'}`}>
                 <Calendar className="w-4 h-4" />
                 {task.due_date ? formatShortDate(task.due_date) : '미정'}
               </p>
@@ -248,8 +248,8 @@ export default function TaskDetail({
 
           {/* 상태 변경 버튼 (담당자, 원장, 관리자) */}
           {(isAssignee || isOwner || onEdit) && task.status !== 'cancelled' && task.status !== 'completed' && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-500 mb-2">상태 변경</p>
+            <div className="mt-4 pt-4 border-t border-at-border">
+              <p className="text-sm text-at-text-weak mb-2">상태 변경</p>
               <div className="flex flex-wrap gap-2">
                 {/* === 담당자/원장 워크플로우 === */}
                 {/* 담당자 또는 원장: 업무 시작 (대기 → 진행 중) */}
@@ -258,7 +258,7 @@ export default function TaskDetail({
                     variant="outline"
                     size="sm"
                     onClick={() => onStatusUpdate('in_progress')}
-                    className="text-blue-600"
+                    className="text-at-accent"
                   >
                     <Loader2 className="w-4 h-4 mr-1" />
                     업무 시작
@@ -298,7 +298,7 @@ export default function TaskDetail({
                       variant="outline"
                       size="sm"
                       onClick={() => onStatusUpdate('completed')}
-                      className="text-green-600"
+                      className="text-at-success"
                     >
                       <CheckCircle2 className="w-4 h-4 mr-1" />
                       완료 승인
@@ -307,7 +307,7 @@ export default function TaskDetail({
                       variant="outline"
                       size="sm"
                       onClick={() => onStatusUpdate('in_progress')}
-                      className="text-blue-600"
+                      className="text-at-accent"
                     >
                       <Loader2 className="w-4 h-4 mr-1" />
                       반려 (재작업)
@@ -320,7 +320,7 @@ export default function TaskDetail({
                     variant="outline"
                     size="sm"
                     onClick={() => onStatusUpdate('completed')}
-                    className="text-green-600"
+                    className="text-at-success"
                   >
                     <CheckCircle2 className="w-4 h-4 mr-1" />
                     완료 처리
@@ -335,7 +335,7 @@ export default function TaskDetail({
                         variant="outline"
                         size="sm"
                         onClick={() => onStatusUpdate('pending')}
-                        className="text-gray-600"
+                        className="text-at-text-secondary"
                       >
                         <Circle className="w-4 h-4 mr-1" />
                         대기로 변경
@@ -346,7 +346,7 @@ export default function TaskDetail({
                         variant="outline"
                         size="sm"
                         onClick={() => onStatusUpdate('on_hold')}
-                        className="text-yellow-600"
+                        className="text-at-warning"
                       >
                         <Pause className="w-4 h-4 mr-1" />
                         보류
@@ -361,10 +361,10 @@ export default function TaskDetail({
 
         {/* 설명 */}
         {task.description && (
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">상세 내용</h3>
+          <div className="p-6 border-b border-at-border">
+            <h3 className="text-sm font-medium text-at-text-secondary mb-2">상세 내용</h3>
             <div
-              className="text-gray-600 prose prose-sm max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1"
+              className="text-at-text-secondary prose prose-sm max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(task.description) }}
             />
           </div>
@@ -372,10 +372,10 @@ export default function TaskDetail({
 
         {/* 진행률 */}
         {task.status !== 'cancelled' && (
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-at-border">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-700">진행률</h3>
-              <span className="text-sm font-medium text-gray-900">{progress}%</span>
+              <h3 className="text-sm font-medium text-at-text-secondary">진행률</h3>
+              <span className="text-sm font-medium text-at-text">{progress}%</span>
             </div>
             <input
               type="range"
@@ -384,7 +384,7 @@ export default function TaskDetail({
               step="5"
               value={progress}
               onChange={(e) => handleProgressChange(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-gray-200 rounded-xl appearance-none cursor-pointer"
               disabled={!isAssignee && !onEdit}
             />
             {progress !== task.progress && (
@@ -403,7 +403,7 @@ export default function TaskDetail({
 
         {/* 댓글 섹션 */}
         <div className="p-6">
-          <h3 className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-4">
+          <h3 className="flex items-center gap-2 text-sm font-medium text-at-text-secondary mb-4">
             <MessageCircle className="w-4 h-4" />
             댓글 ({comments.length})
           </h3>
@@ -411,31 +411,31 @@ export default function TaskDetail({
           {/* 댓글 목록 */}
           {loadingComments ? (
             <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-at-accent"></div>
             </div>
           ) : comments.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">댓글이 없습니다.</p>
+            <p className="text-sm text-at-text-weak text-center py-4">댓글이 없습니다.</p>
           ) : (
             <div className="space-y-4 mb-4">
               {comments.map((comment) => (
                 <div key={comment.id} className="flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-gray-500" />
+                    <User className="w-4 h-4 text-at-text-weak" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">{comment.author_name}</span>
-                      <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
+                      <span className="text-sm font-medium text-at-text">{comment.author_name}</span>
+                      <span className="text-xs text-at-text-weak">{formatDate(comment.created_at)}</span>
                       {comment.author_id === currentUserId && (
                         <button
                           onClick={() => handleDeleteComment(comment.id)}
-                          className="text-xs text-red-500 hover:text-red-700"
+                          className="text-xs text-red-500 hover:text-at-error"
                         >
                           삭제
                         </button>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{comment.content}</p>
+                    <p className="text-sm text-at-text-secondary mt-1 whitespace-pre-wrap">{comment.content}</p>
                   </div>
                 </div>
               ))}
@@ -449,7 +449,7 @@ export default function TaskDetail({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="댓글을 입력하세요..."
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent"
             />
             <Button type="submit" disabled={submittingComment || !newComment.trim()}>
               <Send className="w-4 h-4" />

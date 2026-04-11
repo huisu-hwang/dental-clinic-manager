@@ -31,7 +31,7 @@ export default function WorkerStatusBanner({
   // 확인 중
   if (!initialCheckDone) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-500">
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-at-surface-alt border border-at-border rounded-xl text-sm text-at-text-weak">
         <Loader2 className="w-4 h-4 animate-spin shrink-0" />
         <span>{info.name} 상태 확인 중...</span>
       </div>
@@ -41,13 +41,13 @@ export default function WorkerStatusBanner({
   // 오프라인
   if (workerOnline === false) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-at-warning-bg border border-amber-200 rounded-xl text-sm text-at-warning">
         <AlertTriangle className="w-4 h-4 shrink-0" />
         <span className="flex-1">{info.offlineMessage}</span>
         {onRetry && (
           <button
             onClick={onRetry}
-            className="ml-2 p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-100 rounded transition-colors"
+            className="ml-2 p-1 text-at-warning hover:text-amber-800 hover:bg-amber-100 rounded transition-colors"
             title="다시 확인"
           >
             <RefreshCw className="w-4 h-4" />

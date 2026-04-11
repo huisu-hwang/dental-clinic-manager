@@ -37,7 +37,6 @@ export default function ContributionVoteDisplay({
     setLoading(true)
     setError(null)
 
-    // 1. 투표 세션 조회
     const { data: voteData, error: voteError } = await telegramBoardVoteService.getVote(postId)
     if (voteError || !voteData) {
       setError(voteError || '투표 정보를 불러올 수 없습니다.')
@@ -46,17 +45,14 @@ export default function ContributionVoteDisplay({
     }
     setVote(voteData)
 
-    // 2. 결과 조회
     const { data: resultsData } = await telegramBoardVoteService.getResults(voteData.id)
     if (resultsData) {
       setResults(resultsData)
-      // 기존 선택 복원
       if (resultsData.my_selections?.length) {
         setSelectedCandidates(new Set(resultsData.my_selections))
       }
     }
 
-    // 3. 멤버 목록 조회 (투표 대상)
     const { data: membersData } = await telegramMemberService.getMembers(groupId)
     if (membersData) {
       setMembers(membersData)
@@ -106,7 +102,6 @@ export default function ContributionVoteDisplay({
       return
     }
 
-    // 결과 새로고침
     await fetchData()
     setVoting(false)
   }
@@ -143,8 +138,8 @@ export default function ContributionVoteDisplay({
 
   if (error && !vote) {
     return (
-      <div className="text-center py-6 text-gray-500 text-sm">
-        <XCircle className="w-8 h-8 mx-auto mb-2 text-red-400" />
+      <div className="text-center py-6 text-at-text-secondary text-sm">
+        <XCircle className="w-8 h-8 mx-auto mb-2 text-at-error" />
         {error}
       </div>
     )
@@ -158,13 +153,11 @@ export default function ContributionVoteDisplay({
   const canSeeResults = results.can_see_results
   const maxVotes = vote.max_votes_per_person
 
-  // 투표 가능한 멤버 (본인 제외 옵션)
   const candidates = members.filter(m => {
     if (!vote.allow_self_vote && m.user_id === currentUserId) return false
     return true
   })
 
-  // 결과에서 show_top_n 적용 (종료 시에는 전체 공개)
   const displayResults = canSeeResults && results.results
     ? (isClosed || !vote.show_top_n)
       ? results.results
@@ -179,29 +172,29 @@ export default function ContributionVoteDisplay({
     if (rank === 1) return <Trophy className="w-4 h-4 text-yellow-500" />
     if (rank === 2) return <Trophy className="w-4 h-4 text-gray-400" />
     if (rank === 3) return <Trophy className="w-4 h-4 text-amber-700" />
-    return <span className="text-xs text-gray-400 w-4 text-center">{rank}</span>
+    return <span className="text-xs text-at-text-weak w-4 text-center">{rank}</span>
   }
 
   return (
-    <div className="mt-4 border border-orange-200 rounded-xl overflow-hidden">
+    <div className="mt-4 border border-at-border rounded-xl overflow-hidden">
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 bg-orange-50 border-b border-orange-200">
+      <div className="flex items-center justify-between px-4 py-3 bg-at-surface-alt border-b border-at-border">
         <div className="flex items-center gap-2">
           <Vote className="w-4 h-4 text-orange-600" />
-          <span className="text-sm font-semibold text-orange-900">기여도 투표</span>
+          <span className="text-sm font-semibold text-at-text">기여도 투표</span>
           {isClosed ? (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">종료</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-at-surface-alt text-at-text-secondary">종료</span>
           ) : (
             <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">진행 중</span>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-at-text-weak">
             {results.total_voters}명 참여
           </span>
           <button
             onClick={fetchData}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-at-text-weak hover:text-at-text-secondary transition-colors"
             title="새로고침"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -210,43 +203,38 @@ export default function ContributionVoteDisplay({
       </div>
 
       <div className="p-4 space-y-4">
-        {/* 종료 배너 */}
         {isClosed && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600">
+          <div className="flex items-center gap-2 px-3 py-2 bg-at-surface-alt rounded-xl text-sm text-at-text-secondary">
             <Lock className="w-4 h-4" />
             투표가 종료되었습니다.
           </div>
         )}
 
-        {/* 투표 설정 정보 */}
-        <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-          <span className="px-2 py-1 bg-gray-100 rounded-full">1인당 {maxVotes}명 선택</span>
-          {vote.is_anonymous && <span className="px-2 py-1 bg-gray-100 rounded-full">비밀 투표</span>}
+        <div className="flex flex-wrap gap-2 text-xs text-at-text-weak">
+          <span className="px-2 py-1 bg-at-surface-alt rounded-full">1인당 {maxVotes}명 선택</span>
+          {vote.is_anonymous && <span className="px-2 py-1 bg-at-surface-alt rounded-full">비밀 투표</span>}
           {vote.ends_at && (
-            <span className="px-2 py-1 bg-gray-100 rounded-full flex items-center gap-1">
+            <span className="px-2 py-1 bg-at-surface-alt rounded-full flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {new Date(vote.ends_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 마감
             </span>
           )}
         </div>
 
-        {/* 에러 메시지 */}
         {error && (
-          <div className="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm">
+          <div className="px-3 py-2 bg-at-error-bg text-at-error rounded-xl text-sm">
             {error}
           </div>
         )}
 
-        {/* 투표 UI (진행 중 + 미투표 또는 재투표) */}
         {!isClosed && currentUserId && (
           <div>
-            {/* 멤버 선택 체크박스 */}
             <div className="space-y-1">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-at-text-secondary">
                   투표할 멤버를 선택하세요
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-at-text-weak">
                   {selectedCandidates.size}/{maxVotes}
                 </span>
               </div>
@@ -259,16 +247,16 @@ export default function ContributionVoteDisplay({
                       key={member.user_id}
                       onClick={() => handleToggleCandidate(member.user_id)}
                       disabled={isDisabled}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-all ${
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-left transition-all ${
                         isSelected
                           ? 'bg-orange-100 border-2 border-orange-400 text-orange-800 font-medium'
                           : isDisabled
-                            ? 'bg-gray-50 border border-gray-200 text-gray-400 cursor-not-allowed'
-                            : 'bg-white border border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'
+                            ? 'bg-at-surface-alt border border-at-border text-at-text-weak cursor-not-allowed'
+                            : 'bg-white border border-at-border text-at-text-secondary hover:border-orange-300 hover:bg-orange-50'
                       }`}
                     >
                       <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        isSelected ? 'bg-orange-500' : 'bg-gray-200'
+                        isSelected ? 'bg-orange-500' : 'bg-at-surface-alt'
                       }`}>
                         {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                       </div>
@@ -279,7 +267,6 @@ export default function ContributionVoteDisplay({
               </div>
             </div>
 
-            {/* 투표/재투표 버튼 */}
             <div className="flex items-center gap-2 mt-3">
               <Button
                 size="sm"
@@ -298,7 +285,7 @@ export default function ContributionVoteDisplay({
               {hasVoted && (
                 <button
                   onClick={handleRevote}
-                  className="text-xs text-gray-400 hover:text-gray-600"
+                  className="text-xs text-at-text-weak hover:text-at-text-secondary"
                 >
                   이전 선택 복원
                 </button>
@@ -307,9 +294,8 @@ export default function ContributionVoteDisplay({
           </div>
         )}
 
-        {/* 결과 비공개 안내 */}
         {!canSeeResults && !isClosed && (
-          <div className="text-center py-4 text-sm text-gray-400">
+          <div className="text-center py-4 text-sm text-at-text-weak">
             {vote.result_visibility === 'after_vote' && !hasVoted && (
               <p>투표 후 결과를 확인할 수 있습니다.</p>
             )}
@@ -323,21 +309,19 @@ export default function ContributionVoteDisplay({
           </div>
         )}
 
-        {/* 본인 순위 (after_end + 투표 완료 + 진행 중) */}
         {vote.result_visibility === 'after_end' && hasVoted && !isClosed && results.my_rank && (
-          <div className="px-3 py-2 bg-orange-50 rounded-lg text-sm text-orange-800">
+          <div className="px-3 py-2 bg-orange-50 rounded-xl text-sm text-orange-800">
             현재 나의 순위: <strong>{results.my_rank}위</strong> ({results.my_votes}표)
           </div>
         )}
 
-        {/* 결과 바 차트 */}
         {canSeeResults && displayResults.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1">
+            <h4 className="text-sm font-medium text-at-text-secondary flex items-center gap-1">
               <Trophy className="w-4 h-4 text-orange-500" />
               투표 결과
               {vote.show_top_n && !isClosed && (
-                <span className="text-xs text-gray-400 font-normal">(상위 {vote.show_top_n}명)</span>
+                <span className="text-xs text-at-text-weak font-normal">(상위 {vote.show_top_n}명)</span>
               )}
             </h4>
             <div className="space-y-1.5">
@@ -348,15 +332,15 @@ export default function ContributionVoteDisplay({
                 return (
                   <div
                     key={candidate.user_id}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-                      isMe ? 'bg-orange-50 border border-orange-200' : 'bg-gray-50'
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl ${
+                      isMe ? 'bg-orange-50 border border-orange-200' : 'bg-at-surface-alt'
                     }`}
                   >
                     <div className="w-5 flex-shrink-0">{getRankIcon(candidate.rank)}</div>
-                    <span className={`text-sm w-20 truncate flex-shrink-0 ${isMe ? 'font-bold text-orange-800' : 'text-gray-700'}`}>
+                    <span className={`text-sm w-20 truncate flex-shrink-0 ${isMe ? 'font-bold text-orange-800' : 'text-at-text-secondary'}`}>
                       {candidate.user_name}{isMe && ' (나)'}
                     </span>
-                    <div className="flex-1 h-5 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="flex-1 h-5 bg-at-border rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           candidate.rank === 1 ? 'bg-yellow-400' :
@@ -367,7 +351,7 @@ export default function ContributionVoteDisplay({
                         style={{ width: `${Math.max(barWidth, 2)}%` }}
                       />
                     </div>
-                    <span className="text-sm font-medium text-gray-600 w-8 text-right flex-shrink-0">
+                    <span className="text-sm font-medium text-at-text-secondary w-8 text-right flex-shrink-0">
                       {candidate.vote_count}
                     </span>
                   </div>
@@ -375,24 +359,22 @@ export default function ContributionVoteDisplay({
               })}
             </div>
 
-            {/* 본인 순위 (show_top_n 밖이면 별도 표시) */}
             {results.my_rank && vote.show_top_n && !isClosed && results.my_rank > vote.show_top_n && (
-              <div className="px-3 py-2 bg-orange-50 rounded-lg text-sm text-orange-800 border border-orange-200">
+              <div className="px-3 py-2 bg-orange-50 rounded-xl text-sm text-orange-800 border border-orange-200">
                 나의 순위: <strong>{results.my_rank}위</strong> ({results.my_votes}표)
               </div>
             )}
           </div>
         )}
 
-        {/* 투표 종료 버튼 */}
         {canClose && (
-          <div className="pt-2 border-t border-gray-100">
+          <div className="pt-2 border-t border-at-border">
             <Button
               variant="outline"
               size="sm"
               onClick={handleCloseVote}
               disabled={closing}
-              className="text-red-500 border-red-200 hover:bg-red-50"
+              className="text-at-error border-at-border hover:bg-at-error-bg"
             >
               {closing ? (
                 <><Loader2 className="w-4 h-4 animate-spin mr-1" />종료 중...</>

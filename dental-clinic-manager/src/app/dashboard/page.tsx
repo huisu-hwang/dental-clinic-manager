@@ -362,7 +362,7 @@ export default function DashboardPage() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent mx-auto mb-4"></div>
           <p>데이터를 불러오는 중...</p>
         </div>
       </div>
@@ -396,7 +396,7 @@ export default function DashboardPage() {
           {activeTab === 'attendance' && (
             <div className="space-y-4">
               {/* 출근 관리 서브 탭 네비게이션 - 스크롤 시 고정 */}
-              <div className="sticky top-14 z-10 bg-white border-b border-gray-200 rounded-t-lg">
+              <div className="sticky top-14 z-10 bg-white border-b border-at-border rounded-t-lg">
                 <div className="px-4 sm:px-6 lg:px-8">
                   <nav className="flex space-x-8 overflow-x-auto" aria-label="Tabs">
                     {canCheckIn && (
@@ -404,8 +404,8 @@ export default function DashboardPage() {
                         onClick={() => setAttendanceSubTab('checkin')}
                         className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                           attendanceSubTab === 'checkin'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-at-accent text-at-accent'
+                            : 'border-transparent text-at-text-weak hover:text-at-text-secondary hover:border-at-border'
                         }`}
                       >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,8 +420,8 @@ export default function DashboardPage() {
                         onClick={() => setAttendanceSubTab('history')}
                         className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                           attendanceSubTab === 'history'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-at-accent text-at-accent'
+                            : 'border-transparent text-at-text-weak hover:text-at-text-secondary hover:border-at-border'
                         }`}
                       >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -436,8 +436,8 @@ export default function DashboardPage() {
                         onClick={() => setAttendanceSubTab('stats')}
                         className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                           attendanceSubTab === 'stats'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-at-accent text-at-accent'
+                            : 'border-transparent text-at-text-weak hover:text-at-text-secondary hover:border-at-border'
                         }`}
                       >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -452,8 +452,8 @@ export default function DashboardPage() {
                         onClick={() => setAttendanceSubTab('schedule')}
                         className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                           attendanceSubTab === 'schedule'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-at-accent text-at-accent'
+                            : 'border-transparent text-at-text-weak hover:text-at-text-secondary hover:border-at-border'
                         }`}
                       >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -468,8 +468,8 @@ export default function DashboardPage() {
                         onClick={() => setAttendanceSubTab('team')}
                         className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                           attendanceSubTab === 'team'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-at-accent text-at-accent'
+                            : 'border-transparent text-at-text-weak hover:text-at-text-secondary hover:border-at-border'
                         }`}
                       >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -484,8 +484,8 @@ export default function DashboardPage() {
                         onClick={() => setAttendanceSubTab('qr')}
                         className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                           attendanceSubTab === 'qr'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-at-accent text-at-accent'
+                            : 'border-transparent text-at-text-weak hover:text-at-text-secondary hover:border-at-border'
                         }`}
                       >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -499,7 +499,7 @@ export default function DashboardPage() {
               </div>
 
               {/* 출근 관리 콘텐츠 */}
-              <div className="bg-white rounded-b-lg shadow-sm border border-slate-200 p-6">
+              <div className="bg-white rounded-b-lg shadow-at-card border border-at-border p-6">
                 {attendanceSubTab === 'checkin' && canCheckIn && <CheckInOut />}
                 {attendanceSubTab === 'history' && canViewHistory && <AttendanceHistory />}
                 {attendanceSubTab === 'stats' && canViewStats && <AttendanceStats />}
@@ -512,7 +512,7 @@ export default function DashboardPage() {
 
           {/* 연차 관리 */}
           {activeTab === 'leave' && user && (
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <div className="bg-white rounded-xl shadow-at-card border border-at-border p-6">
               <LeaveManagement currentUser={user} />
             </div>
           )}
@@ -521,9 +521,9 @@ export default function DashboardPage() {
           {activeTab === 'stats' && (
             <div className="space-y-0">
               {/* 통계 헤더 - 스크롤 시 고정 */}
-              <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
+              <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-at-card">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                     <BarChart3 className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -534,14 +534,14 @@ export default function DashboardPage() {
               </div>
 
               {/* 통계 서브 탭 네비게이션 - 스크롤 시 고정 */}
-              <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
+              <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-at-border bg-at-surface-alt">
                 <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
                   <button
                     onClick={() => setStatsSubTab('weekly')}
-                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                       statsSubTab === 'weekly'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                        ? 'bg-white text-at-accent shadow-at-card'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
                     }`}
                   >
                     <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -551,10 +551,10 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => setStatsSubTab('monthly')}
-                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                       statsSubTab === 'monthly'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                        ? 'bg-white text-at-accent shadow-at-card'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
                     }`}
                   >
                     <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -564,10 +564,10 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => setStatsSubTab('annual')}
-                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                       statsSubTab === 'annual'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                        ? 'bg-white text-at-accent shadow-at-card'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
                     }`}
                   >
                     <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -578,10 +578,10 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => setStatsSubTab('custom')}
-                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                       statsSubTab === 'custom'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                        ? 'bg-white text-at-accent shadow-at-card'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
                     }`}
                   >
                     <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -593,16 +593,16 @@ export default function DashboardPage() {
               </div>
 
               {/* 통계 콘텐츠 */}
-              <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
+              <div className="bg-white border-x border-b border-at-border rounded-b-xl p-6">
                 {statsSubTab === 'weekly' && (
                   <>
                     <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="week-selector" className="mr-2 text-sm text-slate-600">주 선택:</label>
+                        <label htmlFor="week-selector" className="mr-2 text-sm text-at-text-secondary">주 선택:</label>
                         <input
                           type="week"
                           id="week-selector"
-                          className="p-2 border border-slate-300 rounded-md text-sm"
+                          className="p-2 border border-at-border rounded-md text-sm"
                           value={weekSelector}
                           onChange={(e) => setWeekSelector(e.target.value)}
                         />
@@ -630,11 +630,11 @@ export default function DashboardPage() {
                   <>
                     <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="month-selector" className="mr-2 text-sm text-slate-600">월 선택:</label>
+                        <label htmlFor="month-selector" className="mr-2 text-sm text-at-text-secondary">월 선택:</label>
                         <input
                           type="month"
                           id="month-selector"
-                          className="p-2 border border-slate-300 rounded-md text-sm"
+                          className="p-2 border border-at-border rounded-md text-sm"
                           value={monthSelector}
                           onChange={(e) => setMonthSelector(e.target.value)}
                         />
@@ -662,10 +662,10 @@ export default function DashboardPage() {
                   <>
                     <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="year-selector" className="mr-2 text-sm text-slate-600">연도 선택:</label>
+                        <label htmlFor="year-selector" className="mr-2 text-sm text-at-text-secondary">연도 선택:</label>
                         <select
                           id="year-selector"
-                          className="p-2 border border-slate-300 rounded-md text-sm"
+                          className="p-2 border border-at-border rounded-md text-sm"
                           value={yearSelector}
                           onChange={(e) => setYearSelector(e.target.value)}
                         >
@@ -695,33 +695,33 @@ export default function DashboardPage() {
 
                 {statsSubTab === 'custom' && (
                   <>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 p-4 bg-at-surface-alt rounded-xl border border-at-border">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                         <div className="flex items-center gap-2">
-                          <label htmlFor="custom-start-date" className="text-sm font-medium text-slate-600 whitespace-nowrap">시작일:</label>
+                          <label htmlFor="custom-start-date" className="text-sm font-medium text-at-text-secondary whitespace-nowrap">시작일:</label>
                           <input
                             type="date"
                             id="custom-start-date"
-                            className="p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="p-2 border border-at-border rounded-md text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                             value={customStartDate}
                             onChange={(e) => setCustomStartDate(e.target.value)}
                             max={customEndDate}
                           />
                         </div>
-                        <span className="hidden sm:block text-slate-400">~</span>
+                        <span className="hidden sm:block text-at-text-weak">~</span>
                         <div className="flex items-center gap-2">
-                          <label htmlFor="custom-end-date" className="text-sm font-medium text-slate-600 whitespace-nowrap">종료일:</label>
+                          <label htmlFor="custom-end-date" className="text-sm font-medium text-at-text-secondary whitespace-nowrap">종료일:</label>
                           <input
                             type="date"
                             id="custom-end-date"
-                            className="p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="p-2 border border-at-border rounded-md text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                             value={customEndDate}
                             onChange={(e) => setCustomEndDate(e.target.value)}
                             min={customStartDate}
                           />
                         </div>
                       </div>
-                      <div className="text-sm text-slate-500">
+                      <div className="text-sm text-at-text-weak">
                         {(() => {
                           const start = new Date(customStartDate)
                           const end = new Date(customEndDate)
@@ -774,7 +774,7 @@ export default function DashboardPage() {
             user ? (
               <ProtocolManagement currentUser={user} />
             ) : (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              <div className="rounded-md border border-amber-200 bg-at-warning-bg p-4 text-sm text-amber-800">
                 사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.
               </div>
             )
@@ -808,7 +808,7 @@ export default function DashboardPage() {
           {/* AI 데이터 분석 */}
           {activeTab === 'ai-analysis' && user?.clinic_id && (
             <PremiumGate featureId="ai-analysis">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-[calc(100vh-180px)]">
+              <div className="bg-white rounded-xl shadow-at-card border border-at-border overflow-hidden h-[calc(100vh-180px)]">
                 <AIChat clinicId={user.clinic_id} />
               </div>
             </PremiumGate>
@@ -838,10 +838,10 @@ export default function DashboardPage() {
           {activeTab === 'guide' && (
             <div className="container mx-auto px-4 py-12">
               <header className="text-center mb-12">
-                <h1 className="text-4xl font-bold text-gray-800 mb-2">
+                <h1 className="text-4xl font-bold text-at-text mb-2">
                   치과 관리 시스템 사용 안내
                 </h1>
-                <p className="text-lg text-gray-600">
+                <p className="text-lg text-at-text-secondary">
                   업무 효율성을 높이는 다양한 기능을 만나보세요.
                 </p>
               </header>
@@ -872,25 +872,25 @@ export default function DashboardPage() {
                     {
                       title: '사용자 관리',
                       description: '역할(원장, 직원 등)에 따라 접근 권한을 제어하고 안전한 인증을 통해 시스템을 보호합니다.',
-                      icon: <Shield className="w-12 h-12 text-blue-500" />,
+                      icon: <Shield className="w-12 h-12 text-at-accent" />,
                     },
                   ].map((feature) => (
                     <div
                       key={feature.title}
-                      className="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col items-center text-center"
+                      className="bg-white p-8 rounded-xl shadow-at-card hover:shadow-xl transition-shadow duration-300 flex flex-col items-center text-center"
                     >
                       <div className="mb-4">{feature.icon}</div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                      <h3 className="text-xl font-semibold text-at-text mb-2">
                         {feature.title}
                       </h3>
-                      <p className="text-gray-600">{feature.description}</p>
+                      <p className="text-at-text-secondary">{feature.description}</p>
                     </div>
                   ))}
                 </div>
               </main>
 
               <footer className="text-center mt-16">
-                 <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md">
+                 <div className="bg-at-tag border-l-4 border-at-accent text-at-accent p-4 rounded-md">
                    <div className="flex items-center">
                       <BookUser className="w-6 h-6 mr-3" />
                       <div>

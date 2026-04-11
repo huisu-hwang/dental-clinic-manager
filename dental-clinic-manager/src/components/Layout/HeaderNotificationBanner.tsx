@@ -137,7 +137,7 @@ export default function HeaderNotificationBanner({
         <div
           className={`
             flex items-center gap-2 px-3 py-1.5 rounded-full
-            ${colors.bg} border border-slate-200/50
+            ${colors.bg} border border-at-border
             transition-all duration-200
             hover:shadow-sm cursor-pointer
           `}
@@ -162,7 +162,7 @@ export default function HeaderNotificationBanner({
               className="flex-shrink-0 p-0.5 rounded-full hover:bg-white/50 transition-colors"
               aria-label="이전 알림"
             >
-              <ChevronLeftIcon className="w-3.5 h-3.5 text-slate-400" />
+              <ChevronLeftIcon className="w-3.5 h-3.5 text-at-text-weak" />
             </button>
           )}
 
@@ -182,7 +182,7 @@ export default function HeaderNotificationBanner({
             <p className={`text-xs sm:text-sm ${colors.text} truncate`}>
               <span className="font-medium">{currentNotification.title}</span>
               {currentNotification.content && (
-                <span className="text-slate-500 font-normal"> - {currentNotification.content}</span>
+                <span className="text-at-text-secondary font-normal"> - {currentNotification.content}</span>
               )}
             </p>
           </div>
@@ -190,7 +190,7 @@ export default function HeaderNotificationBanner({
           {/* 페이지 인디케이터 */}
           {notificationCount > 1 && (
             <div className="flex-shrink-0 flex items-center gap-1">
-              <span className="text-[10px] text-slate-400 hidden sm:inline">
+              <span className="text-[10px] text-at-text-weak hidden sm:inline">
                 {currentIndex + 1}/{notificationCount}
               </span>
               {/* 모바일용 도트 인디케이터 */}
@@ -199,7 +199,7 @@ export default function HeaderNotificationBanner({
                   <div
                     key={idx}
                     className={`w-1 h-1 rounded-full transition-colors ${
-                      idx === currentIndex ? 'bg-slate-500' : 'bg-slate-300'
+                      idx === currentIndex ? 'bg-at-text-secondary' : 'bg-at-border'
                     }`}
                   />
                 ))}
@@ -217,7 +217,7 @@ export default function HeaderNotificationBanner({
               className="flex-shrink-0 p-0.5 rounded-full hover:bg-white/50 transition-colors"
               aria-label="다음 알림"
             >
-              <ChevronRightIcon className="w-3.5 h-3.5 text-slate-400" />
+              <ChevronRightIcon className="w-3.5 h-3.5 text-at-text-weak" />
             </button>
           )}
         </div>

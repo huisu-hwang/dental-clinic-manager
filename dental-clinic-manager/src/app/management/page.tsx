@@ -132,9 +132,9 @@ export default function ManagementPage() {
   // 로딩 중이거나 권한이 없는 경우
   if (authLoading || !permissionsLoaded) {
     return (
-      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center">
+      <div className="bg-at-surface-alt text-at-text font-sans min-h-screen flex justify-center items-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent mx-auto mb-4"></div>
           <p>사용자 정보 확인 중...</p>
         </div>
       </div>
@@ -143,16 +143,16 @@ export default function ManagementPage() {
 
   if (!user) {
     return (
-      <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex justify-center items-center px-4">
+      <div className="bg-at-surface-alt text-at-text font-sans min-h-screen flex justify-center items-center px-4">
         <div className="text-center">
-          <div className="bg-white p-6 sm:p-8 rounded-lg shadow-sm border border-slate-200">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4">로그인이 필요합니다</h1>
-            <p className="text-slate-600 mb-6">
+          <div className="bg-white p-6 sm:p-8 rounded-xl shadow-at-card border border-at-border">
+            <h1 className="text-xl sm:text-2xl font-bold text-at-text mb-4">로그인이 필요합니다</h1>
+            <p className="text-at-text-secondary mb-6">
               이 페이지에 접근하려면 로그인이 필요합니다.
             </p>
             <button
               onClick={() => router.push('/dashboard')}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+              className="bg-at-accent hover:bg-at-accent-hover text-white font-bold py-2 px-4 rounded-md transition-colors"
             >
               대시보드로 이동
             </button>
@@ -163,9 +163,9 @@ export default function ManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-at-surface-alt">
       {/* Header - 상단 고정, 중앙 정렬 */}
-      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200">
+      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-at-border">
         <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
           <Header
             dbStatus="connected"
@@ -189,7 +189,7 @@ export default function ManagementPage() {
       {/* 좌측 사이드바 - 모바일에서는 슬라이드 메뉴 */}
       <aside
         className={`
-          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200 z-20 overflow-y-auto py-3 px-3
+          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-at-border z-20 overflow-y-auto py-3 px-3
           transition-transform duration-300 ease-in-out
           lg:left-[max(0px,calc(50%-700px))]
           ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
@@ -208,10 +208,10 @@ export default function ManagementPage() {
         <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
           <div className="max-w-6xl">
             {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
-            <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
+            <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-at-card">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-xl flex items-center justify-center">
                     <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div>
@@ -223,7 +223,7 @@ export default function ManagementPage() {
             </div>
 
             {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
-            <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
+            <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-at-border bg-at-surface-alt">
               <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
                 {subTabs.map((tab) => {
                   // 메뉴 설정 탭은 모든 사용자 접근 가능 (permissions가 빈 배열)
@@ -235,10 +235,10 @@ export default function ManagementPage() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
+                      className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                         activeTab === tab.id
-                          ? 'bg-white text-blue-600 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                          ? 'bg-white text-at-accent shadow-at-card'
+                          : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
                       }`}
                     >
                       <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -250,7 +250,7 @@ export default function ManagementPage() {
             </div>
 
             {/* 탭 콘텐츠 - 방문한 탭은 display로 숨겨 편집 상태 보존 */}
-            <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6">
+            <div className="bg-white border-x border-b border-at-border rounded-b-xl p-3 sm:p-6">
               {/* Staff Management Tab */}
               {visitedTabs.has('staff') && canAccessStaffManagement && (
                 <div style={{ display: activeTab === 'staff' ? 'block' : 'none' }}>
@@ -291,7 +291,7 @@ export default function ManagementPage() {
                 <div style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
                   <div className="text-center py-12">
                     <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-600">통계 분석 기능은 곧 제공될 예정입니다.</p>
+                    <p className="text-at-text-secondary">통계 분석 기능은 곧 제공될 예정입니다.</p>
                   </div>
                 </div>
               )}
@@ -310,7 +310,7 @@ export default function ManagementPage() {
       {/* Profile Modal */}
       {showProfile && user && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-lg">
+          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-xl">
             <AccountProfile
               currentUser={user}
               onClose={() => setShowProfile(false)}

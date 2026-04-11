@@ -66,25 +66,25 @@ function ServerIpChecker() {
           <button
             onClick={checkServerIp}
             disabled={isChecking}
-            className="px-3 py-1.5 bg-amber-600 text-white text-sm rounded hover:bg-amber-700 disabled:bg-gray-300"
+            className="px-3 py-1.5 bg-amber-600 text-white text-sm rounded hover:bg-amber-700 disabled:opacity-50"
           >
             {isChecking ? '확인 중...' : '서버 IP 확인'}
           </button>
           {serverIp && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">서버 IP:</span>
-              <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono font-bold text-amber-700">
+              <span className="text-sm text-at-text-secondary">서버 IP:</span>
+              <code className="px-2 py-1 bg-at-surface-alt rounded text-sm font-mono font-bold text-amber-700">
                 {serverIp}
               </code>
               <button
                 onClick={() => navigator.clipboard.writeText(serverIp)}
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-at-accent hover:underline"
               >
                 복사
               </button>
             </div>
           )}
-          {error && <span className="text-sm text-red-600">{error}</span>}
+          {error && <span className="text-sm text-at-error">{error}</span>}
         </div>
         {serverIp && (
           <p className="text-xs text-amber-600 mt-2">
@@ -270,7 +270,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
       {/* 메시지 알림 */}
       {message && (
         <div className={`flex items-center gap-2 p-3 rounded-lg ${
-          message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          message.type === 'success' ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'
         }`}>
           {message.type === 'success' ? (
             <CheckCircle className="w-5 h-5" />
@@ -282,13 +282,13 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
       )}
 
       {/* 탭 네비게이션 */}
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-2 border-b border-at-border">
         <button
           onClick={() => setActiveTab('sms')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'sms'
               ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              : 'border-transparent text-at-text-weak hover:text-at-text'
           }`}
         >
           <MessageSquare className="w-4 h-4" />
@@ -299,7 +299,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'templates'
               ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              : 'border-transparent text-at-text-weak hover:text-at-text'
           }`}
         >
           <Edit className="w-4 h-4" />
@@ -310,7 +310,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'voip'
               ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              : 'border-transparent text-at-text-weak hover:text-at-text'
           }`}
         >
           <Phone className="w-4 h-4" />
@@ -321,7 +321,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'dentweb'
               ? 'border-teal-600 text-teal-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              : 'border-transparent text-at-text-weak hover:text-at-text'
           }`}
         >
           <Settings className="w-4 h-4" />
@@ -332,9 +332,9 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
       {/* 알리고 SMS 설정 */}
       {activeTab === 'sms' && (
         <div className="space-y-6">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">알리고 SMS 서비스</h4>
-            <p className="text-sm text-blue-700">
+          <div className="bg-at-tag rounded-xl p-4">
+            <h4 className="font-medium text-at-text mb-2">알리고 SMS 서비스</h4>
+            <p className="text-sm text-at-text-secondary">
               알리고(Aligo)는 대량 문자 발송 서비스입니다.
               <a
                 href="https://smartsms.aligo.in"
@@ -352,7 +352,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 API Key *
               </label>
               <div className="relative">
@@ -361,12 +361,12 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
                   value={aligoForm.api_key}
                   onChange={(e) => setAligoForm(prev => ({ ...prev, api_key: e.target.value }))}
                   placeholder="알리고 API Key"
-                  className="w-full p-3 pr-10 border border-gray-300 rounded-lg"
+                  className="w-full p-3 pr-10 border border-at-border rounded-xl"
                 />
                 <button
                   type="button"
                   onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-at-text-weak hover:text-at-text-secondary"
                 >
                   {showApiKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -374,7 +374,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 사용자 ID *
               </label>
               <input
@@ -382,12 +382,12 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
                 value={aligoForm.user_id}
                 onChange={(e) => setAligoForm(prev => ({ ...prev, user_id: e.target.value }))}
                 placeholder="알리고 사용자 ID"
-                className="w-full p-3 border border-gray-300 rounded-lg"
+                className="w-full p-3 border border-at-border rounded-xl"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 발신 번호 *
               </label>
               <input
@@ -395,9 +395,9 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
                 value={aligoForm.sender_number}
                 onChange={(e) => setAligoForm(prev => ({ ...prev, sender_number: e.target.value }))}
                 placeholder="발신 번호 (사전 등록 필요)"
-                className="w-full p-3 border border-gray-300 rounded-lg"
+                className="w-full p-3 border border-at-border rounded-xl"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-at-text-weak mt-1">
                 발신번호는 알리고에서 사전 등록이 필요합니다.
               </p>
             </div>
@@ -407,7 +407,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
             <button
               onClick={handleSaveAligo}
               disabled={isSavingAligo}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
             >
               {isSavingAligo ? (
                 <>
@@ -426,7 +426,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
               <button
                 onClick={handleTestAligo}
                 disabled={isTestingAligo}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:bg-gray-100"
+                className="flex items-center gap-2 px-4 py-2 border border-at-border text-at-text-secondary rounded-xl hover:bg-at-surface-hover disabled:opacity-50"
               >
                 {isTestingAligo ? (
                   <>
@@ -449,13 +449,13 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
       {activeTab === 'templates' && (
         <div className="space-y-6">
           {/* 템플릿 폼 */}
-          <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-            <h4 className="font-medium text-gray-900">
+          <div className="bg-at-surface-alt rounded-xl p-4 space-y-4">
+            <h4 className="font-medium text-at-text">
               {editingTemplate ? '템플릿 수정' : '새 템플릿 추가'}
             </h4>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 템플릿 이름 *
               </label>
               <input
@@ -463,12 +463,12 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
                 value={templateForm.name}
                 onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="예: 정기검진 리콜"
-                className="w-full p-3 border border-gray-300 rounded-lg"
+                className="w-full p-3 border border-at-border rounded-xl"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 메시지 내용 *
               </label>
               <textarea
@@ -476,16 +476,16 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
                 onChange={(e) => setTemplateForm(prev => ({ ...prev, content: e.target.value }))}
                 rows={4}
                 placeholder="메시지 내용을 입력하세요..."
-                className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+                className="w-full p-3 border border-at-border rounded-xl resize-none"
               />
               <div className="flex flex-wrap gap-2 mt-2">
-                <span className="text-xs text-gray-500">사용 가능한 변수:</span>
+                <span className="text-xs text-at-text-weak">사용 가능한 변수:</span>
                 {['{환자명}', '{병원명}', '{전화번호}'].map(variable => (
                   <button
                     key={variable}
                     type="button"
                     onClick={() => setTemplateForm(prev => ({ ...prev, content: prev.content + variable }))}
-                    className="px-2 py-0.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                    className="px-2 py-0.5 text-xs bg-white border border-at-border rounded-lg hover:bg-at-surface-hover"
                   >
                     {variable}
                   </button>
@@ -498,16 +498,16 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
                 type="checkbox"
                 checked={templateForm.is_default}
                 onChange={(e) => setTemplateForm(prev => ({ ...prev, is_default: e.target.checked }))}
-                className="rounded border-gray-300 text-indigo-600"
+                className="rounded border-at-border text-indigo-600"
               />
-              <span className="text-sm text-gray-700">기본 템플릿으로 설정</span>
+              <span className="text-sm text-at-text-secondary">기본 템플릿으로 설정</span>
             </label>
 
             <div className="flex gap-2">
               <button
                 onClick={handleSaveTemplate}
                 disabled={isSavingTemplate}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300"
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
               >
                 {isSavingTemplate ? '저장 중...' : editingTemplate ? '수정' : '추가'}
               </button>
@@ -517,7 +517,7 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
                     setEditingTemplate(null)
                     setTemplateForm({ name: '', content: '', is_default: false })
                   }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border border-at-border text-at-text-secondary rounded-xl hover:bg-at-surface-hover"
                 >
                   취소
                 </button>
@@ -527,10 +527,10 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
 
           {/* 템플릿 목록 */}
           <div>
-            <h4 className="font-medium text-gray-900 mb-3">저장된 템플릿</h4>
+            <h4 className="font-medium text-at-text mb-3">저장된 템플릿</h4>
             {templates.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <div className="text-center py-8 text-at-text-weak">
+                <MessageSquare className="w-12 h-12 mx-auto mb-2 text-at-text-weak" />
                 <p>저장된 템플릿이 없습니다.</p>
               </div>
             ) : (
@@ -538,11 +538,11 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
                 {templates.map(template => (
                   <div
                     key={template.id}
-                    className="flex items-start gap-4 p-4 bg-white border border-gray-200 rounded-lg"
+                    className="flex items-start gap-4 p-4 bg-white border border-at-border rounded-xl"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-gray-900">{template.name}</p>
+                        <p className="font-medium text-at-text">{template.name}</p>
                         {template.is_default && (
                           <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">
                             <Star className="w-3 h-3" />
@@ -550,20 +550,20 @@ export default function RecallSettings({ clinicId, clinicName, clinicPhone }: Re
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">
+                      <p className="text-sm text-at-text-secondary mt-1 whitespace-pre-wrap">
                         {template.content}
                       </p>
                     </div>
                     <div className="flex gap-1">
                       <button
                         onClick={() => handleEditTemplate(template)}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                        className="p-2 text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt rounded-lg"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteTemplate(template.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                        className="p-2 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded-lg"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

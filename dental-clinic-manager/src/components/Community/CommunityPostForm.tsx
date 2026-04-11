@@ -87,17 +87,17 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
         <ChevronLeft className="w-4 h-4 mr-1" />돌아가기
       </Button>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">{editingPost ? '게시글 수정' : '새 글 작성'}</h2>
+      <div className="bg-white rounded-2xl border border-at-border p-4 sm:p-6 shadow-at-card">
+        <h2 className="text-lg font-bold text-at-text mb-4">{editingPost ? '게시글 수정' : '새 글 작성'}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* 카테고리 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">카테고리</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as CommunityCategory)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent"
             >
               {categories.map((cat) => (
                 <option key={cat.slug} value={cat.slug}>{labelMap[cat.slug] || cat.label}</option>
@@ -107,7 +107,7 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
 
           {/* 제목 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">제목</label>
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">제목</label>
             <Input
               type="text"
               value={title}
@@ -119,13 +119,13 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
 
           {/* 내용 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">내용</label>
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">내용</label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="내용을 입력하세요"
               rows={12}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+              className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent resize-y"
             />
           </div>
 
@@ -137,10 +137,10 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
                   <BarChart3 className="w-4 h-4 mr-1.5" />투표 추가
                 </Button>
               ) : (
-                <div className="border border-indigo-200 rounded-lg p-4 bg-indigo-50/50">
+                <div className="border border-at-border rounded-xl p-4 bg-at-surface-alt">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-indigo-700">투표</h4>
-                    <button type="button" onClick={() => setShowPoll(false)} className="text-gray-400 hover:text-gray-600">
+                    <h4 className="text-sm font-semibold text-at-text-secondary">투표</h4>
+                    <button type="button" onClick={() => setShowPoll(false)} className="text-at-text-weak hover:text-at-text-secondary">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
@@ -172,7 +172,7 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
                     <Button type="button" variant="outline" size="sm" onClick={addPollOption} disabled={pollOptions.length >= 10}>
                       <Plus className="w-4 h-4 mr-1" />선택지 추가
                     </Button>
-                    <label className="flex items-center gap-2 text-sm text-gray-600">
+                    <label className="flex items-center gap-2 text-sm text-at-text-secondary">
                       <input type="checkbox" checked={isMultipleChoice} onChange={(e) => setIsMultipleChoice(e.target.checked)} className="rounded" />
                       복수 선택
                     </label>
@@ -182,7 +182,7 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
             </div>
           )}
 
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-at-error">{error}</p>}
 
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">취소</Button>

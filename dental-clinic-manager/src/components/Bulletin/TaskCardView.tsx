@@ -26,19 +26,19 @@ interface TaskCardViewProps {
 const STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'review', 'completed', 'on_hold', 'cancelled']
 
 const STATUS_BADGE_STYLES: Record<TaskStatus, { bg: string; text: string; dot: string; border: string }> = {
-  pending: { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-400', border: 'border-gray-200' },
-  in_progress: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500', border: 'border-blue-200' },
+  pending: { bg: 'bg-at-surface-alt', text: 'text-at-text-secondary', dot: 'bg-gray-400', border: 'border-at-border' },
+  in_progress: { bg: 'bg-at-accent-light', text: 'text-at-accent', dot: 'bg-at-accent', border: 'border-blue-200' },
   review: { bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-500', border: 'border-purple-200' },
-  completed: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500', border: 'border-green-200' },
-  on_hold: { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500', border: 'border-yellow-200' },
-  cancelled: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-400', border: 'border-red-200' },
+  completed: { bg: 'bg-at-success-bg', text: 'text-at-success', dot: 'bg-green-500', border: 'border-green-200' },
+  on_hold: { bg: 'bg-at-warning-bg', text: 'text-yellow-700', dot: 'bg-yellow-500', border: 'border-yellow-200' },
+  cancelled: { bg: 'bg-at-error-bg', text: 'text-at-error', dot: 'bg-red-400', border: 'border-red-200' },
 }
 
 const PRIORITY_STYLES: Record<TaskPriority, { color: string; label: string }> = {
-  urgent: { color: 'text-red-600', label: '긴급' },
+  urgent: { color: 'text-at-error', label: '긴급' },
   high: { color: 'text-orange-500', label: '높음' },
-  medium: { color: 'text-blue-500', label: '보통' },
-  low: { color: 'text-gray-400', label: '낮음' },
+  medium: { color: 'text-at-accent', label: '보통' },
+  low: { color: 'text-at-text-weak', label: '낮음' },
 }
 
 const getStatusIcon = (status: TaskStatus) => {
@@ -77,7 +77,7 @@ const getInitials = (name: string) => {
 
 // 이름 기반 일관된 색상 선택
 const AVATAR_COLORS = [
-  'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500',
+  'bg-at-accent', 'bg-green-500', 'bg-purple-500', 'bg-pink-500',
   'bg-indigo-500', 'bg-teal-500', 'bg-orange-500', 'bg-cyan-500',
 ]
 
@@ -115,11 +115,11 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                 <span className={`w-2 h-2 rounded-full ${style.dot}`}></span>
                 {TASK_STATUS_LABELS[status]}
               </span>
-              <span className="text-sm text-gray-400 font-medium">{statusTasks.length}</span>
+              <span className="text-sm text-at-text-weak font-medium">{statusTasks.length}</span>
             </div>
 
             {/* 테이블 헤더 */}
-            <div className={`hidden sm:grid ${status === 'completed' ? 'sm:grid-cols-[1fr_120px_120px_120px_100px]' : 'sm:grid-cols-[1fr_120px_120px_100px]'} gap-4 px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider`}>
+            <div className={`hidden sm:grid ${status === 'completed' ? 'sm:grid-cols-[1fr_120px_120px_120px_100px]' : 'sm:grid-cols-[1fr_120px_120px_100px]'} gap-4 px-4 py-2 text-xs font-medium text-at-text-weak uppercase tracking-wider`}>
               <span>업무명</span>
               <span>담당자</span>
               <span>마감일</span>
@@ -128,12 +128,12 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
             </div>
 
             {/* 업무 카드 목록 */}
-            <div className={`bg-white rounded-xl border ${style.border} divide-y divide-gray-100`}>
+            <div className={`bg-white rounded-2xl border ${style.border} divide-y divide-gray-100`}>
               {statusTasks.map((task) => (
                 <div
                   key={task.id}
                   onClick={() => onTaskClick(task)}
-                  className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors group"
+                  className="px-4 py-3 hover:bg-at-surface-alt cursor-pointer transition-colors group"
                 >
                   {/* 모바일 레이아웃 */}
                   <div className="sm:hidden space-y-2">
@@ -142,14 +142,14 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                         {getStatusIcon(task.status)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-gray-900 truncate">{task.title}</h4>
-                        <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+                        <h4 className="text-sm font-medium text-at-text truncate">{task.title}</h4>
+                        <div className="flex items-center gap-3 mt-1.5 text-xs text-at-text-weak">
                           <span className="flex items-center gap-1">
                             <User className="w-3 h-3" />
                             {task.assignee_name || '미지정'}
                           </span>
                           {task.due_date && (
-                            <span className={`flex items-center gap-1 ${isOverdue(task) ? 'text-red-600 font-medium' : ''}`}>
+                            <span className={`flex items-center gap-1 ${isOverdue(task) ? 'text-at-error font-medium' : ''}`}>
                               <Calendar className="w-3 h-3" />
                               {formatDate(task.due_date)}
                             </span>
@@ -159,7 +159,7 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                             {TASK_PRIORITY_LABELS[task.priority]}
                           </span>
                           {task.status === 'completed' && task.completed_at && (
-                            <span className="flex items-center gap-1 text-green-600">
+                            <span className="flex items-center gap-1 text-at-success">
                               <CheckCircle2 className="w-3 h-3" />
                               {formatDate(task.completed_at)}
                             </span>
@@ -177,11 +177,11 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                         {getStatusIcon(task.status)}
                       </div>
                       <div className="min-w-0 flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                        <span className="text-sm font-medium text-at-text truncate group-hover:text-at-accent transition-colors">
                           {task.title}
                         </span>
                         {task.comments_count > 0 && (
-                          <span className="flex items-center gap-0.5 text-xs text-gray-400 flex-shrink-0">
+                          <span className="flex items-center gap-0.5 text-xs text-at-text-weak flex-shrink-0">
                             <MessageCircle className="w-3 h-3" />
                             {task.comments_count}
                           </span>
@@ -196,17 +196,17 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 ${getAvatarColor(task.assignee_name)}`}>
                             {getInitials(task.assignee_name)}
                           </div>
-                          <span className="text-sm text-gray-700 truncate">{task.assignee_name}</span>
+                          <span className="text-sm text-at-text-secondary truncate">{task.assignee_name}</span>
                         </>
                       ) : (
-                        <span className="text-sm text-gray-400">미지정</span>
+                        <span className="text-sm text-at-text-weak">미지정</span>
                       )}
                     </div>
 
                     {/* 마감일 */}
                     <div>
                       {task.due_date ? (
-                        <span className={`text-sm ${isOverdue(task) ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                        <span className={`text-sm ${isOverdue(task) ? 'text-at-error font-medium' : 'text-at-text-secondary'}`}>
                           {formatDate(task.due_date)}
                         </span>
                       ) : (
@@ -218,7 +218,7 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                     {status === 'completed' && (
                       <div>
                         {task.completed_at ? (
-                          <span className="text-sm text-green-600">
+                          <span className="text-sm text-at-success">
                             {formatDate(task.completed_at)}
                           </span>
                         ) : (

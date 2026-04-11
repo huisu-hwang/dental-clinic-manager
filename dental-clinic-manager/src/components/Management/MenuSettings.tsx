@@ -194,7 +194,7 @@ function SortableMenuInCategory({
       style={style}
       className={`
         flex items-center gap-2 p-2 ml-6 rounded-lg border transition-all
-        ${isDragging ? 'shadow-lg ring-2 ring-blue-400 border-blue-400 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'}
+        ${isDragging ? 'shadow-lg ring-2 ring-at-accent border-at-accent bg-at-accent-light' : 'border-at-border bg-white hover:border-at-accent'}
         ${isAnimating === 'up' ? 'animate-bounce-up' : ''}
         ${isAnimating === 'down' ? 'animate-bounce-down' : ''}
       `}
@@ -202,19 +202,19 @@ function SortableMenuInCategory({
       <button
         {...attributes}
         {...listeners}
-        className="flex-shrink-0 p-1 text-slate-400 hover:text-slate-600 cursor-grab active:cursor-grabbing"
+        className="flex-shrink-0 p-1 text-at-text-weak hover:text-at-text-secondary cursor-grab active:cursor-grabbing"
       >
         <GripVertical className="w-4 h-4" />
       </button>
-      <div className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center bg-slate-100 text-slate-600">
+      <div className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center bg-at-surface-alt text-at-text-secondary">
         <Icon className="w-3.5 h-3.5" />
       </div>
-      <span className="flex-1 text-sm text-slate-700 truncate">{item.label}</span>
+      <span className="flex-1 text-sm text-at-text-secondary truncate">{item.label}</span>
       <div className="flex items-center gap-0.5">
         <button
           onClick={onMoveUp}
           disabled={index === 0}
-          className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-1 text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="위로 이동"
         >
           <ChevronUp className="w-4 h-4" />
@@ -222,14 +222,14 @@ function SortableMenuInCategory({
         <button
           onClick={onMoveDown}
           disabled={index === totalCount - 1}
-          className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-1 text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="아래로 이동"
         >
           <ChevronDown className="w-4 h-4" />
         </button>
         <button
           onClick={onRemove}
-          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+          className="p-1 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded transition-colors"
           title="미사용으로 이동"
         >
           <X className="w-4 h-4" />
@@ -295,19 +295,19 @@ function SortableFixedMenu({
       <button
         {...attributes}
         {...listeners}
-        className="flex-shrink-0 p-1 text-slate-400 hover:text-slate-600 cursor-grab active:cursor-grabbing"
+        className="flex-shrink-0 p-1 text-at-text-weak hover:text-at-text-secondary cursor-grab active:cursor-grabbing"
       >
         <GripVertical className="w-4 h-4" />
       </button>
       <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${isTop ? 'bg-emerald-100 text-emerald-600' : 'bg-purple-100 text-purple-600'}`}>
         <Icon className="w-4 h-4" />
       </div>
-      <span className="flex-1 text-sm font-medium text-slate-700 truncate">{item.label}</span>
+      <span className="flex-1 text-sm font-medium text-at-text-secondary truncate">{item.label}</span>
       <div className="flex items-center gap-0.5">
         <button
           onClick={onMoveUp}
           disabled={index === 0}
-          className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-1 text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="위로 이동"
         >
           <ChevronUp className="w-4 h-4" />
@@ -315,14 +315,14 @@ function SortableFixedMenu({
         <button
           onClick={onMoveDown}
           disabled={index === totalCount - 1}
-          className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-1 text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="아래로 이동"
         >
           <ChevronDown className="w-4 h-4" />
         </button>
         <button
           onClick={onRemove}
-          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+          className="p-1 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded transition-colors"
           title="미사용으로 이동"
         >
           <X className="w-4 h-4" />
@@ -403,7 +403,7 @@ function SortableCategoryWithMenus({
       className={`
         rounded-xl border-2 overflow-hidden transition-all
         ${isDragging ? 'shadow-xl ring-2 ring-blue-400' : ''}
-        ${isDropOver ? 'border-blue-400 bg-blue-50/50 ring-2 ring-blue-300' : 'border-slate-200'}
+        ${isDropOver ? 'border-at-accent bg-at-accent-light/50 ring-2 ring-at-accent' : 'border-at-border'}
         ${categoryAnimating === 'up' ? 'animate-bounce-up' : ''}
         ${categoryAnimating === 'down' ? 'animate-bounce-down' : ''}
       `}
@@ -413,32 +413,32 @@ function SortableCategoryWithMenus({
         <div
           className={`
             flex items-center gap-2 p-3 cursor-pointer transition-colors
-            ${isExpanded ? 'bg-slate-100' : 'bg-white hover:bg-slate-50'}
-            ${isDropOver ? 'bg-blue-50' : ''}
+            ${isExpanded ? 'bg-at-surface-alt' : 'bg-white hover:bg-at-surface-hover'}
+            ${isDropOver ? 'bg-at-accent-light' : ''}
           `}
           onClick={onToggleExpand}
         >
           <button
             {...attributes}
             {...listeners}
-            className="flex-shrink-0 p-1 text-slate-400 hover:text-slate-600 cursor-grab active:cursor-grabbing"
+            className="flex-shrink-0 p-1 text-at-text-weak hover:text-at-text-secondary cursor-grab active:cursor-grabbing"
             onClick={(e) => e.stopPropagation()}
           >
             <GripVertical className="w-5 h-5" />
           </button>
-          <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-          <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-blue-100 text-blue-600">
+          <ChevronRight className={`w-4 h-4 text-at-text-weak transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+          <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-at-tag text-at-accent">
             <CategoryIcon className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-800 truncate">{category.label}</p>
-            <p className="text-xs text-slate-500">{menuItems.length}개 메뉴</p>
+            <p className="text-sm font-semibold text-at-text truncate">{category.label}</p>
+            <p className="text-xs text-at-text-weak">{menuItems.length}개 메뉴</p>
           </div>
           <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={onMoveUp}
               disabled={index === 0}
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 text-at-text-weak hover:text-at-text-secondary hover:bg-white rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               title="위로 이동"
             >
               <ChevronUp className="w-4 h-4" />
@@ -446,14 +446,14 @@ function SortableCategoryWithMenus({
             <button
               onClick={onMoveDown}
               disabled={index === totalCount - 1}
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 text-at-text-weak hover:text-at-text-secondary hover:bg-white rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               title="아래로 이동"
             >
               <ChevronDown className="w-4 h-4" />
             </button>
             <button
               onClick={onEdit}
-              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="p-1.5 text-at-text-weak hover:text-at-accent hover:bg-at-accent-light rounded-lg transition-colors"
               title="편집"
             >
               <Pencil className="w-4 h-4" />
@@ -461,7 +461,7 @@ function SortableCategoryWithMenus({
             {category.isCustom && (
               <button
                 onClick={onDelete}
-                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="p-1.5 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded-lg transition-colors"
                 title="삭제"
               >
                 <Trash2 className="w-4 h-4" />
@@ -471,11 +471,11 @@ function SortableCategoryWithMenus({
         </div>
 
         {isExpanded && (
-          <div className="p-2 pt-0 space-y-1.5 bg-slate-50/50">
+          <div className="p-2 pt-0 space-y-1.5 bg-at-surface-alt/30">
             {menuItems.length === 0 ? (
               <div className={`
                 ml-6 p-4 rounded-lg border-2 border-dashed text-center transition-colors
-                ${isDropOver ? 'border-blue-400 bg-blue-50 text-blue-600' : 'border-slate-200 text-slate-400'}
+                ${isDropOver ? 'border-at-accent bg-at-accent-light text-at-accent' : 'border-at-border text-at-text-weak'}
               `}>
                 <p className="text-sm">메뉴를 여기로 드래그하세요</p>
               </div>
@@ -619,14 +619,14 @@ function DraggableUnusedMenu({ item }: DraggableUnusedMenuProps) {
       {...listeners}
       className={`
         flex items-center gap-3 p-3 rounded-lg border-2 cursor-grab active:cursor-grabbing transition-all
-        ${isDragging ? 'shadow-lg ring-2 ring-blue-400 border-blue-400 bg-blue-50' : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm'}
+        ${isDragging ? 'shadow-lg ring-2 ring-at-accent border-at-accent bg-at-accent-light' : 'border-at-border bg-white hover:border-at-accent hover:shadow-sm'}
       `}
     >
-      <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-500">
+      <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-at-surface-alt text-at-text-weak">
         <Icon className="w-4 h-4" />
       </div>
-      <span className="flex-1 text-sm font-medium text-slate-700">{item.label}</span>
-      <GripVertical className="w-4 h-4 text-slate-400" />
+      <span className="flex-1 text-sm font-medium text-at-text-secondary">{item.label}</span>
+      <GripVertical className="w-4 h-4 text-at-text-weak" />
     </div>
   )
 }
@@ -647,7 +647,7 @@ function UnusedMenuPanel({ unusedMenus }: UnusedMenuPanelProps) {
       ref={setNodeRef}
       className={`
         bg-white border-2 rounded-xl overflow-hidden transition-all
-        ${isOver ? 'border-amber-400 ring-2 ring-amber-300 shadow-lg' : 'border-slate-200'}
+        ${isOver ? 'border-amber-400 ring-2 ring-amber-300 shadow-lg' : 'border-at-border'}
       `}
     >
       <div className={`px-4 py-3 border-b transition-colors ${isOver ? 'bg-amber-100 border-amber-200' : 'bg-amber-50 border-amber-200'}`}>
@@ -680,9 +680,9 @@ function UnusedMenuPanel({ unusedMenus }: UnusedMenuPanelProps) {
         </SortableContext>
 
         {unusedMenus.length === 0 && !isOver && (
-          <div className="text-center py-8 text-slate-400">
-            <Check className="w-10 h-10 mx-auto mb-2 text-green-500" />
-            <p className="text-sm font-medium text-green-600">모든 메뉴가 사용 중입니다!</p>
+          <div className="text-center py-8 text-at-text-weak">
+            <Check className="w-10 h-10 mx-auto mb-2 text-at-success" />
+            <p className="text-sm font-medium text-at-success">모든 메뉴가 사용 중입니다!</p>
           </div>
         )}
       </div>
@@ -725,29 +725,29 @@ function EditCategoryModal({ category, isNew, onSave, onClose }: EditCategoryMod
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">
+        <h3 className="text-lg font-bold text-at-text mb-4">
           {isNew ? '새 카테고리 추가' : '카테고리 편집'}
         </h3>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+          <label className="block text-sm font-medium text-at-text-secondary mb-1.5">
             카테고리 이름
           </label>
           <input
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-at-border rounded-xl focus:outline-none focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             placeholder="예: 업무 관리"
             autoFocus
           />
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+          <label className="block text-sm font-medium text-at-text-secondary mb-1.5">
             아이콘 선택
           </label>
-          <div className="grid grid-cols-8 gap-1.5 max-h-40 overflow-y-auto p-2 bg-slate-50 rounded-lg">
+          <div className="grid grid-cols-8 gap-1.5 max-h-40 overflow-y-auto p-2 bg-at-surface-alt rounded-xl">
             {AVAILABLE_CATEGORY_ICONS.map((iconName) => {
               const IconComponent = categoryIcons[iconName]
               if (!IconComponent) return null
@@ -758,8 +758,8 @@ function EditCategoryModal({ category, isNew, onSave, onClose }: EditCategoryMod
                   onClick={() => setIcon(iconName)}
                   className={`p-2 rounded-lg border-2 transition-all ${
                     icon === iconName
-                      ? 'border-blue-500 bg-blue-50 text-blue-600'
-                      : 'border-transparent text-slate-600 hover:bg-slate-100'
+                      ? 'border-at-accent bg-at-accent-light text-at-accent'
+                      : 'border-transparent text-at-text-secondary hover:bg-at-surface-alt'
                   }`}
                 >
                   <IconComponent className="w-4 h-4" />
@@ -772,14 +772,14 @@ function EditCategoryModal({ category, isNew, onSave, onClose }: EditCategoryMod
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-at-text-secondary hover:text-at-text hover:bg-at-surface-hover rounded-xl transition-colors"
           >
             취소
           </button>
           <button
             onClick={handleSave}
             disabled={!label.trim()}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-at-accent hover:bg-at-accent-hover text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isNew ? '추가' : '저장'}
           </button>
@@ -1416,8 +1416,8 @@ export default function MenuSettings() {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-600">메뉴 설정을 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-at-accent mx-auto mb-4"></div>
+          <p className="text-at-text-secondary">메뉴 설정을 불러오는 중...</p>
         </div>
       </div>
     )
@@ -1426,7 +1426,7 @@ export default function MenuSettings() {
   if (!user?.id) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-600">로그인이 필요합니다.</p>
+        <p className="text-at-text-secondary">로그인이 필요합니다.</p>
       </div>
     )
   }
@@ -1453,14 +1453,14 @@ export default function MenuSettings() {
       `}</style>
 
       {/* 상단 안내 */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4">
+      <div className="bg-at-tag border border-at-accent/20 rounded-xl p-4">
         <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Settings className="w-5 h-5 text-blue-600" />
+          <div className="flex-shrink-0 w-10 h-10 bg-at-tag rounded-xl flex items-center justify-center">
+            <Settings className="w-5 h-5 text-at-accent" />
           </div>
           <div>
-            <h4 className="font-semibold text-blue-800 mb-1">나만의 메뉴 설정</h4>
-            <ul className="text-sm text-blue-700 space-y-0.5">
+            <h4 className="font-semibold text-at-text mb-1">나만의 메뉴 설정</h4>
+            <ul className="text-sm text-at-text-secondary space-y-0.5">
               <li>• <strong>상단 고정 메뉴</strong>: 카테고리 위에 항상 표시됩니다</li>
               <li>• <strong>카테고리</strong>: 메뉴를 그룹으로 묶어서 표시합니다</li>
               <li>• <strong>하단 고정 메뉴</strong>: 카테고리 아래에 항상 표시됩니다</li>
@@ -1472,14 +1472,14 @@ export default function MenuSettings() {
 
       {/* 에러/성공 메시지 */}
       {error && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+        <div className="flex items-center gap-2 px-4 py-3 bg-at-error-bg border border-red-200 text-at-error rounded-xl text-sm">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           {error}
         </div>
       )}
 
       {success && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 text-green-600 rounded-lg text-sm">
+        <div className="flex items-center gap-2 px-4 py-3 bg-at-success-bg border border-green-200 text-at-success rounded-xl text-sm">
           <Check className="w-5 h-5 flex-shrink-0" />
           {success}
         </div>
@@ -1513,16 +1513,16 @@ export default function MenuSettings() {
             />
 
             {/* 카테고리 영역 */}
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-              <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
+            <div className="bg-white border border-at-border rounded-xl overflow-hidden">
+              <div className="bg-at-surface-alt px-4 py-3 border-b border-at-border">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FolderPlus className="w-5 h-5 text-slate-600" />
-                    <h3 className="font-semibold text-slate-800">카테고리</h3>
+                    <FolderPlus className="w-5 h-5 text-at-text-secondary" />
+                    <h3 className="font-semibold text-at-text">카테고리</h3>
                   </div>
                   <button
                     onClick={openNewCategoryModal}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-at-accent hover:bg-at-accent-hover text-white text-sm font-medium rounded-xl transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                     추가
@@ -1559,7 +1559,7 @@ export default function MenuSettings() {
                 </SortableContext>
 
                 {sortedCategories.length === 0 && (
-                  <div className="text-center py-8 text-slate-500">
+                  <div className="text-center py-8 text-at-text-weak">
                     <FolderOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">카테고리가 없습니다</p>
                     <p className="text-xs mt-1">위의 &quot;추가&quot; 버튼을 클릭하세요</p>
@@ -1591,30 +1591,30 @@ export default function MenuSettings() {
         {/* 드래그 오버레이 */}
         <DragOverlay dropAnimation={null}>
           {activeItem?.type === 'menu' && activeItem.data && (
-            <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-blue-400 bg-white shadow-xl">
+            <div className="flex items-center gap-3 p-3 rounded-xl border-2 border-at-accent bg-white shadow-xl">
               {(() => {
                 const Icon = menuIcons[activeItem.data.id] || HelpCircle
                 return (
                   <>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-at-accent-light text-at-accent">
                       <Icon className="w-4 h-4" />
                     </div>
-                    <span className="text-sm font-medium text-slate-800">{activeItem.data.label}</span>
+                    <span className="text-sm font-medium text-at-text">{activeItem.data.label}</span>
                   </>
                 )
               })()}
             </div>
           )}
           {activeItem?.type === 'category' && activeItem.data && (
-            <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-blue-400 bg-white shadow-xl">
+            <div className="flex items-center gap-3 p-3 rounded-xl border-2 border-at-accent bg-white shadow-xl">
               {(() => {
                 const Icon = categoryIcons[(activeItem.data as MenuCategorySetting).icon] || FolderOpen
                 return (
                   <>
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-100 text-blue-600">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-at-tag text-at-accent">
                       <Icon className="w-5 h-5" />
                     </div>
-                    <span className="text-sm font-semibold text-slate-800">{(activeItem.data as MenuCategorySetting).label}</span>
+                    <span className="text-sm font-semibold text-at-text">{(activeItem.data as MenuCategorySetting).label}</span>
                   </>
                 )
               })()}
@@ -1624,11 +1624,11 @@ export default function MenuSettings() {
       </DndContext>
 
       {/* 액션 버튼 */}
-      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+      <div className="flex items-center justify-between pt-4 border-t border-at-border">
         <button
           onClick={handleReset}
           disabled={saving}
-          className="flex items-center gap-2 px-4 py-2.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2.5 text-at-text-secondary hover:text-at-text hover:bg-at-surface-hover rounded-xl transition-colors disabled:opacity-50"
         >
           <RotateCcw className="w-4 h-4" />
           기본값으로 초기화
@@ -1639,7 +1639,7 @@ export default function MenuSettings() {
             <button
               onClick={handleCancel}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2.5 text-at-text-secondary hover:text-at-text hover:bg-at-surface-hover rounded-xl transition-colors disabled:opacity-50"
             >
               <X className="w-4 h-4" />
               취소
@@ -1651,8 +1651,8 @@ export default function MenuSettings() {
             disabled={saving || !hasChanges}
             className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all ${
               hasChanges
-                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow'
-                : 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                ? 'bg-at-accent hover:bg-at-accent-hover text-white shadow-sm hover:shadow'
+                : 'bg-at-surface-alt text-at-text-weak cursor-not-allowed'
             } disabled:opacity-50`}
           >
             {saving ? (

@@ -121,22 +121,22 @@ export default function TaskForm({
           <ArrowLeft className="w-4 h-4" />
           취소
         </Button>
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2 className="text-lg font-semibold text-at-text">
           {isEditing ? '업무 수정' : '새 업무 할당'}
         </h2>
       </div>
 
       {/* 폼 */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-at-border p-6 space-y-6">
         {error && (
-          <div className="p-4 bg-red-50 text-red-700 rounded-lg text-sm">
+          <div className="p-4 bg-at-error-bg text-at-error rounded-xl text-sm">
             {error}
           </div>
         )}
 
         {/* 업무명 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             업무명 <span className="text-red-500">*</span>
           </label>
           <Input
@@ -149,19 +149,19 @@ export default function TaskForm({
 
         {/* 담당자 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             담당자 <span className="text-red-500">*</span>
           </label>
           {loadingStaff ? (
-            <div className="flex items-center gap-2 text-gray-500">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <div className="flex items-center gap-2 text-at-text-weak">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-at-accent"></div>
               <span className="text-sm">직원 목록 불러오는 중...</span>
             </div>
           ) : (
             <select
               value={formData.assignee_id}
               onChange={(e) => setFormData({ ...formData, assignee_id: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-at-border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-at-accent"
             >
               <option value="">담당자를 선택하세요</option>
               {staffMembers.map((member) => (
@@ -175,13 +175,13 @@ export default function TaskForm({
 
         {/* 우선순위 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             우선순위
           </label>
           <select
             value={formData.priority}
             onChange={(e) => setFormData({ ...formData, priority: e.target.value as TaskPriority })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-at-border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-at-accent"
           >
             {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
@@ -191,7 +191,7 @@ export default function TaskForm({
 
         {/* 마감일 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             마감일
           </label>
           <Input
@@ -203,7 +203,7 @@ export default function TaskForm({
 
         {/* 상세 내용 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             상세 내용
           </label>
           <EnhancedTiptapEditor
@@ -214,7 +214,7 @@ export default function TaskForm({
         </div>
 
         {/* 버튼 */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+        <div className="flex justify-end gap-3 pt-4 border-t border-at-border">
           <Button type="button" variant="outline" onClick={onCancel}>
             취소
           </Button>

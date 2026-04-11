@@ -18,8 +18,8 @@ export default function CategoryFilter({ selected, onChange, categories, colorMa
         onClick={() => onChange('')}
         className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
           selected === ''
-            ? 'bg-gray-900 text-white'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            ? 'bg-at-text text-white'
+            : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
         }`}
       >
         전체
@@ -31,8 +31,8 @@ export default function CategoryFilter({ selected, onChange, categories, colorMa
           onClick={() => onChange(cat.slug)}
           className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
             selected === cat.slug
-              ? (colorMap[cat.slug] || 'bg-gray-100 text-gray-700').replace('100', '600').replace(/text-\w+-700/, 'text-white')
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? (colorMap[cat.slug] || 'bg-at-surface-alt text-at-text-secondary').replace('100', '600').replace(/text-\w+-700/, 'text-white')
+              : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
           }`}
         >
           {labelMap[cat.slug] || cat.label}

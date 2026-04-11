@@ -123,16 +123,16 @@ export default function StatusUpdateModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-at-card w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 border-b border-at-border">
           <div>
-            <h3 className="font-semibold text-gray-900">상태 변경</h3>
-            <p className="text-sm text-gray-500">{patient.patient_name}</p>
+            <h3 className="font-semibold text-at-text">상태 변경</h3>
+            <p className="text-sm text-at-text-weak">{patient.patient_name}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-at-text-weak hover:text-at-text-secondary"
           >
             <X className="w-6 h-6" />
           </button>
@@ -141,14 +141,14 @@ export default function StatusUpdateModal({
         {/* 내용 */}
         <div className="p-4 space-y-4">
           {/* 현재 상태 */}
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-500 mb-1">현재 상태</p>
+          <div className="p-3 bg-at-surface-alt rounded-lg">
+            <p className="text-sm text-at-text-weak mb-1">현재 상태</p>
             <p className="font-medium">{RECALL_STATUS_LABELS[patient.status]}</p>
           </div>
 
           {/* 에러 메시지 */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
+            <div className="flex items-center gap-2 p-3 bg-at-error-bg text-at-error rounded-lg">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <p className="text-sm">{error}</p>
             </div>
@@ -156,7 +156,7 @@ export default function StatusUpdateModal({
 
           {/* 상태 선택 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <label className="block text-sm font-medium text-at-text-secondary mb-3">
               새 상태 선택
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -164,17 +164,17 @@ export default function StatusUpdateModal({
                 <button
                   key={option.value}
                   onClick={() => setSelectedStatus(option.value)}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                  className={`p-3 rounded-xl border-2 text-left transition-all ${
                     selectedStatus === option.value
                       ? option.color + ' border-current'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : 'border-at-border hover:border-at-border'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     {option.icon}
                     <span className="text-sm font-medium">{option.label}</span>
                   </div>
-                  <p className="text-xs text-gray-500">{option.description}</p>
+                  <p className="text-xs text-at-text-weak">{option.description}</p>
                 </button>
               ))}
             </div>
@@ -183,17 +183,17 @@ export default function StatusUpdateModal({
         </div>
 
         {/* 푸터 */}
-        <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
+        <div className="flex justify-end gap-3 p-4 border-t border-at-border">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 text-at-text-secondary border border-at-border rounded-xl hover:bg-at-surface-hover"
           >
             취소
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving || !selectedStatus}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (
               <>

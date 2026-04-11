@@ -204,26 +204,26 @@ const [formData, setFormData] = useState<ClinicFormData>({
 
   if (loading) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+      <div className="bg-white p-6 rounded-2xl shadow-at-card border border-at-border">
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-600">병원 정보를 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent mx-auto mb-4"></div>
+          <p className="text-at-text-secondary">병원 정보를 불러오는 중...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+    <div className="bg-white rounded-2xl shadow-at-card border border-at-border">
       {/* 탭 네비게이션 */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-at-border">
         <div className="flex flex-wrap">
           <button
             onClick={() => setActiveTab('info')}
             className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
               activeTab === 'info'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-600 hover:text-slate-800'
+                ? 'border-at-accent text-at-accent'
+                : 'border-transparent text-at-text-secondary hover:text-at-text'
             }`}
           >
             <BuildingOfficeIcon className="h-5 w-5" />
@@ -233,8 +233,8 @@ const [formData, setFormData] = useState<ClinicFormData>({
             onClick={() => setActiveTab('hours')}
             className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
               activeTab === 'hours'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-600 hover:text-slate-800'
+                ? 'border-at-accent text-at-accent'
+                : 'border-transparent text-at-text-secondary hover:text-at-text'
             }`}
           >
             <ClockIcon className="h-5 w-5" />
@@ -244,8 +244,8 @@ const [formData, setFormData] = useState<ClinicFormData>({
             onClick={() => setActiveTab('holidays')}
             className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
               activeTab === 'holidays'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-600 hover:text-slate-800'
+                ? 'border-at-accent text-at-accent'
+                : 'border-transparent text-at-text-secondary hover:text-at-text'
             }`}
           >
             <CalendarDaysIcon className="h-5 w-5" />
@@ -255,8 +255,8 @@ const [formData, setFormData] = useState<ClinicFormData>({
             onClick={() => setActiveTab('notifications')}
             className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
               activeTab === 'notifications'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-600 hover:text-slate-800'
+                ? 'border-at-accent text-at-accent'
+                : 'border-transparent text-at-text-secondary hover:text-at-text'
             }`}
           >
             <BellIcon className="h-5 w-5" />
@@ -266,8 +266,8 @@ const [formData, setFormData] = useState<ClinicFormData>({
             onClick={() => setActiveTab('phone')}
             className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
               activeTab === 'phone'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-600 hover:text-slate-800'
+                ? 'border-at-accent text-at-accent'
+                : 'border-transparent text-at-text-secondary hover:text-at-text'
             }`}
           >
             <PhoneIcon className="h-5 w-5" />
@@ -277,8 +277,8 @@ const [formData, setFormData] = useState<ClinicFormData>({
             onClick={() => setActiveTab('attendance')}
             className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
               activeTab === 'attendance'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-600 hover:text-slate-800'
+                ? 'border-at-accent text-at-accent'
+                : 'border-transparent text-at-text-secondary hover:text-at-text'
             }`}
           >
             <QrCodeIcon className="h-5 w-5" />
@@ -293,13 +293,13 @@ const [formData, setFormData] = useState<ClinicFormData>({
           {/* 기존 병원 정보 폼 */}
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+        <div className="mb-4 bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-xl text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="mb-4 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
+        <div className="mb-4 bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-xl text-sm">
           {success}
         </div>
       )}
@@ -311,10 +311,10 @@ const [formData, setFormData] = useState<ClinicFormData>({
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Info */}
               <div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">기본 정보</h3>
+                <h3 className="text-lg font-semibold text-at-text mb-4">기본 정보</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-at-text-secondary mb-1">
                       병원명 *
                     </label>
                     <input
@@ -322,13 +322,13 @@ const [formData, setFormData] = useState<ClinicFormData>({
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       required
                       disabled={saving}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-at-text-secondary mb-1">
                       원장님 성함 *
                     </label>
                     <input
@@ -336,7 +336,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
                       name="ownerName"
                       value={formData.ownerName}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       required
                       disabled={saving}
                     />
@@ -344,7 +344,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     주소 *
                   </label>
                   <input
@@ -352,7 +352,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                     required
                     disabled={saving}
                   />
@@ -360,7 +360,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-at-text-secondary mb-1">
                       전화번호 *
                     </label>
                     <input
@@ -368,13 +368,13 @@ const [formData, setFormData] = useState<ClinicFormData>({
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       required
                       disabled={saving}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-at-text-secondary mb-1">
                       이메일 *
                     </label>
                     <input
@@ -382,7 +382,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       required
                       disabled={saving}
                     />
@@ -390,7 +390,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     사업자등록번호
                   </label>
                   <input
@@ -398,14 +398,14 @@ const [formData, setFormData] = useState<ClinicFormData>({
                     name="businessNumber"
                     value={formData.businessNumber}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                     placeholder="123-45-67890"
                     disabled={saving}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     병원 소개
                   </label>
                   <textarea
@@ -413,7 +413,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
                     value={formData.description}
                     onChange={handleInputChange}
                     rows={3}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                     placeholder="병원에 대한 간단한 소개를 입력하세요..."
                     disabled={saving}
                   />
@@ -422,7 +422,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
 
               {/* Visibility Settings */}
               <div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">공개 설정</h3>
+                <h3 className="text-lg font-semibold text-at-text mb-4">공개 설정</h3>
                 <div className="space-y-4">
                   <div className="flex items-center">
                     <input
@@ -431,10 +431,10 @@ const [formData, setFormData] = useState<ClinicFormData>({
                       name="isPublic"
                       checked={formData.isPublic}
                       onChange={handleInputChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-at-accent focus:ring-at-accent border-at-border rounded"
                       disabled={saving}
                     />
-                    <label htmlFor="isPublic" className="ml-2 block text-sm text-slate-700">
+                    <label htmlFor="isPublic" className="ml-2 block text-sm text-at-text-secondary">
                       병원을 공개하여 직원들이 가입 신청할 수 있도록 허용
                     </label>
                   </div>
@@ -448,10 +448,10 @@ const [formData, setFormData] = useState<ClinicFormData>({
                           name="allowJoinRequests"
                           checked={formData.allowJoinRequests}
                           onChange={handleInputChange}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-at-accent focus:ring-at-accent border-at-border rounded"
                           disabled={saving}
                         />
-                        <label htmlFor="allowJoinRequests" className="ml-2 block text-sm text-slate-700">
+                        <label htmlFor="allowJoinRequests" className="ml-2 block text-sm text-at-text-secondary">
                           가입 신청 허용
                         </label>
                       </div>
@@ -462,9 +462,9 @@ const [formData, setFormData] = useState<ClinicFormData>({
 
               {/* User Limit */}
               <div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">사용자 제한</h3>
+                <h3 className="text-lg font-semibold text-at-text mb-4">사용자 제한</h3>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     최대 사용자 수
                   </label>
                   <input
@@ -474,10 +474,10 @@ const [formData, setFormData] = useState<ClinicFormData>({
                     onChange={handleInputChange}
                     min="1"
                     max="50"
-                    className="w-32 p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-32 p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                     disabled={saving}
                   />
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-at-text-weak">
                     구독 플랜에 따라 제한될 수 있습니다.
                   </p>
                 </div>
@@ -487,7 +487,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-6 rounded-md transition-colors"
+                  className="bg-at-accent hover:bg-at-accent-hover disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl transition-colors"
                 >
                   {saving ? '저장 중...' : '설정 저장'}
                 </button>
@@ -498,25 +498,25 @@ const [formData, setFormData] = useState<ClinicFormData>({
           {/* Sidebar Info */}
           <div className="space-y-4">
             {/* Subscription Info */}
-            <div className="bg-slate-50 p-4 rounded-lg">
+            <div className="bg-at-surface-alt p-4 rounded-xl">
               <div className="flex items-center mb-3">
-                <CreditCardIcon className="h-5 w-5 text-slate-600 mr-2" />
-                <h4 className="font-semibold text-slate-800">구독 정보</h4>
+                <CreditCardIcon className="h-5 w-5 text-at-text-secondary mr-2" />
+                <h4 className="font-semibold text-at-text">구독 정보</h4>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">플랜:</span>
+                  <span className="text-at-text-secondary">플랜:</span>
                   <span className="font-medium">
                     {getSubscriptionTierLabel(clinic.subscription_tier)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">상태:</span>
-                  <span className="font-medium text-green-600">활성</span>
+                  <span className="text-at-text-secondary">상태:</span>
+                  <span className="font-medium text-at-success">활성</span>
                 </div>
                 {clinic.subscription_expires_at && (
                   <div className="flex justify-between">
-                    <span className="text-slate-600">만료:</span>
+                    <span className="text-at-text-secondary">만료:</span>
                     <span className="font-medium">
                       {new Date(clinic.subscription_expires_at).toLocaleDateString('ko-KR')}
                     </span>
@@ -526,20 +526,20 @@ const [formData, setFormData] = useState<ClinicFormData>({
             </div>
 
             {/* Quick Stats */}
-            <div className="bg-slate-50 p-4 rounded-lg">
+            <div className="bg-at-surface-alt p-4 rounded-xl">
               <div className="flex items-center mb-3">
-                <UserGroupIcon className="h-5 w-5 text-slate-600 mr-2" />
-                <h4 className="font-semibold text-slate-800">현황</h4>
+                <UserGroupIcon className="h-5 w-5 text-at-text-secondary mr-2" />
+                <h4 className="font-semibold text-at-text">현황</h4>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">등록일:</span>
+                  <span className="text-at-text-secondary">등록일:</span>
                   <span className="font-medium">
                     {new Date(clinic.created_at).toLocaleDateString('ko-KR')}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">최종 수정:</span>
+                  <span className="text-at-text-secondary">최종 수정:</span>
                   <span className="font-medium">
                     {new Date(clinic.updated_at).toLocaleDateString('ko-KR')}
                   </span>
@@ -548,12 +548,12 @@ const [formData, setFormData] = useState<ClinicFormData>({
             </div>
 
             {/* Security Notice */}
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="bg-at-tag p-4 rounded-xl">
               <div className="flex items-center mb-3">
-                <ShieldCheckIcon className="h-5 w-5 text-blue-600 mr-2" />
-                <h4 className="font-semibold text-blue-800">보안 안내</h4>
+                <ShieldCheckIcon className="h-5 w-5 text-at-accent mr-2" />
+                <h4 className="font-semibold text-at-text">보안 안내</h4>
               </div>
-              <ul className="space-y-1 text-xs text-blue-700">
+              <ul className="space-y-1 text-xs text-at-text-secondary">
                 <li>- 병원을 공개하면 가입 신청을 받을 수 있습니다</li>
                 <li>- 모든 가입 신청은 원장님의 승인이 필요합니다</li>
                 <li>- 직원의 권한은 역할에 따라 자동 설정됩니다</li>
@@ -597,17 +597,17 @@ const [formData, setFormData] = useState<ClinicFormData>({
           {/* 출퇴근 설정 탭 */}
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">QR 코드 출퇴근 설정</h3>
-              <p className="text-sm text-slate-600 mb-6">
+              <h3 className="text-lg font-semibold text-at-text mb-4">QR 코드 출퇴근 설정</h3>
+              <p className="text-sm text-at-text-secondary mb-6">
                 직원들이 QR 코드로 출퇴근 인증 시 위치 확인 여부를 설정합니다.
               </p>
 
               {/* 위치 검증 모드 선택 */}
-              <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
-                <h4 className="font-medium text-slate-800 mb-4">위치 검증 모드</h4>
+              <div className="bg-at-surface-alt p-6 rounded-xl border border-at-border">
+                <h4 className="font-medium text-at-text mb-4">위치 검증 모드</h4>
 
                 <div className="space-y-4">
-                  <label className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200 cursor-pointer hover:border-blue-300 transition-colors">
+                  <label className="flex items-start gap-3 p-4 bg-white rounded-xl border border-at-border cursor-pointer hover:border-at-accent transition-colors">
                     <input
                       type="radio"
                       name="qrLocationVerificationMode"
@@ -617,22 +617,22 @@ const [formData, setFormData] = useState<ClinicFormData>({
                         ...prev,
                         qrLocationVerificationMode: e.target.value as QRLocationVerificationMode
                       }))}
-                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      className="mt-1 h-4 w-4 text-at-accent focus:ring-at-accent border-at-border"
                       disabled={saving || !isOwner}
                     />
                     <div className="flex-1">
-                      <div className="font-medium text-slate-800">위치 확인 필수</div>
-                      <p className="text-sm text-slate-500 mt-1">
+                      <div className="font-medium text-at-text">위치 확인 필수</div>
+                      <p className="text-sm text-at-text-weak mt-1">
                         직원이 근무지 근처(설정된 반경 내)에 있을 때만 QR 코드 출퇴근 인증이 가능합니다.
                         위치 정보가 확인되지 않으면 인증이 거부됩니다.
                       </p>
-                      <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-at-tag text-at-accent">
                         기본 설정
                       </div>
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200 cursor-pointer hover:border-blue-300 transition-colors">
+                  <label className="flex items-start gap-3 p-4 bg-white rounded-xl border border-at-border cursor-pointer hover:border-at-accent transition-colors">
                     <input
                       type="radio"
                       name="qrLocationVerificationMode"
@@ -642,12 +642,12 @@ const [formData, setFormData] = useState<ClinicFormData>({
                         ...prev,
                         qrLocationVerificationMode: e.target.value as QRLocationVerificationMode
                       }))}
-                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      className="mt-1 h-4 w-4 text-at-accent focus:ring-at-accent border-at-border"
                       disabled={saving || !isOwner}
                     />
                     <div className="flex-1">
-                      <div className="font-medium text-slate-800">위치 확인 없이 인증</div>
-                      <p className="text-sm text-slate-500 mt-1">
+                      <div className="font-medium text-at-text">위치 확인 없이 인증</div>
+                      <p className="text-sm text-at-text-weak mt-1">
                         직원의 위치와 상관없이 QR 코드를 스캔하면 출퇴근 인증이 완료됩니다.
                         재택근무, 외근 등 다양한 근무 형태에 유용합니다.
                       </p>
@@ -668,9 +668,9 @@ const [formData, setFormData] = useState<ClinicFormData>({
               </div>
 
               {/* 안내 사항 */}
-              <div className="mt-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <h4 className="font-medium text-blue-800 mb-2">안내 사항</h4>
-                <ul className="space-y-1 text-sm text-blue-700">
+              <div className="mt-6 bg-at-tag p-4 rounded-xl border border-at-accent/20">
+                <h4 className="font-medium text-at-text mb-2">안내 사항</h4>
+                <ul className="space-y-1 text-sm text-at-text-secondary">
                   <li>• &apos;위치 확인 필수&apos; 모드에서는 지점별로 설정된 위치와 반경 내에서만 인증됩니다.</li>
                   <li>• &apos;위치 확인 없이 인증&apos; 모드로 변경하면 모든 직원이 어디서든 QR 코드로 출퇴근 인증이 가능합니다.</li>
                   <li>• 설정 변경은 즉시 적용되며, 기존 출퇴근 기록에는 영향을 주지 않습니다.</li>
@@ -683,7 +683,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
                   <button
                     onClick={handleSubmit}
                     disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-6 rounded-md transition-colors"
+                    className="bg-at-accent hover:bg-at-accent-hover disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl transition-colors"
                   >
                     {saving ? '저장 중...' : '설정 저장'}
                   </button>
@@ -692,12 +692,12 @@ const [formData, setFormData] = useState<ClinicFormData>({
 
               {/* 성공/에러 메시지 */}
               {error && (
-                <div className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                <div className="mt-4 bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-xl text-sm">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="mt-4 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
+                <div className="mt-4 bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-xl text-sm">
                   {success}
                 </div>
               )}

@@ -45,7 +45,7 @@ export default function TiptapEditor({
 
   if (!editable) {
     return (
-      <div className="border border-slate-200 rounded-md bg-slate-50">
+      <div className="border border-at-border rounded-xl bg-at-surface-alt">
         <EditorContent editor={editor} />
       </div>
     )

@@ -82,13 +82,13 @@ export default function CashRegisterTable({
     <div className="space-y-4">
       {/* 데스크탑: 컴팩트 테이블 */}
       <div className="hidden sm:block">
-        <div className="border border-slate-200 rounded-lg overflow-hidden">
+        <div className="border border-at-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 w-24">구분</th>
+              <tr className="bg-at-surface-alt border-b border-at-border">
+                <th className="px-3 py-2 text-left text-xs font-semibold text-at-text-secondary w-24">구분</th>
                 {CURRENCY_DENOMINATIONS.map(denom => (
-                  <th key={denom.key} className="px-2 py-2 text-center text-xs font-semibold text-slate-600 min-w-[70px]">
+                  <th key={denom.key} className="px-2 py-2 text-center text-xs font-semibold text-at-text-secondary min-w-[70px]">
                     <span className={`inline-block px-1.5 py-0.5 rounded text-xs ${
                       denom.type === 'bill' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                     }`}>
@@ -96,7 +96,7 @@ export default function CashRegisterTable({
                     </span>
                   </th>
                 ))}
-                <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 w-32">합계액</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-at-text-secondary w-32">합계액</th>
               </tr>
             </thead>
             <tbody>
@@ -108,7 +108,7 @@ export default function CashRegisterTable({
                     <input
                       type="number"
                       min="0"
-                      className="w-full px-2 py-1 border border-slate-200 rounded text-sm text-center focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                      className="w-full px-2 py-1 border border-at-border rounded-lg text-sm text-center focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
                       value={getPrevCount(denom.key) || ''}
                       onChange={(e) => updateDenomination(`prev_${denom.key}`, parseInt(e.target.value) || 0)}
                       placeholder="0"
@@ -128,7 +128,7 @@ export default function CashRegisterTable({
                     <input
                       type="number"
                       min="0"
-                      className="w-full px-2 py-1 border border-slate-200 rounded text-sm text-center focus:ring-1 focus:ring-blue-400 focus:border-blue-400 bg-white"
+                      className="w-full px-2 py-1 border border-at-border rounded-lg text-sm text-center focus:ring-1 focus:ring-at-accent focus:border-at-accent bg-white"
                       value={getCurrCount(denom.key) || ''}
                       onChange={(e) => updateDenomination(`curr_${denom.key}`, parseInt(e.target.value) || 0)}
                       placeholder="0"
@@ -146,7 +146,7 @@ export default function CashRegisterTable({
 
         {/* 차액 표시 - 데스크탑 */}
         <div className="mt-3 flex items-center justify-end gap-2">
-          <span className="text-sm text-slate-600">차액 (금일 - 전일):</span>
+          <span className="text-sm text-at-text-secondary">차액 (금일 - 전일):</span>
           <span className={`text-lg font-mono font-bold ${
             balanceDifference > 0 ? 'text-green-600' :
             balanceDifference < 0 ? 'text-red-600' : 'text-slate-600'
@@ -158,13 +158,13 @@ export default function CashRegisterTable({
 
       {/* 모바일: 가로 스크롤 테이블 */}
       <div className="sm:hidden">
-        <div className="border border-slate-200 rounded-lg overflow-x-auto">
+        <div className="border border-at-border rounded-xl overflow-x-auto">
           <table className="w-max min-w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-2 py-2 text-left text-xs font-semibold text-slate-600 sticky left-0 bg-slate-50 z-10 min-w-[72px]">구분</th>
+              <tr className="bg-at-surface-alt border-b border-at-border">
+                <th className="px-2 py-2 text-left text-xs font-semibold text-at-text-secondary sticky left-0 bg-slate-50 z-10 min-w-[72px]">구분</th>
                 {CURRENCY_DENOMINATIONS.map(denom => (
-                  <th key={denom.key} className="px-1 py-2 text-center text-xs font-semibold text-slate-600 min-w-[60px]">
+                  <th key={denom.key} className="px-1 py-2 text-center text-xs font-semibold text-at-text-secondary min-w-[60px]">
                     <span className={`inline-block px-1 py-0.5 rounded text-xs ${
                       denom.type === 'bill' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                     }`}>
@@ -172,7 +172,7 @@ export default function CashRegisterTable({
                     </span>
                   </th>
                 ))}
-                <th className="px-2 py-2 text-right text-xs font-semibold text-slate-600 min-w-[90px]">합계</th>
+                <th className="px-2 py-2 text-right text-xs font-semibold text-at-text-secondary min-w-[90px]">합계</th>
               </tr>
             </thead>
             <tbody>
@@ -184,7 +184,7 @@ export default function CashRegisterTable({
                     <input
                       type="number"
                       min="0"
-                      className="w-14 px-1 py-1 border border-slate-200 rounded text-xs text-center focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                      className="w-14 px-1 py-1 border border-at-border rounded-lg text-xs text-center focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
                       value={getPrevCount(denom.key) || ''}
                       onChange={(e) => updateDenomination(`prev_${denom.key}`, parseInt(e.target.value) || 0)}
                       placeholder="0"
@@ -204,7 +204,7 @@ export default function CashRegisterTable({
                     <input
                       type="number"
                       min="0"
-                      className="w-14 px-1 py-1 border border-slate-200 rounded text-xs text-center focus:ring-1 focus:ring-blue-400 focus:border-blue-400 bg-white"
+                      className="w-14 px-1 py-1 border border-at-border rounded-lg text-xs text-center focus:ring-1 focus:ring-at-accent focus:border-at-accent bg-white"
                       value={getCurrCount(denom.key) || ''}
                       onChange={(e) => updateDenomination(`curr_${denom.key}`, parseInt(e.target.value) || 0)}
                       placeholder="0"
@@ -221,8 +221,8 @@ export default function CashRegisterTable({
         </div>
 
         {/* 차액 표시 - 모바일 */}
-        <div className="mt-2 flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-          <span className="text-xs text-slate-600">차액 (금일 - 전일)</span>
+        <div className="mt-2 flex items-center justify-between bg-at-surface-alt rounded-xl px-3 py-2">
+          <span className="text-xs text-at-text-secondary">차액 (금일 - 전일)</span>
           <span className={`text-base font-mono font-bold ${
             balanceDifference > 0 ? 'text-green-600' :
             balanceDifference < 0 ? 'text-red-600' : 'text-slate-600'
@@ -234,11 +234,11 @@ export default function CashRegisterTable({
 
       {/* 비고 */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-sm font-medium text-at-text mb-1">
           비고
         </label>
         <textarea
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+          className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
           rows={2}
           placeholder="현금 출납 관련 특이사항을 기록하세요."
           value={cashRegisterData.notes}

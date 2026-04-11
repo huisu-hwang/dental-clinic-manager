@@ -43,9 +43,9 @@ export default function BranchSelector({
   // 로딩 중
   if (isLoading) {
     return (
-      <div className={`flex items-center gap-2 p-4 bg-slate-50 rounded-lg ${className}`}>
-        <MapPinIcon className="w-5 h-5 text-slate-400 animate-pulse" />
-        <span className="text-sm text-slate-500">지점 정보를 불러오는 중...</span>
+      <div className={`flex items-center gap-2 p-4 bg-at-surface-alt rounded-xl ${className}`}>
+        <MapPinIcon className="w-5 h-5 text-at-text-weak animate-pulse" />
+        <span className="text-sm text-at-text-weak">지점 정보를 불러오는 중...</span>
       </div>
     )
   }
@@ -53,9 +53,9 @@ export default function BranchSelector({
   // 지점이 없는 경우
   if (availableBranches.length === 0) {
     return (
-      <div className={`flex items-center gap-2 p-4 bg-slate-50 rounded-lg ${className}`}>
-        <MapPinIcon className="w-5 h-5 text-slate-400" />
-        <span className="text-sm text-slate-500">등록된 지점이 없습니다.</span>
+      <div className={`flex items-center gap-2 p-4 bg-at-surface-alt rounded-xl ${className}`}>
+        <MapPinIcon className="w-5 h-5 text-at-text-weak" />
+        <span className="text-sm text-at-text-weak">등록된 지점이 없습니다.</span>
       </div>
     )
   }
@@ -66,10 +66,10 @@ export default function BranchSelector({
   }
 
   return (
-    <div className={`bg-white border border-slate-200 rounded-lg p-3 ${className}`}>
+    <div className={`bg-white border border-at-border rounded-xl p-3 ${className}`}>
       <div className="flex items-center gap-2 mb-2">
-        <MapPinIcon className="w-4 h-4 text-slate-600" />
-        <span className="text-sm font-medium text-slate-700">지점 선택</span>
+        <MapPinIcon className="w-4 h-4 text-at-text-secondary" />
+        <span className="text-sm font-medium text-at-text-secondary">지점 선택</span>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -78,11 +78,11 @@ export default function BranchSelector({
           <button
             onClick={() => setSelectedBranchId(null)}
             className={`
-              px-4 py-2 rounded-md text-sm font-medium transition-colors
+              px-4 py-2 rounded-xl text-sm font-medium transition-colors
               ${
                 selectedBranchId === null
-                  ? 'bg-blue-500 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-at-accent text-white shadow-at-card'
+                  : 'bg-at-surface-alt text-at-text-secondary hover:bg-slate-200'
               }
             `}
           >
@@ -96,11 +96,11 @@ export default function BranchSelector({
             key={branch.id}
             onClick={() => setSelectedBranchId(branch.id)}
             className={`
-              px-4 py-2 rounded-md text-sm font-medium transition-colors
+              px-4 py-2 rounded-xl text-sm font-medium transition-colors
               ${
                 selectedBranchId === branch.id
-                  ? 'bg-blue-500 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-at-accent text-white shadow-at-card'
+                  : 'bg-at-surface-alt text-at-text-secondary hover:bg-slate-200'
               }
             `}
             title={branch.address || undefined}
@@ -112,14 +112,14 @@ export default function BranchSelector({
 
       {/* 선택된 지점 정보 표시 */}
       {selectedBranchId && (
-        <div className="mt-3 pt-3 border-t border-slate-200">
+        <div className="mt-3 pt-3 border-t border-at-border">
           {availableBranches.find((b) => b.id === selectedBranchId) && (
-            <div className="text-xs text-slate-600">
+            <div className="text-xs text-at-text-secondary">
               <div className="font-medium mb-1">
                 {availableBranches.find((b) => b.id === selectedBranchId)?.branch_name}
               </div>
               {availableBranches.find((b) => b.id === selectedBranchId)?.address && (
-                <div className="text-slate-500">
+                <div className="text-at-text-weak">
                   {availableBranches.find((b) => b.id === selectedBranchId)?.address}
                 </div>
               )}

@@ -46,13 +46,13 @@ export default function NicknameSetupModal({ onComplete }: NicknameSetupModalPro
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-2xl shadow-at-card max-w-md w-full p-6">
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User className="w-8 h-8 text-blue-600" />
+          <div className="w-16 h-16 bg-at-tag rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-at-accent" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">커뮤니티 닉네임 설정</h2>
-          <p className="text-sm text-gray-500 mt-2">
+          <h2 className="text-xl font-bold text-at-text">커뮤니티 닉네임 설정</h2>
+          <p className="text-sm text-at-text-secondary mt-2">
             커뮤니티에서 사용할 닉네임을 설정해주세요.<br />
             닉네임은 다른 사용자에게 공개됩니다.
           </p>
@@ -60,7 +60,7 @@ export default function NicknameSetupModal({ onComplete }: NicknameSetupModalPro
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">닉네임</label>
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">닉네임</label>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Input
@@ -79,7 +79,7 @@ export default function NicknameSetupModal({ onComplete }: NicknameSetupModalPro
                     {available ? (
                       <Check className="w-4 h-4 text-green-500" />
                     ) : (
-                      <X className="w-4 h-4 text-red-500" />
+                      <X className="w-4 h-4 text-at-error" />
                     )}
                   </div>
                 )}
@@ -94,7 +94,7 @@ export default function NicknameSetupModal({ onComplete }: NicknameSetupModalPro
               </Button>
             </div>
             {available === false && (
-              <p className="text-xs text-red-500 mt-1">이미 사용 중인 닉네임입니다.</p>
+              <p className="text-xs text-at-error mt-1">이미 사용 중인 닉네임입니다.</p>
             )}
             {available === true && (
               <p className="text-xs text-green-500 mt-1">사용 가능한 닉네임입니다.</p>
@@ -102,7 +102,7 @@ export default function NicknameSetupModal({ onComplete }: NicknameSetupModalPro
           </div>
 
           {error && (
-            <p className="text-sm text-red-500">{error}</p>
+            <p className="text-sm text-at-error">{error}</p>
           )}
 
           <Button

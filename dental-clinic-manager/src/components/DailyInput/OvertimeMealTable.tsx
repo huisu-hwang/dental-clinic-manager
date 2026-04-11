@@ -41,14 +41,14 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
   return (
     <div className="space-y-4">
       {/* 공통 적용 안내 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-        <p className="text-xs text-blue-700">
+      <div className="bg-at-accent-light border border-at-accent rounded-xl px-3 py-2">
+        <p className="text-xs text-at-accent">
           당일 출근한 모든 임직원에게 공통 적용됩니다.
         </p>
       </div>
 
       {/* 점심 초과근무 */}
-      <div className={`rounded-lg border-2 transition-all ${data.lunch_overtime_minutes > 0 ? 'bg-orange-50 border-orange-300' : 'bg-slate-50 border-slate-200'}`}>
+      <div className={`rounded-lg border-2 transition-all ${data.lunch_overtime_minutes > 0 ? 'bg-orange-50 border-orange-300' : 'bg-at-surface-alt border-at-border'}`}>
         <div className="flex items-center gap-2 p-3">
           <span className={`text-sm font-medium ${data.lunch_overtime_minutes > 0 ? 'text-orange-700' : 'text-slate-600'}`}>
             점심 초과근무
@@ -71,7 +71,7 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
       </div>
 
       {/* 저녁 초과근무 */}
-      <div className={`rounded-lg border-2 transition-all ${data.dinner_overtime_minutes > 0 ? 'bg-violet-50 border-violet-300' : 'bg-slate-50 border-slate-200'}`}>
+      <div className={`rounded-lg border-2 transition-all ${data.dinner_overtime_minutes > 0 ? 'bg-violet-50 border-violet-300' : 'bg-at-surface-alt border-at-border'}`}>
         <div className="flex items-center gap-2 p-3">
           <span className={`text-sm font-medium ${data.dinner_overtime_minutes > 0 ? 'text-violet-700' : 'text-slate-600'}`}>
             저녁 초과근무
@@ -110,7 +110,7 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
           onChange={(e) => handleNotesChange(e.target.value)}
           readOnly={isReadOnly}
           placeholder="비고 (예: 환자 응급 건 등)"
-          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 text-sm border border-at-border rounded-xl focus:ring-1 focus:ring-at-accent focus:border-at-accent"
         />
       </div>
     </div>

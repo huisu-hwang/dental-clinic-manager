@@ -72,16 +72,16 @@ export default function PremiumFeatureModal({ clinic, grantedBy, onClose, onUpda
         onClick={e => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+        <div className="flex items-center justify-between p-5 border-b border-at-border">
           <div>
-            <h3 className="text-lg font-bold text-slate-800">프리미엄 기능 관리</h3>
-            <p className="text-sm text-slate-500 mt-0.5">{clinic.name}</p>
+            <h3 className="text-lg font-bold text-at-text">프리미엄 기능 관리</h3>
+            <p className="text-sm text-at-text-weak mt-0.5">{clinic.name}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-xl hover:bg-at-surface-alt transition-colors"
           >
-            <X className="w-5 h-5 text-slate-400" />
+            <X className="w-5 h-5 text-at-text-weak" />
           </button>
         </div>
 
@@ -89,7 +89,7 @@ export default function PremiumFeatureModal({ clinic, grantedBy, onClose, onUpda
         <div className="p-5 space-y-3">
           {loading ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent" />
             </div>
           ) : (
             PREMIUM_FEATURE_IDS.map(featureId => {
@@ -100,23 +100,23 @@ export default function PremiumFeatureModal({ clinic, grantedBy, onClose, onUpda
               return (
                 <div
                   key={featureId}
-                  className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
+                  className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
                     isEnabled
-                      ? 'border-blue-200 bg-blue-50/50'
-                      : 'border-slate-200 bg-slate-50/50'
+                      ? 'border-blue-200 bg-at-accent-light/50'
+                      : 'border-at-border bg-at-surface-alt/50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      isEnabled ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-400'
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      isEnabled ? 'bg-at-tag text-at-accent' : 'bg-slate-200 text-at-text-weak'
                     }`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className={`text-sm font-semibold ${isEnabled ? 'text-slate-800' : 'text-slate-500'}`}>
+                      <p className={`text-sm font-semibold ${isEnabled ? 'text-at-text' : 'text-at-text-weak'}`}>
                         {PREMIUM_FEATURE_LABELS[featureId]}
                       </p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-at-text-weak">
                         {isEnabled ? '활성화됨' : '비활성화됨'}
                       </p>
                     </div>
@@ -127,12 +127,12 @@ export default function PremiumFeatureModal({ clinic, grantedBy, onClose, onUpda
                     className={`
                       relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200
                       ${isSaving ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
-                      ${isEnabled ? 'bg-blue-500' : 'bg-slate-300'}
+                      ${isEnabled ? 'bg-at-accent' : 'bg-slate-300'}
                     `}
                   >
                     <span
                       className={`
-                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 shadow-sm
+                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 shadow-at-card
                         ${isEnabled ? 'translate-x-6' : 'translate-x-1'}
                       `}
                     />
@@ -144,8 +144,8 @@ export default function PremiumFeatureModal({ clinic, grantedBy, onClose, onUpda
         </div>
 
         {/* 하단 */}
-        <div className="px-5 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl">
-          <p className="text-xs text-slate-400 text-center">
+        <div className="px-5 py-4 border-t border-at-border bg-at-surface-alt rounded-b-xl">
+          <p className="text-xs text-at-text-weak text-center">
             활성화된 기능은 해당 병원의 대표 원장에게 즉시 적용됩니다.
           </p>
         </div>

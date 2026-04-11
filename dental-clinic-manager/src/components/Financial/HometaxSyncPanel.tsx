@@ -315,15 +315,15 @@ export default function HometaxSyncPanel({
       )}
 
       {/* 인증정보 섹션 */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="bg-white rounded-2xl border border-at-border overflow-hidden">
+        <div className="p-4 border-b border-at-border flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-indigo-500" />
-            <h3 className="font-bold text-slate-800 text-sm">홈택스 인증정보</h3>
+            <h3 className="font-bold text-at-text text-sm">홈택스 인증정보</h3>
           </div>
           {credentials && (
             <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${credentials.last_login_success ? 'bg-emerald-100 text-emerald-700' : credentials.last_login_success === false ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${credentials.last_login_success ? 'bg-at-success-bg text-at-success' : credentials.last_login_success === false ? 'bg-at-error-bg text-at-error' : 'bg-at-surface-alt text-at-text-secondary'}`}>
                 {credentials.last_login_success ? '연동 정상' : credentials.last_login_success === false ? '로그인 실패' : '미확인'}
               </span>
             </div>
@@ -380,30 +380,30 @@ export default function HometaxSyncPanel({
           ) : (
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">사업자등록번호</label>
+                <label className="text-xs font-medium text-at-text-secondary mb-1 block">사업자등록번호</label>
                 <input
                   type="text"
                   value={bizNo}
                   onChange={(e) => setBizNo(e.target.value)}
                   placeholder="000-00-00000"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">홈택스 아이디</label>
+                <label className="text-xs font-medium text-at-text-secondary mb-1 block">홈택스 아이디</label>
                 <input
                   type="text"
                   value={loginId}
                   onChange={(e) => setLoginId(e.target.value)}
                   placeholder="홈택스 로그인 아이디"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 flex items-center gap-1.5">
+                <label className="text-xs font-medium text-at-text-secondary mb-1 flex items-center gap-1.5">
                   홈택스 비밀번호
                   {credentials && !loginPw && (
-                    <span className="flex items-center gap-0.5 text-emerald-600 font-medium">
+                    <span className="flex items-center gap-0.5 text-at-success font-medium">
                       <Check className="w-3 h-3" />저장됨
                     </span>
                   )}
@@ -414,22 +414,22 @@ export default function HometaxSyncPanel({
                     value={loginPw}
                     onChange={(e) => setLoginPw(e.target.value)}
                     placeholder={credentials ? '변경하려면 입력 (비워두면 기존값 유지)' : '홈택스 로그인 비밀번호'}
-                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 pr-10 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-at-text-weak hover:text-at-text"
                   >
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 flex items-center gap-1.5">
+                <label className="text-xs font-medium text-at-text-secondary mb-1 flex items-center gap-1.5">
                   주민등록번호 (생년월일 + 뒷자리 1자리)
                   {credentials?.has_resident_number && !residentNumber && (
-                    <span className="flex items-center gap-0.5 text-emerald-600 font-medium">
+                    <span className="flex items-center gap-0.5 text-at-success font-medium">
                       <Check className="w-3 h-3" />저장됨
                     </span>
                   )}
@@ -446,12 +446,12 @@ export default function HometaxSyncPanel({
                     }}
                     placeholder={credentials?.has_resident_number ? '변경하려면 입력 (비워두면 기존값 유지)' : '000000-0'}
                     maxLength={8}
-                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 pr-10 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-at-text-weak hover:text-at-text"
                   >
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -462,7 +462,7 @@ export default function HometaxSyncPanel({
                 <button
                   onClick={handleSaveCredentials}
                   disabled={saving}
-                  className="flex-1 py-2 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-1"
+                  className="flex-1 py-2 text-sm font-medium text-white bg-at-accent rounded-xl hover:bg-at-accent-hover disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-1"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   저장
@@ -470,7 +470,7 @@ export default function HometaxSyncPanel({
                 {credentials && (
                   <button
                     onClick={() => setShowCredForm(false)}
-                    className="py-2 px-4 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                    className="py-2 px-4 text-sm font-medium text-at-text-secondary bg-at-surface-alt rounded-xl hover:bg-at-surface-hover transition-colors"
                   >
                     취소
                   </button>
@@ -483,9 +483,9 @@ export default function HometaxSyncPanel({
 
       {/* 동기화 섹션 */}
       {credentials && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+        <div className="bg-white rounded-2xl border border-at-border overflow-hidden">
+          <div className="p-4 border-b border-at-border bg-slate-50/50">
+            <h3 className="font-bold text-at-text text-sm flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-indigo-500" />
               데이터 동기화
               <span className="text-xs font-normal text-slate-500">{year}년 {month}월</span>
@@ -533,7 +533,7 @@ export default function HometaxSyncPanel({
                           key={dt}
                           className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg ${
                             isDone
-                              ? 'bg-emerald-100 text-emerald-700'
+                              ? 'bg-at-success-bg text-at-success'
                               : 'bg-blue-100 text-blue-600'
                           }`}
                         >
@@ -592,7 +592,7 @@ export default function HometaxSyncPanel({
                 <button
                   onClick={handleSync}
                   disabled={selectedDataTypes.length === 0}
-                  className="w-full py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2.5 text-sm font-bold text-white bg-at-accent rounded-xl hover:bg-at-accent-hover disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-2"
                 >
                   <RefreshCw className="w-4 h-4" />
                   수동 동기화
@@ -605,7 +605,7 @@ export default function HometaxSyncPanel({
 
       {/* 동기화 이력 */}
       {syncLogs.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-at-border overflow-hidden">
           <button
             onClick={() => setShowLogs(!showLogs)}
             className="w-full p-4 flex items-center justify-between text-sm font-bold text-slate-800 hover:bg-slate-50 transition-colors"

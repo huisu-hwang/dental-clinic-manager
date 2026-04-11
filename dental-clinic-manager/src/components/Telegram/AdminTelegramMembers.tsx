@@ -18,11 +18,9 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // 초대 링크 생성
   const [creatingLink, setCreatingLink] = useState(false)
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null)
 
-  // 멤버 추가 (userId 직접 입력)
   const [showAddMember, setShowAddMember] = useState(false)
   const [addUserId, setAddUserId] = useState('')
   const [addingMember, setAddingMember] = useState(false)
@@ -42,7 +40,6 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
     setLoading(false)
   }
 
-  // 초대 링크 생성
   const handleCreateLink = async () => {
     setCreatingLink(true)
     setError(null)
@@ -57,7 +54,6 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
     setCreatingLink(false)
   }
 
-  // 링크 복사
   const handleCopyLink = async (link: TelegramInviteLink) => {
     const url = `${window.location.origin}/community/telegram/join/${link.invite_code}`
     await navigator.clipboard.writeText(url)
@@ -65,7 +61,6 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
     setTimeout(() => setCopiedLinkId(null), 2000)
   }
 
-  // 링크 비활성화
   const handleDeactivateLink = async (linkId: string) => {
     const { error: deactivateError } = await telegramInviteLinkService.deactivateLink(linkId)
     if (deactivateError) {
@@ -75,7 +70,6 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
     }
   }
 
-  // 멤버 제거
   const handleRemoveMember = async (userId: string) => {
     if (!(await appConfirm('이 멤버를 제거하시겠습니까?'))) return
     const { error: removeError } = await telegramMemberService.removeMember(groupId, userId)
@@ -86,7 +80,6 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
     }
   }
 
-  // 멤버 수동 추가
   const handleAddMember = async () => {
     if (!addUserId.trim()) return
     setAddingMember(true)
@@ -105,7 +98,7 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-5 h-5 animate-spin text-sky-500" />
+        <Loader2 className="w-5 h-5 animate-spin text-at-accent" />
       </div>
     )
   }
@@ -113,7 +106,7 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
   return (
     <div className="space-y-6">
       {error && (
-        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+        <div className="flex items-center gap-2 text-sm text-at-error bg-at-error-bg px-3 py-2 rounded-xl">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           {error}
         </div>
@@ -122,7 +115,7 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
       {/* 초대 링크 섹션 */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+          <h4 className="text-sm font-semibold text-at-text-secondary flex items-center gap-1.5">
             <Link2 className="w-4 h-4" />초대 링크
           </h4>
           <Button
@@ -138,20 +131,20 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
         </div>
 
         {inviteLinks.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-3">생성된 초대 링크가 없습니다</p>
+          <p className="text-xs text-at-text-weak text-center py-3">생성된 초대 링크가 없습니다</p>
         ) : (
           <div className="space-y-2">
             {inviteLinks.map(link => (
               <div
                 key={link.id}
-                className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs ${
-                  link.is_active ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50 opacity-60'
+                className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs ${
+                  link.is_active ? 'border-at-border bg-white' : 'border-at-border bg-at-surface-alt opacity-60'
                 }`}
               >
-                <code className="flex-1 text-gray-600 truncate">
+                <code className="flex-1 text-at-text-secondary truncate">
                   /join/{link.invite_code}
                 </code>
-                <span className="text-gray-400 flex-shrink-0">
+                <span className="text-at-text-weak flex-shrink-0">
                   {link.use_count}회 사용
                   {link.max_uses && ` / ${link.max_uses}`}
                 </span>
@@ -173,13 +166,13 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeactivateLink(link.id)}
-                      className="h-6 w-6 p-0 text-red-400 hover:text-red-600"
+                      className="h-6 w-6 p-0 text-at-error hover:text-at-error"
                     >
                       <XCircle className="w-3 h-3" />
                     </Button>
                   </>
                 ) : (
-                  <span className="text-gray-400">비활성</span>
+                  <span className="text-at-text-weak">비활성</span>
                 )}
               </div>
             ))}
@@ -190,7 +183,7 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
       {/* 멤버 목록 섹션 */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+          <h4 className="text-sm font-semibold text-at-text-secondary flex items-center gap-1.5">
             <Users className="w-4 h-4" />멤버 ({members.length}명)
           </h4>
           <Button
@@ -203,7 +196,6 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
           </Button>
         </div>
 
-        {/* 수동 추가 폼 */}
         {showAddMember && (
           <div className="flex gap-2 mb-3">
             <Input
@@ -224,26 +216,26 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
         )}
 
         {members.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-3">멤버가 없습니다</p>
+          <p className="text-xs text-at-text-weak text-center py-3">멤버가 없습니다</p>
         ) : (
           <div className="space-y-1">
             {members.map(member => (
               <div
                 key={member.id}
-                className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-white text-xs"
+                className="flex items-center justify-between p-2.5 rounded-xl border border-at-border bg-white text-xs"
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 bg-sky-100 rounded-full flex items-center justify-center text-sky-700 font-medium">
+                  <div className="w-7 h-7 bg-at-tag rounded-full flex items-center justify-center text-at-accent font-medium">
                     {(member.user?.name || '?')[0]}
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">{member.user?.name || member.user_id}</span>
+                    <span className="font-medium text-at-text-secondary">{member.user?.name || member.user_id}</span>
                     {member.user?.email && (
-                      <span className="text-gray-400 ml-1.5">{member.user.email}</span>
+                      <span className="text-at-text-weak ml-1.5">{member.user.email}</span>
                     )}
                   </div>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                    member.joined_via === 'invite_link' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'
+                  <span className={`px-1.5 py-0.5 rounded-lg text-[10px] ${
+                    member.joined_via === 'invite_link' ? 'bg-green-50 text-green-600' : 'bg-at-surface-alt text-at-text-weak'
                   }`}>
                     {member.joined_via === 'invite_link' ? '초대링크' : '관리자'}
                   </span>
@@ -252,7 +244,7 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
                   variant="ghost"
                   size="sm"
                   onClick={() => handleRemoveMember(member.user_id)}
-                  className="h-6 w-6 p-0 text-red-400 hover:text-red-600"
+                  className="h-6 w-6 p-0 text-at-error hover:text-at-error"
                 >
                   <Trash2 className="w-3 h-3" />
                 </Button>

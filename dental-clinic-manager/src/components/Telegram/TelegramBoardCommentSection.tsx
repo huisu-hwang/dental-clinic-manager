@@ -22,7 +22,6 @@ export default function TelegramBoardCommentSection({
   isMember = true,
   groupVisibility = 'private',
 }: TelegramBoardCommentSectionProps) {
-  // 비멤버는 public_full에서만 댓글 가능
   const canComment = isMember || groupVisibility === 'public_full'
   const [comments, setComments] = useState<TelegramBoardComment[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,48 +94,45 @@ export default function TelegramBoardCommentSection({
   }
 
   return (
-    <div className="mt-6 border-t border-gray-100 pt-4">
+    <div className="mt-6 border-t border-at-border pt-4">
       {/* 헤더 */}
-      <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5 mb-4">
+      <h4 className="text-sm font-semibold text-at-text flex items-center gap-1.5 mb-4">
         <MessageCircle className="w-4 h-4" />
-        댓글 {comments.length > 0 && <span className="text-gray-400">({comments.length})</span>}
+        댓글 {comments.length > 0 && <span className="text-at-text-weak">({comments.length})</span>}
       </h4>
 
       {/* 댓글 목록 */}
       {loading ? (
         <div className="flex justify-center py-6">
-          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+          <Loader2 className="w-5 h-5 animate-spin text-at-text-weak" />
         </div>
       ) : comments.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-4">아직 댓글이 없습니다</p>
+        <p className="text-sm text-at-text-weak text-center py-4">아직 댓글이 없습니다</p>
       ) : (
         <div className="space-y-3 mb-4">
           {comments.map(comment => (
             <div key={comment.id} className="flex gap-3">
-              {/* 아바타 */}
-              <div className="w-7 h-7 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-0.5">
+              <div className="w-7 h-7 rounded-full bg-at-tag text-at-accent flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-0.5">
                 {(comment.user?.name || '?')[0]}
               </div>
 
               <div className="flex-1 min-w-0">
-                {/* 이름 + 시간 */}
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-sm font-medium text-gray-900">
+                  <span className="text-sm font-medium text-at-text">
                     {comment.user?.name || '알 수 없음'}
                   </span>
-                  <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
+                  <span className="text-xs text-at-text-weak">{formatDate(comment.created_at)}</span>
                   {comment.created_at !== comment.updated_at && (
-                    <span className="text-xs text-gray-400">(수정됨)</span>
+                    <span className="text-xs text-at-text-weak">(수정됨)</span>
                   )}
                 </div>
 
-                {/* 내용 or 수정 모드 */}
                 {editingId === comment.id ? (
                   <div className="flex gap-2 mt-1">
                     <input
                       value={editContent}
                       onChange={e => setEditContent(e.target.value)}
-                      className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      className="flex-1 text-sm border border-at-border rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-at-accent"
                       autoFocus
                       onKeyDown={e => {
                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -157,10 +153,9 @@ export default function TelegramBoardCommentSection({
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{comment.content}</p>
+                  <p className="text-sm text-at-text-secondary whitespace-pre-wrap break-words">{comment.content}</p>
                 )}
 
-                {/* 수정/삭제 */}
                 {canModify(comment) && editingId !== comment.id && (
                   <div className="flex gap-2 mt-1">
                     <button
@@ -168,13 +163,13 @@ export default function TelegramBoardCommentSection({
                         setEditingId(comment.id)
                         setEditContent(comment.content)
                       }}
-                      className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
+                      className="text-xs text-at-text-weak hover:text-at-text-secondary flex items-center gap-0.5"
                     >
                       <Pencil className="w-3 h-3" />수정
                     </button>
                     <button
                       onClick={() => handleDelete(comment.id)}
-                      className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-0.5"
+                      className="text-xs text-at-text-weak hover:text-at-error flex items-center gap-0.5"
                     >
                       <Trash2 className="w-3 h-3" />삭제
                     </button>
@@ -193,7 +188,7 @@ export default function TelegramBoardCommentSection({
             value={newComment}
             onChange={e => setNewComment(e.target.value)}
             placeholder="댓글을 입력하세요..."
-            className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            className="flex-1 text-sm border border-at-border rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-at-accent"
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()

@@ -83,17 +83,17 @@ export default function PasswordVerificationModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+      <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full mx-4">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
-            <LockClosedIcon className="h-6 w-6 text-blue-600" />
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-at-tag mb-4">
+            <LockClosedIcon className="h-6 w-6 text-at-accent" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">
+          <h2 className="text-2xl font-bold text-at-text mb-2">
             비밀번호 확인
           </h2>
-          <p className="text-slate-600 text-sm">
-            <span className="font-semibold text-blue-600">
+          <p className="text-at-text-secondary text-sm">
+            <span className="font-semibold text-at-accent">
               {PURPOSE_LABELS[purpose]}
             </span>
             는 민감한 정보입니다.
@@ -105,7 +105,7 @@ export default function PasswordVerificationModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-at-text-secondary mb-1">
               비밀번호
             </label>
             <input
@@ -113,7 +113,7 @@ export default function PasswordVerificationModal({
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
+              className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent pr-10"
               placeholder="비밀번호를 입력하세요"
               disabled={loading}
               autoFocus
@@ -125,20 +125,20 @@ export default function PasswordVerificationModal({
               onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? (
-                <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                <EyeSlashIcon className="h-5 w-5 text-at-text-weak" />
               ) : (
-                <EyeIcon className="h-5 w-5 text-gray-400" />
+                <EyeIcon className="h-5 w-5 text-at-text-weak" />
               )}
             </button>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+            <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm">
               {error}
             </div>
           )}
 
-          <div className="bg-amber-50 border border-amber-200 px-4 py-3 rounded-md">
+          <div className="bg-at-warning-bg border border-amber-200 px-4 py-3 rounded-md">
             <p className="text-amber-800 text-xs">
               💡 인증 후 10분 동안 재확인 없이 {PURPOSE_LABELS[purpose]}에 접근할 수 있습니다.
             </p>
@@ -150,14 +150,14 @@ export default function PasswordVerificationModal({
               type="button"
               onClick={handleClose}
               disabled={loading}
-              className="flex-1 bg-slate-200 hover:bg-slate-300 disabled:bg-slate-100 text-slate-700 font-medium py-3 px-4 rounded-md transition-colors"
+              className="flex-1 bg-slate-200 hover:bg-slate-300 disabled:bg-at-surface-alt text-at-text-secondary font-medium py-3 px-4 rounded-md transition-colors"
             >
               취소
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-3 px-4 rounded-md transition-colors"
+              className="flex-1 bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white font-medium py-3 px-4 rounded-md transition-colors"
             >
               {loading ? '확인 중...' : '확인'}
             </button>

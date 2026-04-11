@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Send, ChevronDown, ChevronUp, Power, PowerOff, Loader2, AlertCircle, Users, Sparkles } from 'lucide-react'
+import { Plus, Send, ChevronDown, ChevronUp, Power, PowerOff, Loader2, AlertCircle, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { telegramGroupService } from '@/lib/telegramService'
 import { useAuth } from '@/contexts/AuthContext'
@@ -9,7 +9,7 @@ import AdminTelegramGroupSetupGuide from './AdminTelegramGroupSetupGuide'
 import AdminTelegramMembers from './AdminTelegramMembers'
 import AdminTelegramSyncStatus from './AdminTelegramSyncStatus'
 import AdminTelegramApplications from './AdminTelegramApplications'
-import type { TelegramGroup, CreateTelegramGroupDto } from '@/types/telegram'
+import type { TelegramGroup } from '@/types/telegram'
 
 export default function AdminTelegramManager() {
   const { user } = useAuth()
@@ -35,7 +35,6 @@ export default function AdminTelegramManager() {
     setLoading(false)
   }
 
-  // 그룹 활성/비활성 토글
   const handleToggleActive = async (group: TelegramGroup) => {
     const newActive = !group.is_active
     const { error: updateError } = await telegramGroupService.updateGroup(group.id, { is_active: newActive })
@@ -46,7 +45,6 @@ export default function AdminTelegramManager() {
     }
   }
 
-  // 일일 요약 활성/비활성 토글
   const handleToggleSummary = async (group: TelegramGroup) => {
     const newValue = !group.summary_enabled
     const { error: updateError } = await telegramGroupService.updateGroup(group.id, { summary_enabled: newValue })
@@ -57,7 +55,6 @@ export default function AdminTelegramManager() {
     }
   }
 
-  // 수동 요약 트리거
   const handleTriggerSummary = async (groupId: string) => {
     setTriggeringSummary(groupId)
     try {
@@ -79,7 +76,7 @@ export default function AdminTelegramManager() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-sky-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-at-accent" />
       </div>
     )
   }
@@ -87,10 +84,10 @@ export default function AdminTelegramManager() {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-4 py-3 rounded-lg">
+        <div className="flex items-center gap-2 text-sm text-at-error bg-at-error-bg px-4 py-3 rounded-xl">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           {error}
-          <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">×</button>
+          <button onClick={() => setError(null)} className="ml-auto text-at-error/60 hover:text-at-error">×</button>
         </div>
       )}
 
@@ -100,8 +97,8 @@ export default function AdminTelegramManager() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Send className="w-4 h-4 text-sky-500" />
-          <h3 className="text-sm font-semibold text-gray-700">
+          <Send className="w-4 h-4 text-at-accent" />
+          <h3 className="text-sm font-semibold text-at-text-secondary">
             연동된 그룹 ({groups.length})
           </h3>
         </div>
@@ -123,7 +120,7 @@ export default function AdminTelegramManager() {
 
       {/* 그룹 목록 */}
       {groups.length === 0 && !showAddForm ? (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-at-text-weak">
           <Send className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm">연동된 텔레그램 그룹이 없습니다</p>
           <p className="text-xs mt-1">위의 "새 그룹 연동" 버튼을 눌러 시작하세요</p>
@@ -133,21 +130,20 @@ export default function AdminTelegramManager() {
           {groups.map(group => (
             <div
               key={group.id}
-              className={`rounded-xl border overflow-hidden transition-colors ${group.is_active ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50'
-                }`}
+              className={`rounded-xl border overflow-hidden transition-colors ${group.is_active ? 'border-at-border bg-white' : 'border-at-border bg-at-surface-alt'}`}
             >
               {/* 그룹 헤더 */}
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${group.color_bg}`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${group.color_bg}`}>
                       <Send className={`w-4 h-4 ${group.color_text}`} />
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-800">{group.board_title}</h4>
-                      <p className="text-xs text-gray-400">
+                      <h4 className="text-sm font-semibold text-at-text">{group.board_title}</h4>
+                      <p className="text-xs text-at-text-weak">
                         {group.chat_title} · /{group.board_slug}
-                        {!group.is_active && <span className="text-red-400 ml-1">(비활성)</span>}
+                        {!group.is_active && <span className="text-at-error ml-1">(비활성)</span>}
                         {group.is_active && group.summary_enabled && <span className="text-amber-500 ml-1">(일일요약 ON)</span>}
                       </p>
                     </div>
@@ -158,7 +154,7 @@ export default function AdminTelegramManager() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleToggleSummary(group)}
-                      className={`h-7 w-7 p-0 ${group.summary_enabled ? 'text-amber-500' : 'text-gray-300'}`}
+                      className={`h-7 w-7 p-0 ${group.summary_enabled ? 'text-amber-500' : 'text-at-text-weak'}`}
                       title={group.summary_enabled ? '일일요약 비활성화' : '일일요약 활성화'}
                     >
                       <Sparkles className="w-3.5 h-3.5" />
@@ -167,7 +163,7 @@ export default function AdminTelegramManager() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleToggleActive(group)}
-                      className={`h-7 w-7 p-0 ${group.is_active ? 'text-green-500' : 'text-gray-400'}`}
+                      className={`h-7 w-7 p-0 ${group.is_active ? 'text-green-500' : 'text-at-text-weak'}`}
                       title={group.is_active ? '비활성화' : '활성화'}
                     >
                       {group.is_active ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
@@ -201,7 +197,7 @@ export default function AdminTelegramManager() {
 
               {/* 확장된 상세 (멤버 관리) */}
               {expandedGroupId === group.id && (
-                <div className="border-t border-gray-100 p-4 bg-gray-50/50">
+                <div className="border-t border-at-border p-4 bg-at-surface-alt">
                   <AdminTelegramMembers groupId={group.id} />
                 </div>
               )}

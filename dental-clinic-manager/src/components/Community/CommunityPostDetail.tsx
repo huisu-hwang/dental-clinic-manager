@@ -88,7 +88,7 @@ export default function CommunityPostDetail({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
       </div>
     )
   }
@@ -96,7 +96,7 @@ export default function CommunityPostDetail({
   if (!post) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">게시글을 찾을 수 없습니다.</p>
+        <p className="text-at-text-secondary">게시글을 찾을 수 없습니다.</p>
         <Button variant="outline" onClick={onBack} className="mt-4">돌아가기</Button>
       </div>
     )
@@ -107,41 +107,41 @@ export default function CommunityPostDetail({
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <nav className="flex items-center text-sm">
-          <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+          <button onClick={onBack} className="text-at-accent hover:text-at-accent-hover font-medium transition-colors">
             자유게시판
           </button>
-          <span className="mx-2 text-gray-400">›</span>
-          <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{post?.title}</span>
+          <span className="mx-2 text-at-text-weak">›</span>
+          <span className="text-at-text-secondary truncate max-w-[200px] sm:max-w-[400px]">{post?.title}</span>
         </nav>
       </div>
 
       {/* 게시글 본문 */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-at-border overflow-hidden shadow-at-card">
         <div className="p-4 sm:p-6">
           {/* 카테고리 & 제목 */}
           <div className="mb-4">
-            <span className={`text-xs px-2 py-0.5 rounded-full ${colors[post.category] || 'bg-gray-100 text-gray-700'}`}>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${colors[post.category] || 'bg-at-surface-alt text-at-text-secondary'}`}>
               {labels[post.category] || post.category}
             </span>
-            <h1 className="text-xl font-bold text-gray-900 mt-2">{post.title}</h1>
+            <h1 className="text-xl font-bold text-at-text mt-2">{post.title}</h1>
           </div>
 
           {/* 메타 정보 */}
-          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-at-border">
             <div className="flex items-center gap-3">
               {post.profile && <ProfileCard profile={post.profile} compact />}
-              <span className="text-xs text-gray-400">{formatDate(post.created_at)}</span>
+              <span className="text-xs text-at-text-weak">{formatDate(post.created_at)}</span>
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={() => setShowShareDialog(true)} className="text-gray-400 hover:text-blue-500 hidden sm:inline-flex">
+              <Button variant="ghost" size="sm" onClick={() => setShowShareDialog(true)} className="text-at-text-weak hover:text-at-accent hidden sm:inline-flex">
                 <Share2 className="w-3.5 h-3.5 mr-1" />공유
               </Button>
               {isOwner && (
                 <>
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-at-text-weak hover:text-at-text-secondary hidden sm:inline-flex">
                     <Pencil className="w-3.5 h-3.5 mr-1" />수정
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={handleDelete} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
+                  <Button variant="ghost" size="sm" onClick={handleDelete} className="text-at-text-weak hover:text-at-error hidden sm:inline-flex">
                     <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
                   </Button>
                 </>
@@ -182,7 +182,7 @@ export default function CommunityPostDetail({
         </div>
 
         {/* 댓글 */}
-        <div className="border-t border-gray-200 p-4 sm:p-6 bg-gray-50">
+        <div className="border-t border-at-border p-4 sm:p-6 bg-at-surface-alt">
           <CommentList postId={post.id} profileId={myProfileId} commentCount={post.comment_count} />
         </div>
       </div>
@@ -200,14 +200,14 @@ export default function CommunityPostDetail({
       <div className="flex items-center justify-center gap-2 mt-2">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-hover transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           목록으로
         </button>
         <button
           onClick={() => setShowShareDialog(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-accent bg-white border border-at-border rounded-xl hover:bg-at-surface-hover transition-colors"
         >
           <Share2 className="w-4 h-4" />
           공유
@@ -216,14 +216,14 @@ export default function CommunityPostDetail({
           <>
             <button
               onClick={() => onEdit(post)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-hover transition-colors"
             >
               <Pencil className="w-4 h-4" />
               수정
             </button>
             <button
               onClick={handleDelete}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-error bg-white border border-at-border rounded-xl hover:bg-at-error-bg transition-colors"
             >
               <Trash2 className="w-4 h-4" />
               삭제

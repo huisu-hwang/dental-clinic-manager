@@ -256,9 +256,9 @@ export default function AdminAttendanceStats() {
   }
 
   const getAttendanceRateColor = (rate: number) => {
-    if (rate >= 95) return 'text-green-600'
-    if (rate >= 85) return 'text-yellow-600'
-    return 'text-red-600'
+    if (rate >= 95) return 'text-at-success'
+    if (rate >= 85) return 'text-at-warning'
+    return 'text-at-error'
   }
 
   // ISO 시간 문자열에서 HH:MM 형식으로 변환
@@ -387,22 +387,22 @@ export default function AdminAttendanceStats() {
   return (
     <div className="space-y-6">
       {/* 기간 선택 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+      <div className="bg-white rounded-xl shadow p-6">
+        <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+          <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-at-accent-light text-at-accent">
             <Calendar className="w-4 h-4" />
           </div>
-          <h3 className="text-base font-semibold text-slate-800">기간 선택</h3>
+          <h3 className="text-base font-semibold text-at-text">기간 선택</h3>
         </div>
 
         {/* 기간 선택 모드 탭 */}
-        <div className="flex mb-4 bg-slate-100 rounded-lg p-1">
+        <div className="flex mb-4 bg-at-surface-alt rounded-xl p-1">
           <button
             onClick={() => setPeriodMode('monthly')}
-            className={`flex-1 flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               periodMode === 'monthly'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-at-accent shadow-at-card'
+                : 'text-at-text-secondary hover:text-at-text'
             }`}
           >
             <Calendar className="w-4 h-4 mr-2" />
@@ -410,10 +410,10 @@ export default function AdminAttendanceStats() {
           </button>
           <button
             onClick={() => setPeriodMode('custom')}
-            className={`flex-1 flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               periodMode === 'custom'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-at-accent shadow-at-card'
+                : 'text-at-text-secondary hover:text-at-text'
             }`}
           >
             <CalendarRange className="w-4 h-4 mr-2" />
@@ -424,11 +424,11 @@ export default function AdminAttendanceStats() {
         {periodMode === 'monthly' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">년도</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1.5">년도</label>
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               >
                 {years.map((year) => (
                   <option key={year} value={year}>
@@ -438,11 +438,11 @@ export default function AdminAttendanceStats() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">월</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1.5">월</label>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               >
                 {months.map((month) => (
                   <option key={month} value={month}>
@@ -458,43 +458,43 @@ export default function AdminAttendanceStats() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handlePresetPeriod('thisWeek')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
               >
                 이번 주
               </button>
               <button
                 onClick={() => handlePresetPeriod('lastWeek')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
               >
                 지난 주
               </button>
               <button
                 onClick={() => handlePresetPeriod('thisMonth')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
               >
                 이번 달
               </button>
               <button
                 onClick={() => handlePresetPeriod('lastMonth')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
               >
                 지난 달
               </button>
               <button
                 onClick={() => handlePresetPeriod('last3Months')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
               >
                 최근 3개월
               </button>
               <button
                 onClick={() => handlePresetPeriod('last6Months')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
               >
                 최근 6개월
               </button>
               <button
                 onClick={() => handlePresetPeriod('thisYear')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
               >
                 올해
               </button>
@@ -503,31 +503,31 @@ export default function AdminAttendanceStats() {
             {/* 직접 기간 선택 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">시작일</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1.5">시작일</label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   max={endDate}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">종료일</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1.5">종료일</label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate}
                   max={formatDateToString(new Date())}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
             </div>
 
             {/* 선택된 기간 표시 */}
-            <div className="text-sm text-slate-600 bg-blue-50 px-3 py-2 rounded-lg">
-              선택 기간: <span className="font-medium text-blue-700">{startDate}</span> ~ <span className="font-medium text-blue-700">{endDate}</span>
+            <div className="text-sm text-at-text-secondary bg-at-accent-light px-3 py-2 rounded-xl">
+              선택 기간: <span className="font-medium text-at-accent">{startDate}</span> ~ <span className="font-medium text-at-accent">{endDate}</span>
             </div>
           </div>
         )}
@@ -546,27 +546,27 @@ export default function AdminAttendanceStats() {
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-slate-500">통계 로딩 중...</span>
+            <div className="w-5 h-5 border-2 border-at-accent border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-at-text-weak">통계 로딩 중...</span>
           </div>
         </div>
       ) : (
         <>
           {/* 요약 통계 카드 */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-4">
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-xl shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600">전체 직원</p>
-                  <p className="text-xl font-bold text-gray-900">{summaryStats.totalEmployees}명</p>
+                  <p className="text-xs text-at-text-secondary">전체 직원</p>
+                  <p className="text-xl font-bold text-at-text">{summaryStats.totalEmployees}명</p>
                 </div>
-                <Users className="w-8 h-8 text-gray-400" />
+                <Users className="w-8 h-8 text-at-text-weak" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-xl shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600">평균 출근율</p>
+                  <p className="text-xs text-at-text-secondary">평균 출근율</p>
                   <p className={`text-xl font-bold ${getAttendanceRateColor(summaryStats.avgAttendanceRate)}`}>
                     {summaryStats.avgAttendanceRate.toFixed(1)}%
                   </p>
@@ -574,82 +574,82 @@ export default function AdminAttendanceStats() {
                 <BarChart3 className="w-8 h-8 text-green-400" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-xl shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600">총 지각</p>
-                  <p className="text-xl font-bold text-yellow-600">{summaryStats.totalLateCount}회</p>
+                  <p className="text-xs text-at-text-secondary">총 지각</p>
+                  <p className="text-xl font-bold text-at-warning">{summaryStats.totalLateCount}회</p>
                   {summaryStats.totalLateMinutes > 0 && (
-                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalLateMinutes)}</p>
+                    <p className="text-xs text-at-text-weak">{formatMinutesToHours(summaryStats.totalLateMinutes)}</p>
                   )}
                 </div>
                 <Clock className="w-8 h-8 text-yellow-400" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-xl shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600">총 조퇴</p>
-                  <p className="text-xl font-bold text-red-600">{summaryStats.totalEarlyLeaveCount}회</p>
+                  <p className="text-xs text-at-text-secondary">총 조퇴</p>
+                  <p className="text-xl font-bold text-at-error">{summaryStats.totalEarlyLeaveCount}회</p>
                   {summaryStats.totalEarlyLeaveMinutes > 0 && (
-                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalEarlyLeaveMinutes)}</p>
+                    <p className="text-xs text-at-text-weak">{formatMinutesToHours(summaryStats.totalEarlyLeaveMinutes)}</p>
                   )}
                 </div>
                 <TrendingUp className="w-8 h-8 text-red-400 rotate-180" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-xl shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600">총 초과근무</p>
+                  <p className="text-xs text-at-text-secondary">총 초과근무</p>
                   <p className="text-xl font-bold text-purple-600">{summaryStats.totalOvertimeCount}회</p>
                   {(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) > 0 && (
-                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes)}</p>
+                    <p className="text-xs text-at-text-weak">{formatMinutesToHours(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes)}</p>
                   )}
                 </div>
                 <TrendingUp className="w-8 h-8 text-purple-400" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-xl shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600 whitespace-nowrap">순 초과근무</p>
+                  <p className="text-xs text-at-text-secondary whitespace-nowrap">순 초과근무</p>
                   <p className={`text-xl font-bold whitespace-nowrap ${(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) - summaryStats.totalEarlyLeaveMinutes >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>
                     {(summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) - summaryStats.totalEarlyLeaveMinutes >= 0 ? '+' : '-'}{formatMinutesToHours(Math.abs((summaryStats.totalOvertimeMinutes + summaryStats.totalMealOvertimeMinutes) - summaryStats.totalEarlyLeaveMinutes))}
                   </p>
-                  <p className="text-xs text-gray-400 whitespace-nowrap">초과-조퇴</p>
+                  <p className="text-xs text-at-text-weak whitespace-nowrap">초과-조퇴</p>
                 </div>
                 <Clock className="w-8 h-8 text-indigo-400" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-xl shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600">총 결근</p>
-                  <p className="text-xl font-bold text-gray-600">{summaryStats.totalAbsentDays}일</p>
+                  <p className="text-xs text-at-text-secondary">총 결근</p>
+                  <p className="text-xl font-bold text-at-text-secondary">{summaryStats.totalAbsentDays}일</p>
                 </div>
-                <X className="w-8 h-8 text-gray-400" />
+                <X className="w-8 h-8 text-at-text-weak" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-xl shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600">점심 초과근무</p>
+                  <p className="text-xs text-at-text-secondary">점심 초과근무</p>
                   <p className="text-xl font-bold text-orange-600">{summaryStats.totalMealLunch}일</p>
                   {summaryStats.totalLunchOvertimeMinutes > 0 && (
-                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalLunchOvertimeMinutes)}</p>
+                    <p className="text-xs text-at-text-weak">{formatMinutesToHours(summaryStats.totalLunchOvertimeMinutes)}</p>
                   )}
                 </div>
                 <Clock className="w-8 h-8 text-orange-400" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-xl shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600">저녁 초과근무</p>
+                  <p className="text-xs text-at-text-secondary">저녁 초과근무</p>
                   <p className="text-xl font-bold text-violet-600">{summaryStats.totalMealDinner}일</p>
                   {summaryStats.totalDinnerOvertimeMinutes > 0 && (
-                    <p className="text-xs text-gray-400">{formatMinutesToHours(summaryStats.totalDinnerOvertimeMinutes)}</p>
+                    <p className="text-xs text-at-text-weak">{formatMinutesToHours(summaryStats.totalDinnerOvertimeMinutes)}</p>
                   )}
                 </div>
                 <Clock className="w-8 h-8 text-violet-400" />
@@ -658,194 +658,194 @@ export default function AdminAttendanceStats() {
           </div>
 
           {/* 직원별 통계 테이블 */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
+          <div className="bg-white rounded-xl shadow">
+            <div className="px-6 py-4 border-b border-at-border">
+              <h2 className="text-lg font-semibold text-at-text">
                 직원별 {periodMode === 'monthly' ? '월간' : '기간별'} 근태 통계 {periodMode === 'monthly' ? `(${selectedYear}년 ${selectedMonth}월)` : `(${startDate} ~ ${endDate})`}
               </h2>
-              <p className="text-sm text-gray-500 mt-1">직원을 클릭하면 상세 기록을 볼 수 있습니다.</p>
+              <p className="text-sm text-at-text-weak mt-1">직원을 클릭하면 상세 기록을 볼 수 있습니다.</p>
             </div>
 
             {statistics.length === 0 ? (
-              <div className="p-12 text-center text-gray-500">
+              <div className="p-12 text-center text-at-text-weak">
                 <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p>선택한 기간의 근태 통계가 없습니다.</p>
               </div>
             ) : (
               <div className="overflow-x-auto max-h-[calc(100vh-280px)] overflow-y-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                <table className="min-w-full divide-y divide-at-border">
+                  <thead className="bg-at-surface-alt sticky top-0 z-10 shadow-at-card">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-at-text-weak uppercase tracking-wider bg-at-surface-alt">
                         직원명
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-at-text-weak uppercase tracking-wider bg-at-surface-alt">
                         출근율
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-at-text-weak uppercase tracking-wider bg-at-surface-alt">
                         출근/근무일
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-at-text-weak uppercase tracking-wider bg-at-surface-alt">
                         지각
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-at-text-weak uppercase tracking-wider bg-at-surface-alt">
                         조퇴
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-at-text-weak uppercase tracking-wider bg-at-surface-alt">
                         초과근무
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-at-text-weak uppercase tracking-wider bg-at-surface-alt">
                         결근
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-at-text-weak uppercase tracking-wider bg-at-surface-alt">
                         연차
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-at-text-weak uppercase tracking-wider bg-at-surface-alt">
                         총 근무시간
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-at-text-weak uppercase tracking-wider bg-at-surface-alt">
                         상세
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-at-border">
                     {statistics.map((stat) => (
                       <React.Fragment key={stat.user_id}>
                         <tr
-                          className={`hover:bg-gray-50 cursor-pointer ${
-                            expandedUserId === stat.user_id ? 'bg-blue-50' : ''
+                          className={`hover:bg-at-surface-alt cursor-pointer ${
+                            expandedUserId === stat.user_id ? 'bg-at-accent-light' : ''
                           }`}
                           onClick={() => toggleUserDetails(stat.user_id)}
                         >
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{stat.user_name}</div>
+                            <div className="text-sm font-medium text-at-text">{stat.user_name}</div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-center">
                             <span className={`text-sm font-bold ${getAttendanceRateColor(stat.attendance_rate)}`}>
                               {stat.attendance_rate.toFixed(1)}%
                             </span>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-600">
+                          <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-at-text-secondary">
                             {stat.present_days}/{stat.total_work_days}일
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-center">
                             {stat.late_count > 0 ? (
                               <div>
-                                <span className="text-sm font-medium text-yellow-600">{stat.late_count}회</span>
-                                <div className="text-xs text-gray-400">
+                                <span className="text-sm font-medium text-at-warning">{stat.late_count}회</span>
+                                <div className="text-xs text-at-text-weak">
                                   {formatMinutesToHours(stat.total_late_minutes)}
                                 </div>
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-400">-</span>
+                              <span className="text-sm text-at-text-weak">-</span>
                             )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-center">
                             {stat.early_leave_count > 0 ? (
                               <div>
-                                <span className="text-sm font-medium text-red-600">{stat.early_leave_count}회</span>
-                                <div className="text-xs text-gray-400">
+                                <span className="text-sm font-medium text-at-error">{stat.early_leave_count}회</span>
+                                <div className="text-xs text-at-text-weak">
                                   {formatMinutesToHours(stat.total_early_leave_minutes)}
                                 </div>
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-400">-</span>
+                              <span className="text-sm text-at-text-weak">-</span>
                             )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-center">
                             {stat.overtime_count > 0 ? (
                               <div>
                                 <span className="text-sm font-medium text-purple-600">{stat.overtime_count}회</span>
-                                <div className="text-xs text-gray-400">
+                                <div className="text-xs text-at-text-weak">
                                   {formatMinutesToHours(stat.total_overtime_minutes)}
                                 </div>
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-400">-</span>
+                              <span className="text-sm text-at-text-weak">-</span>
                             )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-center">
                             {stat.absent_days > 0 ? (
-                              <span className="text-sm font-medium text-gray-600">{stat.absent_days}일</span>
+                              <span className="text-sm font-medium text-at-text-secondary">{stat.absent_days}일</span>
                             ) : (
-                              <span className="text-sm text-gray-400">-</span>
+                              <span className="text-sm text-at-text-weak">-</span>
                             )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-center">
                             {stat.leave_days > 0 ? (
-                              <span className="text-sm font-medium text-blue-600">{stat.leave_days}일</span>
+                              <span className="text-sm font-medium text-at-accent">{stat.leave_days}일</span>
                             ) : (
-                              <span className="text-sm text-gray-400">-</span>
+                              <span className="text-sm text-at-text-weak">-</span>
                             )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-center">
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-at-text-secondary">
                               {formatMinutesToHours(stat.total_work_minutes)}
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-center">
                             {expandedUserId === stat.user_id ? (
-                              <ChevronUp className="w-5 h-5 text-gray-400 mx-auto" />
+                              <ChevronUp className="w-5 h-5 text-at-text-weak mx-auto" />
                             ) : (
-                              <ChevronDown className="w-5 h-5 text-gray-400 mx-auto" />
+                              <ChevronDown className="w-5 h-5 text-at-text-weak mx-auto" />
                             )}
                           </td>
                         </tr>
                         {/* 상세 기록 확장 패널 */}
                         {expandedUserId === stat.user_id && (
                           <tr>
-                            <td colSpan={10} className="px-4 py-0 bg-gray-50">
+                            <td colSpan={10} className="px-4 py-0 bg-at-surface-alt">
                               <div className="py-4">
-                                <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                                <h4 className="text-sm font-semibold text-at-text-secondary mb-3">
                                   {stat.user_name}님의 {periodMode === 'monthly' ? `${selectedMonth}월` : `${startDate} ~ ${endDate}`} 상세 기록
                                 </h4>
                                 {loadingRecords ? (
                                   <div className="flex items-center justify-center py-4">
-                                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    <span className="text-sm text-gray-500">기록 로딩 중...</span>
+                                    <div className="w-4 h-4 border-2 border-at-accent border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    <span className="text-sm text-at-text-weak">기록 로딩 중...</span>
                                   </div>
                                 ) : userRecords.length === 0 ? (
-                                  <p className="text-sm text-gray-500 text-center py-4">기록이 없습니다.</p>
+                                  <p className="text-sm text-at-text-weak text-center py-4">기록이 없습니다.</p>
                                 ) : (
-                                  <div className="overflow-x-auto max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg">
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                      <thead className="bg-gray-100 sticky top-0 z-10">
+                                  <div className="overflow-x-auto max-h-[400px] overflow-y-auto border border-at-border rounded-xl">
+                                    <table className="min-w-full divide-y divide-at-border">
+                                      <thead className="bg-at-surface-alt sticky top-0 z-10">
                                         <tr>
-                                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                                          <th className="px-3 py-2 text-left text-xs font-medium text-at-text-weak">
                                             날짜
                                           </th>
-                                          <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">
+                                          <th className="px-3 py-2 text-center text-xs font-medium text-at-text-weak">
                                             상태
                                           </th>
-                                          <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">
+                                          <th className="px-3 py-2 text-center text-xs font-medium text-at-text-weak">
                                             출근
                                           </th>
-                                          <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">
+                                          <th className="px-3 py-2 text-center text-xs font-medium text-at-text-weak">
                                             퇴근
                                           </th>
-                                          <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">
+                                          <th className="px-3 py-2 text-center text-xs font-medium text-at-text-weak">
                                             지각
                                           </th>
-                                          <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">
+                                          <th className="px-3 py-2 text-center text-xs font-medium text-at-text-weak">
                                             조퇴
                                           </th>
-                                          <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">
+                                          <th className="px-3 py-2 text-center text-xs font-medium text-at-text-weak">
                                             초과근무
                                           </th>
-                                          <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">
+                                          <th className="px-3 py-2 text-center text-xs font-medium text-at-text-weak">
                                             총 근무
                                           </th>
                                           {canEditAttendance && (
-                                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">
+                                            <th className="px-3 py-2 text-center text-xs font-medium text-at-text-weak">
                                               수정
                                             </th>
                                           )}
                                         </tr>
                                       </thead>
-                                      <tbody className="bg-white divide-y divide-gray-200">
+                                      <tbody className="bg-white divide-y divide-at-border">
                                         {userRecords.map((record) => (
-                                          <tr key={record.id} className="hover:bg-gray-50">
-                                            <td className="px-3 py-2 text-sm text-gray-900">
+                                          <tr key={record.id} className="hover:bg-at-surface-alt">
+                                            <td className="px-3 py-2 text-sm text-at-text">
                                               {formatDate(record.work_date)}
                                             </td>
                                             <td className="px-3 py-2 text-center">
@@ -855,28 +855,28 @@ export default function AdminAttendanceStats() {
                                                 {ATTENDANCE_STATUS_NAMES[record.status]}
                                               </span>
                                             </td>
-                                            <td className="px-3 py-2 text-center text-sm text-gray-600">
+                                            <td className="px-3 py-2 text-center text-sm text-at-text-secondary">
                                               {formatTime(record.check_in_time)}
                                             </td>
-                                            <td className="px-3 py-2 text-center text-sm text-gray-600">
+                                            <td className="px-3 py-2 text-center text-sm text-at-text-secondary">
                                               {formatTime(record.check_out_time)}
                                             </td>
                                             <td className="px-3 py-2 text-center text-sm">
                                               {record.late_minutes > 0 ? (
-                                                <span className="text-yellow-600 font-medium">
+                                                <span className="text-at-warning font-medium">
                                                   {record.late_minutes}분
                                                 </span>
                                               ) : (
-                                                <span className="text-gray-400">-</span>
+                                                <span className="text-at-text-weak">-</span>
                                               )}
                                             </td>
                                             <td className="px-3 py-2 text-center text-sm">
                                               {record.early_leave_minutes > 0 ? (
-                                                <span className="text-red-600 font-medium">
+                                                <span className="text-at-error font-medium">
                                                   {record.early_leave_minutes}분
                                                 </span>
                                               ) : (
-                                                <span className="text-gray-400">-</span>
+                                                <span className="text-at-text-weak">-</span>
                                               )}
                                             </td>
                                             <td className="px-3 py-2 text-center text-sm">
@@ -885,10 +885,10 @@ export default function AdminAttendanceStats() {
                                                   {record.overtime_minutes}분
                                                 </span>
                                               ) : (
-                                                <span className="text-gray-400">-</span>
+                                                <span className="text-at-text-weak">-</span>
                                               )}
                                             </td>
-                                            <td className="px-3 py-2 text-center text-sm text-gray-600">
+                                            <td className="px-3 py-2 text-center text-sm text-at-text-secondary">
                                               {record.total_work_minutes && record.total_work_minutes > 0
                                                 ? formatMinutesToHours(record.total_work_minutes)
                                                 : '-'}
@@ -897,7 +897,7 @@ export default function AdminAttendanceStats() {
                                               <td className="px-3 py-2 text-center">
                                                 <button
                                                   onClick={(e) => openEditModal(record, e)}
-                                                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+                                                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-at-accent bg-at-accent-light rounded hover:bg-at-tag transition-colors"
                                                   title="기록 수정"
                                                 >
                                                   <Pencil className="w-3 h-3 mr-1" />
@@ -936,35 +936,35 @@ export default function AdminAttendanceStats() {
             />
 
             {/* 모달 콘텐츠 */}
-            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6 z-10">
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6 z-10">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-at-text">
                   근태 기록 수정
                 </h3>
                 <button
                   onClick={closeEditModal}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-at-text-weak hover:text-at-text-secondary"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">
+              <div className="mb-4 p-3 bg-at-surface-alt rounded-xl">
+                <p className="text-sm text-at-text-secondary">
                   <span className="font-medium">날짜:</span> {formatDate(editingRecord.work_date)}
                 </p>
               </div>
 
               {editError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">{editError}</p>
+                <div className="mb-4 p-3 bg-at-error-bg border border-red-200 rounded-xl">
+                  <p className="text-sm text-at-error">{editError}</p>
                 </div>
               )}
 
               <div className="space-y-4">
                 {/* 상태 선택 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     근태 상태
                   </label>
                   <select
@@ -975,7 +975,7 @@ export default function AdminAttendanceStats() {
                         status: e.target.value as AttendanceStatus,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   >
                     <option value="present">정상출근</option>
                     <option value="late">지각</option>
@@ -988,7 +988,7 @@ export default function AdminAttendanceStats() {
 
                 {/* 출근 시간 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     출근 시간
                   </label>
                   <input
@@ -1000,13 +1000,13 @@ export default function AdminAttendanceStats() {
                         check_in_time: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   />
                 </div>
 
                 {/* 퇴근 시간 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     퇴근 시간
                   </label>
                   <input
@@ -1018,13 +1018,13 @@ export default function AdminAttendanceStats() {
                         check_out_time: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   />
                 </div>
 
                 {/* 메모 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     메모
                   </label>
                   <textarea
@@ -1037,7 +1037,7 @@ export default function AdminAttendanceStats() {
                     }
                     rows={3}
                     placeholder="수정 사유를 입력하세요..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
                   />
                 </div>
               </div>
@@ -1046,7 +1046,7 @@ export default function AdminAttendanceStats() {
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={closeEditModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-at-text-secondary bg-at-surface-alt rounded-xl hover:bg-gray-200 transition-colors"
                   disabled={isSaving}
                 >
                   취소
@@ -1054,7 +1054,7 @@ export default function AdminAttendanceStats() {
                 <button
                   onClick={handleSaveEdit}
                   disabled={isSaving}
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-at-accent rounded-xl hover:bg-at-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSaving ? (
                     <>

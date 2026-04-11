@@ -27,12 +27,12 @@ interface ModalState {
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
-  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-at-accent-light text-at-accent">
       <Icon className="w-4 h-4" />
     </div>
-    <h3 className="text-base font-semibold text-slate-800">
-      <span className="text-blue-600 mr-1">{number}.</span>
+    <h3 className="text-base font-semibold text-at-text">
+      <span className="text-at-accent mr-1">{number}.</span>
       {title}
     </h3>
   </div>
@@ -41,17 +41,17 @@ const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: s
 // 상담 목록 컴포넌트
 const ConsultList = ({ logs }: { logs: ConsultLog[] }) => {
   if (logs.length === 0) {
-    return <p className="text-center text-slate-500 py-8">상담 기록이 없습니다.</p>
+    return <p className="text-center text-at-text-weak py-8">상담 기록이 없습니다.</p>
   }
   const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date))
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="bg-slate-50 text-left">
-          <th className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">날짜</th>
-          <th className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">환자명</th>
+        <tr className="bg-at-surface-alt text-left">
+          <th className="px-3 py-2 font-medium text-at-text-secondary whitespace-nowrap">날짜</th>
+          <th className="px-3 py-2 font-medium text-at-text-secondary whitespace-nowrap">환자명</th>
           <th className="px-3 py-2 font-medium text-slate-600">상담내용</th>
-          <th className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">진행</th>
+          <th className="px-3 py-2 font-medium text-at-text-secondary whitespace-nowrap">진행</th>
           <th className="px-3 py-2 font-medium text-slate-600">비고</th>
         </tr>
       </thead>
@@ -77,18 +77,18 @@ const ConsultList = ({ logs }: { logs: ConsultLog[] }) => {
 // 선물 목록 컴포넌트
 const GiftList = ({ logs }: { logs: GiftLog[] }) => {
   if (logs.length === 0) {
-    return <p className="text-center text-slate-500 py-8">선물 기록이 없습니다.</p>
+    return <p className="text-center text-at-text-weak py-8">선물 기록이 없습니다.</p>
   }
   const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date))
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="bg-slate-50 text-left">
-          <th className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">날짜</th>
-          <th className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">환자명</th>
-          <th className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">선물종류</th>
-          <th className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">수량</th>
-          <th className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">리뷰</th>
+        <tr className="bg-at-surface-alt text-left">
+          <th className="px-3 py-2 font-medium text-at-text-secondary whitespace-nowrap">날짜</th>
+          <th className="px-3 py-2 font-medium text-at-text-secondary whitespace-nowrap">환자명</th>
+          <th className="px-3 py-2 font-medium text-at-text-secondary whitespace-nowrap">선물종류</th>
+          <th className="px-3 py-2 font-medium text-at-text-secondary whitespace-nowrap">수량</th>
+          <th className="px-3 py-2 font-medium text-at-text-secondary whitespace-nowrap">리뷰</th>
           <th className="px-3 py-2 font-medium text-slate-600">비고</th>
         </tr>
       </thead>
@@ -115,13 +115,13 @@ const GiftList = ({ logs }: { logs: GiftLog[] }) => {
 // 리콜 예약 목록 컴포넌트
 const RecallList = ({ data }: { data: Array<{ date: string; names: string }> }) => {
   if (data.length === 0) {
-    return <p className="text-center text-slate-500 py-8">리콜 예약 기록이 없습니다.</p>
+    return <p className="text-center text-at-text-weak py-8">리콜 예약 기록이 없습니다.</p>
   }
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="bg-slate-50 text-left">
-          <th className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">날짜</th>
+        <tr className="bg-at-surface-alt text-left">
+          <th className="px-3 py-2 font-medium text-at-text-secondary whitespace-nowrap">날짜</th>
           <th className="px-3 py-2 font-medium text-slate-600">예약 환자</th>
         </tr>
       </thead>
@@ -143,15 +143,15 @@ const DetailModal = ({ modal, onClose }: { modal: ModalState; onClose: () => voi
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col mx-4"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col mx-4"
         onClick={e => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <h2 className="text-base font-semibold text-slate-800">{modal.title}</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-at-border">
+          <h2 className="text-base font-semibold text-at-text">{modal.title}</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1 rounded-xl text-at-text-weak hover:text-at-text hover:bg-at-surface-hover transition-colors"
             aria-label="닫기"
           >
             <X className="w-5 h-5" />
@@ -170,8 +170,8 @@ const DetailModal = ({ modal, onClose }: { modal: ModalState; onClose: () => voi
         </div>
 
         {/* 푸터 */}
-        <div className="px-5 py-3 border-t border-slate-200 text-right">
-          <span className="text-sm text-slate-500">총 {count}건</span>
+        <div className="px-5 py-3 border-t border-at-border text-right">
+          <span className="text-sm text-at-text-weak">총 {count}건</span>
         </div>
       </div>
     </div>
@@ -232,7 +232,7 @@ const CategoryGiftCard = ({
 
       {/* 확장된 선물 상세 목록 */}
       {isExpanded && hasMultipleGifts && (
-        <div className="mt-3 pt-3 border-t border-slate-200 space-y-1.5">
+        <div className="mt-3 pt-3 border-t border-at-border space-y-1.5">
           {giftEntries.map(([giftName, count]) => (
             <div key={giftName} className="flex justify-between items-center text-xs">
               <span className="text-slate-600">{giftName}</span>
@@ -368,14 +368,14 @@ export default function StatsContainer({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* 상담 진행률 카드 (클릭 → 진행된 상담 목록) */}
           <div
-            className="bg-blue-50 rounded-lg p-4 border border-blue-200 cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all"
+            className="bg-at-accent-light rounded-2xl p-4 border border-at-border cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all"
             onClick={openConsultProceedModal}
           >
             <div className="flex items-start justify-between">
-              <div className="text-xs font-medium text-blue-600 uppercase tracking-wider">상담 진행률</div>
+              <div className="text-xs font-medium text-at-accent uppercase tracking-wider">상담 진행률</div>
               <span className="text-xs text-blue-400 font-medium">상세 →</span>
             </div>
-            <div className="text-2xl font-bold text-blue-700 mt-1">{stats.consultProceedRate || 0}%</div>
+            <div className="text-2xl font-bold text-at-accent mt-1">{stats.consultProceedRate || 0}%</div>
             <div className="text-xs text-slate-500 mt-1">({stats.consult_proceed} / {stats.totalConsults})</div>
           </div>
           {/* 리콜 예약률 카드 (클릭 → 리콜 예약 환자 목록) */}
@@ -453,10 +453,10 @@ export default function StatsContainer({
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
-            <Gift className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <p className="text-slate-600 mb-2">선택한 기간의 선물 증정 기록이 없습니다.</p>
-            <p className="text-sm text-slate-500">선물 증정 기록이 있으면 자동으로 표시됩니다.</p>
+          <div className="text-center py-12 bg-at-surface-alt rounded-2xl border border-at-border">
+            <Gift className="w-12 h-12 text-at-text-weak mx-auto mb-4" />
+            <p className="text-at-text-secondary mb-2">선택한 기간의 선물 증정 기록이 없습니다.</p>
+            <p className="text-sm text-at-text-weak">선물 증정 기록이 있으면 자동으로 표시됩니다.</p>
           </div>
         )}
       </div>

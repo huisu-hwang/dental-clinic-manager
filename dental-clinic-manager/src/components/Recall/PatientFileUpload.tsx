@@ -9,7 +9,7 @@ interface PatientFileUploadProps {
   onUpload: (patients: RecallPatientUploadData[], filename: string) => void
   onCancel: () => void
   isLoading?: boolean
-  excludeMode?: boolean // true: 전화번호만 필수 (제외 환자 업로드용)
+  excludeMode?: boolean
 }
 
 interface ParsedColumn {
@@ -36,68 +36,22 @@ const EXCLUDE_COLUMNS: ParsedColumn[] = [
   { key: 'notes', label: '비고', required: false }
 ]
 
-// 컬럼명 매핑 (다양한 형식 지원)
 const COLUMN_MAPPINGS: Record<string, keyof RecallPatientUploadData> = {
-  '환자명': 'patient_name',
-  '환자이름': 'patient_name',
-  '이름': 'patient_name',
-  '성명': 'patient_name',
-  'name': 'patient_name',
-  'patient_name': 'patient_name',
-
-  '전화번호': 'phone_number',
-  '연락처': 'phone_number',
-  '핸드폰': 'phone_number',
-  '휴대폰': 'phone_number',
-  '휴대전화': 'phone_number',
-  'phone': 'phone_number',
-  'phone_number': 'phone_number',
-  'tel': 'phone_number',
-  'mobile': 'phone_number',
-
-  '차트번호': 'chart_number',
-  '차트': 'chart_number',
-  'chart': 'chart_number',
-  'chart_number': 'chart_number',
-
-  '생년월일': 'birth_date',
-  '생일': 'birth_date',
-  '출생일': 'birth_date',
-  '주민번호앞자리': 'birth_date',
-  'birth': 'birth_date',
-  'birthday': 'birth_date',
-  'birth_date': 'birth_date',
-  'birthdate': 'birth_date',
-  'dob': 'birth_date',
-
-  '성별': 'gender',
-  '성': 'gender',
-  'gender': 'gender',
-  'sex': 'gender',
-
-  '최종내원일': 'last_visit_date',
-  '최종 내원일': 'last_visit_date',
-  '마지막내원일': 'last_visit_date',
-  '마지막 내원일': 'last_visit_date',
-  '최근내원일': 'last_visit_date',
-  '내원일': 'last_visit_date',
-  '방문일': 'last_visit_date',
-  'last_visit': 'last_visit_date',
-  'last_visit_date': 'last_visit_date',
-
-  '시술': 'treatment_type',
-  '시술종류': 'treatment_type',
-  '진료내용': 'treatment_type',
-  '진료': 'treatment_type',
-  'treatment': 'treatment_type',
-  'treatment_type': 'treatment_type',
-
-  '비고': 'notes',
-  '메모': 'notes',
-  '참고': 'notes',
-  'notes': 'notes',
-  'memo': 'notes',
-  'remark': 'notes'
+  '환자명': 'patient_name', '환자이름': 'patient_name', '이름': 'patient_name', '성명': 'patient_name',
+  'name': 'patient_name', 'patient_name': 'patient_name',
+  '전화번호': 'phone_number', '연락처': 'phone_number', '핸드폰': 'phone_number', '휴대폰': 'phone_number',
+  '휴대전화': 'phone_number', 'phone': 'phone_number', 'phone_number': 'phone_number',
+  'tel': 'phone_number', 'mobile': 'phone_number',
+  '차트번호': 'chart_number', '차트': 'chart_number', 'chart': 'chart_number', 'chart_number': 'chart_number',
+  '생년월일': 'birth_date', '생일': 'birth_date', '출생일': 'birth_date', '주민번호앞자리': 'birth_date',
+  'birth': 'birth_date', 'birthday': 'birth_date', 'birth_date': 'birth_date', 'birthdate': 'birth_date', 'dob': 'birth_date',
+  '성별': 'gender', '성': 'gender', 'gender': 'gender', 'sex': 'gender',
+  '최종내원일': 'last_visit_date', '최종 내원일': 'last_visit_date', '마지막내원일': 'last_visit_date',
+  '마지막 내원일': 'last_visit_date', '최근내원일': 'last_visit_date', '내원일': 'last_visit_date',
+  '방문일': 'last_visit_date', 'last_visit': 'last_visit_date', 'last_visit_date': 'last_visit_date',
+  '시술': 'treatment_type', '시술종류': 'treatment_type', '진료내용': 'treatment_type', '진료': 'treatment_type',
+  'treatment': 'treatment_type', 'treatment_type': 'treatment_type',
+  '비고': 'notes', '메모': 'notes', '참고': 'notes', 'notes': 'notes', 'memo': 'notes', 'remark': 'notes'
 }
 
 export default function PatientFileUpload({ onUpload, onCancel, isLoading, excludeMode }: PatientFileUploadProps) {
@@ -111,19 +65,15 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
   const allParsedRowsRef = useRef<any[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // 전화번호 정규화
   const normalizePhoneNumber = (phone: string): string => {
     if (!phone) return ''
-    // 숫자만 추출
     const digits = phone.toString().replace(/[^0-9]/g, '')
-    // 앞에 0이 빠진 경우 추가
     if (digits.length === 10 && !digits.startsWith('0')) {
       return '0' + digits
     }
     return digits
   }
 
-  // 날짜 유효성 검증
   const isValidDate = (year: number, month: number, day: number): boolean => {
     if (month < 1 || month > 12 || day < 1 || day > 31) return false
     if (year < 1900 || year > 2100) return false
@@ -131,13 +81,10 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
     return d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day
   }
 
-  // 날짜 정규화
   const normalizeDate = (date: any): string | undefined => {
     if (!date) return undefined
-
-    // Excel 날짜 시리얼 값 처리
     if (typeof date === 'number') {
-      if (date < 1 || date > 2958465) return undefined // 1900-01-01 ~ 9999-12-31
+      if (date < 1 || date > 2958465) return undefined
       const excelDate = new Date((date - 25569) * 86400 * 1000)
       const y = excelDate.getUTCFullYear()
       const m = excelDate.getUTCMonth() + 1
@@ -145,89 +92,54 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
       if (!isValidDate(y, m, d)) return undefined
       return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     }
-
-    // 문자열 날짜 처리
     const dateStr = date.toString().trim()
     if (!dateStr) return undefined
-
     let year: number, month: number, day: number
-
-    // YYYY-MM-DD 형식
     if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) {
       const parts = dateStr.split('-')
       year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
-    }
-    // YYYY/MM/DD 형식
-    else if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(dateStr)) {
+    } else if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(dateStr)) {
       const parts = dateStr.split('/')
       year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
-    }
-    // YYYY.MM.DD 형식
-    else if (/^\d{4}\.\d{1,2}\.\d{1,2}\.?$/.test(dateStr)) {
+    } else if (/^\d{4}\.\d{1,2}\.\d{1,2}\.?$/.test(dateStr)) {
       const parts = dateStr.replace(/\.$/, '').split('.')
       year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
-    }
-    // YYYYMMDD 형식
-    else if (/^\d{8}$/.test(dateStr)) {
+    } else if (/^\d{8}$/.test(dateStr)) {
       year = parseInt(dateStr.slice(0, 4)); month = parseInt(dateStr.slice(4, 6)); day = parseInt(dateStr.slice(6, 8))
-    }
-    // YYMMDD 형식 (주민번호 앞자리)
-    else if (/^\d{6}$/.test(dateStr)) {
+    } else if (/^\d{6}$/.test(dateStr)) {
       const yy = parseInt(dateStr.slice(0, 2))
       const century = yy > 30 ? 1900 : 2000
       year = century + yy; month = parseInt(dateStr.slice(2, 4)); day = parseInt(dateStr.slice(4, 6))
-    }
-    // YYYY-MM-DD HH:mm:ss 또는 YYYY/MM/DD HH:mm:ss (날짜 부분만 추출)
-    else if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}\s+\d{1,2}:\d{2}/.test(dateStr)) {
+    } else if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}\s+\d{1,2}:\d{2}/.test(dateStr)) {
       const datePart = dateStr.split(/\s+/)[0]
       const parts = datePart.split(/[-/]/)
       year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2])
-    }
-    else {
+    } else {
       return undefined
     }
-
     if (!isValidDate(year, month, day)) return undefined
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   }
 
-  // 성별 정규화
   const normalizeGender = (gender: any): string | undefined => {
     if (!gender) return undefined
-
     const genderStr = gender.toString().trim().toLowerCase()
-
-    // 남성
-    if (['남', '남성', '남자', 'm', 'male', '1', '3'].includes(genderStr)) {
-      return 'male'
-    }
-    // 여성
-    if (['여', '여성', '여자', 'f', 'female', '2', '4'].includes(genderStr)) {
-      return 'female'
-    }
-
+    if (['남', '남성', '남자', 'm', 'male', '1', '3'].includes(genderStr)) return 'male'
+    if (['여', '여성', '여자', 'f', 'female', '2', '4'].includes(genderStr)) return 'female'
     return undefined
   }
 
-  // 파일 파싱
   const parseFile = useCallback(async (file: File) => {
     setParseError(null)
-
     try {
       const extension = file.name.split('.').pop()?.toLowerCase()
-
       let headerRow: string[] = []
       let allRows: Record<string, any>[] = []
 
       if (extension === 'csv') {
-        // CSV 파싱
         const text = await file.text()
         const rows = text.split('\n').map(row => row.split(',').map(cell => cell.trim().replace(/^"|"$/g, '')))
-
-        if (rows.length < 2) {
-          throw new Error('데이터가 없습니다.')
-        }
-
+        if (rows.length < 2) throw new Error('데이터가 없습니다.')
         headerRow = rows[0]
         const dataRows = rows.slice(1).filter(row => row.some(cell => cell.trim()))
         allRows = dataRows.map(row => {
@@ -235,19 +147,13 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
           headerRow.forEach((h, i) => { obj[h] = row[i] || '' })
           return obj
         })
-
       } else if (extension === 'xlsx' || extension === 'xls') {
-        // Excel 파싱
         const buffer = await file.arrayBuffer()
         const workbook = XLSX.read(buffer, { type: 'array' })
         const sheetName = workbook.SheetNames[0]
         const sheet = workbook.Sheets[sheetName]
         const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][]
-
-        if (jsonData.length < 2) {
-          throw new Error('데이터가 없습니다.')
-        }
-
+        if (jsonData.length < 2) throw new Error('데이터가 없습니다.')
         headerRow = jsonData[0].map(h => String(h || '').trim())
         const dataRows = jsonData.slice(1).filter(row => row.some(cell => cell != null && cell !== ''))
         allRows = dataRows.map(row => {
@@ -255,44 +161,32 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
           headerRow.forEach((h, i) => { obj[h] = row[i] ?? '' })
           return obj
         })
-
       } else {
         throw new Error('지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 업로드해주세요.')
       }
 
-      // 전체 파싱 데이터 저장 (업로드 시 재파싱 방지)
       allParsedRowsRef.current = allRows
       setHeaders(headerRow)
       setPreviewData(allRows.slice(0, 5))
 
-      // 자동 컬럼 매핑
       const autoMapping: Record<string, keyof RecallPatientUploadData> = {}
       headerRow.forEach(header => {
         const normalizedHeader = header.toLowerCase().replace(/\s/g, '')
         const mapping = COLUMN_MAPPINGS[header] || COLUMN_MAPPINGS[normalizedHeader]
-        if (mapping) {
-          autoMapping[header] = mapping
-        }
+        if (mapping) autoMapping[header] = mapping
       })
       setColumnMapping(autoMapping)
-
       setFile(file)
-
     } catch (error) {
       console.error('File parse error:', error)
       setParseError(error instanceof Error ? error.message : '파일 파싱 중 오류가 발생했습니다.')
     }
   }, [])
 
-  // 최종 데이터 변환 (저장된 파싱 데이터 사용 — 재파싱 없음)
   const convertToPatientData = useCallback((): RecallPatientUploadData[] | null => {
     const mappedKeys = Object.values(columnMapping)
-
     if (excludeMode) {
-      // 제외 모드: 전화번호 또는 환자명 중 하나라도 매핑되어 있으면 진행
-      const hasPhone = mappedKeys.includes('phone_number')
-      const hasName = mappedKeys.includes('patient_name')
-      if (!hasPhone && !hasName) {
+      if (!mappedKeys.includes('phone_number') && !mappedKeys.includes('patient_name')) {
         setParseError('전화번호 또는 환자명 컬럼을 하나 이상 매핑해주세요.')
         return null
       }
@@ -309,54 +203,30 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
       return null
     }
 
-    // 데이터 변환
     const headerToKey: Record<string, keyof RecallPatientUploadData> = {}
-    Object.entries(columnMapping).forEach(([header, key]) => {
-      headerToKey[header] = key
-    })
+    Object.entries(columnMapping).forEach(([header, key]) => { headerToKey[header] = key })
 
     const patients: RecallPatientUploadData[] = []
     const invalidRows: number[] = []
 
     allRows.forEach((row, index) => {
       const patient: Partial<RecallPatientUploadData> = {}
-
       Object.entries(headerToKey).forEach(([header, key]) => {
         let value = row[header]
-
-        // 특수 처리
-        if (key === 'phone_number') {
-          value = normalizePhoneNumber(value)
-        } else if (key === 'last_visit_date' || key === 'birth_date') {
-          value = normalizeDate(value)
-        } else if (key === 'gender') {
-          value = normalizeGender(value)
-        } else if (typeof value === 'string') {
-          value = value.trim() || undefined
-        } else if (value != null) {
-          // Excel에서 숫자로 파싱된 값 (차트번호 등)을 문자열로 변환
-          value = String(value).trim() || undefined
-        }
-
-        // undefined가 아닌 값만 추가
-        if (value !== undefined && value !== '') {
-          patient[key] = value
-        }
+        if (key === 'phone_number') value = normalizePhoneNumber(value)
+        else if (key === 'last_visit_date' || key === 'birth_date') value = normalizeDate(value)
+        else if (key === 'gender') value = normalizeGender(value)
+        else if (typeof value === 'string') value = value.trim() || undefined
+        else if (value != null) value = String(value).trim() || undefined
+        if (value !== undefined && value !== '') patient[key] = value
       })
 
       if (excludeMode) {
-        // 제외 모드: 전화번호 또는 환자명 중 하나라도 있으면 유효
-        if (patient.phone_number || patient.patient_name) {
-          patients.push(patient as RecallPatientUploadData)
-        } else {
-          invalidRows.push(index + 2)
-        }
+        if (patient.phone_number || patient.patient_name) patients.push(patient as RecallPatientUploadData)
+        else invalidRows.push(index + 2)
       } else {
-        if (patient.patient_name && patient.phone_number) {
-          patients.push(patient as RecallPatientUploadData)
-        } else {
-          invalidRows.push(index + 2)
-        }
+        if (patient.patient_name && patient.phone_number) patients.push(patient as RecallPatientUploadData)
+        else invalidRows.push(index + 2)
       }
     })
 
@@ -367,11 +237,9 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
       )
       return null
     }
-
     return patients
   }, [columnMapping, excludeMode])
 
-  // 업로드 처리
   const handleUpload = () => {
     const patients = convertToPatientData()
     if (patients && patients.length > 0) {
@@ -379,193 +247,129 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
     }
   }
 
-  // 드래그 앤 드롭 핸들러
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
-
-  const handleDragLeave = () => {
-    setIsDragging(false)
-  }
-
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true) }
+  const handleDragLeave = () => setIsDragging(false)
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-
+    e.preventDefault(); setIsDragging(false)
     const droppedFile = e.dataTransfer.files[0]
-    if (droppedFile) {
-      parseFile(droppedFile)
-    }
+    if (droppedFile) parseFile(droppedFile)
   }
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
-    if (selectedFile) {
-      parseFile(selectedFile)
-    }
+    if (selectedFile) parseFile(selectedFile)
   }
-
-  // 컬럼 매핑 변경
   const handleMappingChange = (header: string, value: string) => {
     setColumnMapping(prev => {
-      if (value) {
-        return { ...prev, [header]: value as keyof RecallPatientUploadData }
-      } else {
-        const newMapping = { ...prev }
-        delete newMapping[header]
-        return newMapping
-      }
+      if (value) return { ...prev, [header]: value as keyof RecallPatientUploadData }
+      const newMapping = { ...prev }
+      delete newMapping[header]
+      return newMapping
     })
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-2xl shadow-at-card border border-at-border p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">환자 목록 업로드</h3>
-        <button
-          onClick={onCancel}
-          className="text-gray-400 hover:text-gray-600"
-        >
+        <h3 className="text-lg font-semibold text-at-text">환자 목록 업로드</h3>
+        <button onClick={onCancel} className="text-at-text-weak hover:text-at-text-secondary">
           <X className="w-5 h-5" />
         </button>
       </div>
 
       {!file ? (
         <>
-          {/* 파일 업로드 영역 */}
           <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragging
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 hover:border-gray-400'
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              isDragging ? 'border-at-accent bg-at-accent-light' : 'border-at-border hover:border-at-border'
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-2">
-              파일을 드래그하거나 클릭하여 업로드
-            </p>
-            <p className="text-sm text-gray-400">
-              CSV, Excel (.xlsx, .xls) 파일 지원
-            </p>
+            <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileSelect} className="hidden" />
+            <Upload className="w-12 h-12 text-at-text-weak mx-auto mb-4" />
+            <p className="text-at-text-secondary mb-2">파일을 드래그하거나 클릭하여 업로드</p>
+            <p className="text-sm text-at-text-weak">CSV, Excel (.xlsx, .xls) 파일 지원</p>
           </div>
 
-          {/* 파일 형식 안내 */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">파일 형식 안내</h4>
-            <p className="text-sm text-blue-700 mb-3">
-              아래 컬럼명을 포함한 Excel 또는 CSV 파일을 업로드해주세요.
-            </p>
+          <div className="mt-6 p-4 bg-at-accent-light rounded-xl">
+            <h4 className="font-medium text-at-text mb-2">파일 형식 안내</h4>
+            <p className="text-sm text-at-accent mb-3">아래 컬럼명을 포함한 Excel 또는 CSV 파일을 업로드해주세요.</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
               {COLUMNS.map(col => (
                 <div key={col.key} className="flex items-center gap-1">
-                  <span className={col.required ? 'text-red-500' : 'text-gray-400'}>
-                    {col.required ? '*' : ''}
-                  </span>
-                  <span className="text-blue-900">{col.label}</span>
+                  <span className={col.required ? 'text-at-error' : 'text-at-text-weak'}>{col.required ? '*' : ''}</span>
+                  <span className="text-at-text">{col.label}</span>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-blue-600 mt-2">* 필수 항목</p>
+            <p className="text-xs text-at-accent mt-2">* 필수 항목</p>
           </div>
         </>
       ) : (
         <>
-          {/* 파일 정보 */}
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-6">
-            <FileSpreadsheet className="w-8 h-8 text-green-600" />
+          <div className="flex items-center gap-3 p-3 bg-at-surface-alt rounded-xl mb-6">
+            <FileSpreadsheet className="w-8 h-8 text-at-success" />
             <div className="flex-1">
-              <p className="font-medium text-gray-900">{file.name}</p>
-              <p className="text-sm text-gray-500">
-                {previewData.length > 0 ? `미리보기: ${previewData.length}건` : ''}
-              </p>
+              <p className="font-medium text-at-text">{file.name}</p>
+              <p className="text-sm text-at-text-weak">{previewData.length > 0 ? `미리보기: ${previewData.length}건` : ''}</p>
             </div>
             <button
-              onClick={() => {
-                setFile(null)
-                setPreviewData([])
-                setHeaders([])
-                setColumnMapping({})
-                setParseError(null)
-                allParsedRowsRef.current = []
-              }}
-              className="text-gray-400 hover:text-gray-600"
+              onClick={() => { setFile(null); setPreviewData([]); setHeaders([]); setColumnMapping({}); setParseError(null); allParsedRowsRef.current = [] }}
+              className="text-at-text-weak hover:text-at-text-secondary"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* 에러 메시지 */}
           {parseError && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg mb-6">
+            <div className="flex items-center gap-2 p-3 bg-at-error-bg text-at-error rounded-xl mb-6">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <p className="text-sm">{parseError}</p>
             </div>
           )}
 
-          {/* 컬럼 매핑 */}
           <div className="mb-6">
-            <h4 className="font-medium text-gray-900 mb-3">컬럼 매핑</h4>
+            <h4 className="font-medium text-at-text mb-3">컬럼 매핑</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {headers.map(header => (
                 <div key={header} className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 w-32 truncate" title={header}>
-                    {header}
-                  </span>
-                  <span className="text-gray-400">→</span>
+                  <span className="text-sm text-at-text-secondary w-32 truncate" title={header}>{header}</span>
+                  <span className="text-at-text-weak">→</span>
                   <select
                     value={columnMapping[header] || ''}
                     onChange={(e) => handleMappingChange(header, e.target.value)}
-                    className="flex-1 p-2 border border-gray-300 rounded-md text-sm"
+                    className="flex-1 p-2 border border-at-border rounded-xl text-sm"
                   >
                     <option value="">선택 안함</option>
                     {COLUMNS.map(col => (
-                      <option key={col.key} value={col.key}>
-                        {col.label} {col.required ? '*' : ''}
-                      </option>
+                      <option key={col.key} value={col.key}>{col.label} {col.required ? '*' : ''}</option>
                     ))}
                   </select>
-                  {columnMapping[header] && (
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  )}
+                  {columnMapping[header] && <CheckCircle className="w-5 h-5 text-at-success flex-shrink-0" />}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* 데이터 미리보기 */}
           {previewData.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-3">데이터 미리보기</h4>
+              <h4 className="font-medium text-at-text mb-3">데이터 미리보기</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50">
+                    <tr className="bg-at-surface-alt">
                       {headers.map(header => (
-                        <th key={header} className="px-3 py-2 text-left text-gray-600 font-medium">
-                          {header}
-                        </th>
+                        <th key={header} className="px-3 py-2 text-left text-at-text-secondary font-medium">{header}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {previewData.map((row, index) => (
-                      <tr key={index} className="border-t border-gray-100">
+                      <tr key={index} className="border-t border-at-border">
                         {headers.map(header => (
-                          <td key={header} className="px-3 py-2 text-gray-900">
-                            {String(row[header] || '')}
-                          </td>
+                          <td key={header} className="px-3 py-2 text-at-text">{String(row[header] || '')}</td>
                         ))}
                       </tr>
                     ))}
@@ -573,16 +377,15 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
                 </table>
               </div>
               {previewData.length >= 5 && (
-                <p className="text-xs text-gray-500 mt-2">* 상위 5건만 미리보기로 표시됩니다.</p>
+                <p className="text-xs text-at-text-weak mt-2">* 상위 5건만 미리보기로 표시됩니다.</p>
               )}
             </div>
           )}
 
-          {/* 버튼 */}
           <div className="flex justify-end gap-3">
             <button
               onClick={onCancel}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 text-at-text-secondary border border-at-border rounded-xl hover:bg-at-surface-hover"
             >
               취소
             </button>
@@ -592,18 +395,12 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
                 ? (!Object.values(columnMapping).includes('phone_number') && !Object.values(columnMapping).includes('patient_name'))
                 : (!Object.values(columnMapping).includes('patient_name') || !Object.values(columnMapping).includes('phone_number'))
               )}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isLoading ? (
-                <>
-                  <span className="animate-spin">⏳</span>
-                  업로드 중...
-                </>
+                <><span className="animate-spin">⏳</span>업로드 중...</>
               ) : (
-                <>
-                  <Upload className="w-4 h-4" />
-                  업로드
-                </>
+                <><Upload className="w-4 h-4" />업로드</>
               )}
             </button>
           </div>

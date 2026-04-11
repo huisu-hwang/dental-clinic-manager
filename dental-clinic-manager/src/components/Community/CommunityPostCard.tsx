@@ -29,7 +29,7 @@ export default function CommunityPostCard({ post, onClick, labelMap, colorMap }:
   return (
     <div
       onClick={() => onClick(post)}
-      className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 border-l-2 ${
+      className={`flex items-center px-4 py-3 hover:bg-at-surface-hover cursor-pointer transition-colors border-b border-at-border last:border-b-0 border-l-2 ${
         post.is_pinned ? 'border-l-red-400 bg-red-50/30' : 'border-l-transparent'
       }`}
     >
@@ -41,19 +41,19 @@ export default function CommunityPostCard({ post, onClick, labelMap, colorMap }:
       </div>
       {/* 분류 */}
       <div className="hidden sm:block w-20 flex-shrink-0 text-center">
-        <span className={`text-xs px-1.5 py-0.5 rounded ${colors[post.category] || 'bg-gray-100 text-gray-700'}`}>
+        <span className={`text-xs px-1.5 py-0.5 rounded ${colors[post.category] || 'bg-at-surface-alt text-at-text-secondary'}`}>
           {labels[post.category] || post.category}
         </span>
       </div>
       {/* 제목 */}
       <div className="flex-1 min-w-0 flex items-center gap-1.5">
-        <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${colors[post.category] || 'bg-gray-100 text-gray-700'}`}>
+        <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${colors[post.category] || 'bg-at-surface-alt text-at-text-secondary'}`}>
           {labels[post.category] || post.category}
         </span>
         {post.has_poll && (
           <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 flex-shrink-0">투표</span>
         )}
-        <span className="text-sm text-gray-900 truncate">{post.title}</span>
+        <span className="text-sm text-at-text truncate">{post.title}</span>
         {(() => {
           const created = new Date(post.created_at)
           const now = new Date()
@@ -72,15 +72,15 @@ export default function CommunityPostCard({ post, onClick, labelMap, colorMap }:
         )}
       </div>
       {/* 작성자 */}
-      <div className="hidden sm:block w-20 text-center text-sm text-gray-500 flex-shrink-0 truncate">
+      <div className="hidden sm:block w-20 text-center text-sm text-at-text-secondary flex-shrink-0 truncate">
         {post.profile?.nickname || '익명'}
       </div>
       {/* 작성일 */}
-      <div className="w-20 text-center text-sm text-gray-500 flex-shrink-0">
+      <div className="w-20 text-center text-sm text-at-text-secondary flex-shrink-0">
         {formatDate(post.created_at)}
       </div>
       {/* 조회수 */}
-      <div className="hidden sm:block w-12 text-center text-sm text-gray-500 flex-shrink-0">
+      <div className="hidden sm:block w-12 text-center text-sm text-at-text-secondary flex-shrink-0">
         {post.view_count}
       </div>
     </div>

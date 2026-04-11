@@ -74,28 +74,28 @@ export default function AnnouncementForm({
           <ArrowLeft className="w-4 h-4" />
           취소
         </Button>
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2 className="text-lg font-semibold text-at-text">
           {isEditing ? '공지사항 수정' : '새 공지사항 작성'}
         </h2>
       </div>
 
       {/* 폼 */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-at-border p-6 space-y-6">
         {error && (
-          <div className="p-4 bg-red-50 text-red-700 rounded-lg text-sm">
+          <div className="p-4 bg-at-error-bg text-at-error rounded-xl text-sm">
             {error}
           </div>
         )}
 
         {/* 카테고리 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             카테고리 <span className="text-red-500">*</span>
           </label>
           <select
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value as AnnouncementCategory })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-at-border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-at-accent"
           >
             {Object.entries(ANNOUNCEMENT_CATEGORY_LABELS).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
@@ -105,7 +105,7 @@ export default function AnnouncementForm({
 
         {/* 제목 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             제목 <span className="text-red-500">*</span>
           </label>
           <Input
@@ -120,7 +120,7 @@ export default function AnnouncementForm({
         {showDateFields && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-at-text-secondary mb-2">
                 시작일
               </label>
               <Input
@@ -130,7 +130,7 @@ export default function AnnouncementForm({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-at-text-secondary mb-2">
                 종료일
               </label>
               <Input
@@ -144,7 +144,7 @@ export default function AnnouncementForm({
 
         {/* 내용 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             내용 <span className="text-red-500">*</span>
           </label>
           <EnhancedTiptapEditor
@@ -161,23 +161,23 @@ export default function AnnouncementForm({
               type="checkbox"
               checked={formData.is_pinned}
               onChange={(e) => setFormData({ ...formData, is_pinned: e.target.checked })}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-at-accent border-at-border rounded focus:ring-at-accent"
             />
-            <span className="text-sm text-gray-700">상단 고정</span>
+            <span className="text-sm text-at-text-secondary">상단 고정</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.is_important}
               onChange={(e) => setFormData({ ...formData, is_important: e.target.checked })}
-              className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+              className="w-4 h-4 text-at-error border-at-border rounded focus:ring-red-500"
             />
-            <span className="text-sm text-gray-700">중요 공지</span>
+            <span className="text-sm text-at-text-secondary">중요 공지</span>
           </label>
         </div>
 
         {/* 버튼 */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+        <div className="flex justify-end gap-3 pt-4 border-t border-at-border">
           <Button type="button" variant="outline" onClick={onCancel}>
             취소
           </Button>

@@ -169,30 +169,30 @@ export default function EnhancedSignupForm({
         <div className="text-center mb-8">
           <button
             onClick={() => setCurrentStep('clinic-selection')}
-            className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium mb-4"
+            className="inline-flex items-center text-at-accent hover:text-at-accent font-medium mb-4"
           >
             ← 돌아가기
           </button>
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-at-accent rounded-xl flex items-center justify-center">
               <span className="text-white font-bold">🦷</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
+            <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
           </div>
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">새 병원 등록</h2>
-          <p className="text-slate-600">병원 정보를 입력하여 계정을 생성하세요</p>
+          <h2 className="text-3xl font-bold text-at-text mb-2">새 병원 등록</h2>
+          <p className="text-at-text-secondary">병원 정보를 입력하여 계정을 생성하세요</p>
         </div>
 
         {/* Form */}
-        <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
+        <div className="bg-white p-8 rounded-2xl shadow-at-card border border-at-border">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 로그인 정보 */}
-            <div className="pb-4 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">로그인 정보</h3>
+            <div className="pb-4 border-b border-at-border">
+              <h3 className="text-lg font-semibold text-at-text mb-4">로그인 정보</h3>
 
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="userId" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="userId" className="block text-sm font-medium text-at-text-secondary mb-1">
                     아이디 *
                   </label>
                   <input
@@ -201,14 +201,14 @@ export default function EnhancedSignupForm({
                     name="userId"
                     value={formData.userId}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                     placeholder="4글자 이상의 아이디"
                     disabled={loading}
                   />
                 </div>
 
                 <div className="relative">
-                  <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="password" className="block text-sm font-medium text-at-text-secondary mb-1">
                     비밀번호 *
                   </label>
                   <input
@@ -217,7 +217,7 @@ export default function EnhancedSignupForm({
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
+                    className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent pr-10"
                     placeholder="6글자 이상"
                     disabled={loading}
                   />
@@ -227,15 +227,15 @@ export default function EnhancedSignupForm({
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                      <EyeSlashIcon className="h-5 w-5 text-at-text-weak" />
                     ) : (
-                      <EyeIcon className="h-5 w-5 text-gray-400" />
+                      <EyeIcon className="h-5 w-5 text-at-text-weak" />
                     )}
                   </button>
                 </div>
 
                 <div className="relative">
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-at-text-secondary mb-1">
                     비밀번호 확인 *
                   </label>
                   <input
@@ -244,7 +244,7 @@ export default function EnhancedSignupForm({
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
+                    className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent pr-10"
                     placeholder="비밀번호를 다시 입력하세요"
                     disabled={loading}
                   />
@@ -254,9 +254,9 @@ export default function EnhancedSignupForm({
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     {showConfirmPassword ? (
-                      <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                      <EyeSlashIcon className="h-5 w-5 text-at-text-weak" />
                     ) : (
-                      <EyeIcon className="h-5 w-5 text-gray-400" />
+                      <EyeIcon className="h-5 w-5 text-at-text-weak" />
                     )}
                   </button>
                 </div>
@@ -265,12 +265,12 @@ export default function EnhancedSignupForm({
 
             {/* 병원 정보 */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">병원 정보</h3>
+              <h3 className="text-lg font-semibold text-at-text mb-4">병원 정보</h3>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="clinicOwnerName" className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="clinicOwnerName" className="block text-sm font-medium text-at-text-secondary mb-1">
                       원장 이름 *
                     </label>
                     <input
@@ -279,14 +279,14 @@ export default function EnhancedSignupForm({
                       name="clinicOwnerName"
                       value={formData.clinicOwnerName}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       placeholder="홍길동"
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="clinicName" className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="clinicName" className="block text-sm font-medium text-at-text-secondary mb-1">
                       치과명 *
                     </label>
                     <input
@@ -295,7 +295,7 @@ export default function EnhancedSignupForm({
                       name="clinicName"
                       value={formData.clinicName}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       placeholder="○○치과"
                       disabled={loading}
                     />
@@ -303,7 +303,7 @@ export default function EnhancedSignupForm({
                 </div>
 
                 <div>
-                  <label htmlFor="clinicAddress" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="clinicAddress" className="block text-sm font-medium text-at-text-secondary mb-1">
                     치과 주소 *
                   </label>
                   <input
@@ -312,7 +312,7 @@ export default function EnhancedSignupForm({
                     name="clinicAddress"
                     value={formData.clinicAddress}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                     placeholder="서울시 강남구 테헤란로 123 4층"
                     disabled={loading}
                   />
@@ -320,7 +320,7 @@ export default function EnhancedSignupForm({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="clinicPhone" className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="clinicPhone" className="block text-sm font-medium text-at-text-secondary mb-1">
                       치과 전화번호 *
                     </label>
                     <input
@@ -332,7 +332,7 @@ export default function EnhancedSignupForm({
                         const formatted = autoFormatPhoneNumber(e.target.value);
                         setFormData(prev => ({ ...prev, clinicPhone: formatted.value }));
                       }}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       placeholder="02-1234-5678"
                       maxLength={13}
                       disabled={loading}
@@ -340,7 +340,7 @@ export default function EnhancedSignupForm({
                   </div>
 
                   <div>
-                    <label htmlFor="clinicEmail" className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="clinicEmail" className="block text-sm font-medium text-at-text-secondary mb-1">
                       이메일 주소 *
                     </label>
                     <input
@@ -349,7 +349,7 @@ export default function EnhancedSignupForm({
                       name="clinicEmail"
                       value={formData.clinicEmail}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       placeholder="clinic@example.com"
                       disabled={loading}
                     />
@@ -357,7 +357,7 @@ export default function EnhancedSignupForm({
                 </div>
 
                 <div>
-                  <label htmlFor="businessNumber" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="businessNumber" className="block text-sm font-medium text-at-text-secondary mb-1">
                     사업자등록번호 (선택)
                   </label>
                   <input
@@ -366,7 +366,7 @@ export default function EnhancedSignupForm({
                     name="businessNumber"
                     value={formData.businessNumber}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                     placeholder="123-45-67890"
                     disabled={loading}
                   />
@@ -375,13 +375,13 @@ export default function EnhancedSignupForm({
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+              <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-xl text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
+              <div className="bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-xl text-sm">
                 {success}
               </div>
             )}
@@ -389,18 +389,18 @@ export default function EnhancedSignupForm({
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+              className="w-full bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-xl transition-colors"
             >
               {loading ? '가입 중...' : '병원 등록 및 회원가입'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-slate-600">
+            <p className="text-at-text-secondary">
               이미 계정이 있으신가요?{' '}
               <button
                 onClick={onShowLogin}
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-at-accent hover:text-at-accent font-medium"
               >
                 로그인하기
               </button>

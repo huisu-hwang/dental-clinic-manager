@@ -125,45 +125,45 @@ export default function DentwebImportModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col mx-4">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 border-b border-at-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
               <Database className="w-5 h-5 text-teal-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">덴트웹에서 가져오기</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="text-lg font-bold text-at-text">덴트웹에서 가져오기</h2>
+              <p className="text-sm text-at-text-weak">
                 덴트웹 환자를 리콜 대상으로 등록합니다
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+          <button onClick={onClose} className="p-2 text-at-text-weak hover:text-at-text-secondary rounded-lg hover:bg-at-surface-hover">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* 필터 영역 */}
-        <div className="p-4 border-b border-gray-100 space-y-3">
+        <div className="p-4 border-b border-at-border space-y-3">
           <div className="flex flex-wrap gap-3">
             {/* 검색 */}
             <div className="flex-1 min-w-[200px] relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="이름, 차트번호, 전화번호 검색..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
 
             {/* 미내원 기간 필터 */}
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
+              <Calendar className="w-4 h-4 text-at-text-weak" />
               <select
                 value={lastVisitMonths}
                 onChange={(e) => setLastVisitMonths(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500"
+                className="px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-teal-500"
               >
                 <option value={0}>전체 환자</option>
                 <option value={3}>3개월 이상 미내원</option>
@@ -176,8 +176,8 @@ export default function DentwebImportModal({
 
           {/* 결과 요약 */}
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">
-              총 <strong className="text-gray-700">{totalPatients}</strong>명
+            <span className="text-at-text-weak">
+              총 <strong className="text-at-text-secondary">{totalPatients}</strong>명
               {selectedIds.length > 0 && (
                 <span className="ml-2 text-teal-600">
                   (<strong>{selectedIds.length}</strong>명 선택)
@@ -188,7 +188,7 @@ export default function DentwebImportModal({
               <button
                 onClick={handleImport}
                 disabled={isImporting}
-                className="flex items-center gap-2 px-4 py-1.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-gray-300 text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-1.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 disabled:opacity-50 text-sm font-medium"
               >
                 {isImporting ? (
                   <>
@@ -208,7 +208,7 @@ export default function DentwebImportModal({
 
         {/* 에러 메시지 */}
         {error && (
-          <div className="mx-4 mt-3 flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+          <div className="mx-4 mt-3 flex items-center gap-2 p-3 bg-at-error-bg text-at-error rounded-xl text-sm">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             {error}
           </div>
@@ -219,10 +219,10 @@ export default function DentwebImportModal({
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
-              <span className="ml-3 text-gray-500">환자 목록 로딩 중...</span>
+              <span className="ml-3 text-at-text-weak">환자 목록 로딩 중...</span>
             </div>
           ) : patients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-16 text-at-text-weak">
               <Database className="w-12 h-12 mb-3" />
               <p className="text-sm">
                 {totalPatients === 0
@@ -232,10 +232,10 @@ export default function DentwebImportModal({
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr className="text-left text-gray-600">
+              <thead className="bg-at-surface-alt sticky top-0">
+                <tr className="text-left text-at-text-secondary">
                   <th className="px-4 py-3 w-10">
-                    <button onClick={handleSelectAll} className="text-gray-400 hover:text-teal-600">
+                    <button onClick={handleSelectAll} className="text-at-text-weak hover:text-teal-600">
                       {selectedIds.length === patients.length && patients.length > 0 ? (
                         <CheckSquare className="w-5 h-5 text-teal-600" />
                       ) : (
@@ -251,7 +251,7 @@ export default function DentwebImportModal({
                   <th className="px-4 py-3">최근치료</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-at-border">
                 {patients.map(patient => (
                   <tr
                     key={patient.id}
@@ -259,41 +259,41 @@ export default function DentwebImportModal({
                     className={`cursor-pointer transition-colors ${
                       selectedIds.includes(patient.id)
                         ? 'bg-teal-50'
-                        : 'hover:bg-gray-50'
+                        : 'hover:bg-at-surface-hover'
                     }`}
                   >
                     <td className="px-4 py-3">
                       {selectedIds.includes(patient.id) ? (
                         <CheckSquare className="w-5 h-5 text-teal-600" />
                       ) : (
-                        <Square className="w-5 h-5 text-gray-300" />
+                        <Square className="w-5 h-5 text-at-text-weak" />
                       )}
                     </td>
-                    <td className="px-4 py-3 font-mono text-gray-600">
+                    <td className="px-4 py-3 font-mono text-at-text-secondary">
                       {patient.chart_number || '-'}
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                    <td className="px-4 py-3 font-medium text-at-text">
                       {patient.patient_name}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-at-text-secondary">
                       {patient.phone_number || '-'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-at-text-secondary">
                       {patient.birth_date || '-'}
                     </td>
                     <td className="px-4 py-3">
                       {patient.last_visit_date ? (
                         <div>
-                          <span className="text-gray-600">{patient.last_visit_date}</span>
+                          <span className="text-at-text-secondary">{patient.last_visit_date}</span>
                           <span className="ml-1 text-xs text-orange-500">
                             ({formatElapsedTime(patient.last_visit_date)})
                           </span>
                         </div>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-at-text-weak">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 max-w-[150px] truncate">
+                    <td className="px-4 py-3 text-at-text-secondary max-w-[150px] truncate">
                       {patient.last_treatment_type || '-'}
                     </td>
                   </tr>
@@ -305,21 +305,21 @@ export default function DentwebImportModal({
 
         {/* 페이지네이션 */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 p-4 border-t border-gray-200">
+          <div className="flex items-center justify-center gap-2 p-4 border-t border-at-border">
             <button
               onClick={() => { setCurrentPage(prev => prev - 1); loadPatients(currentPage - 1) }}
               disabled={currentPage <= 1}
-              className="p-1.5 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-gray-50"
+              className="p-1.5 rounded-lg border border-at-border disabled:opacity-50 hover:bg-at-surface-hover"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm text-gray-600 px-3">
+            <span className="text-sm text-at-text-secondary px-3">
               {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => { setCurrentPage(prev => prev + 1); loadPatients(currentPage + 1) }}
               disabled={currentPage >= totalPages}
-              className="p-1.5 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-gray-50"
+              className="p-1.5 rounded-lg border border-at-border disabled:opacity-50 hover:bg-at-surface-hover"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

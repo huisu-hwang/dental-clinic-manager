@@ -49,7 +49,6 @@ const PERIOD_COMPARE_LABELS: Record<RecallStatsPeriod, { current: string; previo
   monthly: { current: '이번 달', previous: '지난 달' }
 }
 
-// 변화율 계산
 function calcChangeRate(current: number, previous: number): { rate: number; direction: 'up' | 'down' | 'same' } {
   if (previous === 0 && current === 0) return { rate: 0, direction: 'same' }
   if (previous === 0) return { rate: 100, direction: 'up' }
@@ -57,25 +56,22 @@ function calcChangeRate(current: number, previous: number): { rate: number; dire
   return { rate: Math.abs(rate), direction: rate > 0 ? 'up' : rate < 0 ? 'down' : 'same' }
 }
 
-// 변화 표시 컴포넌트
 function ChangeIndicator({ current, previous, suffix = '' }: { current: number; previous: number; suffix?: string }) {
   const { rate, direction } = calcChangeRate(current, previous)
   if (direction === 'same') {
-    return <span className="text-xs text-gray-400 flex items-center gap-0.5"><Minus className="w-3 h-3" /> 변동 없음</span>
+    return <span className="text-xs text-at-text-weak flex items-center gap-0.5"><Minus className="w-3 h-3" /> 변동 없음</span>
   }
   const isUp = direction === 'up'
   return (
-    <span className={`text-xs flex items-center gap-0.5 ${isUp ? 'text-green-600' : 'text-red-500'}`}>
+    <span className={`text-xs flex items-center gap-0.5 ${isUp ? 'text-at-success' : 'text-at-error'}`}>
       {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
       {rate}%{suffix} {isUp ? '증가' : '감소'}
     </span>
   )
 }
 
-// 간단한 막대 차트 컴포넌트 (일별 추이)
 function TrendChart({ trends }: { trends: RecallDailyTrend[] }) {
   if (trends.length === 0) return null
-
   const maxTotal = Math.max(...trends.map(t => t.total_processed), 1)
 
   return (
@@ -91,48 +87,34 @@ function TrendChart({ trends }: { trends: RecallDailyTrend[] }) {
 
           return (
             <div key={t.date} className="flex-1 flex flex-col items-center group relative">
-              {/* 툴팁 */}
               <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
-                <div className="bg-gray-800 text-white text-xs rounded-lg px-2 py-1.5 whitespace-nowrap">
+                <div className="bg-gray-800 text-white text-xs rounded-xl px-2 py-1.5 whitespace-nowrap">
                   <p className="font-medium">{t.date}</p>
                   <p>처리: {t.total_processed}건</p>
                   <p>예약: {t.appointment_count}건</p>
                   <p>성공률: {t.success_rate}%</p>
                 </div>
               </div>
-              {/* 바 */}
               <div className="w-full flex flex-col justify-end h-full">
                 {t.total_processed > 0 ? (
                   <>
-                    <div
-                      className="w-full bg-blue-200 rounded-t transition-all"
-                      style={{ height: `${otherHeight}%`, minHeight: otherHeight > 0 ? '2px' : 0 }}
-                    />
-                    <div
-                      className="w-full bg-green-500 rounded-b transition-all"
-                      style={{ height: `${apptHeight}%`, minHeight: apptHeight > 0 ? '2px' : 0 }}
-                    />
+                    <div className="w-full bg-at-tag rounded-t transition-all" style={{ height: `${otherHeight}%`, minHeight: otherHeight > 0 ? '2px' : 0 }} />
+                    <div className="w-full bg-green-500 rounded-b transition-all" style={{ height: `${apptHeight}%`, minHeight: apptHeight > 0 ? '2px' : 0 }} />
                   </>
                 ) : (
-                  <div className="w-full bg-gray-100 rounded" style={{ height: '2px' }} />
+                  <div className="w-full bg-at-surface-alt rounded" style={{ height: '2px' }} />
                 )}
               </div>
-              {/* 날짜 라벨 */}
-              <span className={`text-[10px] mt-1 ${isToday ? 'text-blue-600 font-bold' : 'text-gray-400'}`}>
+              <span className={`text-[10px] mt-1 ${isToday ? 'text-at-accent font-bold' : 'text-at-text-weak'}`}>
                 {dayLabel}
               </span>
             </div>
           )
         })}
       </div>
-      {/* 범례 */}
-      <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-green-500 rounded-sm inline-block" /> 예약 성공
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-blue-200 rounded-sm inline-block" /> 기타 처리
-        </span>
+      <div className="flex items-center justify-center gap-4 text-xs text-at-text-weak">
+        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded-sm inline-block" /> 예약 성공</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-at-tag rounded-sm inline-block" /> 기타 처리</span>
       </div>
     </div>
   )
@@ -150,33 +132,25 @@ export default function RecallStats() {
   const loadStats = useCallback(async () => {
     setIsLoading(true)
     const result = await recallService.patients.getStats()
-    if (result.success && result.data) {
-      setStats(result.data)
-    }
+    if (result.success && result.data) setStats(result.data)
     setIsLoading(false)
   }, [])
 
   const loadTodayActivity = useCallback(async () => {
     const result = await recallService.patients.getTodayActivity()
-    if (result.success && result.data) {
-      setTodayActivity(result.data)
-    }
+    if (result.success && result.data) setTodayActivity(result.data)
   }, [])
 
   const loadTimeRangeStats = useCallback(async (p: RecallStatsPeriod) => {
     setIsLoadingPeriod(true)
     const result = await recallService.patients.getTimeRangeStats(p)
-    if (result.success && result.data) {
-      setTimeRangeStats(result.data)
-    }
+    if (result.success && result.data) setTimeRangeStats(result.data)
     setIsLoadingPeriod(false)
   }, [])
 
   const loadTrends = useCallback(async () => {
     const result = await recallService.patients.getDailyTrends(14)
-    if (result.success && result.data) {
-      setTrends(result.data)
-    }
+    if (result.success && result.data) setTrends(result.data)
   }, [])
 
   useEffect(() => {
@@ -185,33 +159,24 @@ export default function RecallStats() {
     loadTrends()
   }, [loadStats, loadTodayActivity, loadTrends])
 
-  useEffect(() => {
-    loadTimeRangeStats(period)
-  }, [period, loadTimeRangeStats])
+  useEffect(() => { loadTimeRangeStats(period) }, [period, loadTimeRangeStats])
 
-  // 상태별 아이콘 매핑
   const getStatusIcon = (status: PatientRecallStatus) => {
     switch (status) {
-      case 'appointment_made':
-        return <Calendar className="w-4 h-4" />
-      case 'no_answer':
-        return <PhoneOff className="w-4 h-4" />
-      case 'call_rejected':
-        return <Phone className="w-4 h-4" />
-      case 'visit_refused':
-        return <UserX className="w-4 h-4" />
-      case 'invalid_number':
-        return <AlertCircle className="w-4 h-4" />
-      default:
-        return <Activity className="w-4 h-4" />
+      case 'appointment_made': return <Calendar className="w-4 h-4" />
+      case 'no_answer': return <PhoneOff className="w-4 h-4" />
+      case 'call_rejected': return <Phone className="w-4 h-4" />
+      case 'visit_refused': return <UserX className="w-4 h-4" />
+      case 'invalid_number': return <AlertCircle className="w-4 h-4" />
+      default: return <Activity className="w-4 h-4" />
     }
   }
 
   if (isLoading) {
     return (
       <div className="py-12 text-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-        <p className="text-gray-500">통계를 불러오는 중...</p>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-at-accent mx-auto mb-4"></div>
+        <p className="text-at-text-weak">통계를 불러오는 중...</p>
       </div>
     )
   }
@@ -219,13 +184,12 @@ export default function RecallStats() {
   if (!stats) {
     return (
       <div className="py-12 text-center">
-        <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500">통계 데이터가 없습니다.</p>
+        <BarChart3 className="w-12 h-12 text-at-text-weak mx-auto mb-4" />
+        <p className="text-at-text-weak">통계 데이터가 없습니다.</p>
       </div>
     )
   }
 
-  // 도넛 차트용 데이터
   const chartData = [
     { label: '예약 성공', value: stats.appointment_count, color: '#22c55e' },
     { label: '거부/실패', value: stats.rejected_count + stats.invalid_count, color: '#ef4444' },
@@ -234,7 +198,6 @@ export default function RecallStats() {
   ].filter(d => d.value > 0)
 
   const total = chartData.reduce((sum, d) => sum + d.value, 0)
-
   const cur = timeRangeStats?.current
   const prev = timeRangeStats?.previous
   const compareLabels = PERIOD_COMPARE_LABELS[period]
@@ -243,31 +206,28 @@ export default function RecallStats() {
     <div className="space-y-6">
       {/* 주요 통계 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 text-white">
           <div className="flex items-center justify-between">
             <Users className="w-8 h-8 opacity-80" />
             <span className="text-3xl font-bold">{stats.total_patients}</span>
           </div>
           <p className="text-blue-100 mt-2">전체 환자</p>
         </div>
-
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-4 text-white">
           <div className="flex items-center justify-between">
             <Calendar className="w-8 h-8 opacity-80" />
             <span className="text-3xl font-bold">{stats.appointment_count}</span>
           </div>
           <p className="text-green-100 mt-2">예약 성공</p>
         </div>
-
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white">
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-4 text-white">
           <div className="flex items-center justify-between">
             <Phone className="w-8 h-8 opacity-80" />
             <span className="text-3xl font-bold">{stats.contacted_count}</span>
           </div>
           <p className="text-purple-100 mt-2">연락 완료</p>
         </div>
-
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 text-white">
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 text-white">
           <div className="flex items-center justify-between">
             <Percent className="w-8 h-8 opacity-80" />
             <span className="text-3xl font-bold">{stats.success_rate}%</span>
@@ -277,22 +237,19 @@ export default function RecallStats() {
       </div>
 
       {/* 기간별 통계 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-at-border p-6 shadow-at-card">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-indigo-600" />
+          <h3 className="text-lg font-semibold text-at-text flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-at-accent" />
             기간별 리콜 통계
           </h3>
-          {/* 기간 선택 탭 */}
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
+          <div className="flex bg-at-surface-alt rounded-xl p-0.5">
             {(['daily', 'weekly', 'monthly'] as RecallStatsPeriod[]).map(p => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                  period === p
-                    ? 'bg-white text-indigo-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                  period === p ? 'bg-white text-at-accent shadow-sm' : 'text-at-text-weak hover:text-at-text-secondary'
                 }`}
               >
                 {PERIOD_LABELS[p]}
@@ -303,229 +260,166 @@ export default function RecallStats() {
 
         {isLoadingPeriod ? (
           <div className="py-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto mb-3"></div>
-            <p className="text-gray-400 text-sm">로딩 중...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent mx-auto mb-3"></div>
+            <p className="text-at-text-weak text-sm">로딩 중...</p>
           </div>
         ) : cur && prev ? (
           <div className="space-y-5">
-            {/* 기간 라벨 */}
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-at-text-weak">
               <Clock className="w-4 h-4" />
-              <span className="font-medium text-gray-700">{compareLabels.current}</span>
-              <span className="text-gray-400">({timeRangeStats?.periodLabel})</span>
-              <span className="text-gray-300">vs</span>
+              <span className="font-medium text-at-text">{compareLabels.current}</span>
+              <span className="text-at-text-weak">({timeRangeStats?.periodLabel})</span>
+              <span className="text-at-border">vs</span>
               <span>{compareLabels.previous}</span>
-              <span className="text-gray-400">({timeRangeStats?.previousLabel})</span>
+              <span className="text-at-text-weak">({timeRangeStats?.previousLabel})</span>
             </div>
 
-            {/* 핵심 지표 카드 */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* 총 처리 */}
-              <div className="bg-slate-50 rounded-lg p-4">
+              <div className="bg-at-surface-alt rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-500">총 처리</span>
-                  <Activity className="w-4 h-4 text-slate-400" />
+                  <span className="text-sm text-at-text-weak">총 처리</span>
+                  <Activity className="w-4 h-4 text-at-text-weak" />
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{cur.total_processed}</p>
-                <div className="mt-1">
-                  <ChangeIndicator current={cur.total_processed} previous={prev.total_processed} />
-                </div>
-                <p className="text-xs text-gray-400 mt-0.5">{compareLabels.previous}: {prev.total_processed}건</p>
+                <p className="text-2xl font-bold text-at-text">{cur.total_processed}</p>
+                <div className="mt-1"><ChangeIndicator current={cur.total_processed} previous={prev.total_processed} /></div>
+                <p className="text-xs text-at-text-weak mt-0.5">{compareLabels.previous}: {prev.total_processed}건</p>
               </div>
 
-              {/* 예약 성공 */}
-              <div className="bg-green-50 rounded-lg p-4">
+              <div className="bg-at-success-bg rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-500">예약 성공</span>
-                  <Calendar className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-at-text-weak">예약 성공</span>
+                  <Calendar className="w-4 h-4 text-at-success" />
                 </div>
                 <p className="text-2xl font-bold text-green-700">{cur.appointment_count}</p>
-                <div className="mt-1">
-                  <ChangeIndicator current={cur.appointment_count} previous={prev.appointment_count} />
-                </div>
-                <p className="text-xs text-gray-400 mt-0.5">{compareLabels.previous}: {prev.appointment_count}건</p>
+                <div className="mt-1"><ChangeIndicator current={cur.appointment_count} previous={prev.appointment_count} /></div>
+                <p className="text-xs text-at-text-weak mt-0.5">{compareLabels.previous}: {prev.appointment_count}건</p>
               </div>
 
-              {/* 성공률 */}
-              <div className="bg-indigo-50 rounded-lg p-4">
+              <div className="bg-at-accent-light rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-500">성공률</span>
-                  <Percent className="w-4 h-4 text-indigo-400" />
+                  <span className="text-sm text-at-text-weak">성공률</span>
+                  <Percent className="w-4 h-4 text-at-accent" />
                 </div>
-                <p className="text-2xl font-bold text-indigo-700">{cur.success_rate}%</p>
-                <div className="mt-1">
-                  <ChangeIndicator current={cur.success_rate} previous={prev.success_rate} suffix="p" />
-                </div>
-                <p className="text-xs text-gray-400 mt-0.5">{compareLabels.previous}: {prev.success_rate}%</p>
+                <p className="text-2xl font-bold text-at-accent">{cur.success_rate}%</p>
+                <div className="mt-1"><ChangeIndicator current={cur.success_rate} previous={prev.success_rate} suffix="p" /></div>
+                <p className="text-xs text-at-text-weak mt-0.5">{compareLabels.previous}: {prev.success_rate}%</p>
               </div>
 
-              {/* 문자 발송 */}
-              <div className="bg-blue-50 rounded-lg p-4">
+              <div className="bg-at-accent-light rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-500">문자 발송</span>
-                  <MessageSquare className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm text-at-text-weak">문자 발송</span>
+                  <MessageSquare className="w-4 h-4 text-at-accent" />
                 </div>
-                <p className="text-2xl font-bold text-blue-700">{cur.sms_sent_count}</p>
-                <div className="mt-1">
-                  <ChangeIndicator current={cur.sms_sent_count} previous={prev.sms_sent_count} />
-                </div>
-                <p className="text-xs text-gray-400 mt-0.5">{compareLabels.previous}: {prev.sms_sent_count}건</p>
+                <p className="text-2xl font-bold text-at-accent">{cur.sms_sent_count}</p>
+                <div className="mt-1"><ChangeIndicator current={cur.sms_sent_count} previous={prev.sms_sent_count} /></div>
+                <p className="text-xs text-at-text-weak mt-0.5">{compareLabels.previous}: {prev.sms_sent_count}건</p>
               </div>
             </div>
 
-            {/* 상세 상태별 분포 (현재 기간) */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-sm font-medium text-gray-700 mb-3">{compareLabels.current} 상태별 상세</p>
+            <div className="bg-at-surface-alt rounded-xl p-4">
+              <p className="text-sm font-medium text-at-text-secondary mb-3">{compareLabels.current} 상태별 상세</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="flex items-center gap-2">
-                  <PhoneOff className="w-4 h-4 text-orange-500" />
+                  <PhoneOff className="w-4 h-4 text-at-warning" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{cur.no_answer_count}</p>
-                    <p className="text-xs text-gray-500">부재중</p>
+                    <p className="text-sm font-medium text-at-text">{cur.no_answer_count}</p>
+                    <p className="text-xs text-at-text-weak">부재중</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-red-500" />
+                  <Phone className="w-4 h-4 text-at-error" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{cur.call_rejected_count}</p>
-                    <p className="text-xs text-gray-500">통화거부</p>
+                    <p className="text-sm font-medium text-at-text">{cur.call_rejected_count}</p>
+                    <p className="text-xs text-at-text-weak">통화거부</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <UserX className="w-4 h-4 text-red-400" />
+                  <UserX className="w-4 h-4 text-at-error" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{cur.visit_refused_count}</p>
-                    <p className="text-xs text-gray-500">내원거부</p>
+                    <p className="text-sm font-medium text-at-text">{cur.visit_refused_count}</p>
+                    <p className="text-xs text-at-text-weak">내원거부</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-purple-500" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{cur.invalid_number_count}</p>
-                    <p className="text-xs text-gray-500">없는번호</p>
+                    <p className="text-sm font-medium text-at-text">{cur.invalid_number_count}</p>
+                    <p className="text-xs text-at-text-weak">없는번호</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="py-8 text-center text-gray-400 text-sm">
-            기간별 통계 데이터가 없습니다.
-          </div>
+          <div className="py-8 text-center text-at-text-weak text-sm">기간별 통계 데이터가 없습니다.</div>
         )}
       </div>
 
       {/* 최근 14일 추이 차트 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-indigo-600" />
+      <div className="bg-white rounded-2xl border border-at-border p-6 shadow-at-card">
+        <h3 className="text-lg font-semibold text-at-text mb-4 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-at-accent" />
           최근 14일 추이
         </h3>
-        {trends.length > 0 ? (
-          <TrendChart trends={trends} />
-        ) : (
-          <div className="py-8 text-center text-gray-400 text-sm">
-            추이 데이터가 없습니다.
-          </div>
+        {trends.length > 0 ? <TrendChart trends={trends} /> : (
+          <div className="py-8 text-center text-at-text-weak text-sm">추이 데이터가 없습니다.</div>
         )}
       </div>
 
       {/* 상태별 분포 + 오늘 활동 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 상태별 분포 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-indigo-600" />
+        <div className="bg-white rounded-2xl border border-at-border p-6 shadow-at-card">
+          <h3 className="text-lg font-semibold text-at-text mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-at-accent" />
             전체 상태별 분포
           </h3>
-
           <div className="space-y-3">
-            <div>
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-gray-600">리콜 전</span>
-                <span className="font-medium">{stats.pending_count}명</span>
+            {[
+              { label: '리콜 전', value: stats.pending_count, barClass: 'bg-gray-400' },
+              { label: '연락 진행', value: stats.contacted_count - stats.appointment_count, barClass: 'bg-at-accent' },
+              { label: '예약 성공', value: stats.appointment_count, barClass: 'bg-green-500' },
+              { label: '거부/실패', value: stats.rejected_count + stats.invalid_count, barClass: 'bg-red-500' },
+            ].map(({ label, value, barClass }) => (
+              <div key={label}>
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="text-at-text-secondary">{label}</span>
+                  <span className="font-medium">{value}명</span>
+                </div>
+                <div className="w-full bg-at-surface-alt rounded-full h-2">
+                  <div className={`${barClass} h-2 rounded-full transition-all`} style={{ width: `${total > 0 ? (value / total) * 100 : 0}%` }} />
+                </div>
               </div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div
-                  className="bg-gray-400 h-2 rounded-full transition-all"
-                  style={{ width: `${total > 0 ? (stats.pending_count / total) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-gray-600">연락 진행</span>
-                <span className="font-medium">{stats.contacted_count - stats.appointment_count}명</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full transition-all"
-                  style={{ width: `${total > 0 ? ((stats.contacted_count - stats.appointment_count) / total) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-gray-600">예약 성공</span>
-                <span className="font-medium">{stats.appointment_count}명</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full transition-all"
-                  style={{ width: `${total > 0 ? (stats.appointment_count / total) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-gray-600">거부/실패</span>
-                <span className="font-medium">{stats.rejected_count + stats.invalid_count}명</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div
-                  className="bg-red-500 h-2 rounded-full transition-all"
-                  style={{ width: `${total > 0 ? ((stats.rejected_count + stats.invalid_count) / total) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* 오늘 활동 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-indigo-600" />
+        <div className="bg-white rounded-2xl border border-at-border p-6 shadow-at-card">
+          <h3 className="text-lg font-semibold text-at-text mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-at-accent" />
             오늘 활동
           </h3>
 
           {todayActivity ? (
             <>
               <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="text-center p-4 bg-indigo-50 rounded-lg">
-                  <Activity className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-indigo-900">{todayActivity.totalChanges}</p>
-                  <p className="text-sm text-indigo-600">총 처리</p>
+                <div className="text-center p-4 bg-at-accent-light rounded-xl">
+                  <Activity className="w-6 h-6 text-at-accent mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-at-text">{todayActivity.totalChanges}</p>
+                  <p className="text-sm text-at-accent">총 처리</p>
                 </div>
-
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <Calendar className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                <div className="text-center p-4 bg-at-success-bg rounded-xl">
+                  <Calendar className="w-6 h-6 text-at-success mx-auto mb-2" />
                   <p className="text-2xl font-bold text-green-900">{todayActivity.appointmentsMade}</p>
-                  <p className="text-sm text-green-600">예약 성공</p>
+                  <p className="text-sm text-at-success">예약 성공</p>
                 </div>
               </div>
 
               {todayActivity.statusChanges.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">상태별 처리 현황</p>
+                  <p className="text-sm font-medium text-at-text-secondary mb-2">상태별 처리 현황</p>
                   <div className="flex flex-wrap gap-2">
                     {todayActivity.statusChanges.map(({ status, count }) => (
-                      <div
-                        key={status}
-                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium ${RECALL_STATUS_COLORS[status]}`}
-                      >
+                      <div key={status} className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium ${RECALL_STATUS_COLORS[status]}`}>
                         {getStatusIcon(status)}
                         {RECALL_STATUS_LABELS[status]}: {count}
                       </div>
@@ -535,8 +429,8 @@ export default function RecallStats() {
               )}
 
               {todayActivity.recentPatients.length > 0 && (
-                <div className="pt-4 border-t border-gray-100">
-                  <p className="text-sm font-medium text-gray-700 mb-2">최근 처리 환자</p>
+                <div className="pt-4 border-t border-at-border">
+                  <p className="text-sm font-medium text-at-text-secondary mb-2">최근 처리 환자</p>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {todayActivity.recentPatients.slice(0, 5).map(patient => (
                       <div key={patient.id} className="flex items-center justify-between text-sm">
@@ -547,11 +441,8 @@ export default function RecallStats() {
                             {RECALL_STATUS_LABELS[patient.status]}
                           </span>
                         </div>
-                        <span className="text-gray-400 text-xs">
-                          {patient.recall_datetime && new Date(patient.recall_datetime).toLocaleTimeString('ko-KR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                        <span className="text-at-text-weak text-xs">
+                          {patient.recall_datetime && new Date(patient.recall_datetime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     ))}
@@ -560,8 +451,8 @@ export default function RecallStats() {
               )}
             </>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Activity className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+            <div className="text-center py-8 text-at-text-weak">
+              <Activity className="w-8 h-8 mx-auto mb-2 text-at-text-weak" />
               <p>오늘 활동 내역이 없습니다.</p>
             </div>
           )}
@@ -569,50 +460,41 @@ export default function RecallStats() {
       </div>
 
       {/* 진행률 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-indigo-600" />
+      <div className="bg-white rounded-2xl border border-at-border p-6 shadow-at-card">
+        <h3 className="text-lg font-semibold text-at-text mb-4 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-at-accent" />
           전체 진행률
         </h3>
-
         <div className="relative pt-1">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-600">
-              진행: {stats.contacted_count}/{stats.total_patients}
-            </span>
-            <span className="text-sm font-medium text-indigo-600">
-              {stats.total_patients > 0
-                ? Math.round((stats.contacted_count / stats.total_patients) * 100)
-                : 0}%
+            <span className="text-sm font-medium text-at-text-secondary">진행: {stats.contacted_count}/{stats.total_patients}</span>
+            <span className="text-sm font-medium text-at-accent">
+              {stats.total_patients > 0 ? Math.round((stats.contacted_count / stats.total_patients) * 100) : 0}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-4">
+          <div className="w-full bg-at-surface-alt rounded-full h-4">
             <div
               className="bg-gradient-to-r from-indigo-500 to-purple-500 h-4 rounded-full transition-all flex items-center justify-end pr-2"
-              style={{
-                width: `${stats.total_patients > 0 ? (stats.contacted_count / stats.total_patients) * 100 : 0}%`
-              }}
+              style={{ width: `${stats.total_patients > 0 ? (stats.contacted_count / stats.total_patients) * 100 : 0}%` }}
             >
-              {stats.contacted_count > 0 && (
-                <span className="text-xs text-white font-medium">{stats.contacted_count}</span>
-              )}
+              {stats.contacted_count > 0 && <span className="text-xs text-white font-medium">{stats.contacted_count}</span>}
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mt-6">
-          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="flex items-center gap-3 p-3 bg-at-success-bg rounded-xl">
+            <CheckCircle className="w-8 h-8 text-at-success" />
             <div>
               <p className="text-2xl font-bold text-green-900">{stats.appointment_count}</p>
-              <p className="text-sm text-green-600">예약 성공</p>
+              <p className="text-sm text-at-success">예약 성공</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
-            <XCircle className="w-8 h-8 text-red-600" />
+          <div className="flex items-center gap-3 p-3 bg-at-error-bg rounded-xl">
+            <XCircle className="w-8 h-8 text-at-error" />
             <div>
               <p className="text-2xl font-bold text-red-900">{stats.rejected_count + stats.invalid_count}</p>
-              <p className="text-sm text-red-600">실패/거부</p>
+              <p className="text-sm text-at-error">실패/거부</p>
             </div>
           </div>
         </div>

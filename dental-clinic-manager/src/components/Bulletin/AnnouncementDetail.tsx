@@ -44,11 +44,11 @@ export default function AnnouncementDetail({
   const getCategoryBadgeColor = (category: string) => {
     switch (category) {
       case 'schedule':
-        return 'bg-blue-100 text-blue-700'
+        return 'bg-at-tag text-at-accent'
       case 'holiday':
-        return 'bg-red-100 text-red-700'
+        return 'bg-at-error-bg text-at-error'
       default:
-        return 'bg-gray-100 text-gray-700'
+        return 'bg-at-surface-alt text-at-text-secondary'
     }
   }
 
@@ -57,18 +57,18 @@ export default function AnnouncementDetail({
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <nav className="flex items-center text-sm">
-          <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+          <button onClick={onBack} className="text-at-accent hover:text-at-accent font-medium transition-colors">
             공지사항
           </button>
-          <span className="mx-2 text-gray-400">›</span>
-          <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{announcement.title}</span>
+          <span className="mx-2 text-at-text-weak">›</span>
+          <span className="text-at-text-weak truncate max-w-[200px] sm:max-w-[400px]">{announcement.title}</span>
         </nav>
       </div>
 
       {/* 공지사항 내용 */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-at-border overflow-hidden">
         {/* 제목 영역 */}
-        <div className="p-4 sm:p-6 border-b border-gray-200">
+        <div className="p-4 sm:p-6 border-b border-at-border">
           <div className="flex items-center gap-2 mb-3">
             {announcement.is_pinned && (
               <Pin className="w-4 h-4 text-red-500" />
@@ -77,33 +77,33 @@ export default function AnnouncementDetail({
               {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category as keyof typeof ANNOUNCEMENT_CATEGORY_LABELS]}
             </span>
             {announcement.is_important && (
-              <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+              <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-at-error-bg text-at-error">
                 <AlertCircle className="w-3 h-3" />
                 중요
               </span>
             )}
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-4">{announcement.title}</h1>
+          <h1 className="text-xl font-bold text-at-text mb-4">{announcement.title}</h1>
           {/* 메타 정보 */}
           <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
-            <div className="flex items-center gap-3 text-xs text-gray-400">
-              <span className="text-gray-600 font-medium">{announcement.author_name}</span>
+            <div className="flex items-center gap-3 text-xs text-at-text-weak">
+              <span className="text-at-text-secondary font-medium">{announcement.author_name}</span>
               <span>{formatDate(announcement.created_at)}</span>
               <span className="flex items-center gap-1">
                 <Eye className="w-3 h-3" />{announcement.view_count}
               </span>
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={() => setShowShareDialog(true)} className="text-gray-400 hover:text-blue-500 hidden sm:inline-flex">
+              <Button variant="ghost" size="sm" onClick={() => setShowShareDialog(true)} className="text-at-text-weak hover:text-at-accent hidden sm:inline-flex">
                 <Share2 className="w-3.5 h-3.5 mr-1" />공유
               </Button>
               {onEdit && (
-                <Button variant="ghost" size="sm" onClick={onEdit} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
+                <Button variant="ghost" size="sm" onClick={onEdit} className="text-at-text-weak hover:text-at-text-secondary hidden sm:inline-flex">
                   <Pencil className="w-3.5 h-3.5 mr-1" />수정
                 </Button>
               )}
               {onDelete && (
-                <Button variant="ghost" size="sm" onClick={onDelete} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
+                <Button variant="ghost" size="sm" onClick={onDelete} className="text-at-text-weak hover:text-red-500 hidden sm:inline-flex">
                   <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
                 </Button>
               )}
@@ -111,12 +111,12 @@ export default function AnnouncementDetail({
           </div>
           {/* 일정 정보 */}
           {announcement.start_date && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-2 text-blue-700">
+            <div className="mt-4 p-3 bg-at-accent-light rounded-xl">
+              <div className="flex items-center gap-2 text-at-accent">
                 <Calendar className="w-4 h-4" />
                 <span className="font-medium">일정</span>
               </div>
-              <p className="mt-1 text-blue-600">
+              <p className="mt-1 text-at-accent">
                 {announcement.start_date}
                 {announcement.end_date && announcement.end_date !== announcement.start_date && (
                   <> ~ {announcement.end_date}</>
@@ -129,7 +129,7 @@ export default function AnnouncementDetail({
         {/* 본문 영역 */}
         <div className="p-4 sm:p-6">
           <div
-            className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap"
+            className="prose prose-sm max-w-none text-at-text-secondary whitespace-pre-wrap"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(announcement.content) }}
           />
         </div>
@@ -139,14 +139,14 @@ export default function AnnouncementDetail({
       <div className="flex items-center justify-center gap-2 mt-2">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-alt transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           목록으로
         </button>
         <button
           onClick={() => setShowShareDialog(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-accent bg-white border border-blue-200 rounded-xl hover:bg-at-accent-light transition-colors"
         >
           <Share2 className="w-4 h-4" />
           공유
@@ -154,7 +154,7 @@ export default function AnnouncementDetail({
         {onEdit && (
           <button
             onClick={onEdit}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-alt transition-colors"
           >
             <Pencil className="w-4 h-4" />
             수정
@@ -163,7 +163,7 @@ export default function AnnouncementDetail({
         {onDelete && (
           <button
             onClick={onDelete}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-error bg-white border border-red-200 rounded-xl hover:bg-at-error-bg transition-colors"
           >
             <Trash2 className="w-4 h-4" />
             삭제

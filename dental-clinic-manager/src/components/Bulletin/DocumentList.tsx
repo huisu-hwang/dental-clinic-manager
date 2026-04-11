@@ -122,20 +122,20 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
   const getCategoryBadgeColor = (category: DocumentCategory) => {
     switch (category) {
       case 'manual':
-        return 'bg-blue-100 text-blue-700'
+        return 'bg-at-tag text-at-accent'
       case 'form':
-        return 'bg-green-100 text-green-700'
+        return 'bg-at-success-bg text-at-success'
       case 'guideline':
         return 'bg-purple-100 text-purple-700'
       case 'reference':
         return 'bg-orange-100 text-orange-700'
       default:
-        return 'bg-gray-100 text-gray-700'
+        return 'bg-at-surface-alt text-at-text-secondary'
     }
   }
 
   const getFileIcon = (fileName?: string) => {
-    if (!fileName) return <FileText className="w-5 h-5 text-gray-400" />
+    if (!fileName) return <FileText className="w-5 h-5 text-at-text-weak" />
     const ext = fileName.split('.').pop()?.toLowerCase()
 
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) {
@@ -147,7 +147,7 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
     if (['pdf'].includes(ext || '')) {
       return <File className="w-5 h-5 text-red-500" />
     }
-    return <FileText className="w-5 h-5 text-blue-500" />
+    return <FileText className="w-5 h-5 text-at-accent" />
   }
 
   const formatFileSize = (bytes?: number) => {
@@ -196,10 +196,10 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
       {/* 헤더 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
-          <FolderOpen className="w-5 h-5 text-green-600" />
-          <h2 className="text-lg font-semibold text-gray-900">문서 모음</h2>
+          <FolderOpen className="w-5 h-5 text-at-success" />
+          <h2 className="text-lg font-semibold text-at-text">문서 모음</h2>
           {!loading && (
-            <span className="text-xs text-gray-400 font-normal ml-1">총 {total}건</span>
+            <span className="text-xs text-at-text-weak font-normal ml-1">총 {total}건</span>
           )}
         </div>
         {canCreate && (
@@ -213,11 +213,11 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
       {/* 필터 및 검색 */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-500" />
+          <Filter className="w-4 h-4 text-at-text-weak" />
           <select
             value={selectedCategory}
             onChange={(e) => handleCategoryChange(e.target.value as DocumentCategory | '')}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent"
           >
             <option value="">전체 카테고리</option>
             {Object.entries(DOCUMENT_CATEGORY_LABELS).map(([key, label]) => (
@@ -227,7 +227,7 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
         </div>
         <form onSubmit={handleSearch} className="flex-1 flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
             <Input
               type="text"
               placeholder="제목 또는 설명 검색..."
@@ -242,7 +242,7 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
 
       {/* 에러 표시 */}
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 text-red-700 rounded-lg">
+        <div className="flex items-center gap-2 p-4 bg-at-error-bg text-at-error rounded-xl">
           <AlertCircle className="w-5 h-5" />
           <span>{error}</span>
         </div>
@@ -254,19 +254,19 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
         </div>
       ) : documents.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
+        <div className="text-center py-16 text-at-text-weak">
           <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <FolderOpen className="w-8 h-8 text-sky-300" />
           </div>
-          <p className="font-medium text-gray-600 mb-1">등록된 문서가 없습니다</p>
-          <p className="text-sm text-gray-400">새로운 문서가 등록되면 여기에 표시됩니다.</p>
+          <p className="font-medium text-at-text-secondary mb-1">등록된 문서가 없습니다</p>
+          <p className="text-sm text-at-text-weak">새로운 문서가 등록되면 여기에 표시됩니다.</p>
         </div>
       ) : (
         <>
           {/* 문서 목록 */}
-          <div className="bg-white rounded-xl border border-gray-200">
+          <div className="bg-white rounded-2xl border border-at-border">
             {/* 테이블 헤더 */}
-            <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
+            <div className="flex items-center px-4 py-2 border-b border-at-border bg-at-surface-alt text-xs font-medium text-at-text-weak">
               <div className="hidden sm:block w-16 flex-shrink-0 text-center">분류</div>
               <div className="flex-1 min-w-0 text-center">제목</div>
               <div className="hidden sm:block w-20 text-center flex-shrink-0">작성자</div>
@@ -275,12 +275,12 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
               <div className="hidden sm:block w-10 flex-shrink-0" />
             </div>
             {/* 목록 */}
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-at-border">
               {documents.map((document) => (
                 <div
                   key={document.id}
                   onClick={() => handleDocumentClick(document)}
-                  className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-l-2 ${
+                  className={`flex items-center px-4 py-3 hover:bg-at-surface-alt cursor-pointer transition-colors border-l-2 ${
                     'border-l-transparent'
                   }`}
                 >
@@ -298,7 +298,7 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
                     {document.file_name && (
                       <span className="flex-shrink-0">{getFileIcon(document.file_name)}</span>
                     )}
-                    <span className="text-sm text-gray-900 truncate">{document.title}</span>
+                    <span className="text-sm text-at-text truncate">{document.title}</span>
                     {(() => {
                       const created = new Date(document.created_at)
                       const now = new Date()
@@ -307,15 +307,15 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
                     })()}
                   </div>
                   {/* 작성자 */}
-                  <div className="hidden sm:block w-20 text-center text-sm text-gray-500 flex-shrink-0">
+                  <div className="hidden sm:block w-20 text-center text-sm text-at-text-weak flex-shrink-0">
                     {document.author_name}
                   </div>
                   {/* 작성일 */}
-                  <div className="w-20 text-center text-sm text-gray-500 flex-shrink-0">
+                  <div className="w-20 text-center text-sm text-at-text-weak flex-shrink-0">
                     {formatDate(document.created_at)}
                   </div>
                   {/* 조회수 */}
-                  <div className="hidden sm:block w-12 text-center text-sm text-gray-500 flex-shrink-0">
+                  <div className="hidden sm:block w-12 text-center text-sm text-at-text-weak flex-shrink-0">
                     {document.view_count}
                   </div>
                   {/* 다운로드 */}
@@ -326,7 +326,7 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
                           e.stopPropagation()
                           handleDownload(document)
                         }}
-                        className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-400 hover:text-gray-600"
+                        className="p-1 rounded hover:bg-gray-200 transition-colors text-at-text-weak hover:text-at-text-secondary"
                         title="다운로드"
                       >
                         <Download className="w-4 h-4" />
@@ -344,7 +344,7 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                className="px-2 py-1 text-xs rounded-xl border border-at-border disabled:opacity-40 hover:bg-at-surface-alt"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
@@ -359,15 +359,15 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
                 }, [])
                 .map((p, i) =>
                   typeof p === 'string' ? (
-                    <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
+                    <span key={`dots-${i}`} className="px-2 text-at-text-weak text-sm">...</span>
                   ) : (
                     <button
                       key={p}
                       onClick={() => setPage(p as number)}
-                      className={`min-w-[28px] px-2 py-1 text-xs rounded-lg border transition-colors ${
+                      className={`min-w-[28px] px-2 py-1 text-xs rounded-xl border transition-colors ${
                         page === p
                           ? 'bg-sky-500 text-white border-sky-500'
-                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                          : 'border-at-border text-at-text-secondary hover:bg-at-surface-alt'
                       }`}
                     >
                       {p}
@@ -377,7 +377,7 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                className="px-2 py-1 text-xs rounded-xl border border-at-border disabled:opacity-40 hover:bg-at-surface-alt"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </button>

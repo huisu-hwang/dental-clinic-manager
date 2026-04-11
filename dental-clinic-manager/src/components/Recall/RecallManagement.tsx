@@ -480,14 +480,14 @@ export default function RecallManagement() {
       </div>
 
       {/* 서브 탭 네비게이션 */}
-      <div className="border-x border-b border-slate-200 bg-slate-50">
+      <div className="border-x border-b border-at-border bg-at-surface-alt">
         <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('patients')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'patients'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white text-at-accent shadow-sm'
+                : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
             }`}
           >
             <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -497,8 +497,8 @@ export default function RecallManagement() {
             onClick={() => setActiveTab('activity')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'activity'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white text-at-accent shadow-sm'
+                : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
             }`}
           >
             <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -508,8 +508,8 @@ export default function RecallManagement() {
             onClick={() => setActiveTab('stats')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'stats'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white text-at-accent shadow-sm'
+                : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -519,8 +519,8 @@ export default function RecallManagement() {
             onClick={() => setActiveTab('settings')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'settings'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white text-at-accent shadow-sm'
+                : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
             }`}
           >
             <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -530,7 +530,7 @@ export default function RecallManagement() {
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6">
+      <div className="bg-white border-x border-b border-at-border rounded-b-xl p-3 sm:p-6">
         {/* 환자 목록 탭 */}
         {activeTab === 'patients' && (
           <div className="space-y-4">
@@ -538,7 +538,7 @@ export default function RecallManagement() {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setShowUpload(true)}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover transition-colors text-sm"
               >
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">환자 업로드</span>
@@ -588,9 +588,9 @@ export default function RecallManagement() {
                       문자 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
                     </button>
                     {selectedPatients.length === 0 && (
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-at-text text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
                         환자를 선택한 후 클릭하세요
-                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-at-text rotate-45"></div>
                       </div>
                     )}
                   </div>
@@ -617,17 +617,17 @@ export default function RecallManagement() {
                       <>
                         <div className="fixed inset-0 z-20" onClick={() => setShowExcludeDropdown(false)} />
                         <div className="absolute left-0 top-full mt-1 z-30">
-                          <div className="w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                          <div className="w-44 bg-white rounded-xl shadow-xl border border-at-border py-1">
                             <button
                               onClick={() => { handleBulkExclude('family'); setShowExcludeDropdown(false) }}
-                              className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
+                              className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-at-text-secondary"
                             >
                               <Heart className="w-4 h-4 text-amber-500" />
                               지인
                             </button>
                             <button
                               onClick={() => { handleBulkExclude('unfavorable'); setShowExcludeDropdown(false) }}
-                              className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
+                              className="w-full px-3 py-2.5 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-at-text-secondary"
                             >
                               <ShieldOff className="w-4 h-4 text-rose-500" />
                               비우호적
@@ -644,17 +644,17 @@ export default function RecallManagement() {
                       onClick={selectedPatients.length > 0 ? handleBulkDelete : undefined}
                       className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
                         selectedPatients.length > 0
-                          ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer'
-                          : 'bg-gray-200 text-gray-400 cursor-default'
+                          ? 'bg-at-text text-white hover:opacity-90 cursor-pointer'
+                          : 'bg-at-surface-alt text-at-text-weak cursor-default'
                       }`}
                     >
                       <Trash2 className="w-4 h-4" />
                       삭제 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
                     </button>
                     {selectedPatients.length === 0 && (
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-at-text text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
                         환자를 선택한 후 클릭하세요
-                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-at-text rotate-45"></div>
                       </div>
                     )}
                   </div>
@@ -677,9 +677,9 @@ export default function RecallManagement() {
                       문자 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
                     </button>
                     {selectedPatients.length === 0 && (
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-at-text text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
                         환자를 선택한 후 클릭하세요
-                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-at-text rotate-45"></div>
                       </div>
                     )}
                   </div>
@@ -697,9 +697,9 @@ export default function RecallManagement() {
                       복원 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
                     </button>
                     {selectedPatients.length === 0 && (
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-at-text text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
                         환자를 선택한 후 클릭하세요
-                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-at-text rotate-45"></div>
                       </div>
                     )}
                   </div>
@@ -710,17 +710,17 @@ export default function RecallManagement() {
                       onClick={selectedPatients.length > 0 ? handleBulkDelete : undefined}
                       className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
                         selectedPatients.length > 0
-                          ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer'
-                          : 'bg-gray-200 text-gray-400 cursor-default'
+                          ? 'bg-at-text text-white hover:opacity-90 cursor-pointer'
+                          : 'bg-at-surface-alt text-at-text-weak cursor-default'
                       }`}
                     >
                       <Trash2 className="w-4 h-4" />
                       삭제 {selectedPatients.length > 0 && `(${selectedPatients.length})`}
                     </button>
                     {selectedPatients.length === 0 && (
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 px-3 py-2 bg-at-text text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
                         환자를 선택한 후 클릭하세요
-                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-at-text rotate-45"></div>
                       </div>
                     )}
                   </div>
@@ -729,7 +729,7 @@ export default function RecallManagement() {
 
               <button
                 onClick={handleRefresh}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors ml-auto text-sm"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-at-border text-at-text-secondary rounded-xl hover:bg-at-surface-hover transition-colors ml-auto text-sm"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span className="hidden sm:inline">새로고침</span>

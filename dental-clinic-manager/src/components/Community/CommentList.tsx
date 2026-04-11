@@ -51,8 +51,8 @@ export default function CommentList({ postId, profileId, commentCount }: Comment
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
-        <MessageSquare className="w-4 h-4 text-gray-500" />
-        <h3 className="text-sm font-semibold text-gray-900">댓글 {commentCount > 0 && `(${commentCount})`}</h3>
+        <MessageSquare className="w-4 h-4 text-at-text-secondary" />
+        <h3 className="text-sm font-semibold text-at-text">댓글 {commentCount > 0 && `(${commentCount})`}</h3>
       </div>
 
       {/* 댓글 작성 */}
@@ -65,12 +65,12 @@ export default function CommentList({ postId, profileId, commentCount }: Comment
       {/* 댓글 목록 */}
       {loading ? (
         <div className="flex justify-center py-4">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-at-accent"></div>
         </div>
       ) : comments.length === 0 ? (
-        <p className="text-center py-6 text-sm text-gray-400">첫 댓글을 남겨보세요!</p>
+        <p className="text-center py-6 text-sm text-at-text-weak">첫 댓글을 남겨보세요!</p>
       ) : (
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-at-border">
           {comments.map((comment) => (
             <CommentItem
               key={comment.id}

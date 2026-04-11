@@ -111,14 +111,14 @@ export default function StaffChecklistOverview() {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-at-card border border-at-border p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-at-tag rounded-xl flex items-center justify-center">
               <BarChart3 className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-800">직원 업무 현황</h2>
+              <h2 className="text-lg font-bold text-at-text">직원 업무 현황</h2>
               <p className="text-sm text-slate-500">전체 직원의 업무 체크리스트 완료 현황</p>
             </div>
           </div>
@@ -133,7 +133,7 @@ export default function StaffChecklistOverview() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-1.5 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             />
             <button
               onClick={() => changeDate(1)}
@@ -144,7 +144,7 @@ export default function StaffChecklistOverview() {
             {!isToday && (
               <button
                 onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-                className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-at-accent bg-at-accent-light rounded-xl hover:bg-at-tag transition-colors"
               >
                 오늘
               </button>
@@ -155,7 +155,7 @@ export default function StaffChecklistOverview() {
 
       {/* 직원 없음 */}
       {staffData.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-at-card border border-at-border p-8 text-center">
           <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="w-8 h-8 text-slate-400" />
           </div>
@@ -164,13 +164,13 @@ export default function StaffChecklistOverview() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {staffData.map(s => (
-            <div key={s.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div key={s.id} className="bg-white rounded-2xl shadow-at-card border border-at-border overflow-hidden">
               {/* 직원 헤더 - 클릭하여 상세 보기 */}
               <div
                 role="button"
                 tabIndex={0}
                 aria-expanded={expandedStaffId === s.id}
-                className="px-4 py-3 border-b border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                className="px-4 py-3 border-b border-at-border flex items-center justify-between cursor-pointer hover:bg-at-surface-hover transition-colors"
                 onClick={() => setExpandedStaffId(prev => prev === s.id ? null : s.id)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -203,7 +203,7 @@ export default function StaffChecklistOverview() {
                     </p>
                     <p className="text-xs text-slate-400">{s.completed}/{s.total}</p>
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                  <ChevronDown className={`w-4 h-4 text-at-text-weak transition-transform duration-200 ${
                     expandedStaffId === s.id ? 'rotate-180' : ''
                   }`} />
                 </div>
@@ -211,7 +211,7 @@ export default function StaffChecklistOverview() {
 
               {/* 진행률 바 */}
               <div className="px-4 py-2">
-                <div className="w-full bg-slate-200 rounded-full h-2">
+                <div className="w-full bg-at-surface-alt rounded-full h-2">
                   <div
                     className={`h-2 rounded-full transition-all duration-500 ${
                       s.rate === 100 ? 'bg-green-500' : 'bg-blue-500'
@@ -244,12 +244,12 @@ export default function StaffChecklistOverview() {
 
               {/* 개별 작업 상세 목록 (확장 시) */}
               {expandedStaffId === s.id && (
-                <div className="border-t border-slate-200 px-4 py-3 bg-slate-50/50">
+                <div className="border-t border-at-border px-4 py-3 bg-at-surface-alt">
                   {periodCfg.keys.filter(period =>
                     s.tasks.some(t => t.period === period)
                   ).map(period => (
                     <div key={period} className="mb-3 last:mb-0">
-                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      <h4 className="text-xs font-semibold text-at-text-secondary uppercase tracking-wider mb-2">
                         {periodCfg.labels[period] || period}
                       </h4>
                       <div className="space-y-1">

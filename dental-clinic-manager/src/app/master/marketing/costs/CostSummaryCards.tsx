@@ -26,7 +26,7 @@ function formatKrw(amount: number) {
 
 function ChangeIndicator({ percent }: { percent: number | null }) {
   if (percent === null) return null
-  if (percent === 0) return <span className="text-xs text-slate-400">변동 없음</span>
+  if (percent === 0) return <span className="text-xs text-at-text-weak">변동 없음</span>
 
   const isUp = percent > 0
   return (
@@ -39,7 +39,7 @@ function ChangeIndicator({ percent }: { percent: number | null }) {
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 animate-pulse">
+    <div className="bg-white rounded-xl border border-at-border p-5 animate-pulse">
       <div className="h-4 bg-slate-200 rounded w-24 mb-4" />
       <div className="h-8 bg-slate-200 rounded w-32 mb-2" />
       <div className="h-4 bg-slate-200 rounded w-24 mb-3" />
@@ -57,12 +57,12 @@ interface CardProps {
 
 function SummaryCard({ label, compareLabel, data, accentColor }: CardProps) {
   return (
-    <div className={`bg-white rounded-xl border border-slate-200 p-5 border-l-4 ${accentColor}`}>
-      <div className="text-sm font-medium text-slate-500 mb-3">{label}</div>
-      <div className="text-2xl font-bold text-slate-800 mb-1">{formatUsd(data.totalUsd)}</div>
-      <div className="text-sm text-slate-500 mb-3">{formatKrw(data.totalKrw)}</div>
+    <div className={`bg-white rounded-xl border border-at-border p-5 border-l-4 ${accentColor}`}>
+      <div className="text-sm font-medium text-at-text-weak mb-3">{label}</div>
+      <div className="text-2xl font-bold text-at-text mb-1">{formatUsd(data.totalUsd)}</div>
+      <div className="text-sm text-at-text-weak mb-3">{formatKrw(data.totalKrw)}</div>
       <div className="flex items-center gap-2">
-        <span className="text-xs text-slate-400">{compareLabel} 대비</span>
+        <span className="text-xs text-at-text-weak">{compareLabel} 대비</span>
         <ChangeIndicator percent={data.changePercent} />
       </div>
     </div>
@@ -136,7 +136,7 @@ export default function CostSummaryCards() {
 
   if (error || !data) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600">
+      <div className="bg-at-error-bg border border-red-200 rounded-xl p-4 text-sm text-at-error">
         {error ?? '데이터를 불러오지 못했습니다.'}
       </div>
     )

@@ -165,13 +165,13 @@ export default function ExpenseForm({
       <div className="space-y-4">
         {/* 카테고리 선택 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-at-text mb-1">
             지출 카테고리 <span className="text-red-500">*</span>
           </label>
           <select
             value={formData.category_id}
             onChange={e => handleChange('category_id', e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
           >
             {categories.map(cat => (
               <option key={cat.id} value={cat.id}>
@@ -193,7 +193,7 @@ export default function ExpenseForm({
 
         {/* 금액 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-at-text mb-1">
             금액 <span className="text-red-500">*</span>
           </label>
           <div className="relative">
@@ -201,7 +201,7 @@ export default function ExpenseForm({
               type="text"
               value={formData.amount > 0 ? formData.amount.toLocaleString() : ''}
               onChange={e => handleNumberChange('amount', e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right pr-10"
+              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-right pr-10"
               placeholder="0"
             />
             <span className="absolute right-3 top-2 text-gray-400">원</span>
@@ -210,7 +210,7 @@ export default function ExpenseForm({
 
         {/* 거래처 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-at-text mb-1">
             거래처 (업체명)
           </label>
           <div className="relative">
@@ -219,7 +219,7 @@ export default function ExpenseForm({
               type="text"
               value={formData.vendor_name}
               onChange={e => handleChange('vendor_name', e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-9 pr-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               placeholder="거래처 이름"
             />
           </div>
@@ -227,21 +227,21 @@ export default function ExpenseForm({
 
         {/* 설명 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-at-text mb-1">
             지출 내역 설명
           </label>
           <input
             type="text"
             value={formData.description}
             onChange={e => handleChange('description', e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             placeholder="지출 내역에 대한 설명"
           />
         </div>
 
         {/* 결제 방법 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-at-text mb-1">
             결제 방법
           </label>
           <div className="flex flex-wrap gap-2">
@@ -253,8 +253,8 @@ export default function ExpenseForm({
                   onClick={() => handleChange('payment_method', value)}
                   className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
                     formData.payment_method === value
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                      ? 'bg-at-accent text-white border-at-accent'
+                      : 'bg-white text-at-text border-at-border hover:border-at-accent'
                   }`}
                 >
                   {label}
@@ -272,7 +272,7 @@ export default function ExpenseForm({
               id="is_business_card"
               checked={formData.is_business_card}
               onChange={e => handleChange('is_business_card', e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-blue-600 border-at-border rounded-lg focus:ring-at-accent"
             />
             <label htmlFor="is_business_card" className="text-sm text-gray-700 flex items-center">
               <CreditCard className="w-4 h-4 mr-1 text-blue-600" />
@@ -282,14 +282,14 @@ export default function ExpenseForm({
         )}
 
         {/* 세금계산서 */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border border-at-border rounded-xl p-4 bg-at-surface-alt">
           <div className="flex items-center gap-2 mb-3">
             <input
               type="checkbox"
               id="has_tax_invoice"
               checked={formData.has_tax_invoice}
               onChange={e => handleChange('has_tax_invoice', e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-blue-600 border-at-border rounded-lg focus:ring-at-accent"
             />
             <label htmlFor="has_tax_invoice" className="text-sm font-medium text-gray-700 flex items-center">
               <Receipt className="w-4 h-4 mr-1 text-green-600" />
@@ -305,7 +305,7 @@ export default function ExpenseForm({
                   type="text"
                   value={formData.tax_invoice_number}
                   onChange={e => handleChange('tax_invoice_number', e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 py-1.5 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   placeholder="선택사항"
                 />
               </div>
@@ -315,7 +315,7 @@ export default function ExpenseForm({
                   type="date"
                   value={formData.tax_invoice_date}
                   onChange={e => handleChange('tax_invoice_date', e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 py-1.5 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
             </div>
@@ -329,7 +329,7 @@ export default function ExpenseForm({
             id="is_hometax_synced"
             checked={formData.is_hometax_synced}
             onChange={e => handleChange('is_hometax_synced', e.target.checked)}
-            className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+            className="w-4 h-4 text-green-600 border-at-border rounded-lg focus:ring-at-success"
           />
           <label htmlFor="is_hometax_synced" className="text-sm text-gray-700">
             홈택스에서 조회 가능한 지출
@@ -338,13 +338,13 @@ export default function ExpenseForm({
 
         {/* 메모 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-at-text mb-1">
             메모
           </label>
           <textarea
             value={formData.notes}
             onChange={e => handleChange('notes', e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             rows={2}
             placeholder="추가 메모 사항"
           />
@@ -354,14 +354,14 @@ export default function ExpenseForm({
         <div className="flex justify-end gap-3 pt-4 border-t">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-4 py-2 text-at-text bg-at-surface-alt rounded-xl hover:bg-at-surface-hover transition-colors"
           >
             취소
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !formData.category_id || formData.amount <= 0}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {saving ? (
               <>

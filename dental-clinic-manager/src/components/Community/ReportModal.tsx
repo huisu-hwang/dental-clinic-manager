@@ -42,13 +42,13 @@ export default function ReportModal({ postId, commentId, profileId, onClose }: R
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-2xl shadow-at-card max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Flag className="w-5 h-5 text-red-500" />
-            <h3 className="text-lg font-semibold text-gray-900">신고</h3>
+            <Flag className="w-5 h-5 text-at-error" />
+            <h3 className="text-lg font-semibold text-at-text">신고</h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-at-text-weak hover:text-at-text-secondary">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -58,22 +58,22 @@ export default function ReportModal({ postId, commentId, profileId, onClose }: R
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
               <Flag className="w-6 h-6 text-green-600" />
             </div>
-            <p className="text-gray-700 font-medium">신고가 접수되었습니다.</p>
-            <p className="text-sm text-gray-500 mt-1">관리자가 검토 후 조치합니다.</p>
+            <p className="text-at-text font-medium">신고가 접수되었습니다.</p>
+            <p className="text-sm text-at-text-secondary mt-1">관리자가 검토 후 조치합니다.</p>
           </div>
         ) : (
           <>
-            <p className="text-sm text-gray-500 mb-4">신고 사유를 선택해주세요.</p>
+            <p className="text-sm text-at-text-secondary mb-4">신고 사유를 선택해주세요.</p>
 
             <div className="space-y-2 mb-4">
               {reasons.map((reason) => (
                 <button
                   key={reason}
                   onClick={() => setSelectedReason(reason)}
-                  className={`w-full text-left px-4 py-2.5 rounded-lg border transition-colors text-sm ${
+                  className={`w-full text-left px-4 py-2.5 rounded-xl border transition-colors text-sm ${
                     selectedReason === reason
-                      ? 'border-red-300 bg-red-50 text-red-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      ? 'border-at-border bg-at-error-bg text-at-error'
+                      : 'border-at-border hover:bg-at-surface-hover text-at-text-secondary'
                   }`}
                 >
                   {REPORT_REASON_LABELS[reason]}
@@ -86,7 +86,7 @@ export default function ReportModal({ postId, commentId, profileId, onClose }: R
               onChange={(e) => setDetail(e.target.value)}
               placeholder="추가 설명 (선택사항)"
               rows={3}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
+              className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-error mb-4"
             />
 
             <div className="flex gap-2">

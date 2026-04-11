@@ -176,8 +176,8 @@ export default function AdminCategoryManager() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">게시판 주제 관리</h3>
-          <p className="text-xs text-gray-500 mt-0.5">주제를 추가, 수정, 삭제하고 순서를 변경할 수 있습니다</p>
+          <h3 className="text-sm font-semibold text-at-text">게시판 주제 관리</h3>
+          <p className="text-xs text-at-text-weak mt-0.5">주제를 추가, 수정, 삭제하고 순서를 변경할 수 있습니다</p>
         </div>
         {!showAddForm && (
           <Button size="sm" onClick={() => setShowAddForm(true)} disabled={saving}>
@@ -188,10 +188,10 @@ export default function AdminCategoryManager() {
 
       {/* 에러 메시지 */}
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+        <div className="flex items-center gap-2 p-3 bg-at-error-bg text-at-error rounded-xl text-sm">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">
+          <button onClick={() => setError(null)} className="ml-auto text-at-error hover:opacity-70">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -199,11 +199,11 @@ export default function AdminCategoryManager() {
 
       {/* 새 카테고리 추가 폼 */}
       {showAddForm && (
-        <div className="border border-blue-200 rounded-lg p-4 bg-blue-50/50 space-y-3">
-          <h4 className="text-sm font-semibold text-blue-700">새 주제 추가</h4>
+        <div className="border border-at-border rounded-2xl p-4 bg-at-accent-light space-y-3">
+          <h4 className="text-sm font-semibold text-at-accent">새 주제 추가</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">식별자 (영문, 숫자, _)</label>
+              <label className="block text-xs font-medium text-at-text-secondary mb-1">식별자 (영문, 숫자, _)</label>
               <Input
                 type="text"
                 value={newSlug}
@@ -213,7 +213,7 @@ export default function AdminCategoryManager() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">표시 이름</label>
+              <label className="block text-xs font-medium text-at-text-secondary mb-1">표시 이름</label>
               <Input
                 type="text"
                 value={newLabel}
@@ -224,7 +224,7 @@ export default function AdminCategoryManager() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">색상</label>
+            <label className="block text-xs font-medium text-at-text-secondary mb-1">색상</label>
             <div className="flex flex-wrap gap-2">
               {COLOR_PRESETS.map((preset, idx) => (
                 <button
@@ -232,7 +232,7 @@ export default function AdminCategoryManager() {
                   type="button"
                   onClick={() => setNewColorIdx(idx)}
                   className={`px-3 py-1 rounded-full text-xs font-medium ${preset.bg} ${preset.text} ${
-                    newColorIdx === idx ? 'ring-2 ring-offset-1 ring-blue-500' : ''
+                    newColorIdx === idx ? 'ring-2 ring-offset-1 ring-at-accent' : ''
                   }`}
                 >
                   {preset.label}
@@ -251,36 +251,36 @@ export default function AdminCategoryManager() {
       )}
 
       {/* 카테고리 목록 */}
-      <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+      <div className="border border-at-border rounded-2xl divide-y divide-at-border shadow-at-card">
         {categories.length === 0 ? (
-          <div className="p-8 text-center text-gray-400 text-sm">
+          <div className="p-8 text-center text-at-text-weak text-sm">
             등록된 주제가 없습니다
           </div>
         ) : (
           categories.map((cat, index) => (
             <div
               key={cat.id}
-              className={`p-3 sm:p-4 flex items-center gap-3 ${!cat.is_active ? 'bg-gray-50 opacity-60' : ''}`}
+              className={`p-3 sm:p-4 flex items-center gap-3 ${!cat.is_active ? 'bg-at-surface-alt opacity-60' : ''}`}
             >
               {/* 순서 변경 */}
               <div className="flex flex-col gap-0.5">
                 <button
                   onClick={() => handleMove(index, 'up')}
                   disabled={index === 0 || saving}
-                  className="text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                  className="text-at-text-weak hover:text-at-text-secondary disabled:opacity-30"
                 >
                   <ChevronUp className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleMove(index, 'down')}
                   disabled={index === categories.length - 1 || saving}
-                  className="text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                  className="text-at-text-weak hover:text-at-text-secondary disabled:opacity-30"
                 >
                   <ChevronDown className="w-4 h-4" />
                 </button>
               </div>
 
-              <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0 hidden sm:block" />
+              <GripVertical className="w-4 h-4 text-at-text-weak flex-shrink-0 hidden sm:block" />
 
               {/* 콘텐츠 */}
               {editingId === cat.id ? (
@@ -300,7 +300,7 @@ export default function AdminCategoryManager() {
                         type="button"
                         onClick={() => setEditColorIdx(idx)}
                         className={`px-2 py-0.5 rounded-full text-xs ${preset.bg} ${preset.text} ${
-                          editColorIdx === idx ? 'ring-2 ring-offset-1 ring-blue-500' : ''
+                          editColorIdx === idx ? 'ring-2 ring-offset-1 ring-at-accent' : ''
                         }`}
                       >
                         {preset.label}
@@ -325,9 +325,9 @@ export default function AdminCategoryManager() {
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${cat.color_bg} ${cat.color_text}`}>
                         {cat.label}
                       </span>
-                      <span className="text-xs text-gray-400 font-mono">{cat.slug}</span>
+                      <span className="text-xs text-at-text-weak font-mono">{cat.slug}</span>
                       {!cat.is_active && (
-                        <span className="text-xs text-red-500 font-medium">비활성</span>
+                        <span className="text-xs text-at-error font-medium">비활성</span>
                       )}
                     </div>
                   </div>
@@ -337,7 +337,7 @@ export default function AdminCategoryManager() {
                     <button
                       onClick={() => handleToggleActive(cat)}
                       disabled={saving}
-                      className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="p-1.5 rounded-xl hover:bg-at-surface-hover text-at-text-weak hover:text-at-text-secondary transition-colors"
                       title={cat.is_active ? '비활성화' : '활성화'}
                     >
                       {cat.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -345,7 +345,7 @@ export default function AdminCategoryManager() {
                     <button
                       onClick={() => startEdit(cat)}
                       disabled={saving}
-                      className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
+                      className="p-1.5 rounded-xl hover:bg-at-surface-hover text-at-text-weak hover:text-at-accent transition-colors"
                       title="수정"
                     >
                       <Edit3 className="w-4 h-4" />
@@ -353,7 +353,7 @@ export default function AdminCategoryManager() {
                     <button
                       onClick={() => handleDelete(cat)}
                       disabled={saving}
-                      className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-600 transition-colors"
+                      className="p-1.5 rounded-xl hover:bg-at-surface-hover text-at-text-weak hover:text-at-error transition-colors"
                       title="삭제"
                     >
                       <Trash2 className="w-4 h-4" />

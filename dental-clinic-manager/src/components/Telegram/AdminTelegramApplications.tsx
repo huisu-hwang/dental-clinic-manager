@@ -41,7 +41,6 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
       setError('게시판 경로와 이름을 모두 입력해주세요.')
       return
     }
-    // Validation for slug (only alphanumeric and hyphens)
     if (!/^[a-zA-Z0-9-]+$/.test(boardSlug.trim())) {
       setError('게시판 경로는 영문, 숫자, 하이픈(-)만 사용할 수 있습니다.')
       return
@@ -88,7 +87,7 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
   if (loading) {
     return (
       <div className="flex items-center justify-center py-6">
-        <Loader2 className="w-5 h-5 animate-spin text-sky-500" />
+        <Loader2 className="w-5 h-5 animate-spin text-at-accent" />
       </div>
     )
   }
@@ -100,16 +99,16 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
   return (
     <div className="space-y-3">
       {error && (
-        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-4 py-3 rounded-lg">
+        <div className="flex items-center gap-2 text-sm text-at-error bg-at-error-bg px-4 py-3 rounded-xl">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           {error}
-          <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">×</button>
+          <button onClick={() => setError(null)} className="ml-auto text-at-error/60 hover:text-at-error">×</button>
         </div>
       )}
 
       <div className="flex items-center gap-2">
         <Clock className="w-4 h-4 text-amber-500" />
-        <h3 className="text-sm font-semibold text-gray-700">
+        <h3 className="text-sm font-semibold text-at-text-secondary">
           게시판 신청 대기
           <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-amber-500 rounded-full">
             {applications.length}
@@ -121,19 +120,19 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
         {applications.map(app => (
           <div
             key={app.id}
-            className="p-4 rounded-xl border border-amber-200 bg-amber-50/50"
+            className="p-4 rounded-xl border border-at-border bg-at-surface-alt"
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
-                  <Send className="w-4 h-4 text-amber-600" />
+                <div className="w-9 h-9 rounded-xl bg-at-tag flex items-center justify-center">
+                  <Send className="w-4 h-4 text-at-accent" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-800">{app.board_title}</h4>
-                  <p className="text-xs text-gray-500">
+                  <h4 className="text-sm font-semibold text-at-text">{app.board_title}</h4>
+                  <p className="text-xs text-at-text-secondary">
                     {app.chat_title} · /{app.board_slug}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-at-text-weak mt-0.5">
                     신청자: {app.creator?.name || '알 수 없음'}
                     {app.creator?.email ? ` (${app.creator.email})` : ''}
                     {' · '}
@@ -144,7 +143,7 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
             </div>
 
             {app.application_reason && (
-              <p className="text-xs text-gray-600 mt-2 bg-white px-3 py-2 rounded-md border border-gray-100">
+              <p className="text-xs text-at-text-secondary mt-2 bg-white px-3 py-2 rounded-lg border border-at-border">
                 신청 사유: {app.application_reason}
               </p>
             )}
@@ -156,7 +155,7 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
                   value={rejectionReason}
                   onChange={e => setRejectionReason(e.target.value)}
                   placeholder="반려 사유를 입력해주세요"
-                  className="w-full h-16 px-3 py-2 text-sm border border-red-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent bg-white"
+                  className="w-full h-16 px-3 py-2 text-sm border border-at-border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-at-error focus:border-transparent bg-white"
                   autoFocus
                 />
                 <div className="flex gap-2 justify-end">
@@ -183,22 +182,22 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
 
             {/* 승인 정보 입력 */}
             {approvingId === app.id && (
-              <div className="mt-3 space-y-3 p-3 bg-white rounded-lg border border-green-100">
+              <div className="mt-3 space-y-3 p-3 bg-white rounded-xl border border-at-border">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">게시판 이름</label>
+                  <label className="block text-xs font-medium text-at-text-secondary mb-1">게시판 이름</label>
                   <input
                     type="text"
                     value={boardTitle}
                     onChange={e => setBoardTitle(e.target.value)}
                     placeholder="예: 치과 공지방"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                    className="w-full px-3 py-2 text-sm border border-at-border rounded-xl focus:outline-none focus:ring-2 focus:ring-at-accent focus:border-transparent"
                     autoFocus
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">게시판 식별자 (URL 경로)</label>
+                  <label className="block text-xs font-medium text-at-text-secondary mb-1">게시판 식별자 (URL 경로)</label>
                   <div className="flex items-center">
-                    <span className="bg-gray-50 border border-r-0 border-gray-200 px-3 py-2 text-sm text-gray-500 rounded-l-md font-mono">
+                    <span className="bg-at-surface-alt border border-r-0 border-at-border px-3 py-2 text-sm text-at-text-weak rounded-l-xl font-mono">
                       /community/telegram/
                     </span>
                     <input
@@ -206,7 +205,7 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
                       value={boardSlug}
                       onChange={e => setBoardSlug(e.target.value)}
                       placeholder="notice"
-                      className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent font-mono"
+                      className="flex-1 px-3 py-2 text-sm border border-at-border rounded-r-xl focus:outline-none focus:ring-2 focus:ring-at-accent focus:border-transparent font-mono"
                     />
                   </div>
                 </div>
@@ -240,7 +239,7 @@ export default function AdminTelegramApplications({ onReviewComplete }: AdminTel
                   size="sm"
                   onClick={() => { setRejectingId(app.id); setRejectionReason('') }}
                   disabled={!!processingId}
-                  className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                  className="h-7 text-xs text-at-error border-at-border hover:bg-at-error-bg"
                 >
                   <XCircle className="w-3 h-3 mr-1" />반려
                 </Button>

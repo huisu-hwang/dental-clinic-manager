@@ -278,26 +278,26 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
         <div className="text-center mb-8">
           <button
             onClick={onBackToLanding}
-            className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium mb-4"
+            className="inline-flex items-center text-at-accent hover:text-at-accent font-medium mb-4"
           >
             ← 돌아가기
           </button>
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-at-accent rounded-xl flex items-center justify-center">
               <span className="text-white font-bold">🦷</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
+            <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
           </div>
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">로그인</h2>
-          <p className="text-slate-600">계정에 로그인하여 업무를 시작하세요</p>
+          <h2 className="text-3xl font-bold text-at-text mb-2">로그인</h2>
+          <p className="text-at-text-secondary">계정에 로그인하여 업무를 시작하세요</p>
         </div>
 
 
         {/* Form */}
-        <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
+        <div className="bg-white p-8 rounded-2xl shadow-at-card border border-at-border">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-at-text-secondary mb-1">
                 이메일 주소
               </label>
               <input
@@ -306,7 +306,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                 placeholder="email@example.com"
                 disabled={loading}
                 autoComplete="email"
@@ -314,7 +314,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
             </div>
 
             <div className="relative">
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-at-text-secondary mb-1">
                 비밀번호
               </label>
               <input
@@ -323,7 +323,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
+                className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent pr-10"
                 placeholder="비밀번호를 입력하세요"
                 disabled={loading}
                 autoComplete="current-password"
@@ -334,9 +334,9 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                  <EyeSlashIcon className="h-5 w-5 text-at-text-weak" />
                 ) : (
-                  <EyeIcon className="h-5 w-5 text-gray-400" />
+                  <EyeIcon className="h-5 w-5 text-at-text-weak" />
                 )}
               </button>
             </div>
@@ -350,9 +350,9 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-at-accent focus:ring-at-accent border-at-border rounded"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600">
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-at-text-secondary">
                   로그인 정보 저장
                 </label>
               </div>
@@ -366,9 +366,9 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                     type="checkbox"
                     checked={autoLogin}
                     onChange={(e) => setAutoLogin(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-at-accent focus:ring-at-accent border-at-border rounded"
                   />
-                  <label htmlFor="auto-login" className="ml-2 block text-sm text-slate-600">
+                  <label htmlFor="auto-login" className="ml-2 block text-sm text-at-text-secondary">
                     자동 로그인 (다음에 자동으로 로그인)
                   </label>
                 </div>
@@ -379,7 +379,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
                 <button
                   type="button"
                   onClick={onShowForgotPassword}
-                  className="font-medium text-blue-600 hover:text-blue-700"
+                  className="font-medium text-at-accent hover:text-at-accent"
                 >
                   비밀번호를 잊으셨나요?
                 </button>
@@ -387,7 +387,7 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+              <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-xl text-sm">
                 {error}
               </div>
             )}
@@ -395,18 +395,18 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+              className="w-full bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-xl transition-colors"
             >
               {loading ? '로그인 중...' : '로그인'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-slate-600">
+            <p className="text-at-text-secondary">
               아직 계정이 없으신가요?{' '}
               <button
                 onClick={onShowSignup}
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-at-accent hover:text-at-accent font-medium"
               >
                 회원가입하기
               </button>

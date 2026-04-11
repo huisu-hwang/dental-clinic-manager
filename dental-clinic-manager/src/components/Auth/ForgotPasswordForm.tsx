@@ -67,18 +67,18 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
         <div className="text-center mb-8">
             <button
                 onClick={onBackToLogin}
-                className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium mb-4"
+                className="inline-flex items-center text-at-accent hover:text-at-accent font-medium mb-4"
             >
                 ← 로그인으로 돌아가기
             </button>
-            <h2 className="text-3xl font-bold text-slate-800 mb-2">비밀번호 재설정</h2>
-            <p className="text-slate-600">가입 시 사용한 이메일 주소를 입력하세요.</p>
+            <h2 className="text-3xl font-bold text-at-text mb-2">비밀번호 재설정</h2>
+            <p className="text-at-text-secondary">가입 시 사용한 이메일 주소를 입력하세요.</p>
         </div>
 
-        <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
+        <div className="bg-white p-8 rounded-2xl shadow-at-card border border-at-border">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-at-text-secondary mb-1">
                 이메일 주소
               </label>
               <input
@@ -87,7 +87,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
                 name="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                 placeholder="email@example.com"
                 required
                 disabled={loading}
@@ -95,13 +95,13 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
             </div>
 
             {message && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md text-sm">
+              <div className="bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-xl text-sm">
                 {message}
               </div>
             )}
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+              <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-xl text-sm">
                 {error}
               </div>
             )}
@@ -111,7 +111,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
                 href={getEmailProvider(sentEmail)!.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition-colors text-center"
+                className="block w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition-colors text-center"
               >
                 {getEmailProvider(sentEmail)!.name}(으)로 바로 이동
               </a>
@@ -119,7 +119,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
               <button
                 type="submit"
                 disabled={loading || !!message}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+                className="w-full bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-xl transition-colors"
               >
                 {loading ? '전송 중...' : message ? '이메일을 확인해주세요' : '재설정 이메일 받기'}
               </button>

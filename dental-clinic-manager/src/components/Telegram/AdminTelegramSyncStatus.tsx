@@ -30,7 +30,7 @@ export default function AdminTelegramSyncStatus({ groupId, onTriggerSummary, tri
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-gray-400 text-xs">
+      <div className="flex items-center gap-2 text-at-text-weak text-xs">
         <Loader2 className="w-3 h-3 animate-spin" />
         상태 확인 중...
       </div>
@@ -52,15 +52,15 @@ export default function AdminTelegramSyncStatus({ groupId, onTriggerSummary, tri
 
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs">
-      <span className="flex items-center gap-1 text-gray-500">
+      <span className="flex items-center gap-1 text-at-text-secondary">
         <Clock className="w-3 h-3" />
         마지막 동기화: {formatLastSync(status.lastSync)}
       </span>
-      <span className="flex items-center gap-1 text-gray-500">
+      <span className="flex items-center gap-1 text-at-text-secondary">
         <MessageSquare className="w-3 h-3" />
         오늘 메시지: {status.todayMessages}건
       </span>
-      <span className="flex items-center gap-1 text-gray-500">
+      <span className="flex items-center gap-1 text-at-text-secondary">
         <FileText className="w-3 h-3" />
         총 게시글: {status.totalPosts}건
       </span>

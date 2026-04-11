@@ -124,7 +124,7 @@ export default function PhoneDialSettingsModal({
         {/* 헤더 */}
         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
               <Phone className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -134,7 +134,7 @@ export default function PhoneDialSettingsModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/20 rounded-xl transition-colors"
           >
             <X className="w-5 h-5 text-white" />
           </button>
@@ -144,7 +144,7 @@ export default function PhoneDialSettingsModal({
         <div className="p-6 space-y-6">
           {/* 프로토콜 선택 */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">
+            <label className="block text-sm font-medium text-at-text-secondary mb-3">
               전화 연결 방식
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -158,14 +158,14 @@ export default function PhoneDialSettingsModal({
                 <button
                   key={option.value}
                   onClick={() => handleProtocolChange(option.value as PhoneDialProtocol)}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${
                     localSettings.protocol === option.value
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-slate-200 hover:border-slate-300'
+                      ? 'border-at-accent bg-at-accent-light'
+                      : 'border-at-border hover:border-at-border'
                   }`}
                 >
-                  <div className="font-medium text-slate-800">{option.label}</div>
-                  <div className="text-xs text-slate-500 mt-1">{option.desc}</div>
+                  <div className="font-medium text-at-text">{option.label}</div>
+                  <div className="text-xs text-at-text-weak mt-1">{option.desc}</div>
                 </button>
               ))}
             </div>
@@ -173,21 +173,21 @@ export default function PhoneDialSettingsModal({
 
           {/* HTTP API 설정 (IP 전화기) */}
           {localSettings.protocol === 'http' && (
-            <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <div className="space-y-4 p-4 bg-at-surface-alt rounded-xl">
+              <div className="flex items-center gap-2 text-sm font-medium text-at-text-secondary">
                 <Settings className="w-4 h-4" />
                 IP 전화기 설정
               </div>
 
               {/* 프리셋 선택 */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-at-text-secondary mb-2">
                   전화기 제조사 선택
                 </label>
                 <select
                   value={selectedPreset}
                   onChange={(e) => applyPreset(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 >
                   <option value="">프리셋 선택...</option>
                   {PHONE_PRESETS.map(preset => (
@@ -200,7 +200,7 @@ export default function PhoneDialSettingsModal({
 
               {/* IP 주소 */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-at-text-secondary mb-2">
                   전화기 IP 주소 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -214,13 +214,13 @@ export default function PhoneDialSettingsModal({
                     }
                   }))}
                   placeholder="예: 192.168.1.100"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
 
               {/* 포트 */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-at-text-secondary mb-2">
                   포트 번호
                 </label>
                 <input
@@ -234,14 +234,14 @@ export default function PhoneDialSettingsModal({
                     }
                   }))}
                   placeholder="80"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
 
               {/* 고급 설정 토글 */}
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                className="flex items-center gap-2 text-sm text-at-accent hover:text-at-accent"
               >
                 <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
                 고급 설정
@@ -252,9 +252,9 @@ export default function PhoneDialSettingsModal({
                 <div className="space-y-4 pt-2">
                   {/* API 경로 */}
                   <div>
-                    <label className="block text-sm text-slate-600 mb-2">
+                    <label className="block text-sm text-at-text-secondary mb-2">
                       API 경로 템플릿
-                      <span className="ml-1 text-slate-400">({'{number}'} = 전화번호)</span>
+                      <span className="ml-1 text-at-text-weak">({'{number}'} = 전화번호)</span>
                     </label>
                     <input
                       type="text"
@@ -267,13 +267,13 @@ export default function PhoneDialSettingsModal({
                         }
                       }))}
                       placeholder="/dial?number={number}"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                      className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent font-mono text-sm"
                     />
                   </div>
 
                   {/* HTTP 메서드 */}
                   <div>
-                    <label className="block text-sm text-slate-600 mb-2">
+                    <label className="block text-sm text-at-text-secondary mb-2">
                       HTTP 메서드
                     </label>
                     <select
@@ -285,7 +285,7 @@ export default function PhoneDialSettingsModal({
                           method: e.target.value as 'GET' | 'POST'
                         }
                       }))}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                     >
                       <option value="GET">GET</option>
                       <option value="POST">POST</option>
@@ -295,7 +295,7 @@ export default function PhoneDialSettingsModal({
                   {/* 인증 정보 */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm text-slate-600 mb-2">
+                      <label className="block text-sm text-at-text-secondary mb-2">
                         사용자명 (선택)
                       </label>
                       <input
@@ -313,11 +313,11 @@ export default function PhoneDialSettingsModal({
                           }
                         }))}
                         placeholder="admin"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm text-slate-600 mb-2">
+                      <label className="block text-sm text-at-text-secondary mb-2">
                         비밀번호 (선택)
                       </label>
                       <input
@@ -335,7 +335,7 @@ export default function PhoneDialSettingsModal({
                           }
                         }))}
                         placeholder="••••••"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                       />
                     </div>
                   </div>
@@ -346,7 +346,7 @@ export default function PhoneDialSettingsModal({
               <button
                 onClick={handleTest}
                 disabled={testing || !localSettings.httpSettings?.host}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white rounded-xl transition-colors"
               >
                 <Wifi className="w-4 h-4" />
                 {testing ? '테스트 중...' : '연결 테스트'}
@@ -356,15 +356,15 @@ export default function PhoneDialSettingsModal({
 
           {/* LG U+ 센트릭스 설정 */}
           {localSettings.protocol === 'centrex' && (
-            <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <div className="space-y-4 p-4 bg-at-surface-alt rounded-xl">
+              <div className="flex items-center gap-2 text-sm font-medium text-at-text-secondary">
                 <Settings className="w-4 h-4" />
                 LG U+ 센트릭스 설정
               </div>
 
               {/* 070 번호 */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-at-text-secondary mb-2">
                   070 전화번호 (로그인 ID) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -379,14 +379,14 @@ export default function PhoneDialSettingsModal({
                     }
                   }))}
                   placeholder="예: 07012345678"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
-                <p className="mt-1 text-xs text-slate-400">센트릭스에 등록된 070 번호를 입력하세요</p>
+                <p className="mt-1 text-xs text-at-text-weak">센트릭스에 등록된 070 번호를 입력하세요</p>
               </div>
 
               {/* 비밀번호 */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-at-text-secondary mb-2">
                   비밀번호 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -401,16 +401,16 @@ export default function PhoneDialSettingsModal({
                     }
                   }))}
                   placeholder="센트릭스 비밀번호"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
-                <p className="mt-1 text-xs text-slate-400">비밀번호는 서버에서 안전하게 암호화(SHA-512)되어 전송됩니다</p>
+                <p className="mt-1 text-xs text-at-text-weak">비밀번호는 서버에서 안전하게 암호화(SHA-512)되어 전송됩니다</p>
               </div>
 
               {/* 연결 테스트 */}
               <button
                 onClick={handleTest}
                 disabled={testing || !localSettings.centrexSettings?.phoneNumber || !localSettings.centrexSettings?.password}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white rounded-xl transition-colors"
               >
                 <Wifi className="w-4 h-4" />
                 {testing ? '테스트 중...' : '연결 테스트'}
@@ -420,12 +420,12 @@ export default function PhoneDialSettingsModal({
 
           {/* 전화번호 포맷 설정 */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <div className="flex items-center gap-2 text-sm font-medium text-at-text-secondary">
               <HelpCircle className="w-4 h-4" />
               전화번호 포맷 옵션
             </div>
 
-            <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg cursor-pointer">
+            <label className="flex items-center gap-3 p-3 bg-at-surface-alt rounded-xl cursor-pointer">
               <input
                 type="checkbox"
                 checked={localSettings.numberFormat?.removeSpecialChars ?? true}
@@ -436,38 +436,38 @@ export default function PhoneDialSettingsModal({
                     removeSpecialChars: e.target.checked
                   }
                 }))}
-                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="w-4 h-4 rounded border-at-border text-at-accent focus:ring-at-accent"
               />
               <div>
-                <div className="text-sm text-slate-700">특수문자 제거</div>
-                <div className="text-xs text-slate-500">하이픈(-) 등을 제거하고 숫자만 전송</div>
+                <div className="text-sm text-at-text-secondary">특수문자 제거</div>
+                <div className="text-xs text-at-text-weak">하이픈(-) 등을 제거하고 숫자만 전송</div>
               </div>
             </label>
           </div>
 
           {/* 테스트 결과 */}
           {testResult && (
-            <div className={`flex items-start gap-3 p-4 rounded-lg ${
-              testResult.success ? 'bg-green-50' : 'bg-red-50'
+            <div className={`flex items-start gap-3 p-4 rounded-xl ${
+              testResult.success ? 'bg-at-success-bg' : 'bg-at-error-bg'
             }`}>
               {testResult.success ? (
-                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-5 h-5 text-at-success flex-shrink-0 mt-0.5" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-at-error flex-shrink-0 mt-0.5" />
               )}
-              <div className={`text-sm ${testResult.success ? 'text-green-700' : 'text-red-700'}`}>
+              <div className={`text-sm ${testResult.success ? 'text-at-success' : 'text-at-error'}`}>
                 {testResult.message}
               </div>
             </div>
           )}
 
           {/* 한국 환경 가이드 */}
-          <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <div className="p-4 bg-at-warning-bg rounded-xl border border-amber-200">
             <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-at-warning flex-shrink-0 mt-0.5" />
               <div className="text-sm text-amber-800">
                 <p className="font-semibold mb-2">추천 설정 안내</p>
-                <div className="space-y-2 text-amber-700">
+                <div className="space-y-2 text-at-warning">
                   <p><strong>LG U+ 고급형 센트릭스 (권장)</strong></p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
                     <li>&quot;LG U+ 센트릭스&quot; 선택 → 070번호와 비밀번호 입력</li>
@@ -493,12 +493,12 @@ export default function PhoneDialSettingsModal({
           </div>
 
           {/* 사용 방법 */}
-          <div className="p-4 bg-blue-50 rounded-lg">
+          <div className="p-4 bg-at-accent-light rounded-xl">
             <div className="flex items-start gap-2">
-              <HelpCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-700">
+              <HelpCircle className="w-4 h-4 text-at-accent flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-at-accent">
                 <p className="font-medium mb-1">연결 방식 설명</p>
-                <ul className="list-disc list-inside space-y-1 text-blue-600">
+                <ul className="list-disc list-inside space-y-1 text-at-accent">
                   <li><strong>기본 전화:</strong> 스마트폰이나 소프트폰 앱으로 연결 (tel: 프로토콜)</li>
                   <li><strong>Skype:</strong> Skype 앱이 설치된 PC에서 사용</li>
                   <li><strong>SIP:</strong> SIP 클라이언트 앱(MicroSIP 등)으로 연결</li>
@@ -511,23 +511,23 @@ export default function PhoneDialSettingsModal({
         </div>
 
         {/* 푸터 */}
-        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex justify-between rounded-b-xl">
+        <div className="sticky bottom-0 bg-white border-t border-at-border px-6 py-4 flex justify-between rounded-b-xl">
           <button
             onClick={handleTestDial}
-            className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+            className="px-4 py-2 text-at-text-secondary hover:text-at-text transition-colors"
           >
             테스트 전화 (010-0000-0000)
           </button>
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+              className="px-4 py-2 text-at-text-secondary hover:text-at-text transition-colors"
             >
               취소
             </button>
             <button
               onClick={handleSave}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="px-6 py-2 bg-at-accent hover:bg-at-accent-hover text-white rounded-xl transition-colors"
             >
               저장
             </button>

@@ -18,12 +18,12 @@ interface User {
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
-  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+    <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-at-accent-light text-at-accent">
       <Icon className="w-4 h-4" />
     </div>
-    <h3 className="text-base font-semibold text-slate-800">
-      <span className="text-blue-600 mr-1">{number}.</span>
+    <h3 className="text-base font-semibold text-at-text">
+      <span className="text-at-accent mr-1">{number}.</span>
       {title}
     </h3>
   </div>
@@ -183,16 +183,16 @@ export default function ScheduleManagement() {
         <SectionHeader number={1} title="직원 선택" icon={Users} />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-3">
-            <label className="block text-sm font-medium text-slate-600 mb-1.5">직원</label>
+            <label className="block text-sm font-medium text-at-text-secondary mb-1.5">직원</label>
             {users.length === 0 ? (
-              <div className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 text-slate-500">
+              <div className="w-full px-3 py-2 border border-at-border rounded-xl bg-at-surface-alt text-at-text-weak">
                 직원 목록을 불러오는 중... (또는 등록된 직원이 없습니다)
               </div>
             ) : (
               <select
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
               >
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -206,7 +206,7 @@ export default function ScheduleManagement() {
             <button
               onClick={loadClinicHours}
               disabled={loading || !selectedUser}
-              className="w-full px-4 py-2 rounded-lg font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 rounded-xl font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
               병원 진료시간 가져오기
             </button>
@@ -216,10 +216,10 @@ export default function ScheduleManagement() {
 
       {message && (
         <div
-          className={`p-4 rounded-lg ${
+          className={`p-4 rounded-xl ${
             message.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
+              ? 'bg-at-success-bg text-green-800 border border-green-200'
+              : 'bg-at-error-bg text-red-800 border border-red-200'
           }`}
         >
           {message.text}
@@ -232,24 +232,24 @@ export default function ScheduleManagement() {
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <div className="flex items-center space-x-2">
-                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-slate-500">스케줄 로딩 중...</span>
+                <div className="w-5 h-5 border-2 border-at-accent border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-at-text-weak">스케줄 로딩 중...</span>
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto border border-slate-200 rounded-lg">
+            <div className="overflow-x-auto border border-at-border rounded-xl">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">요일</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">근무 여부</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">출근 시간</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">퇴근 시간</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">점심시간</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">액션</th>
+                  <tr className="bg-at-surface-alt border-b border-at-border">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">요일</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">근무 여부</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">출근 시간</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">퇴근 시간</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">점심시간</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">액션</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
+                <tbody className="divide-y divide-at-border">
                   {dayOrder.map((dayName) => {
                     const schedule = workSchedule?.[dayName]
                     return (
@@ -268,12 +268,12 @@ export default function ScheduleManagement() {
       </div>
 
       {/* 안내 */}
-      <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+      <div className="p-4 bg-at-surface-alt rounded-xl border border-at-border">
         <div className="flex items-start space-x-2">
-          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <Info className="w-5 h-5 text-at-accent flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-medium text-slate-600 mb-1">안내사항</p>
-            <ul className="text-xs text-slate-500 space-y-0.5 list-disc list-inside">
+            <p className="text-xs font-medium text-at-text-secondary mb-1">안내사항</p>
+            <ul className="text-xs text-at-text-weak space-y-0.5 list-disc list-inside">
               <li>&quot;병원 진료시간 가져오기&quot;를 클릭하면 병원 설정의 진료시간을 직원 스케줄에 적용합니다.</li>
               <li>각 요일별로 다른 시간을 설정할 수 있습니다. 요일별로 &quot;수정&quot; 버튼을 클릭하세요.</li>
               <li>스케줄은 출퇴근 기록 및 근로계약서 작성 시 자동으로 사용됩니다.</li>
@@ -334,8 +334,8 @@ function DayScheduleRow({
   }
 
   return (
-    <tr className={isEditing ? 'bg-blue-50' : 'hover:bg-slate-50'}>
-      <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-800">
+    <tr className={isEditing ? 'bg-at-accent-light' : 'hover:bg-at-surface-alt'}>
+      <td className="px-4 py-3 whitespace-nowrap font-medium text-at-text">
         {DAY_NAMES_KO[dayName]}
       </td>
       <td className="px-4 py-3 whitespace-nowrap">
@@ -344,14 +344,14 @@ function DayScheduleRow({
             type="checkbox"
             checked={isWorking}
             onChange={(e) => setIsWorking(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+            className="w-4 h-4 text-at-accent border-at-border rounded focus:ring-at-accent"
           />
         ) : (
           <span
             className={`px-2 py-1 text-xs font-semibold rounded-full ${
               schedule?.isWorking
-                ? 'bg-green-100 text-green-800'
-                : 'bg-slate-100 text-slate-600'
+                ? 'bg-at-success-bg text-green-800'
+                : 'bg-at-surface-alt text-at-text-secondary'
             }`}
           >
             {schedule?.isWorking ? '근무' : '휴무'}
@@ -365,10 +365,10 @@ function DayScheduleRow({
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
             disabled={!isWorking}
-            className="px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+            className="px-2 py-1 border border-at-border rounded focus:ring-2 focus:ring-at-accent disabled:bg-at-surface-alt"
           />
         ) : (
-          <span className="text-slate-800">
+          <span className="text-at-text">
             {schedule?.isWorking && schedule?.start ? schedule.start : '-'}
           </span>
         )}
@@ -380,10 +380,10 @@ function DayScheduleRow({
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
             disabled={!isWorking}
-            className="px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+            className="px-2 py-1 border border-at-border rounded focus:ring-2 focus:ring-at-accent disabled:bg-at-surface-alt"
           />
         ) : (
-          <span className="text-slate-800">
+          <span className="text-at-text">
             {schedule?.isWorking && schedule?.end ? schedule.end : '-'}
           </span>
         )}
@@ -396,19 +396,19 @@ function DayScheduleRow({
               value={breakStart}
               onChange={(e) => setBreakStart(e.target.value)}
               disabled={!isWorking}
-              className="px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 w-24"
+              className="px-2 py-1 border border-at-border rounded focus:ring-2 focus:ring-at-accent disabled:bg-at-surface-alt w-24"
             />
-            <span className="text-slate-500 self-center">~</span>
+            <span className="text-at-text-weak self-center">~</span>
             <input
               type="time"
               value={breakEnd}
               onChange={(e) => setBreakEnd(e.target.value)}
               disabled={!isWorking}
-              className="px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 w-24"
+              className="px-2 py-1 border border-at-border rounded focus:ring-2 focus:ring-at-accent disabled:bg-at-surface-alt w-24"
             />
           </div>
         ) : (
-          <span className="text-slate-800">
+          <span className="text-at-text">
             {schedule?.isWorking && schedule?.breakStart && schedule?.breakEnd
               ? `${schedule.breakStart} ~ ${schedule.breakEnd}`
               : '-'}
@@ -420,13 +420,13 @@ function DayScheduleRow({
           <div className="flex gap-2">
             <button
               onClick={handleSave}
-              className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="px-3 py-1 bg-at-accent text-white rounded hover:bg-at-accent-hover"
             >
               저장
             </button>
             <button
               onClick={handleCancel}
-              className="px-3 py-1 bg-slate-300 text-slate-700 rounded hover:bg-slate-400"
+              className="px-3 py-1 bg-slate-300 text-at-text-secondary rounded hover:bg-slate-400"
             >
               취소
             </button>
@@ -434,7 +434,7 @@ function DayScheduleRow({
         ) : (
           <button
             onClick={() => setIsEditing(true)}
-            className="text-blue-600 hover:text-blue-800 font-medium"
+            className="text-at-accent hover:text-blue-800 font-medium"
           >
             수정
           </button>

@@ -185,11 +185,11 @@ export default function WorkerStatusMenuItem() {
     <div>
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+        className="group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text"
         title="워커 상태"
       >
         <div className="relative flex-shrink-0">
-          <Server className="w-5 h-5 text-slate-400 group-hover:text-slate-600" />
+          <Server className="w-5 h-5 text-at-text-weak group-hover:text-at-text-secondary" />
           <span
             className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white ${STATUS_COLOR[overallStatus]}`}
             aria-hidden
@@ -200,25 +200,25 @@ export default function WorkerStatusMenuItem() {
           onClick={handleRefresh}
           role="button"
           aria-label="워커 상태 새로고침"
-          className="p-0.5 rounded hover:bg-slate-200"
+          className="p-0.5 rounded hover:bg-at-surface-hover"
         >
-          <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 text-at-text-weak ${refreshing ? 'animate-spin' : ''}`} />
         </span>
         {expanded ? (
-          <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+          <ChevronUp className="w-3.5 h-3.5 text-at-text-weak" />
         ) : (
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+          <ChevronDown className="w-3.5 h-3.5 text-at-text-weak" />
         )}
       </button>
 
       {expanded && (
-        <div className="ml-3 mr-1 mt-1 mb-2 space-y-1.5 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
+        <div className="ml-3 mr-1 mt-1 mb-2 space-y-1.5 px-3 py-2 rounded-lg bg-at-surface-alt border border-at-border">
           {workerStatuses.map((w) => (
             <div key={w.key} className="flex items-center justify-between text-xs">
-              <span className="text-slate-600">{w.label}</span>
+              <span className="text-at-text-secondary">{w.label}</span>
               <div className="flex items-center space-x-1.5">
                 <span className={`w-2 h-2 rounded-full ${STATUS_COLOR[w.status]}`} />
-                <span className="text-slate-500">
+                <span className="text-at-text-secondary">
                   {STATUS_LABEL[w.status]}
                   {w.status === 'online' && w.getExtra ? w.getExtra(status) : ''}
                 </span>
@@ -226,7 +226,7 @@ export default function WorkerStatusMenuItem() {
             </div>
           ))}
           {overallStatus !== 'online' && overallStatus !== 'loading' && (
-            <div className="pt-1 mt-1 border-t border-slate-200 text-[11px] text-slate-400 leading-snug">
+            <div className="pt-1 mt-1 border-t border-at-border text-[11px] text-at-text-weak leading-snug">
               워커에 문제가 있습니다. 관리자에게 설치/실행을 요청하세요.
             </div>
           )}
