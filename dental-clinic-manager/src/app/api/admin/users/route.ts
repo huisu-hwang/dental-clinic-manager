@@ -128,14 +128,38 @@ export async function GET(request: Request) {
       }
     }
 
-    // 4. 데이터 병합 (email_verified + recent_logins 추가)
+    // 3-2. 최근 접속 기록 조회 (각 사용자별 가장 최근 access 기록)
+    console.log('[Admin API] Fetching recent access activities...')
+    const { data: recentAccess, error: accessError } = await supabase
+      .from('user_activity_logs')
+      .select('user_id, created_at')
+      .eq('activity_type', 'access')
+      .order('created_at', { ascending: false })
+      .limit(500)
+
+    if (accessError) {
+      console.error('[Admin API] Error fetching access activities:', accessError)
+    }
+
+    // 사용자별 가장 최근 접속 시간 추출
+    const lastActiveByUser: Record<string, string> = {}
+    if (recentAccess) {
+      for (const log of recentAccess) {
+        if (!lastActiveByUser[log.user_id]) {
+          lastActiveByUser[log.user_id] = log.created_at
+        }
+      }
+    }
+
+    // 4. 데이터 병합 (email_verified + recent_logins + last_active_at 추가)
     const mergedData = publicUsers.map((user: any) => {
       const authUser = authUsers.find((au: any) => au.id === user.id)
       return {
         ...user,
         email_confirmed_at: authUser?.email_confirmed_at,
         email_verified: !!authUser?.email_confirmed_at,
-        recent_logins: loginsByUser[user.id] || []
+        recent_logins: loginsByUser[user.id] || [],
+        last_active_at: lastActiveByUser[user.id] || null
       }
     })
 

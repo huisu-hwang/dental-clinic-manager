@@ -932,7 +932,8 @@ export default function MasterAdminPage() {
                       {getRoleLabel(u.role)}
                     </span>
                     <span>{u.clinic?.name || '소속 없음'}</span>
-                    <span>{formatRelativeTime(u.last_login_at)}</span>
+                    <span>로그인: {formatRelativeTime(u.last_login_at)}</span>
+                    <span>접속: {formatRelativeTime(u.last_active_at)}</span>
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button onClick={() => handleViewActivity(u)} className="flex-1 text-blue-600 border border-blue-200 py-1.5 rounded-lg text-xs font-medium">활동</button>
@@ -957,6 +958,7 @@ export default function MasterAdminPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">소속 병원</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">최근 로그인</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">최근 접속</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">생성일</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
                   </tr>
@@ -1007,6 +1009,11 @@ export default function MasterAdminPage() {
                             </span>
                           )}
                         </button>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <span title={user.last_active_at ? new Date(user.last_active_at).toLocaleString('ko-KR') : '기록 없음'}>
+                          {formatRelativeTime(user.last_active_at)}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {new Date(user.created_at).toLocaleDateString()}
