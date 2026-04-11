@@ -85,7 +85,7 @@ export default function TelegramBoardPostDetail({
     (post.post_type === 'general' || post.post_type === 'vote') &&
     post.created_by === currentUserId
   )
-  const typeColor = TELEGRAM_POST_TYPE_COLORS[post.post_type] || { bg: 'bg-gray-100', text: 'text-gray-700' }
+  const typeColor = TELEGRAM_POST_TYPE_COLORS[post.post_type] || { bg: 'bg-at-surface-alt', text: 'text-at-text-secondary' }
   const typeLabel = TELEGRAM_POST_TYPE_LABELS[post.post_type] || post.post_type
 
   const TypeIcon = post.post_type === 'summary' ? Brain
@@ -116,16 +116,16 @@ export default function TelegramBoardPostDetail({
       {/* 상단 네비게이션 */}
       <div className="flex items-center justify-between mb-4">
         <nav className="flex items-center text-sm">
-          <button onClick={onBack} className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+          <button onClick={onBack} className="text-at-accent hover:text-at-accent font-medium transition-colors">
             게시판
           </button>
-          <span className="mx-2 text-gray-400">›</span>
-          <span className="text-gray-500 truncate max-w-[200px] sm:max-w-[400px]">{post.title}</span>
+          <span className="mx-2 text-at-text-weak">›</span>
+          <span className="text-at-text-secondary truncate max-w-[200px] sm:max-w-[400px]">{post.title}</span>
         </nav>
       </div>
 
       {/* 게시글 헤더 */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-at-border overflow-hidden shadow-at-card">
         <div className="p-4 sm:p-6">
           {/* 타입 뱃지 + 메타 */}
           <div className="flex items-center gap-2 mb-3">
@@ -134,28 +134,28 @@ export default function TelegramBoardPostDetail({
               {typeLabel}
             </span>
             {post.summary_date && (
-              <span className="text-xs text-gray-500 flex items-center gap-1">
+              <span className="text-xs text-at-text-secondary flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 {post.summary_date} 요약
               </span>
             )}
             {post.ai_model && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-at-text-weak">
                 by {post.ai_model}
               </span>
             )}
           </div>
 
           {/* 제목 */}
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900 mb-3">
+          <h1 className="text-lg sm:text-xl font-bold text-at-text mb-3">
             {post.title}
           </h1>
 
           {/* 메타 정보 */}
-          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
-            <div className="flex items-center gap-3 text-xs text-gray-400">
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-at-border">
+            <div className="flex items-center gap-3 text-xs text-at-text-weak">
               {(post.author?.name || post.telegram_sender_name) && (
-                <span className="text-gray-600 font-medium">{post.author?.name || post.telegram_sender_name}</span>
+                <span className="text-at-text-secondary font-medium">{post.author?.name || post.telegram_sender_name}</span>
               )}
               <span>{formatDate(post.created_at)}</span>
               <span className="flex items-center gap-1">
@@ -165,12 +165,12 @@ export default function TelegramBoardPostDetail({
             {(canModify || canDelete) && (
               <div className="flex items-center gap-1">
                 {canModify && onEdit && (
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-gray-400 hover:text-gray-600 hidden sm:inline-flex">
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(post)} className="text-at-text-weak hover:text-at-text-secondary hidden sm:inline-flex">
                     <Pencil className="w-3.5 h-3.5 mr-1" />수정
                   </Button>
                 )}
                 {canDelete && onDelete && (
-                  <Button variant="ghost" size="sm" onClick={() => onDelete(post)} className="text-gray-400 hover:text-red-500 hidden sm:inline-flex">
+                  <Button variant="ghost" size="sm" onClick={() => onDelete(post)} className="text-at-text-weak hover:text-at-error hidden sm:inline-flex">
                     <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
                   </Button>
                 )}
@@ -180,8 +180,8 @@ export default function TelegramBoardPostDetail({
 
           {/* 파일 목록 */}
           {(post.file_urls?.length ?? 0) > 0 && (
-            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-1">
+            <div className="mb-4 p-3 bg-at-accent-light rounded-xl">
+              <h4 className="text-sm font-medium text-at-accent mb-2 flex items-center gap-1">
                 <FileText className="w-4 h-4" />첨부 파일
               </h4>
               <div className="space-y-2">
@@ -191,12 +191,12 @@ export default function TelegramBoardPostDetail({
                     href={file.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                    className="flex items-center gap-2 text-sm text-at-accent hover:text-at-accent hover:underline"
                   >
                     <Download className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className="truncate">{file.name || `파일 ${i + 1}`}</span>
                     {file.size && (
-                      <span className="text-xs text-blue-400 flex-shrink-0">
+                      <span className="text-xs text-at-text-weak flex-shrink-0">
                         ({formatFileSize(file.size)})
                       </span>
                     )}
@@ -208,7 +208,7 @@ export default function TelegramBoardPostDetail({
 
           {/* 링크 목록 */}
           {(post.link_urls?.length ?? 0) > 0 && (
-            <div className="mb-4 p-3 bg-green-50 rounded-lg">
+            <div className="mb-4 p-3 bg-green-50 rounded-xl">
               <h4 className="text-sm font-medium text-green-800 mb-2 flex items-center gap-1">
                 <Link2 className="w-4 h-4" />공유 링크
               </h4>
@@ -232,11 +232,11 @@ export default function TelegramBoardPostDetail({
           {/* 본문 콘텐츠 */}
           {post.content && (
             <div
-              className="prose prose-sm max-w-none text-gray-700
-                prose-headings:text-gray-900 prose-headings:font-semibold
+              className="prose prose-sm max-w-none text-at-text-secondary
+                prose-headings:text-at-text prose-headings:font-semibold
                 prose-h3:text-base prose-h3:mt-4 prose-h3:mb-2
                 prose-ul:my-2 prose-li:my-0.5
-                prose-p:my-2 prose-a:text-blue-600
+                prose-p:my-2 prose-a:text-at-accent
                 [&_video]:rounded-lg [&_video]:max-w-full [&_video]:my-4"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
             />
@@ -291,7 +291,7 @@ export default function TelegramBoardPostDetail({
       <div className="flex items-center justify-center gap-2 mt-4">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-hover transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           목록으로
@@ -299,7 +299,7 @@ export default function TelegramBoardPostDetail({
         {canModify && onEdit && (
           <button
             onClick={() => onEdit(post)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-hover transition-colors"
           >
             <Pencil className="w-4 h-4" />
             수정
@@ -308,7 +308,7 @@ export default function TelegramBoardPostDetail({
         {canDelete && onDelete && (
           <button
             onClick={() => onDelete(post)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-error bg-white border border-at-border rounded-xl hover:bg-at-error-bg transition-colors"
           >
             <Trash2 className="w-4 h-4" />
             삭제

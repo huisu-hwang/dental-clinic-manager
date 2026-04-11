@@ -93,8 +93,8 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-sky-500 mx-auto mb-3" />
-          <p className="text-sm text-gray-500">초대 링크 확인 중...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-at-accent mx-auto mb-3" />
+          <p className="text-sm text-at-text-weak">초대 링크 확인 중...</p>
         </div>
       </div>
     )
@@ -104,11 +104,11 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center max-w-sm">
-          <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-7 h-7 text-red-500" />
+          <div className="w-14 h-14 bg-at-error-bg rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-7 h-7 text-at-error" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">초대 링크 오류</h2>
-          <p className="text-sm text-gray-500 mb-6">{error}</p>
+          <h2 className="text-lg font-semibold text-at-text mb-2">초대 링크 오류</h2>
+          <p className="text-sm text-at-text-weak mb-6">{error}</p>
           <Button variant="outline" onClick={() => router.push('/dashboard/community/telegram')}>
             게시판 목록으로
           </Button>
@@ -124,8 +124,8 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
           <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-7 h-7 text-green-500" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">가입 완료!</h2>
-          <p className="text-sm text-gray-500">게시판으로 이동합니다...</p>
+          <h2 className="text-lg font-semibold text-at-text mb-2">가입 완료!</h2>
+          <p className="text-sm text-at-text-weak">게시판으로 이동합니다...</p>
         </div>
       </div>
     )
@@ -136,8 +136,8 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        {/* 헤더 */}
+      <div className="w-full max-w-sm bg-white rounded-2xl border border-at-border shadow-at-card overflow-hidden">
+        {/* 헤더 — sky/blue gradient 유지 (브랜드 색상) */}
         <div className="bg-gradient-to-r from-sky-500 to-blue-600 px-6 py-8 text-center">
           <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Send className="w-8 h-8 text-white" />
@@ -149,16 +149,16 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
         <div className="p-6">
           {groupInfo && (
             <div className="text-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              <h3 className="text-lg font-semibold text-at-text mb-1">
                 {groupInfo.board_title}
               </h3>
               {groupInfo.board_description && (
-                <p className="text-sm text-gray-500">{groupInfo.board_description}</p>
+                <p className="text-sm text-at-text-weak">{groupInfo.board_description}</p>
               )}
             </div>
           )}
 
-          <div className="flex items-center gap-2 text-xs text-gray-400 justify-center mb-6">
+          <div className="flex items-center gap-2 text-xs text-at-text-weak justify-center mb-6">
             <Users className="w-3.5 h-3.5" />
             <span>가입하면 이 모임의 게시판을 열람할 수 있습니다</span>
           </div>
