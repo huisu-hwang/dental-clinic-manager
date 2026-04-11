@@ -113,10 +113,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <HometaxSyncProvider>
-    <div className="min-h-screen bg-at-surface-alt">
+    <div className="min-h-screen bg-at-surface">
       {/* Header - 상단 고정, 중앙 정렬 */}
       <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-at-surface border-b border-at-border fixed-header-safe">
-        <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
+        <div className="max-w-[1400px] mx-auto h-full flex items-center pl-[max(0.75rem,calc(50vw-700px))] pr-3">
           <Header
             user={user}
             onLogout={logout}
