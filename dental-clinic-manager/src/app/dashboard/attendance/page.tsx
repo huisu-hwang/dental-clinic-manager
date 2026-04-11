@@ -39,67 +39,47 @@ export default function AttendancePage() {
   if (!user) return null
 
   return (
-    <>
-      {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
-      <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">근태관리</h2>
-              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Attendance Management</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* 탭 네비게이션 — 연차관리 스타일 */}
+      <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+        {subTabs.map((tab) => {
+          const hasTabPermission =
+            (tab.id === 'checkin' && canCheckIn) ||
+            (tab.id === 'history' && canViewHistory) ||
+            (tab.id === 'stats' && canViewStats) ||
+            (tab.id === 'schedule' && canManageSchedule) ||
+            (tab.id === 'team' && canViewTeam) ||
+            (tab.id === 'qr' && canManageQR)
 
-      {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
-      <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-at-border bg-at-surface-alt">
-        <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
-          {subTabs.map((tab) => {
-            const hasTabPermission =
-              (tab.id === 'checkin' && canCheckIn) ||
-              (tab.id === 'history' && canViewHistory) ||
-              (tab.id === 'stats' && canViewStats) ||
-              (tab.id === 'schedule' && canManageSchedule) ||
-              (tab.id === 'team' && canViewTeam) ||
-              (tab.id === 'qr' && canManageQR)
+          if (!hasTabPermission) return null
 
-            if (!hasTabPermission) return null
-
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'bg-white text-at-accent shadow-sm'
-                    : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                <span className="hidden xs:inline sm:inline">{tab.label}</span>
-                <span className="xs:hidden sm:hidden">{tab.label.split(' ')[0]}</span>
-              </button>
-            )
-          })}
-        </nav>
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all ${
+                activeTab === tab.id
+                  ? 'bg-at-accent-light text-at-accent'
+                  : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+              }`}
+            >
+              <Icon className="w-4 h-4 mr-2" />
+              {tab.label}
+            </button>
+          )
+        })}
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div className="bg-white border-x border-b border-at-border rounded-b-xl p-3 sm:p-6">
-        <div key={activeTab} className="tab-content">
-          {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
-          {activeTab === 'history' && canViewHistory && <AttendanceHistory />}
-          {activeTab === 'stats' && canViewStats && <AttendanceStats />}
-          {activeTab === 'schedule' && canManageSchedule && <ScheduleManagement />}
-          {activeTab === 'team' && canViewTeam && <TeamStatus />}
-          {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
-        </div>
+      <div key={activeTab} className="tab-content">
+        {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
+        {activeTab === 'history' && canViewHistory && <AttendanceHistory />}
+        {activeTab === 'stats' && canViewStats && <AttendanceStats />}
+        {activeTab === 'schedule' && canManageSchedule && <ScheduleManagement />}
+        {activeTab === 'team' && canViewTeam && <TeamStatus />}
+        {activeTab === 'qr' && canManageQR && <QRCodeDisplay />}
       </div>
-    </>
+    </div>
   )
 }
