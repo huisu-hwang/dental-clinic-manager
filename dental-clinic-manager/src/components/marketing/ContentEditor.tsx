@@ -158,7 +158,9 @@ function markdownToHtml(
       const imgMatch = trimmed.match(/^!\[(.+?)\]\((.+?)\)$/)
       if (imgMatch) {
         const alt = imgMatch[1]
-        const url = imgMatch[2]
+        const img = images?.[imageIndex]
+        const url = img?.path || imgMatch[2]
+        imageIndex++
         htmlParts.push(`<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" />`)
       }
       continue
