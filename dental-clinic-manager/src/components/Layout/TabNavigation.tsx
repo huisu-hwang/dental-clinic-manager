@@ -86,7 +86,9 @@ import {
   Trash2,
   X,
   Lock,
-  Download
+  Download,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react'
 
 interface TabNavigationProps {
@@ -94,6 +96,8 @@ interface TabNavigationProps {
   onTabChange: (tab: string) => void
   onItemClick?: () => void
   skipAutoRedirect?: boolean
+  isCollapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
 interface Tab {
@@ -246,7 +250,7 @@ function DroppableZone({ id, children, isEditMode }: { id: string; children: Rea
   )
 }
 
-export default function TabNavigation({ activeTab, onTabChange, onItemClick, skipAutoRedirect = false }: TabNavigationProps) {
+export default function TabNavigation({ activeTab, onTabChange, onItemClick, skipAutoRedirect = false, isCollapsed = false, onToggleCollapse }: TabNavigationProps) {
   const { hasPermission } = usePermissions()
   const { menuSettings, categorySettings, isLoading } = useMenuSettings()
   const { user } = useAuth()
@@ -315,6 +319,13 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
       setExpandedCategories(new Set(allCategoryIds))
     }
   }, [isEditMode, localCategorySettings])
+
+  // 축소 시 편집 모드 자동 해제
+  useEffect(() => {
+    if (isCollapsed && isEditMode) {
+      setIsEditMode(false)
+    }
+  }, [isCollapsed])
 
   // 카테고리 추가 input에 포커스
   useEffect(() => {
@@ -858,30 +869,32 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   return (
     <nav className="flex flex-col h-full w-full">
       {/* 편집 모드 토글 버튼 */}
-      <div className="flex items-center justify-end px-1 pb-2">
-        <button
-          onClick={toggleEditMode}
-          className={`
-            flex items-center space-x-1.5 py-1 px-2.5 rounded-lg text-xs font-medium transition-all duration-200
-            ${isEditMode
-              ? 'bg-blue-500 text-white hover:bg-blue-600'
-              : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-            }
-          `}
-        >
-          {isEditMode ? (
-            <>
-              <Check className="w-3.5 h-3.5" />
-              <span>완료</span>
-            </>
-          ) : (
-            <>
-              <Pencil className="w-3.5 h-3.5" />
-              <span>메뉴 편집</span>
-            </>
-          )}
-        </button>
-      </div>
+      {!isCollapsed && (
+        <div className="flex items-center justify-end px-1 pb-2">
+          <button
+            onClick={toggleEditMode}
+            className={`
+              flex items-center space-x-1.5 py-1 px-2.5 rounded-lg text-xs font-medium transition-all duration-200
+              ${isEditMode
+                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+              }
+            `}
+          >
+            {isEditMode ? (
+              <>
+                <Check className="w-3.5 h-3.5" />
+                <span>완료</span>
+              </>
+            ) : (
+              <>
+                <Pencil className="w-3.5 h-3.5" />
+                <span>메뉴 편집</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* 상단 영역 */}
       <div className="flex-1 space-y-1">
@@ -1073,6 +1086,120 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
               {getActiveOverlayContent()}
             </DragOverlay>
           </DndContext>
+        ) : isCollapsed ? (
+          // === 축소 모드 ===
+          <>
+            {/* 상단 고정 메뉴들 */}
+            {topFixedMenus.map(tab => {
+              const isActive = activeTab === tab.id
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabClick(tab.id, tab.isPremiumLocked)}
+                  title={tab.label}
+                  className={`
+                    group flex items-center justify-center py-2.5 rounded-xl text-sm font-medium transition-all duration-200 w-full
+                    ${tab.isPremiumLocked
+                      ? 'text-slate-300 cursor-not-allowed opacity-50'
+                      : isActive
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                    }
+                  `}
+                >
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                </button>
+              )
+            })}
+
+            {/* 미분류 메뉴 */}
+            {uncategorizedMenus.map(tab => {
+              const isActive = activeTab === tab.id
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabClick(tab.id, tab.isPremiumLocked)}
+                  title={tab.label}
+                  className={`
+                    group flex items-center justify-center py-2.5 rounded-xl text-sm font-medium transition-all duration-200 w-full
+                    ${tab.isPremiumLocked
+                      ? 'text-slate-300 cursor-not-allowed opacity-50'
+                      : isActive
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                    }
+                  `}
+                >
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                </button>
+              )
+            })}
+
+            {/* 구분선 */}
+            {(topFixedMenus.length > 0 || uncategorizedMenus.length > 0) && visibleCategories.length > 0 && (
+              <div className="py-1"><div className="h-px bg-slate-200" /></div>
+            )}
+
+            {/* 카테고리들 */}
+            {visibleCategories.map(category => {
+              const categoryTabs = getVisibleTabsForCategory(category.id)
+              if (categoryTabs.length === 0) return null
+              const isExpanded = expandedCategories.has(category.id)
+              const hasActive = categoryHasActiveTab(category.id)
+              const CategoryIcon = categoryIconMap[category.icon] || Briefcase
+
+              return (
+                <div key={category.id} className="space-y-0.5">
+                  <button
+                    onClick={() => toggleCategory(category.id)}
+                    title={category.label}
+                    className={`
+                      group flex items-center justify-center w-full py-1.5 rounded-lg transition-all duration-200
+                      ${hasActive && !isExpanded
+                        ? 'text-blue-600 bg-blue-50'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                      }
+                    `}
+                  >
+                    <div className="relative">
+                      <CategoryIcon className="w-4 h-4" />
+                      {hasActive && !isExpanded && (
+                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      )}
+                    </div>
+                  </button>
+                  <div className={`overflow-hidden transition-all duration-200 ease-in-out ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="space-y-0.5">
+                      {categoryTabs.map(tab => {
+                        const isActive = activeTab === tab.id
+                        const Icon = tab.icon
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => handleTabClick(tab.id, tab.isPremiumLocked)}
+                            title={tab.label}
+                            className={`
+                              group flex items-center justify-center py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
+                              ${tab.isPremiumLocked
+                                ? 'text-slate-300 cursor-not-allowed opacity-50'
+                                : isActive
+                                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/20'
+                                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                              }
+                            `}
+                          >
+                            <Icon className={`w-4 h-4 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-500'}`} />
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </>
         ) : (
           // === 일반 모드 ===
           <>
@@ -1212,16 +1339,17 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
 
       {/* 하단 영역: 워커 상태 + 워커 다운로드 + 하단 고정 메뉴들 */}
       <div className="pt-2 border-t border-slate-200 mt-2 space-y-1">
-        {/* 워커 상태 (프리미엄 기능 활성화된 사용자만 표시) */}
-        <WorkerStatusMenuItem />
+        {/* 워커 상태 (프리미엄 기능 활성화된 사용자만 표시, 축소 시 숨김) */}
+        {!isCollapsed && <WorkerStatusMenuItem />}
         {/* 워커 다운로드 버튼 */}
         <button
           onClick={handleWorkerDownload}
           disabled={isDownloadingWorker}
-          className="group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full text-slate-500 hover:bg-green-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={isCollapsed ? (isDownloadingWorker ? '다운로드 중...' : '통합 워커 다운로드') : undefined}
+          className={`group flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} py-2.5 ${isCollapsed ? '' : 'px-3'} rounded-xl text-sm font-medium transition-all duration-200 w-full text-slate-500 hover:bg-green-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <Download className={`w-5 h-5 flex-shrink-0 text-slate-400 group-hover:text-green-600 ${isDownloadingWorker ? 'animate-bounce' : ''}`} />
-          <span className="truncate">{isDownloadingWorker ? '다운로드 중...' : '통합 워커 다운로드'}</span>
+          {!isCollapsed && <span className="truncate">{isDownloadingWorker ? '다운로드 중...' : '통합 워커 다운로드'}</span>}
         </button>
         {bottomFixedMenus.map(tab => {
           const isActive = activeTab === tab.id
@@ -1231,8 +1359,9 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
+              title={isCollapsed ? tab.label : undefined}
               className={`
-                group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
+                group flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} py-2.5 ${isCollapsed ? '' : 'px-3'} rounded-xl text-sm font-medium transition-all duration-200 w-full
                 ${isActive
                   ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
                   : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
@@ -1241,10 +1370,27 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
               `}
             >
               <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
-              <span className="truncate">{tab.label}</span>
+              {!isCollapsed && <span className="truncate">{tab.label}</span>}
             </button>
           )
         })}
+        {/* 사이드바 접기/펼치기 */}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            title={isCollapsed ? '메뉴 펼치기' : '메뉴 접기'}
+            className={`
+              group flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} py-2.5 ${isCollapsed ? '' : 'px-3'} rounded-xl text-sm font-medium transition-all duration-200 w-full
+              text-slate-400 hover:bg-slate-100 hover:text-slate-600
+            `}
+          >
+            {isCollapsed
+              ? <ChevronsRight className="w-5 h-5 flex-shrink-0" />
+              : <ChevronsLeft className="w-5 h-5 flex-shrink-0" />
+            }
+            {!isCollapsed && <span className="truncate">메뉴 접기</span>}
+          </button>
+        )}
       </div>
 
       {/* Mac 워커 설치 모달 */}
